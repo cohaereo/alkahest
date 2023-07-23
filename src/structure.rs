@@ -1,0 +1,217 @@
+use binrw::file_ptr::IntoSeekFrom;
+use binrw::{BinRead, BinReaderExt, BinResult, Endian, VecArgs};
+use destiny_pkg::{PackageManager, TagHash};
+use std::fmt::{Debug, Formatter, Write};
+use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::ops::Deref;
+use std::slice::Iter;
+
+pub type TablePointer32<T> = _TablePointer<i32, u32, T>;
+pub type TablePointer64<T> = _TablePointer<i64, u64, T>;
+pub type TablePointer<T> = TablePointer64<T>;
+
+pub type RelPointer32<T> = _RelPointer<i32, T>;
+pub type RelPointer64<T> = _RelPointer<i64, T>;
+pub type RelPointer<T = ()> = RelPointer64<T>;
+
+#[derive(Clone)]
+pub struct _TablePointer<O: Into<i64>, C: Into<u64>, T: BinRead> {
+    offset_base: u64,
+    offset: O,
+    count: C,
+
+    data: Vec<T>,
+}
+
+impl<'a, O: Into<i64>, C: Into<u64>, T: BinRead> BinRead for _TablePointer<O, C, T>
+where
+    C: BinRead + Copy,
+    O: BinRead + Copy,
+    C::Args<'a>: Default + Clone,
+    O::Args<'a>: Default + Clone,
+    T::Args<'a>: Default + Clone,
+{
+    type Args<'b> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let count: C = reader.read_type(endian)?;
+        let offset_base = reader.stream_position()?;
+        let offset: O = reader.read_type(endian)?;
+
+        let offset_save = reader.stream_position()?;
+
+        let seek64: i64 = offset.into();
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(seek64))?;
+        // TODO(cohae): Check array header
+        reader.seek(SeekFrom::Current(16))?;
+
+        let count64: u64 = count.into();
+        let mut data = Vec::with_capacity(count64 as _);
+        for _ in 0..count64 {
+            data.push(reader.read_type(endian)?);
+        }
+
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(_TablePointer {
+            offset_base,
+            offset,
+            count,
+            data,
+        })
+    }
+}
+
+impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> _TablePointer<O, C, T> {
+    pub fn iter(&self) -> Iter<'_, T> {
+        self.data.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> Deref for _TablePointer<O, C, T> {
+    type Target = [T];
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<'a, O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> IntoIterator
+    for &'a _TablePointer<O, C, T>
+{
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead + Debug> Debug
+    for _TablePointer<O, C, T>
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "TablePointer(address=0x{:x}, count={}",
+            self.offset_base as i64 + self.offset.into(),
+            self.count.into(),
+        ))?;
+
+        f.write_str(", data=")?;
+        self.data.fmt(f)?;
+
+        f.write_char(')')
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct _RelPointer<O: Into<i64>, T: BinRead> {
+    offset_base: u64,
+    offset: O,
+
+    data: T,
+}
+
+impl<'a, O: Into<i64>, T: BinRead> BinRead for _RelPointer<O, T>
+where
+    O: BinRead + Copy,
+    O::Args<'a>: Default + Clone,
+    T::Args<'a>: Default + Clone,
+{
+    type Args<'b> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let offset_base = reader.stream_position()?;
+        let offset: O = reader.read_type(endian)?;
+
+        let offset_save = reader.stream_position()?;
+
+        let seek64: i64 = offset.into();
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(seek64))?;
+
+        let mut data = reader.read_type(endian)?;
+
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(_RelPointer {
+            offset_base,
+            offset,
+            data,
+        })
+    }
+}
+
+impl<O: Into<i64> + Copy, T: BinRead> Deref for _RelPointer<O, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<O: Into<i64> + Copy, T: BinRead + Debug> Debug for _RelPointer<O, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "RelPointer(address=0x{:x}",
+            self.offset_base as i64 + self.offset.into(),
+        ))?;
+
+        f.write_str(", data=")?;
+        self.data.fmt(f)?;
+
+        f.write_char(')')
+    }
+}
+
+impl<O: Into<i64> + Copy, T: BinRead + Debug> Into<SeekFrom> for _RelPointer<O, T> {
+    fn into(self) -> SeekFrom {
+        SeekFrom::Start((self.offset_base as i64 + self.offset.into()) as u64)
+    }
+}
+
+// pub trait PackageManagerExt {
+//     fn read_tag_struct<'a, T: BinRead>(&mut self, tag: TagHash) -> anyhow::Result<T>
+//     where
+//         T::Args<'a>: Default + Clone;
+// }
+//
+// impl PackageManagerExt for PackageManager {
+//     fn read_tag_struct<'a, T: BinRead>(&mut self, tag: TagHash) -> anyhow::Result<T>
+//     where
+//         T::Args<'a>: Default + Clone,
+//     {
+//         let data = self.read_tag(tag)?;
+//         let mut cur = Cursor::new(data);
+//         Ok(cur.read_le()?)
+//     }
+// }
+
+#[derive(BinRead)]
+pub struct CafeMarker(#[br(assert(self_0 == 0xcafe))] u16);
+
+#[derive(BinRead)]
+pub struct DeadBeefMarker(#[br(assert(self_0 == 0xdeadbeef))] u32);
+
+impl Debug for CafeMarker {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("CafeMarker")
+    }
+}
+
+impl Debug for DeadBeefMarker {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("DeadBeefMarker")
+    }
+}
