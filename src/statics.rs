@@ -3,6 +3,7 @@ use destiny_pkg::TagHash;
 use std::io::SeekFrom;
 
 use crate::entity::{ELodCategory, EPrimitiveType};
+use crate::types::Vector2;
 use crate::{
     structure::TablePointer,
     types::{Vector3, Vector4},
@@ -11,7 +12,7 @@ use crate::{
 #[derive(BinRead, Debug)]
 pub struct Unk80807194 {
     pub file_size: u64,
-    pub unk8: TablePointer<(u16, u16, u16, u16)>,
+    pub unk8: TablePointer<Unk8080719b>,
     pub parts: TablePointer<Unk8080719a>,
     pub buffers: TablePointer<(TagHash, TagHash, TagHash, u32)>,
 }
@@ -24,6 +25,14 @@ pub struct Unk8080719a {
     pub unk9: u8,
     pub lod_category: ELodCategory,
     pub primitive_type: EPrimitiveType,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk8080719b {
+    pub part_index: u16,
+    pub unk2: u16,
+    pub unk4: u16,
+    pub unk6: u16,
 }
 
 #[derive(BinRead, Debug)]
@@ -64,7 +73,8 @@ pub struct Unk808071a7 {
     pub model_offset: Vector3,
     pub unk5c: [f32; 4],
     pub model_scale: f32,
-    pub unk70: [f32; 4],
+    pub texture_coordinate_scale: Vector2,
+    pub texture_coordinate_offset: Vector2,
 }
 
 #[derive(BinRead, Debug, Clone)]

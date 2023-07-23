@@ -212,10 +212,18 @@ pub fn main() -> anyhow::Result<()> {
     let to_load: Vec<TagHash> = to_load.keys().cloned().collect();
 
     let mut static_map: IntMap<u32, StaticModel> = Default::default();
+    let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
+    let mut texture_map: IntMap<u32, (ID3D11Texture2D, ID3D11ShaderResourceView)> =
+        Default::default();
     for almostloadable in &to_load {
         // let almostloadable = &TagHash::new(package.pkg_id(), 637);
 
         let mheader: Unk808071a7 = package_manager.read_tag_struct(*almostloadable).unwrap();
+        for m in &mheader.materials {
+            let mat: material::Unk808071e8 = package_manager.read_tag_struct(*m).unwrap();
+            material_map.insert(m.0, mat);
+        }
+
         match StaticModel::load(mheader, &device, &device_context, &mut package_manager) {
             Ok(model) => {
                 static_map.insert(almostloadable.0, model);
@@ -344,116 +352,109 @@ pub fn main() -> anyhow::Result<()> {
         e_subtype: u8,
         index: usize,
     }
-    let mut textures = vec![];
-    for (i, e) in package
-        .entries()
-        .iter()
-        .enumerate()
-        .filter(|(_, v)| v.file_type == 32 && v.file_size == 40)
+
+    for m in material_map.values()
+    // for (i, e) in package
+    //     .entries()
+    //     .iter()
+    //     .enumerate()
+    //     .filter(|(_, v)| v.file_type == 32 && v.file_size == 40)
     {
-        let ref_package = TagHash(e.reference).pkg_id();
-        let ref_entry = TagHash(e.reference).entry_index() as usize;
-        if ref_package != package.pkg_id() {
-            continue;
-        }
-
-        // Skip everything but cubemaps
-        if e.file_subtype != 2 {
-            continue;
-        }
-
-        let v = package.read_entry(i).unwrap();
-        let mut cur = Cursor::new(v);
-        let texture: TextureHeader = cur.read_le().unwrap();
-        let texture_data = if let Some(t) = texture.large_buffer {
-            package_manager
-                .read_tag(t)
-                .expect("Failed to read texture data")
-        } else {
-            package
-                .read_entry(ref_entry)
-                .expect("Failed to read texture data")
-                .to_vec()
-        };
-        // let mut out_file = File::create(format!("dump/{i}.dds")).unwrap();
-        // dump_to_dds(&mut out_file, &texture, &texture_data);
-
-        // Transparency hack
-        let mut texture_data = texture_data;
-        if texture.format == DxgiFormat::R8G8B8A8_UNORM_SRGB
-            || texture.format == DxgiFormat::R8G8B8A8_UNORM
-        {
-            for b in texture_data.chunks_exact_mut(4) {
-                let mul = b[3] as f32 / 255.;
-                b[0] = (b[0] as f32 * mul) as u8;
-                b[1] = (b[1] as f32 * mul) as u8;
-                b[2] = (b[2] as f32 * mul) as u8;
-            }
-        }
-
-        info!(
-            "Uploading texture {} {texture:?}",
-            TagHash::new(ref_package, i as _)
-        );
-        let tex = unsafe {
-            let mut initial_data = [D3D11_SUBRESOURCE_DATA::default(); 6];
-            let (pitch, slice_pitch) =
-                calculate_pitch(texture.format, texture.width as _, texture.height as _);
-            for i in 0..6 {
-                let d = &mut initial_data[i];
-                d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
-                d.SysMemPitch = pitch as _;
+        println!("Material");
+        for t in &m.ps_textures {
+            println!("\t{} {:?}", t.index, t.texture);
+            let tex_hash = t.texture;
+            if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
+                continue;
             }
 
-            device
-                .CreateTexture2D(
-                    &D3D11_TEXTURE2D_DESC {
-                        Width: texture.width as _,
-                        Height: texture.height as _,
-                        MipLevels: 1,
-                        ArraySize: texture.array_size as _,
+            let texture_header_ref = TagHash(
+                package_manager
+                    .get_entry_by_tag(tex_hash)
+                    .unwrap()
+                    .reference,
+            );
+
+            // // Skip everything but cubemaps
+            // if e.file_subtype != 2 {
+            //     continue;
+            // }
+
+            // let v = package.read_entry(i).unwrap();
+            let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
+            let texture_data = if let Some(t) = texture.large_buffer {
+                package_manager
+                    .read_tag(t)
+                    .expect("Failed to read texture data")
+            } else {
+                package_manager
+                    .read_entry(
+                        texture_header_ref.pkg_id(),
+                        texture_header_ref.entry_index() as _,
+                    )
+                    .expect("Failed to read texture data")
+                    .to_vec()
+            };
+            // let mut out_file = File::create(format!("dump/{i}.dds")).unwrap();
+            // dump_to_dds(&mut out_file, &texture, &texture_data);
+
+            info!("Uploading texture {} {texture:?}", tex_hash);
+            let tex = unsafe {
+                let mut initial_data = [D3D11_SUBRESOURCE_DATA::default(); 6];
+                let (pitch, slice_pitch) =
+                    calculate_pitch(texture.format, texture.width as _, texture.height as _);
+                for i in 0..texture.array_size as usize {
+                    let d = &mut initial_data[i];
+                    d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
+                    d.SysMemPitch = pitch as _;
+                }
+
+                device
+                    .CreateTexture2D(
+                        &D3D11_TEXTURE2D_DESC {
+                            Width: texture.width as _,
+                            Height: texture.height as _,
+                            MipLevels: 1,
+                            ArraySize: texture.array_size as _,
+                            Format: texture.format.into(),
+                            SampleDesc: DXGI_SAMPLE_DESC {
+                                Count: 1,
+                                Quality: 0,
+                            },
+                            Usage: D3D11_USAGE_DEFAULT,
+                            BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                            CPUAccessFlags: Default::default(),
+                            MiscFlags: Default::default(),
+                        },
+                        Some(initial_data.as_ptr()),
+                    )
+                    .context("Failed to create texture")?
+            };
+            let view = unsafe {
+                device.CreateShaderResourceView(
+                    &tex,
+                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
                         Format: texture.format.into(),
-                        SampleDesc: DXGI_SAMPLE_DESC {
-                            Count: 1,
-                            Quality: 0,
+                        ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                            Texture2D: D3D11_TEX2D_SRV {
+                                MostDetailedMip: 0,
+                                MipLevels: 1,
+                            },
                         },
-                        Usage: D3D11_USAGE_DEFAULT,
-                        BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                        CPUAccessFlags: Default::default(),
-                        MiscFlags: D3D11_RESOURCE_MISC_TEXTURECUBE,
-                    },
-                    Some(initial_data.as_ptr()),
-                )
-                .context("Failed to create texture")?
-        };
-        let view = unsafe {
-            device.CreateShaderResourceView(
-                &tex,
-                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: texture.format.into(),
-                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURECUBE,
-                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                        TextureCube: D3D11_TEXCUBE_SRV {
-                            MostDetailedMip: 0,
-                            MipLevels: u32::MAX,
-                        },
-                    },
-                }),
-            )?
-        };
-        textures.push(PackageTexture {
-            handle: tex,
-            view,
-            format: texture.format,
-            width: texture.width,
-            height: texture.height,
-            depth: texture.depth,
-            array_size: texture.array_size,
-            e_type: e.file_type,
-            e_subtype: e.file_subtype,
-            index: i,
-        });
+                    }),
+                )?
+            };
+
+            unsafe {
+                device_context.PSSetShaderResources(0, Some(&[Some(view.clone())]));
+            }
+            texture_map.insert(tex_hash.0, (tex, view));
+        }
     }
+
+    info!("Loaded {} textures", texture_map.len());
+
     let le_sampler = unsafe {
         device.CreateSamplerState(&D3D11_SAMPLER_DESC {
             Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
@@ -752,11 +753,11 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.Unmap(&le_cbuffer, 0);
                     device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
 
-                    if !textures.is_empty() {
-                        let le_texture = &textures[tex_i % textures.len()];
-                        device_context
-                            .PSSetShaderResources(0, Some(&[Some(le_texture.view.clone())]));
-                    }
+                    // if !textures.is_empty() {
+                    //     let le_texture = &textures[tex_i % textures.len()];
+                    //     device_context
+                    //         .PSSetShaderResources(0, Some(&[Some(le_texture.view.clone())]));
+                    // }
                     device_context.PSSetSamplers(0, Some(&[Some(le_sampler.clone())]));
 
                     // device_context.Draw(4, 0);
@@ -828,7 +829,7 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_model_cbuffer.clone())]),
                                     );
 
-                                    model.draw(&device_context);
+                                    model.draw(&device_context, &material_map, &texture_map);
                                 }
                             }
                         }
