@@ -1,3 +1,4 @@
+use crate::dxgi::DxgiFormat;
 use crate::entity::{
     decode_vertices, decode_vertices2, ELodCategory, EPrimitiveType, IndexBufferHeader,
     VertexBufferHeader,
@@ -9,6 +10,8 @@ use anyhow::{ensure, Context};
 use destiny_pkg::PackageManager;
 use itertools::Itertools;
 use nohash_hasher::IntMap;
+use std::mem::transmute;
+use std::ptr;
 use tracing::{error, info, warn};
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -19,6 +22,12 @@ pub struct StaticModelBuffer {
     index_buffer: ID3D11Buffer,
     index_count: usize,
     // material: material::Unk808071e8,
+}
+
+pub struct LoadedTexture {
+    pub handle: ID3D11Texture2D,
+    pub view: ID3D11ShaderResourceView,
+    pub format: DxgiFormat,
 }
 
 pub struct StaticModel {
@@ -182,7 +191,10 @@ impl StaticModel {
         &self,
         device_context: &ID3D11DeviceContext,
         materials: &IntMap<u32, material::Unk808071e8>,
-        textures: &IntMap<u32, (ID3D11Texture2D, ID3D11ShaderResourceView)>,
+        vshaders: &IntMap<u32, ID3D11VertexShader>,
+        pshaders: &IntMap<u32, ID3D11PixelShader>,
+        textures: &IntMap<u32, LoadedTexture>,
+        tex_i: usize,
     ) {
         unsafe {
             for (iu, u) in self
@@ -207,6 +219,18 @@ impl StaticModel {
                         .get(iu)
                         .and_then(|m| materials.get(&m.0))
                     {
+                        // if let Some(vs) = vshaders.get(&mat.vertex_shader.0) {
+                        //     device_context.VSSetShader(vs, None);
+                        // } else {
+                        //     device_context.VSSetShader(&*ptr::null() as &ID3D11VertexShader, None);
+                        // }
+
+                        if let Some(ps) = pshaders.get(&mat.pixel_shader.0) {
+                            device_context.PSSetShader(ps, None);
+                        } else {
+                            device_context.PSSetShader(&*ptr::null() as &ID3D11PixelShader, None);
+                        }
+
                         // if !mat.ps_textures.is_empty() {
                         //     if let Some((_, le_texture_view)) =
                         //         textures.get(&mat.ps_textures.first().unwrap().texture.0)
@@ -218,14 +242,46 @@ impl StaticModel {
                         //     }
                         // }
 
-                        for pst in &mat.ps_textures {
-                            if let Some((_, le_texture_view)) = textures.get(&pst.texture.0) {
-                                device_context.PSSetShaderResources(
-                                    pst.index,
-                                    Some(&[Some(le_texture_view.clone())]),
-                                );
+                        // let mut ps_textures = vec![];
+                        // for pst in &mat.ps_textures {
+                        //     if let Some(t) = textures.get(&pst.texture.0) {
+                        //         ps_textures.push(t)
+                        //     }
+                        // }
+
+                        // if let Some(t) = ps_textures.iter().find(|l| l.format.is_srgb())
+                        // .or(ps_textures.first())
+                        let vs_tex_count =
+                            mat.vs_textures
+                                .iter()
+                                .map(|v| v.index + 1)
+                                .max()
+                                .unwrap_or_default() as usize;
+
+                        let ps_tex_count =
+                            mat.ps_textures
+                                .iter()
+                                .map(|v| v.index + 1)
+                                .max()
+                                .unwrap_or_default() as usize;
+
+                        let mut vs_textures = vec![None; vs_tex_count];
+                        for p in &mat.vs_textures {
+                            if let Some(t) = textures.get(&p.texture.0) {
+                                vs_textures[p.index as usize] = Some(t.view.clone());
                             }
                         }
+
+                        device_context.VSSetShaderResources(0, Some(vs_textures.as_slice()));
+
+                        let mut ps_textures = vec![None; ps_tex_count];
+                        for p in &mat.ps_textures {
+                            if let Some(t) = textures.get(&p.texture.0) {
+                                ps_textures[p.index as usize] = Some(t.view.clone());
+                            }
+                        }
+
+                        device_context.PSSetShaderResources(0, Some(ps_textures.as_slice()));
                     }
 
                     device_context.IASetVertexBuffers(
@@ -245,7 +301,7 @@ impl StaticModel {
                         EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     });
 
-                    device_context.DrawIndexed(p.index_count, p.index_start, 0);
+                    device_context.DrawIndexedInstanced(p.index_count, 4, p.index_start, 0, 0);
                 }
             }
         }

@@ -16,12 +16,11 @@ use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
 use egui::Widget;
-use glam::{EulerRot, Mat4, Quat, Vec2, Vec3};
+use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tracing::{error, info};
-use windows::core::Interface;
+use tracing::{error, info, warn};
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
     D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
@@ -41,7 +40,7 @@ use crate::dxgi::{calculate_pitch, DxgiFormat};
 use crate::entity::{
     decode_vertices, ELodCategory, EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
 };
-use crate::static_render::StaticModel;
+use crate::static_render::{LoadedTexture, StaticModel};
 use crate::statics::{Unk80807194, Unk8080719a, Unk808071a7, Unk8080966d};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::TextureHeader;
@@ -96,7 +95,6 @@ pub fn get_string(
     Some(final_string)
 }
 
-#[allow(unreachable_code)]
 pub fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
 
@@ -213,8 +211,9 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut static_map: IntMap<u32, StaticModel> = Default::default();
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
-    let mut texture_map: IntMap<u32, (ID3D11Texture2D, ID3D11ShaderResourceView)> =
-        Default::default();
+    let mut vshader_map: IntMap<u32, ID3D11VertexShader> = Default::default();
+    let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
+    let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     for almostloadable in &to_load {
         // let almostloadable = &TagHash::new(package.pkg_id(), 637);
 
@@ -237,7 +236,7 @@ pub fn main() -> anyhow::Result<()> {
 
     println!("Compiling shaders");
     let mut vshader = None;
-    let mut pshader = None;
+    // let mut pshader = None;
     let mut errors = None;
 
     let flags = if cfg!(debug_assertions) {
@@ -248,7 +247,7 @@ pub fn main() -> anyhow::Result<()> {
     unsafe {
         (
             D3DCompileFromFile(
-                w!("shaders.shader"),
+                w!("vshader.shader"),
                 None,
                 None,
                 s!("VShader"),
@@ -259,18 +258,18 @@ pub fn main() -> anyhow::Result<()> {
                 Some(&mut errors),
             )
             .context("Failed to compile vertex shader")?,
-            D3DCompileFromFile(
-                w!("shaders.shader"),
-                None,
-                None,
-                s!("PShader"),
-                s!("ps_5_0"),
-                flags,
-                0,
-                &mut pshader,
-                Some(&mut errors),
-            )
-            .context("Failed to compile pixel shader")?,
+            // D3DCompileFromFile(
+            //     w!("shaders.shader"),
+            //     None,
+            //     None,
+            //     s!("PShader"),
+            //     s!("ps_5_0"),
+            //     flags,
+            //     0,
+            //     &mut pshader,
+            //     Some(&mut errors),
+            // )
+            // .context("Failed to compile pixel shader")?,
         )
     };
 
@@ -280,11 +279,11 @@ pub fn main() -> anyhow::Result<()> {
             std::slice::from_raw_parts(eptr.cast(), errors.GetBufferSize())
         };
         let errors = String::from_utf8_lossy(estr);
-        panic!("{}", errors);
+        warn!("{}", errors);
     }
 
     let vshader = vshader.unwrap();
-    let pshader = pshader.unwrap();
+    // let pshader = pshader.unwrap();
 
     println!("Creating vertex layout");
     let vertex_layout = unsafe {
@@ -322,19 +321,47 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     println!("Creating shaders");
-    let (vshader, pshader) = unsafe {
+    for m in material_map.values() {
+        if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
+            vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
+                info!("Loading VShader {:?}", m.vertex_shader);
+                let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                unsafe {
+                    device
+                        .CreateVertexShader(&vs_data, None)
+                        .context("Failed to load vertex shader")
+                        .unwrap()
+                }
+            });
+        }
+
+        if let Ok(v) = package_manager.get_entry_by_tag(m.pixel_shader) {
+            pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
+                info!("Loading PShader {:?}", m.pixel_shader);
+                let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                unsafe {
+                    device
+                        .CreatePixelShader(&ps_data, None)
+                        .context("Failed to load pixel shader")
+                        .unwrap()
+                }
+            });
+        }
+    }
+
+    let vshader = unsafe {
         let vs_blob = std::slice::from_raw_parts(
             vshader.GetBufferPointer() as *const u8,
             vshader.GetBufferSize(),
         );
         let v = device.CreateVertexShader(vs_blob, None)?;
-        let ps_blob = std::slice::from_raw_parts(
-            pshader.GetBufferPointer() as *const u8,
-            pshader.GetBufferSize(),
-        );
-        let p = device.CreatePixelShader(ps_blob, None)?;
+        // let ps_blob = std::slice::from_raw_parts(
+        //     pshader.GetBufferPointer() as *const u8,
+        //     pshader.GetBufferSize(),
+        // );
+        // let p = device.CreatePixelShader(ps_blob, None)?;
 
-        (v, p)
+        v
     };
 
     println!("Loading textures");
@@ -360,9 +387,9 @@ pub fn main() -> anyhow::Result<()> {
     //     .enumerate()
     //     .filter(|(_, v)| v.file_type == 32 && v.file_size == 40)
     {
-        println!("Material");
+        // println!("Material");
         for t in &m.ps_textures {
-            println!("\t{} {:?}", t.index, t.texture);
+            // println!("\t{} {:?}", t.index, t.texture);
             let tex_hash = t.texture;
             if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
                 continue;
@@ -398,13 +425,13 @@ pub fn main() -> anyhow::Result<()> {
             // let mut out_file = File::create(format!("dump/{i}.dds")).unwrap();
             // dump_to_dds(&mut out_file, &texture, &texture_data);
 
-            info!("Uploading texture {} {texture:?}", tex_hash);
+            // info!("Uploading texture {} {texture:?}", tex_hash);
             let tex = unsafe {
                 let mut initial_data = [D3D11_SUBRESOURCE_DATA::default(); 6];
                 let (pitch, slice_pitch) =
                     calculate_pitch(texture.format, texture.width as _, texture.height as _);
-                for i in 0..texture.array_size as usize {
-                    let d = &mut initial_data[i];
+
+                for (i, d) in initial_data.iter_mut().enumerate() {
                     d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
                     d.SysMemPitch = pitch as _;
                 }
@@ -449,7 +476,14 @@ pub fn main() -> anyhow::Result<()> {
             unsafe {
                 device_context.PSSetShaderResources(0, Some(&[Some(view.clone())]));
             }
-            texture_map.insert(tex_hash.0, (tex, view));
+            texture_map.insert(
+                tex_hash.0,
+                LoadedTexture {
+                    handle: tex,
+                    view,
+                    format: texture.format,
+                },
+            );
         }
     }
 
@@ -490,6 +524,19 @@ pub fn main() -> anyhow::Result<()> {
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
                 ByteWidth: (4 * 4 * 4) * 2,
+                ..Default::default()
+            },
+            None,
+        )?
+    };
+
+    let le_model_cb11 = unsafe {
+        device.CreateBuffer(
+            &D3D11_BUFFER_DESC {
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
+                ByteWidth: (64 * 4) * 4,
                 ..Default::default()
             },
             None,
@@ -586,6 +633,8 @@ pub fn main() -> anyhow::Result<()> {
         d: false,
         mouse1: false,
         shift: false,
+        ctrl: false,
+        space: false,
     };
 
     let mut camera = FpsCamera::default();
@@ -654,28 +703,56 @@ pub fn main() -> anyhow::Result<()> {
                     }
                     WindowEvent::ModifiersChanged(modifiers) => {
                         input_state.shift = modifiers.shift();
+                        input_state.ctrl = modifiers.ctrl();
                     }
                     WindowEvent::KeyboardInput { input, .. } => {
                         if input.state == ElementState::Pressed {
                             match input.virtual_keycode {
-                                Some(VirtualKeyCode::Up) => tex_i = tex_i.wrapping_add(1),
-                                Some(VirtualKeyCode::Down) => tex_i = tex_i.wrapping_sub(1),
+                                Some(VirtualKeyCode::Up) => {
+                                    tex_i = tex_i.wrapping_add(1);
+                                    info!("Switched to texture index {}", tex_i)
+                                }
+                                Some(VirtualKeyCode::Down) => {
+                                    tex_i = tex_i.wrapping_sub(1);
+                                    info!("Switched to texture index {}", tex_i)
+                                }
                                 Some(VirtualKeyCode::Right) => {
-                                    placement_i = placement_i.wrapping_add(1);
-                                    info!(
-                                        "Switched to placement group {}",
-                                        placement_i % placement_groups.len()
-                                    );
+                                    placement_i = placement_i.wrapping_add(1)
                                 }
+
                                 Some(VirtualKeyCode::Left) => {
-                                    placement_i = placement_i.wrapping_sub(1);
-                                    info!(
-                                        "Switched to placement group {}",
-                                        placement_i % placement_groups.len()
-                                    );
+                                    placement_i = placement_i.wrapping_sub(1)
                                 }
+
                                 Some(VirtualKeyCode::Escape) => *control_flow = ControlFlow::Exit,
                                 _ => {}
+                            }
+
+                            if let Some(VirtualKeyCode::Right | VirtualKeyCode::Left) =
+                                input.virtual_keycode
+                            {
+                                info!(
+                                    "Switched to placement group {}",
+                                    placement_i % placement_groups.len()
+                                );
+
+                                // let mut p_min = Vec3::MAX;
+                                // let mut p_max = Vec3::MIN;
+                                // for t in &placement_groups[placement_i % placement_groups.len()]
+                                //     .transforms
+                                // {
+                                //     let v = Vec3::new(
+                                //         t.translation.x,
+                                //         t.translation.y,
+                                //         t.translation.z,
+                                //     );
+                                //
+                                //     p_min = p_min.min(v);
+                                //     p_max = p_max.max(v);
+                                // }
+                                //
+                                // let center = (p_min + p_max) / 2.0;
+                                // camera.position = center;
                             }
                         }
 
@@ -691,6 +768,9 @@ pub fn main() -> anyhow::Result<()> {
                             }
                             Some(VirtualKeyCode::D) => {
                                 input_state.d = input.state == ElementState::Pressed
+                            }
+                            Some(VirtualKeyCode::Space) => {
+                                input_state.space = input.state == ElementState::Pressed
                             }
                             _ => {}
                         }
@@ -729,7 +809,7 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.RSSetState(&rasterizer_state);
 
                     device_context.VSSetShader(&vshader, None);
-                    device_context.PSSetShader(&pshader, None);
+                    // device_context.PSSetShader(&pshader, None);
                     device_context.IASetInputLayout(&vertex_layout);
 
                     let projection = Mat4::perspective_lh(
@@ -739,6 +819,8 @@ pub fn main() -> anyhow::Result<()> {
                         3000.0,
                     );
                     let view = camera.calculate_matrix();
+
+                    let view_proj = view * projection;
                     // Mat4::from_quat(camera_rot) * Mat4::from_translation(position) * y_to_z_up;
 
                     let bmap = device_context
@@ -752,13 +834,17 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.Unmap(&le_cbuffer, 0);
                     device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
+                    // device_context.VSSetConstantBuffers(12, Some(&[Some(le_cbuffer.clone())]));
 
                     // if !textures.is_empty() {
                     //     let le_texture = &textures[tex_i % textures.len()];
                     //     device_context
                     //         .PSSetShaderResources(0, Some(&[Some(le_texture.view.clone())]));
                     // }
-                    device_context.PSSetSamplers(0, Some(&[Some(le_sampler.clone())]));
+                    device_context.PSSetSamplers(
+                        0,
+                        Some(&[Some(le_sampler.clone()), Some(le_sampler.clone())]),
+                    );
 
                     // device_context.Draw(4, 0);
                     // model.draw(&device_context);
@@ -829,7 +915,31 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_model_cbuffer.clone())]),
                                     );
 
-                                    model.draw(&device_context, &material_map, &texture_map);
+                                    let cb11_data = vec![Vec4::ONE; 64];
+                                    let bmap = device_context
+                                        .Map(&le_model_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                                        .context("Failed to map model cbuffer11")
+                                        .unwrap();
+
+                                    bmap.pData.copy_from_nonoverlapping(
+                                        cb11_data.as_ptr() as _,
+                                        std::mem::size_of::<Vec4>() * 64,
+                                    );
+
+                                    device_context.Unmap(&le_model_cb11, 0);
+                                    device_context.VSSetConstantBuffers(
+                                        11,
+                                        Some(&[Some(le_model_cb11.clone())]),
+                                    );
+
+                                    model.draw(
+                                        &device_context,
+                                        &material_map,
+                                        &vshader_map,
+                                        &pshader_map,
+                                        &texture_map,
+                                        tex_i,
+                                    );
                                 }
                             }
                         }

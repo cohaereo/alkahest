@@ -7,6 +7,8 @@ pub struct InputState {
     pub d: bool,
     pub mouse1: bool,
     pub shift: bool,
+    pub ctrl: bool,
+    pub space: bool,
 }
 
 #[derive(Clone)]
@@ -49,7 +51,14 @@ impl FpsCamera {
     pub fn update(&mut self, input: &InputState, delta: f32) {
         let mut speed = delta * 35.0;
         if input.shift {
-            speed *= 3.5;
+            speed *= 3.0;
+        }
+        if input.ctrl {
+            speed *= 0.25;
+        }
+        // We're gonna have to go right to... LUDICROUS SPEED
+        if input.space {
+            speed *= 10.0;
         }
 
         let mut direction = Vec3::ZERO;

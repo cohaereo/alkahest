@@ -369,6 +369,19 @@ impl DxgiFormat {
             u => panic!("{u:?}"),
         }
     }
+
+    pub fn is_srgb(&self) -> bool {
+        matches!(
+            self,
+            DxgiFormat::R8G8B8A8_UNORM_SRGB
+                | DxgiFormat::BC1_UNORM_SRGB
+                | DxgiFormat::BC2_UNORM_SRGB
+                | DxgiFormat::BC3_UNORM_SRGB
+                | DxgiFormat::B8G8R8A8_UNORM_SRGB
+                | DxgiFormat::B8G8R8X8_UNORM_SRGB
+                | DxgiFormat::BC7_UNORM_SRGB
+        )
+    }
 }
 
 pub fn calculate_pitch(fmt: DxgiFormat, width: usize, height: usize) -> (usize, usize) {
