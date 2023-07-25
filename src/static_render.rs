@@ -1,13 +1,14 @@
 use crate::dxgi::DxgiFormat;
 use crate::entity::{
-    decode_vertices, decode_vertices2, ELodCategory, EPrimitiveType, IndexBufferHeader,
-    VertexBufferHeader,
+    decode_vertices, decode_vertices2, DecodedVertex, DecodedVertexBuffer, ELodCategory,
+    EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
 };
 use crate::material;
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 use crate::types::{Vector2, Vector3, Vector4};
 use anyhow::{ensure, Context};
 use destiny_pkg::PackageManager;
+use glam::{Vec2, Vec3, Vec3A, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use std::mem::transmute;
@@ -80,8 +81,10 @@ impl StaticModel {
                 continue;
             }
 
+            let mut buffer = DecodedVertexBuffer::default();
+
             let vertex_buffer = pm.read_tag(t).unwrap();
-            let vertices = &decode_vertices(&vertex_header, &vertex_buffer);
+            decode_vertices(&vertex_header, &vertex_buffer, &mut buffer);
 
             let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer).unwrap();
             let t = pm.get_entry_by_tag(*index_buffer).unwrap().reference.into();
@@ -97,47 +100,95 @@ impl StaticModel {
             };
 
             // let random_uv = (fastrand::f32() % 1.0, fastrand::f32() % 1.0);
-            let mut vertices: Vec<(Vector3, Vector2)> = vertices
-                .into_iter()
-                .map(|v| {
-                    (
-                        Vector3 {
-                            x: v.x * model.model_scale + model.model_offset.x,
-                            y: v.y * model.model_scale + model.model_offset.y,
-                            z: v.z * model.model_scale + model.model_offset.z,
-                        },
-                        Vector2 { x: 0.5, y: 0.5 },
-                    )
-                })
-                .collect();
+            // let mut vertices: Vec<(Vector3, Vector2)> = vertices
+            //     .into_iter()
+            //     .map(|v| {
+            //         (
+            //             Vector3 {
+            //                 x: v.x * model.model_scale + model.model_offset.x,
+            //                 y: v.y * model.model_scale + model.model_offset.y,
+            //                 z: v.z * model.model_scale + model.model_offset.z,
+            //             },
+            //             Vector2 { x: 0.5, y: 0.5 },
+            //         )
+            //     })
+            //     .collect();
+            // for (i, v) in unk_vertices.iter().enumerate() {
+            //     vertices[i].1 = Vector2 {
+            //         x: v.x * model.texture_coordinate_scale.x
+            //             + model.texture_coordinate_offset.x,
+            //         y: v.y * model.texture_coordinate_scale.y
+            //             + model.texture_coordinate_offset.y,
+            //     };
+            // }
 
             if unk_buffer.is_valid() {
                 let unk_header: VertexBufferHeader = pm.read_tag_struct(*unk_buffer).unwrap();
                 let t = pm.get_entry_by_tag(*unk_buffer).unwrap().reference.into();
 
                 let unk_buffer = pm.read_tag(t).unwrap();
-                let unk_vertices = &decode_vertices2(&unk_header, &unk_buffer);
-                for (i, v) in unk_vertices.iter().enumerate() {
-                    vertices[i].1 = Vector2 {
-                        x: v.x * model.texture_coordinate_scale.x
-                            + model.texture_coordinate_offset.x,
-                        y: v.y * model.texture_coordinate_scale.y
-                            + model.texture_coordinate_offset.y,
-                    };
-                }
+                decode_vertices2(&unk_header, &unk_buffer, &mut buffer);
             }
 
+            let mut vertices = vec![];
+            for v in buffer.positions {
+                vertices.push(DecodedVertex {
+                    position: [
+                        v.x * model.model_scale + model.model_offset.x,
+                        v.y * model.model_scale + model.model_offset.y,
+                        v.z * model.model_scale + model.model_offset.z,
+                        v.w,
+                    ],
+                    tex_coord: Default::default(),
+                    normal: Vec4::splat(69.0).into(),
+                    tangent: Default::default(),
+                    color: [1., 1., 1., 1.],
+                });
+            }
+
+            for (i, v) in buffer.tex_coords.iter().enumerate() {
+                if i >= vertices.len() {
+                    warn!(
+                        "Too many texture coordinates (got {}, expected {})",
+                        buffer.tex_coords.len(),
+                        vertices.len()
+                    );
+                    break;
+                }
+                vertices[i].tex_coord = [
+                    v.x * model.texture_coordinate_scale.x + model.texture_coordinate_offset.x,
+                    v.y * model.texture_coordinate_scale.y + model.texture_coordinate_offset.y,
+                ];
+            }
+
+            for (i, v) in buffer.normals.iter().enumerate() {
+                vertices[i].normal = [v.x, v.y, v.z, v.w];
+            }
+
+            for (i, v) in buffer.tangents.iter().enumerate() {
+                vertices[i].tangent = [v.x, v.y, v.z, v.w];
+            }
+
+            for (i, v) in buffer.colors.iter().enumerate() {
+                vertices[i].color = [v.x, v.y, v.z, v.w];
+            }
+
+            assert_eq!(
+                std::mem::size_of::<DecodedVertex>(),
+                (4 + 2 + 4 + 4 + 4) * 4
+            );
+            let bytes: &[u8] = bytemuck::cast_slice(&vertices);
             let vertex_buffer = unsafe {
                 let buffer = device
                     .CreateBuffer(
                         &D3D11_BUFFER_DESC {
-                            ByteWidth: (vertices.len() * std::mem::size_of::<[f32; 5]>()) as _,
+                            ByteWidth: bytes.len() as _,
                             Usage: D3D11_USAGE_IMMUTABLE,
                             BindFlags: D3D11_BIND_VERTEX_BUFFER,
                             ..Default::default()
                         },
                         Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: vertices.as_ptr() as _,
+                            pSysMem: bytes.as_ptr() as _,
                             ..Default::default()
                         }),
                         // None,
@@ -193,7 +244,9 @@ impl StaticModel {
         materials: &IntMap<u32, material::Unk808071e8>,
         vshaders: &IntMap<u32, ID3D11VertexShader>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
+        cbuffers: &IntMap<u32, ID3D11Buffer>,
         textures: &IntMap<u32, LoadedTexture>,
+        cbuffer_default: ID3D11Buffer,
         tex_i: usize,
     ) {
         unsafe {
@@ -224,6 +277,30 @@ impl StaticModel {
                         // } else {
                         //     device_context.VSSetShader(&*ptr::null() as &ID3D11VertexShader, None);
                         // }
+
+                        if let Some(cbuffer) =
+                            cbuffers.get(&self.model.materials.get(iu).unwrap().0)
+                        {
+                            device_context.PSSetConstantBuffers(
+                                0,
+                                Some(&[
+                                    Some(cbuffer.clone()),
+                                    Some(cbuffer.clone()),
+                                    Some(cbuffer.clone()),
+                                    Some(cbuffer.clone()),
+                                ]),
+                            );
+                        } else {
+                            device_context.PSSetConstantBuffers(
+                                0,
+                                Some(&[
+                                    Some(cbuffer_default.clone()),
+                                    Some(cbuffer_default.clone()),
+                                    Some(cbuffer_default.clone()),
+                                    Some(cbuffer_default.clone()),
+                                ]),
+                            );
+                        }
 
                         if let Some(ps) = pshaders.get(&mat.pixel_shader.0) {
                             device_context.PSSetShader(ps, None);
@@ -288,7 +365,7 @@ impl StaticModel {
                         0,
                         1,
                         Some(&Some(buffers.vertex_buffer.clone())),
-                        Some(&(5 * 4)),
+                        Some(&((4 + 2 + 4 + 4 + 4) * 4)),
                         Some(&0),
                     );
                     device_context.IASetIndexBuffer(

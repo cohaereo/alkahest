@@ -1,9 +1,12 @@
 use crate::structure::{DeadBeefMarker, TablePointer};
-use crate::types::{Vector2, Vector4};
+use crate::types::{Vector2, Vector3, Vector4};
 use binrw::{BinRead, BinReaderExt};
+use bytemuck::{Pod, Zeroable};
 use destiny_pkg::TagHash;
+use glam::{Vec2, Vec3A, Vec4};
 use std::cmp::Ordering;
 use std::io::{Cursor, Read, SeekFrom};
+use tracing::{debug, warn};
 
 #[derive(BinRead, Debug)]
 pub struct Unk808073a5 {
@@ -126,95 +129,146 @@ pub struct IndexBufferHeader {
     pub zero1: u32,
 }
 
-pub fn decode_vertices2(header: &VertexBufferHeader, data: &[u8]) -> Vec<Vector2> {
+#[derive(Default)]
+pub struct DecodedVertexBuffer {
+    pub positions: Vec<Vector4>,
+    pub tex_coords: Vec<Vector2>,
+    pub normals: Vec<Vector4>,
+    pub tangents: Vec<Vector4>,
+    pub colors: Vec<Vector4>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default, Pod, Zeroable)]
+pub struct DecodedVertex {
+    pub position: [f32; 4],
+    pub tex_coord: [f32; 2],
+    pub normal: [f32; 4],
+    pub tangent: [f32; 4],
+    pub color: [f32; 4],
+}
+
+pub fn decode_vertices2(header: &VertexBufferHeader, data: &[u8], out: &mut DecodedVertexBuffer) {
     let mut cur = Cursor::new(data);
-    let mut vertices = vec![];
 
     let count = data.len() / header.stride as usize;
     let mut data = vec![0u8; header.stride as usize];
     for _ in 0..count {
         cur.read_exact(&mut data).unwrap();
-        let v = match header.vtype {
-            0 => decode_vertex2_0(header.stride, &data),
+        match header.vtype {
+            0 => decode_vertex2_0(header.stride, &data, out),
             u => panic!("Unsupported vertex data type {u}"),
         };
-
-        vertices.push(v);
     }
-
-    vertices
 }
 
-fn decode_vertex2_0(stride: u16, data: &[u8]) -> Vector2 {
+fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) {
+    let mut cur = Cursor::new(data);
     match stride {
-        0x4 => {
-            // TODO(cohae): Has more data
-            let d: &[i16] = bytemuck::cast_slice(data);
-            let d2: [i16; 2] = d.try_into().unwrap();
-
-            Vector2::from(d2)
+        4 => {
+            let d2: [i16; 2] = cur.read_le().unwrap();
+            out.tex_coords.push(d2.into());
         }
-        0x8 => {
-            // TODO(cohae): Stubbed for now
-            Vector2::default()
+        8 => {
+            let d4: [i16; 4] = cur.read_le().unwrap();
+            out.normals.push(d4.into());
         }
-        0x10 => {
+        16 => {
             // TODO(cohae): Has more data
             let d: &[i16] = bytemuck::cast_slice(data);
             let d2: [i16; 2] = d[4..6].try_into().unwrap();
 
-            Vector2::from(d2)
+            out.tex_coords.push(d2.into());
         }
-        0xc | 0x14 | 0x18 | 0x1c => {
-            // TODO(cohae): Has more data
-            let d: &[i16] = bytemuck::cast_slice(data);
-            let d2: [i16; 2] = d[0..2].try_into().unwrap();
+        12 | 20 | 24 => {
+            let d2: [i16; 2] = cur.read_le().unwrap();
+            out.tex_coords.push(d2.into());
+            let n4: [i16; 4] = cur.read_le().unwrap();
+            out.normals.push(n4.into());
 
-            Vector2::from(d2)
+            if stride == 20 || stride == 24 {
+                let t4: [i16; 4] = cur.read_le().unwrap();
+                out.tangents.push(t4.into());
+
+                if stride == 24 {
+                    let c4: [u8; 4] = cur.read_le().unwrap();
+                    out.colors.push(c4.into());
+                }
+            }
+        }
+        28 => {
+            // TODO(cohae): Has more data
+            let d2: [i16; 2] = cur.read_le().unwrap();
+            out.tex_coords.push(d2.into());
         }
         u => panic!("Unsupported v2_0 stride 0x{u:x}"),
-    }
+    };
 }
 
-pub fn decode_vertices(header: &VertexBufferHeader, data: &[u8]) -> Vec<Vector4> {
+pub fn decode_vertices(header: &VertexBufferHeader, data: &[u8], out: &mut DecodedVertexBuffer) {
     let mut cur = Cursor::new(data);
-    let mut vertices = vec![];
 
     let count = data.len() / header.stride as usize;
     let mut data = vec![0u8; header.stride as usize];
     for _ in 0..count {
         cur.read_exact(&mut data).unwrap();
-        let v = match header.vtype {
-            0 => decode_vertex0(header.stride, &data),
+        match header.vtype {
+            0 => decode_vertex0(header.stride, &data, out),
             u => panic!("Unsupported vertex data type {u}"),
         };
-
-        vertices.push(v);
     }
-
-    vertices
 }
 
-fn decode_vertex0(stride: u16, data: &[u8]) -> Vector4 {
+fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) {
     let mut c = Cursor::new(data);
     match stride {
-        0x8 => {
+        8 => {
             let d4: [i16; 4] = c.read_le().unwrap();
-            (Vector4::from(d4))
+            out.positions.push(d4.into());
         }
-        0xc | 0x10 | 0x1c | 0x20 | 0x28 => {
+        12 => {
+            // TODO(cohae): More data to be discovered
+            let pos: [i16; 4] = c.read_le().unwrap();
+            let uv: [i16; 2] = c.read_le().unwrap();
+            out.positions.push(pos.into());
+            out.tex_coords.push(uv.into());
+        }
+        28 | 32 => {
+            let pos: [i16; 4] = c.read_le().unwrap();
+            let uv: [i16; 2] = c.read_le().unwrap();
+            let normal: [i16; 4] = c.read_le().unwrap();
+            let tangent: [i16; 4] = c.read_le().unwrap();
+            out.positions.push(pos.into());
+            out.tex_coords.push(uv.into());
+            out.normals.push(normal.into());
+            out.tangents.push(tangent.into());
+
+            if stride == 32 {
+                let color: [u8; 4] = c.read_le().unwrap();
+                out.colors.push(color.into());
+            }
+        }
+        16 | 40 => {
             // TODO(cohae): More data to be discovered
             let d4: [i16; 4] = c.read_le().unwrap();
-            (Vector4::from(d4))
+            out.positions.push(d4.into());
         }
-        0x14 => {
+        20 => {
+            warn!("Stubbed V0 stride 20");
             // TODO(cohae): Stubbed
-            (Vector4::default())
+            out.positions.push(Vector4::default());
         }
-        0x18 | 0x30 => {
-            let d_pos: [f32; 4] = c.read_le().unwrap();
-            (Vector4::from(d_pos))
+        24 => {
+            out.positions.push(c.read_le().unwrap());
+            // TODO(cohae): Almost definitely wrong
+            out.tex_coords.push(c.read_le().unwrap());
+        }
+        48 => {
+            out.positions.push(c.read_le().unwrap());
+            // TODO(cohae): Almost definitely wrong
+            out.normals.push(c.read_le().unwrap());
+            out.tangents.push(c.read_le().unwrap());
         }
         u => panic!("Unsupported v0 stride 0x{u:x}"),
-    }
+    };
 }

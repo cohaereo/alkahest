@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::{BufWriter, Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
+use std::ptr;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -20,10 +21,11 @@ use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
+use windows::core::Interface;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
-    D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
+    D3DCompileFromFile, D3DReflect, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
 };
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -96,7 +98,10 @@ pub fn get_string(
 }
 
 pub fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt().init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
+    // tracing_subscriber::fmt().init();
 
     let pkg_path = std::env::args().nth(1).unwrap_or_default();
     let package = Destiny2PreBeyondLight
@@ -263,6 +268,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
     let mut vshader_map: IntMap<u32, ID3D11VertexShader> = Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
+    let mut cbuffer_map: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     for almostloadable in &to_load {
         // let almostloadable = &TagHash::new(package.pkg_id(), 637);
@@ -350,7 +356,7 @@ pub fn main() -> anyhow::Result<()> {
                 D3D11_INPUT_ELEMENT_DESC {
                     SemanticName: s!("POSITION"),
                     SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32B32_FLOAT,
+                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
                     InputSlot: 0,
                     AlignedByteOffset: 0,
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
@@ -361,7 +367,34 @@ pub fn main() -> anyhow::Result<()> {
                     SemanticIndex: 0,
                     Format: DXGI_FORMAT_R32G32_FLOAT,
                     InputSlot: 0,
-                    AlignedByteOffset: 12,
+                    AlignedByteOffset: 16,
+                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                    InstanceDataStepRate: 0,
+                },
+                D3D11_INPUT_ELEMENT_DESC {
+                    SemanticName: s!("NORMAL"),
+                    SemanticIndex: 0,
+                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
+                    InputSlot: 0,
+                    AlignedByteOffset: 16 + 8,
+                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                    InstanceDataStepRate: 0,
+                },
+                D3D11_INPUT_ELEMENT_DESC {
+                    SemanticName: s!("TANGENT"),
+                    SemanticIndex: 0,
+                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
+                    InputSlot: 0,
+                    AlignedByteOffset: 16 + 8 + 16,
+                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                    InstanceDataStepRate: 0,
+                },
+                D3D11_INPUT_ELEMENT_DESC {
+                    SemanticName: s!("COLOR"),
+                    SemanticIndex: 0,
+                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
+                    InputSlot: 0,
+                    AlignedByteOffset: 16 + 8 + 16 + 16,
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
                     InstanceDataStepRate: 0,
                 },
@@ -371,7 +404,24 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     println!("Creating shaders");
-    for m in material_map.values() {
+    for (t, m) in material_map.iter() {
+        // println!(
+        //     "{t:08x} VS {:?} - {} {} {} {}",
+        //     m.vertex_shader,
+        //     m.unk68.len(),
+        //     m.unk78.len(),
+        //     m.unk88.len(),
+        //     m.unk98.len(),
+        // );
+        println!(
+            "{t:08x} PS {:?} - {} {} {} {}",
+            m.pixel_shader,
+            m.unk2e8.len(),
+            m.unk2f8.len(),
+            m.unk308.len(),
+            m.unk318.len()
+        );
+
         if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
             vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
                 info!("Loading VShader {:?}", m.vertex_shader);
@@ -390,12 +440,98 @@ pub fn main() -> anyhow::Result<()> {
                 info!("Loading PShader {:?}", m.pixel_shader);
                 let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
                 unsafe {
+                    // let mut reflector: *mut ID3D11ShaderReflection = ptr::null_mut();
+                    // D3DReflect(
+                    //     ps_data.as_ptr() as _,
+                    //     ps_data.len() as _,
+                    //     &ID3D11ShaderReflection::IID,
+                    //     &mut reflector as *mut *mut ID3D11ShaderReflection as _,
+                    // )
+                    // .unwrap();
+                    //
+                    // // if !reflector.is_null() {
+                    // if false {
+                    //     let desc = (*reflector).GetDesc().unwrap();
+                    //
+                    //     println!("{} cbuffers", desc.ConstantBuffers);
+                    //     for i in 0..desc.ConstantBuffers {
+                    //         if let Some(cb) = (*reflector).GetConstantBufferByIndex(i) {
+                    //             println!("Got cb");
+                    //             let mut cb_desc = Default::default();
+                    //             if cb.GetDesc(&mut cb_desc).is_ok() {
+                    //                 println!("Got cb_desc");
+                    //                 println!(
+                    //                     "cb{i} - name={:?} type={:?} size={}",
+                    //                     cb_desc.Name, cb_desc.Type, cb_desc.Size
+                    //                 );
+                    //             }
+                    //         }
+                    //     }
+                    // } else {
+                    //     error!("Couldn't make a reflector");
+                    // }
+
                     device
                         .CreatePixelShader(&ps_data, None)
                         .context("Failed to load pixel shader")
                         .unwrap()
                 }
             });
+        }
+
+        if m.unk34c.is_valid() {
+            let buffer_header_ref = TagHash(
+                package_manager
+                    .get_entry_by_tag(m.unk34c)
+                    .unwrap()
+                    .reference,
+            );
+
+            let buffer = package_manager.read_tag(buffer_header_ref).unwrap();
+            debug!(
+                "Read {} bytes cbuffer from {buffer_header_ref:?}",
+                buffer.len()
+            );
+            let buf = unsafe {
+                device.CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        Usage: D3D11_USAGE_DYNAMIC,
+                        BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                        CPUAccessFlags: Default::default(),
+                        ByteWidth: buffer.len() as _,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: buffer.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )?
+            };
+
+            cbuffer_map.insert(*t, buf);
+        } else if m.unk318.len() > 1
+        // && !m.unk2f8.is_empty()
+        && m.unk318
+            .iter()
+            .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+        {
+            let buf = unsafe {
+                device.CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        Usage: D3D11_USAGE_DYNAMIC,
+                        BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                        CPUAccessFlags: Default::default(),
+                        ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: m.unk318.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )?
+            };
+
+            cbuffer_map.insert(*t, buf);
         }
     }
 
@@ -573,14 +709,14 @@ pub fn main() -> anyhow::Result<()> {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: (4 * 4 * 4) * 2,
+                ByteWidth: (4 * 4 * 4) * 3,
                 ..Default::default()
             },
             None,
         )?
     };
 
-    let le_model_cb11 = unsafe {
+    let le_model_cb0 = unsafe {
         device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
@@ -689,10 +825,30 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut camera = FpsCamera::default();
 
-    let start_time = Instant::now();
+    unsafe {
+        // let mut cb11_data = vec![];
+        // for _ in 0..64 {
+        //     cb11_data.push(Vec4::new(
+        //         fastrand::f32() % 1.0,
+        //         fastrand::f32() % 1.0,
+        //         fastrand::f32() % 1.0,
+        //         1.0,
+        //     ));
+        // }
+        let cb11_data = vec![Vec4::splat(0.6); 128];
+        let bmap = device_context
+            .Map(&le_model_cb0, 0, D3D11_MAP_WRITE_DISCARD, 0)
+            .context("Failed to map model cbuffer11")
+            .unwrap();
+
+        bmap.pData
+            .copy_from_nonoverlapping(cb11_data.as_ptr() as _, std::mem::size_of::<Vec4>() * 64);
+
+        device_context.Unmap(&le_model_cb0, 0);
+    }
+
     let mut tex_i: usize = 0;
     let mut placement_i: usize = 1;
-    let mut rotation = Vec2::ZERO;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
     event_loop.run(move |event, _, control_flow| {
@@ -890,9 +1046,17 @@ pub fn main() -> anyhow::Result<()> {
                     //     device_context
                     //         .PSSetShaderResources(0, Some(&[Some(le_texture.view.clone())]));
                     // }
+
+                    // TODO(cohae): Find a more solid way to assign samplers
                     device_context.PSSetSamplers(
                         0,
-                        Some(&[Some(le_sampler.clone()), Some(le_sampler.clone())]),
+                        Some(&[
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                        ]),
                     );
 
                     // device_context.Draw(4, 0);
@@ -922,6 +1086,8 @@ pub fn main() -> anyhow::Result<()> {
                                             transform.rotation.z,
                                             transform.rotation.w,
                                         )) * Mat4::from_scale(Vec3::splat(transform.scale.x));
+
+                                    let normal_matrix = model_matrix.inverse().transpose();
 
                                     const RANDOM_COLORS: [u32; 64] = [
                                         0xFFE4C4, 0x008080, 0x00FA9A, 0xF5DEB3, 0x8FBC8F, 0x7FFF00,
@@ -954,8 +1120,10 @@ pub fn main() -> anyhow::Result<()> {
                                         .unwrap();
 
                                     bmap.pData.copy_from_nonoverlapping(
-                                        &(model_matrix, color) as *const (Mat4, Vec3) as _,
-                                        std::mem::size_of::<(Mat4, Vec3)>(),
+                                        &(model_matrix, normal_matrix, color)
+                                            as *const (Mat4, Mat4, Vec3)
+                                            as _,
+                                        std::mem::size_of::<(Mat4, Mat4, Vec3)>(),
                                     );
 
                                     device_context.Unmap(&le_model_cbuffer, 0);
@@ -964,33 +1132,23 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_model_cbuffer.clone())]),
                                     );
 
-                                    let cb11_data = vec![Vec4::splat(0.5); 64];
-                                    let bmap = device_context
-                                        .Map(&le_model_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                                        .context("Failed to map model cbuffer11")
-                                        .unwrap();
-
-                                    bmap.pData.copy_from_nonoverlapping(
-                                        cb11_data.as_ptr() as _,
-                                        std::mem::size_of::<Vec4>() * 64,
-                                    );
-
-                                    device_context.Unmap(&le_model_cb11, 0);
                                     device_context.VSSetConstantBuffers(
                                         11,
-                                        Some(&[Some(le_model_cb11.clone())]),
+                                        Some(&[Some(le_model_cb0.clone())]),
                                     );
-                                    device_context.PSSetConstantBuffers(
-                                        0,
-                                        Some(&[Some(le_model_cb11.clone())]),
-                                    );
+                                    // device_context.PSSetConstantBuffers(
+                                    //     0,
+                                    //     Some(&[Some(le_model_cb0.clone())]),
+                                    // );
 
                                     model.draw(
                                         &device_context,
                                         &material_map,
                                         &vshader_map,
                                         &pshader_map,
+                                        &cbuffer_map,
                                         &texture_map,
+                                        le_model_cb0.clone(),
                                         tex_i,
                                     );
                                 }

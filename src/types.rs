@@ -141,14 +141,18 @@ impl DecodeFloat for f32 {
     }
 }
 
-impl DecodeFloat for i16 {
-    fn decode_float(self) -> f32 {
-        self as f32 / i16::MAX as f32
-    }
+macro_rules! impl_decode_float {
+    ($t:ty) => {
+        impl DecodeFloat for $t {
+            fn decode_float(self) -> f32 {
+                self as f32 / <$t>::MAX as f32
+            }
+        }
+    };
+    ($($t:ty),+) => {
+        $(impl_decode_float!($t);)*
+    };
 }
 
-impl DecodeFloat for u16 {
-    fn decode_float(self) -> f32 {
-        self as f32 / u16::MAX as f32
-    }
-}
+impl_decode_float!(u8, u16);
+impl_decode_float!(i8, i16);
