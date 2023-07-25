@@ -176,10 +176,60 @@ pub fn main() -> anyhow::Result<()> {
     let device_context = device_context.unwrap();
     let swap_chain = swap_chain.unwrap();
 
-    let mut render_target_view = unsafe {
+    let mut rtv0 = unsafe {
         let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
 
         device.CreateRenderTargetView(&buffer, None)?
+    };
+
+    let mut rtv1 = unsafe {
+        let tex = device
+            .CreateTexture2D(
+                &D3D11_TEXTURE2D_DESC {
+                    Width: window.inner_size().width as _,
+                    Height: window.inner_size().height as _,
+                    MipLevels: 1,
+                    ArraySize: 1,
+                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    SampleDesc: DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: D3D11_BIND_RENDER_TARGET,
+                    CPUAccessFlags: Default::default(),
+                    MiscFlags: Default::default(),
+                },
+                None,
+            )
+            .context("Failed to create RT1 texture")?;
+
+        device.CreateRenderTargetView(&tex, None)?
+    };
+
+    let mut rtv2 = unsafe {
+        let tex = device
+            .CreateTexture2D(
+                &D3D11_TEXTURE2D_DESC {
+                    Width: window.inner_size().width as _,
+                    Height: window.inner_size().height as _,
+                    MipLevels: 1,
+                    ArraySize: 1,
+                    Format: DXGI_FORMAT_R8G8B8A8_TYPELESS,
+                    SampleDesc: DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: D3D11_BIND_RENDER_TARGET,
+                    CPUAccessFlags: Default::default(),
+                    MiscFlags: Default::default(),
+                },
+                None,
+            )
+            .context("Failed to create RT2 texture")?;
+
+        device.CreateRenderTargetView(&tex, None)?
     };
 
     let mut placement_groups = vec![];
@@ -674,7 +724,7 @@ pub fn main() -> anyhow::Result<()> {
                         }]));
                         device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                        render_target_view = new_rtv;
+                        rtv0 = new_rtv;
                     },
                     WindowEvent::ScaleFactorChanged { .. } => {
                         // renderer.resize();
@@ -784,10 +834,9 @@ pub fn main() -> anyhow::Result<()> {
                 last_frame = Instant::now();
 
                 unsafe {
-                    device_context.ClearRenderTargetView(
-                        &render_target_view,
-                        [1.0, 0.0, 0.0, 1.0].as_ptr() as _,
-                    );
+                    device_context.ClearRenderTargetView(&rtv0, [0.2, 0.2, 0.2, 1.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&rtv1, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&rtv2, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
                     device_context.ClearDepthStencilView(
                         &depth_stencil_view,
                         D3D11_CLEAR_DEPTH.0 as _,
@@ -802,7 +851,7 @@ pub fn main() -> anyhow::Result<()> {
                         Some(&mut 1),
                     );
                     device_context.OMSetRenderTargets(
-                        Some(&[Some(render_target_view.clone())]),
+                        Some(&[Some(rtv0.clone()), Some(rtv1.clone()), Some(rtv2.clone())]),
                         &depth_stencil_view,
                     );
 
@@ -820,7 +869,7 @@ pub fn main() -> anyhow::Result<()> {
                     );
                     let view = camera.calculate_matrix();
 
-                    let view_proj = view * projection;
+                    // let view_proj = view * projection;
                     // Mat4::from_quat(camera_rot) * Mat4::from_translation(position) * y_to_z_up;
 
                     let bmap = device_context
@@ -915,7 +964,7 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_model_cbuffer.clone())]),
                                     );
 
-                                    let cb11_data = vec![Vec4::ONE; 64];
+                                    let cb11_data = vec![Vec4::splat(0.5); 64];
                                     let bmap = device_context
                                         .Map(&le_model_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
                                         .context("Failed to map model cbuffer11")
@@ -929,6 +978,10 @@ pub fn main() -> anyhow::Result<()> {
                                     device_context.Unmap(&le_model_cb11, 0);
                                     device_context.VSSetConstantBuffers(
                                         11,
+                                        Some(&[Some(le_model_cb11.clone())]),
+                                    );
+                                    device_context.PSSetConstantBuffers(
+                                        0,
                                         Some(&[Some(le_model_cb11.clone())]),
                                     );
 
