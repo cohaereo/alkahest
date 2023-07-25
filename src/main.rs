@@ -729,6 +729,19 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
+    let le_pixel_cb12 = unsafe {
+        device.CreateBuffer(
+            &D3D11_BUFFER_DESC {
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
+                ByteWidth: (4 * 4) * 8,
+                ..Default::default()
+            },
+            None,
+        )?
+    };
+
     let rasterizer_state = unsafe {
         device
             .CreateRasterizerState(&D3D11_RASTERIZER_DESC {
@@ -1038,6 +1051,21 @@ pub fn main() -> anyhow::Result<()> {
                     );
 
                     device_context.Unmap(&le_cbuffer, 0);
+
+                    let bmap = device_context
+                        .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                        .unwrap();
+
+                    let mut cb12_data = vec![Vec4::ZERO; 8];
+                    cb12_data[7] = camera.front.extend(1.0);
+
+                    bmap.pData.copy_from_nonoverlapping(
+                        cb12_data.as_ptr() as _,
+                        8 * std::mem::size_of::<Vec4>(),
+                    );
+
+                    device_context.Unmap(&le_pixel_cb12, 0);
+
                     device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
                     // device_context.VSSetConstantBuffers(12, Some(&[Some(le_cbuffer.clone())]));
 
@@ -1058,6 +1086,8 @@ pub fn main() -> anyhow::Result<()> {
                             Some(le_sampler.clone()),
                         ]),
                     );
+
+                    device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
 
                     // device_context.Draw(4, 0);
                     // model.draw(&device_context);

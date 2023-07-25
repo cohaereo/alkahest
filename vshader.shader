@@ -36,11 +36,8 @@ void VShader(
     // [00:37]Delta: then theres sometimes v6 and 7 which i've seen used for FrontFace
     o0 = mul(in_normal, normalMatrix);
     o1 = in_tangent;
-    o2 = -in_tangent;
+    o2 = float4(normalize( cross( in_tangent.xyz, o0.xyz ) ) * in_tangent.w, 1.0);
     o3 = in_texcoord.xyxy;
-    o4 = float4(0, 0, 0, 0);
+    o4 = float4(1, 1, 1, 1);
     o5 = in_color;
-    // output.color = modelColor * (texcoord.x * 0.5 + 0.5);
-
-    // return output;
 }
