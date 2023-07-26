@@ -99,22 +99,39 @@ pub fn get_string(
     Some(final_string)
 }
 
+macro_rules! time_it {
+    ($name:expr, $code:block) => {
+        let bench_start = Instant::now();
+
+        $code
+
+        info!(
+            "{} took {}s",
+            $name, bench_start.elapsed().as_secs_f32()
+        );
+    };
+}
+
 pub fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        // .with_max_level(tracing::Level::DEBUG)
         .init();
     // tracing_subscriber::fmt().init();
 
-    let pkg_path = std::env::args().nth(1).unwrap_or_default();
-    let package = Destiny2PreBeyondLight
-        .open(&pkg_path)
-        .expect("Failed to open package");
-    let mut package_manager = PackageManager::new(
-        PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
-        Destiny2PreBeyondLight,
-        true,
-    )
-    .unwrap();
+    let package;
+    let mut package_manager;
+    time_it!("Initializing package manager", {
+        let pkg_path = std::env::args().nth(1).unwrap_or_default();
+        package = Destiny2PreBeyondLight
+            .open(&pkg_path)
+            .expect("Failed to open package");
+        package_manager = PackageManager::new(
+            PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
+            Destiny2PreBeyondLight,
+            true,
+        )
+        .unwrap();
+    });
 
     // return;
     // Winit event loop
@@ -151,7 +168,7 @@ pub fn main() -> anyhow::Result<()> {
         DXGI_SWAP_CHAIN_DESC {
             BufferDesc: buffer_descriptor,
             SampleDesc: sample_descriptor,
-            BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+            BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT,
             BufferCount: 1,
             OutputWindow: match window.raw_window_handle() {
                 RawWindowHandle::Win32(h) => unsafe { transmute(h.hwnd) },
@@ -168,7 +185,7 @@ pub fn main() -> anyhow::Result<()> {
             None,
             D3D_DRIVER_TYPE_HARDWARE,
             HINSTANCE::default(),
-            D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_DEBUG,
+            D3D11_CREATE_DEVICE_SINGLETHREADED, // | D3D11_CREATE_DEVICE_DEBUG,
             Some(&[D3D_FEATURE_LEVEL_11_1]),
             D3D11_SDK_VERSION,
             Some(&swap_chain_description),
@@ -183,13 +200,53 @@ pub fn main() -> anyhow::Result<()> {
     let device_context = device_context.unwrap();
     let swap_chain = swap_chain.unwrap();
 
-    let mut rtv0 = unsafe {
+    let mut swapchain_target = unsafe {
         let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
-
         device.CreateRenderTargetView(&buffer, None)?
     };
 
-    let mut rtv1 = unsafe {
+    let (mut rtv0, rtv0_view) = unsafe {
+        let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
+        let tex = device
+            .CreateTexture2D(
+                &D3D11_TEXTURE2D_DESC {
+                    Width: window.inner_size().width as _,
+                    Height: window.inner_size().height as _,
+                    MipLevels: 1,
+                    ArraySize: 1,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    SampleDesc: DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+                    CPUAccessFlags: Default::default(),
+                    MiscFlags: Default::default(),
+                },
+                None,
+            )
+            .context("Failed to create RT1 texture")?;
+
+        (
+            device.CreateRenderTargetView(&tex, None)?,
+            device.CreateShaderResourceView(
+                &tex,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Texture2D: D3D11_TEX2D_SRV {
+                            MostDetailedMip: 0,
+                            MipLevels: 1,
+                        },
+                    },
+                }),
+            )?,
+        )
+    };
+
+    let (mut rtv1, rtv1_view) = unsafe {
         let tex = device
             .CreateTexture2D(
                 &D3D11_TEXTURE2D_DESC {
@@ -203,7 +260,7 @@ pub fn main() -> anyhow::Result<()> {
                         Quality: 0,
                     },
                     Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_RENDER_TARGET,
+                    BindFlags: D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
                     CPUAccessFlags: Default::default(),
                     MiscFlags: Default::default(),
                 },
@@ -211,10 +268,25 @@ pub fn main() -> anyhow::Result<()> {
             )
             .context("Failed to create RT1 texture")?;
 
-        device.CreateRenderTargetView(&tex, None)?
+        (
+            device.CreateRenderTargetView(&tex, None)?,
+            device.CreateShaderResourceView(
+                &tex,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Texture2D: D3D11_TEX2D_SRV {
+                            MostDetailedMip: 0,
+                            MipLevels: 1,
+                        },
+                    },
+                }),
+            )?,
+        )
     };
 
-    let mut rtv2 = unsafe {
+    let (mut rtv2, rtv2_view) = unsafe {
         let tex = device
             .CreateTexture2D(
                 &D3D11_TEXTURE2D_DESC {
@@ -228,7 +300,7 @@ pub fn main() -> anyhow::Result<()> {
                         Quality: 0,
                     },
                     Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_RENDER_TARGET,
+                    BindFlags: D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
                     CPUAccessFlags: Default::default(),
                     MiscFlags: Default::default(),
                 },
@@ -236,7 +308,22 @@ pub fn main() -> anyhow::Result<()> {
             )
             .context("Failed to create RT2 texture")?;
 
-        device.CreateRenderTargetView(&tex, None)?
+        (
+            device.CreateRenderTargetView(&tex, None)?,
+            device.CreateShaderResourceView(
+                &tex,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: DXGI_FORMAT_R8G8B8A8_TYPELESS,
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Texture2D: D3D11_TEX2D_SRV {
+                            MostDetailedMip: 0,
+                            MipLevels: 1,
+                        },
+                    },
+                }),
+            )?,
+        )
     };
 
     let mut placement_groups = vec![];
@@ -246,7 +333,7 @@ pub fn main() -> anyhow::Result<()> {
         let placements: Unk8080966d = package_manager
             .read_tag_struct(TagHash::new(package.pkg_id(), *pi as _))
             .unwrap();
-        info!(
+        debug!(
             "{i} Placement group {pi}, {} statics, {} instances ({:?})",
             TagHash::new(package.pkg_id(), *pi as _),
             placements.statics.len(),
@@ -272,29 +359,34 @@ pub fn main() -> anyhow::Result<()> {
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
     let mut cbuffer_map: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
-    for almostloadable in &to_load {
-        // let almostloadable = &TagHash::new(package.pkg_id(), 637);
 
-        let mheader: Unk808071a7 = package_manager.read_tag_struct(*almostloadable).unwrap();
-        for m in &mheader.materials {
-            let mat: material::Unk808071e8 = package_manager.read_tag_struct(*m).unwrap();
-            material_map.insert(m.0, mat);
-        }
+    time_it!("Loading statics", {
+        for almostloadable in &to_load {
+            // let almostloadable = &TagHash::new(package.pkg_id(), 637);
 
-        match StaticModel::load(mheader, &device, &device_context, &mut package_manager) {
-            Ok(model) => {
-                static_map.insert(almostloadable.0, model);
-                // info!(model = ?almostloadable, "Successfully loaded model");
+            let mheader: Unk808071a7 = package_manager.read_tag_struct(*almostloadable).unwrap();
+            for m in &mheader.materials {
+                let mat: material::Unk808071e8 = package_manager.read_tag_struct(*m).unwrap();
+                material_map.insert(m.0, mat);
             }
-            Err(e) => {
-                error!(model = ?almostloadable, "Failed to load model: {e}");
+
+            match StaticModel::load(mheader, &device, &device_context, &mut package_manager) {
+                Ok(model) => {
+                    static_map.insert(almostloadable.0, model);
+                    // info!(model = ?almostloadable, "Successfully loaded model");
+                }
+                Err(e) => {
+                    error!(model = ?almostloadable, "Failed to load model: {e}");
+                }
             }
         }
-    }
+    });
 
-    println!("Compiling shaders");
+    info!("Loaded {} statics", static_map.len());
+
     let mut vshader = None;
-    // let mut pshader = None;
+    let mut vshader_fullscreen = None;
+    let mut pshader_fullscreen = None;
     let mut errors = None;
 
     let flags = if cfg!(debug_assertions) {
@@ -316,18 +408,30 @@ pub fn main() -> anyhow::Result<()> {
                 Some(&mut errors),
             )
             .context("Failed to compile vertex shader")?,
-            // D3DCompileFromFile(
-            //     w!("shaders.shader"),
-            //     None,
-            //     None,
-            //     s!("PShader"),
-            //     s!("ps_5_0"),
-            //     flags,
-            //     0,
-            //     &mut pshader,
-            //     Some(&mut errors),
-            // )
-            // .context("Failed to compile pixel shader")?,
+            D3DCompileFromFile(
+                w!("fullscreen.shader"),
+                None,
+                None,
+                s!("VShader"),
+                s!("vs_5_0"),
+                flags,
+                0,
+                &mut vshader_fullscreen,
+                Some(&mut errors),
+            )
+            .context("Failed to compile vertex shader")?,
+            D3DCompileFromFile(
+                w!("fullscreen.shader"),
+                None,
+                None,
+                s!("PShader"),
+                s!("ps_5_0"),
+                flags,
+                0,
+                &mut pshader_fullscreen,
+                Some(&mut errors),
+            )
+            .context("Failed to compile pixel shader")?,
         )
     };
 
@@ -341,9 +445,10 @@ pub fn main() -> anyhow::Result<()> {
     }
 
     let vshader = vshader.unwrap();
+    let vshader_fullscreen = vshader_fullscreen.unwrap();
+    let pshader_fullscreen = pshader_fullscreen.unwrap();
     // let pshader = pshader.unwrap();
 
-    println!("Creating vertex layout");
     let vertex_layout = unsafe {
         let vs_blob = std::slice::from_raw_parts(
             vshader.GetBufferPointer() as *const u8,
@@ -405,275 +510,301 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
-    println!("Creating shaders");
-    for (t, m) in material_map.iter() {
-        // println!(
-        //     "{t:08x} VS {:?} - {} {} {} {}",
-        //     m.vertex_shader,
-        //     m.unk68.len(),
-        //     m.unk78.len(),
-        //     m.unk88.len(),
-        //     m.unk98.len(),
-        // );
-        println!(
-            "{t:08x} PS {:?} - {} {} {} {}",
-            m.pixel_shader,
-            m.unk2e8.len(),
-            m.unk2f8.len(),
-            m.unk308.len(),
-            m.unk318.len()
-        );
+    time_it!("Loading shaders", {
+        for (t, m) in material_map.iter() {
+            // println!(
+            //     "{t:08x} VS {:?} - {} {} {} {}",
+            //     m.vertex_shader,
+            //     m.unk68.len(),
+            //     m.unk78.len(),
+            //     m.unk88.len(),
+            //     m.unk98.len(),
+            // );
+            // println!(
+            //     "{t:08x} PS {:?} - {} {} {} {}",
+            //     m.pixel_shader,
+            //     m.unk2e8.len(),
+            //     m.unk2f8.len(),
+            //     m.unk308.len(),
+            //     m.unk318.len()
+            // );
 
-        if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
-            vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
-                info!("Loading VShader {:?}", m.vertex_shader);
-                let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
-                unsafe {
-                    device
-                        .CreateVertexShader(&vs_data, None)
-                        .context("Failed to load vertex shader")
+            if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
+                vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
+                    debug!("Loading VShader {:?}", m.vertex_shader);
+                    let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                    unsafe {
+                        device
+                            .CreateVertexShader(&vs_data, None)
+                            .context("Failed to load vertex shader")
+                            .unwrap()
+                    }
+                });
+            }
+
+            if let Ok(v) = package_manager.get_entry_by_tag(m.pixel_shader) {
+                pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
+                    debug!("Loading PShader {:?}", m.pixel_shader);
+                    let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                    unsafe {
+                        // let mut reflector: *mut ID3D11ShaderReflection = ptr::null_mut();
+                        // D3DReflect(
+                        //     ps_data.as_ptr() as _,
+                        //     ps_data.len() as _,
+                        //     &ID3D11ShaderReflection::IID,
+                        //     &mut reflector as *mut *mut ID3D11ShaderReflection as _,
+                        // )
+                        // .unwrap();
+                        //
+                        // // if !reflector.is_null() {
+                        // if false {
+                        //     let desc = (*reflector).GetDesc().unwrap();
+                        //
+                        //     println!("{} cbuffers", desc.ConstantBuffers);
+                        //     for i in 0..desc.ConstantBuffers {
+                        //         if let Some(cb) = (*reflector).GetConstantBufferByIndex(i) {
+                        //             println!("Got cb");
+                        //             let mut cb_desc = Default::default();
+                        //             if cb.GetDesc(&mut cb_desc).is_ok() {
+                        //                 println!("Got cb_desc");
+                        //                 println!(
+                        //                     "cb{i} - name={:?} type={:?} size={}",
+                        //                     cb_desc.Name, cb_desc.Type, cb_desc.Size
+                        //                 );
+                        //             }
+                        //         }
+                        //     }
+                        // } else {
+                        //     error!("Couldn't make a reflector");
+                        // }
+
+                        device
+                            .CreatePixelShader(&ps_data, None)
+                            .context("Failed to load pixel shader")
+                            .unwrap()
+                    }
+                });
+            }
+
+            if m.unk34c.is_valid() {
+                let buffer_header_ref = TagHash(
+                    package_manager
+                        .get_entry_by_tag(m.unk34c)
                         .unwrap()
-                }
-            });
-        }
+                        .reference,
+                );
 
-        if let Ok(v) = package_manager.get_entry_by_tag(m.pixel_shader) {
-            pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
-                info!("Loading PShader {:?}", m.pixel_shader);
-                let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
-                unsafe {
-                    // let mut reflector: *mut ID3D11ShaderReflection = ptr::null_mut();
-                    // D3DReflect(
-                    //     ps_data.as_ptr() as _,
-                    //     ps_data.len() as _,
-                    //     &ID3D11ShaderReflection::IID,
-                    //     &mut reflector as *mut *mut ID3D11ShaderReflection as _,
-                    // )
-                    // .unwrap();
-                    //
-                    // // if !reflector.is_null() {
-                    // if false {
-                    //     let desc = (*reflector).GetDesc().unwrap();
-                    //
-                    //     println!("{} cbuffers", desc.ConstantBuffers);
-                    //     for i in 0..desc.ConstantBuffers {
-                    //         if let Some(cb) = (*reflector).GetConstantBufferByIndex(i) {
-                    //             println!("Got cb");
-                    //             let mut cb_desc = Default::default();
-                    //             if cb.GetDesc(&mut cb_desc).is_ok() {
-                    //                 println!("Got cb_desc");
-                    //                 println!(
-                    //                     "cb{i} - name={:?} type={:?} size={}",
-                    //                     cb_desc.Name, cb_desc.Type, cb_desc.Size
-                    //                 );
-                    //             }
-                    //         }
-                    //     }
-                    // } else {
-                    //     error!("Couldn't make a reflector");
-                    // }
+                let buffer = package_manager.read_tag(buffer_header_ref).unwrap();
+                debug!(
+                    "Read {} bytes cbuffer from {buffer_header_ref:?}",
+                    buffer.len()
+                );
+                let buf = unsafe {
+                    device.CreateBuffer(
+                        &D3D11_BUFFER_DESC {
+                            Usage: D3D11_USAGE_DYNAMIC,
+                            BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                            CPUAccessFlags: Default::default(),
+                            ByteWidth: buffer.len() as _,
+                            ..Default::default()
+                        },
+                        Some(&D3D11_SUBRESOURCE_DATA {
+                            pSysMem: buffer.as_ptr() as _,
+                            ..Default::default()
+                        }),
+                    )?
+                };
 
-                    device
-                        .CreatePixelShader(&ps_data, None)
-                        .context("Failed to load pixel shader")
-                        .unwrap()
-                }
-            });
-        }
-
-        if m.unk34c.is_valid() {
-            let buffer_header_ref = TagHash(
-                package_manager
-                    .get_entry_by_tag(m.unk34c)
-                    .unwrap()
-                    .reference,
-            );
-
-            let buffer = package_manager.read_tag(buffer_header_ref).unwrap();
-            debug!(
-                "Read {} bytes cbuffer from {buffer_header_ref:?}",
-                buffer.len()
-            );
-            let buf = unsafe {
-                device.CreateBuffer(
-                    &D3D11_BUFFER_DESC {
-                        Usage: D3D11_USAGE_DYNAMIC,
-                        BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                        CPUAccessFlags: Default::default(),
-                        ByteWidth: buffer.len() as _,
-                        ..Default::default()
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: buffer.as_ptr() as _,
-                        ..Default::default()
-                    }),
-                )?
-            };
-
-            cbuffer_map.insert(*t, buf);
-        } else if m.unk318.len() > 1
+                cbuffer_map.insert(*t, buf);
+            } else if m.unk318.len() > 1
         // && !m.unk2f8.is_empty()
         && m.unk318
             .iter()
             .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-        {
-            let buf = unsafe {
-                device.CreateBuffer(
-                    &D3D11_BUFFER_DESC {
-                        Usage: D3D11_USAGE_DYNAMIC,
-                        BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                        CPUAccessFlags: Default::default(),
-                        ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
-                        ..Default::default()
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: m.unk318.as_ptr() as _,
-                        ..Default::default()
-                    }),
-                )?
-            };
+            {
+                let buf = unsafe {
+                    device.CreateBuffer(
+                        &D3D11_BUFFER_DESC {
+                            Usage: D3D11_USAGE_DYNAMIC,
+                            BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                            CPUAccessFlags: Default::default(),
+                            ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
+                            ..Default::default()
+                        },
+                        Some(&D3D11_SUBRESOURCE_DATA {
+                            pSysMem: m.unk318.as_ptr() as _,
+                            ..Default::default()
+                        }),
+                    )?
+                };
 
-            cbuffer_map.insert(*t, buf);
+                cbuffer_map.insert(*t, buf);
+            }
         }
-    }
+    });
 
-    let vshader = unsafe {
+    info!(
+        "Loaded {} vertex shaders, {} pixel shaders",
+        vshader_map.len(),
+        pshader_map.len()
+    );
+
+    let (vshader, vshader_fullscreen, pshader_fullscreen) = unsafe {
         let vs_blob = std::slice::from_raw_parts(
             vshader.GetBufferPointer() as *const u8,
             vshader.GetBufferSize(),
         );
         let v = device.CreateVertexShader(vs_blob, None)?;
+        let vs_blob = std::slice::from_raw_parts(
+            vshader_fullscreen.GetBufferPointer() as *const u8,
+            vshader_fullscreen.GetBufferSize(),
+        );
+        let v2 = device.CreateVertexShader(vs_blob, None)?;
+        let ps_blob = std::slice::from_raw_parts(
+            pshader_fullscreen.GetBufferPointer() as *const u8,
+            pshader_fullscreen.GetBufferSize(),
+        );
+        let v3 = device.CreatePixelShader(ps_blob, None)?;
         // let ps_blob = std::slice::from_raw_parts(
         //     pshader.GetBufferPointer() as *const u8,
         //     pshader.GetBufferSize(),
         // );
         // let p = device.CreatePixelShader(ps_blob, None)?;
 
-        v
+        (v, v2, v3)
     };
 
-    println!("Loading textures");
+    time_it!("Loading textures", {
+        let mut egui_ctx = egui::Context::default();
+        struct PackageTexture {
+            handle: ID3D11Texture2D,
+            view: ID3D11ShaderResourceView,
+            format: DxgiFormat,
+            width: u16,
+            height: u16,
+            depth: u16,
+            array_size: u16,
+            e_type: u8,
+            e_subtype: u8,
+            index: usize,
+        }
 
-    let mut egui_ctx = egui::Context::default();
-    struct PackageTexture {
-        handle: ID3D11Texture2D,
-        view: ID3D11ShaderResourceView,
-        format: DxgiFormat,
-        width: u16,
-        height: u16,
-        depth: u16,
-        array_size: u16,
-        e_type: u8,
-        e_subtype: u8,
-        index: usize,
-    }
-
-    for m in material_map.values()
-    // for (i, e) in package
-    //     .entries()
-    //     .iter()
-    //     .enumerate()
-    //     .filter(|(_, v)| v.file_type == 32 && v.file_size == 40)
-    {
-        // println!("Material");
-        for t in &m.ps_textures {
-            // println!("\t{} {:?}", t.index, t.texture);
-            let tex_hash = t.texture;
-            if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
-                continue;
-            }
-
-            let texture_header_ref = TagHash(
-                package_manager
-                    .get_entry_by_tag(tex_hash)
-                    .unwrap()
-                    .reference,
-            );
-
-            // // Skip everything but cubemaps
-            // if e.file_subtype != 2 {
-            //     continue;
-            // }
-
-            // let v = package.read_entry(i).unwrap();
-            let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
-            let texture_data = if let Some(t) = texture.large_buffer {
-                package_manager
-                    .read_tag(t)
-                    .expect("Failed to read texture data")
-            } else {
-                package_manager
-                    .read_entry(
-                        texture_header_ref.pkg_id(),
-                        texture_header_ref.entry_index() as _,
-                    )
-                    .expect("Failed to read texture data")
-                    .to_vec()
-            };
-            // let mut out_file = File::create(format!("dump/{i}.dds")).unwrap();
-            // dump_to_dds(&mut out_file, &texture, &texture_data);
-
-            // info!("Uploading texture {} {texture:?}", tex_hash);
-            let tex = unsafe {
-                let mut initial_data = [D3D11_SUBRESOURCE_DATA::default(); 6];
-                let (pitch, slice_pitch) =
-                    calculate_pitch(texture.format, texture.width as _, texture.height as _);
-
-                for (i, d) in initial_data.iter_mut().enumerate() {
-                    d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
-                    d.SysMemPitch = pitch as _;
+        for m in material_map.values()
+        // for (i, e) in package
+        //     .entries()
+        //     .iter()
+        //     .enumerate()
+        //     .filter(|(_, v)| v.file_type == 32 && v.file_size == 40)
+        {
+            // println!("Material");
+            for t in &m.ps_textures {
+                // println!("\t{} {:?}", t.index, t.texture);
+                let tex_hash = t.texture;
+                if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
+                    continue;
                 }
 
-                device
-                    .CreateTexture2D(
-                        &D3D11_TEXTURE2D_DESC {
-                            Width: texture.width as _,
-                            Height: texture.height as _,
-                            MipLevels: 1,
-                            ArraySize: texture.array_size as _,
-                            Format: texture.format.into(),
-                            SampleDesc: DXGI_SAMPLE_DESC {
-                                Count: 1,
-                                Quality: 0,
-                            },
-                            Usage: D3D11_USAGE_DEFAULT,
-                            BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                            CPUAccessFlags: Default::default(),
-                            MiscFlags: Default::default(),
-                        },
-                        Some(initial_data.as_ptr()),
-                    )
-                    .context("Failed to create texture")?
-            };
-            let view = unsafe {
-                device.CreateShaderResourceView(
-                    &tex,
-                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: texture.format.into(),
-                        ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                            Texture2D: D3D11_TEX2D_SRV {
-                                MostDetailedMip: 0,
-                                MipLevels: 1,
-                            },
-                        },
-                    }),
-                )?
-            };
+                let texture_header_ref = TagHash(
+                    package_manager
+                        .get_entry_by_tag(tex_hash)
+                        .unwrap()
+                        .reference,
+                );
 
-            unsafe {
-                device_context.PSSetShaderResources(0, Some(&[Some(view.clone())]));
+                let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
+                let texture_data = if let Some(t) = texture.large_buffer {
+                    package_manager
+                        .read_tag(t)
+                        .expect("Failed to read texture data")
+                } else {
+                    package_manager
+                        .read_entry(
+                            texture_header_ref.pkg_id(),
+                            texture_header_ref.entry_index() as _,
+                        )
+                        .expect("Failed to read texture data")
+                        .to_vec()
+                };
+                // let mut out_file = File::create(format!("dump/{i}.dds")).unwrap();
+                // dump_to_dds(&mut out_file, &texture, &texture_data);
+
+                // info!("Uploading texture {} {texture:?}", tex_hash);
+                let tex = unsafe {
+                    let mut initial_data = [D3D11_SUBRESOURCE_DATA::default(); 6];
+                    let (pitch, slice_pitch) =
+                        calculate_pitch(texture.format, texture.width as _, texture.height as _);
+
+                    for (i, d) in initial_data.iter_mut().enumerate() {
+                        d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
+                        d.SysMemPitch = pitch as _;
+                    }
+
+                    // {
+                    //     let mut bytes_remaining = texture_data.len();
+                    //     let mut mip_levels = 0;
+                    //     while bytes_remaining > 0 {
+                    //         let mip_size = slice_pitch >> mip_levels;
+                    //         if bytes_remaining < mip_size {
+                    //             break;
+                    //         }
+                    //         mip_levels += 1;
+                    //         println!(
+                    //             "mip {mip_levels}, 0x{bytes_remaining:x} -> 0x{:x} ({:?})",
+                    //             bytes_remaining - mip_size,
+                    //             texture.format
+                    //         );
+                    //         bytes_remaining -= mip_size;
+                    //     }
+                    // }
+
+                    device
+                        .CreateTexture2D(
+                            &D3D11_TEXTURE2D_DESC {
+                                Width: texture.width as _,
+                                Height: texture.height as _,
+                                MipLevels: 1,
+                                ArraySize: texture.array_size as _,
+                                Format: texture.format.into(),
+                                SampleDesc: DXGI_SAMPLE_DESC {
+                                    Count: 1,
+                                    Quality: 0,
+                                },
+                                Usage: D3D11_USAGE_DEFAULT,
+                                BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                                CPUAccessFlags: Default::default(),
+                                MiscFlags: Default::default(),
+                            },
+                            Some(initial_data.as_ptr()),
+                        )
+                        .context("Failed to create texture")?
+                };
+                let view = unsafe {
+                    device.CreateShaderResourceView(
+                        &tex,
+                        Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                            Format: texture.format.into(),
+                            ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                Texture2D: D3D11_TEX2D_SRV {
+                                    MostDetailedMip: 0,
+                                    MipLevels: 1,
+                                },
+                            },
+                        }),
+                    )?
+                };
+
+                texture_map.insert(
+                    tex_hash.0,
+                    LoadedTexture {
+                        handle: tex,
+                        view,
+                        format: texture.format,
+                    },
+                );
             }
-            texture_map.insert(
-                tex_hash.0,
-                LoadedTexture {
-                    handle: tex,
-                    view,
-                    format: texture.format,
-                },
-            );
         }
-    }
+    });
 
     info!("Loaded {} textures", texture_map.len());
 
@@ -770,11 +901,25 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
+    let cb_composite_options = unsafe {
+        device.CreateBuffer(
+            &D3D11_BUFFER_DESC {
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
+                ByteWidth: 4 * 4,
+                ..Default::default()
+            },
+            None,
+        )?
+    };
+
     let rasterizer_state = unsafe {
         device
             .CreateRasterizerState(&D3D11_RASTERIZER_DESC {
                 FillMode: D3D11_FILL_SOLID,
-                CullMode: D3D11_CULL_BACK,
+                CullMode: D3D11_CULL_NONE,
+                // CullMode: D3D11_CULL_BACK,
                 FrontCounterClockwise: true.into(),
                 DepthBias: 0,
                 DepthBiasClamp: 0.0,
@@ -888,6 +1033,49 @@ pub fn main() -> anyhow::Result<()> {
         device_context.Unmap(&le_model_cb0, 0);
     }
 
+    let matcap = unsafe {
+        const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
+        device
+            .CreateTexture2D(
+                &D3D11_TEXTURE2D_DESC {
+                    Width: 128 as _,
+                    Height: 128 as _,
+                    MipLevels: 1,
+                    ArraySize: 1 as _,
+                    Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                    SampleDesc: DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                    CPUAccessFlags: Default::default(),
+                    MiscFlags: Default::default(),
+                },
+                Some(&D3D11_SUBRESOURCE_DATA {
+                    pSysMem: MATCAP_DATA.as_ptr() as _,
+                    SysMemPitch: 128 * 4,
+                    ..Default::default()
+                } as _),
+            )
+            .context("Failed to create texture")?
+    };
+    let matcap_view = unsafe {
+        device.CreateShaderResourceView(
+            &matcap,
+            Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                    Texture2D: D3D11_TEX2D_SRV {
+                        MostDetailedMip: 0,
+                        MipLevels: 1,
+                    },
+                },
+            }),
+        )?
+    };
+
     let mut winit_app = egui_winit::State::new(&window);
 
     let mut tex_i: usize = 0;
@@ -925,7 +1113,7 @@ pub fn main() -> anyhow::Result<()> {
                             }]));
                             device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                            rtv0 = new_rtv;
+                            swapchain_target = new_rtv;
                         },
                         WindowEvent::ScaleFactorChanged { .. } => {
                             // renderer.resize();
@@ -1038,7 +1226,7 @@ pub fn main() -> anyhow::Result<()> {
                 last_frame = Instant::now();
 
                 unsafe {
-                    device_context.ClearRenderTargetView(&rtv0, [0.2, 0.2, 0.2, 1.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&rtv0, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
                     device_context.ClearRenderTargetView(&rtv1, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
                     device_context.ClearRenderTargetView(&rtv2, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
                     device_context.ClearDepthStencilView(
@@ -1071,18 +1259,13 @@ pub fn main() -> anyhow::Result<()> {
                         0.01,
                         7500.0,
                     );
-                    // let projection = Mat4::orthographic_lh(-5.0, 5.0, -5.0, 5.0, -30.0, 5000.0);
                     let view = camera.calculate_matrix();
-
-                    // let view_proj = view * projection;
-                    // Mat4::from_quat(camera_rot) * Mat4::from_translation(position) * y_to_z_up;
 
                     let bmap = device_context
                         .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
 
                     let proj_view = (projection * view);
-                    let normalized = Mat3::from_mat4(proj_view).inverse().transpose();
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view, //Mat4::from_mat3(normalized),
@@ -1102,7 +1285,7 @@ pub fn main() -> anyhow::Result<()> {
                         .unwrap();
 
                     let mut cb12_data = vec![Vec4::ZERO; 8];
-                    // cb12_data[7] = camera.front.extend(1.0);
+                    cb12_data[7] = camera.position.extend(1.0);
 
                     bmap.pData.copy_from_nonoverlapping(
                         cb12_data.as_ptr() as _,
@@ -1267,6 +1450,37 @@ pub fn main() -> anyhow::Result<()> {
                             }
                         }
                     }
+
+                    device_context
+                        .OMSetRenderTargets(Some(&[Some(swapchain_target.clone())]), None);
+                    device_context.PSSetShaderResources(
+                        0,
+                        Some(&[
+                            Some(rtv0_view.clone()),
+                            Some(rtv1_view.clone()),
+                            Some(rtv2_view.clone()),
+                            Some(matcap_view.clone()),
+                        ]),
+                    );
+
+                    let bmap = device_context
+                        .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                        .unwrap();
+                    bmap.pData.copy_from_nonoverlapping(
+                        // &scope_instance as *const ScopeStaticInstance as _,
+                        &(tex_i as u32) as *const u32 as _,
+                        4,
+                    );
+
+                    device_context.Unmap(&cb_composite_options, 0);
+                    device_context
+                        .PSSetConstantBuffers(0, Some(&[Some(cb_composite_options.clone())]));
+
+                    device_context.VSSetShader(&vshader_fullscreen, None);
+                    device_context.PSSetShader(&pshader_fullscreen, None);
+                    device_context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                    device_context.Draw(3, 0);
+                    // device_context.Draw(4, 0);
 
                     // TODO(cohae): Gbuffer view
 

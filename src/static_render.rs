@@ -148,11 +148,11 @@ impl StaticModel {
 
             for (i, v) in buffer.tex_coords.iter().enumerate() {
                 if i >= vertices.len() {
-                    warn!(
-                        "Too many texture coordinates (got {}, expected {})",
-                        buffer.tex_coords.len(),
-                        vertices.len()
-                    );
+                    // warn!(
+                    //     "Too many texture coordinates (got {}, expected {})",
+                    //     buffer.tex_coords.len(),
+                    //     vertices.len()
+                    // );
                     break;
                 }
                 vertices[i].tex_coord = [
