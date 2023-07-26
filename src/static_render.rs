@@ -247,7 +247,6 @@ impl StaticModel {
         cbuffers: &IntMap<u32, ID3D11Buffer>,
         textures: &IntMap<u32, LoadedTexture>,
         cbuffer_default: ID3D11Buffer,
-        tex_i: usize,
     ) {
         unsafe {
             for (iu, u) in self
@@ -272,12 +271,6 @@ impl StaticModel {
                         .get(iu)
                         .and_then(|m| materials.get(&m.0))
                     {
-                        // if let Some(vs) = vshaders.get(&mat.vertex_shader.0) {
-                        //     device_context.VSSetShader(vs, None);
-                        // } else {
-                        //     device_context.VSSetShader(&*ptr::null() as &ID3D11VertexShader, None);
-                        // }
-
                         if let Some(cbuffer) =
                             cbuffers.get(&self.model.materials.get(iu).unwrap().0)
                         {
@@ -302,10 +295,13 @@ impl StaticModel {
                             );
                         }
 
+                        // TODO(cohae): Might not go that well if it's None
+                        if let Some(vs) = vshaders.get(&mat.vertex_shader.0) {
+                            device_context.VSSetShader(vs, None);
+                        }
+
                         if let Some(ps) = pshaders.get(&mat.pixel_shader.0) {
                             device_context.PSSetShader(ps, None);
-                        } else {
-                            device_context.PSSetShader(&*ptr::null() as &ID3D11PixelShader, None);
                         }
 
                         // if !mat.ps_textures.is_empty() {
@@ -378,7 +374,7 @@ impl StaticModel {
                         EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     });
 
-                    device_context.DrawIndexedInstanced(p.index_count, 4, p.index_start, 0, 0);
+                    device_context.DrawIndexedInstanced(p.index_count, 1, p.index_start, 0, 0);
                 }
             }
         }

@@ -31,6 +31,6 @@ windows = { version = "0.42.0", features = [
 ] }
 raw-window-handle = "0.5.2"
 u16cstr = "0.4.0"
-glam = "0.24.1"
+glam = { version = "0.24.1", features = ["bytemuck"] }
 nohash-hasher = "0.2.0"
 fastrand = "2.0.0"

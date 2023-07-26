@@ -17,7 +17,7 @@ use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
 use egui::Widget;
-use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4};
+use glam::{Affine3A, EulerRot, Mat3, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -42,6 +42,7 @@ use crate::dxgi::{calculate_pitch, DxgiFormat};
 use crate::entity::{
     decode_vertices, ELodCategory, EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
 };
+use crate::scopes::{ScopeStaticInstance, ScopeView};
 use crate::static_render::{LoadedTexture, StaticModel};
 use crate::statics::{Unk80807194, Unk8080719a, Unk808071a7, Unk8080966d};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
@@ -53,6 +54,7 @@ mod dds;
 mod dxgi;
 mod entity;
 mod material;
+mod scopes;
 mod static_render;
 mod statics;
 mod structure;
@@ -696,7 +698,7 @@ pub fn main() -> anyhow::Result<()> {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: 2 * (4 * 4 * 4),
+                ByteWidth: 2 * (4 * 4 * 4) + 4 * 4,
                 ..Default::default()
             },
             None,
@@ -723,6 +725,32 @@ pub fn main() -> anyhow::Result<()> {
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
                 ByteWidth: (64 * 4) * 4,
+                ..Default::default()
+            },
+            None,
+        )?
+    };
+
+    let le_vertex_cb11 = unsafe {
+        device.CreateBuffer(
+            &D3D11_BUFFER_DESC {
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
+                ByteWidth: (16 * std::mem::size_of::<ScopeStaticInstance>()) as _,
+                ..Default::default()
+            },
+            None,
+        )?
+    };
+
+    let le_vertex_cb12 = unsafe {
+        device.CreateBuffer(
+            &D3D11_BUFFER_DESC {
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
+                ByteWidth: std::mem::size_of::<ScopeView>() as _,
                 ..Default::default()
             },
             None,
@@ -1026,7 +1054,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.RSSetState(&rasterizer_state);
 
-                    device_context.VSSetShader(&vshader, None);
+                    // device_context.VSSetShader(&vshader, None);
                     // device_context.PSSetShader(&pshader, None);
                     device_context.IASetInputLayout(&vertex_layout);
 
@@ -1034,40 +1062,50 @@ pub fn main() -> anyhow::Result<()> {
                         90f32.to_radians(),
                         window_dims.width as f32 / window_dims.height as f32,
                         0.01,
-                        3000.0,
+                        7500.0,
                     );
+                    // let projection = Mat4::orthographic_lh(-5.0, 5.0, -5.0, 5.0, -30.0, 5000.0);
                     let view = camera.calculate_matrix();
 
                     // let view_proj = view * projection;
                     // Mat4::from_quat(camera_rot) * Mat4::from_translation(position) * y_to_z_up;
 
                     let bmap = device_context
-                        .Map(&le_cbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                        .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
 
+                    let proj_view = (projection * view);
+                    let normalized = Mat3::from_mat4(proj_view).inverse().transpose();
+
+                    let scope_view = ScopeView {
+                        world_to_projective: proj_view, //Mat4::from_mat3(normalized),
+                        camera_to_world: view.transpose(),
+                        _13: proj_view.w_axis,
+                        ..Default::default()
+                    };
                     bmap.pData.copy_from_nonoverlapping(
-                        &(projection, view) as *const (Mat4, Mat4) as _,
-                        2 * std::mem::size_of::<Mat4>(),
+                        &scope_view as *const ScopeView as _,
+                        std::mem::size_of::<ScopeView>(),
                     );
 
-                    device_context.Unmap(&le_cbuffer, 0);
+                    device_context.Unmap(&le_vertex_cb12, 0);
 
-                    let bmap = device_context
-                        .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                        .unwrap();
+                    // let bmap = device_context
+                    //     .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                    //     .unwrap();
+                    //
+                    // let mut cb12_data = vec![Vec4::ZERO; 8];
+                    // // cb12_data[7] = camera.front.extend(1.0);
+                    //
+                    // bmap.pData.copy_from_nonoverlapping(
+                    //     cb12_data.as_ptr() as _,
+                    //     8 * std::mem::size_of::<Vec4>(),
+                    // );
+                    //
+                    // device_context.Unmap(&le_pixel_cb12, 0);
 
-                    let mut cb12_data = vec![Vec4::ZERO; 8];
-                    cb12_data[7] = camera.front.extend(1.0);
-
-                    bmap.pData.copy_from_nonoverlapping(
-                        cb12_data.as_ptr() as _,
-                        8 * std::mem::size_of::<Vec4>(),
-                    );
-
-                    device_context.Unmap(&le_pixel_cb12, 0);
-
-                    device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
-                    // device_context.VSSetConstantBuffers(12, Some(&[Some(le_cbuffer.clone())]));
+                    // device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
+                    device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
                     // if !textures.is_empty() {
                     //     let le_texture = &textures[tex_i % textures.len()];
@@ -1118,54 +1156,98 @@ pub fn main() -> anyhow::Result<()> {
                                         )) * Mat4::from_scale(Vec3::splat(transform.scale.x));
 
                                     let normal_matrix = model_matrix.inverse().transpose();
-
-                                    const RANDOM_COLORS: [u32; 64] = [
-                                        0xFFE4C4, 0x008080, 0x00FA9A, 0xF5DEB3, 0x8FBC8F, 0x7FFF00,
-                                        0x6A5ACD, 0xFF1493, 0x5F9EA0, 0x7B68EE, 0x778899, 0xFFF0F5,
-                                        0xDA70D6, 0xF0F8FF, 0xCD853F, 0xFFC0CB, 0xFFE4E1, 0x000080,
-                                        0xB0E0E6, 0xD3D3D3, 0x2F4F4F, 0x483D8B, 0xA0522D, 0xBC8F8F,
-                                        0x228B22, 0xEE82EE, 0xFF00FF, 0xFF0000, 0xFFB6C1, 0x20B2AA,
-                                        0xFFFAF0, 0xD8BFD8, 0x0000FF, 0xA52A2A, 0xFFFFE0, 0xF5FFFA,
-                                        0x9370DB, 0x2E8B57, 0x9932CC, 0xFFFFF0, 0x87CEEB, 0x48D1CC,
-                                        0xEEE8AA, 0x00008B, 0xF0E68C, 0x3CB371, 0x87CEFA, 0xE0FFFF,
-                                        0xADD8E6, 0xFF8C00, 0x00FF00, 0xFF69B4, 0xDC143C, 0xBDB76B,
-                                        0x006400, 0xF08080, 0xFFFAFA, 0xFF4500, 0xDCDCDC, 0x708090,
-                                        0xFDF5E6, 0x808000, 0xC0C0C0, 0x7B68EE,
-                                    ];
-
-                                    let color = {
-                                        let c = RANDOM_COLORS
-                                            [model_hash.0 as usize % RANDOM_COLORS.len()];
-
-                                        let r = (c >> 16) as u8;
-                                        let g = (c >> 8) as u8;
-                                        let b = c as u8;
-
-                                        Vec3::new(r as f32 / 255., g as f32 / 255., b as f32 / 255.)
-                                    };
-
                                     let bmap = device_context
-                                        .Map(&le_model_cbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                                        .context("Failed to map model cbuffer")
+                                        .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
                                         .unwrap();
 
+                                    let model_affine = Affine3A::from_mat4(model_matrix);
+
+                                    // let scope_instance = ScopeStaticInstance {
+                                    //     mesh_to_world: model_matrix,
+                                    //     // _0: [
+                                    //     //     model_matrix.x_axis, //Vec4::new(1.0, 0.0, 0.0, 0.0), // instance_matrix.x_axis,
+                                    //     //     model_matrix.y_axis, //Vec4::new(0.0, 1.0, 0.0, 0.0), // instance_matrix.y_axis,
+                                    //     //     model_matrix.z_axis, //Vec4::new(0.0, 0.0, 1.0, 0.0), // instance_matrix.z_axis,
+                                    //     // ],
+                                    //     // _3: Vec4::new(1.0, 0.0, 1.0, f32::from_bits(u32::MAX)),
+                                    // };
+
+                                    let scope_instance = Mat4 {
+                                        x_axis: model_affine
+                                            .x_axis
+                                            .extend(model_affine.translation.x),
+                                        y_axis: model_affine
+                                            .y_axis
+                                            .extend(model_affine.translation.y),
+                                        z_axis: model_affine
+                                            .z_axis
+                                            .extend(model_affine.translation.z),
+                                        w_axis: Vec4::new(1.0, 0.0, 0.0, f32::from_bits(u32::MAX)),
+                                    };
+                                    let bdata = vec![scope_instance; 16];
                                     bmap.pData.copy_from_nonoverlapping(
-                                        &(model_matrix, normal_matrix, color)
-                                            as *const (Mat4, Mat4, Vec3)
-                                            as _,
-                                        std::mem::size_of::<(Mat4, Mat4, Vec3)>(),
+                                        // &scope_instance as *const ScopeStaticInstance as _,
+                                        bdata.as_ptr() as _,
+                                        16 * std::mem::size_of::<Mat4>(),
                                     );
 
-                                    device_context.Unmap(&le_model_cbuffer, 0);
-                                    device_context.VSSetConstantBuffers(
-                                        1,
-                                        Some(&[Some(le_model_cbuffer.clone())]),
-                                    );
-
+                                    device_context.Unmap(&le_vertex_cb11, 0);
                                     device_context.VSSetConstantBuffers(
                                         11,
-                                        Some(&[Some(le_model_cb0.clone())]),
+                                        Some(&[Some(le_vertex_cb11.clone())]),
                                     );
+
+                                    // const RANDOM_COLORS: [u32; 64] = [
+                                    //     0xFFE4C4, 0x008080, 0x00FA9A, 0xF5DEB3, 0x8FBC8F, 0x7FFF00,
+                                    //     0x6A5ACD, 0xFF1493, 0x5F9EA0, 0x7B68EE, 0x778899, 0xFFF0F5,
+                                    //     0xDA70D6, 0xF0F8FF, 0xCD853F, 0xFFC0CB, 0xFFE4E1, 0x000080,
+                                    //     0xB0E0E6, 0xD3D3D3, 0x2F4F4F, 0x483D8B, 0xA0522D, 0xBC8F8F,
+                                    //     0x228B22, 0xEE82EE, 0xFF00FF, 0xFF0000, 0xFFB6C1, 0x20B2AA,
+                                    //     0xFFFAF0, 0xD8BFD8, 0x0000FF, 0xA52A2A, 0xFFFFE0, 0xF5FFFA,
+                                    //     0x9370DB, 0x2E8B57, 0x9932CC, 0xFFFFF0, 0x87CEEB, 0x48D1CC,
+                                    //     0xEEE8AA, 0x00008B, 0xF0E68C, 0x3CB371, 0x87CEFA, 0xE0FFFF,
+                                    //     0xADD8E6, 0xFF8C00, 0x00FF00, 0xFF69B4, 0xDC143C, 0xBDB76B,
+                                    //     0x006400, 0xF08080, 0xFFFAFA, 0xFF4500, 0xDCDCDC, 0x708090,
+                                    //     0xFDF5E6, 0x808000, 0xC0C0C0, 0x7B68EE,
+                                    // ];
+                                    //
+                                    // let color = {
+                                    //     let c = RANDOM_COLORS
+                                    //         [model_hash.0 as usize % RANDOM_COLORS.len()];
+                                    //
+                                    //     let r = (c >> 16) as u8;
+                                    //     let g = (c >> 8) as u8;
+                                    //     let b = c as u8;
+                                    //
+                                    //     Vec3::new(r as f32 / 255., g as f32 / 255., b as f32 / 255.)
+                                    // };
+                                    //
+                                    // let bmap = device_context
+                                    //     .Map(&le_model_cbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                                    //     .context("Failed to map model cbuffer")
+                                    //     .unwrap();
+                                    //
+                                    // bmap.pData.copy_from_nonoverlapping(
+                                    //     &(model_matrix, normal_matrix, color)
+                                    //         as *const (Mat4, Mat4, Vec3)
+                                    //         as _,
+                                    //     std::mem::size_of::<(Mat4, Mat4, Vec3)>(),
+                                    // );
+                                    //
+                                    // device_context.Unmap(&le_model_cbuffer, 0);
+                                    // device_context.VSSetConstantBuffers(
+                                    //     11,
+                                    //     Some(&[Some(le_model_cbuffer.clone())]),
+                                    // );
+                                    // device_context.VSSetConstantBuffers(
+                                    //     1,
+                                    //     Some(&[Some(le_model_cbuffer.clone())]),
+                                    // );
+                                    //
+                                    // device_context.VSSetConstantBuffers(
+                                    //     11,
+                                    //     Some(&[Some(le_model_cb0.clone())]),
+                                    // );
                                     // device_context.PSSetConstantBuffers(
                                     //     0,
                                     //     Some(&[Some(le_model_cb0.clone())]),
@@ -1179,12 +1261,13 @@ pub fn main() -> anyhow::Result<()> {
                                         &cbuffer_map,
                                         &texture_map,
                                         le_model_cb0.clone(),
-                                        tex_i,
                                     );
                                 }
                             }
                         }
                     }
+
+                    // TODO(cohae): Gbuffer view
 
                     swap_chain.Present(1, 0).unwrap()
                 };
