@@ -17,7 +17,7 @@ use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
 use egui::Widget;
-use glam::{Affine3A, EulerRot, Mat3, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4};
+use glam::{Affine3A, EulerRot, Mat3, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -888,6 +888,8 @@ pub fn main() -> anyhow::Result<()> {
         device_context.Unmap(&le_model_cb0, 0);
     }
 
+    let mut winit_app = egui_winit::State::new(&window);
+
     let mut tex_i: usize = 0;
     let mut placement_i: usize = 1;
     let mut last_frame = Instant::now();
@@ -895,135 +897,140 @@ pub fn main() -> anyhow::Result<()> {
     event_loop.run(move |event, _, control_flow| {
         match &event {
             Event::WindowEvent { event, .. } => {
-                match event {
-                    WindowEvent::Resized(new_dims) => unsafe {
-                        swap_chain
-                            .ResizeBuffers(
-                                1,
-                                new_dims.width,
-                                new_dims.height,
-                                DXGI_FORMAT_B8G8R8A8_UNORM,
-                                0,
-                            )
-                            .expect("Failed to resize swapchain");
+                // if !winit_app.on_event(ctx, event).consumed {
+                if true {
+                    match event {
+                        WindowEvent::Resized(new_dims) => unsafe {
+                            swap_chain
+                                .ResizeBuffers(
+                                    1,
+                                    new_dims.width,
+                                    new_dims.height,
+                                    DXGI_FORMAT_B8G8R8A8_UNORM,
+                                    0,
+                                )
+                                .expect("Failed to resize swapchain");
 
-                        let bb: ID3D11Texture2D = swap_chain.GetBuffer(0).unwrap();
+                            let bb: ID3D11Texture2D = swap_chain.GetBuffer(0).unwrap();
 
-                        let new_rtv = device.CreateRenderTargetView(&bb, None).unwrap();
+                            let new_rtv = device.CreateRenderTargetView(&bb, None).unwrap();
 
-                        device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-                            TopLeftX: 0.0,
-                            TopLeftY: 0.0,
-                            Width: new_dims.width as f32,
-                            Height: new_dims.height as f32,
-                            MinDepth: 0.0,
-                            MaxDepth: 1.0,
-                        }]));
-                        device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
+                            device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                                TopLeftX: 0.0,
+                                TopLeftY: 0.0,
+                                Width: new_dims.width as f32,
+                                Height: new_dims.height as f32,
+                                MinDepth: 0.0,
+                                MaxDepth: 1.0,
+                            }]));
+                            device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                        rtv0 = new_rtv;
-                    },
-                    WindowEvent::ScaleFactorChanged { .. } => {
-                        // renderer.resize();
-                    }
-                    WindowEvent::CloseRequested => {
-                        *control_flow = ControlFlow::Exit;
-                    }
-                    WindowEvent::MouseInput { state, button, .. } => {
-                        if button == &MouseButton::Left {
-                            input_state.mouse1 = *state == ElementState::Pressed
+                            rtv0 = new_rtv;
+                        },
+                        WindowEvent::ScaleFactorChanged { .. } => {
+                            // renderer.resize();
                         }
-                    }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        if let Some(ref mut p) = last_cursor_pos {
-                            let delta = (position.x - p.x, position.y - p.y);
+                        WindowEvent::CloseRequested => {
+                            *control_flow = ControlFlow::Exit;
+                        }
+                        WindowEvent::MouseInput { state, button, .. } => {
+                            if button == &MouseButton::Left {
+                                input_state.mouse1 = *state == ElementState::Pressed
+                            }
+                        }
+                        WindowEvent::CursorMoved { position, .. } => {
+                            if let Some(ref mut p) = last_cursor_pos {
+                                let delta = (position.x - p.x, position.y - p.y);
 
-                            if input_state.mouse1 {
-                                camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
-                                // rotation -= Vec2::new(delta.1 as f32, delta.0 as f32) * 0.005;
+                                if input_state.mouse1 {
+                                    camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
+                                    // rotation -= Vec2::new(delta.1 as f32, delta.0 as f32) * 0.005;
+                                }
+
+                                last_cursor_pos = Some(*position);
+                            } else {
+                                last_cursor_pos = Some(*position);
+                            }
+                        }
+                        WindowEvent::ModifiersChanged(modifiers) => {
+                            input_state.shift = modifiers.shift();
+                            input_state.ctrl = modifiers.ctrl();
+                        }
+                        WindowEvent::KeyboardInput { input, .. } => {
+                            if input.state == ElementState::Pressed {
+                                match input.virtual_keycode {
+                                    Some(VirtualKeyCode::Up) => {
+                                        tex_i = tex_i.wrapping_add(1);
+                                        info!("Switched to texture index {}", tex_i)
+                                    }
+                                    Some(VirtualKeyCode::Down) => {
+                                        tex_i = tex_i.wrapping_sub(1);
+                                        info!("Switched to texture index {}", tex_i)
+                                    }
+                                    Some(VirtualKeyCode::Right) => {
+                                        placement_i = placement_i.wrapping_add(1)
+                                    }
+
+                                    Some(VirtualKeyCode::Left) => {
+                                        placement_i = placement_i.wrapping_sub(1)
+                                    }
+
+                                    Some(VirtualKeyCode::Escape) => {
+                                        *control_flow = ControlFlow::Exit
+                                    }
+                                    _ => {}
+                                }
+
+                                if let Some(VirtualKeyCode::Right | VirtualKeyCode::Left) =
+                                    input.virtual_keycode
+                                {
+                                    info!(
+                                        "Switched to placement group {}",
+                                        placement_i % placement_groups.len()
+                                    );
+
+                                    // let mut p_min = Vec3::MAX;
+                                    // let mut p_max = Vec3::MIN;
+                                    // for t in &placement_groups[placement_i % placement_groups.len()]
+                                    //     .transforms
+                                    // {
+                                    //     let v = Vec3::new(
+                                    //         t.translation.x,
+                                    //         t.translation.y,
+                                    //         t.translation.z,
+                                    //     );
+                                    //
+                                    //     p_min = p_min.min(v);
+                                    //     p_max = p_max.max(v);
+                                    // }
+                                    //
+                                    // let center = (p_min + p_max) / 2.0;
+                                    // camera.position = center;
+                                }
                             }
 
-                            last_cursor_pos = Some(*position);
-                        } else {
-                            last_cursor_pos = Some(*position);
-                        }
-                    }
-                    WindowEvent::ModifiersChanged(modifiers) => {
-                        input_state.shift = modifiers.shift();
-                        input_state.ctrl = modifiers.ctrl();
-                    }
-                    WindowEvent::KeyboardInput { input, .. } => {
-                        if input.state == ElementState::Pressed {
                             match input.virtual_keycode {
-                                Some(VirtualKeyCode::Up) => {
-                                    tex_i = tex_i.wrapping_add(1);
-                                    info!("Switched to texture index {}", tex_i)
+                                Some(VirtualKeyCode::W) => {
+                                    input_state.w = input.state == ElementState::Pressed
                                 }
-                                Some(VirtualKeyCode::Down) => {
-                                    tex_i = tex_i.wrapping_sub(1);
-                                    info!("Switched to texture index {}", tex_i)
+                                Some(VirtualKeyCode::A) => {
+                                    input_state.a = input.state == ElementState::Pressed
                                 }
-                                Some(VirtualKeyCode::Right) => {
-                                    placement_i = placement_i.wrapping_add(1)
+                                Some(VirtualKeyCode::S) => {
+                                    input_state.s = input.state == ElementState::Pressed
                                 }
-
-                                Some(VirtualKeyCode::Left) => {
-                                    placement_i = placement_i.wrapping_sub(1)
+                                Some(VirtualKeyCode::D) => {
+                                    input_state.d = input.state == ElementState::Pressed
                                 }
-
-                                Some(VirtualKeyCode::Escape) => *control_flow = ControlFlow::Exit,
+                                Some(VirtualKeyCode::Space) => {
+                                    input_state.space = input.state == ElementState::Pressed
+                                }
                                 _ => {}
                             }
-
-                            if let Some(VirtualKeyCode::Right | VirtualKeyCode::Left) =
-                                input.virtual_keycode
-                            {
-                                info!(
-                                    "Switched to placement group {}",
-                                    placement_i % placement_groups.len()
-                                );
-
-                                // let mut p_min = Vec3::MAX;
-                                // let mut p_max = Vec3::MIN;
-                                // for t in &placement_groups[placement_i % placement_groups.len()]
-                                //     .transforms
-                                // {
-                                //     let v = Vec3::new(
-                                //         t.translation.x,
-                                //         t.translation.y,
-                                //         t.translation.z,
-                                //     );
-                                //
-                                //     p_min = p_min.min(v);
-                                //     p_max = p_max.max(v);
-                                // }
-                                //
-                                // let center = (p_min + p_max) / 2.0;
-                                // camera.position = center;
-                            }
                         }
 
-                        match input.virtual_keycode {
-                            Some(VirtualKeyCode::W) => {
-                                input_state.w = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::A) => {
-                                input_state.a = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::S) => {
-                                input_state.s = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::D) => {
-                                input_state.d = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::Space) => {
-                                input_state.space = input.state == ElementState::Pressed
-                            }
-                            _ => {}
-                        }
+                        _ => (),
                     }
-
-                    _ => (),
                 }
             }
             Event::RedrawRequested(..) => {
@@ -1090,19 +1097,19 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.Unmap(&le_vertex_cb12, 0);
 
-                    // let bmap = device_context
-                    //     .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                    //     .unwrap();
-                    //
-                    // let mut cb12_data = vec![Vec4::ZERO; 8];
-                    // // cb12_data[7] = camera.front.extend(1.0);
-                    //
-                    // bmap.pData.copy_from_nonoverlapping(
-                    //     cb12_data.as_ptr() as _,
-                    //     8 * std::mem::size_of::<Vec4>(),
-                    // );
-                    //
-                    // device_context.Unmap(&le_pixel_cb12, 0);
+                    let bmap = device_context
+                        .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                        .unwrap();
+
+                    let mut cb12_data = vec![Vec4::ZERO; 8];
+                    // cb12_data[7] = camera.front.extend(1.0);
+
+                    bmap.pData.copy_from_nonoverlapping(
+                        cb12_data.as_ptr() as _,
+                        8 * std::mem::size_of::<Vec4>(),
+                    );
+
+                    device_context.Unmap(&le_pixel_cb12, 0);
 
                     // device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
                     device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
@@ -1148,42 +1155,36 @@ pub fn main() -> anyhow::Result<()> {
                                                 transform.translation.z,
                                             ]
                                             .into(),
-                                        ) * Mat4::from_quat(Quat::from_xyzw(
-                                            transform.rotation.x,
-                                            transform.rotation.y,
-                                            transform.rotation.z,
-                                            transform.rotation.w,
-                                        )) * Mat4::from_scale(Vec3::splat(transform.scale.x));
+                                        ) * Mat4::from_quat(
+                                            Quat::from_xyzw(
+                                                transform.rotation.x,
+                                                transform.rotation.y,
+                                                transform.rotation.z,
+                                                transform.rotation.w,
+                                            )
+                                            .inverse(),
+                                        ) * Mat4::from_scale(Vec3::splat(transform.scale.x));
 
-                                    let normal_matrix = model_matrix.inverse().transpose();
                                     let bmap = device_context
                                         .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
                                         .unwrap();
 
-                                    let model_affine = Affine3A::from_mat4(model_matrix);
-
-                                    // let scope_instance = ScopeStaticInstance {
-                                    //     mesh_to_world: model_matrix,
-                                    //     // _0: [
-                                    //     //     model_matrix.x_axis, //Vec4::new(1.0, 0.0, 0.0, 0.0), // instance_matrix.x_axis,
-                                    //     //     model_matrix.y_axis, //Vec4::new(0.0, 1.0, 0.0, 0.0), // instance_matrix.y_axis,
-                                    //     //     model_matrix.z_axis, //Vec4::new(0.0, 0.0, 1.0, 0.0), // instance_matrix.z_axis,
-                                    //     // ],
-                                    //     // _3: Vec4::new(1.0, 0.0, 1.0, f32::from_bits(u32::MAX)),
-                                    // };
-
                                     let scope_instance = Mat4 {
-                                        x_axis: model_affine
+                                        x_axis: model_matrix
                                             .x_axis
-                                            .extend(model_affine.translation.x),
-                                        y_axis: model_affine
+                                            .xyz()
+                                            .extend(model_matrix.w_axis.x),
+                                        y_axis: model_matrix
                                             .y_axis
-                                            .extend(model_affine.translation.y),
-                                        z_axis: model_affine
+                                            .xyz()
+                                            .extend(model_matrix.w_axis.y),
+                                        z_axis: model_matrix
                                             .z_axis
-                                            .extend(model_affine.translation.z),
+                                            .xyz()
+                                            .extend(model_matrix.w_axis.z),
                                         w_axis: Vec4::new(1.0, 0.0, 0.0, f32::from_bits(u32::MAX)),
                                     };
+
                                     let bdata = vec![scope_instance; 16];
                                     bmap.pData.copy_from_nonoverlapping(
                                         // &scope_instance as *const ScopeStaticInstance as _,

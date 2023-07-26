@@ -34,3 +34,4 @@ u16cstr = "0.4.0"
 glam = { version = "0.24.1", features = ["bytemuck"] }
 nohash-hasher = "0.2.0"
 fastrand = "2.0.0"
+egui-winit = "0.22.0"
