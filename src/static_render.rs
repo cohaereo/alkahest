@@ -306,26 +306,6 @@ impl StaticModel {
                             device_context.PSSetShader(ps, None);
                         }
 
-                        // if !mat.ps_textures.is_empty() {
-                        //     if let Some((_, le_texture_view)) =
-                        //         textures.get(&mat.ps_textures.first().unwrap().texture.0)
-                        //     {
-                        //         device_context.PSSetShaderResources(
-                        //             0,
-                        //             Some(&[Some(le_texture_view.clone())]),
-                        //         );
-                        //     }
-                        // }
-
-                        // let mut ps_textures = vec![];
-                        // for pst in &mat.ps_textures {
-                        //     if let Some(t) = textures.get(&pst.texture.0) {
-                        //         ps_textures.push(t)
-                        //     }
-                        // }
-
-                        // if let Some(t) = ps_textures.iter().find(|l| l.format.is_srgb())
-                        // .or(ps_textures.first())
                         let vs_tex_count =
                             mat.vs_textures
                                 .iter()

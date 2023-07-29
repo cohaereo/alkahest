@@ -682,7 +682,7 @@ pub fn main() -> anyhow::Result<()> {
         }
 
         for m in material_map.values() {
-            for t in m.ps_textures.iter() {
+            for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
                 let tex_hash = t.texture;
                 if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
                     continue;
@@ -721,24 +721,6 @@ pub fn main() -> anyhow::Result<()> {
                         d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
                         d.SysMemPitch = pitch as _;
                     }
-
-                    // {
-                    //     let mut bytes_remaining = texture_data.len();
-                    //     let mut mip_levels = 0;
-                    //     while bytes_remaining > 0 {
-                    //         let mip_size = slice_pitch >> mip_levels;
-                    //         if bytes_remaining < mip_size {
-                    //             break;
-                    //         }
-                    //         mip_levels += 1;
-                    //         println!(
-                    //             "mip {mip_levels}, 0x{bytes_remaining:x} -> 0x{:x} ({:?})",
-                    //             bytes_remaining - mip_size,
-                    //             texture.format
-                    //         );
-                    //         bytes_remaining -= mip_size;
-                    //     }
-                    // }
 
                     device
                         .CreateTexture2D(
