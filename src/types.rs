@@ -1,6 +1,5 @@
 use binrw::BinRead;
 use bytemuck::{Pod, Zeroable};
-use egui::emath::Numeric;
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]

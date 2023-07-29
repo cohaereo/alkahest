@@ -6,22 +6,21 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = { version  = "1.0.71", features = ["backtrace"] }
 destiny-pkg = { version = "0.3.0", path = "../destiny2-package" }
-egui = "0.22.0"
 #egui_winit_vulkano = { path = "/home/mikaela/Downloads/egui_winit_vulkano" }
 #vulkano = "0.33.0"
 #vulkano-util = "0.33.0"
-winit = { version = "0.28.6" }
+winit = { version = "0.27.2" }
 binrw = "0.11"
 itertools = "0.11.0"
 ddsfile = "0.5.1"
 hex = "0.4.3"
 bytemuck = { version = "1.13.1", features = ["derive"] }
 tracing = "0.1.37"
-tracing-subscriber = "0.3.17"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
-windows = { version = "0.42.0", features = [
+windows = { version = "0.43.0", features = [
     "Win32_Graphics_Direct3D11",
     "Win32_Graphics_Direct3D",
     "Win32_Graphics_Dxgi",
@@ -34,4 +33,19 @@ u16cstr = "0.4.0"
 glam = { version = "0.24.1", features = ["bytemuck"] }
 nohash-hasher = "0.2.0"
 fastrand = "2.0.0"
-egui-winit = "0.22.0"
+
+imgui = "0.9.0"
+#imgui-dx11-renderer = "0.8.0"
+imgui-dx11-renderer = { path = "../imgui-dx11-renderer" }
+imgui-winit-support = "0.9.0"
+tracing-tracy = "0.10.2"
+tracy-client = "0.15.2"
+
+[package.metadata.imgui-dx11-renderer]
+targets = [
+    "x86_64-pc-windows-gnu",
+]
+[package.metadata.alkahest]
+targets = [
+    "x86_64-pc-windows-gnu",
+]

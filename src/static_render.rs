@@ -64,11 +64,14 @@ impl StaticModel {
         // }
 
         let mut buffers = vec![];
-        for (index_buffer, vertex_buffer, unk_buffer, u3) in &header.buffers {
-            let vertex_header: VertexBufferHeader = pm.read_tag_struct(*vertex_buffer).unwrap();
+        for (bi, (index_buffer, vertex_buffer_hash, unk_buffer_hash, u3)) in
+            header.buffers.iter().enumerate()
+        {
+            let vertex_header: VertexBufferHeader =
+                pm.read_tag_struct(*vertex_buffer_hash).unwrap();
 
             let t = pm
-                .get_entry_by_tag(*vertex_buffer)
+                .get_entry_by_tag(*vertex_buffer_hash)
                 .unwrap()
                 .reference
                 .into();
@@ -84,7 +87,10 @@ impl StaticModel {
             let mut buffer = DecodedVertexBuffer::default();
 
             let vertex_buffer = pm.read_tag(t).unwrap();
-            decode_vertices(&vertex_header, &vertex_buffer, &mut buffer);
+            if let Err(e) = decode_vertices(&vertex_header, &vertex_buffer, &mut buffer) {
+                error!("Failed to decode second vertex buffer: {e}");
+                continue;
+            }
 
             let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer).unwrap();
             let t = pm.get_entry_by_tag(*index_buffer).unwrap().reference.into();
@@ -99,35 +105,19 @@ impl StaticModel {
                 d.into_iter().map_into().collect()
             };
 
-            // let random_uv = (fastrand::f32() % 1.0, fastrand::f32() % 1.0);
-            // let mut vertices: Vec<(Vector3, Vector2)> = vertices
-            //     .into_iter()
-            //     .map(|v| {
-            //         (
-            //             Vector3 {
-            //                 x: v.x * model.model_scale + model.model_offset.x,
-            //                 y: v.y * model.model_scale + model.model_offset.y,
-            //                 z: v.z * model.model_scale + model.model_offset.z,
-            //             },
-            //             Vector2 { x: 0.5, y: 0.5 },
-            //         )
-            //     })
-            //     .collect();
-            // for (i, v) in unk_vertices.iter().enumerate() {
-            //     vertices[i].1 = Vector2 {
-            //         x: v.x * model.texture_coordinate_scale.x
-            //             + model.texture_coordinate_offset.x,
-            //         y: v.y * model.texture_coordinate_scale.y
-            //             + model.texture_coordinate_offset.y,
-            //     };
-            // }
-
-            if unk_buffer.is_valid() {
-                let unk_header: VertexBufferHeader = pm.read_tag_struct(*unk_buffer).unwrap();
-                let t = pm.get_entry_by_tag(*unk_buffer).unwrap().reference.into();
+            if unk_buffer_hash.is_valid() {
+                let unk_header: VertexBufferHeader = pm.read_tag_struct(*unk_buffer_hash).unwrap();
+                let t = pm
+                    .get_entry_by_tag(*unk_buffer_hash)
+                    .unwrap()
+                    .reference
+                    .into();
 
                 let unk_buffer = pm.read_tag(t).unwrap();
-                decode_vertices2(&unk_header, &unk_buffer, &mut buffer);
+                if let Err(e) = decode_vertices2(&unk_header, &unk_buffer, &mut buffer) {
+                    error!("Failed to decode second vertex buffer: {e}");
+                    continue;
+                }
             }
 
             let mut vertices = vec![];
@@ -140,7 +130,7 @@ impl StaticModel {
                         v.w,
                     ],
                     tex_coord: Default::default(),
-                    normal: Vec4::splat(69.0).into(),
+                    normal: [0., 0., 1., 0.],
                     tangent: Default::default(),
                     color: [1., 1., 1., 1.],
                 });
@@ -221,6 +211,18 @@ impl StaticModel {
 
                 buffer
             };
+
+            // if header
+            //     .parts
+            //     .iter()
+            //     .any(|p| p.index_start == 294 && p.index_count == 435 && p.buffer_index == bi as u8)
+            // {
+            //     let unk_header: VertexBufferHeader = pm.read_tag_struct(*unk_buffer_hash).unwrap();
+            //     error!(
+            //         "FUCKED FORMAT stride0={} stride2={} vbuf={:?} ubuf={:?}",
+            //         vertex_header.stride, unk_header.stride, vertex_buffer_hash, unk_buffer_hash
+            //     )
+            // }
 
             buffers.push(StaticModelBuffer {
                 vertex_buffer,

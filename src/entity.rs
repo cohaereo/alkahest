@@ -1,11 +1,12 @@
 use crate::structure::{DeadBeefMarker, TablePointer};
 use crate::types::{Vector2, Vector3, Vector4};
+use anyhow::anyhow;
 use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3A, Vec4};
 use std::cmp::Ordering;
-use std::io::{Cursor, Read, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use tracing::{debug, warn};
 
 #[derive(BinRead, Debug)]
@@ -148,7 +149,11 @@ pub struct DecodedVertex {
     pub color: [f32; 4],
 }
 
-pub fn decode_vertices2(header: &VertexBufferHeader, data: &[u8], out: &mut DecodedVertexBuffer) {
+pub fn decode_vertices2(
+    header: &VertexBufferHeader,
+    data: &[u8],
+    out: &mut DecodedVertexBuffer,
+) -> anyhow::Result<()> {
     let mut cur = Cursor::new(data);
 
     let count = data.len() / header.stride as usize;
@@ -156,56 +161,69 @@ pub fn decode_vertices2(header: &VertexBufferHeader, data: &[u8], out: &mut Deco
     for _ in 0..count {
         cur.read_exact(&mut data).unwrap();
         match header.vtype {
-            0 => decode_vertex2_0(header.stride, &data, out),
-            u => panic!("Unsupported vertex data type {u}"),
+            0 => decode_vertex2_0(header.stride, &data, out)?,
+            u => anyhow::bail!("Unsupported vertex data type {u}"),
         };
     }
+
+    Ok(())
 }
 
-fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) {
+fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> anyhow::Result<()> {
     let mut cur = Cursor::new(data);
     match stride {
-        4 => {
-            let d2: [i16; 2] = cur.read_le().unwrap();
-            out.tex_coords.push(d2.into());
-        }
         8 => {
             let d4: [i16; 4] = cur.read_le().unwrap();
             out.normals.push(d4.into());
         }
-        16 => {
-            // TODO(cohae): Has more data
-            let d: &[i16] = bytemuck::cast_slice(data);
-            let d2: [i16; 2] = d[4..6].try_into().unwrap();
-
+        4 => {
+            let d2: [i16; 2] = cur.read_le().unwrap();
             out.tex_coords.push(d2.into());
         }
-        12 | 20 | 24 => {
+        12 => {
+            let d2: [i16; 2] = cur.read_le().unwrap();
+            out.tex_coords.push(d2.into());
+
+            if matches!(stride, 12) {
+                let n4: [i16; 4] = cur.read_le().unwrap();
+                out.normals.push(n4.into());
+            }
+        }
+        16 => {
+            // TODO(cohae): Has more data
+            let d2: [i16; 2] = cur.read_le().unwrap();
+            out.tex_coords.push(d2.into());
+            let n4: [i16; 4] = cur.read_le().unwrap();
+            out.normals.push(n4.into());
+        }
+        20 => {
             let d2: [i16; 2] = cur.read_le().unwrap();
             out.tex_coords.push(d2.into());
             let n4: [i16; 4] = cur.read_le().unwrap();
             out.normals.push(n4.into());
 
-            if stride == 20 || stride == 24 {
-                let t4: [i16; 4] = cur.read_le().unwrap();
-                out.tangents.push(t4.into());
-
-                if stride == 24 {
-                    let c4: [u8; 4] = cur.read_le().unwrap();
-                    out.colors.push(c4.into());
-                }
-            }
+            let t4: [i16; 4] = cur.read_le().unwrap();
+            out.tangents.push(t4.into());
         }
-        28 => {
+        24 => {
             // TODO(cohae): Has more data
             let d2: [i16; 2] = cur.read_le().unwrap();
             out.tex_coords.push(d2.into());
+            // TODO(cohae): Broken normals
+            // let n4: [i16; 4] = cur.read_le().unwrap();
+            // out.normals.push(n4.into());
         }
-        u => panic!("Unsupported v2_0 stride 0x{u:x}"),
+        u => anyhow::bail!("Unsupported v2_0 stride {u}"),
     };
+
+    Ok(())
 }
 
-pub fn decode_vertices(header: &VertexBufferHeader, data: &[u8], out: &mut DecodedVertexBuffer) {
+pub fn decode_vertices(
+    header: &VertexBufferHeader,
+    data: &[u8],
+    out: &mut DecodedVertexBuffer,
+) -> anyhow::Result<()> {
     let mut cur = Cursor::new(data);
 
     let count = data.len() / header.stride as usize;
@@ -213,13 +231,15 @@ pub fn decode_vertices(header: &VertexBufferHeader, data: &[u8], out: &mut Decod
     for _ in 0..count {
         cur.read_exact(&mut data).unwrap();
         match header.vtype {
-            0 => decode_vertex0(header.stride, &data, out),
-            u => panic!("Unsupported vertex data type {u}"),
+            0 => decode_vertex0(header.stride, &data, out)?,
+            u => anyhow::bail!("Unsupported vertex data type {u}"),
         };
     }
+
+    Ok(())
 }
 
-fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) {
+fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> anyhow::Result<()> {
     let mut c = Cursor::new(data);
     match stride {
         8 => {
@@ -269,6 +289,8 @@ fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) {
             out.normals.push(c.read_le().unwrap());
             out.tangents.push(c.read_le().unwrap());
         }
-        u => panic!("Unsupported v0 stride 0x{u:x}"),
+        u => anyhow::bail!("Unsupported v0 stride {u}"),
     };
+
+    Ok(())
 }

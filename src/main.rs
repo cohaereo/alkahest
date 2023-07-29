@@ -12,16 +12,30 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use crate::camera::{FpsCamera, InputState};
+use crate::dxgi::{calculate_pitch, DxgiFormat};
+use crate::entity::{
+    decode_vertices, ELodCategory, EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
+};
+use crate::gui::{CompositorMode, COMPOSITOR_MODES};
+use crate::scopes::{ScopeStaticInstance, ScopeView};
+use crate::static_render::{LoadedTexture, StaticModel};
+use crate::statics::{Unk80807194, Unk8080719a, Unk808071a7, Unk8080966d};
+use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
+use crate::texture::TextureHeader;
+use crate::types::{DestinyHash, Vector3};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use egui::Widget;
 use glam::{Affine3A, EulerRot, Mat3, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
+use imgui::{Condition, FontConfig, FontSource, WindowFlags};
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::EnvFilter;
 use windows::core::Interface;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
@@ -38,21 +52,11 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
-use crate::dxgi::{calculate_pitch, DxgiFormat};
-use crate::entity::{
-    decode_vertices, ELodCategory, EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
-};
-use crate::scopes::{ScopeStaticInstance, ScopeView};
-use crate::static_render::{LoadedTexture, StaticModel};
-use crate::statics::{Unk80807194, Unk8080719a, Unk808071a7, Unk8080966d};
-use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::texture::TextureHeader;
-use crate::types::{DestinyHash, Vector3};
-
 mod camera;
 mod dds;
 mod dxgi;
 mod entity;
+mod gui;
 mod material;
 mod scopes;
 mod static_render;
@@ -113,10 +117,18 @@ macro_rules! time_it {
 }
 
 pub fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        // .with_max_level(tracing::Level::DEBUG)
-        .init();
+    // tracing_subscriber::fmt()
+    //     .with_max_level(tracing::Level::DEBUG)
+    //     .
+    //     .init();
     // tracing_subscriber::fmt().init();
+    tracing::subscriber::set_global_default(
+        tracing_subscriber::registry()
+            .with(tracing_tracy::TracyLayer::new())
+            .with(tracing_subscriber::fmt::layer())
+            .with(EnvFilter::from_default_env()),
+    )
+    .expect("Failed to set up the tracing subscriber");
 
     let package;
     let mut package_manager;
@@ -202,7 +214,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut swapchain_target = unsafe {
         let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
-        device.CreateRenderTargetView(&buffer, None)?
+        Some(device.CreateRenderTargetView(&buffer, None)?)
     };
 
     let (mut rtv0, rtv0_view) = unsafe {
@@ -254,7 +266,8 @@ pub fn main() -> anyhow::Result<()> {
                     Height: window.inner_size().height as _,
                     MipLevels: 1,
                     ArraySize: 1,
-                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
                     SampleDesc: DXGI_SAMPLE_DESC {
                         Count: 1,
                         Quality: 0,
@@ -273,7 +286,7 @@ pub fn main() -> anyhow::Result<()> {
             device.CreateShaderResourceView(
                 &tex,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
                     ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture2D: D3D11_TEX2D_SRV {
@@ -294,7 +307,8 @@ pub fn main() -> anyhow::Result<()> {
                     Height: window.inner_size().height as _,
                     MipLevels: 1,
                     ArraySize: 1,
-                    Format: DXGI_FORMAT_R8G8B8A8_TYPELESS,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    // Format: DXGI_FORMAT_R8G8B8A8_TYPELESS,
                     SampleDesc: DXGI_SAMPLE_DESC {
                         Count: 1,
                         Quality: 0,
@@ -313,7 +327,7 @@ pub fn main() -> anyhow::Result<()> {
             device.CreateShaderResourceView(
                 &tex,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_R8G8B8A8_TYPELESS,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
                     ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture2D: D3D11_TEX2D_SRV {
@@ -509,6 +523,7 @@ pub fn main() -> anyhow::Result<()> {
             vs_blob,
         )?
     };
+    println!("Done vertex layout");
 
     time_it!("Loading shaders", {
         for (t, m) in material_map.iter() {
@@ -530,8 +545,10 @@ pub fn main() -> anyhow::Result<()> {
             // );
 
             if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
+                let _span =
+                    tracing::debug_span!("load vshader", shader = ?m.vertex_shader).entered();
+
                 vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
-                    debug!("Loading VShader {:?}", m.vertex_shader);
                     let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
                     unsafe {
                         device
@@ -543,41 +560,12 @@ pub fn main() -> anyhow::Result<()> {
             }
 
             if let Ok(v) = package_manager.get_entry_by_tag(m.pixel_shader) {
+                let _span =
+                    tracing::debug_span!("load pshader", shader = ?m.pixel_shader).entered();
+
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
-                    debug!("Loading PShader {:?}", m.pixel_shader);
                     let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
                     unsafe {
-                        // let mut reflector: *mut ID3D11ShaderReflection = ptr::null_mut();
-                        // D3DReflect(
-                        //     ps_data.as_ptr() as _,
-                        //     ps_data.len() as _,
-                        //     &ID3D11ShaderReflection::IID,
-                        //     &mut reflector as *mut *mut ID3D11ShaderReflection as _,
-                        // )
-                        // .unwrap();
-                        //
-                        // // if !reflector.is_null() {
-                        // if false {
-                        //     let desc = (*reflector).GetDesc().unwrap();
-                        //
-                        //     println!("{} cbuffers", desc.ConstantBuffers);
-                        //     for i in 0..desc.ConstantBuffers {
-                        //         if let Some(cb) = (*reflector).GetConstantBufferByIndex(i) {
-                        //             println!("Got cb");
-                        //             let mut cb_desc = Default::default();
-                        //             if cb.GetDesc(&mut cb_desc).is_ok() {
-                        //                 println!("Got cb_desc");
-                        //                 println!(
-                        //                     "cb{i} - name={:?} type={:?} size={}",
-                        //                     cb_desc.Name, cb_desc.Type, cb_desc.Size
-                        //                 );
-                        //             }
-                        //         }
-                        //     }
-                        // } else {
-                        //     error!("Couldn't make a reflector");
-                        // }
-
                         device
                             .CreatePixelShader(&ps_data, None)
                             .context("Failed to load pixel shader")
@@ -595,24 +583,26 @@ pub fn main() -> anyhow::Result<()> {
                 );
 
                 let buffer = package_manager.read_tag(buffer_header_ref).unwrap();
-                debug!(
+                trace!(
                     "Read {} bytes cbuffer from {buffer_header_ref:?}",
                     buffer.len()
                 );
                 let buf = unsafe {
-                    device.CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            Usage: D3D11_USAGE_DYNAMIC,
-                            BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                            CPUAccessFlags: Default::default(),
-                            ByteWidth: buffer.len() as _,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: buffer.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                    )?
+                    device
+                        .CreateBuffer(
+                            &D3D11_BUFFER_DESC {
+                                Usage: D3D11_USAGE_IMMUTABLE,
+                                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                                CPUAccessFlags: Default::default(),
+                                ByteWidth: buffer.len() as _,
+                                ..Default::default()
+                            },
+                            Some(&D3D11_SUBRESOURCE_DATA {
+                                pSysMem: buffer.as_ptr() as _,
+                                ..Default::default()
+                            }),
+                        )
+                        .context("Failed to load variable cbuffer")?
                 };
 
                 cbuffer_map.insert(*t, buf);
@@ -622,20 +612,23 @@ pub fn main() -> anyhow::Result<()> {
             .iter()
             .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
+                trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
-                    device.CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            Usage: D3D11_USAGE_DYNAMIC,
-                            BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                            CPUAccessFlags: Default::default(),
-                            ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: m.unk318.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                    )?
+                    device
+                        .CreateBuffer(
+                            &D3D11_BUFFER_DESC {
+                                Usage: D3D11_USAGE_IMMUTABLE,
+                                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                                CPUAccessFlags: Default::default(),
+                                ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
+                                ..Default::default()
+                            },
+                            Some(&D3D11_SUBRESOURCE_DATA {
+                                pSysMem: m.unk318.as_ptr() as _,
+                                ..Default::default()
+                            }),
+                        )
+                        .context("Failed to load float4 cbuffer")?
                 };
 
                 cbuffer_map.insert(*t, buf);
@@ -675,7 +668,6 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     time_it!("Loading textures", {
-        let mut egui_ctx = egui::Context::default();
         struct PackageTexture {
             handle: ID3D11Texture2D,
             view: ID3D11ShaderResourceView,
@@ -689,20 +681,13 @@ pub fn main() -> anyhow::Result<()> {
             index: usize,
         }
 
-        for m in material_map.values()
-        // for (i, e) in package
-        //     .entries()
-        //     .iter()
-        //     .enumerate()
-        //     .filter(|(_, v)| v.file_type == 32 && v.file_size == 40)
-        {
-            // println!("Material");
-            for t in &m.ps_textures {
-                // println!("\t{} {:?}", t.index, t.texture);
+        for m in material_map.values() {
+            for t in m.ps_textures.iter() {
                 let tex_hash = t.texture;
                 if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
                     continue;
                 }
+                let _span = tracing::debug_span!("load texture", texture = ?tex_hash).entered();
 
                 let texture_header_ref = TagHash(
                     package_manager
@@ -725,8 +710,6 @@ pub fn main() -> anyhow::Result<()> {
                         .expect("Failed to read texture data")
                         .to_vec()
                 };
-                // let mut out_file = File::create(format!("dump/{i}.dds")).unwrap();
-                // dump_to_dds(&mut out_file, &texture, &texture_data);
 
                 // info!("Uploading texture {} {texture:?}", tex_hash);
                 let tex = unsafe {
@@ -918,8 +901,8 @@ pub fn main() -> anyhow::Result<()> {
         device
             .CreateRasterizerState(&D3D11_RASTERIZER_DESC {
                 FillMode: D3D11_FILL_SOLID,
-                CullMode: D3D11_CULL_NONE,
-                // CullMode: D3D11_CULL_BACK,
+                // CullMode: D3D11_CULL_NONE,
+                CullMode: D3D11_CULL_BACK,
                 FrontCounterClockwise: true.into(),
                 DepthBias: 0,
                 DepthBiasClamp: 0.0,
@@ -1012,15 +995,6 @@ pub fn main() -> anyhow::Result<()> {
     let mut camera = FpsCamera::default();
 
     unsafe {
-        // let mut cb11_data = vec![];
-        // for _ in 0..64 {
-        //     cb11_data.push(Vec4::new(
-        //         fastrand::f32() % 1.0,
-        //         fastrand::f32() % 1.0,
-        //         fastrand::f32() % 1.0,
-        //         1.0,
-        //     ));
-        // }
         let cb11_data = vec![Vec4::splat(0.6); 128];
         let bmap = device_context
             .Map(&le_model_cb0, 0, D3D11_MAP_WRITE_DISCARD, 0)
@@ -1076,19 +1050,50 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
-    let mut winit_app = egui_winit::State::new(&window);
+    let blend_state = unsafe {
+        device.CreateBlendState(&D3D11_BLEND_DESC {
+            RenderTarget: [D3D11_RENDER_TARGET_BLEND_DESC {
+                BlendEnable: false.into(),
+                SrcBlend: D3D11_BLEND_ONE,
+                DestBlend: D3D11_BLEND_ZERO,
+                BlendOp: D3D11_BLEND_OP_ADD,
+                SrcBlendAlpha: D3D11_BLEND_ONE,
+                DestBlendAlpha: D3D11_BLEND_ZERO,
+                BlendOpAlpha: D3D11_BLEND_OP_ADD,
+                RenderTargetWriteMask: D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8,
+            }; 8],
+            ..Default::default()
+        })?
+    };
 
-    let mut tex_i: usize = 0;
+    let mut imgui = imgui::Context::create();
+    imgui.style_mut().window_rounding = 4.0;
+
+    let mut platform = WinitPlatform::init(&mut imgui);
+    platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Rounded);
+    let hidpi_factor = platform.hidpi_factor();
+    let font_size = (13.0 * hidpi_factor) as f32;
+    imgui.fonts().add_font(&[FontSource::DefaultFontData {
+        config: Some(FontConfig {
+            size_pixels: font_size,
+            ..FontConfig::default()
+        }),
+    }]);
+    let mut renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, &device)? };
+
+    let mut composite_mode: usize = 0;
     let mut placement_i: usize = 1;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
     event_loop.run(move |event, _, control_flow| {
+        platform.handle_event(imgui.io_mut(), &window, &event);
         match &event {
             Event::WindowEvent { event, .. } => {
                 // if !winit_app.on_event(ctx, event).consumed {
                 if true {
                     match event {
                         WindowEvent::Resized(new_dims) => unsafe {
+                            swapchain_target = None;
                             swap_chain
                                 .ResizeBuffers(
                                     1,
@@ -1113,7 +1118,7 @@ pub fn main() -> anyhow::Result<()> {
                             }]));
                             device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                            swapchain_target = new_rtv;
+                            swapchain_target = Some(new_rtv);
                         },
                         WindowEvent::ScaleFactorChanged { .. } => {
                             // renderer.resize();
@@ -1122,7 +1127,7 @@ pub fn main() -> anyhow::Result<()> {
                             *control_flow = ControlFlow::Exit;
                         }
                         WindowEvent::MouseInput { state, button, .. } => {
-                            if button == &MouseButton::Left {
+                            if button == &MouseButton::Left && !imgui.io().want_capture_mouse {
                                 input_state.mouse1 = *state == ElementState::Pressed
                             }
                         }
@@ -1130,9 +1135,8 @@ pub fn main() -> anyhow::Result<()> {
                             if let Some(ref mut p) = last_cursor_pos {
                                 let delta = (position.x - p.x, position.y - p.y);
 
-                                if input_state.mouse1 {
+                                if input_state.mouse1 && !imgui.io().want_capture_mouse {
                                     camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
-                                    // rotation -= Vec2::new(delta.1 as f32, delta.0 as f32) * 0.005;
                                 }
 
                                 last_cursor_pos = Some(*position);
@@ -1147,14 +1151,6 @@ pub fn main() -> anyhow::Result<()> {
                         WindowEvent::KeyboardInput { input, .. } => {
                             if input.state == ElementState::Pressed {
                                 match input.virtual_keycode {
-                                    Some(VirtualKeyCode::Up) => {
-                                        tex_i = tex_i.wrapping_add(1);
-                                        info!("Switched to texture index {}", tex_i)
-                                    }
-                                    Some(VirtualKeyCode::Down) => {
-                                        tex_i = tex_i.wrapping_sub(1);
-                                        info!("Switched to texture index {}", tex_i)
-                                    }
                                     Some(VirtualKeyCode::Right) => {
                                         placement_i = placement_i.wrapping_add(1)
                                     }
@@ -1222,7 +1218,23 @@ pub fn main() -> anyhow::Result<()> {
                 }
             }
             Event::RedrawRequested(..) => {
+                imgui.io_mut().update_delta_time(last_frame.elapsed());
                 camera.update(&input_state, last_frame.elapsed().as_secs_f32());
+
+                let ui = imgui.new_frame();
+                ui.window("FPS")
+                    .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
+                    .build(|| ui.text(format!("{:.1}", 1.0 / last_frame.elapsed().as_secs_f32())));
+
+                ui.window("Options")
+                    .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
+                    .size([128.0, 36.0], Condition::Always)
+                    .build(|| {
+                        ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
+                            format!("{v}").into()
+                        });
+                    });
+
                 last_frame = Instant::now();
 
                 unsafe {
@@ -1238,26 +1250,37 @@ pub fn main() -> anyhow::Result<()> {
 
                     let window_dims = window.inner_size();
 
+                    device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                        TopLeftX: 0.0,
+                        TopLeftY: 0.0,
+                        Width: window_dims.width as f32,
+                        Height: window_dims.height as f32,
+                        MinDepth: 0.0,
+                        MaxDepth: 1.0,
+                    }]));
+
+                    device_context.RSSetState(&rasterizer_state);
+                    device_context.OMSetBlendState(
+                        &blend_state,
+                        Some(&[1f32, 1., 1., 1.] as _),
+                        0xffffffff,
+                    );
                     device_context.OMGetDepthStencilState(
                         Some(&mut Some(depth_stencil_state.clone())),
-                        Some(&mut 1),
+                        Some(&mut 0),
                     );
                     device_context.OMSetRenderTargets(
                         Some(&[Some(rtv0.clone()), Some(rtv1.clone()), Some(rtv2.clone())]),
                         &depth_stencil_view,
                     );
 
-                    device_context.RSSetState(&rasterizer_state);
-
-                    // device_context.VSSetShader(&vshader, None);
-                    // device_context.PSSetShader(&pshader, None);
                     device_context.IASetInputLayout(&vertex_layout);
 
                     let projection = Mat4::perspective_lh(
                         90f32.to_radians(),
                         window_dims.width as f32 / window_dims.height as f32,
                         0.01,
-                        7500.0,
+                        4000.0,
                     );
                     let view = camera.calculate_matrix();
 
@@ -1297,12 +1320,6 @@ pub fn main() -> anyhow::Result<()> {
                     // device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
                     device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
-                    // if !textures.is_empty() {
-                    //     let le_texture = &textures[tex_i % textures.len()];
-                    //     device_context
-                    //         .PSSetShaderResources(0, Some(&[Some(le_texture.view.clone())]));
-                    // }
-
                     // TODO(cohae): Find a more solid way to assign samplers
                     device_context.PSSetSamplers(
                         0,
@@ -1317,9 +1334,6 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
 
-                    // device_context.Draw(4, 0);
-                    // model.draw(&device_context);
-                    // static_map.values().next().unwrap().draw(&device_context);
                     let placements = &placement_groups[placement_i % placement_groups.len()];
                     for instance in &placements.instances {
                         if let Some(model_hash) =
@@ -1381,62 +1395,6 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_vertex_cb11.clone())]),
                                     );
 
-                                    // const RANDOM_COLORS: [u32; 64] = [
-                                    //     0xFFE4C4, 0x008080, 0x00FA9A, 0xF5DEB3, 0x8FBC8F, 0x7FFF00,
-                                    //     0x6A5ACD, 0xFF1493, 0x5F9EA0, 0x7B68EE, 0x778899, 0xFFF0F5,
-                                    //     0xDA70D6, 0xF0F8FF, 0xCD853F, 0xFFC0CB, 0xFFE4E1, 0x000080,
-                                    //     0xB0E0E6, 0xD3D3D3, 0x2F4F4F, 0x483D8B, 0xA0522D, 0xBC8F8F,
-                                    //     0x228B22, 0xEE82EE, 0xFF00FF, 0xFF0000, 0xFFB6C1, 0x20B2AA,
-                                    //     0xFFFAF0, 0xD8BFD8, 0x0000FF, 0xA52A2A, 0xFFFFE0, 0xF5FFFA,
-                                    //     0x9370DB, 0x2E8B57, 0x9932CC, 0xFFFFF0, 0x87CEEB, 0x48D1CC,
-                                    //     0xEEE8AA, 0x00008B, 0xF0E68C, 0x3CB371, 0x87CEFA, 0xE0FFFF,
-                                    //     0xADD8E6, 0xFF8C00, 0x00FF00, 0xFF69B4, 0xDC143C, 0xBDB76B,
-                                    //     0x006400, 0xF08080, 0xFFFAFA, 0xFF4500, 0xDCDCDC, 0x708090,
-                                    //     0xFDF5E6, 0x808000, 0xC0C0C0, 0x7B68EE,
-                                    // ];
-                                    //
-                                    // let color = {
-                                    //     let c = RANDOM_COLORS
-                                    //         [model_hash.0 as usize % RANDOM_COLORS.len()];
-                                    //
-                                    //     let r = (c >> 16) as u8;
-                                    //     let g = (c >> 8) as u8;
-                                    //     let b = c as u8;
-                                    //
-                                    //     Vec3::new(r as f32 / 255., g as f32 / 255., b as f32 / 255.)
-                                    // };
-                                    //
-                                    // let bmap = device_context
-                                    //     .Map(&le_model_cbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                                    //     .context("Failed to map model cbuffer")
-                                    //     .unwrap();
-                                    //
-                                    // bmap.pData.copy_from_nonoverlapping(
-                                    //     &(model_matrix, normal_matrix, color)
-                                    //         as *const (Mat4, Mat4, Vec3)
-                                    //         as _,
-                                    //     std::mem::size_of::<(Mat4, Mat4, Vec3)>(),
-                                    // );
-                                    //
-                                    // device_context.Unmap(&le_model_cbuffer, 0);
-                                    // device_context.VSSetConstantBuffers(
-                                    //     11,
-                                    //     Some(&[Some(le_model_cbuffer.clone())]),
-                                    // );
-                                    // device_context.VSSetConstantBuffers(
-                                    //     1,
-                                    //     Some(&[Some(le_model_cbuffer.clone())]),
-                                    // );
-                                    //
-                                    // device_context.VSSetConstantBuffers(
-                                    //     11,
-                                    //     Some(&[Some(le_model_cb0.clone())]),
-                                    // );
-                                    // device_context.PSSetConstantBuffers(
-                                    //     0,
-                                    //     Some(&[Some(le_model_cb0.clone())]),
-                                    // );
-
                                     model.draw(
                                         &device_context,
                                         &material_map,
@@ -1451,8 +1409,10 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    device_context
-                        .OMSetRenderTargets(Some(&[Some(swapchain_target.clone())]), None);
+                    device_context.OMSetRenderTargets(
+                        Some(&[Some(swapchain_target.as_ref().unwrap().clone())]),
+                        None,
+                    );
                     device_context.PSSetShaderResources(
                         0,
                         Some(&[
@@ -1467,8 +1427,7 @@ pub fn main() -> anyhow::Result<()> {
                         .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
                     bmap.pData.copy_from_nonoverlapping(
-                        // &scope_instance as *const ScopeStaticInstance as _,
-                        &(tex_i as u32) as *const u32 as _,
+                        &(COMPOSITOR_MODES[composite_mode] as u32) as *const u32 as _,
                         4,
                     );
 
@@ -1480,14 +1439,23 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.PSSetShader(&pshader_fullscreen, None);
                     device_context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
                     device_context.Draw(3, 0);
-                    // device_context.Draw(4, 0);
 
-                    // TODO(cohae): Gbuffer view
+                    platform.prepare_render(&ui, &window);
+                    renderer
+                        .render(imgui.render())
+                        .expect("imgui rendering failed");
+                    device_context.OMSetDepthStencilState(None, 0);
 
-                    swap_chain.Present(1, 0).unwrap()
+                    swap_chain.Present(1, 0).unwrap();
+
+                    tracy_client::Client::running().map(|c| c.frame_mark());
                 };
             }
             Event::MainEventsCleared => {
+                let io = imgui.io_mut();
+                platform
+                    .prepare_frame(io, &window)
+                    .expect("Failed to start frame");
                 window.request_redraw();
             }
             _ => (),
