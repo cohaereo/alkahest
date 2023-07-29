@@ -1,5 +1,5 @@
 use crate::structure::{DeadBeefMarker, TablePointer};
-use crate::types::{Vector2, Vector3, Vector4};
+use crate::types::{DecodeFloat, Vector2, Vector3, Vector4};
 use anyhow::anyhow;
 use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
@@ -133,7 +133,7 @@ pub struct IndexBufferHeader {
 #[derive(Default)]
 pub struct DecodedVertexBuffer {
     pub positions: Vec<Vector4>,
-    pub tex_coords: Vec<Vector2>,
+    pub tex_coords: Vec<Vector4>,
     pub normals: Vec<Vector4>,
     pub tangents: Vec<Vector4>,
     pub colors: Vec<Vector4>,
@@ -143,7 +143,7 @@ pub struct DecodedVertexBuffer {
 #[derive(Copy, Clone, Default, Pod, Zeroable)]
 pub struct DecodedVertex {
     pub position: [f32; 4],
-    pub tex_coord: [f32; 2],
+    pub tex_coord: [f32; 4],
     pub normal: [f32; 4],
     pub tangent: [f32; 4],
     pub color: [f32; 4],
@@ -178,11 +178,21 @@ fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> 
         }
         4 => {
             let d2: [i16; 2] = cur.read_le().unwrap();
-            out.tex_coords.push(d2.into());
+            out.tex_coords.push(Vector4::new(
+                d2[0].decode_float(),
+                d2[1].decode_float(),
+                1.0,
+                1.0,
+            ));
         }
         12 => {
             let d2: [i16; 2] = cur.read_le().unwrap();
-            out.tex_coords.push(d2.into());
+            out.tex_coords.push(Vector4::new(
+                d2[0].decode_float(),
+                d2[1].decode_float(),
+                1.0,
+                1.0,
+            ));
 
             if matches!(stride, 12) {
                 let n4: [i16; 4] = cur.read_le().unwrap();
@@ -192,13 +202,23 @@ fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> 
         16 => {
             // TODO(cohae): Has more data
             let d2: [i16; 2] = cur.read_le().unwrap();
-            out.tex_coords.push(d2.into());
+            out.tex_coords.push(Vector4::new(
+                d2[0].decode_float(),
+                d2[1].decode_float(),
+                1.0,
+                1.0,
+            ));
             let n4: [i16; 4] = cur.read_le().unwrap();
             out.normals.push(n4.into());
         }
         20 => {
             let d2: [i16; 2] = cur.read_le().unwrap();
-            out.tex_coords.push(d2.into());
+            out.tex_coords.push(Vector4::new(
+                d2[0].decode_float(),
+                d2[1].decode_float(),
+                1.0,
+                1.0,
+            ));
             let n4: [i16; 4] = cur.read_le().unwrap();
             out.normals.push(n4.into());
 
@@ -207,11 +227,19 @@ fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> 
         }
         24 => {
             // TODO(cohae): Has more data
-            let d2: [i16; 2] = cur.read_le().unwrap();
-            out.tex_coords.push(d2.into());
+            let d4: [i16; 4] = cur.read_le().unwrap();
+            out.tex_coords.push(d4.into());
             // TODO(cohae): Broken normals
-            // let n4: [i16; 4] = cur.read_le().unwrap();
-            // out.normals.push(n4.into());
+            let n3: [i16; 3] = cur.read_le().unwrap();
+            let t3: [i16; 3] = cur.read_le().unwrap();
+            // let t4: [i16; 4] = cur.read_le().unwrap();
+            // let n3: Vector3 = n3.into();
+            // let t3: Vector3 = t3.into();
+            // out.normals.push(Vector4::new(n3.x, n3.y, n3.z, 1.0));
+            // out.tangents.push(Vector4::new(t3.x, t3.y, t3.z, 1.0));
+            // out.tangents.push(t4.into());
+            let color: [u8; 4] = cur.read_le().unwrap();
+            out.colors.push(color.into());
         }
         u => anyhow::bail!("Unsupported v2_0 stride {u}"),
     };
@@ -251,7 +279,12 @@ fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> an
             let pos: [i16; 4] = c.read_le().unwrap();
             let uv: [i16; 2] = c.read_le().unwrap();
             out.positions.push(pos.into());
-            out.tex_coords.push(uv.into());
+            out.tex_coords.push(Vector4::new(
+                uv[0].decode_float(),
+                uv[1].decode_float(),
+                1.0,
+                1.0,
+            ));
         }
         28 | 32 => {
             let pos: [i16; 4] = c.read_le().unwrap();
@@ -259,7 +292,12 @@ fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> an
             let normal: [i16; 4] = c.read_le().unwrap();
             let tangent: [i16; 4] = c.read_le().unwrap();
             out.positions.push(pos.into());
-            out.tex_coords.push(uv.into());
+            out.tex_coords.push(Vector4::new(
+                uv[0].decode_float(),
+                uv[1].decode_float(),
+                1.0,
+                1.0,
+            ));
             out.normals.push(normal.into());
             out.tangents.push(tangent.into());
 

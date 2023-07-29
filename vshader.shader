@@ -42,7 +42,7 @@ cbuffer ModelBuffer : register(b11) {
 
 void VShader(
     float4 in_position : POSITION, // in_0
-    float2 in_texcoord : TEXCOORD, // in_1
+    float4 in_texcoord : TEXCOORD, // in_1
     float4 in_normal : NORMAL, // in_2
     float4 in_tangent : TANGENT, // in_3
     float4 in_color : COLOR, // in_4

@@ -148,6 +148,8 @@ impl StaticModel {
                 vertices[i].tex_coord = [
                     v.x * model.texture_coordinate_scale.x + model.texture_coordinate_offset.x,
                     v.y * model.texture_coordinate_scale.y + model.texture_coordinate_offset.y,
+                    v.z,
+                    v.w,
                 ];
             }
 
@@ -165,7 +167,7 @@ impl StaticModel {
 
             assert_eq!(
                 std::mem::size_of::<DecodedVertex>(),
-                (4 + 2 + 4 + 4 + 4) * 4
+                (4 + 4 + 4 + 4 + 4) * 4
             );
             let bytes: &[u8] = bytemuck::cast_slice(&vertices);
             let vertex_buffer = unsafe {
@@ -246,7 +248,8 @@ impl StaticModel {
         materials: &IntMap<u32, material::Unk808071e8>,
         vshaders: &IntMap<u32, ID3D11VertexShader>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers: &IntMap<u32, ID3D11Buffer>,
+        cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
+        cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
         textures: &IntMap<u32, LoadedTexture>,
         cbuffer_default: ID3D11Buffer,
     ) {
@@ -274,7 +277,7 @@ impl StaticModel {
                         .and_then(|m| materials.get(&m.0))
                     {
                         if let Some(cbuffer) =
-                            cbuffers.get(&self.model.materials.get(iu).unwrap().0)
+                            cbuffers_ps.get(&self.model.materials.get(iu).unwrap().0)
                         {
                             device_context.PSSetConstantBuffers(
                                 0,
@@ -287,6 +290,29 @@ impl StaticModel {
                             );
                         } else {
                             device_context.PSSetConstantBuffers(
+                                0,
+                                Some(&[
+                                    Some(cbuffer_default.clone()),
+                                    Some(cbuffer_default.clone()),
+                                    Some(cbuffer_default.clone()),
+                                    Some(cbuffer_default.clone()),
+                                ]),
+                            );
+                        }
+                        if let Some(cbuffer) =
+                            cbuffers_vs.get(&self.model.materials.get(iu).unwrap().0)
+                        {
+                            device_context.VSSetConstantBuffers(
+                                0,
+                                Some(&[
+                                    Some(cbuffer.clone()),
+                                    Some(cbuffer.clone()),
+                                    Some(cbuffer.clone()),
+                                    Some(cbuffer.clone()),
+                                ]),
+                            );
+                        } else {
+                            device_context.VSSetConstantBuffers(
                                 0,
                                 Some(&[
                                     Some(cbuffer_default.clone()),
@@ -343,7 +369,7 @@ impl StaticModel {
                         0,
                         1,
                         Some(&Some(buffers.vertex_buffer.clone())),
-                        Some(&((4 + 2 + 4 + 4 + 4) * 4)),
+                        Some(&((4 + 4 + 4 + 4 + 4) * 4)),
                         Some(&0),
                     );
                     device_context.IASetIndexBuffer(

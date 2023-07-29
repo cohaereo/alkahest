@@ -17,7 +17,10 @@ pub struct Unk808071e8 {
     pub unk78: TablePointer<Vector4>,
     pub unk88: TablePointer<Unk808073f3>,
     pub unk98: TablePointer<Vector4>,
-    pub unka8: [u32; 136],
+    pub balls0: [u32; 9],
+
+    pub balls1: TagHash,
+    pub unka8: [u32; 136 - 10],
 
     pub pixel_shader: TagHash,
     pub unk2cc: u32,

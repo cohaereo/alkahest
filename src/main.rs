@@ -371,7 +371,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
     let mut vshader_map: IntMap<u32, ID3D11VertexShader> = Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
-    let mut cbuffer_map: IntMap<u32, ID3D11Buffer> = Default::default();
+    let mut cbuffer_map_vs: IntMap<u32, ID3D11Buffer> = Default::default();
+    let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
 
     time_it!("Loading statics", {
@@ -486,7 +487,7 @@ pub fn main() -> anyhow::Result<()> {
                 D3D11_INPUT_ELEMENT_DESC {
                     SemanticName: s!("TEXCOORD"),
                     SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32_FLOAT,
+                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
                     InputSlot: 0,
                     AlignedByteOffset: 16,
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
@@ -497,7 +498,7 @@ pub fn main() -> anyhow::Result<()> {
                     SemanticIndex: 0,
                     Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
                     InputSlot: 0,
-                    AlignedByteOffset: 16 + 8,
+                    AlignedByteOffset: 16 + 16,
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
                     InstanceDataStepRate: 0,
                 },
@@ -506,7 +507,7 @@ pub fn main() -> anyhow::Result<()> {
                     SemanticIndex: 0,
                     Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
                     InputSlot: 0,
-                    AlignedByteOffset: 16 + 8 + 16,
+                    AlignedByteOffset: 16 + 16 + 16,
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
                     InstanceDataStepRate: 0,
                 },
@@ -515,7 +516,7 @@ pub fn main() -> anyhow::Result<()> {
                     SemanticIndex: 0,
                     Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
                     InputSlot: 0,
-                    AlignedByteOffset: 16 + 8 + 16 + 16,
+                    AlignedByteOffset: 16 + 16 + 16 + 16,
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
                     InstanceDataStepRate: 0,
                 },
@@ -551,10 +552,20 @@ pub fn main() -> anyhow::Result<()> {
                 vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
                     let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
                     unsafe {
-                        device
+                        let v = device
                             .CreateVertexShader(&vs_data, None)
                             .context("Failed to load vertex shader")
-                            .unwrap()
+                            .unwrap();
+
+                        let name = format!("VS {:?} (mat 0x{:x})\0", m.vertex_shader, t);
+                        v.SetPrivateData(
+                            &WKPDID_D3DDebugObjectName,
+                            name.len() as u32 - 1,
+                            Some(name.as_ptr() as _),
+                        )
+                        .expect("Failed to set VS name");
+
+                        v
                     }
                 });
             }
@@ -566,12 +577,49 @@ pub fn main() -> anyhow::Result<()> {
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
                     let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
                     unsafe {
-                        device
+                        let v = device
                             .CreatePixelShader(&ps_data, None)
                             .context("Failed to load pixel shader")
-                            .unwrap()
+                            .unwrap();
+
+                        let name = format!("PS {:?} (mat 0x{:x})\0", m.pixel_shader, t);
+                        v.SetPrivateData(
+                            &WKPDID_D3DDebugObjectName,
+                            name.len() as u32 - 1,
+                            Some(name.as_ptr() as _),
+                        )
+                        .expect("Failed to set VS name");
+
+                        v
                     }
                 });
+            }
+
+            if m.unk98.len() > 1
+                && m.unk98
+                    .iter()
+                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+            {
+                trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
+                let buf = unsafe {
+                    device
+                        .CreateBuffer(
+                            &D3D11_BUFFER_DESC {
+                                Usage: D3D11_USAGE_IMMUTABLE,
+                                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                                CPUAccessFlags: Default::default(),
+                                ByteWidth: (m.unk98.len() * std::mem::size_of::<Vec4>()) as _,
+                                ..Default::default()
+                            },
+                            Some(&D3D11_SUBRESOURCE_DATA {
+                                pSysMem: m.unk98.as_ptr() as _,
+                                ..Default::default()
+                            }),
+                        )
+                        .context("Failed to load float4 cbuffer")?
+                };
+
+                cbuffer_map_vs.insert(*t, buf);
             }
 
             if m.unk34c.is_valid() {
@@ -605,12 +653,11 @@ pub fn main() -> anyhow::Result<()> {
                         .context("Failed to load variable cbuffer")?
                 };
 
-                cbuffer_map.insert(*t, buf);
-            } else if m.unk318.len() > 1
-        // && !m.unk2f8.is_empty()
-        && m.unk318
-            .iter()
-            .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+                cbuffer_map_ps.insert(*t, buf);
+            } else if !m.unk318.is_empty()
+                && m.unk318
+                    .iter()
+                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
@@ -631,7 +678,7 @@ pub fn main() -> anyhow::Result<()> {
                         .context("Failed to load float4 cbuffer")?
                 };
 
-                cbuffer_map.insert(*t, buf);
+                cbuffer_map_ps.insert(*t, buf);
             }
         }
     });
@@ -1221,8 +1268,8 @@ pub fn main() -> anyhow::Result<()> {
 
                 unsafe {
                     device_context.ClearRenderTargetView(&rtv0, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
-                    device_context.ClearRenderTargetView(&rtv1, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
-                    device_context.ClearRenderTargetView(&rtv2, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&rtv1, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&rtv2, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
                     device_context.ClearDepthStencilView(
                         &depth_stencil_view,
                         D3D11_CLEAR_DEPTH.0 as _,
@@ -1361,7 +1408,7 @@ pub fn main() -> anyhow::Result<()> {
                                             .z_axis
                                             .xyz()
                                             .extend(model_matrix.w_axis.z),
-                                        w_axis: Vec4::new(1.0, 0.0, 0.0, f32::from_bits(u32::MAX)),
+                                        w_axis: Vec4::new(1.0, 0.0, 0.0, f32::from_bits(u32::MIN)),
                                     };
 
                                     let bdata = vec![scope_instance; 16];
@@ -1382,7 +1429,8 @@ pub fn main() -> anyhow::Result<()> {
                                         &material_map,
                                         &vshader_map,
                                         &pshader_map,
-                                        &cbuffer_map,
+                                        &cbuffer_map_vs,
+                                        &cbuffer_map_ps,
                                         &texture_map,
                                         le_model_cb0.clone(),
                                     );
