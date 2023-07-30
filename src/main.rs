@@ -11,7 +11,7 @@ use std::ptr;
 use std::str::FromStr;
 use std::time::Instant;
 
-use crate::camera::{FpsCamera, InputState};
+use crate::camera::{convert_matrix, FpsCamera, InputState};
 use crate::dxbc::{get_input_signature, DxbcHeader};
 use crate::dxgi::{calculate_pitch, DxgiFormat};
 use crate::entity::{
@@ -1293,7 +1293,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view, //Mat4::from_mat3(normalized),
-                        camera_to_world: view.transpose(),
+                        camera_to_world: convert_matrix(view),
                         _13: proj_view.w_axis,
                         ..Default::default()
                     };
@@ -1345,7 +1345,7 @@ pub fn main() -> anyhow::Result<()> {
                                     as usize
                                     ..(instance.instance_offset + instance.instance_count) as usize]
                                 {
-                                    let instance_matrix = Mat4::from_scale_rotation_translation(
+                                    let mm = Mat4::from_scale_rotation_translation(
                                         Vec3::splat(transform.scale.x),
                                         Quat::from_xyzw(
                                             transform.rotation.x,
@@ -1354,33 +1354,26 @@ pub fn main() -> anyhow::Result<()> {
                                             transform.rotation.w,
                                         )
                                         .inverse(),
-                                        [
-                                            transform.translation.x,
-                                            transform.translation.y,
-                                            transform.translation.z,
-                                        ]
-                                        .into(),
+                                        Vec3::ZERO,
                                     );
 
-                                    let model_matrix = instance_matrix * model.model_transform();
+                                    let model_matrix = Mat4::from_cols(
+                                        mm.x_axis.truncate().extend(transform.translation.x),
+                                        mm.y_axis.truncate().extend(transform.translation.y),
+                                        mm.z_axis.truncate().extend(transform.translation.z),
+                                        mm.w_axis,
+                                    );
+
+                                    let combined_matrix = model.mesh_transform() * model_matrix;
 
                                     let bmap = device_context
                                         .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
                                         .unwrap();
 
                                     let scope_instance = Mat4 {
-                                        x_axis: model_matrix
-                                            .x_axis
-                                            .xyz()
-                                            .extend(model_matrix.w_axis.x),
-                                        y_axis: model_matrix
-                                            .y_axis
-                                            .xyz()
-                                            .extend(model_matrix.w_axis.y),
-                                        z_axis: model_matrix
-                                            .z_axis
-                                            .xyz()
-                                            .extend(model_matrix.w_axis.z),
+                                        x_axis: combined_matrix.x_axis,
+                                        y_axis: combined_matrix.y_axis,
+                                        z_axis: combined_matrix.z_axis,
                                         w_axis: model
                                             .texcoord_transform()
                                             .extend(f32::from_bits(u32::MAX)),

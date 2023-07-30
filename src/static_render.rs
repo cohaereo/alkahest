@@ -61,15 +61,12 @@ impl StaticModel {
         )
     }
 
-    pub fn model_transform(&self) -> Mat4 {
-        Mat4::from_scale_rotation_translation(
-            Vec3::splat(self.model.model_scale),
-            Quat::IDENTITY,
-            Vec3::new(
-                self.model.model_offset.x,
-                self.model.model_offset.y,
-                self.model.model_offset.z,
-            ),
+    pub fn mesh_transform(&self) -> Mat4 {
+        Mat4::from_cols(
+            [self.model.model_scale, 0.0, 0.0, self.model.model_offset.x].into(),
+            [0.0, self.model.model_scale, 0.0, self.model.model_offset.y].into(),
+            [0.0, 0.0, self.model.model_scale, self.model.model_offset.z].into(),
+            [0.0, 0.0, 0.0, 1.0].into(),
         )
     }
 
