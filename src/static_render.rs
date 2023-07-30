@@ -1,28 +1,40 @@
+use crate::dxbc::DxbcInputSignature;
 use crate::dxgi::DxgiFormat;
 use crate::entity::{
     decode_vertices, decode_vertices2, DecodedVertex, DecodedVertexBuffer, ELodCategory,
     EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
 };
-use crate::material;
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 use crate::types::{Vector2, Vector3, Vector4};
+use crate::vertex_layout::InputElement;
+use crate::{material, vertex_layout};
 use anyhow::{ensure, Context};
 use destiny_pkg::PackageManager;
-use glam::{Vec2, Vec3, Vec3A, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec3A, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
+use std::io::Read;
 use std::mem::transmute;
 use std::ptr;
 use tracing::{error, info, warn};
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_R32_UINT;
+use windows::Win32::Graphics::Dxgi::Common::{
+    DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
+};
 
 pub struct StaticModelBuffer {
-    vertex_buffer: ID3D11Buffer,
+    combined_vertex_buffer: ID3D11Buffer,
+    combined_vertex_stride: u32,
+
+    // vertex_buffer: ID3D11Buffer,
+    // vertex_stride: u32,
+    //
+    // vertex2_buffer: Option<ID3D11Buffer>,
+    // vertex2_stride: Option<u32>,
     index_buffer: ID3D11Buffer,
+    index_format: DXGI_FORMAT,
     index_count: usize,
-    // material: material::Unk808071e8,
 }
 
 pub struct LoadedTexture {
@@ -40,35 +52,45 @@ pub struct StaticModel {
 }
 
 impl StaticModel {
+    /// Returns instance scope compatible texcoord (X + YZ)
+    pub fn texcoord_transform(&self) -> Vec3 {
+        Vec3::new(
+            self.model.texture_coordinate_scale.x,
+            self.model.texture_coordinate_offset.x,
+            self.model.texture_coordinate_offset.y,
+        )
+    }
+
+    pub fn model_transform(&self) -> Mat4 {
+        Mat4::from_scale_rotation_translation(
+            Vec3::splat(self.model.model_scale),
+            Quat::IDENTITY,
+            Vec3::new(
+                self.model.model_offset.x,
+                self.model.model_offset.y,
+                self.model.model_offset.z,
+            ),
+        )
+    }
+
     pub fn load(
         model: Unk808071a7,
         device: &ID3D11Device,
-        device_context: &ID3D11DeviceContext,
         pm: &mut PackageManager,
     ) -> anyhow::Result<StaticModel> {
         let header: Unk80807194 = pm.read_tag_struct(model.unk8).unwrap();
 
         ensure!(header.unk8.len() == model.materials.len());
 
-        // println!(
-        //     "{} materials, {} things, {} parts, {} buffers",
-        //     model.materials.len(),
-        //     header.unk8.len(),
-        //     header.parts.len(),
-        //     header.buffers.len()
-        // );
-        // for (p, m) in header.unk8.iter().zip(model.materials.iter()) {
-        //     let part = &header.parts[p.unk0 as usize];
-        //
-        //     println!("\tu {p:x?} / {:?} / {m:?}", part.lod_category)
-        // }
-
         let mut buffers = vec![];
-        for (bi, (index_buffer, vertex_buffer_hash, unk_buffer_hash, u3)) in
-            header.buffers.iter().enumerate()
-        {
+        for (index_buffer, vertex_buffer_hash, vertex2_buffer_hash, u3) in header.buffers.iter() {
             let vertex_header: VertexBufferHeader =
                 pm.read_tag_struct(*vertex_buffer_hash).unwrap();
+
+            if vertex_header.stride == 24 || vertex_header.stride == 48 {
+                warn!("Support for 32-bit floats in vertex buffers are disabled");
+                continue;
+            }
 
             let t = pm
                 .get_entry_by_tag(*vertex_buffer_hash)
@@ -76,161 +98,89 @@ impl StaticModel {
                 .reference
                 .into();
 
-            if vertex_header.stride == 1 {
-                warn!(
-                    "Weird stride ({}), skipping ({:?})",
-                    vertex_header.stride, t
-                );
-                continue;
-            }
+            let vertex_data = pm.read_tag(t).unwrap();
 
-            let mut buffer = DecodedVertexBuffer::default();
-
-            let vertex_buffer = pm.read_tag(t).unwrap();
-            if let Err(e) = decode_vertices(&vertex_header, &vertex_buffer, &mut buffer) {
-                error!("Failed to decode second vertex buffer: {e}");
-                continue;
-            }
-
-            let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer).unwrap();
-            let t = pm.get_entry_by_tag(*index_buffer).unwrap().reference.into();
-            let index_buffer = pm.read_tag(t).unwrap();
-
-            let indices = if index_header.is_32bit {
-                let d: &[u32] = bytemuck::cast_slice(&index_buffer);
-                d.to_vec()
-            } else {
-                let d: &[u16] = bytemuck::cast_slice(&index_buffer);
-                let d = d.to_vec();
-                d.into_iter().map_into().collect()
-            };
-
-            if unk_buffer_hash.is_valid() {
-                let unk_header: VertexBufferHeader = pm.read_tag_struct(*unk_buffer_hash).unwrap();
+            let mut vertex2_stride = None;
+            let mut vertex2_data = None;
+            if vertex2_buffer_hash.is_valid() {
+                let vertex2_header: VertexBufferHeader =
+                    pm.read_tag_struct(*vertex2_buffer_hash).unwrap();
                 let t = pm
-                    .get_entry_by_tag(*unk_buffer_hash)
+                    .get_entry_by_tag(*vertex2_buffer_hash)
                     .unwrap()
                     .reference
                     .into();
 
-                let unk_buffer = pm.read_tag(t).unwrap();
-                if let Err(e) = decode_vertices2(&unk_header, &unk_buffer, &mut buffer) {
-                    error!("Failed to decode second vertex buffer: {e}");
-                    continue;
-                }
+                vertex2_stride = Some(vertex2_header.stride as u32);
+                vertex2_data = Some(pm.read_tag(t).unwrap());
             }
 
-            let mut vertices = vec![];
-            for v in buffer.positions {
-                vertices.push(DecodedVertex {
-                    position: [
-                        v.x * model.model_scale + model.model_offset.x,
-                        v.y * model.model_scale + model.model_offset.y,
-                        v.z * model.model_scale + model.model_offset.z,
-                        v.w,
-                    ],
-                    tex_coord: Default::default(),
-                    normal: [0., 0., 1., 0.],
-                    tangent: Default::default(),
-                    color: [1., 1., 1., 1.],
-                });
-            }
-
-            for (i, v) in buffer.tex_coords.iter().enumerate() {
-                if i >= vertices.len() {
-                    // warn!(
-                    //     "Too many texture coordinates (got {}, expected {})",
-                    //     buffer.tex_coords.len(),
-                    //     vertices.len()
-                    // );
-                    break;
-                }
-                vertices[i].tex_coord = [
-                    v.x * model.texture_coordinate_scale.x + model.texture_coordinate_offset.x,
-                    v.y * model.texture_coordinate_scale.y + model.texture_coordinate_offset.y,
-                    v.z,
-                    v.w,
-                ];
-            }
-
-            for (i, v) in buffer.normals.iter().enumerate() {
-                vertices[i].normal = [v.x, v.y, v.z, v.w];
-            }
-
-            for (i, v) in buffer.tangents.iter().enumerate() {
-                vertices[i].tangent = [v.x, v.y, v.z, v.w];
-            }
-
-            for (i, v) in buffer.colors.iter().enumerate() {
-                vertices[i].color = [v.x, v.y, v.z, v.w];
-            }
-
-            assert_eq!(
-                std::mem::size_of::<DecodedVertex>(),
-                (4 + 4 + 4 + 4 + 4) * 4
-            );
-            let bytes: &[u8] = bytemuck::cast_slice(&vertices);
-            let vertex_buffer = unsafe {
-                let buffer = device
-                    .CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            ByteWidth: bytes.len() as _,
-                            Usage: D3D11_USAGE_IMMUTABLE,
-                            BindFlags: D3D11_BIND_VERTEX_BUFFER,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: bytes.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                        // None,
-                    )
-                    .context("Failed to create vertex buffer")?;
-
-                device_context.Unmap(&buffer, 0);
-
-                buffer
-            };
+            let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer).unwrap();
+            let t = pm.get_entry_by_tag(*index_buffer).unwrap().reference.into();
+            let index_data = pm.read_tag(t).unwrap();
 
             let index_buffer = unsafe {
                 let buffer = device
                     .CreateBuffer(
                         &D3D11_BUFFER_DESC {
-                            ByteWidth: (indices.len() * std::mem::size_of::<u32>()) as _,
+                            ByteWidth: index_data.len() as _,
                             Usage: D3D11_USAGE_IMMUTABLE,
                             BindFlags: D3D11_BIND_INDEX_BUFFER,
                             ..Default::default()
                         },
                         Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: indices.as_ptr() as _,
+                            pSysMem: index_data.as_ptr() as _,
                             ..Default::default()
                         }),
-                        // None,
                     )
                     .context("Failed to create index buffer")?;
-
-                device_context.Unmap(&buffer, 0);
 
                 buffer
             };
 
-            // if header
-            //     .parts
-            //     .iter()
-            //     .any(|p| p.index_start == 294 && p.index_count == 435 && p.buffer_index == bi as u8)
-            // {
-            //     let unk_header: VertexBufferHeader = pm.read_tag_struct(*unk_buffer_hash).unwrap();
-            //     error!(
-            //         "FUCKED FORMAT stride0={} stride2={} vbuf={:?} ubuf={:?}",
-            //         vertex_header.stride, unk_header.stride, vertex_buffer_hash, unk_buffer_hash
-            //     )
-            // }
+            let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
+                vertex_data
+                    .chunks_exact(vertex_header.stride as _)
+                    .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
+                    .map(|(v1, v2)| [v1, v2].concat())
+                    .flatten()
+                    .collect()
+            } else {
+                vertex_data
+            };
+
+            let combined_vertex_buffer = unsafe {
+                device
+                    .CreateBuffer(
+                        &D3D11_BUFFER_DESC {
+                            ByteWidth: combined_vertex_data.len() as _,
+                            Usage: D3D11_USAGE_IMMUTABLE,
+                            BindFlags: D3D11_BIND_VERTEX_BUFFER,
+                            ..Default::default()
+                        },
+                        Some(&D3D11_SUBRESOURCE_DATA {
+                            pSysMem: combined_vertex_data.as_ptr() as _,
+                            ..Default::default()
+                        }),
+                    )
+                    .context("Failed to create combined vertex buffer")?
+            };
 
             buffers.push(StaticModelBuffer {
-                vertex_buffer,
+                combined_vertex_buffer,
+                combined_vertex_stride: (vertex_header.stride as u32
+                    + vertex2_stride.unwrap_or_default()),
                 index_buffer,
-                index_count: indices.len(),
-                // material: u3,
+                index_format: if index_header.is_32bit {
+                    DXGI_FORMAT_R32_UINT
+                } else {
+                    DXGI_FORMAT_R16_UINT
+                },
+                index_count: if index_header.is_32bit {
+                    index_data.len() / 4
+                } else {
+                    index_data.len() / 2
+                } as _,
             })
         }
 
@@ -246,7 +196,7 @@ impl StaticModel {
         &self,
         device_context: &ID3D11DeviceContext,
         materials: &IntMap<u32, material::Unk808071e8>,
-        vshaders: &IntMap<u32, ID3D11VertexShader>,
+        vshaders: &IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
         cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
         cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
@@ -324,7 +274,8 @@ impl StaticModel {
                         }
 
                         // TODO(cohae): Might not go that well if it's None
-                        if let Some(vs) = vshaders.get(&mat.vertex_shader.0) {
+                        if let Some((vs, input_layout)) = vshaders.get(&mat.vertex_shader.0) {
+                            device_context.IASetInputLayout(input_layout);
                             device_context.VSSetShader(vs, None);
                         }
 
@@ -368,13 +319,14 @@ impl StaticModel {
                     device_context.IASetVertexBuffers(
                         0,
                         1,
-                        Some(&Some(buffers.vertex_buffer.clone())),
-                        Some(&((4 + 4 + 4 + 4 + 4) * 4)),
+                        Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
+                        Some([buffers.combined_vertex_stride].as_ptr()),
                         Some(&0),
                     );
+
                     device_context.IASetIndexBuffer(
                         Some(&buffers.index_buffer),
-                        DXGI_FORMAT_R32_UINT,
+                        buffers.index_format,
                         0,
                     );
                     device_context.IASetPrimitiveTopology(match p.primitive_type {

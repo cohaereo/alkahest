@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use crate::camera::{FpsCamera, InputState};
+use crate::dxbc::{get_input_signature, DxbcHeader};
 use crate::dxgi::{calculate_pitch, DxgiFormat};
 use crate::entity::{
     decode_vertices, ELodCategory, EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
@@ -23,6 +24,7 @@ use crate::statics::{Unk80807194, Unk8080719a, Unk808071a7, Unk8080966d};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::TextureHeader;
 use crate::types::{DestinyHash, Vector3};
+use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
@@ -54,6 +56,7 @@ use winit::{
 
 mod camera;
 mod dds;
+mod dxbc;
 mod dxgi;
 mod entity;
 mod gui;
@@ -66,6 +69,7 @@ mod text;
 mod texture;
 mod types;
 mod unknown;
+mod vertex_layout;
 
 pub fn get_string(
     pm: &mut PackageManager,
@@ -266,8 +270,8 @@ pub fn main() -> anyhow::Result<()> {
                     Height: window.inner_size().height as _,
                     MipLevels: 1,
                     ArraySize: 1,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    // Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
                     SampleDesc: DXGI_SAMPLE_DESC {
                         Count: 1,
                         Quality: 0,
@@ -286,7 +290,8 @@ pub fn main() -> anyhow::Result<()> {
             device.CreateShaderResourceView(
                 &tex,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    // Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
                     ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture2D: D3D11_TEX2D_SRV {
@@ -369,7 +374,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut static_map: IntMap<u32, StaticModel> = Default::default();
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
-    let mut vshader_map: IntMap<u32, ID3D11VertexShader> = Default::default();
+    let mut vshader_map: IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)> = Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
     let mut cbuffer_map_vs: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
@@ -385,7 +390,7 @@ pub fn main() -> anyhow::Result<()> {
                 material_map.insert(m.0, mat);
             }
 
-            match StaticModel::load(mheader, &device, &device_context, &mut package_manager) {
+            match StaticModel::load(mheader, &device, &mut package_manager) {
                 Ok(model) => {
                     static_map.insert(almostloadable.0, model);
                     // info!(model = ?almostloadable, "Successfully loaded model");
@@ -399,7 +404,7 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} statics", static_map.len());
 
-    let mut vshader = None;
+    // let mut vshader = None;
     let mut vshader_fullscreen = None;
     let mut pshader_fullscreen = None;
     let mut errors = None;
@@ -411,18 +416,18 @@ pub fn main() -> anyhow::Result<()> {
     };
     unsafe {
         (
-            D3DCompileFromFile(
-                w!("vshader.shader"),
-                None,
-                None,
-                s!("VShader"),
-                s!("vs_5_0"),
-                flags,
-                0,
-                &mut vshader,
-                Some(&mut errors),
-            )
-            .context("Failed to compile vertex shader")?,
+            // D3DCompileFromFile(
+            //     w!("vshader.shader"),
+            //     None,
+            //     None,
+            //     s!("VShader"),
+            //     s!("vs_5_0"),
+            //     flags,
+            //     0,
+            //     &mut vshader,
+            //     Some(&mut errors),
+            // )
+            // .context("Failed to compile vertex shader")?,
             D3DCompileFromFile(
                 w!("fullscreen.shader"),
                 None,
@@ -459,72 +464,10 @@ pub fn main() -> anyhow::Result<()> {
         warn!("{}", errors);
     }
 
-    let vshader = vshader.unwrap();
+    // let vshader = vshader.unwrap();
     let vshader_fullscreen = vshader_fullscreen.unwrap();
     let pshader_fullscreen = pshader_fullscreen.unwrap();
     // let pshader = pshader.unwrap();
-
-    let vertex_layout = unsafe {
-        let vs_blob = std::slice::from_raw_parts(
-            vshader.GetBufferPointer() as *const u8,
-            vshader.GetBufferSize(),
-        );
-        // let ps_blob = std::slice::from_raw_parts(
-        //     pshader.GetBufferPointer() as *const u8,
-        //     pshader.GetBufferSize(),
-        // );
-        device.CreateInputLayout(
-            &[
-                D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: s!("POSITION"),
-                    SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
-                    InputSlot: 0,
-                    AlignedByteOffset: 0,
-                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                    InstanceDataStepRate: 0,
-                },
-                D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: s!("TEXCOORD"),
-                    SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
-                    InputSlot: 0,
-                    AlignedByteOffset: 16,
-                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                    InstanceDataStepRate: 0,
-                },
-                D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: s!("NORMAL"),
-                    SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
-                    InputSlot: 0,
-                    AlignedByteOffset: 16 + 16,
-                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                    InstanceDataStepRate: 0,
-                },
-                D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: s!("TANGENT"),
-                    SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
-                    InputSlot: 0,
-                    AlignedByteOffset: 16 + 16 + 16,
-                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                    InstanceDataStepRate: 0,
-                },
-                D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: s!("COLOR"),
-                    SemanticIndex: 0,
-                    Format: DXGI_FORMAT_R32G32B32A32_FLOAT,
-                    InputSlot: 0,
-                    AlignedByteOffset: 16 + 16 + 16 + 16,
-                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                    InstanceDataStepRate: 0,
-                },
-            ],
-            vs_blob,
-        )?
-    };
-    println!("Done vertex layout");
 
     time_it!("Loading shaders", {
         for (t, m) in material_map.iter() {
@@ -551,6 +494,45 @@ pub fn main() -> anyhow::Result<()> {
 
                 vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
                     let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                    let mut vs_cur = Cursor::new(&vs_data);
+                    let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
+                    let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
+
+                    let layout = vertex_layout::build_input_layout(
+                        &input_sig
+                            .elements
+                            .iter()
+                            .map(|e| InputElement::from_dxbc(e, false))
+                            .collect::<Vec<InputElement>>(),
+                    );
+
+                    // let mut max_element = 0;
+                    // for (element, eldesc) in input_sig.elements.iter().zip(layout.iter()) {
+                    //     let pt = InputElement::from_dxbc(element, false);
+                    //     println!(
+                    //         "{} - {} {:?} {:?} => {:?}, offset {}",
+                    //         element.semantic_index,
+                    //         unsafe { eldesc.SemanticName.to_string().unwrap() },
+                    //         element.component_type,
+                    //         element.component_mask,
+                    //         DxgiFormat::try_from(eldesc.Format.0).unwrap(),
+                    //         eldesc.AlignedByteOffset
+                    //     );
+                    //
+                    //     max_element += 1;
+                    // }
+                    //
+                    // for element in input_sig.elements.iter().skip(max_element as _) {
+                    //     let pt = InputElement::from_dxbc(element, false);
+                    //     println!(
+                    //         "{} - {} {:?} {:?} => not mapped",
+                    //         element.semantic_index,
+                    //         element.semantic_name.to_string(),
+                    //         element.component_type,
+                    //         element.component_mask,
+                    //     );
+                    // }
+
                     unsafe {
                         let v = device
                             .CreateVertexShader(&vs_data, None)
@@ -565,7 +547,11 @@ pub fn main() -> anyhow::Result<()> {
                         )
                         .expect("Failed to set VS name");
 
-                        v
+                        let input_layout = device
+                            .CreateInputLayout(&layout, &vs_data)
+                            .expect("Failed to create input layout");
+
+                        (v, input_layout)
                     }
                 });
             }
@@ -689,12 +675,12 @@ pub fn main() -> anyhow::Result<()> {
         pshader_map.len()
     );
 
-    let (vshader, vshader_fullscreen, pshader_fullscreen) = unsafe {
-        let vs_blob = std::slice::from_raw_parts(
-            vshader.GetBufferPointer() as *const u8,
-            vshader.GetBufferSize(),
-        );
-        let v = device.CreateVertexShader(vs_blob, None)?;
+    let (vshader_fullscreen, pshader_fullscreen) = unsafe {
+        // let vs_blob = std::slice::from_raw_parts(
+        //     vshader.GetBufferPointer() as *const u8,
+        //     vshader.GetBufferSize(),
+        // );
+        // let v = device.CreateVertexShader(vs_blob, None)?;
         let vs_blob = std::slice::from_raw_parts(
             vshader_fullscreen.GetBufferPointer() as *const u8,
             vshader_fullscreen.GetBufferSize(),
@@ -711,23 +697,10 @@ pub fn main() -> anyhow::Result<()> {
         // );
         // let p = device.CreatePixelShader(ps_blob, None)?;
 
-        (v, v2, v3)
+        (v2, v3)
     };
 
     time_it!("Loading textures", {
-        struct PackageTexture {
-            handle: ID3D11Texture2D,
-            view: ID3D11ShaderResourceView,
-            format: DxgiFormat,
-            width: u16,
-            height: u16,
-            depth: u16,
-            array_size: u16,
-            e_type: u8,
-            e_subtype: u8,
-            index: usize,
-        }
-
         for m in material_map.values() {
             for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
                 let tex_hash = t.texture;
@@ -1110,6 +1083,7 @@ pub fn main() -> anyhow::Result<()> {
     }]);
     let mut renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, &device)? };
 
+    let start_time = Instant::now();
     let mut composite_mode: usize = 0;
     let mut placement_i: usize = 1;
     let mut last_frame = Instant::now();
@@ -1303,8 +1277,6 @@ pub fn main() -> anyhow::Result<()> {
                         &depth_stencil_view,
                     );
 
-                    device_context.IASetInputLayout(&vertex_layout);
-
                     let projection = Mat4::perspective_lh(
                         90f32.to_radians(),
                         window_dims.width as f32 / window_dims.height as f32,
@@ -1373,23 +1345,24 @@ pub fn main() -> anyhow::Result<()> {
                                     as usize
                                     ..(instance.instance_offset + instance.instance_count) as usize]
                                 {
-                                    let model_matrix =
-                                        Mat4::from_translation(
-                                            [
-                                                transform.translation.x,
-                                                transform.translation.y,
-                                                transform.translation.z,
-                                            ]
-                                            .into(),
-                                        ) * Mat4::from_quat(
-                                            Quat::from_xyzw(
-                                                transform.rotation.x,
-                                                transform.rotation.y,
-                                                transform.rotation.z,
-                                                transform.rotation.w,
-                                            )
-                                            .inverse(),
-                                        ) * Mat4::from_scale(Vec3::splat(transform.scale.x));
+                                    let instance_matrix = Mat4::from_scale_rotation_translation(
+                                        Vec3::splat(transform.scale.x),
+                                        Quat::from_xyzw(
+                                            transform.rotation.x,
+                                            transform.rotation.y,
+                                            transform.rotation.z,
+                                            transform.rotation.w,
+                                        )
+                                        .inverse(),
+                                        [
+                                            transform.translation.x,
+                                            transform.translation.y,
+                                            transform.translation.z,
+                                        ]
+                                        .into(),
+                                    );
+
+                                    let model_matrix = instance_matrix * model.model_transform();
 
                                     let bmap = device_context
                                         .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
@@ -1408,7 +1381,9 @@ pub fn main() -> anyhow::Result<()> {
                                             .z_axis
                                             .xyz()
                                             .extend(model_matrix.w_axis.z),
-                                        w_axis: Vec4::new(1.0, 0.0, 0.0, f32::from_bits(u32::MIN)),
+                                        w_axis: model
+                                            .texcoord_transform()
+                                            .extend(f32::from_bits(u32::MAX)),
                                     };
 
                                     let bdata = vec![scope_instance; 16];

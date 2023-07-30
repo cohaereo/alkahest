@@ -10,8 +10,8 @@ pub type TablePointer32<T> = _TablePointer<i32, u32, T>;
 pub type TablePointer64<T> = _TablePointer<i64, u64, T>;
 pub type TablePointer<T> = TablePointer64<T>;
 
-pub type RelPointer32<T> = _RelPointer<i32, T>;
-pub type RelPointer64<T> = _RelPointer<i64, T>;
+pub type RelPointer32<T = ()> = _RelPointer<i32, T>;
+pub type RelPointer64<T = ()> = _RelPointer<i64, T>;
 pub type RelPointer<T = ()> = RelPointer64<T>;
 
 #[derive(Clone)]
@@ -180,23 +180,6 @@ impl<O: Into<i64> + Copy, T: BinRead + Debug> Into<SeekFrom> for _RelPointer<O, 
         SeekFrom::Start((self.offset_base as i64 + self.offset.into()) as u64)
     }
 }
-
-// pub trait PackageManagerExt {
-//     fn read_tag_struct<'a, T: BinRead>(&mut self, tag: TagHash) -> anyhow::Result<T>
-//     where
-//         T::Args<'a>: Default + Clone;
-// }
-//
-// impl PackageManagerExt for PackageManager {
-//     fn read_tag_struct<'a, T: BinRead>(&mut self, tag: TagHash) -> anyhow::Result<T>
-//     where
-//         T::Args<'a>: Default + Clone,
-//     {
-//         let data = self.read_tag(tag)?;
-//         let mut cur = Cursor::new(data);
-//         Ok(cur.read_le()?)
-//     }
-// }
 
 #[derive(BinRead)]
 pub struct CafeMarker(#[br(assert(self_0 == 0xcafe))] u16);

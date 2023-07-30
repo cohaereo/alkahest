@@ -17,10 +17,10 @@ pub struct Unk808071e8 {
     pub unk78: TablePointer<Vector4>,
     pub unk88: TablePointer<Unk808073f3>,
     pub unk98: TablePointer<Vector4>,
-    pub balls0: [u32; 9],
+    pub unka8: [u32; 9],
 
-    pub balls1: TagHash,
-    pub unka8: [u32; 136 - 10],
+    pub unkcc: TagHash,
+    pub unkd0: [u32; 126],
 
     pub pixel_shader: TagHash,
     pub unk2cc: u32,
@@ -33,12 +33,13 @@ pub struct Unk808071e8 {
     pub unk318: TablePointer<Vector4>,
     pub unk328: [u32; 9],
 
-    /// Pointer to a float4 buffer
+    /// Pointer to a float4 buffer, usually passed into cbuffer0
     pub unk34c: TagHash,
 }
 
 #[derive(BinRead, Debug)]
 pub struct Unk80807211 {
+    /// Material slot to assign to
     pub index: u32,
     pub texture: TagHash,
 }

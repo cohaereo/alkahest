@@ -67,6 +67,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "binrw",
+ "bitflags 2.3.3",
  "bytemuck",
  "ddsfile",
  "destiny-pkg",
