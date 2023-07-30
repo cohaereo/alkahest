@@ -1337,7 +1337,7 @@ pub fn main() -> anyhow::Result<()> {
                         .unwrap();
 
                     let mut cb12_data = vec![Vec4::ZERO; 8];
-                    cb12_data[7] = camera.position.extend(1.0);
+                    cb12_data[7] = camera.position.yxz().extend(1.0);
 
                     bmap.pData.copy_from_nonoverlapping(
                         cb12_data.as_ptr() as _,

@@ -225,19 +225,32 @@ fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> 
             let t4: [i16; 4] = cur.read_le().unwrap();
             out.tangents.push(t4.into());
         }
+        // TODO(cohae): Format depends on shader
         24 => {
+            let d2: [i16; 2] = cur.read_le().unwrap();
+            out.tex_coords.push(Vector4::new(
+                d2[0].decode_float(),
+                d2[1].decode_float(),
+                1.0,
+                1.0,
+            ));
+            let n4: [i16; 4] = cur.read_le().unwrap();
+            out.normals.push(n4.into());
+
             // TODO(cohae): Has more data
-            let d4: [i16; 4] = cur.read_le().unwrap();
-            out.tex_coords.push(d4.into());
+            // let d4: [i16; 4] = cur.read_le().unwrap();
+            // out.tex_coords.push(d4.into());
             // TODO(cohae): Broken normals
-            let n3: [i16; 3] = cur.read_le().unwrap();
-            let t3: [i16; 3] = cur.read_le().unwrap();
-            // let t4: [i16; 4] = cur.read_le().unwrap();
+            // let n3: [i16; 3] = cur.read_le().unwrap();
+            // let t3: [i16; 3] = cur.read_le().unwrap();
             // let n3: Vector3 = n3.into();
             // let t3: Vector3 = t3.into();
             // out.normals.push(Vector4::new(n3.x, n3.y, n3.z, 1.0));
             // out.tangents.push(Vector4::new(t3.x, t3.y, t3.z, 1.0));
             // out.tangents.push(t4.into());
+            let u4: [i16; 4] = cur.read_le().unwrap();
+            // let n4: [i16; 4] = cur.read_le().unwrap();
+            // out.normals.push(n4.into());
             let color: [u8; 4] = cur.read_le().unwrap();
             out.colors.push(color.into());
         }
@@ -275,7 +288,6 @@ fn decode_vertex0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> an
             out.positions.push(d4.into());
         }
         12 => {
-            // TODO(cohae): More data to be discovered
             let pos: [i16; 4] = c.read_le().unwrap();
             let uv: [i16; 2] = c.read_le().unwrap();
             out.positions.push(pos.into());
