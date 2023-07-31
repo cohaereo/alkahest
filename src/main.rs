@@ -16,7 +16,7 @@ use crate::dxgi::calculate_pitch;
 
 use crate::gui::COMPOSITOR_MODES;
 use crate::scopes::{ScopeStaticInstance, ScopeView};
-use crate::static_render::{LoadedTexture, StaticModel};
+use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::TextureHeader;
@@ -26,17 +26,14 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Quat, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
+use glam::{Mat4, Quat, Vec3, Vec3Swizzles, Vec4};
 use imgui::{Condition, FontConfig, FontSource, WindowFlags};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-use tracy_client::ProfiledAllocator;
-use windows::core::Interface;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
     D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
@@ -106,9 +103,9 @@ pub fn get_string(
 }
 
 // TODO(cohae): Put tracy features such as this behind a feature flag
-#[global_allocator]
-static GLOBAL: ProfiledAllocator<std::alloc::System> =
-    ProfiledAllocator::new(std::alloc::System, 100);
+// #[global_allocator]
+// static GLOBAL: ProfiledAllocator<std::alloc::System> =
+//     ProfiledAllocator::new(std::alloc::System, 100);
 
 pub fn main() -> anyhow::Result<()> {
     rayon::ThreadPoolBuilder::new()
@@ -144,6 +141,7 @@ pub fn main() -> anyhow::Result<()> {
     // Winit event loop
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
+        .with_title("Alkahest")
         .with_inner_size(PhysicalSize::new(1600u32, 900u32))
         .build(&event_loop)?;
 
@@ -261,8 +259,8 @@ pub fn main() -> anyhow::Result<()> {
                     Height: window.inner_size().height as _,
                     MipLevels: 1,
                     ArraySize: 1,
-                    // Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
                     SampleDesc: DXGI_SAMPLE_DESC {
                         Count: 1,
                         Quality: 0,
@@ -281,8 +279,8 @@ pub fn main() -> anyhow::Result<()> {
             device.CreateShaderResourceView(
                 &tex,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    // Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
                     ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture2D: D3D11_TEX2D_SRV {
@@ -666,54 +664,95 @@ pub fn main() -> anyhow::Result<()> {
                 };
 
                 // info!("Uploading texture {} {texture:?}", tex_hash);
-                let tex = unsafe {
-                    let mut initial_data = [D3D11_SUBRESOURCE_DATA::default(); 6];
+                let (tex, view) = unsafe {
+                    let mut initial_data =
+                        vec![D3D11_SUBRESOURCE_DATA::default(); texture.array_size as _];
                     let (pitch, slice_pitch) =
                         calculate_pitch(texture.format, texture.width as _, texture.height as _);
 
                     for (i, d) in initial_data.iter_mut().enumerate() {
                         d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
                         d.SysMemPitch = pitch as _;
+                        d.SysMemSlicePitch = slice_pitch as _;
                     }
 
-                    device
-                        .CreateTexture2D(
-                            &D3D11_TEXTURE2D_DESC {
-                                Width: texture.width as _,
-                                Height: texture.height as _,
-                                MipLevels: 1,
-                                ArraySize: texture.array_size as _,
-                                Format: texture.format.into(),
-                                SampleDesc: DXGI_SAMPLE_DESC {
-                                    Count: 1,
-                                    Quality: 0,
+                    if texture.depth > 1 {
+                        let tex = device
+                            .CreateTexture3D(
+                                &D3D11_TEXTURE3D_DESC {
+                                    Width: texture.width as _,
+                                    Height: texture.height as _,
+                                    Depth: texture.depth as _,
+                                    MipLevels: 1,
+                                    Format: texture.format.into(),
+                                    Usage: D3D11_USAGE_DEFAULT,
+                                    BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                                    CPUAccessFlags: Default::default(),
+                                    MiscFlags: Default::default(),
                                 },
-                                Usage: D3D11_USAGE_DEFAULT,
-                                BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                                CPUAccessFlags: Default::default(),
-                                MiscFlags: Default::default(),
-                            },
-                            Some(initial_data.as_ptr()),
-                        )
-                        .context("Failed to create texture")
-                        .unwrap()
-                };
-                let view = unsafe {
-                    device
-                        .CreateShaderResourceView(
-                            &tex,
-                            Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                                Format: texture.format.into(),
-                                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                                    Texture2D: D3D11_TEX2D_SRV {
-                                        MostDetailedMip: 0,
-                                        MipLevels: 1,
+                                Some(initial_data.as_ptr()),
+                            )
+                            .context("Failed to create 3D texture")
+                            .unwrap();
+
+                        let view = device
+                            .CreateShaderResourceView(
+                                &tex,
+                                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                                    Format: texture.format.into(),
+                                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
+                                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                        Texture3D: D3D11_TEX3D_SRV {
+                                            MostDetailedMip: 0,
+                                            MipLevels: 1,
+                                        },
                                     },
+                                }),
+                            )
+                            .unwrap();
+
+                        (TextureHandle::Texture3D(tex), view)
+                    } else {
+                        let tex = device
+                            .CreateTexture2D(
+                                &D3D11_TEXTURE2D_DESC {
+                                    Width: texture.width as _,
+                                    Height: texture.height as _,
+                                    MipLevels: 1,
+                                    ArraySize: texture.array_size as _,
+                                    Format: texture.format.into(),
+                                    SampleDesc: DXGI_SAMPLE_DESC {
+                                        Count: 1,
+                                        Quality: 0,
+                                    },
+                                    Usage: D3D11_USAGE_DEFAULT,
+                                    BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                                    CPUAccessFlags: Default::default(),
+                                    MiscFlags: Default::default(),
                                 },
-                            }),
-                        )
-                        .unwrap()
+                                Some(initial_data.as_ptr()),
+                            )
+                            .context("Failed to create texture")
+                            .unwrap();
+
+                        let view = device
+                            .CreateShaderResourceView(
+                                &tex,
+                                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                                    Format: texture.format.into(),
+                                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                        Texture2D: D3D11_TEX2D_SRV {
+                                            MostDetailedMip: 0,
+                                            MipLevels: 1,
+                                        },
+                                    },
+                                }),
+                            )
+                            .unwrap();
+
+                        (TextureHandle::Texture2D(tex), view)
+                    }
                 };
 
                 texture_map.insert(
@@ -862,7 +901,7 @@ pub fn main() -> anyhow::Result<()> {
                     Height: window.inner_size().height,
                     MipLevels: 1,
                     ArraySize: 1,
-                    Format: DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+                    Format: DXGI_FORMAT_D32_FLOAT,
                     SampleDesc: DXGI_SAMPLE_DESC {
                         Count: 1,
                         Quality: 0,
@@ -882,8 +921,8 @@ pub fn main() -> anyhow::Result<()> {
             .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
                 DepthEnable: true.into(),
                 DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ALL,
-                DepthFunc: D3D11_COMPARISON_LESS,
-                StencilEnable: true.into(),
+                DepthFunc: D3D11_COMPARISON_GREATER_EQUAL,
+                StencilEnable: false.into(),
                 StencilReadMask: 0xff,
                 StencilWriteMask: 0xff,
                 FrontFace: D3D11_DEPTH_STENCILOP_DESC {
@@ -907,7 +946,7 @@ pub fn main() -> anyhow::Result<()> {
             .CreateDepthStencilView(
                 &depth_stencil_texture,
                 Some(&D3D11_DEPTH_STENCIL_VIEW_DESC {
-                    Format: DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+                    Format: DXGI_FORMAT_D32_FLOAT,
                     ViewDimension: D3D11_DSV_DIMENSION_TEXTURE2D,
                     Flags: 0,
                     Anonymous: D3D11_DEPTH_STENCIL_VIEW_DESC_0 {
@@ -1048,14 +1087,6 @@ pub fn main() -> anyhow::Result<()> {
 
                             let new_rtv = device.CreateRenderTargetView(&bb, None).unwrap();
 
-                            device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-                                TopLeftX: 0.0,
-                                TopLeftY: 0.0,
-                                Width: new_dims.width as f32,
-                                Height: new_dims.height as f32,
-                                MinDepth: 0.0,
-                                MaxDepth: 1.0,
-                            }]));
                             device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
                             swapchain_target = Some(new_rtv);
@@ -1184,7 +1215,7 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.ClearDepthStencilView(
                         &depth_stencil_view,
                         D3D11_CLEAR_DEPTH.0 as _,
-                        1.0,
+                        0.0,
                         0,
                     );
 
@@ -1205,20 +1236,19 @@ pub fn main() -> anyhow::Result<()> {
                         Some(&[1f32, 1., 1., 1.] as _),
                         0xffffffff,
                     );
-                    device_context.OMGetDepthStencilState(
-                        Some(&mut Some(depth_stencil_state.clone())),
-                        Some(&mut 0),
-                    );
                     device_context.OMSetRenderTargets(
                         Some(&[Some(rtv0.clone()), Some(rtv1.clone()), Some(rtv2.clone())]),
                         &depth_stencil_view,
                     );
+                    device_context.OMSetDepthStencilState(
+                        &depth_stencil_state.clone(),
+                        0,
+                    );
 
-                    let projection = Mat4::perspective_lh(
+                    let projection = Mat4::perspective_infinite_reverse_lh(
                         90f32.to_radians(),
                         window_dims.width as f32 / window_dims.height as f32,
                         0.01,
-                        4000.0,
                     );
                     let view = camera.calculate_matrix();
 
@@ -1273,6 +1303,7 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
 
                     let placements = &placement_groups[placement_i % placement_groups.len()];
+                    // for placements in &placement_groups {
                     for instance in &placements.instances {
                         if let Some(model_hash) =
                             placements.statics.iter().nth(instance.static_index as _)
@@ -1344,9 +1375,9 @@ pub fn main() -> anyhow::Result<()> {
                                         le_model_cb0.clone(),
                                     );
                                 }
-                            }
                         }
                     }
+                }
 
                     device_context.OMSetRenderTargets(
                         Some(&[Some(swapchain_target.as_ref().unwrap().clone())]),

@@ -30,8 +30,13 @@ pub struct StaticModelBuffer {
     index_count: usize,
 }
 
+pub enum TextureHandle {
+    Texture2D(ID3D11Texture2D),
+    Texture3D(ID3D11Texture3D),
+}
+
 pub struct LoadedTexture {
-    pub handle: ID3D11Texture2D,
+    pub handle: TextureHandle,
     pub view: ID3D11ShaderResourceView,
     pub format: DxgiFormat,
 }
@@ -294,7 +299,9 @@ impl StaticModel {
                             }
                         }
 
-                        device_context.VSSetShaderResources(0, Some(vs_textures.as_slice()));
+                        if !vs_textures.is_empty() {
+                            device_context.VSSetShaderResources(0, Some(vs_textures.as_slice()));
+                        }
 
                         let mut ps_textures = vec![None; ps_tex_count];
                         for p in &mat.ps_textures {
@@ -303,7 +310,9 @@ impl StaticModel {
                             }
                         }
 
-                        device_context.PSSetShaderResources(0, Some(ps_textures.as_slice()));
+                        if !ps_textures.is_empty() {
+                            device_context.PSSetShaderResources(0, Some(ps_textures.as_slice()));
+                        }
                     }
 
                     device_context.IASetVertexBuffers(
