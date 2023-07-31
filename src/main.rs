@@ -2,34 +2,31 @@
 extern crate windows;
 
 use std::collections::HashMap;
-use std::fmt::Write;
-use std::fs::File;
-use std::io::{BufWriter, Cursor, Read, Seek, SeekFrom};
+
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
-use std::ptr;
+
 use std::str::FromStr;
 use std::time::Instant;
 
 use crate::camera::{convert_matrix, FpsCamera, InputState};
 use crate::dxbc::{get_input_signature, DxbcHeader};
-use crate::dxgi::{calculate_pitch, DxgiFormat};
-use crate::entity::{
-    decode_vertices, ELodCategory, EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
-};
-use crate::gui::{CompositorMode, COMPOSITOR_MODES};
+use crate::dxgi::calculate_pitch;
+
+use crate::gui::COMPOSITOR_MODES;
 use crate::scopes::{ScopeStaticInstance, ScopeView};
 use crate::static_render::{LoadedTexture, StaticModel};
-use crate::statics::{Unk80807194, Unk8080719a, Unk808071a7, Unk8080966d};
+use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::TextureHeader;
-use crate::types::{DestinyHash, Vector3};
+use crate::types::DestinyHash;
 use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Affine3A, EulerRot, Mat3, Mat4, Quat, Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
+use glam::{Mat4, Quat, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use imgui::{Condition, FontConfig, FontSource, WindowFlags};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use itertools::Itertools;
@@ -42,7 +39,7 @@ use tracy_client::ProfiledAllocator;
 use windows::core::Interface;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
-    D3DCompileFromFile, D3DReflect, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
+    D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
 };
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -146,7 +143,7 @@ pub fn main() -> anyhow::Result<()> {
     // return;
     // Winit event loop
     let event_loop = EventLoop::new();
-    let mut window = winit::window::WindowBuilder::new()
+    let window = winit::window::WindowBuilder::new()
         .with_inner_size(PhysicalSize::new(1600u32, 900u32))
         .build(&event_loop)?;
 
@@ -215,8 +212,8 @@ pub fn main() -> anyhow::Result<()> {
         Some(device.CreateRenderTargetView(&buffer, None)?)
     };
 
-    let (mut rtv0, rtv0_view) = unsafe {
-        let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
+    let (rtv0, rtv0_view) = unsafe {
+        let _buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
         let tex = device
             .CreateTexture2D(
                 &D3D11_TEXTURE2D_DESC {
@@ -256,7 +253,7 @@ pub fn main() -> anyhow::Result<()> {
         )
     };
 
-    let (mut rtv1, rtv1_view) = unsafe {
+    let (rtv1, rtv1_view) = unsafe {
         let tex = device
             .CreateTexture2D(
                 &D3D11_TEXTURE2D_DESC {
@@ -298,7 +295,7 @@ pub fn main() -> anyhow::Result<()> {
         )
     };
 
-    let (mut rtv2, rtv2_view) = unsafe {
+    let (rtv2, rtv2_view) = unsafe {
         let tex = device
             .CreateTexture2D(
                 &D3D11_TEXTURE2D_DESC {
@@ -748,7 +745,7 @@ pub fn main() -> anyhow::Result<()> {
         })?
     };
 
-    let le_cbuffer = unsafe {
+    let _le_cbuffer = unsafe {
         device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
@@ -761,7 +758,7 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
-    let le_model_cbuffer = unsafe {
+    let _le_model_cbuffer = unsafe {
         device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
@@ -1023,7 +1020,7 @@ pub fn main() -> anyhow::Result<()> {
     }]);
     let mut renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, &device)? };
 
-    let start_time = Instant::now();
+    let _start_time = Instant::now();
     let mut composite_mode: usize = 0;
     let mut placement_i: usize = 1;
     let mut last_frame = Instant::now();
@@ -1229,7 +1226,7 @@ pub fn main() -> anyhow::Result<()> {
                         .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
 
-                    let proj_view = (projection * view);
+                    let proj_view = projection * view;
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view, //Mat4::from_mat3(normalized),

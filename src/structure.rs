@@ -1,8 +1,7 @@
-use binrw::file_ptr::IntoSeekFrom;
-use binrw::{BinRead, BinReaderExt, BinResult, Endian, VecArgs};
-use destiny_pkg::{PackageManager, TagHash};
+use binrw::{BinRead, BinReaderExt, BinResult, Endian};
+
 use std::fmt::{Debug, Formatter, Write};
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 use std::ops::Deref;
 use std::slice::Iter;
 
@@ -142,7 +141,7 @@ where
         reader.seek(SeekFrom::Start(offset_base))?;
         reader.seek(SeekFrom::Current(seek64))?;
 
-        let mut data = reader.read_type(endian)?;
+        let data = reader.read_type(endian)?;
 
         reader.seek(SeekFrom::Start(offset_save))?;
 

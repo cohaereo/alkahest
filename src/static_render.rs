@@ -1,22 +1,15 @@
-use crate::dxbc::DxbcInputSignature;
 use crate::dxgi::DxgiFormat;
-use crate::entity::{
-    decode_vertices, decode_vertices2, DecodedVertex, DecodedVertexBuffer, ELodCategory,
-    EPrimitiveType, IndexBufferHeader, VertexBufferHeader,
-};
+use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
-use crate::types::{Vector2, Vector3, Vector4};
-use crate::vertex_layout::InputElement;
-use crate::{material, vertex_layout};
+
+use crate::material;
 use anyhow::{ensure, Context};
 use destiny_pkg::PackageManager;
-use glam::{Mat4, Quat, Vec2, Vec3, Vec3A, Vec4};
+use glam::{Mat4, Vec3};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
-use std::io::Read;
-use std::mem::transmute;
-use std::ptr;
-use tracing::{error, info, warn};
+
+use tracing::warn;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::{
@@ -80,7 +73,7 @@ impl StaticModel {
         ensure!(header.unk8.len() == model.materials.len());
 
         let mut buffers = vec![];
-        for (index_buffer, vertex_buffer_hash, vertex2_buffer_hash, u3) in header.buffers.iter() {
+        for (index_buffer, vertex_buffer_hash, vertex2_buffer_hash, _u3) in header.buffers.iter() {
             let vertex_header: VertexBufferHeader =
                 pm.read_tag_struct(*vertex_buffer_hash).unwrap();
 

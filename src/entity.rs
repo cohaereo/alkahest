@@ -1,13 +1,13 @@
 use crate::structure::{DeadBeefMarker, TablePointer};
-use crate::types::{DecodeFloat, Vector2, Vector3, Vector4};
-use anyhow::anyhow;
+use crate::types::{DecodeFloat, Vector2, Vector4};
+
 use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
 use destiny_pkg::TagHash;
-use glam::{Vec2, Vec3A, Vec4};
+
 use std::cmp::Ordering;
-use std::io::{Cursor, Read, Seek, SeekFrom};
-use tracing::{debug, warn};
+use std::io::{Cursor, Read, SeekFrom};
+use tracing::warn;
 
 #[derive(BinRead, Debug)]
 pub struct Unk808073a5 {
@@ -248,7 +248,7 @@ fn decode_vertex2_0(stride: u16, data: &[u8], out: &mut DecodedVertexBuffer) -> 
             // out.normals.push(Vector4::new(n3.x, n3.y, n3.z, 1.0));
             // out.tangents.push(Vector4::new(t3.x, t3.y, t3.z, 1.0));
             // out.tangents.push(t4.into());
-            let u4: [i16; 4] = cur.read_le().unwrap();
+            let _u4: [i16; 4] = cur.read_le().unwrap();
             // let n4: [i16; 4] = cur.read_le().unwrap();
             // out.normals.push(n4.into());
             let color: [u8; 4] = cur.read_le().unwrap();
