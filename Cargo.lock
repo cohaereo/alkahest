@@ -80,6 +80,7 @@ dependencies = [
  "itertools",
  "nohash-hasher",
  "raw-window-handle 0.5.2",
+ "rayon",
  "tracing",
  "tracing-subscriber",
  "tracing-tracy",

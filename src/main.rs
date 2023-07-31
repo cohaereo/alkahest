@@ -35,9 +35,10 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
+use tracy_client::ProfiledAllocator;
 use windows::core::Interface;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
@@ -107,25 +108,17 @@ pub fn get_string(
     Some(final_string)
 }
 
-macro_rules! time_it {
-    ($name:expr, $code:block) => {
-        let bench_start = Instant::now();
-
-        $code
-
-        info!(
-            "{} took {}s",
-            $name, bench_start.elapsed().as_secs_f32()
-        );
-    };
-}
+// TODO(cohae): Put tracy features such as this behind a feature flag
+#[global_allocator]
+static GLOBAL: ProfiledAllocator<std::alloc::System> =
+    ProfiledAllocator::new(std::alloc::System, 100);
 
 pub fn main() -> anyhow::Result<()> {
-    // tracing_subscriber::fmt()
-    //     .with_max_level(tracing::Level::DEBUG)
-    //     .
-    //     .init();
-    // tracing_subscriber::fmt().init();
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|i| format!("rayon-worker-{i}"))
+        .build_global()
+        .unwrap();
+
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(tracing_tracy::TracyLayer::new())
@@ -134,20 +127,21 @@ pub fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to set up the tracing subscriber");
 
-    let package;
-    let mut package_manager;
-    time_it!("Initializing package manager", {
-        let pkg_path = std::env::args().nth(1).unwrap_or_default();
-        package = Destiny2PreBeyondLight
-            .open(&pkg_path)
-            .expect("Failed to open package");
-        package_manager = PackageManager::new(
-            PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
-            Destiny2PreBeyondLight,
-            true,
-        )
-        .unwrap();
-    });
+    let (package, mut package_manager) =
+        info_span!("Initializing package manager").in_scope(|| {
+            let pkg_path = std::env::args().nth(1).unwrap_or_default();
+            (
+                Destiny2PreBeyondLight
+                    .open(&pkg_path)
+                    .expect("Failed to open package"),
+                PackageManager::new(
+                    PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
+                    Destiny2PreBeyondLight,
+                    true,
+                )
+                .unwrap(),
+            )
+        });
 
     // return;
     // Winit event loop
@@ -380,10 +374,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
 
-    time_it!("Loading statics", {
+    info_span!("Loading statics").in_scope(|| {
         for almostloadable in &to_load {
-            // let almostloadable = &TagHash::new(package.pkg_id(), 637);
-
             let mheader: Unk808071a7 = package_manager.read_tag_struct(*almostloadable).unwrap();
             for m in &mheader.materials {
                 let mat: material::Unk808071e8 = package_manager.read_tag_struct(*m).unwrap();
@@ -393,7 +385,6 @@ pub fn main() -> anyhow::Result<()> {
             match StaticModel::load(mheader, &device, &mut package_manager) {
                 Ok(model) => {
                     static_map.insert(almostloadable.0, model);
-                    // info!(model = ?almostloadable, "Successfully loaded model");
                 }
                 Err(e) => {
                     error!(model = ?almostloadable, "Failed to load model: {e}");
@@ -404,7 +395,6 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} statics", static_map.len());
 
-    // let mut vshader = None;
     let mut vshader_fullscreen = None;
     let mut pshader_fullscreen = None;
     let mut errors = None;
@@ -416,18 +406,6 @@ pub fn main() -> anyhow::Result<()> {
     };
     unsafe {
         (
-            // D3DCompileFromFile(
-            //     w!("vshader.shader"),
-            //     None,
-            //     None,
-            //     s!("VShader"),
-            //     s!("vs_5_0"),
-            //     flags,
-            //     0,
-            //     &mut vshader,
-            //     Some(&mut errors),
-            // )
-            // .context("Failed to compile vertex shader")?,
             D3DCompileFromFile(
                 w!("fullscreen.shader"),
                 None,
@@ -469,25 +447,8 @@ pub fn main() -> anyhow::Result<()> {
     let pshader_fullscreen = pshader_fullscreen.unwrap();
     // let pshader = pshader.unwrap();
 
-    time_it!("Loading shaders", {
+    info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
-            // println!(
-            //     "{t:08x} VS {:?} - {} {} {} {}",
-            //     m.vertex_shader,
-            //     m.unk68.len(),
-            //     m.unk78.len(),
-            //     m.unk88.len(),
-            //     m.unk98.len(),
-            // );
-            // println!(
-            //     "{t:08x} PS {:?} - {} {} {} {}",
-            //     m.pixel_shader,
-            //     m.unk2e8.len(),
-            //     m.unk2f8.len(),
-            //     m.unk308.len(),
-            //     m.unk318.len()
-            // );
-
             if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
                 let _span =
                     tracing::debug_span!("load vshader", shader = ?m.vertex_shader).entered();
@@ -505,33 +466,6 @@ pub fn main() -> anyhow::Result<()> {
                             .map(|e| InputElement::from_dxbc(e, false))
                             .collect::<Vec<InputElement>>(),
                     );
-
-                    // let mut max_element = 0;
-                    // for (element, eldesc) in input_sig.elements.iter().zip(layout.iter()) {
-                    //     let pt = InputElement::from_dxbc(element, false);
-                    //     println!(
-                    //         "{} - {} {:?} {:?} => {:?}, offset {}",
-                    //         element.semantic_index,
-                    //         unsafe { eldesc.SemanticName.to_string().unwrap() },
-                    //         element.component_type,
-                    //         element.component_mask,
-                    //         DxgiFormat::try_from(eldesc.Format.0).unwrap(),
-                    //         eldesc.AlignedByteOffset
-                    //     );
-                    //
-                    //     max_element += 1;
-                    // }
-                    //
-                    // for element in input_sig.elements.iter().skip(max_element as _) {
-                    //     let pt = InputElement::from_dxbc(element, false);
-                    //     println!(
-                    //         "{} - {} {:?} {:?} => not mapped",
-                    //         element.semantic_index,
-                    //         element.semantic_name.to_string(),
-                    //         element.component_type,
-                    //         element.component_mask,
-                    //     );
-                    // }
 
                     unsafe {
                         let v = device
@@ -602,7 +536,8 @@ pub fn main() -> anyhow::Result<()> {
                                 ..Default::default()
                             }),
                         )
-                        .context("Failed to load float4 cbuffer")?
+                        .context("Failed to load float4 cbuffer")
+                        .unwrap()
                 };
 
                 cbuffer_map_vs.insert(*t, buf);
@@ -636,7 +571,8 @@ pub fn main() -> anyhow::Result<()> {
                                 ..Default::default()
                             }),
                         )
-                        .context("Failed to load variable cbuffer")?
+                        .context("Failed to load variable cbuffer")
+                        .unwrap()
                 };
 
                 cbuffer_map_ps.insert(*t, buf);
@@ -661,7 +597,8 @@ pub fn main() -> anyhow::Result<()> {
                                 ..Default::default()
                             }),
                         )
-                        .context("Failed to load float4 cbuffer")?
+                        .context("Failed to load float4 cbuffer")
+                        .unwrap()
                 };
 
                 cbuffer_map_ps.insert(*t, buf);
@@ -700,14 +637,14 @@ pub fn main() -> anyhow::Result<()> {
         (v2, v3)
     };
 
-    time_it!("Loading textures", {
+    info_span!("Loading textures").in_scope(|| {
         for m in material_map.values() {
             for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
                 let tex_hash = t.texture;
                 if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
                     continue;
                 }
-                let _span = tracing::debug_span!("load texture", texture = ?tex_hash).entered();
+                let _span = debug_span!("load texture", texture = ?tex_hash).entered();
 
                 let texture_header_ref = TagHash(
                     package_manager
@@ -761,22 +698,25 @@ pub fn main() -> anyhow::Result<()> {
                             },
                             Some(initial_data.as_ptr()),
                         )
-                        .context("Failed to create texture")?
+                        .context("Failed to create texture")
+                        .unwrap()
                 };
                 let view = unsafe {
-                    device.CreateShaderResourceView(
-                        &tex,
-                        Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                            Format: texture.format.into(),
-                            ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                                Texture2D: D3D11_TEX2D_SRV {
-                                    MostDetailedMip: 0,
-                                    MipLevels: 1,
+                    device
+                        .CreateShaderResourceView(
+                            &tex,
+                            Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                                Format: texture.format.into(),
+                                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                    Texture2D: D3D11_TEX2D_SRV {
+                                        MostDetailedMip: 0,
+                                        MipLevels: 1,
+                                    },
                                 },
-                            },
-                        }),
-                    )?
+                            }),
+                        )
+                        .unwrap()
                 };
 
                 texture_map.insert(
@@ -1340,6 +1280,10 @@ pub fn main() -> anyhow::Result<()> {
                         if let Some(model_hash) =
                             placements.statics.iter().nth(instance.static_index as _)
                         {
+                            let _span =
+                                debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
+                                    .entered();
+
                             if let Some(model) = static_map.get(&model_hash.0) {
                                 for transform in &placements.transforms[instance.instance_offset
                                     as usize
