@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Instant;
 
-use crate::camera::{convert_matrix, FpsCamera, InputState};
+use crate::camera::{FpsCamera, InputState};
 use crate::dxbc::{get_input_signature, DxbcHeader};
 use crate::dxgi::calculate_pitch;
 
@@ -1068,7 +1068,6 @@ pub fn main() -> anyhow::Result<()> {
         platform.handle_event(imgui.io_mut(), &window, &event);
         match &event {
             Event::WindowEvent { event, .. } => {
-                // if !winit_app.on_event(ctx, event).consumed {
                 if true {
                     match event {
                         WindowEvent::Resized(new_dims) => unsafe {
@@ -1245,10 +1244,10 @@ pub fn main() -> anyhow::Result<()> {
                         0,
                     );
 
-                    let projection = Mat4::perspective_infinite_reverse_lh(
+                    let projection = Mat4::perspective_infinite_reverse_rh(
                         90f32.to_radians(),
                         window_dims.width as f32 / window_dims.height as f32,
-                        0.01,
+                        0.001,
                     );
                     let view = camera.calculate_matrix();
 
@@ -1257,11 +1256,14 @@ pub fn main() -> anyhow::Result<()> {
                         .unwrap();
 
                     let proj_view = projection * view;
+                    let mut view2 = Mat4::IDENTITY;
+                    view2.w_axis = camera.position.extend(1.0);
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view, //Mat4::from_mat3(normalized),
-                        camera_to_world: convert_matrix(view),
-                        _13: proj_view.w_axis,
+                        camera_to_world: view2,
+                        // HACK: Account for missing depth value in output
+                        view_miscellaneous: Vec4::new(0.0, 0.0, 0.001, 1.0),
                         ..Default::default()
                     };
                     bmap.pData.copy_from_nonoverlapping(
@@ -1300,7 +1302,8 @@ pub fn main() -> anyhow::Result<()> {
                         ]),
                     );
 
-                    device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
+                    device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                    // device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
 
                     let placements = &placement_groups[placement_i % placement_groups.len()];
                     // for placements in &placement_groups {
@@ -1431,6 +1434,4 @@ pub fn main() -> anyhow::Result<()> {
             _ => (),
         }
     });
-
-    Ok(())
 }

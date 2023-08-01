@@ -17,7 +17,7 @@ pub struct ScopeView {
     // pub target: Vec4,
     pub _12: Vec4,
     // pub view_miscellaneous: Vec4,
-    pub _13: Vec4,
+    pub view_miscellaneous: Vec4,
 }
 
 #[repr(C)]

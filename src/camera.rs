@@ -44,7 +44,7 @@ impl FpsCamera {
     }
 
     pub fn update_mouse(&mut self, mouse_delta: Vec2) {
-        self.orientation += -Vec2::new(mouse_delta.y * 0.8, mouse_delta.x) * 0.15;
+        self.orientation += Vec2::new(mouse_delta.y * 0.8, mouse_delta.x) * 0.15;
         self.update_vectors();
     }
 
@@ -63,10 +63,10 @@ impl FpsCamera {
 
         let mut direction = Vec3::ZERO;
         if input.w {
-            direction -= self.front;
+            direction += self.front;
         }
         if input.s {
-            direction += self.front;
+            direction -= self.front;
         }
 
         if input.d {
@@ -92,7 +92,6 @@ impl FpsCamera {
 
     pub fn calculate_matrix(&mut self) -> Mat4 {
         Mat4::look_at_rh(self.position, self.position + self.front, Vec3::Z)
-            * Mat4::from_scale(Vec3::new(-1.0, 1.0, 1.0)) // TODO(cohae): fix this shit
     }
 
     pub fn rotation(&self) -> Quat {
@@ -103,13 +102,4 @@ impl FpsCamera {
     pub fn position(&mut self) -> Vec3 {
         self.position
     }
-}
-
-pub fn convert_matrix(m: Mat4) -> Mat4 {
-    Mat4::from_cols(
-        m.x_axis.truncate().extend(m.w_axis.x),
-        m.y_axis.truncate().extend(m.w_axis.y),
-        m.z_axis.truncate().extend(m.w_axis.z),
-        [0.0, 0.0, 0.0, 1.0].into(),
-    )
 }
