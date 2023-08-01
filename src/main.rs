@@ -374,7 +374,7 @@ pub fn main() -> anyhow::Result<()> {
     unsafe {
         (
             D3DCompileFromFile(
-                w!("fullscreen.shader"),
+                w!("fullscreen.hlsl"),
                 None,
                 None,
                 s!("VShader"),
@@ -386,7 +386,7 @@ pub fn main() -> anyhow::Result<()> {
             )
             .context("Failed to compile vertex shader")?,
             D3DCompileFromFile(
-                w!("fullscreen.shader"),
+                w!("fullscreen.hlsl"),
                 None,
                 None,
                 s!("PShader"),
