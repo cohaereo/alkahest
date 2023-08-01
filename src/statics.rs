@@ -70,8 +70,10 @@ pub struct Unk808071a7 {
     pub unk20: TablePointer<Unk80807193>,
     pub unk30: [u32; 2],
     pub unk38: [f32; 6],
+    // ? Similar to model_offset, but not quite right...
+    pub unk50: Vector3,
+    pub unk5c: f32,
     pub model_offset: Vector3,
-    pub unk5c: [f32; 4],
     pub model_scale: f32,
     pub texture_coordinate_scale: Vector2,
     pub texture_coordinate_offset: Vector2,
