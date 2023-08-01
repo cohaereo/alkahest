@@ -2,15 +2,11 @@
 name = "alkahest"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["cohaereo <cohaereo@protonmail.com>"]
 
 [dependencies]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 destiny-pkg = { version = "0.3.0", git = "https://github.com/v4nguard/destiny-pkg" }
-#egui_winit_vulkano = { path = "/home/mikaela/Downloads/egui_winit_vulkano" }
-#vulkano = "0.33.0"
-#vulkano-util = "0.33.0"
 winit = { version = "0.27.2" }
 binrw = "0.11"
 itertools = "0.11.0"
@@ -34,16 +30,20 @@ glam = { version = "0.24.1", features = ["bytemuck"] }
 nohash-hasher = "0.2.0"
 fastrand = "2.0.0"
 
-imgui = "0.9.0"
-#imgui-dx11-renderer = "0.8.0"
-imgui-dx11-renderer = { path = "../imgui-dx11-renderer" }
-imgui-winit-support = "0.9.0"
+imgui = "0.11.0"
+imgui-dx11-renderer = { git = "https://github.com/cohaereo/imgui-dx11-renderer" }
+imgui-winit-support = "0.11.0"
 tracing-tracy = "0.10.2"
 tracy-client = "0.15.2"
 bitflags = "2.3.3"
 rayon = "1.7.0"
 
+[features]
+default = []
+tracy = []
+
 [package.metadata.imgui-dx11-renderer]
 targets = ["x86_64-pc-windows-gnu"]
+
 [package.metadata.alkahest]
 targets = ["x86_64-pc-windows-gnu"]

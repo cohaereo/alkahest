@@ -3,7 +3,7 @@ extern crate windows;
 
 use std::collections::HashMap;
 
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read};
 use std::mem::transmute;
 use std::path::PathBuf;
 
@@ -18,9 +18,9 @@ use crate::gui::COMPOSITOR_MODES;
 use crate::scopes::{ScopeStaticInstance, ScopeView};
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
-use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
+
 use crate::texture::TextureHeader;
-use crate::types::DestinyHash;
+
 use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -66,43 +66,6 @@ mod types;
 mod unknown;
 mod vertex_layout;
 
-pub fn get_string(
-    pm: &mut PackageManager,
-    (container, string): (TagHash, DestinyHash),
-) -> Option<String> {
-    if string.is_none() {
-        return None;
-    }
-
-    let textset_header: StringSetHeader = pm.read_tag_struct(container).ok()?;
-    // println!("{textset_header:#x?}");
-    // println!("{} bytes text data in {i}", data.len());
-
-    let data = pm.read_tag(textset_header.language_english).unwrap();
-    let mut cur = Cursor::new(&data);
-    let text_data: StringData = cur.read_le().ok()?;
-
-    let (combination, _) = text_data
-        .string_combinations
-        .iter()
-        .zip(textset_header.string_hashes.iter())
-        .find(|(_, h)| **h == string)?;
-    let mut final_string = String::new();
-
-    for ip in 0..combination.part_count {
-        cur.seek(combination.data.into()).unwrap();
-        cur.seek(SeekFrom::Current(ip * 0x20)).unwrap();
-        let part: StringPart = cur.read_le().unwrap();
-        cur.seek(part.data.into()).unwrap();
-        let mut data = vec![0u8; part.byte_length as usize];
-        cur.read_exact(&mut data).unwrap();
-        final_string += &decode_text(&data, part.cipher_shift);
-    }
-
-    Some(final_string)
-}
-
-// TODO(cohae): Put tracy features such as this behind a feature flag
 // #[global_allocator]
 // static GLOBAL: ProfiledAllocator<std::alloc::System> =
 //     ProfiledAllocator::new(std::alloc::System, 100);
@@ -113,12 +76,20 @@ pub fn main() -> anyhow::Result<()> {
         .build_global()
         .unwrap();
 
-    tracing::subscriber::set_global_default(
-        tracing_subscriber::registry()
-            .with(tracing_tracy::TracyLayer::new())
-            .with(tracing_subscriber::fmt::layer())
-            .with(EnvFilter::from_default_env()),
-    )
+    if cfg!(feature = "tracy") {
+        tracing::subscriber::set_global_default(
+            tracing_subscriber::registry()
+                .with(tracing_tracy::TracyLayer::new())
+                .with(tracing_subscriber::fmt::layer())
+                .with(EnvFilter::from_default_env()),
+        )
+    } else {
+        tracing::subscriber::set_global_default(
+            tracing_subscriber::registry()
+                .with(tracing_subscriber::fmt::layer())
+                .with(EnvFilter::from_default_env()),
+        )
+    }
     .expect("Failed to set up the tracing subscriber");
 
     let (package, mut package_manager) =
@@ -137,11 +108,11 @@ pub fn main() -> anyhow::Result<()> {
             )
         });
 
-    // return;
-    // Winit event loop
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
+        // TODO(cohae): Buffers need to be reconfigured on resize
+        .with_resizable(false)
         .with_inner_size(PhysicalSize::new(1600u32, 900u32))
         .build(&event_loop)?;
 
@@ -260,6 +231,7 @@ pub fn main() -> anyhow::Result<()> {
                     MipLevels: 1,
                     ArraySize: 1,
                     Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    // TODO(cohae): Does not work on Windows. Why?
                     // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
                     SampleDesc: DXGI_SAMPLE_DESC {
                         Count: 1,
@@ -608,11 +580,6 @@ pub fn main() -> anyhow::Result<()> {
     );
 
     let (vshader_fullscreen, pshader_fullscreen) = unsafe {
-        // let vs_blob = std::slice::from_raw_parts(
-        //     vshader.GetBufferPointer() as *const u8,
-        //     vshader.GetBufferSize(),
-        // );
-        // let v = device.CreateVertexShader(vs_blob, None)?;
         let vs_blob = std::slice::from_raw_parts(
             vshader_fullscreen.GetBufferPointer() as *const u8,
             vshader_fullscreen.GetBufferSize(),
@@ -623,12 +590,6 @@ pub fn main() -> anyhow::Result<()> {
             pshader_fullscreen.GetBufferSize(),
         );
         let v3 = device.CreatePixelShader(ps_blob, None)?;
-        // let ps_blob = std::slice::from_raw_parts(
-        //     pshader.GetBufferPointer() as *const u8,
-        //     pshader.GetBufferSize(),
-        // );
-        // let p = device.CreatePixelShader(ps_blob, None)?;
-
         (v2, v3)
     };
 
@@ -1061,7 +1022,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let _start_time = Instant::now();
     let mut composite_mode: usize = 0;
-    let mut placement_i: usize = 1;
+    let mut placement_i: usize = 0;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
     event_loop.run(move |event, _, control_flow| {
@@ -1142,24 +1103,6 @@ pub fn main() -> anyhow::Result<()> {
                                         "Switched to placement group {}",
                                         placement_i % placement_groups.len()
                                     );
-
-                                    // let mut p_min = Vec3::MAX;
-                                    // let mut p_max = Vec3::MIN;
-                                    // for t in &placement_groups[placement_i % placement_groups.len()]
-                                    //     .transforms
-                                    // {
-                                    //     let v = Vec3::new(
-                                    //         t.translation.x,
-                                    //         t.translation.y,
-                                    //         t.translation.z,
-                                    //     );
-                                    //
-                                    //     p_min = p_min.min(v);
-                                    //     p_max = p_max.max(v);
-                                    // }
-                                    //
-                                    // let center = (p_min + p_max) / 2.0;
-                                    // camera.position = center;
                                 }
                             }
 
@@ -1196,14 +1139,22 @@ pub fn main() -> anyhow::Result<()> {
                     .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
                     .build(|| ui.text(format!("{:.1}", 1.0 / last_frame.elapsed().as_secs_f32())));
 
-                ui.window("Options")
-                    .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
-                    .size([128.0, 36.0], Condition::Always)
-                    .build(|| {
-                        ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
-                            format!("{v}").into()
+                    ui.window("Options")
+                        .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
+                        .size([128.0, 36.0], Condition::Always)
+                        .build(|| {
+                            ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
+                                format!("{v}").into()
+                            });
                         });
-                    });
+
+                        ui.window("Debug")
+                            .flags(WindowFlags::NO_TITLE_BAR)
+                            .build(|| {
+                                ui.text(format!("X: {}", camera.position.x));
+                                ui.text(format!("Y: {}", camera.position.y));
+                                ui.text(format!("Z: {}", camera.position.z));
+                            });
 
                 last_frame = Instant::now();
 
@@ -1292,6 +1243,16 @@ pub fn main() -> anyhow::Result<()> {
 
                     // TODO(cohae): Find a more solid way to assign samplers
                     device_context.PSSetSamplers(
+                        0,
+                        Some(&[
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                            Some(le_sampler.clone()),
+                        ]),
+                    );
+                    device_context.VSSetSamplers(
                         0,
                         Some(&[
                             Some(le_sampler.clone()),
