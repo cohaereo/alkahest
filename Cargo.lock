@@ -912,7 +912,7 @@ dependencies = [
 [[package]]
 name = "imgui-dx11-renderer"
 version = "0.9.0"
-source = "git+https://github.com/cohaereo/imgui-dx11-renderer#096c1158465f9f52d8f6c4774b4dbf008516ec62"
+source = "git+https://github.com/cohaereo/imgui-dx11-renderer#f6ed37e32f3edcf060851c0968806a1444ef3d93"
 dependencies = [
  "imgui",
  "windows 0.43.0",

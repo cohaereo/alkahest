@@ -492,9 +492,9 @@ pub fn main() -> anyhow::Result<()> {
                     device
                         .CreateBuffer(
                             &D3D11_BUFFER_DESC {
-                                Usage: D3D11_USAGE_IMMUTABLE,
+                                Usage: D3D11_USAGE_DYNAMIC,
                                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                                CPUAccessFlags: Default::default(),
+                                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
                                 ByteWidth: (m.unk98.len() * std::mem::size_of::<Vec4>()) as _,
                                 ..Default::default()
                             },
@@ -527,9 +527,9 @@ pub fn main() -> anyhow::Result<()> {
                     device
                         .CreateBuffer(
                             &D3D11_BUFFER_DESC {
-                                Usage: D3D11_USAGE_IMMUTABLE,
+                                Usage: D3D11_USAGE_DYNAMIC,
                                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                                CPUAccessFlags: Default::default(),
+                                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
                                 ByteWidth: buffer.len() as _,
                                 ..Default::default()
                             },
@@ -553,9 +553,9 @@ pub fn main() -> anyhow::Result<()> {
                     device
                         .CreateBuffer(
                             &D3D11_BUFFER_DESC {
-                                Usage: D3D11_USAGE_IMMUTABLE,
+                                Usage: D3D11_USAGE_DYNAMIC,
                                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                                CPUAccessFlags: Default::default(),
+                                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
                                 ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
                                 ..Default::default()
                             },
@@ -1198,8 +1198,9 @@ pub fn main() -> anyhow::Result<()> {
                     let projection = Mat4::perspective_infinite_reverse_rh(
                         90f32.to_radians(),
                         window_dims.width as f32 / window_dims.height as f32,
-                        0.001,
+                        0.0001,
                     );
+
                     let view = camera.calculate_matrix();
 
                     let bmap = device_context
@@ -1213,8 +1214,8 @@ pub fn main() -> anyhow::Result<()> {
                     let scope_view = ScopeView {
                         world_to_projective: proj_view, //Mat4::from_mat3(normalized),
                         camera_to_world: view2,
-                        // HACK: Account for missing depth value in output
-                        view_miscellaneous: Vec4::new(0.0, 0.0, 0.001, 1.0),
+                        // Account for missing depth value in output
+                        view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
                         ..Default::default()
                     };
                     bmap.pData.copy_from_nonoverlapping(
@@ -1224,19 +1225,19 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.Unmap(&le_vertex_cb12, 0);
 
-                    let bmap = device_context
-                        .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                        .unwrap();
-
-                    let mut cb12_data = vec![Vec4::ZERO; 8];
-                    cb12_data[7] = camera.position.yxz().extend(1.0);
-
-                    bmap.pData.copy_from_nonoverlapping(
-                        cb12_data.as_ptr() as _,
-                        8 * std::mem::size_of::<Vec4>(),
-                    );
-
-                    device_context.Unmap(&le_pixel_cb12, 0);
+                    // let bmap = device_context
+                    //     .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                    //     .unwrap();
+                    // 
+                    // let mut cb12_data = vec![Vec4::ZERO; 8];
+                    // cb12_data[7] = camera.position.yxz().extend(1.0);
+                    // 
+                    // bmap.pData.copy_from_nonoverlapping(
+                    //     cb12_data.as_ptr() as _,
+                    //     8 * std::mem::size_of::<Vec4>(),
+                    // );
+                    // 
+                    // device_context.Unmap(&le_pixel_cb12, 0);
 
                     // device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
                     device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
