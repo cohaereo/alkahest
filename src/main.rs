@@ -33,6 +33,7 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use tracing::{debug, debug_span, error, info, info_span, trace, warn};
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 use windows::Win32::Foundation::*;
@@ -83,16 +84,20 @@ pub fn main() -> anyhow::Result<()> {
             tracing_subscriber::registry()
                 .with(tracing_tracy::TracyLayer::new())
                 .with(tracing_subscriber::fmt::layer())
-                .with(EnvFilter::from_default_env()),
+                .with(EnvFilter::builder()
+                    .with_default_directive(LevelFilter::INFO.into())
+                    .from_env_lossy()),
         )
     } else {
         tracing::subscriber::set_global_default(
             tracing_subscriber::registry()
                 .with(tracing_subscriber::fmt::layer())
-                .with(EnvFilter::from_default_env()),
+                .with(EnvFilter::builder()
+                    .with_default_directive(LevelFilter::INFO.into())
+                    .from_env_lossy())
         )
     }
-    .expect("Failed to set up the tracing subscriber");
+        .expect("Failed to set up the tracing subscriber");
 
     let (package, mut package_manager) =
         info_span!("Initializing package manager").in_scope(|| {
@@ -106,7 +111,7 @@ pub fn main() -> anyhow::Result<()> {
                     Destiny2PreBeyondLight,
                     true,
                 )
-                .unwrap(),
+                    .unwrap(),
             )
         });
 
@@ -152,6 +157,7 @@ pub fn main() -> anyhow::Result<()> {
                 }
             }
         }
+
         info!(
             "Map {:x?} - {} placement groups",
             think.map_name,
@@ -431,7 +437,7 @@ pub fn main() -> anyhow::Result<()> {
                 &mut vshader_fullscreen,
                 Some(&mut errors),
             )
-            .context("Failed to compile vertex shader")?,
+                .context("Failed to compile vertex shader")?,
             D3DCompileFromFile(
                 w!("fullscreen.hlsl"),
                 None,
@@ -443,7 +449,7 @@ pub fn main() -> anyhow::Result<()> {
                 &mut pshader_fullscreen,
                 Some(&mut errors),
             )
-            .context("Failed to compile pixel shader")?,
+                .context("Failed to compile pixel shader")?,
         )
     };
 
@@ -456,16 +462,13 @@ pub fn main() -> anyhow::Result<()> {
         warn!("{}", errors);
     }
 
-    // let vshader = vshader.unwrap();
     let vshader_fullscreen = vshader_fullscreen.unwrap();
     let pshader_fullscreen = pshader_fullscreen.unwrap();
-    // let pshader = pshader.unwrap();
 
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
             if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
-                let _span =
-                    tracing::debug_span!("load vshader", shader = ?m.vertex_shader).entered();
+                let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
 
                 vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
                     let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
@@ -493,7 +496,7 @@ pub fn main() -> anyhow::Result<()> {
                             name.len() as u32 - 1,
                             Some(name.as_ptr() as _),
                         )
-                        .expect("Failed to set VS name");
+                            .expect("Failed to set VS name");
 
                         let input_layout = device
                             .CreateInputLayout(&layout, &vs_data)
@@ -522,7 +525,7 @@ pub fn main() -> anyhow::Result<()> {
                             name.len() as u32 - 1,
                             Some(name.as_ptr() as _),
                         )
-                        .expect("Failed to set VS name");
+                            .expect("Failed to set VS name");
 
                         v
                     }
@@ -531,8 +534,8 @@ pub fn main() -> anyhow::Result<()> {
 
             if m.unk98.len() > 1
                 && m.unk98
-                    .iter()
-                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+                .iter()
+                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
@@ -592,8 +595,8 @@ pub fn main() -> anyhow::Result<()> {
                 cbuffer_map_ps.insert(*t, buf);
             } else if !m.unk318.is_empty()
                 && m.unk318
-                    .iter()
-                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+                .iter()
+                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
@@ -1076,105 +1079,103 @@ pub fn main() -> anyhow::Result<()> {
         platform.handle_event(imgui.io_mut(), &window, &event);
         match &event {
             Event::WindowEvent { event, .. } => {
-                if true {
-                    match event {
-                        WindowEvent::Resized(new_dims) => unsafe {
-                            swapchain_target = None;
-                            swap_chain
-                                .ResizeBuffers(
-                                    1,
-                                    new_dims.width,
-                                    new_dims.height,
-                                    DXGI_FORMAT_B8G8R8A8_UNORM,
-                                    0,
-                                )
-                                .expect("Failed to resize swapchain");
+                match event {
+                    WindowEvent::Resized(new_dims) => unsafe {
+                        swapchain_target = None;
+                        swap_chain
+                            .ResizeBuffers(
+                                1,
+                                new_dims.width,
+                                new_dims.height,
+                                DXGI_FORMAT_B8G8R8A8_UNORM,
+                                0,
+                            )
+                            .expect("Failed to resize swapchain");
 
-                            let bb: ID3D11Texture2D = swap_chain.GetBuffer(0).unwrap();
+                        let bb: ID3D11Texture2D = swap_chain.GetBuffer(0).unwrap();
 
-                            let new_rtv = device.CreateRenderTargetView(&bb, None).unwrap();
+                        let new_rtv = device.CreateRenderTargetView(&bb, None).unwrap();
 
-                            device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
+                        device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                            swapchain_target = Some(new_rtv);
-                        },
-                        WindowEvent::ScaleFactorChanged { .. } => {
-                            // renderer.resize();
+                        swapchain_target = Some(new_rtv);
+                    },
+                    WindowEvent::ScaleFactorChanged { .. } => {
+                        // renderer.resize();
+                    }
+                    WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    WindowEvent::MouseInput { state, button, .. } => {
+                        if button == &MouseButton::Left && !imgui.io().want_capture_mouse {
+                            input_state.mouse1 = *state == ElementState::Pressed
                         }
-                        WindowEvent::CloseRequested => {
-                            *control_flow = ControlFlow::Exit;
-                        }
-                        WindowEvent::MouseInput { state, button, .. } => {
-                            if button == &MouseButton::Left && !imgui.io().want_capture_mouse {
-                                input_state.mouse1 = *state == ElementState::Pressed
-                            }
-                        }
-                        WindowEvent::CursorMoved { position, .. } => {
-                            if let Some(ref mut p) = last_cursor_pos {
-                                let delta = (position.x - p.x, position.y - p.y);
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        if let Some(ref mut p) = last_cursor_pos {
+                            let delta = (position.x - p.x, position.y - p.y);
 
-                                if input_state.mouse1 && !imgui.io().want_capture_mouse {
-                                    camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
-                                }
-
-                                last_cursor_pos = Some(*position);
-                            } else {
-                                last_cursor_pos = Some(*position);
-                            }
-                        }
-                        WindowEvent::ModifiersChanged(modifiers) => {
-                            input_state.shift = modifiers.shift();
-                            input_state.ctrl = modifiers.ctrl();
-                        }
-                        WindowEvent::KeyboardInput { input, .. } => {
-                            if input.state == ElementState::Pressed {
-                                match input.virtual_keycode {
-                                    Some(VirtualKeyCode::Right) => {
-                                        map_i = map_i.wrapping_add(1)
-                                    }
-
-                                    Some(VirtualKeyCode::Left) => {
-                                        map_i = map_i.wrapping_sub(1)
-                                    }
-
-                                    Some(VirtualKeyCode::Escape) => {
-                                        *control_flow = ControlFlow::Exit
-                                    }
-                                    _ => {}
-                                }
-
-                                if let Some(VirtualKeyCode::Right | VirtualKeyCode::Left) =
-                                    input.virtual_keycode
-                                {
-                                    info!(
-                                        "Switched to map group {}",
-                                        map_i % maps.len()
-                                    );
-                                }
+                            if input_state.mouse1 && !imgui.io().want_capture_mouse {
+                                camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
                             }
 
+                            last_cursor_pos = Some(*position);
+                        } else {
+                            last_cursor_pos = Some(*position);
+                        }
+                    }
+                    WindowEvent::ModifiersChanged(modifiers) => {
+                        input_state.shift = modifiers.shift();
+                        input_state.ctrl = modifiers.ctrl();
+                    }
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if input.state == ElementState::Pressed {
                             match input.virtual_keycode {
-                                Some(VirtualKeyCode::W) => {
-                                    input_state.w = input.state == ElementState::Pressed
+                                Some(VirtualKeyCode::Right) => {
+                                    map_i = map_i.wrapping_add(1)
                                 }
-                                Some(VirtualKeyCode::A) => {
-                                    input_state.a = input.state == ElementState::Pressed
+
+                                Some(VirtualKeyCode::Left) => {
+                                    map_i = map_i.wrapping_sub(1)
                                 }
-                                Some(VirtualKeyCode::S) => {
-                                    input_state.s = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::D) => {
-                                    input_state.d = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::Space) => {
-                                    input_state.space = input.state == ElementState::Pressed
+
+                                Some(VirtualKeyCode::Escape) => {
+                                    *control_flow = ControlFlow::Exit
                                 }
                                 _ => {}
                             }
+
+                            if let Some(VirtualKeyCode::Right | VirtualKeyCode::Left) =
+                                input.virtual_keycode
+                            {
+                                info!(
+                                    "Switched to map group {}",
+                                    map_i % maps.len()
+                                );
+                            }
                         }
 
-                        _ => (),
+                        match input.virtual_keycode {
+                            Some(VirtualKeyCode::W) => {
+                                input_state.w = input.state == ElementState::Pressed
+                            }
+                            Some(VirtualKeyCode::A) => {
+                                input_state.a = input.state == ElementState::Pressed
+                            }
+                            Some(VirtualKeyCode::S) => {
+                                input_state.s = input.state == ElementState::Pressed
+                            }
+                            Some(VirtualKeyCode::D) => {
+                                input_state.d = input.state == ElementState::Pressed
+                            }
+                            Some(VirtualKeyCode::Space) => {
+                                input_state.space = input.state == ElementState::Pressed
+                            }
+                            _ => {}
+                        }
                     }
+
+                    _ => (),
                 }
             }
             Event::RedrawRequested(..) => {
@@ -1186,22 +1187,22 @@ pub fn main() -> anyhow::Result<()> {
                     .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
                     .build(|| ui.text(format!("{:.1}", 1.0 / last_frame.elapsed().as_secs_f32())));
 
-                    ui.window("Options")
-                        .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
-                        .size([128.0, 36.0], Condition::Always)
-                        .build(|| {
-                            ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
-                                format!("{v}").into()
-                            });
+                ui.window("Options")
+                    .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
+                    .size([128.0, 36.0], Condition::Always)
+                    .build(|| {
+                        ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
+                            format!("{v}").into()
                         });
+                    });
 
-                        ui.window("Debug")
-                            .flags(WindowFlags::NO_TITLE_BAR)
-                            .build(|| {
-                                ui.text(format!("X: {}", camera.position.x));
-                                ui.text(format!("Y: {}", camera.position.y));
-                                ui.text(format!("Z: {}", camera.position.z));
-                            });
+                ui.window("Debug")
+                    .flags(WindowFlags::NO_TITLE_BAR)
+                    .build(|| {
+                        ui.text(format!("X: {}", camera.position.x));
+                        ui.text(format!("Y: {}", camera.position.y));
+                        ui.text(format!("Z: {}", camera.position.z));
+                    });
 
                 last_frame = Instant::now();
 
