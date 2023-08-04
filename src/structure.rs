@@ -197,3 +197,43 @@ impl Debug for DeadBeefMarker {
         f.write_str("DeadBeefMarker")
     }
 }
+
+#[derive(Clone, Copy)]
+pub struct ResourcePointer {
+    pub offset: u64,
+    pub resource_type: u32,
+}
+
+impl BinRead for ResourcePointer {
+    type Args<'b> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let offset_base = reader.stream_position()?;
+        let offset: i64 = reader.read_type(endian)?;
+        let offset_save = reader.stream_position()?;
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset - 4))?;
+        let resource_type: u32 = reader.read_type(endian)?;
+
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(ResourcePointer {
+            offset: offset_base.saturating_add_signed(offset),
+            resource_type,
+        })
+    }
+}
+
+impl Debug for ResourcePointer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "ResourcePointer(type=0x{:08x})",
+            self.resource_type
+        ))
+    }
+}

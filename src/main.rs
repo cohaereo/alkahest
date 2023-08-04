@@ -3,7 +3,7 @@ extern crate windows;
 
 use std::collections::HashMap;
 
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
 
@@ -21,6 +21,7 @@ use crate::statics::{Unk808071a7, Unk8080966d};
 
 use crate::texture::TextureHeader;
 
+use crate::map::{Unk80806ef4, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
 use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -55,6 +56,7 @@ mod dxbc;
 mod dxgi;
 mod entity;
 mod gui;
+mod map;
 mod material;
 mod scopes;
 mod static_render;
@@ -107,6 +109,76 @@ pub fn main() -> anyhow::Result<()> {
                 .unwrap(),
             )
         });
+
+    let mut maps: Vec<(u32, Vec<TagHash>)> = vec![];
+    for (index, entry) in package.get_all_by_reference(0x80807dae) {
+        let tag = TagHash::new(package.pkg_id(), index as _);
+        let think: Unk80807dae = package_manager.read_tag_struct(tag).unwrap();
+        // println!("{think:#x?}");
+        let child_map: Unk808091e0 = package_manager
+            .read_tag_struct(think.child_map_reference)
+            .unwrap();
+        // println!("{child_map:#x?}");
+        let mut placement_group_tags = vec![];
+        for res in &child_map.map_resources {
+            let thing2: Unk80808a54 = if res.is_hash32 != 0 {
+                package_manager.read_tag_struct(res.hash32).unwrap()
+            } else {
+                // TODO: Move TagHash64 to destiny-pkg
+                package_manager.read_hash_struct(res.hash64.0).unwrap()
+            };
+
+            for tablehash in &thing2.data_tables {
+                let table_data = package_manager.read_tag(*tablehash).unwrap();
+                let mut cur = Cursor::new(&table_data);
+                let table: Unk808099d6 = cur.read_le().unwrap();
+
+                // info!(
+                //     "\tTable {:?}, {} entries",
+                //     tablehash,
+                //     table.data_entries.len()
+                // );
+                for data in &table.data_entries {
+                    if data.data_resource.resource_type == 0x808071b3 {
+                        // info!("\t\tDat {:?} = {:?}", data.translation, data.data_resource);
+                        cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            .unwrap();
+                        let preheader_tag: TagHash = cur.read_le().unwrap();
+                        let preheader: Unk80806ef4 =
+                            package_manager.read_tag_struct(preheader_tag).unwrap();
+
+                        placement_group_tags.push(preheader.placement_group);
+                    }
+                }
+            }
+        }
+        info!(
+            "Map {:x?} - {} placement groups",
+            think.map_name,
+            placement_group_tags.len()
+        ); // TODO(cohae): Map name lookup
+
+        maps.push((think.map_name.0, placement_group_tags));
+    }
+
+    let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
+
+    let mut to_load: HashMap<TagHash, ()> = Default::default();
+    for (_, placement_group_tags) in &maps {
+        for tag in placement_group_tags.iter() {
+            let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
+
+            for v in &placements.statics {
+                to_load.insert(*v, ());
+            }
+
+            placement_groups.insert(tag.0, placements);
+        }
+    }
+
+    if placement_groups.is_empty() {
+        panic!("No map placements found in package");
+    }
 
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
@@ -305,31 +377,6 @@ pub fn main() -> anyhow::Result<()> {
             )?,
         )
     };
-
-    let mut placement_groups = vec![];
-
-    let mut to_load: HashMap<TagHash, ()> = Default::default();
-    for (i, (pi, _)) in package.get_all_by_reference(0x8080966d).iter().enumerate() {
-        let placements: Unk8080966d = package_manager
-            .read_tag_struct(TagHash::new(package.pkg_id(), *pi as _))
-            .unwrap();
-        debug!(
-            "{i} Placement group {pi}, {} statics, {} instances ({:?})",
-            TagHash::new(package.pkg_id(), *pi as _),
-            placements.statics.len(),
-            placements.transforms.len()
-        );
-
-        for v in &placements.statics {
-            to_load.insert(*v, ());
-        }
-
-        placement_groups.push(placements);
-    }
-
-    if placement_groups.is_empty() {
-        panic!("No map placements found in package");
-    }
 
     let to_load: Vec<TagHash> = to_load.keys().cloned().collect();
 
@@ -1022,7 +1069,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let _start_time = Instant::now();
     let mut composite_mode: usize = 0;
-    let mut placement_i: usize = 0;
+    let mut map_i: usize = 0;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
     event_loop.run(move |event, _, control_flow| {
@@ -1083,11 +1130,11 @@ pub fn main() -> anyhow::Result<()> {
                             if input.state == ElementState::Pressed {
                                 match input.virtual_keycode {
                                     Some(VirtualKeyCode::Right) => {
-                                        placement_i = placement_i.wrapping_add(1)
+                                        map_i = map_i.wrapping_add(1)
                                     }
 
                                     Some(VirtualKeyCode::Left) => {
-                                        placement_i = placement_i.wrapping_sub(1)
+                                        map_i = map_i.wrapping_sub(1)
                                     }
 
                                     Some(VirtualKeyCode::Escape) => {
@@ -1100,8 +1147,8 @@ pub fn main() -> anyhow::Result<()> {
                                     input.virtual_keycode
                                 {
                                     info!(
-                                        "Switched to placement group {}",
-                                        placement_i % placement_groups.len()
+                                        "Switched to map group {}",
+                                        map_i % maps.len()
                                     );
                                 }
                             }
@@ -1267,82 +1314,86 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
                     // device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
 
-                    let placements = &placement_groups[placement_i % placement_groups.len()];
-                    // for placements in &placement_groups {
-                    for instance in &placements.instances {
-                        if let Some(model_hash) =
-                            placements.statics.iter().nth(instance.static_index as _)
-                        {
-                            let _span =
-                                debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
-                                    .entered();
+                    let map = &maps[map_i % maps.len()];
+                    for ptag in &map.1 {
+                        let placements = &placement_groups[&ptag.0];
+                        // for placements in &placement_groups {
+                        for instance in &placements.instances {
+                            if let Some(model_hash) =
+                                placements.statics.iter().nth(instance.static_index as _)
+                            {
+                                let _span =
+                                    debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
+                                        .entered();
 
-                            if let Some(model) = static_map.get(&model_hash.0) {
-                                for transform in &placements.transforms[instance.instance_offset
-                                    as usize
-                                    ..(instance.instance_offset + instance.instance_count) as usize]
-                                {
-                                    let mm = Mat4::from_scale_rotation_translation(
-                                        Vec3::splat(transform.scale.x),
-                                        Quat::from_xyzw(
-                                            transform.rotation.x,
-                                            transform.rotation.y,
-                                            transform.rotation.z,
-                                            transform.rotation.w,
-                                        )
-                                        .inverse(),
-                                        Vec3::ZERO,
-                                    );
+                                if let Some(model) = static_map.get(&model_hash.0) {
+                                    for transform in &placements.transforms[instance.instance_offset
+                                        as usize
+                                        ..(instance.instance_offset + instance.instance_count) as usize]
+                                    {
+                                        let mm = Mat4::from_scale_rotation_translation(
+                                            Vec3::splat(transform.scale.x),
+                                            Quat::from_xyzw(
+                                                transform.rotation.x,
+                                                transform.rotation.y,
+                                                transform.rotation.z,
+                                                transform.rotation.w,
+                                            )
+                                                .inverse(),
+                                            Vec3::ZERO,
+                                        );
 
-                                    let model_matrix = Mat4::from_cols(
-                                        mm.x_axis.truncate().extend(transform.translation.x),
-                                        mm.y_axis.truncate().extend(transform.translation.y),
-                                        mm.z_axis.truncate().extend(transform.translation.z),
-                                        mm.w_axis,
-                                    );
+                                        let model_matrix = Mat4::from_cols(
+                                            mm.x_axis.truncate().extend(transform.translation.x),
+                                            mm.y_axis.truncate().extend(transform.translation.y),
+                                            mm.z_axis.truncate().extend(transform.translation.z),
+                                            mm.w_axis,
+                                        );
 
-                                    let combined_matrix = model.mesh_transform() * model_matrix;
+                                        let combined_matrix = model.mesh_transform() * model_matrix;
 
-                                    let bmap = device_context
-                                        .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                                        .unwrap();
+                                        let bmap = device_context
+                                            .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                                            .unwrap();
 
-                                    let scope_instance = Mat4 {
-                                        x_axis: combined_matrix.x_axis,
-                                        y_axis: combined_matrix.y_axis,
-                                        z_axis: combined_matrix.z_axis,
-                                        w_axis: model
-                                            .texcoord_transform()
-                                            .extend(f32::from_bits(u32::MAX)),
-                                    };
+                                        let scope_instance = Mat4 {
+                                            x_axis: combined_matrix.x_axis,
+                                            y_axis: combined_matrix.y_axis,
+                                            z_axis: combined_matrix.z_axis,
+                                            w_axis: model
+                                                .texcoord_transform()
+                                                .extend(f32::from_bits(u32::MAX)),
+                                        };
 
-                                    let bdata = vec![scope_instance; 16];
-                                    bmap.pData.copy_from_nonoverlapping(
-                                        // &scope_instance as *const ScopeStaticInstance as _,
-                                        bdata.as_ptr() as _,
-                                        16 * std::mem::size_of::<Mat4>(),
-                                    );
+                                        let bdata = vec![scope_instance; 16];
+                                        bmap.pData.copy_from_nonoverlapping(
+                                            // &scope_instance as *const ScopeStaticInstance as _,
+                                            bdata.as_ptr() as _,
+                                            16 * std::mem::size_of::<Mat4>(),
+                                        );
 
-                                    device_context.Unmap(&le_vertex_cb11, 0);
-                                    device_context.VSSetConstantBuffers(
-                                        11,
-                                        Some(&[Some(le_vertex_cb11.clone())]),
-                                    );
+                                        device_context.Unmap(&le_vertex_cb11, 0);
+                                        device_context.VSSetConstantBuffers(
+                                            11,
+                                            Some(&[Some(le_vertex_cb11.clone())]),
+                                        );
 
-                                    model.draw(
-                                        &device_context,
-                                        &material_map,
-                                        &vshader_map,
-                                        &pshader_map,
-                                        &cbuffer_map_vs,
-                                        &cbuffer_map_ps,
-                                        &texture_map,
-                                        le_model_cb0.clone(),
-                                    );
+                                        model.draw(
+                                            &device_context,
+                                            &material_map,
+                                            &vshader_map,
+                                            &pshader_map,
+                                            &cbuffer_map_vs,
+                                            &cbuffer_map_ps,
+                                            &texture_map,
+                                            le_model_cb0.clone(),
+                                        );
+                                    }
                                 }
+                            }
                         }
                     }
-                }
+
 
                     device_context.OMSetRenderTargets(
                         Some(&[Some(swapchain_target.as_ref().unwrap().clone())]),

@@ -66,11 +66,7 @@ pub fn decode_text(data: &[u8], cipher: u16) -> String {
         let u0 = b0.wrapping_add(cipher as u8);
 
         match b0 {
-            0..=0x7f => {
-                result.push(char::from(u0));
-                offset += 1
-            }
-            0xd0..=0xdf => {
+            0xc0..=0xdf => {
                 result.push(char::REPLACEMENT_CHARACTER);
                 offset += 2
             }
@@ -78,12 +74,8 @@ pub fn decode_text(data: &[u8], cipher: u16) -> String {
                 result.push(char::REPLACEMENT_CHARACTER);
                 offset += 3
             }
-            0xf0..=0xfc => {
-                result.push(char::REPLACEMENT_CHARACTER);
-                offset += 4
-            }
-            _ => {
-                result.push(char::REPLACEMENT_CHARACTER);
+            0..=0x7f | _ => {
+                result.push(char::from(u0));
                 offset += 1
             }
         }

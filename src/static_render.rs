@@ -1,6 +1,7 @@
 use crate::dxgi::DxgiFormat;
 use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
+use std::time::Instant;
 
 use crate::material;
 use anyhow::{ensure, Context};
@@ -47,6 +48,9 @@ pub struct StaticModel {
     mesh_groups: Vec<Unk8080719b>,
 
     model: Unk808071a7,
+
+    // TODO: Remove, just for testing
+    start_time: Instant,
 }
 
 impl StaticModel {
@@ -184,6 +188,7 @@ impl StaticModel {
             model,
             parts: header.parts.to_vec(),
             mesh_groups: header.unk8.to_vec(),
+            start_time: Instant::now(),
         })
     }
 
@@ -247,6 +252,19 @@ impl StaticModel {
                         if let Some(cbuffer) =
                             cbuffers_vs.get(&self.model.materials.get(iu).unwrap().0)
                         {
+                            // Works for quite a few vertex animations, still a few non-functional/stretchy ones though
+                            // very laggy because of cbuffer writes
+                            // {
+                            //     let cmap =
+                            //         device_context.Map(cbuffer, 0, D3D11_MAP_WRITE, 0).unwrap();
+                            //
+                            //     cmap.pData
+                            //         .cast::<f32>()
+                            //         .add(4 * 2 + 1)
+                            //         .write(self.start_time.elapsed().as_secs_f32() / 6.0);
+                            //     device_context.Unmap(cbuffer, 0);
+                            // }
+
                             device_context.VSSetConstantBuffers(
                                 0,
                                 Some(&[
