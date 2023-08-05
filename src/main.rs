@@ -30,8 +30,9 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Quat, Vec3, Vec4};
-use imgui::{Condition, FontConfig, FontSource, WindowFlags};
+use frustum_query::frustum::Frustum;
+use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use imgui::{Condition, FontConfig, FontSource, ImColor32, WindowFlags};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -127,7 +128,7 @@ pub fn main() -> anyhow::Result<()> {
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
         // TODO(cohae): Buffers need to be reconfigured on resize
-        .with_resizable(false)
+        // .with_resizable(false)
         .with_inner_size(PhysicalSize::new(1600u32, 900u32))
         .build(&event_loop)?;
 
@@ -330,7 +331,12 @@ pub fn main() -> anyhow::Result<()> {
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
 
-    let mut maps: Vec<(u32, Vec<TagHash>)> = vec![];
+    struct UnknownPoint {
+        pub position: Vec4,
+        pub resource_type: u32,
+    }
+
+    let mut maps: Vec<(u32, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
     let mut terrain_headers: Vec<Unk8080714f> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let tag = TagHash::new(package.pkg_id(), index as _);
@@ -340,6 +346,7 @@ pub fn main() -> anyhow::Result<()> {
             .unwrap();
 
         let mut placement_group_tags = vec![];
+        let mut unknown_things = vec![];
         for res in &child_map.map_resources {
             let thing2: Unk80808a54 = if res.is_hash32 != 0 {
                 package_manager.read_tag_struct(res.hash32).unwrap()
@@ -383,10 +390,21 @@ pub fn main() -> anyhow::Result<()> {
 
                             terrain_headers.push(terrain);
                         }
-                        u => debug!(
-                            "Skipping unknown resource type {u:x} {:?}",
-                            data.translation
-                        ),
+                        u => {
+                            debug!(
+                                "Skipping unknown resource type {u:x} {:?}",
+                                data.translation
+                            );
+                            unknown_things.push(UnknownPoint {
+                                position: Vec4::new(
+                                    data.translation.x,
+                                    data.translation.y,
+                                    data.translation.z,
+                                    data.translation.w,
+                                ),
+                                resource_type: data.data_resource.resource_type,
+                            });
+                        }
                     };
                 }
             }
@@ -398,7 +416,7 @@ pub fn main() -> anyhow::Result<()> {
             placement_group_tags.len()
         ); // TODO(cohae): Map name lookup
 
-        maps.push((think.map_name.0, placement_group_tags));
+        maps.push((think.map_name.0, placement_group_tags, unknown_things));
     }
 
     let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
@@ -406,7 +424,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
-    for (_, placement_group_tags) in &maps {
+    for (_, placement_group_tags, _) in &maps {
         for tag in placement_group_tags.iter() {
             let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
 
@@ -565,8 +583,7 @@ pub fn main() -> anyhow::Result<()> {
             }
 
             if let Ok(v) = package_manager.get_entry_by_tag(m.pixel_shader) {
-                let _span =
-                    tracing::debug_span!("load pshader", shader = ?m.pixel_shader).entered();
+                let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
 
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
                     let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
@@ -1124,6 +1141,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut map_i: usize = 0;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
+    let mut debug_distance = 2000.0;
+    let mut show_map_resources = false;
     event_loop.run(move |event, _, control_flow| {
         platform.handle_event(imgui.io_mut(), &window, &event);
         match &event {
@@ -1245,13 +1264,67 @@ pub fn main() -> anyhow::Result<()> {
                         });
                     });
 
+
+                let window_dims = window.inner_size();
                 ui.window("Debug")
-                    .flags(WindowFlags::NO_TITLE_BAR)
                     .build(|| {
                         ui.text(format!("X: {}", camera.position.x));
                         ui.text(format!("Y: {}", camera.position.y));
                         ui.text(format!("Z: {}", camera.position.z));
+                        ui.separator();
+                        ui.checkbox("Show map resources", &mut show_map_resources);
+                        if show_map_resources {
+                            ui.slider("Debug distance", 25.0, 4000.0, &mut debug_distance);
+                        }
                     });
+
+                let map = &maps[map_i % maps.len()];
+
+                let screen_size = ui.io().display_size;
+                if show_map_resources {
+                    ui.window("Paint-over")
+                        .flags(WindowFlags::NO_BACKGROUND | WindowFlags::NO_TITLE_BAR | WindowFlags::NO_INPUTS | WindowFlags::NO_DECORATION | WindowFlags::NO_RESIZE | WindowFlags::NO_MOVE)
+                        .size(screen_size, Condition::Always)
+                        .position([0.0, 0.0], Condition::Always)
+                        .build(|| {
+                            let projection = Mat4::perspective_infinite_reverse_rh(
+                                90f32.to_radians(),
+                                window_dims.width as f32 / window_dims.height as f32,
+                                0.0001,
+                            );
+
+                            let view = camera.calculate_matrix();
+                            let proj_view = projection * view;
+                            let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());
+
+                            let draw_list = ui.get_background_draw_list();
+                            draw_list.with_clip_rect([0.0, 0.0], screen_size, || for unk in &map.2 {
+                                if !camera_frustum.point_intersecting(&unk.position.x, &unk.position.y, &unk.position.z) {
+                                    continue;
+                                }
+
+                                let distance = unk.position.truncate().distance(camera.position);
+                                if distance > debug_distance {
+                                    continue
+                                }
+
+                                let distance = distance / 5000.0;
+
+                                let projected_point = proj_view.project_point3(unk.position.truncate());
+
+                                let screen_point = Vec2::new(
+                                    ((projected_point.x + 1.0) * 0.5) * screen_size[0],
+                                    ((1.0 - projected_point.y) * 0.5) * screen_size[1]
+                                );
+
+                                ui.set_window_font_scale((1.0 - distance).max(0.1));
+                                let c = RANDOM_COLORS[unk.resource_type as usize % 16];
+                                let color = ImColor32::from_rgb(c[0], c[1], c[2]);
+                                draw_list.add_circle(screen_point.to_array(), (1.0 - distance).max(0.1) * 2.0, color).filled(true).build();
+                                draw_list.add_text(screen_point.to_array(), color, format!("Resource {:08x}", unk.resource_type));
+                            });
+                        });
+                }
 
                 last_frame = Instant::now();
 
@@ -1266,8 +1339,6 @@ pub fn main() -> anyhow::Result<()> {
                         0,
                     );
 
-                    let window_dims = window.inner_size();
-
                     device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
@@ -1276,6 +1347,7 @@ pub fn main() -> anyhow::Result<()> {
                         MinDepth: 0.0,
                         MaxDepth: 1.0,
                     }]));
+
 
                     device_context.RSSetState(&rasterizer_state);
                     device_context.OMSetBlendState(
@@ -1327,6 +1399,7 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
                     let map = &maps[map_i % maps.len()];
+
                     for ptag in &map.1 {
                         let placements = &placement_groups[&ptag.0];
                         for instance in &placements.instances {
@@ -1473,3 +1546,22 @@ pub fn main() -> anyhow::Result<()> {
         }
     });
 }
+
+const RANDOM_COLORS: [[u8; 3]; 16] = [
+    [0xFF, 0x00, 0x00],
+    [0x00, 0xFF, 0x00],
+    [0x00, 0x00, 0xFF],
+    [0xFF, 0xFF, 0x00],
+    [0xFF, 0x00, 0xFF],
+    [0x00, 0xFF, 0xFF],
+    [0x00, 0x00, 0x00],
+    [0x80, 0x00, 0x00],
+    [0x00, 0x80, 0x00],
+    [0x00, 0x00, 0x80],
+    [0x80, 0x80, 0x00],
+    [0x80, 0x00, 0x80],
+    [0x00, 0x80, 0x80],
+    [0x80, 0x80, 0x80],
+    [0xC0, 0x00, 0x00],
+    [0x00, 0xC0, 0x00],
+];

@@ -37,6 +37,7 @@ tracing-tracy = "0.10.2"
 tracy-client = "0.15.2"
 bitflags = "2.3.3"
 rayon = "1.7.0"
+frustum_query = "0.1.2"
 
 [features]
 default = []

@@ -1,13 +1,12 @@
 use crate::structure::{DeadBeefMarker, TablePointer};
-use crate::types::{DecodeFloat, Vector2, Vector4};
+use crate::types::{Vector2, Vector4};
 
-use binrw::{BinRead, BinReaderExt};
-use bytemuck::{Pod, Zeroable};
+use binrw::BinRead;
+
 use destiny_pkg::TagHash;
 
 use std::cmp::Ordering;
-use std::io::{Cursor, Read, SeekFrom};
-use tracing::warn;
+use std::io::SeekFrom;
 
 #[derive(BinRead, Debug)]
 pub struct Unk808073a5 {

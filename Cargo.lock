@@ -72,6 +72,7 @@ dependencies = [
  "ddsfile",
  "destiny-pkg",
  "fastrand",
+ "frustum_query",
  "glam",
  "hex",
  "imgui",
@@ -806,6 +807,12 @@ dependencies = [
  "libc",
  "pkg-config",
 ]
+
+[[package]]
+name = "frustum_query"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1771c26abed26b2527d888742fffd27dab86d205bf4846748abf29c06ef5a05"
 
 [[package]]
 name = "generator"
