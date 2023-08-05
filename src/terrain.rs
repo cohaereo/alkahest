@@ -9,8 +9,8 @@ use nohash_hasher::IntMap;
 use windows::Win32::Graphics::Direct3D::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader,
-    ID3D11VertexShader, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
-    D3D11_MAP_WRITE_DISCARD, D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
+    ID3D11SamplerState, ID3D11VertexShader, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
+    D3D11_BUFFER_DESC, D3D11_MAP_WRITE_DISCARD, D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
 };
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
@@ -135,6 +135,7 @@ impl TerrainRenderer {
         cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
         cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
         textures: &IntMap<u32, LoadedTexture>,
+        samplers: &IntMap<u32, ID3D11SamplerState>,
         cbuffer_default: ID3D11Buffer,
         cb11: &ID3D11Buffer,
     ) {
@@ -181,36 +182,25 @@ impl TerrainRenderer {
                 }
 
                 if let Some(cbuffer) = cbuffers_ps.get(&part.material.0) {
-                    device_context.PSSetConstantBuffers(
-                        0,
-                        Some(&[
-                            Some(cbuffer.clone()),
-                        ]),
-                    );
+                    device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer.clone())]));
                 } else {
-                    device_context.PSSetConstantBuffers(
-                        0,
-                        Some(&[
-                            Some(cbuffer_default.clone()),
-                        ]),
-                    );
+                    device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer_default.clone())]));
                 }
 
                 let mat = materials.get(&part.material.0).unwrap();
+                for (si, s) in mat.vs_samplers.iter().enumerate() {
+                    device_context
+                        .VSSetSamplers(1 + si as u32, Some(&[samplers.get(&s.sampler.0).cloned()]));
+                }
+                for (si, s) in mat.ps_samplers.iter().enumerate() {
+                    device_context
+                        .PSSetSamplers(1 + si as u32, Some(&[samplers.get(&s.sampler.0).cloned()]));
+                }
+
                 if let Some(cbuffer) = cbuffers_vs.get(&part.material.0) {
-                    device_context.VSSetConstantBuffers(
-                        0,
-                        Some(&[
-                            Some(cbuffer.clone()),
-                        ]),
-                    );
+                    device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer.clone())]));
                 } else {
-                    device_context.VSSetConstantBuffers(
-                        0,
-                        Some(&[
-                            Some(cbuffer_default.clone()),
-                        ]),
-                    );
+                    device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer_default.clone())]));
                 }
 
                 // TODO(cohae): Might not go that well if it's None

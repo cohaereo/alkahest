@@ -194,6 +194,7 @@ impl StaticModel {
         cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
         cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
         textures: &IntMap<u32, LoadedTexture>,
+        samplers: &IntMap<u32, ID3D11SamplerState>,
         cbuffer_default: ID3D11Buffer,
     ) {
         unsafe {
@@ -219,6 +220,19 @@ impl StaticModel {
                         .get(iu)
                         .and_then(|m| materials.get(&m.0))
                     {
+                        for (si, s) in mat.vs_samplers.iter().enumerate() {
+                            device_context.VSSetSamplers(
+                                1 + si as u32,
+                                Some(&[samplers.get(&s.sampler.0).cloned()]),
+                            );
+                        }
+                        for (si, s) in mat.ps_samplers.iter().enumerate() {
+                            device_context.PSSetSamplers(
+                                1 + si as u32,
+                                Some(&[samplers.get(&s.sampler.0).cloned()]),
+                            );
+                        }
+
                         if let Some(cbuffer) =
                             cbuffers_ps.get(&self.model.materials.get(iu).unwrap().0)
                         {

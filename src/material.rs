@@ -15,7 +15,7 @@ pub struct Unk808071e8 {
     pub unk64: u32,
     pub unk68: TablePointer<u8>,
     pub unk78: TablePointer<Vector4>,
-    pub unk88: TablePointer<Unk808073f3>,
+    pub vs_samplers: TablePointer<Unk808073f3>,
     pub unk98: TablePointer<Vector4>,
     pub unka8: [u32; 9],
 
@@ -29,7 +29,7 @@ pub struct Unk808071e8 {
     pub unk2e4: u32,
     pub unk2e8: TablePointer<u8>,
     pub unk2f8: TablePointer<Vector4>,
-    pub unk308: TablePointer<Unk808073f3>,
+    pub ps_samplers: TablePointer<Unk808073f3>,
     pub unk318: TablePointer<Vector4>,
     pub unk328: [u32; 9],
 
@@ -46,7 +46,7 @@ pub struct Unk80807211 {
 
 #[derive(BinRead, Debug)]
 pub struct Unk808073f3 {
-    pub unk0: TagHash,
+    pub sampler: TagHash,
     pub unk4: u32,
     pub unk8: u32,
     pub unkc: u32,

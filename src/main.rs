@@ -105,7 +105,7 @@ pub fn main() -> anyhow::Result<()> {
                 ),
         )
     }
-        .expect("Failed to set up the tracing subscriber");
+    .expect("Failed to set up the tracing subscriber");
 
     let (package, mut package_manager) =
         info_span!("Initializing package manager").in_scope(|| {
@@ -119,7 +119,7 @@ pub fn main() -> anyhow::Result<()> {
                     Destiny2PreBeyondLight,
                     true,
                 )
-                    .unwrap(),
+                .unwrap(),
             )
         });
 
@@ -328,6 +328,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_vs: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
+    let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
 
     let mut maps: Vec<(u32, Vec<TagHash>)> = vec![];
     let mut terrain_headers: Vec<Unk8080714f> = vec![];
@@ -404,6 +405,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
+    let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
     for (_, placement_group_tags) in &maps {
         for tag in placement_group_tags.iter() {
             let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
@@ -483,7 +485,7 @@ pub fn main() -> anyhow::Result<()> {
                 &mut vshader_fullscreen,
                 Some(&mut errors),
             )
-                .context("Failed to compile vertex shader")?,
+            .context("Failed to compile vertex shader")?,
             D3DCompileFromFile(
                 w!("fullscreen.hlsl"),
                 None,
@@ -495,7 +497,7 @@ pub fn main() -> anyhow::Result<()> {
                 &mut pshader_fullscreen,
                 Some(&mut errors),
             )
-                .context("Failed to compile pixel shader")?,
+            .context("Failed to compile pixel shader")?,
         )
     };
 
@@ -513,6 +515,10 @@ pub fn main() -> anyhow::Result<()> {
 
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
+            for sampler in m.vs_samplers.iter().chain(m.ps_samplers.iter()) {
+                to_load_samplers.insert(sampler.sampler, ());
+            }
+
             if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
                 let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
 
@@ -547,7 +553,7 @@ pub fn main() -> anyhow::Result<()> {
                             name.len() as u32 - 1,
                             Some(name.as_ptr() as _),
                         )
-                            .expect("Failed to set VS name");
+                        .expect("Failed to set VS name");
 
                         let input_layout = device
                             .CreateInputLayout(&layout, &vs_data)
@@ -576,7 +582,7 @@ pub fn main() -> anyhow::Result<()> {
                             name.len() as u32 - 1,
                             Some(name.as_ptr() as _),
                         )
-                            .expect("Failed to set VS name");
+                        .expect("Failed to set VS name");
 
                         v
                     }
@@ -585,8 +591,8 @@ pub fn main() -> anyhow::Result<()> {
 
             if m.unk98.len() > 1
                 && m.unk98
-                .iter()
-                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+                    .iter()
+                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
@@ -646,8 +652,8 @@ pub fn main() -> anyhow::Result<()> {
                 cbuffer_map_ps.insert(*t, buf);
             } else if !m.unk318.is_empty()
                 && m.unk318
-                .iter()
-                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+                    .iter()
+                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
@@ -835,33 +841,21 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} textures", texture_map.len());
 
-    let le_samplers: Vec<ID3D11SamplerState> = unsafe {
-        let address_modes = [
-            D3D11_TEXTURE_ADDRESS_WRAP,
-            D3D11_TEXTURE_ADDRESS_WRAP,
-            D3D11_TEXTURE_ADDRESS_MIRROR,
-        ];
+    let to_load_samplers: Vec<TagHash> = to_load_samplers.keys().cloned().collect();
+    for s in to_load_samplers {
+        let sampler_header_ref = TagHash(package_manager.get_entry_by_tag(s).unwrap().reference);
+        let sampler_data = package_manager.read_tag(sampler_header_ref).unwrap();
 
-        address_modes
-            .into_iter()
-            .map(|a| {
-                device
-                    .CreateSamplerState(&D3D11_SAMPLER_DESC {
-                        Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-                        AddressU: a,
-                        AddressV: a,
-                        AddressW: a,
-                        MipLODBias: 0.,
-                        MaxAnisotropy: 1,
-                        ComparisonFunc: D3D11_COMPARISON_ALWAYS,
-                        BorderColor: Default::default(),
-                        MinLOD: 0.,
-                        MaxLOD: f32::MAX,
-                    })
-                    .expect("Failed to create sampler state")
-            })
-            .collect()
-    };
+        let sampler = unsafe {
+            device
+                .CreateSamplerState(sampler_data.as_ptr() as _)
+                .expect("Failed to create sampler state")
+        };
+
+        sampler_map.insert(s.0, sampler);
+    }
+
+    info!("Loaded {} samplers", sampler_map.len());
 
     let _le_cbuffer = unsafe {
         device.CreateBuffer(
@@ -1330,11 +1324,6 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
-                    for (si, s) in le_samplers.iter().enumerate() {
-                        device_context.PSSetSamplers(si as u32 + 1, Some(&[Some(s.clone())]));
-                        device_context.VSSetSamplers(si as u32 + 1, Some(&[Some(s.clone())]));
-                    }
-
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
                     let map = &maps[map_i % maps.len()];
@@ -1406,6 +1395,7 @@ pub fn main() -> anyhow::Result<()> {
                                             &cbuffer_map_vs,
                                             &cbuffer_map_ps,
                                             &texture_map,
+                                            &sampler_map,
                                             le_model_cb0.clone(),
                                         );
                                     }
@@ -1423,6 +1413,7 @@ pub fn main() -> anyhow::Result<()> {
                             &cbuffer_map_vs,
                             &cbuffer_map_ps,
                             &texture_map,
+                            &sampler_map,
                             le_model_cb0.clone(),
                             &le_vertex_cb11,
                         );
