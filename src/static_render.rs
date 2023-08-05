@@ -7,7 +7,6 @@ use crate::material;
 use anyhow::{ensure, Context};
 use destiny_pkg::PackageManager;
 use glam::{Mat4, Vec3};
-use itertools::Itertools;
 use nohash_hasher::IntMap;
 
 use tracing::warn;
@@ -28,7 +27,6 @@ pub struct StaticModelBuffer {
     // vertex2_stride: Option<u32>,
     index_buffer: ID3D11Buffer,
     index_format: DXGI_FORMAT,
-    index_count: usize,
 }
 
 pub enum TextureHandle {
@@ -175,11 +173,6 @@ impl StaticModel {
                 } else {
                     DXGI_FORMAT_R16_UINT
                 },
-                index_count: if index_header.is_32bit {
-                    index_data.len() / 4
-                } else {
-                    index_data.len() / 2
-                } as _,
             })
         }
 

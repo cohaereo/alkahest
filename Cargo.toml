@@ -47,3 +47,6 @@ targets = ["x86_64-pc-windows-gnu"]
 
 [package.metadata.alkahest]
 targets = ["x86_64-pc-windows-gnu"]
+
+[profile.dev.package.destiny-pkg]
+opt-level = 3

@@ -3,7 +3,7 @@ extern crate windows;
 
 use std::collections::HashMap;
 
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
 
@@ -11,29 +11,32 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use crate::camera::{FpsCamera, InputState};
-use crate::dxbc::{get_input_signature, DxbcHeader};
+use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 
 use crate::gui::COMPOSITOR_MODES;
-use crate::scopes::{ScopeStaticInstance, ScopeView};
+use crate::scopes::ScopeView;
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
 
 use crate::texture::TextureHeader;
 
-use crate::map::{Unk80806ef4, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
+use crate::map::{
+    Unk80806ef4, Unk8080714b, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6,
+};
+use crate::terrain::TerrainRenderer;
 use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Quat, Vec3, Vec3Swizzles, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4};
 use imgui::{Condition, FontConfig, FontSource, WindowFlags};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing::level_filters::LevelFilter;
+use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 use windows::Win32::Foundation::*;
@@ -63,6 +66,7 @@ mod scopes;
 mod static_render;
 mod statics;
 mod structure;
+mod terrain;
 mod text;
 mod texture;
 mod types;
@@ -84,17 +88,21 @@ pub fn main() -> anyhow::Result<()> {
             tracing_subscriber::registry()
                 .with(tracing_tracy::TracyLayer::new())
                 .with(tracing_subscriber::fmt::layer())
-                .with(EnvFilter::builder()
-                    .with_default_directive(LevelFilter::INFO.into())
-                    .from_env_lossy()),
+                .with(
+                    EnvFilter::builder()
+                        .with_default_directive(LevelFilter::INFO.into())
+                        .from_env_lossy(),
+                ),
         )
     } else {
         tracing::subscriber::set_global_default(
             tracing_subscriber::registry()
                 .with(tracing_subscriber::fmt::layer())
-                .with(EnvFilter::builder()
-                    .with_default_directive(LevelFilter::INFO.into())
-                    .from_env_lossy())
+                .with(
+                    EnvFilter::builder()
+                        .with_default_directive(LevelFilter::INFO.into())
+                        .from_env_lossy(),
+                ),
         )
     }
         .expect("Failed to set up the tracing subscriber");
@@ -114,77 +122,6 @@ pub fn main() -> anyhow::Result<()> {
                     .unwrap(),
             )
         });
-
-    let mut maps: Vec<(u32, Vec<TagHash>)> = vec![];
-    for (index, entry) in package.get_all_by_reference(0x80807dae) {
-        let tag = TagHash::new(package.pkg_id(), index as _);
-        let think: Unk80807dae = package_manager.read_tag_struct(tag).unwrap();
-        // println!("{think:#x?}");
-        let child_map: Unk808091e0 = package_manager
-            .read_tag_struct(think.child_map_reference)
-            .unwrap();
-        // println!("{child_map:#x?}");
-        let mut placement_group_tags = vec![];
-        for res in &child_map.map_resources {
-            let thing2: Unk80808a54 = if res.is_hash32 != 0 {
-                package_manager.read_tag_struct(res.hash32).unwrap()
-            } else {
-                // TODO: Move TagHash64 to destiny-pkg
-                package_manager.read_hash_struct(res.hash64.0).unwrap()
-            };
-
-            for tablehash in &thing2.data_tables {
-                let table_data = package_manager.read_tag(*tablehash).unwrap();
-                let mut cur = Cursor::new(&table_data);
-                let table: Unk808099d6 = cur.read_le().unwrap();
-
-                // info!(
-                //     "\tTable {:?}, {} entries",
-                //     tablehash,
-                //     table.data_entries.len()
-                // );
-                for data in &table.data_entries {
-                    if data.data_resource.resource_type == 0x808071b3 {
-                        // info!("\t\tDat {:?} = {:?}", data.translation, data.data_resource);
-                        cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            .unwrap();
-                        let preheader_tag: TagHash = cur.read_le().unwrap();
-                        let preheader: Unk80806ef4 =
-                            package_manager.read_tag_struct(preheader_tag).unwrap();
-
-                        placement_group_tags.push(preheader.placement_group);
-                    }
-                }
-            }
-        }
-
-        info!(
-            "Map {:x?} - {} placement groups",
-            think.map_name,
-            placement_group_tags.len()
-        ); // TODO(cohae): Map name lookup
-
-        maps.push((think.map_name.0, placement_group_tags));
-    }
-
-    let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
-
-    let mut to_load: HashMap<TagHash, ()> = Default::default();
-    for (_, placement_group_tags) in &maps {
-        for tag in placement_group_tags.iter() {
-            let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
-
-            for v in &placements.statics {
-                to_load.insert(*v, ());
-            }
-
-            placement_groups.insert(tag.0, placements);
-        }
-    }
-
-    if placement_groups.is_empty() {
-        panic!("No map placements found in package");
-    }
 
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
@@ -384,8 +321,6 @@ pub fn main() -> anyhow::Result<()> {
         )
     };
 
-    let to_load: Vec<TagHash> = to_load.keys().cloned().collect();
-
     let mut static_map: IntMap<u32, StaticModel> = Default::default();
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
     let mut vshader_map: IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)> = Default::default();
@@ -394,8 +329,119 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
 
+    let mut maps: Vec<(u32, Vec<TagHash>)> = vec![];
+    let mut terrain_headers: Vec<Unk8080714f> = vec![];
+    for (index, _) in package.get_all_by_reference(0x80807dae) {
+        let tag = TagHash::new(package.pkg_id(), index as _);
+        let think: Unk80807dae = package_manager.read_tag_struct(tag).unwrap();
+        let child_map: Unk808091e0 = package_manager
+            .read_tag_struct(think.child_map_reference)
+            .unwrap();
+
+        let mut placement_group_tags = vec![];
+        for res in &child_map.map_resources {
+            let thing2: Unk80808a54 = if res.is_hash32 != 0 {
+                package_manager.read_tag_struct(res.hash32).unwrap()
+            } else {
+                // TODO: Move TagHash64 to destiny-pkg
+                package_manager.read_hash_struct(res.hash64.0).unwrap()
+            };
+
+            for tablehash in &thing2.data_tables {
+                let table_data = package_manager.read_tag(*tablehash).unwrap();
+                let mut cur = Cursor::new(&table_data);
+                let table: Unk808099d6 = cur.read_le().unwrap();
+
+                for data in &table.data_entries {
+                    match data.data_resource.resource_type {
+                        // D2Class_C96C8080 (placement)
+                        0x808071b3 => {
+                            cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                .unwrap();
+                            let preheader_tag: TagHash = cur.read_le().unwrap();
+                            let preheader: Unk80806ef4 =
+                                package_manager.read_tag_struct(preheader_tag).unwrap();
+
+                            placement_group_tags.push(preheader.placement_group);
+                        }
+                        // D2Class_7D6C8080 (terrain)
+                        0x8080714b => {
+                            cur.seek(SeekFrom::Start(data.data_resource.offset))
+                                .unwrap();
+
+                            let terrain_resource: Unk8080714b = cur.read_le().unwrap();
+                            let terrain: Unk8080714f = package_manager
+                                .read_tag_struct(terrain_resource.terrain)
+                                .unwrap();
+
+                            for p in &terrain.mesh_parts {
+                                let mat: material::Unk808071e8 =
+                                    package_manager.read_tag_struct(p.material).unwrap();
+                                material_map.insert(p.material.0, mat);
+                            }
+
+                            terrain_headers.push(terrain);
+                        }
+                        u => debug!(
+                            "Skipping unknown resource type {u:x} {:?}",
+                            data.translation
+                        ),
+                    };
+                }
+            }
+        }
+
+        info!(
+            "Map {:x?} - {} placement groups",
+            think.map_name,
+            placement_group_tags.len()
+        ); // TODO(cohae): Map name lookup
+
+        maps.push((think.map_name.0, placement_group_tags));
+    }
+
+    let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
+
+    let mut to_load: HashMap<TagHash, ()> = Default::default();
+    let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
+    for (_, placement_group_tags) in &maps {
+        for tag in placement_group_tags.iter() {
+            let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
+
+            for v in &placements.statics {
+                to_load.insert(*v, ());
+            }
+
+            placement_groups.insert(tag.0, placements);
+        }
+    }
+
+    if placement_groups.is_empty() {
+        panic!("No map placements found in package");
+    }
+
+    let mut terrain_renderers = vec![];
+    info_span!("Loading terrain").in_scope(|| {
+        for header in terrain_headers.into_iter() {
+            for t in &header.mesh_groups {
+                to_load_textures.insert(t.dyemap, ());
+            }
+
+            match TerrainRenderer::load(header, &device, &mut package_manager) {
+                Ok(renderer) => {
+                    terrain_renderers.push(renderer);
+                }
+                Err(e) => {
+                    error!("Failed to load terrain: {e}");
+                }
+            }
+        }
+    });
+
+    let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
+
     info_span!("Loading statics").in_scope(|| {
-        for almostloadable in &to_load {
+        for almostloadable in &to_load_statics {
             let mheader: Unk808071a7 = package_manager.read_tag_struct(*almostloadable).unwrap();
             for m in &mheader.materials {
                 let mat: material::Unk808071e8 = package_manager.read_tag_struct(*m).unwrap();
@@ -480,10 +526,15 @@ pub fn main() -> anyhow::Result<()> {
                         &input_sig
                             .elements
                             .iter()
-                            .map(|e| InputElement::from_dxbc(e, false))
+                            .map(|e| {
+                                InputElement::from_dxbc(
+                                    e,
+                                    e.component_type == DxbcInputType::Float,
+                                    false,
+                                )
+                            })
                             .collect::<Vec<InputElement>>(),
                     );
-
                     unsafe {
                         let v = device
                             .CreateVertexShader(&vs_data, None)
@@ -643,156 +694,173 @@ pub fn main() -> anyhow::Result<()> {
         (v2, v3)
     };
 
+    for m in material_map.values() {
+        for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
+            to_load_textures.insert(t.texture, ());
+        }
+    }
+
+    let to_load_textures: Vec<TagHash> = to_load_textures.keys().cloned().collect();
     info_span!("Loading textures").in_scope(|| {
-        for m in material_map.values() {
-            for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
-                let tex_hash = t.texture;
-                if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
-                    continue;
-                }
-                let _span = debug_span!("load texture", texture = ?tex_hash).entered();
-
-                let texture_header_ref = TagHash(
-                    package_manager
-                        .get_entry_by_tag(tex_hash)
-                        .unwrap()
-                        .reference,
-                );
-
-                let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
-                let texture_data = if let Some(t) = texture.large_buffer {
-                    package_manager
-                        .read_tag(t)
-                        .expect("Failed to read texture data")
-                } else {
-                    package_manager
-                        .read_entry(
-                            texture_header_ref.pkg_id(),
-                            texture_header_ref.entry_index() as _,
-                        )
-                        .expect("Failed to read texture data")
-                        .to_vec()
-                };
-
-                // info!("Uploading texture {} {texture:?}", tex_hash);
-                let (tex, view) = unsafe {
-                    let mut initial_data =
-                        vec![D3D11_SUBRESOURCE_DATA::default(); texture.array_size as _];
-                    let (pitch, slice_pitch) =
-                        calculate_pitch(texture.format, texture.width as _, texture.height as _);
-
-                    for (i, d) in initial_data.iter_mut().enumerate() {
-                        d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
-                        d.SysMemPitch = pitch as _;
-                        d.SysMemSlicePitch = slice_pitch as _;
-                    }
-
-                    if texture.depth > 1 {
-                        let tex = device
-                            .CreateTexture3D(
-                                &D3D11_TEXTURE3D_DESC {
-                                    Width: texture.width as _,
-                                    Height: texture.height as _,
-                                    Depth: texture.depth as _,
-                                    MipLevels: 1,
-                                    Format: texture.format.into(),
-                                    Usage: D3D11_USAGE_DEFAULT,
-                                    BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                                    CPUAccessFlags: Default::default(),
-                                    MiscFlags: Default::default(),
-                                },
-                                Some(initial_data.as_ptr()),
-                            )
-                            .context("Failed to create 3D texture")
-                            .unwrap();
-
-                        let view = device
-                            .CreateShaderResourceView(
-                                &tex,
-                                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                                    Format: texture.format.into(),
-                                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
-                                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                                        Texture3D: D3D11_TEX3D_SRV {
-                                            MostDetailedMip: 0,
-                                            MipLevels: 1,
-                                        },
-                                    },
-                                }),
-                            )
-                            .unwrap();
-
-                        (TextureHandle::Texture3D(tex), view)
-                    } else {
-                        let tex = device
-                            .CreateTexture2D(
-                                &D3D11_TEXTURE2D_DESC {
-                                    Width: texture.width as _,
-                                    Height: texture.height as _,
-                                    MipLevels: 1,
-                                    ArraySize: texture.array_size as _,
-                                    Format: texture.format.into(),
-                                    SampleDesc: DXGI_SAMPLE_DESC {
-                                        Count: 1,
-                                        Quality: 0,
-                                    },
-                                    Usage: D3D11_USAGE_DEFAULT,
-                                    BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                                    CPUAccessFlags: Default::default(),
-                                    MiscFlags: Default::default(),
-                                },
-                                Some(initial_data.as_ptr()),
-                            )
-                            .context("Failed to create texture")
-                            .unwrap();
-
-                        let view = device
-                            .CreateShaderResourceView(
-                                &tex,
-                                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                                    Format: texture.format.into(),
-                                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                                        Texture2D: D3D11_TEX2D_SRV {
-                                            MostDetailedMip: 0,
-                                            MipLevels: 1,
-                                        },
-                                    },
-                                }),
-                            )
-                            .unwrap();
-
-                        (TextureHandle::Texture2D(tex), view)
-                    }
-                };
-
-                texture_map.insert(
-                    tex_hash.0,
-                    LoadedTexture {
-                        handle: tex,
-                        view,
-                        format: texture.format,
-                    },
-                );
+        for tex_hash in to_load_textures.into_iter() {
+            if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
+                continue;
             }
+            let _span = debug_span!("load texture", texture = ?tex_hash).entered();
+
+            let texture_header_ref = TagHash(
+                package_manager
+                    .get_entry_by_tag(tex_hash)
+                    .unwrap()
+                    .reference,
+            );
+
+            let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
+            let texture_data = if let Some(t) = texture.large_buffer {
+                package_manager
+                    .read_tag(t)
+                    .expect("Failed to read texture data")
+            } else {
+                package_manager
+                    .read_entry(
+                        texture_header_ref.pkg_id(),
+                        texture_header_ref.entry_index() as _,
+                    )
+                    .expect("Failed to read texture data")
+                    .to_vec()
+            };
+
+            // info!("Uploading texture {} {texture:?}", tex_hash);
+            let (tex, view) = unsafe {
+                let mut initial_data =
+                    vec![D3D11_SUBRESOURCE_DATA::default(); texture.array_size as _];
+                let (pitch, slice_pitch) =
+                    calculate_pitch(texture.format, texture.width as _, texture.height as _);
+
+                for (i, d) in initial_data.iter_mut().enumerate() {
+                    d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
+                    d.SysMemPitch = pitch as _;
+                    d.SysMemSlicePitch = slice_pitch as _;
+                }
+
+                if texture.depth > 1 {
+                    let tex = device
+                        .CreateTexture3D(
+                            &D3D11_TEXTURE3D_DESC {
+                                Width: texture.width as _,
+                                Height: texture.height as _,
+                                Depth: texture.depth as _,
+                                MipLevels: 1,
+                                Format: texture.format.into(),
+                                Usage: D3D11_USAGE_DEFAULT,
+                                BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                                CPUAccessFlags: Default::default(),
+                                MiscFlags: Default::default(),
+                            },
+                            Some(initial_data.as_ptr()),
+                        )
+                        .context("Failed to create 3D texture")
+                        .unwrap();
+
+                    let view = device
+                        .CreateShaderResourceView(
+                            &tex,
+                            Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                                Format: texture.format.into(),
+                                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
+                                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                    Texture3D: D3D11_TEX3D_SRV {
+                                        MostDetailedMip: 0,
+                                        MipLevels: 1,
+                                    },
+                                },
+                            }),
+                        )
+                        .unwrap();
+
+                    (TextureHandle::Texture3D(tex), view)
+                } else {
+                    let tex = device
+                        .CreateTexture2D(
+                            &D3D11_TEXTURE2D_DESC {
+                                Width: texture.width as _,
+                                Height: texture.height as _,
+                                MipLevels: 1,
+                                ArraySize: texture.array_size as _,
+                                Format: texture.format.into(),
+                                SampleDesc: DXGI_SAMPLE_DESC {
+                                    Count: 1,
+                                    Quality: 0,
+                                },
+                                Usage: D3D11_USAGE_DEFAULT,
+                                BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                                CPUAccessFlags: Default::default(),
+                                MiscFlags: Default::default(),
+                            },
+                            Some(initial_data.as_ptr()),
+                        )
+                        .context("Failed to create texture")
+                        .unwrap();
+
+                    let view = device
+                        .CreateShaderResourceView(
+                            &tex,
+                            Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                                Format: texture.format.into(),
+                                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                    Texture2D: D3D11_TEX2D_SRV {
+                                        MostDetailedMip: 0,
+                                        MipLevels: 1,
+                                    },
+                                },
+                            }),
+                        )
+                        .unwrap();
+
+                    (TextureHandle::Texture2D(tex), view)
+                }
+            };
+
+            texture_map.insert(
+                tex_hash.0,
+                LoadedTexture {
+                    handle: tex,
+                    view,
+                    format: texture.format,
+                },
+            );
         }
     });
 
     info!("Loaded {} textures", texture_map.len());
 
-    let le_sampler = unsafe {
-        device.CreateSamplerState(&D3D11_SAMPLER_DESC {
-            Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-            AddressU: D3D11_TEXTURE_ADDRESS_WRAP,
-            AddressV: D3D11_TEXTURE_ADDRESS_WRAP,
-            AddressW: D3D11_TEXTURE_ADDRESS_WRAP,
-            MipLODBias: 0.,
-            MaxAnisotropy: 1,
-            ComparisonFunc: D3D11_COMPARISON_ALWAYS,
-            BorderColor: Default::default(),
-            MinLOD: 0.,
-            MaxLOD: f32::MAX,
-        })?
+    let le_samplers: Vec<ID3D11SamplerState> = unsafe {
+        let address_modes = [
+            D3D11_TEXTURE_ADDRESS_WRAP,
+            D3D11_TEXTURE_ADDRESS_WRAP,
+            D3D11_TEXTURE_ADDRESS_MIRROR,
+        ];
+
+        address_modes
+            .into_iter()
+            .map(|a| {
+                device
+                    .CreateSamplerState(&D3D11_SAMPLER_DESC {
+                        Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+                        AddressU: a,
+                        AddressV: a,
+                        AddressW: a,
+                        MipLODBias: 0.,
+                        MaxAnisotropy: 1,
+                        ComparisonFunc: D3D11_COMPARISON_ALWAYS,
+                        BorderColor: Default::default(),
+                        MinLOD: 0.,
+                        MaxLOD: f32::MAX,
+                    })
+                    .expect("Failed to create sampler state")
+            })
+            .collect()
     };
 
     let _le_cbuffer = unsafe {
@@ -840,7 +908,7 @@ pub fn main() -> anyhow::Result<()> {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: (16 * std::mem::size_of::<ScopeStaticInstance>()) as _,
+                ByteWidth: std::mem::size_of::<Mat4>() as _,
                 ..Default::default()
             },
             None,
@@ -854,19 +922,6 @@ pub fn main() -> anyhow::Result<()> {
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
                 ByteWidth: std::mem::size_of::<ScopeView>() as _,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
-
-    let le_pixel_cb12 = unsafe {
-        device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: (4 * 4) * 8,
                 ..Default::default()
             },
             None,
@@ -1260,7 +1315,7 @@ pub fn main() -> anyhow::Result<()> {
                     view2.w_axis = camera.position.extend(1.0);
 
                     let scope_view = ScopeView {
-                        world_to_projective: proj_view, //Mat4::from_mat3(normalized),
+                        world_to_projective: proj_view,
                         camera_to_world: view2,
                         // Account for missing depth value in output
                         view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
@@ -1273,52 +1328,18 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.Unmap(&le_vertex_cb12, 0);
 
-                    // let bmap = device_context
-                    //     .Map(&le_pixel_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                    //     .unwrap();
-                    // 
-                    // let mut cb12_data = vec![Vec4::ZERO; 8];
-                    // cb12_data[7] = camera.position.yxz().extend(1.0);
-                    // 
-                    // bmap.pData.copy_from_nonoverlapping(
-                    //     cb12_data.as_ptr() as _,
-                    //     8 * std::mem::size_of::<Vec4>(),
-                    // );
-                    // 
-                    // device_context.Unmap(&le_pixel_cb12, 0);
-
-                    // device_context.VSSetConstantBuffers(0, Some(&[Some(le_cbuffer.clone())]));
                     device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
-                    // TODO(cohae): Find a more solid way to assign samplers
-                    device_context.PSSetSamplers(
-                        0,
-                        Some(&[
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                        ]),
-                    );
-                    device_context.VSSetSamplers(
-                        0,
-                        Some(&[
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                            Some(le_sampler.clone()),
-                        ]),
-                    );
+                    for (si, s) in le_samplers.iter().enumerate() {
+                        device_context.PSSetSamplers(si as u32 + 1, Some(&[Some(s.clone())]));
+                        device_context.VSSetSamplers(si as u32 + 1, Some(&[Some(s.clone())]));
+                    }
 
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
-                    // device_context.PSSetConstantBuffers(12, Some(&[Some(le_pixel_cb12.clone())]));
 
                     let map = &maps[map_i % maps.len()];
                     for ptag in &map.1 {
                         let placements = &placement_groups[&ptag.0];
-                        // for placements in &placement_groups {
                         for instance in &placements.instances {
                             if let Some(model_hash) =
                                 placements.statics.iter().nth(instance.static_index as _)
@@ -1366,11 +1387,9 @@ pub fn main() -> anyhow::Result<()> {
                                                 .extend(f32::from_bits(u32::MAX)),
                                         };
 
-                                        let bdata = vec![scope_instance; 16];
                                         bmap.pData.copy_from_nonoverlapping(
-                                            // &scope_instance as *const ScopeStaticInstance as _,
-                                            bdata.as_ptr() as _,
-                                            16 * std::mem::size_of::<Mat4>(),
+                                            &scope_instance as *const Mat4 as _,
+                                            std::mem::size_of::<Mat4>(),
                                         );
 
                                         device_context.Unmap(&le_vertex_cb11, 0);
@@ -1393,6 +1412,20 @@ pub fn main() -> anyhow::Result<()> {
                                 }
                             }
                         }
+                    }
+
+                    for t in &terrain_renderers {
+                        t.draw(
+                            &device_context,
+                            &material_map,
+                            &vshader_map,
+                            &pshader_map,
+                            &cbuffer_map_vs,
+                            &cbuffer_map_ps,
+                            &texture_map,
+                            le_model_cb0.clone(),
+                            &le_vertex_cb11,
+                        );
                     }
 
 

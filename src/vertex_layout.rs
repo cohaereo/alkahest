@@ -1,16 +1,16 @@
 use crate::dxbc::{DxbcInputElement, SemanticType};
 use crate::dxgi::DxgiFormat;
-use bitflags::Flags;
 use windows::Win32::Graphics::Direct3D11::{D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA};
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 pub struct InputElement {
     pub format: DxgiFormat,
+    pub semantic_index: u32,
     pub semantic_type: SemanticType,
 }
 
 impl InputElement {
-    pub fn from_dxbc(e: &DxbcInputElement, is_float: bool) -> InputElement {
+    pub fn from_dxbc(e: &DxbcInputElement, interpolated: bool, is_float: bool) -> InputElement {
         let ty = match e.component_mask.iter().count() {
             1 => InputType::Float,
             2 => InputType::Float2,
@@ -20,7 +20,8 @@ impl InputElement {
         };
 
         InputElement {
-            format: ty.to_dxgi_type(&e.semantic_name.to_string(), is_float),
+            format: ty.to_dxgi_type(&e.semantic_name.to_string(), interpolated, is_float),
+            semantic_index: e.semantic_index,
             semantic_type: SemanticType::from_str(&e.semantic_name.to_string())
                 .unwrap_or(SemanticType::TexCoord),
         }
@@ -47,20 +48,33 @@ impl InputType {
 
     /// Convert to a compatible DXGI_FORMAT
     /// This function aligns 16-bit types to 32-bit where necessary
-    pub fn to_dxgi_type(self, semantic_name: &str, is_float: bool) -> DxgiFormat {
+    pub fn to_dxgi_type(
+        self,
+        semantic_name: &str,
+        interpolated: bool,
+        is_float: bool,
+    ) -> DxgiFormat {
         match if !is_float { self.align_16() } else { self } {
             InputType::Float => {
                 if is_float {
                     DxgiFormat::R32_FLOAT
                 } else {
-                    DxgiFormat::R16_SNORM
+                    if interpolated {
+                        DxgiFormat::R16_SNORM
+                    } else {
+                        DxgiFormat::R16_SINT
+                    }
                 }
             }
             InputType::Float2 => {
                 if is_float {
                     DxgiFormat::R32G32_FLOAT
                 } else {
-                    DxgiFormat::R16G16_SNORM
+                    if interpolated {
+                        DxgiFormat::R16G16_SNORM
+                    } else {
+                        DxgiFormat::R16G16_SINT
+                    }
                 }
             }
             InputType::Float3 => {
@@ -77,7 +91,11 @@ impl InputType {
                     if is_float {
                         DxgiFormat::R32G32B32A32_FLOAT
                     } else {
-                        DxgiFormat::R16G16B16A16_SNORM
+                        if interpolated {
+                            DxgiFormat::R16G16B16A16_SNORM
+                        } else {
+                            DxgiFormat::R16G16B16A16_SINT
+                        }
                     }
                 }
             }
@@ -93,8 +111,8 @@ pub fn build_input_layout(elements: &[InputElement]) -> Vec<D3D11_INPUT_ELEMENT_
         .filter(|e| !e.semantic_type.is_system_value())
     {
         map.push(D3D11_INPUT_ELEMENT_DESC {
-            SemanticName: e.semantic_type.to_pcstr(), // TODO(cohae): static semantic strings so we can pass them into this
-            SemanticIndex: 0,
+            SemanticName: e.semantic_type.to_pcstr(),
+            SemanticIndex: e.semantic_index,
             Format: DXGI_FORMAT(e.format.into()),
             InputSlot: 0,
             AlignedByteOffset: offset,

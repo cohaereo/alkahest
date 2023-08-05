@@ -114,7 +114,7 @@ impl Debug for Vector3 {
 impl Debug for Vector4 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "Vector4(x={:.3}, y={:.3}, z={:.3}, w={:.3})",
+            "Vector4(x={}, y={}, z={}, w={})",
             self.x, self.y, self.z, self.w
         ))
     }

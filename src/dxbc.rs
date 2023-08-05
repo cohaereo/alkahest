@@ -45,13 +45,15 @@ pub struct DxbcInputElement {
     _pad: u16,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, PartialEq)]
 #[br(repr(u32))]
 pub enum DxbcInputType {
     Uint = 1,
+    Int = 2,
     Float = 3,
 }
 
+#[derive(Debug)]
 pub enum SemanticType {
     Position,
     TexCoord,
