@@ -16,12 +16,15 @@ use crate::camera::{FpsCamera, InputState};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 
+use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
+use crate::overlays::gbuffer_viewer::{GBufferInfoOverlay, CompositorMode, COMPOSITOR_MODES};
+use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourceTypeOverlay, UnknownPoint};
 use crate::scopes::ScopeView;
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
-use crate::map_data::*;
+
 use crate::texture::TextureHeader;
 
 use crate::map::{
@@ -59,10 +62,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
-use crate::overlays::gui::GuiManager;
-use crate::overlays::camera_settings::CameraPositionOverlay;
-use crate::overlays::gbuffer_viewer::{GBufferInfoOverlay, CompositorMode, COMPOSITOR_MODES};
-
 mod overlays;
 mod camera;
 mod dds;
@@ -81,7 +80,6 @@ mod texture;
 mod types;
 mod unknown;
 mod vertex_layout;
-mod map_data;
 
 // #[global_allocator]
 // static GLOBAL: ProfiledAllocator<std::alloc::System> =
@@ -133,7 +131,50 @@ pub fn main() -> anyhow::Result<()> {
             )
         });
 
-    let mut dumper = DataAggregator { vertex_formats: vec![]};
+    let mut stringmap: IntMap<u32, String> = Default::default();
+    let all_global_packages = [
+        0x019a, 0x01cf, 0x01fe, 0x0211, 0x0238, 0x03ab, 0x03d1, 0x03ed, 0x03f5, 0x06dc,
+    ];
+    {
+        let _span = info_span!("Loading global strings").entered();
+        for (p, e, _) in package_manager
+            .get_all_by_reference(0x80809a88)
+            .into_iter()
+            .filter(|(p, _, _)| all_global_packages.contains(p))
+        {
+            let textset_header: StringSetHeader =
+                package_manager.read_tag_struct(TagHash::new(p, e as _))?;
+
+            let data = package_manager
+                .read_tag(textset_header.language_english)
+                .unwrap();
+            let mut cur = Cursor::new(&data);
+            let text_data: StringData = cur.read_le()?;
+
+            for (combination, hash) in text_data
+                .string_combinations
+                .iter()
+                .zip(textset_header.string_hashes.iter())
+            {
+                let mut final_string = String::new();
+
+                for ip in 0..combination.part_count {
+                    cur.seek(combination.data.into())?;
+                    cur.seek(SeekFrom::Current(ip * 0x20))?;
+                    let part: StringPart = cur.read_le()?;
+                    cur.seek(part.data.into())?;
+                    let mut data = vec![0u8; part.byte_length as usize];
+                    cur.read_exact(&mut data)?;
+                    final_string += &decode_text(&data, part.cipher_shift);
+                }
+
+                stringmap.insert(hash.0, final_string);
+            }
+        }
+    }
+
+    info!("Loaded {} global strings", stringmap.len());
+
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
@@ -340,7 +381,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
-    let mut maps: Vec<(u32, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
+    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
     let mut terrain_headers: Vec<Unk8080714f> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let tag = TagHash::new(package.pkg_id(), index as _);
@@ -559,18 +600,19 @@ pub fn main() -> anyhow::Result<()> {
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
                     let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
 
-                    let input_vec = input_sig
-                        .elements
-                        .iter()
-                        .map(|e| {
-                            InputElement::from_dxbc(
-                                e,
-                                e.component_type == DxbcInputType::Float,
-                                false,
-                            )
-                        }).collect::<Vec<InputElement>>();
-                    let layout = vertex_layout::build_input_layout(&input_vec);
-                    dumper.vertex_format(input_vec);
+                    let layout = vertex_layout::build_input_layout(
+                        &input_sig
+                            .elements
+                            .iter()
+                            .map(|e| {
+                                InputElement::from_dxbc(
+                                    e,
+                                    e.component_type == DxbcInputType::Float,
+                                    false,
+                                )
+                            })
+                            .collect::<Vec<InputElement>>(),
+                    );
                     unsafe {
                         let v = device
                             .CreateVertexShader(&vs_data, None)
@@ -1134,16 +1176,16 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay { delta: 0.0 }));
-    let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay { composition_mode: CompositorMode::Combined as usize }));
+    let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay { composition_mode: CompositorMode::Combined as usize, map_index: 0, maps: maps.clone() }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay { camera: camera.clone(), show_map_resources: false, map_resource_distance: 2000.0 }));
-    let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay { debug_overlay: gui_debug.clone(), map: (0, vec![], vec![]) }));
+    let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay { debug_overlay: gui_debug.clone(), map: (0,String::new(), vec![], vec![]) }));
     let mut gui_manager = GuiManager::create(&window, &device);
     gui_manager.add_overlay(Box::new(gui_fps.clone()));
     gui_manager.add_overlay(Box::new(gui_debug.clone()));
     gui_manager.add_overlay(Box::new(gui_gbuffer.clone()));
     gui_manager.add_overlay(Box::new(gui_resources.clone()));
+
     let _start_time = Instant::now();
-    let mut map_i: usize = 0;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
 
@@ -1203,27 +1245,10 @@ pub fn main() -> anyhow::Result<()> {
                     WindowEvent::KeyboardInput { input, .. } => {
                         if input.state == ElementState::Pressed {
                             match input.virtual_keycode {
-                                Some(VirtualKeyCode::Right) => {
-                                    map_i = map_i.wrapping_add(1)
-                                }
-
-                                Some(VirtualKeyCode::Left) => {
-                                    map_i = map_i.wrapping_sub(1)
-                                }
-
                                 Some(VirtualKeyCode::Escape) => {
                                     *control_flow = ControlFlow::Exit
                                 }
                                 _ => {}
-                            }
-
-                            if let Some(VirtualKeyCode::Right | VirtualKeyCode::Left) =
-                                input.virtual_keycode
-                            {
-                                info!(
-                                    "Switched to map group {}",
-                                    map_i % maps.len()
-                                );
                             }
                         }
 
@@ -1245,25 +1270,14 @@ pub fn main() -> anyhow::Result<()> {
                             }
                             _ => {}
                         }
-
-                        match input.virtual_keycode {
-                            Some(VirtualKeyCode::I) => {
-                                if input.state == ElementState::Released {
-                                    dumper.dump(TypeFlags::VERTEX_FORMAT)
-                                }
-                            }
-                            _ => {}
-                        }
                     }
 
                     _ => (),
                 }
             }
-
             Event::RedrawRequested(..) => {
                 camera.borrow_mut().update(&input_state, last_frame.elapsed().as_secs_f32());
                 gui_fps.borrow_mut().delta = last_frame.elapsed().as_secs_f32(); // TODO: There has to be a way not to do this...
-
                 let window_dims = window.inner_size();
                 last_frame = Instant::now();
 
@@ -1337,8 +1351,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
-                    let map = &maps[map_i % maps.len()];
-                    gui_resources.borrow_mut().set_map_data(map.0, map.1.clone(), map.2.clone());
+                    let map = &maps[gui_gbuffer.borrow().map_index % maps.len()];
+                    gui_resources.borrow_mut().set_map_data(map.0, &map.1, map.2.clone(), map.3.clone());
 
                     for ptag in &map.2 {
                         let placements = &placement_groups[&ptag.0];
@@ -1483,3 +1497,22 @@ pub fn main() -> anyhow::Result<()> {
         }
     });
 }
+
+const RANDOM_COLORS: [[u8; 3]; 16] = [
+    [0xFF, 0x00, 0x00],
+    [0x00, 0xFF, 0x00],
+    [0x00, 0x00, 0xFF],
+    [0xFF, 0xFF, 0x00],
+    [0xFF, 0x00, 0xFF],
+    [0x00, 0xFF, 0xFF],
+    [0x00, 0x00, 0x00],
+    [0x80, 0x00, 0x00],
+    [0x00, 0x80, 0x00],
+    [0x00, 0x00, 0x80],
+    [0x80, 0x80, 0x00],
+    [0x80, 0x00, 0x80],
+    [0x00, 0x80, 0x80],
+    [0x80, 0x80, 0x80],
+    [0xC0, 0x00, 0x00],
+    [0x00, 0xC0, 0x00],
+];

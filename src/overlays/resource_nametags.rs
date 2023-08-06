@@ -9,12 +9,12 @@ use super::{gui::OverlayProvider, camera_settings::CameraPositionOverlay};
 
 pub struct ResourceTypeOverlay {
     pub debug_overlay: Rc<RefCell<CameraPositionOverlay>>,
-    pub map: (u32, Vec<TagHash>, Vec<UnknownPoint>)
+    pub map: (u32, String, Vec<TagHash>, Vec<UnknownPoint>)
  }
 
  impl ResourceTypeOverlay {
-    pub fn set_map_data(&mut self, size: u32, one: Vec<TagHash>, two: Vec<UnknownPoint>) {
-        self.map = (size, one, two);
+    pub fn set_map_data(&mut self, size: u32, name: &String, one: Vec<TagHash>, two: Vec<UnknownPoint>) {
+        self.map = (size, name.to_string(), one, two);
     }
  }
 
@@ -40,7 +40,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                 let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());
     
                 let draw_list = ui.get_background_draw_list();
-                draw_list.with_clip_rect([0.0, 0.0], screen_size, || for unk in &mut self.map.2 {
+                draw_list.with_clip_rect([0.0, 0.0], screen_size, || for unk in &mut self.map.3 {
                     if !camera_frustum.point_intersecting(&unk.position.x, &unk.position.y, &unk.position.z) {
                         continue;
                     }
