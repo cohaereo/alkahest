@@ -3,44 +3,18 @@ extern crate windows;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
-
 use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Instant;
 
-use crate::camera::{FpsCamera, InputState};
-use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
-use crate::dxgi::calculate_pitch;
-
-use crate::overlays::camera_settings::CameraPositionOverlay;
-use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gbuffer_viewer::{GBufferInfoOverlay, CompositorMode, COMPOSITOR_MODES};
-use crate::overlays::gui::GuiManager;
-use crate::overlays::resource_nametags::{ResourceTypeOverlay, UnknownPoint};
-use crate::scopes::ScopeView;
-use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
-use crate::statics::{Unk808071a7, Unk8080966d};
-
-use crate::texture::TextureHeader;
-
-use crate::map::{
-    Unk80806ef4, Unk8080714b, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6,
-};
-use crate::terrain::TerrainRenderer;
-use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use frustum_query::frustum::Frustum;
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
-use imgui::{Condition, FontConfig, FontSource, ImColor32, WindowFlags};
-use imgui_winit_support::{HiDpiMode, WinitPlatform};
+use glam::{Mat4, Quat, Vec3, Vec4};
 use nohash_hasher::IntMap;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use tracing::level_filters::LevelFilter;
@@ -48,9 +22,7 @@ use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 use windows::Win32::Foundation::*;
-use windows::Win32::Graphics::Direct3D::Fxc::{
-    D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
-};
+use windows::Win32::Graphics::Direct3D::Fxc::{ D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION };
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
@@ -62,6 +34,23 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
+use crate::camera::{FpsCamera, InputState};
+use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
+use crate::dxgi::calculate_pitch;
+use crate::map::{ Unk80806ef4, Unk8080714b, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6 };
+use crate::overlays::camera_settings::CameraPositionOverlay;
+use crate::overlays::fps_display::FpsDisplayOverlay;
+use crate::overlays::gbuffer_viewer::{GBufferInfoOverlay, CompositorMode, COMPOSITOR_MODES};
+use crate::overlays::gui::GuiManager;
+use crate::overlays::resource_nametags::{ResourceTypeOverlay, UnknownPoint};
+use crate::scopes::ScopeView;
+use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
+use crate::statics::{Unk808071a7, Unk8080966d};
+use crate::terrain::TerrainRenderer;
+use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
+use crate::texture::TextureHeader;
+use crate::vertex_layout::InputElement;
+
 mod overlays;
 mod camera;
 mod dds;
@@ -69,6 +58,7 @@ mod dxbc;
 mod dxgi;
 mod entity;
 mod map;
+mod map_data;
 mod material;
 mod scopes;
 mod static_render;

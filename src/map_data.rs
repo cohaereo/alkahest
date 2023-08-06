@@ -33,7 +33,7 @@ impl DataAggregator {
                 writeln!(&mut file, "|:--------:|:--------------:|:--------|").unwrap();
                 for (index, input) in inputs.iter().enumerate() {
                     unsafe {
-                        writeln!(&mut file, "| v{0} | {1} | {2:?} |", index, input.semantic_type.to_pcstr().to_string().unwrap(), input.format).unwrap();
+                        writeln!(&mut file, "| v{0} | {1}{2} | {3:?} |", index, input.semantic_type.to_pcstr().to_string().unwrap(), input.semantic_index, input.format).unwrap();
                     }
                 }
                 writeln!(&mut file).unwrap();
