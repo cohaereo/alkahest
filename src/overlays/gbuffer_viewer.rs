@@ -1,6 +1,33 @@
-use std::fmt::{Display, Formatter};
+use std::{fmt::Formatter, fmt::Display};
+use destiny_pkg::TagHash;
+use imgui::{WindowFlags, Condition};
+use winit::window::Window;
 
-// Using a u32 so we can pass this option to the composite shader directly
+use super::{gui::OverlayProvider, resource_nametags::UnknownPoint};
+
+pub struct GBufferInfoOverlay {
+    pub composition_mode: usize,
+    pub map_index: usize,
+    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<UnknownPoint>)>
+ }
+
+impl OverlayProvider for GBufferInfoOverlay {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window) {
+        ui.window("Options")
+            .flags(WindowFlags::NO_TITLE_BAR)
+            .size([178.0, 72.0], Condition::FirstUseEver)
+            .build(|| {
+                ui.combo(" ", &mut self.composition_mode, &COMPOSITOR_MODES, |v| {
+                    format!("{v}").into()
+                });
+                ui.combo("Map", &mut self.map_index, &self.maps, |(_, map_name, _, _)| {
+                    map_name.into()
+                });
+        });
+
+    }
+}
+
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum CompositorMode {

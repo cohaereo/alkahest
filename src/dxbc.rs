@@ -53,7 +53,7 @@ pub enum DxbcInputType {
     Float = 3,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SemanticType {
     Position,
     TexCoord,
