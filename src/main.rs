@@ -3,7 +3,7 @@ extern crate windows;
 
 use std::collections::HashMap;
 
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
 
@@ -25,6 +25,7 @@ use crate::map::{
     Unk80806ef4, Unk8080714b, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6,
 };
 use crate::terrain::TerrainRenderer;
+use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::vertex_layout::InputElement;
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -123,6 +124,50 @@ pub fn main() -> anyhow::Result<()> {
                 .unwrap(),
             )
         });
+
+    let mut stringmap: IntMap<u32, String> = Default::default();
+    let all_global_packages = [
+        0x019a, 0x01cf, 0x01fe, 0x0211, 0x0238, 0x03ab, 0x03d1, 0x03ed, 0x03f5, 0x06dc,
+    ];
+    {
+        let _span = info_span!("Loading global strings").entered();
+        for (p, e, _) in package_manager
+            .get_all_by_reference(0x80809a88)
+            .into_iter()
+            .filter(|(p, _, _)| all_global_packages.contains(p))
+        {
+            let textset_header: StringSetHeader =
+                package_manager.read_tag_struct(TagHash::new(p, e as _))?;
+
+            let data = package_manager
+                .read_tag(textset_header.language_english)
+                .unwrap();
+            let mut cur = Cursor::new(&data);
+            let text_data: StringData = cur.read_le()?;
+
+            for (combination, hash) in text_data
+                .string_combinations
+                .iter()
+                .zip(textset_header.string_hashes.iter())
+            {
+                let mut final_string = String::new();
+
+                for ip in 0..combination.part_count {
+                    cur.seek(combination.data.into())?;
+                    cur.seek(SeekFrom::Current(ip * 0x20))?;
+                    let part: StringPart = cur.read_le()?;
+                    cur.seek(part.data.into())?;
+                    let mut data = vec![0u8; part.byte_length as usize];
+                    cur.read_exact(&mut data)?;
+                    final_string += &decode_text(&data, part.cipher_shift);
+                }
+
+                stringmap.insert(hash.0, final_string);
+            }
+        }
+    }
+
+    info!("Loaded {} global strings", stringmap.len());
 
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
@@ -336,7 +381,7 @@ pub fn main() -> anyhow::Result<()> {
         pub resource_type: u32,
     }
 
-    let mut maps: Vec<(u32, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
+    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
     let mut terrain_headers: Vec<Unk8080714f> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let tag = TagHash::new(package.pkg_id(), index as _);
@@ -410,13 +455,22 @@ pub fn main() -> anyhow::Result<()> {
             }
         }
 
+        let map_name = stringmap
+            .get(&think.map_name.0)
+            .cloned()
+            .unwrap_or(format!("[MissingString_{:08x}]", think.map_name.0));
         info!(
-            "Map {:x?} - {} placement groups",
+            "Map {:x?} '{map_name}' - {} placement groups",
             think.map_name,
             placement_group_tags.len()
         ); // TODO(cohae): Map name lookup
 
-        maps.push((think.map_name.0, placement_group_tags, unknown_things));
+        maps.push((
+            think.map_name.0,
+            map_name,
+            placement_group_tags,
+            unknown_things,
+        ));
     }
 
     let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
@@ -424,7 +478,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
-    for (_, placement_group_tags, _) in &maps {
+    for (_, _, placement_group_tags, _) in &maps {
         for tag in placement_group_tags.iter() {
             let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
 
@@ -1256,11 +1310,14 @@ pub fn main() -> anyhow::Result<()> {
                     .build(|| ui.text(format!("{:.1}", 1.0 / last_frame.elapsed().as_secs_f32())));
 
                 ui.window("Options")
-                    .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
-                    .size([128.0, 36.0], Condition::Always)
+                    .flags(WindowFlags::NO_TITLE_BAR)
+                    .size([178.0, 72.0], Condition::FirstUseEver)
                     .build(|| {
                         ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
                             format!("{v}").into()
+                        });
+                        ui.combo("Map", &mut map_i, &maps, |(_, map_name, _, _)| {
+                            map_name.into()
                         });
                     });
 
@@ -1298,7 +1355,7 @@ pub fn main() -> anyhow::Result<()> {
                             let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());
 
                             let draw_list = ui.get_background_draw_list();
-                            draw_list.with_clip_rect([0.0, 0.0], screen_size, || for unk in &map.2 {
+                            draw_list.with_clip_rect([0.0, 0.0], screen_size, || for unk in &map.3 {
                                 if !camera_frustum.point_intersecting(&unk.position.x, &unk.position.y, &unk.position.z) {
                                     continue;
                                 }
@@ -1400,7 +1457,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     let map = &maps[map_i % maps.len()];
 
-                    for ptag in &map.1 {
+                    for ptag in &map.2 {
                         let placements = &placement_groups[&ptag.0];
                         for instance in &placements.instances {
                             if let Some(model_hash) =
