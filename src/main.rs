@@ -1,12 +1,14 @@
 #[macro_use]
 extern crate windows;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
 
+use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -14,11 +16,12 @@ use crate::camera::{FpsCamera, InputState};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 
-use crate::gui::COMPOSITOR_MODES;
+use crate::overlays::fps_display::FpsDisplayOverlay;
+use crate::overlays::resource_nametags::{ResourceTypeOverlay, UnknownPoint};
 use crate::scopes::ScopeView;
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
-
+use crate::map_data::*;
 use crate::texture::TextureHeader;
 
 use crate::map::{
@@ -56,12 +59,16 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
+use crate::overlays::gui::GuiManager;
+use crate::overlays::camera_settings::CameraPositionOverlay;
+use crate::overlays::gbuffer_viewer::{GBufferInfoOverlay, CompositorMode, COMPOSITOR_MODES};
+
+mod overlays;
 mod camera;
 mod dds;
 mod dxbc;
 mod dxgi;
 mod entity;
-mod gui;
 mod map;
 mod material;
 mod scopes;
@@ -74,6 +81,7 @@ mod texture;
 mod types;
 mod unknown;
 mod vertex_layout;
+mod map_data;
 
 // #[global_allocator]
 // static GLOBAL: ProfiledAllocator<std::alloc::System> =
@@ -125,50 +133,7 @@ pub fn main() -> anyhow::Result<()> {
             )
         });
 
-    let mut stringmap: IntMap<u32, String> = Default::default();
-    let all_global_packages = [
-        0x019a, 0x01cf, 0x01fe, 0x0211, 0x0238, 0x03ab, 0x03d1, 0x03ed, 0x03f5, 0x06dc,
-    ];
-    {
-        let _span = info_span!("Loading global strings").entered();
-        for (p, e, _) in package_manager
-            .get_all_by_reference(0x80809a88)
-            .into_iter()
-            .filter(|(p, _, _)| all_global_packages.contains(p))
-        {
-            let textset_header: StringSetHeader =
-                package_manager.read_tag_struct(TagHash::new(p, e as _))?;
-
-            let data = package_manager
-                .read_tag(textset_header.language_english)
-                .unwrap();
-            let mut cur = Cursor::new(&data);
-            let text_data: StringData = cur.read_le()?;
-
-            for (combination, hash) in text_data
-                .string_combinations
-                .iter()
-                .zip(textset_header.string_hashes.iter())
-            {
-                let mut final_string = String::new();
-
-                for ip in 0..combination.part_count {
-                    cur.seek(combination.data.into())?;
-                    cur.seek(SeekFrom::Current(ip * 0x20))?;
-                    let part: StringPart = cur.read_le()?;
-                    cur.seek(part.data.into())?;
-                    let mut data = vec![0u8; part.byte_length as usize];
-                    cur.read_exact(&mut data)?;
-                    final_string += &decode_text(&data, part.cipher_shift);
-                }
-
-                stringmap.insert(hash.0, final_string);
-            }
-        }
-    }
-
-    info!("Loaded {} global strings", stringmap.len());
-
+    let mut dumper = DataAggregator { vertex_formats: vec![]};
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
@@ -375,13 +340,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
-
-    struct UnknownPoint {
-        pub position: Vec4,
-        pub resource_type: u32,
-    }
-
-    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
+    let mut maps: Vec<(u32, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
     let mut terrain_headers: Vec<Unk8080714f> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let tag = TagHash::new(package.pkg_id(), index as _);
@@ -600,19 +559,18 @@ pub fn main() -> anyhow::Result<()> {
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
                     let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
 
-                    let layout = vertex_layout::build_input_layout(
-                        &input_sig
-                            .elements
-                            .iter()
-                            .map(|e| {
-                                InputElement::from_dxbc(
-                                    e,
-                                    e.component_type == DxbcInputType::Float,
-                                    false,
-                                )
-                            })
-                            .collect::<Vec<InputElement>>(),
-                    );
+                    let input_vec = input_sig
+                        .elements
+                        .iter()
+                        .map(|e| {
+                            InputElement::from_dxbc(
+                                e,
+                                e.component_type == DxbcInputType::Float,
+                                false,
+                            )
+                        }).collect::<Vec<InputElement>>();
+                    let layout = vertex_layout::build_input_layout(&input_vec);
+                    dumper.vertex_format(input_vec);
                     unsafe {
                         let v = device
                             .CreateVertexShader(&vs_data, None)
@@ -1101,7 +1059,7 @@ pub fn main() -> anyhow::Result<()> {
         space: false,
     };
 
-    let mut camera = FpsCamera::default();
+    let camera: Rc<RefCell<FpsCamera>> = Rc::new(RefCell::new(FpsCamera::default()));
 
     unsafe {
         let cb11_data = vec![Vec4::splat(0.6); 128];
@@ -1175,30 +1133,22 @@ pub fn main() -> anyhow::Result<()> {
         })?
     };
 
-    let mut imgui = imgui::Context::create();
-    imgui.style_mut().window_rounding = 4.0;
-
-    let mut platform = WinitPlatform::init(&mut imgui);
-    platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Rounded);
-    let hidpi_factor = platform.hidpi_factor();
-    let font_size = (13.0 * hidpi_factor) as f32;
-    imgui.fonts().add_font(&[FontSource::DefaultFontData {
-        config: Some(FontConfig {
-            size_pixels: font_size,
-            ..FontConfig::default()
-        }),
-    }]);
-    let mut renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, &device)? };
-
+    let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay { delta: 0.0 }));
+    let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay { composition_mode: CompositorMode::Combined as usize }));
+    let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay { camera: camera.clone(), show_map_resources: false, map_resource_distance: 2000.0 }));
+    let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay { debug_overlay: gui_debug.clone(), map: (0, vec![], vec![]) }));
+    let mut gui_manager = GuiManager::create(&window, &device);
+    gui_manager.add_overlay(Box::new(gui_fps.clone()));
+    gui_manager.add_overlay(Box::new(gui_debug.clone()));
+    gui_manager.add_overlay(Box::new(gui_gbuffer.clone()));
+    gui_manager.add_overlay(Box::new(gui_resources.clone()));
     let _start_time = Instant::now();
-    let mut composite_mode: usize = 0;
     let mut map_i: usize = 0;
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
-    let mut debug_distance = 2000.0;
-    let mut show_map_resources = false;
+
     event_loop.run(move |event, _, control_flow| {
-        platform.handle_event(imgui.io_mut(), &window, &event);
+        gui_manager.handle_event(&event, &window);
         match &event {
             Event::WindowEvent { event, .. } => {
                 match event {
@@ -1229,7 +1179,7 @@ pub fn main() -> anyhow::Result<()> {
                         *control_flow = ControlFlow::Exit;
                     }
                     WindowEvent::MouseInput { state, button, .. } => {
-                        if button == &MouseButton::Left && !imgui.io().want_capture_mouse {
+                        if button == &MouseButton::Left && !gui_manager.imgui.io().want_capture_mouse {
                             input_state.mouse1 = *state == ElementState::Pressed
                         }
                     }
@@ -1237,8 +1187,8 @@ pub fn main() -> anyhow::Result<()> {
                         if let Some(ref mut p) = last_cursor_pos {
                             let delta = (position.x - p.x, position.y - p.y);
 
-                            if input_state.mouse1 && !imgui.io().want_capture_mouse {
-                                camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
+                            if input_state.mouse1 && !gui_manager.imgui.io().want_capture_mouse {
+                                camera.borrow_mut().update_mouse((delta.0 as f32, delta.1 as f32).into());
                             }
 
                             last_cursor_pos = Some(*position);
@@ -1295,94 +1245,26 @@ pub fn main() -> anyhow::Result<()> {
                             }
                             _ => {}
                         }
+
+                        match input.virtual_keycode {
+                            Some(VirtualKeyCode::I) => {
+                                if input.state == ElementState::Released {
+                                    dumper.dump(TypeFlags::VERTEX_FORMAT)
+                                }
+                            }
+                            _ => {}
+                        }
                     }
 
                     _ => (),
                 }
             }
+
             Event::RedrawRequested(..) => {
-                imgui.io_mut().update_delta_time(last_frame.elapsed());
-                camera.update(&input_state, last_frame.elapsed().as_secs_f32());
-
-                let ui = imgui.new_frame();
-                ui.window("FPS")
-                    .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
-                    .build(|| ui.text(format!("{:.1}", 1.0 / last_frame.elapsed().as_secs_f32())));
-
-                ui.window("Options")
-                    .flags(WindowFlags::NO_TITLE_BAR)
-                    .size([178.0, 72.0], Condition::FirstUseEver)
-                    .build(|| {
-                        ui.combo(" ", &mut composite_mode, &COMPOSITOR_MODES, |v| {
-                            format!("{v}").into()
-                        });
-                        ui.combo("Map", &mut map_i, &maps, |(_, map_name, _, _)| {
-                            map_name.into()
-                        });
-                    });
-
+                camera.borrow_mut().update(&input_state, last_frame.elapsed().as_secs_f32());
+                gui_fps.borrow_mut().delta = last_frame.elapsed().as_secs_f32(); // TODO: There has to be a way not to do this...
 
                 let window_dims = window.inner_size();
-                ui.window("Debug")
-                    .build(|| {
-                        ui.text(format!("X: {}", camera.position.x));
-                        ui.text(format!("Y: {}", camera.position.y));
-                        ui.text(format!("Z: {}", camera.position.z));
-                        ui.separator();
-                        ui.checkbox("Show map resources", &mut show_map_resources);
-                        if show_map_resources {
-                            ui.slider("Debug distance", 25.0, 4000.0, &mut debug_distance);
-                        }
-                    });
-
-                let map = &maps[map_i % maps.len()];
-
-                let screen_size = ui.io().display_size;
-                if show_map_resources {
-                    ui.window("Paint-over")
-                        .flags(WindowFlags::NO_BACKGROUND | WindowFlags::NO_TITLE_BAR | WindowFlags::NO_INPUTS | WindowFlags::NO_DECORATION | WindowFlags::NO_RESIZE | WindowFlags::NO_MOVE)
-                        .size(screen_size, Condition::Always)
-                        .position([0.0, 0.0], Condition::Always)
-                        .build(|| {
-                            let projection = Mat4::perspective_infinite_reverse_rh(
-                                90f32.to_radians(),
-                                window_dims.width as f32 / window_dims.height as f32,
-                                0.0001,
-                            );
-
-                            let view = camera.calculate_matrix();
-                            let proj_view = projection * view;
-                            let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());
-
-                            let draw_list = ui.get_background_draw_list();
-                            draw_list.with_clip_rect([0.0, 0.0], screen_size, || for unk in &map.3 {
-                                if !camera_frustum.point_intersecting(&unk.position.x, &unk.position.y, &unk.position.z) {
-                                    continue;
-                                }
-
-                                let distance = unk.position.truncate().distance(camera.position);
-                                if distance > debug_distance {
-                                    continue
-                                }
-
-                                let distance = distance / 5000.0;
-
-                                let projected_point = proj_view.project_point3(unk.position.truncate());
-
-                                let screen_point = Vec2::new(
-                                    ((projected_point.x + 1.0) * 0.5) * screen_size[0],
-                                    ((1.0 - projected_point.y) * 0.5) * screen_size[1]
-                                );
-
-                                ui.set_window_font_scale((1.0 - distance).max(0.1));
-                                let c = RANDOM_COLORS[unk.resource_type as usize % 16];
-                                let color = ImColor32::from_rgb(c[0], c[1], c[2]);
-                                draw_list.add_circle(screen_point.to_array(), (1.0 - distance).max(0.1) * 2.0, color).filled(true).build();
-                                draw_list.add_text(screen_point.to_array(), color, format!("Resource {:08x}", unk.resource_type));
-                            });
-                        });
-                }
-
                 last_frame = Instant::now();
 
                 unsafe {
@@ -1427,7 +1309,7 @@ pub fn main() -> anyhow::Result<()> {
                         0.0001,
                     );
 
-                    let view = camera.calculate_matrix();
+                    let view = camera.borrow_mut().calculate_matrix();
 
                     let bmap = device_context
                         .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
@@ -1435,7 +1317,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     let proj_view = projection * view;
                     let mut view2 = Mat4::IDENTITY;
-                    view2.w_axis = camera.position.extend(1.0);
+                    view2.w_axis = camera.borrow_mut().position.extend(1.0);
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view,
@@ -1456,6 +1338,7 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
                     let map = &maps[map_i % maps.len()];
+                    gui_resources.borrow_mut().set_map_data(map.0, map.1.clone(), map.2.clone());
 
                     for ptag in &map.2 {
                         let placements = &placement_groups[&ptag.0];
@@ -1568,7 +1451,7 @@ pub fn main() -> anyhow::Result<()> {
                         .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
                     bmap.pData.copy_from_nonoverlapping(
-                        &(COMPOSITOR_MODES[composite_mode] as u32) as *const u32 as _,
+                        &(COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32) as *const u32 as _,
                         4,
                     );
 
@@ -1581,10 +1464,8 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
                     device_context.Draw(3, 0);
 
-                    platform.prepare_render(&ui, &window);
-                    renderer
-                        .render(imgui.render())
-                        .expect("imgui rendering failed");
+                    gui_manager.draw_frame(&window, last_frame.elapsed());
+
                     device_context.OMSetDepthStencilState(None, 0);
 
                     swap_chain.Present(1, 0).unwrap();
@@ -1593,9 +1474,8 @@ pub fn main() -> anyhow::Result<()> {
                 };
             }
             Event::MainEventsCleared => {
-                let io = imgui.io_mut();
-                platform
-                    .prepare_frame(io, &window)
+                let io = gui_manager.imgui.io_mut();
+                gui_manager.platform.prepare_frame(io, &window)
                     .expect("Failed to start frame");
                 window.request_redraw();
             }
@@ -1603,22 +1483,3 @@ pub fn main() -> anyhow::Result<()> {
         }
     });
 }
-
-const RANDOM_COLORS: [[u8; 3]; 16] = [
-    [0xFF, 0x00, 0x00],
-    [0x00, 0xFF, 0x00],
-    [0x00, 0x00, 0xFF],
-    [0xFF, 0xFF, 0x00],
-    [0xFF, 0x00, 0xFF],
-    [0x00, 0xFF, 0xFF],
-    [0x00, 0x00, 0x00],
-    [0x80, 0x00, 0x00],
-    [0x00, 0x80, 0x00],
-    [0x00, 0x00, 0x80],
-    [0x80, 0x80, 0x00],
-    [0x80, 0x00, 0x80],
-    [0x00, 0x80, 0x80],
-    [0x80, 0x80, 0x80],
-    [0xC0, 0x00, 0x00],
-    [0x00, 0xC0, 0x00],
-];

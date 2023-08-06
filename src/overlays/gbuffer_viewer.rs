@@ -1,6 +1,26 @@
-use std::fmt::{Display, Formatter};
+use std::{fmt::Formatter, fmt::Display};
+use imgui::{WindowFlags, Condition};
+use winit::window::Window;
 
-// Using a u32 so we can pass this option to the composite shader directly
+use super::gui::OverlayProvider;
+
+pub struct GBufferInfoOverlay {
+    pub composition_mode: usize
+ }
+
+impl OverlayProvider for GBufferInfoOverlay {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window) {
+        ui.window("Options")
+            .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_RESIZE)
+            .size([128.0, 36.0], Condition::Always)
+            .build(|| {
+                ui.combo(" ", &mut self.composition_mode, &COMPOSITOR_MODES, |v| {
+                format!("{v}").into()
+            });
+        });
+    }
+}
+
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum CompositorMode {

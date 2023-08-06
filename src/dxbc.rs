@@ -53,10 +53,12 @@ pub enum DxbcInputType {
     Float = 3,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SemanticType {
     Position,
     TexCoord,
+    TexCoord0,
+    TexCoord1,
     Normal,
     Tangent,
     Color,
@@ -70,6 +72,8 @@ impl SemanticType {
         Some(match s {
             "POSITION" => SemanticType::Position,
             "TEXCOORD" => SemanticType::TexCoord,
+            "TEXCOORD0" => SemanticType::TexCoord0,
+            "TEXCOORD1" => SemanticType::TexCoord1,
             "NORMAL" => SemanticType::Normal,
             "TANGENT" => SemanticType::Tangent,
             "COLOR" => SemanticType::Color,
@@ -83,6 +87,8 @@ impl SemanticType {
         match self {
             SemanticType::Position => s!("POSITION"),
             SemanticType::TexCoord => s!("TEXCOORD"),
+            SemanticType::TexCoord0 => s!("TEXCOORD0"),
+            SemanticType::TexCoord1 => s!("TEXCOORD1"),
             SemanticType::Normal => s!("NORMAL"),
             SemanticType::Tangent => s!("TANGENT"),
             SemanticType::Color => s!("COLOR"),
