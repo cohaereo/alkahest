@@ -34,6 +34,10 @@ Texture2D RenderTarget2 : register(t2);
 Texture2D Matcap : register(t3);
 SamplerState SampleType : register(s0);
 
+float3 GammaCorrect(float3 c) {
+    return pow(c, float3(1.0/2.2, 1.0/2.2, 1.0/2.2));
+}
+
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
     float4 diffuse = RenderTarget0.Sample(SampleType, input.uv);
@@ -42,7 +46,7 @@ float4 PShader(VSOutput input) : SV_Target {
 
     [branch] switch(tex_i) {
         case 1: // RT0 (gamma-corrected)
-            return float4(pow(diffuse.xyz, float3(1.0/2.2, 1.0/2.2, 1.0/2.2)), 1.0);
+            return float4(GammaCorrect(diffuse.xyz), 1.0);
         case 2: // RT1
             return RenderTarget1.Sample(SampleType, input.uv);
         case 3: // RT2
@@ -58,7 +62,7 @@ float4 PShader(VSOutput input) : SV_Target {
             return float4(pbr_stack.yyy * 2.0, 1.0);
         }
         case 7: { // Emission
-            return float4(pbr_stack.yyy * 2.0 - 1.0, 1.0);
+            return float4(GammaCorrect(diffuse.xyz) * (pbr_stack.y * 2.0 - 1.0), 1.0);
         }
         case 8: { // Transmission
             return float4(pbr_stack.zzz, 1.0);
@@ -72,7 +76,7 @@ float4 PShader(VSOutput input) : SV_Target {
         default: { // Combined
             float2 muv = 0.5 * normal.xy + float2(0.5, 0.5);
             float4 matcap = Matcap.Sample(SampleType, float2(muv.x, 1.0-muv.y));
-            return float4(pow((diffuse.xyz * matcap.x), float3(1.0/2.2, 1.0/2.2, 1.0/2.2)) * (pbr_stack.y * 2.0), 1.0);
+            return float4(GammaCorrect(diffuse.xyz * matcap.x) * (pbr_stack.y * 2.0), 1.0);
         }
     }
 }
