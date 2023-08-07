@@ -3,6 +3,7 @@ extern crate windows;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
@@ -22,7 +23,9 @@ use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 use windows::Win32::Foundation::*;
-use windows::Win32::Graphics::Direct3D::Fxc::{ D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION };
+use windows::Win32::Graphics::Direct3D::Fxc::{
+    D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
+};
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
@@ -35,14 +38,16 @@ use winit::{
 };
 
 use crate::camera::{FpsCamera, InputState};
+use crate::dds::dump_to_dds;
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
-use crate::map::{ Unk80806ef4, Unk8080714b, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6 };
+use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
+use crate::map_resources::{MapResource, Unk80806b7f, Unk8080714b};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gbuffer_viewer::{GBufferInfoOverlay, CompositorMode, COMPOSITOR_MODES};
+use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay, COMPOSITOR_MODES};
 use crate::overlays::gui::GuiManager;
-use crate::overlays::resource_nametags::{ResourceTypeOverlay, UnknownPoint};
+use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::scopes::ScopeView;
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
@@ -51,7 +56,6 @@ use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::TextureHeader;
 use crate::vertex_layout::InputElement;
 
-mod overlays;
 mod camera;
 mod dds;
 mod dxbc;
@@ -59,7 +63,9 @@ mod dxgi;
 mod entity;
 mod map;
 mod map_data;
+mod map_resources;
 mod material;
+mod overlays;
 mod scopes;
 mod static_render;
 mod statics;
@@ -371,7 +377,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
-    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<UnknownPoint>)> = vec![];
+    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>)> = vec![];
     let mut terrain_headers: Vec<Unk8080714f> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let tag = TagHash::new(package.pkg_id(), index as _);
@@ -381,7 +387,7 @@ pub fn main() -> anyhow::Result<()> {
             .unwrap();
 
         let mut placement_group_tags = vec![];
-        let mut unknown_things = vec![];
+        let mut resource_points = vec![];
         for res in &child_map.map_resources {
             let thing2: Unk80808a54 = if res.is_hash32 != 0 {
                 package_manager.read_tag_struct(res.hash32).unwrap()
@@ -396,51 +402,100 @@ pub fn main() -> anyhow::Result<()> {
                 let table: Unk808099d6 = cur.read_le().unwrap();
 
                 for data in &table.data_entries {
-                    match data.data_resource.resource_type {
-                        // D2Class_C96C8080 (placement)
-                        0x808071b3 => {
-                            cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                .unwrap();
-                            let preheader_tag: TagHash = cur.read_le().unwrap();
-                            let preheader: Unk80806ef4 =
-                                package_manager.read_tag_struct(preheader_tag).unwrap();
+                    if data.data_resource.is_valid {
+                        match data.data_resource.resource_type {
+                            // D2Class_C96C8080 (placement)
+                            0x808071b3 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let preheader_tag: TagHash = cur.read_le().unwrap();
+                                let preheader: Unk80806ef4 =
+                                    package_manager.read_tag_struct(preheader_tag).unwrap();
 
-                            placement_group_tags.push(preheader.placement_group);
-                        }
-                        // D2Class_7D6C8080 (terrain)
-                        0x8080714b => {
-                            cur.seek(SeekFrom::Start(data.data_resource.offset))
-                                .unwrap();
-
-                            let terrain_resource: Unk8080714b = cur.read_le().unwrap();
-                            let terrain: Unk8080714f = package_manager
-                                .read_tag_struct(terrain_resource.terrain)
-                                .unwrap();
-
-                            for p in &terrain.mesh_parts {
-                                let mat: material::Unk808071e8 =
-                                    package_manager.read_tag_struct(p.material).unwrap();
-                                material_map.insert(p.material.0, mat);
+                                placement_group_tags.push(preheader.placement_group);
                             }
+                            // D2Class_7D6C8080 (terrain)
+                            0x8080714b => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset))
+                                    .unwrap();
 
-                            terrain_headers.push(terrain);
-                        }
-                        u => {
-                            debug!(
-                                "Skipping unknown resource type {u:x} {:?}",
-                                data.translation
-                            );
-                            unknown_things.push(UnknownPoint {
-                                position: Vec4::new(
-                                    data.translation.x,
-                                    data.translation.y,
-                                    data.translation.z,
-                                    data.translation.w,
-                                ),
-                                resource_type: data.data_resource.resource_type,
-                            });
-                        }
-                    };
+                                let terrain_resource: Unk8080714b = cur.read_le().unwrap();
+                                let terrain: Unk8080714f = package_manager
+                                    .read_tag_struct(terrain_resource.terrain)
+                                    .unwrap();
+
+                                for p in &terrain.mesh_parts {
+                                    let mat: material::Unk808071e8 =
+                                        package_manager.read_tag_struct(p.material).unwrap();
+                                    material_map.insert(p.material.0, mat);
+                                }
+
+                                terrain_headers.push(terrain);
+                            }
+                            // Cubemap volume
+                            0x80806b7f => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset))
+                                    .unwrap();
+
+                                let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
+                                resource_points.push(ResourcePoint {
+                                    position: Vec4::new(
+                                        data.translation.x,
+                                        data.translation.y,
+                                        data.translation.z,
+                                        data.translation.w,
+                                    ),
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::CubemapVolume(cubemap_volume),
+                                });
+                            }
+                            // Point light
+                            0x80806cbf => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                resource_points.push(ResourcePoint {
+                                    position: Vec4::new(
+                                        data.translation.x,
+                                        data.translation.y,
+                                        data.translation.z,
+                                        data.translation.w,
+                                    ),
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::PointLight(tag),
+                                });
+                            }
+                            u => {
+                                debug!(
+                                    "Skipping unknown resource type {u:x} {:?}",
+                                    data.translation
+                                );
+                                resource_points.push(ResourcePoint {
+                                    position: Vec4::new(
+                                        data.translation.x,
+                                        data.translation.y,
+                                        data.translation.z,
+                                        data.translation.w,
+                                    ),
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::Unknown(
+                                        data.data_resource.resource_type,
+                                    ),
+                                });
+                            }
+                        };
+                    } else {
+                        resource_points.push(ResourcePoint {
+                            position: Vec4::new(
+                                data.translation.x,
+                                data.translation.y,
+                                data.translation.z,
+                                data.translation.w,
+                            ),
+                            resource_type: u32::MAX,
+                            resource: MapResource::Generic(data.entity),
+                        });
+                    }
                 }
             }
         }
@@ -459,7 +514,7 @@ pub fn main() -> anyhow::Result<()> {
             think.map_name.0,
             map_name,
             placement_group_tags,
-            unknown_things,
+            resource_points,
         ));
     }
 
@@ -1166,9 +1221,21 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay { delta: 0.0 }));
-    let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay { composition_mode: CompositorMode::Combined as usize, map_index: 0, maps: maps.clone() }));
-    let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay { camera: camera.clone(), show_map_resources: false, map_resource_distance: 2000.0 }));
-    let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay { debug_overlay: gui_debug.clone(), map: (0,String::new(), vec![], vec![]) }));
+    let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
+        composition_mode: CompositorMode::Combined as usize,
+        map_index: 0,
+        maps: maps.clone(),
+    }));
+    let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
+        camera: camera.clone(),
+        show_map_resources: false,
+        show_unknown_map_resources: true,
+        map_resource_distance: 2000.0,
+    }));
+    let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
+        debug_overlay: gui_debug.clone(),
+        map: (0, String::new(), vec![], vec![]),
+    }));
     let mut gui_manager = GuiManager::create(&window, &device);
     gui_manager.add_overlay(Box::new(gui_fps.clone()));
     gui_manager.add_overlay(Box::new(gui_debug.clone()));
@@ -1487,22 +1554,3 @@ pub fn main() -> anyhow::Result<()> {
         }
     });
 }
-
-const RANDOM_COLORS: [[u8; 3]; 16] = [
-    [0xFF, 0x00, 0x00],
-    [0x00, 0xFF, 0x00],
-    [0x00, 0x00, 0xFF],
-    [0xFF, 0xFF, 0x00],
-    [0xFF, 0x00, 0xFF],
-    [0x00, 0xFF, 0xFF],
-    [0x00, 0x00, 0x00],
-    [0x80, 0x00, 0x00],
-    [0x00, 0x80, 0x00],
-    [0x00, 0x00, 0x80],
-    [0x80, 0x80, 0x00],
-    [0x80, 0x00, 0x80],
-    [0x00, 0x80, 0x80],
-    [0x80, 0x80, 0x80],
-    [0xC0, 0x00, 0x00],
-    [0x00, 0xC0, 0x00],
-];

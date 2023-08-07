@@ -62,7 +62,7 @@ pub struct Unk808099d6 {
 #[derive(BinRead, Debug)]
 pub struct Unk808099d8 {
     // 80809c0f ?
-    pub unk0: TagHash,
+    pub entity: TagHash,
     pub unk4: [u32; 3],
     pub rotation: Vector4,
     pub translation: Vector4,
@@ -81,17 +81,6 @@ pub struct Unk80806ef4 {
     // 8080966d
     pub placement_group: TagHash,
     pub unkc: [u32; 7],
-}
-
-// Terrain resource
-#[derive(BinRead, Debug)]
-pub struct Unk8080714b {
-    #[br(seek_before(SeekFrom::Current(0x10)))]
-    pub unk10: u16,
-    pub unk12: u16,
-    pub unk14: DestinyHash,
-    pub terrain: TagHash,
-    pub terrain_bounds: TagHash,
 }
 
 /// Terrain

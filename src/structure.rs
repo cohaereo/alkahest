@@ -202,6 +202,7 @@ impl Debug for DeadBeefMarker {
 pub struct ResourcePointer {
     pub offset: u64,
     pub resource_type: u32,
+    pub is_valid: bool,
 }
 
 impl BinRead for ResourcePointer {
@@ -214,6 +215,14 @@ impl BinRead for ResourcePointer {
     ) -> BinResult<Self> {
         let offset_base = reader.stream_position()?;
         let offset: i64 = reader.read_type(endian)?;
+        if offset == 0 || offset == i64::MAX {
+            return Ok(ResourcePointer {
+                offset: 0,
+                resource_type: u32::MAX,
+                is_valid: false,
+            });
+        }
+
         let offset_save = reader.stream_position()?;
 
         reader.seek(SeekFrom::Start(offset_base))?;
@@ -225,6 +234,7 @@ impl BinRead for ResourcePointer {
         Ok(ResourcePointer {
             offset: offset_base.saturating_add_signed(offset),
             resource_type,
+            is_valid: true,
         })
     }
 }

@@ -13,7 +13,7 @@ pub fn dump_to_dds<W: Write + Seek>(out: &mut W, tex: &TextureHeader, data: &[u8
         mipmap_levels: None,
         array_layers: Some(tex.array_size as _),
         caps2: None,
-        is_cubemap: false, //(tex.array_size % 6) == 0,
+        is_cubemap: (tex.array_size % 6) == 0,
         resource_dimension: if tex.depth == 1 {
             D3D10ResourceDimension::Texture2D
         } else {

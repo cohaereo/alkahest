@@ -3,12 +3,12 @@ use destiny_pkg::TagHash;
 use imgui::{WindowFlags, Condition};
 use winit::window::Window;
 
-use super::{gui::OverlayProvider, resource_nametags::UnknownPoint};
+use super::{gui::OverlayProvider, resource_nametags::ResourcePoint};
 
 pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
     pub map_index: usize,
-    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<UnknownPoint>)>
+    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>)>
  }
 
 impl OverlayProvider for GBufferInfoOverlay {
