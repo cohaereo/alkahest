@@ -113,7 +113,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let (package, mut package_manager) =
         info_span!("Initializing package manager").in_scope(|| {
-            let pkg_path = std::env::args().nth(1).unwrap_or_default();
+            let pkg_path = std::env::args().nth(1).expect("No package file was given!");
             (
                 Destiny2PreBeyondLight
                     .open(&pkg_path)
