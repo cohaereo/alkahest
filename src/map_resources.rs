@@ -1,3 +1,6 @@
+use crate::icons::{
+    ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_CIRCLE, ICON_LIGHTBULB_ON, ICON_PANORAMA, ICON_SPHERE,
+};
 use crate::structure::RelPointer;
 use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, NullString};
@@ -9,7 +12,7 @@ pub enum MapResource {
     // PlacementGroup(TagHash),
     // Terrain(Unk8080714b),
     /// Generic data entry with no resource
-    Generic(TagHash),
+    Entity(TagHash),
     CubemapVolume(Unk80806b7f),
     PointLight(TagHash),
     Unknown(u32),
@@ -18,7 +21,7 @@ pub enum MapResource {
 impl MapResource {
     pub fn debug_string(&self) -> String {
         match self {
-            MapResource::Generic(e) => format!("Entity 0x{:08x}", e.0),
+            MapResource::Entity(e) => format!("Entity 0x{:08x}", e.0),
             MapResource::CubemapVolume(c) => {
                 format!("Cubemap Volume\n'{}'", c.cubemap_name.to_string())
             }
@@ -48,10 +51,19 @@ impl MapResource {
         ];
 
         match self {
-            MapResource::Generic(_) => [255, 255, 255],
+            MapResource::Entity(_) => [255, 255, 255],
             MapResource::CubemapVolume(_) => [50, 255, 50],
             MapResource::PointLight(_) => [220, 220, 20],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
+        }
+    }
+
+    pub fn debug_icon(&self) -> char {
+        match self {
+            MapResource::Entity(_) => ICON_CHESS_PAWN,
+            MapResource::CubemapVolume(_) => ICON_SPHERE,
+            MapResource::PointLight(_) => ICON_LIGHTBULB_ON,
+            MapResource::Unknown(_) => ICON_HELP,
         }
     }
 }

@@ -2,7 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use imgui::{Context, FontConfig, FontSource};
+use crate::icons::{ICON_MAX, ICON_MIN};
+use imgui::{Context, FontConfig, FontGlyphRanges, FontSource};
 use imgui_dx11_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use windows::Win32::Graphics::Direct3D11::ID3D11Device;
@@ -21,19 +22,38 @@ pub struct GuiManager {
     overlays: Vec<Box<Rc<RefCell<dyn OverlayProvider>>>>,
 }
 
-//TODO: Way to obtain overlays by type
+// TODO: Way to obtain overlays by type
 impl GuiManager {
     pub fn create(window: &Window, device: &ID3D11Device) -> Self {
         let mut imgui = imgui::Context::create();
         imgui.style_mut().window_rounding = 4.0;
         let mut platform = WinitPlatform::init(&mut imgui);
         platform.attach_window(imgui.io_mut(), window, HiDpiMode::Rounded);
-        imgui.fonts().add_font(&[FontSource::DefaultFontData {
-            config: Some(FontConfig {
+
+        // Combine icon font with default
+        imgui.fonts().add_font(&[
+            FontSource::DefaultFontData {
+                config: Some(FontConfig {
+                    size_pixels: (13.0 * platform.hidpi_factor()) as f32,
+                    glyph_ranges: FontGlyphRanges::default(),
+                    ..FontConfig::default()
+                }),
+            },
+            FontSource::TtfData {
+                data: include_bytes!("../../materialdesignicons-webfont.ttf"),
                 size_pixels: (13.0 * platform.hidpi_factor()) as f32,
-                ..FontConfig::default()
-            }),
-        }]);
+                config: Some(FontConfig {
+                    size_pixels: (13.0 * platform.hidpi_factor()) as f32,
+                    glyph_ranges: FontGlyphRanges::from_slice(&[
+                        ICON_MIN as u32,
+                        ICON_MAX as u32,
+                        0,
+                    ]),
+                    ..FontConfig::default()
+                }),
+            },
+        ]);
+
         let renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, device).unwrap() };
         return GuiManager {
             imgui,

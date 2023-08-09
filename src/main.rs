@@ -60,6 +60,7 @@ mod dds;
 mod dxbc;
 mod dxgi;
 mod entity;
+mod icons;
 mod map;
 mod map_data;
 mod map_resources;
@@ -373,7 +374,7 @@ pub fn main() -> anyhow::Result<()> {
                                 data.translation.w,
                             ),
                             resource_type: u32::MAX,
-                            resource: MapResource::Generic(data.entity),
+                            resource: MapResource::Entity(data.entity),
                         });
                     }
                 }

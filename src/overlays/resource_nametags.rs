@@ -78,8 +78,6 @@ impl OverlayProvider for ResourceTypeOverlay {
                                 continue;
                             }
 
-                            let distance = distance / 5000.0;
-
                             let projected_point = proj_view.project_point3(res.position.truncate());
 
                             let screen_point = Vec2::new(
@@ -87,7 +85,6 @@ impl OverlayProvider for ResourceTypeOverlay {
                                 ((1.0 - projected_point.y) * 0.5) * screen_size[1],
                             );
 
-                            ui.set_window_font_scale((1.0 - distance).max(0.1));
                             if let MapResource::Unknown(_) = res.resource {
                                 if !self.debug_overlay.borrow_mut().show_unknown_map_resources {
                                     continue;
@@ -96,16 +93,16 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                             let c = res.resource.debug_color();
                             let color = ImColor32::from_rgb(c[0], c[1], c[2]);
-                            draw_list
-                                .add_circle(
-                                    screen_point.to_array(),
-                                    (1.0 - distance).max(0.1) * 2.0,
-                                    color,
-                                )
-                                .filled(true)
-                                .build();
+                            ui.set_window_font_scale(1.5);
                             draw_list.add_text(
                                 screen_point.to_array(),
+                                color,
+                                res.resource.debug_icon().to_string(),
+                            );
+
+                            ui.set_window_font_scale(1.0);
+                            draw_list.add_text(
+                                (screen_point + Vec2::new(20.0, 0.0)).to_array(),
                                 color,
                                 res.resource.debug_string(),
                             );
