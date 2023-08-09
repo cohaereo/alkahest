@@ -1,4 +1,4 @@
-use crate::structure::{RelPointer, ResourcePointer, TablePointer};
+use crate::structure::{ResourcePointer, TablePointer};
 use crate::types::{DestinyHash, TagHash64, Vector4};
 use binrw::BinRead;
 use destiny_pkg::TagHash;

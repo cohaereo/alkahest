@@ -1,6 +1,6 @@
-use std::{fmt::Formatter, fmt::Display};
 use destiny_pkg::TagHash;
-use imgui::{WindowFlags, Condition};
+use imgui::{Condition, WindowFlags};
+use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
 use super::{gui::OverlayProvider, resource_nametags::ResourcePoint};
@@ -8,11 +8,11 @@ use super::{gui::OverlayProvider, resource_nametags::ResourcePoint};
 pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
     pub map_index: usize,
-    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>)>
- }
+    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>)>,
+}
 
 impl OverlayProvider for GBufferInfoOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window) {
         ui.window("Options")
             .flags(WindowFlags::NO_TITLE_BAR)
             .size([178.0, 72.0], Condition::FirstUseEver)
@@ -20,11 +20,13 @@ impl OverlayProvider for GBufferInfoOverlay {
                 ui.combo(" ", &mut self.composition_mode, &COMPOSITOR_MODES, |v| {
                     format!("{v}").into()
                 });
-                ui.combo("Map", &mut self.map_index, &self.maps, |(_, map_name, _, _)| {
-                    map_name.into()
-                });
-        });
-
+                ui.combo(
+                    "Map",
+                    &mut self.map_index,
+                    &self.maps,
+                    |(_, map_name, _, _)| map_name.into(),
+                );
+            });
     }
 }
 

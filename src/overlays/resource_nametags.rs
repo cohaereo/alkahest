@@ -88,7 +88,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                             );
 
                             ui.set_window_font_scale((1.0 - distance).max(0.1));
-                            if let MapResource::Unknown(u) = res.resource {
+                            if let MapResource::Unknown(_) = res.resource {
                                 if !self.debug_overlay.borrow_mut().show_unknown_map_resources {
                                     continue;
                                 }

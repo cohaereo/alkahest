@@ -3,7 +3,6 @@ extern crate windows;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
@@ -38,7 +37,6 @@ use winit::{
 };
 
 use crate::camera::{FpsCamera, InputState};
-use crate::dds::dump_to_dds;
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
@@ -48,6 +46,7 @@ use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay, COMPOSITOR_MODES};
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
+use crate::render::GBuffer;
 use crate::scopes::ScopeView;
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
@@ -66,6 +65,7 @@ mod map_data;
 mod map_resources;
 mod material;
 mod overlays;
+mod render;
 mod scopes;
 mod static_render;
 mod statics;
@@ -174,8 +174,6 @@ pub fn main() -> anyhow::Result<()> {
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
-        // TODO(cohae): Buffers need to be reconfigured on resize
-        // .with_resizable(false)
         .with_inner_size(PhysicalSize::new(1600u32, 900u32))
         .build(&event_loop)?;
 
@@ -244,130 +242,10 @@ pub fn main() -> anyhow::Result<()> {
         Some(device.CreateRenderTargetView(&buffer, None)?)
     };
 
-    let (rtv0, rtv0_view) = unsafe {
-        let _buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
-        let tex = device
-            .CreateTexture2D(
-                &D3D11_TEXTURE2D_DESC {
-                    Width: window.inner_size().width as _,
-                    Height: window.inner_size().height as _,
-                    MipLevels: 1,
-                    ArraySize: 1,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-                    CPUAccessFlags: Default::default(),
-                    MiscFlags: Default::default(),
-                },
-                None,
-            )
-            .context("Failed to create RT1 texture")?;
-
-        (
-            device.CreateRenderTargetView(&tex, None)?,
-            device.CreateShaderResourceView(
-                &tex,
-                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                        Texture2D: D3D11_TEX2D_SRV {
-                            MostDetailedMip: 0,
-                            MipLevels: 1,
-                        },
-                    },
-                }),
-            )?,
-        )
-    };
-
-    let (rtv1, rtv1_view) = unsafe {
-        let tex = device
-            .CreateTexture2D(
-                &D3D11_TEXTURE2D_DESC {
-                    Width: window.inner_size().width as _,
-                    Height: window.inner_size().height as _,
-                    MipLevels: 1,
-                    ArraySize: 1,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    // TODO(cohae): Does not work on Windows. Why?
-                    // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-                    CPUAccessFlags: Default::default(),
-                    MiscFlags: Default::default(),
-                },
-                None,
-            )
-            .context("Failed to create RT1 texture")?;
-
-        (
-            device.CreateRenderTargetView(&tex, None)?,
-            device.CreateShaderResourceView(
-                &tex,
-                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    // Format: DXGI_FORMAT_R10G10B10A2_TYPELESS,
-                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                        Texture2D: D3D11_TEX2D_SRV {
-                            MostDetailedMip: 0,
-                            MipLevels: 1,
-                        },
-                    },
-                }),
-            )?,
-        )
-    };
-
-    let (rtv2, rtv2_view) = unsafe {
-        let tex = device
-            .CreateTexture2D(
-                &D3D11_TEXTURE2D_DESC {
-                    Width: window.inner_size().width as _,
-                    Height: window.inner_size().height as _,
-                    MipLevels: 1,
-                    ArraySize: 1,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    // Format: DXGI_FORMAT_R8G8B8A8_TYPELESS,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-                    CPUAccessFlags: Default::default(),
-                    MiscFlags: Default::default(),
-                },
-                None,
-            )
-            .context("Failed to create RT2 texture")?;
-
-        (
-            device.CreateRenderTargetView(&tex, None)?,
-            device.CreateShaderResourceView(
-                &tex,
-                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                        Texture2D: D3D11_TEX2D_SRV {
-                            MostDetailedMip: 0,
-                            MipLevels: 1,
-                        },
-                    },
-                }),
-            )?,
-        )
-    };
+    let mut gbuffer = GBuffer::create(
+        (window.inner_size().width, window.inner_size().height),
+        &device,
+    )?;
 
     let mut static_map: IntMap<u32, StaticModel> = Default::default();
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
@@ -1069,70 +947,6 @@ pub fn main() -> anyhow::Result<()> {
             .context("Failed to create Rasterizer State")?
     };
 
-    let depth_stencil_texture = unsafe {
-        device
-            .CreateTexture2D(
-                &D3D11_TEXTURE2D_DESC {
-                    Width: window.inner_size().width,
-                    Height: window.inner_size().height,
-                    MipLevels: 1,
-                    ArraySize: 1,
-                    Format: DXGI_FORMAT_D32_FLOAT,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_DEPTH_STENCIL,
-                    CPUAccessFlags: Default::default(),
-                    MiscFlags: Default::default(),
-                },
-                None,
-            )
-            .context("Failed to create depth texture")?
-    };
-
-    let depth_stencil_state = unsafe {
-        device
-            .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
-                DepthEnable: true.into(),
-                DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ALL,
-                DepthFunc: D3D11_COMPARISON_GREATER_EQUAL,
-                StencilEnable: false.into(),
-                StencilReadMask: 0xff,
-                StencilWriteMask: 0xff,
-                FrontFace: D3D11_DEPTH_STENCILOP_DESC {
-                    StencilFailOp: D3D11_STENCIL_OP_KEEP,
-                    StencilDepthFailOp: D3D11_STENCIL_OP_INCR,
-                    StencilPassOp: D3D11_STENCIL_OP_KEEP,
-                    StencilFunc: D3D11_COMPARISON_ALWAYS,
-                },
-                BackFace: D3D11_DEPTH_STENCILOP_DESC {
-                    StencilFailOp: D3D11_STENCIL_OP_KEEP,
-                    StencilDepthFailOp: D3D11_STENCIL_OP_DECR,
-                    StencilPassOp: D3D11_STENCIL_OP_KEEP,
-                    StencilFunc: D3D11_COMPARISON_ALWAYS,
-                },
-            })
-            .context("Failed to create depth stencil state")?
-    };
-
-    let depth_stencil_view = unsafe {
-        device
-            .CreateDepthStencilView(
-                &depth_stencil_texture,
-                Some(&D3D11_DEPTH_STENCIL_VIEW_DESC {
-                    Format: DXGI_FORMAT_D32_FLOAT,
-                    ViewDimension: D3D11_DSV_DIMENSION_TEXTURE2D,
-                    Flags: 0,
-                    Anonymous: D3D11_DEPTH_STENCIL_VIEW_DESC_0 {
-                        Texture2D: { D3D11_TEX2D_DSV { MipSlice: 0 } },
-                    },
-                }),
-            )
-            .context("Failed to create depth stencil view")?
-    };
-
     // let y_to_z_up: Mat4 = Mat4::from_rotation_x(-90f32.to_radians());
 
     let mut input_state = InputState {
@@ -1231,6 +1045,8 @@ pub fn main() -> anyhow::Result<()> {
         show_map_resources: false,
         show_unknown_map_resources: true,
         map_resource_distance: 2000.0,
+        render_scale: 100.0,
+        render_scale_changed: false,
     }));
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
         debug_overlay: gui_debug.clone(),
@@ -1270,6 +1086,9 @@ pub fn main() -> anyhow::Result<()> {
                         device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
                         swapchain_target = Some(new_rtv);
+
+                        let render_scale = gui_debug.borrow().render_scale / 100.0;
+                        gbuffer.resize(((new_dims.width as f32 * render_scale) as u32, (new_dims.height as f32 * render_scale) as u32), &device).expect("Failed to resize GBuffers");
                     },
                     WindowEvent::ScaleFactorChanged { .. } => {
                         // renderer.resize();
@@ -1333,17 +1152,25 @@ pub fn main() -> anyhow::Result<()> {
                 }
             }
             Event::RedrawRequested(..) => {
+                let render_scale = gui_debug.borrow().render_scale / 100.0;
+                if gui_debug.borrow().render_scale_changed {
+                    let dims = window.inner_size();
+                    gbuffer.resize(((dims.width as f32 * render_scale) as u32, (dims.height as f32 * render_scale) as u32), &device).expect("Failed to resize GBuffers");
+                    // Just to be safe
+                    gui_debug.borrow_mut().render_scale_changed = false;
+                }
+
                 camera.borrow_mut().update(&input_state, last_frame.elapsed().as_secs_f32());
                 gui_fps.borrow_mut().delta = last_frame.elapsed().as_secs_f32(); // TODO: There has to be a way not to do this...
                 let window_dims = window.inner_size();
                 last_frame = Instant::now();
 
                 unsafe {
-                    device_context.ClearRenderTargetView(&rtv0, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
-                    device_context.ClearRenderTargetView(&rtv1, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
-                    device_context.ClearRenderTargetView(&rtv2, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&gbuffer.rt0.render_target, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&gbuffer.rt1.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
+                    device_context.ClearRenderTargetView(&gbuffer.rt2.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
                     device_context.ClearDepthStencilView(
-                        &depth_stencil_view,
+                        &gbuffer.depth.view,
                         D3D11_CLEAR_DEPTH.0 as _,
                         0.0,
                         0,
@@ -1352,8 +1179,8 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
-                        Width: window_dims.width as f32,
-                        Height: window_dims.height as f32,
+                        Width: window_dims.width as f32 * render_scale,
+                        Height: window_dims.height as f32 * render_scale,
                         MinDepth: 0.0,
                         MaxDepth: 1.0,
                     }]));
@@ -1366,11 +1193,11 @@ pub fn main() -> anyhow::Result<()> {
                         0xffffffff,
                     );
                     device_context.OMSetRenderTargets(
-                        Some(&[Some(rtv0.clone()), Some(rtv1.clone()), Some(rtv2.clone())]),
-                        &depth_stencil_view,
+                        Some(&[Some(gbuffer.rt0.render_target.clone()), Some(gbuffer.rt1.render_target.clone()), Some(gbuffer.rt2.render_target.clone())]),
+                        &gbuffer.depth.view,
                     );
                     device_context.OMSetDepthStencilState(
-                        &depth_stencil_state.clone(),
+                        &gbuffer.depth.state,
                         0,
                     );
 
@@ -1511,9 +1338,9 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.PSSetShaderResources(
                         0,
                         Some(&[
-                            Some(rtv0_view.clone()),
-                            Some(rtv1_view.clone()),
-                            Some(rtv2_view.clone()),
+                            Some(gbuffer.rt0.view.clone()),
+                            Some(gbuffer.rt1.view.clone()),
+                            Some(gbuffer.rt2.view.clone()),
                             Some(matcap_view.clone()),
                         ]),
                     );
@@ -1529,6 +1356,15 @@ pub fn main() -> anyhow::Result<()> {
                     device_context.Unmap(&cb_composite_options, 0);
                     device_context
                         .PSSetConstantBuffers(0, Some(&[Some(cb_composite_options.clone())]));
+
+                    device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                        TopLeftX: 0.0,
+                        TopLeftY: 0.0,
+                        Width: window_dims.width as f32,
+                        Height: window_dims.height as f32,
+                        MinDepth: 0.0,
+                        MaxDepth: 1.0,
+                    }]));
 
                     device_context.VSSetShader(&vshader_fullscreen, None);
                     device_context.PSSetShader(&pshader_fullscreen, None);

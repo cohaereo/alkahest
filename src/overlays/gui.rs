@@ -2,12 +2,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use imgui::{Context, FontSource, FontConfig};
+use imgui::{Context, FontConfig, FontSource};
 use imgui_dx11_renderer::Renderer;
-use imgui_winit_support::{WinitPlatform, HiDpiMode};
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use windows::Win32::Graphics::Direct3D11::ID3D11Device;
-use winit::window::Window;
 use winit::event::Event;
+use winit::window::Window;
 
 //TODO: Pass GUI Manager to get other overlays
 pub trait OverlayProvider {
@@ -23,7 +23,6 @@ pub struct GuiManager {
 
 //TODO: Way to obtain overlays by type
 impl GuiManager {
-
     pub fn create(window: &Window, device: &ID3D11Device) -> Self {
         let mut imgui = imgui::Context::create();
         imgui.style_mut().window_rounding = 4.0;
@@ -33,7 +32,7 @@ impl GuiManager {
             config: Some(FontConfig {
                 size_pixels: (13.0 * platform.hidpi_factor()) as f32,
                 ..FontConfig::default()
-            })
+            }),
         }]);
         let renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, device).unwrap() };
         return GuiManager {
@@ -46,11 +45,11 @@ impl GuiManager {
 
     pub fn add_overlay(&mut self, overlay: Box<Rc<RefCell<dyn OverlayProvider>>>) {
         self.overlays.push(overlay);
-
     }
 
     pub fn handle_event(&mut self, event: &Event<'_, ()>, window: &Window) {
-        self.platform.handle_event(self.imgui.io_mut(), window, event)
+        self.platform
+            .handle_event(self.imgui.io_mut(), window, event)
     }
 
     pub fn draw_frame(&mut self, window: &Window, delta: Duration) {
@@ -62,6 +61,8 @@ impl GuiManager {
         }
 
         self.platform.prepare_render(&ui, window);
-        self.renderer.render(self.imgui.render()).expect("GuiManager failed to render!");
+        self.renderer
+            .render(self.imgui.render())
+            .expect("GuiManager failed to render!");
     }
 }
