@@ -255,8 +255,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
-    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>)> = vec![];
-    let mut terrain_headers: Vec<Unk8080714f> = vec![];
+    let mut terrain_headers = vec![];
+    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let tag = TagHash::new(package.pkg_id(), index as _);
         let think: Unk80807dae = package_manager.read_tag_struct(tag).unwrap();
@@ -266,6 +266,7 @@ pub fn main() -> anyhow::Result<()> {
 
         let mut placement_group_tags = vec![];
         let mut resource_points = vec![];
+        let mut terrains = vec![];
         for res in &child_map.map_resources {
             let thing2: Unk80808a54 = if res.is_hash32 != 0 {
                 package_manager.read_tag_struct(res.hash32).unwrap()
@@ -308,7 +309,8 @@ pub fn main() -> anyhow::Result<()> {
                                     material_map.insert(p.material.0, mat);
                                 }
 
-                                terrain_headers.push(terrain);
+                                terrain_headers.push((terrain_resource.terrain, terrain));
+                                terrains.push(terrain_resource.terrain);
                             }
                             // Cubemap volume
                             0x80806b7f => {
@@ -393,6 +395,7 @@ pub fn main() -> anyhow::Result<()> {
             map_name,
             placement_group_tags,
             resource_points,
+            terrains,
         ));
     }
 
@@ -401,7 +404,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
-    for (_, _, placement_group_tags, _) in &maps {
+    for (_, _, placement_group_tags, _, _) in &maps {
         for tag in placement_group_tags.iter() {
             let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
 
@@ -417,16 +420,16 @@ pub fn main() -> anyhow::Result<()> {
         panic!("No map placements found in package");
     }
 
-    let mut terrain_renderers = vec![];
+    let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
     info_span!("Loading terrain").in_scope(|| {
-        for header in terrain_headers.into_iter() {
+        for (t, header) in terrain_headers.into_iter() {
             for t in &header.mesh_groups {
                 to_load_textures.insert(t.dyemap, ());
             }
 
             match TerrainRenderer::load(header, &device, &mut package_manager) {
                 Ok(renderer) => {
-                    terrain_renderers.push(renderer);
+                    terrain_renderers.insert(t.0, renderer);
                 }
                 Err(e) => {
                     error!("Failed to load terrain: {e}");
@@ -1315,21 +1318,22 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    for t in &terrain_renderers {
-                        t.draw(
-                            &device_context,
-                            &material_map,
-                            &vshader_map,
-                            &pshader_map,
-                            &cbuffer_map_vs,
-                            &cbuffer_map_ps,
-                            &texture_map,
-                            &sampler_map,
-                            le_model_cb0.clone(),
-                            &le_vertex_cb11,
-                        );
+                    for th in &map.4 {
+                        if let Some(t) = terrain_renderers.get(&th.0) {
+                            t.draw(
+                                &device_context,
+                                &material_map,
+                                &vshader_map,
+                                &pshader_map,
+                                &cbuffer_map_vs,
+                                &cbuffer_map_ps,
+                                &texture_map,
+                                &sampler_map,
+                                le_model_cb0.clone(),
+                                &le_vertex_cb11,
+                            );
+                        }
                     }
-
 
                     device_context.OMSetRenderTargets(
                         Some(&[Some(swapchain_target.as_ref().unwrap().clone())]),

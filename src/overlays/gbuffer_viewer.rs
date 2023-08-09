@@ -8,7 +8,7 @@ use super::{gui::OverlayProvider, resource_nametags::ResourcePoint};
 pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
     pub map_index: usize,
-    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>)>,
+    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)>,
 }
 
 impl OverlayProvider for GBufferInfoOverlay {
@@ -24,7 +24,7 @@ impl OverlayProvider for GBufferInfoOverlay {
                     "Map",
                     &mut self.map_index,
                     &self.maps,
-                    |(_, map_name, _, _)| map_name.into(),
+                    |(_, map_name, _, _, _)| map_name.into(),
                 );
             });
     }
