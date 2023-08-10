@@ -9,6 +9,8 @@ use destiny_pkg::PackageManager;
 use glam::{Mat4, Vec3};
 use nohash_hasher::IntMap;
 
+use crate::packages::package_manager;
+use crate::texture::TextureHandle;
 use tracing::warn;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -27,11 +29,6 @@ pub struct StaticModelBuffer {
     // vertex2_stride: Option<u32>,
     index_buffer: ID3D11Buffer,
     index_format: DXGI_FORMAT,
-}
-
-pub enum TextureHandle {
-    Texture2D(ID3D11Texture2D),
-    Texture3D(ID3D11Texture3D),
 }
 
 pub struct LoadedTexture {
@@ -70,11 +67,8 @@ impl StaticModel {
         )
     }
 
-    pub fn load(
-        model: Unk808071a7,
-        device: &ID3D11Device,
-        pm: &mut PackageManager,
-    ) -> anyhow::Result<StaticModel> {
+    pub fn load(model: Unk808071a7, device: &ID3D11Device) -> anyhow::Result<StaticModel> {
+        let pm = package_manager();
         let header: Unk80807194 = pm.read_tag_struct(model.unk8).unwrap();
 
         ensure!(header.unk8.len() == model.materials.len());

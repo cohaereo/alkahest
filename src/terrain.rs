@@ -1,6 +1,7 @@
 use crate::entity::{IndexBufferHeader, VertexBufferHeader};
 use crate::map::Unk8080714f;
 use crate::material;
+use crate::packages::package_manager;
 use crate::static_render::LoadedTexture;
 use anyhow::Context;
 use destiny_pkg::PackageManager;
@@ -27,11 +28,8 @@ pub struct TerrainRenderer {
 }
 
 impl TerrainRenderer {
-    pub fn load(
-        terrain: Unk8080714f,
-        device: &ID3D11Device,
-        pm: &mut PackageManager,
-    ) -> anyhow::Result<TerrainRenderer> {
+    pub fn load(terrain: Unk8080714f, device: &ID3D11Device) -> anyhow::Result<TerrainRenderer> {
+        let pm = package_manager();
         let vertex_header: VertexBufferHeader = pm.read_tag_struct(terrain.vertex_buffer).unwrap();
 
         let t = pm.get_entry(terrain.vertex_buffer).unwrap().reference;

@@ -44,12 +44,13 @@ use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay, COMPOSITOR_MODES};
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
+use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::{DeviceContextSwapchain, GBuffer};
-use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
+use crate::static_render::{LoadedTexture, StaticModel};
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::terrain::TerrainRenderer;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::texture::TextureHeader;
+use crate::texture::{TextureHandle, TextureHeader};
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
 
@@ -64,6 +65,7 @@ mod map_data;
 mod map_resources;
 mod material;
 mod overlays;
+mod packages;
 mod render;
 mod static_render;
 mod statics;
@@ -109,21 +111,22 @@ pub fn main() -> anyhow::Result<()> {
     }
     .expect("Failed to set up the tracing subscriber");
 
-    let (package, mut package_manager) =
-        info_span!("Initializing package manager").in_scope(|| {
-            let pkg_path = std::env::args().nth(1).expect("No package file was given!");
-            (
-                Destiny2PreBeyondLight
-                    .open(&pkg_path)
-                    .expect("Failed to open package"),
-                PackageManager::new(
-                    PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
-                    Destiny2PreBeyondLight,
-                    true,
-                )
-                .unwrap(),
+    let (package, mut pm) = info_span!("Initializing package manager").in_scope(|| {
+        let pkg_path = std::env::args().nth(1).expect("No package file was given!");
+        (
+            Destiny2PreBeyondLight
+                .open(&pkg_path)
+                .expect("Failed to open package"),
+            PackageManager::new(
+                PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
+                Destiny2PreBeyondLight,
+                true,
             )
-        });
+            .unwrap(),
+        )
+    });
+
+    PACKAGE_MANAGER.with(|v| *v.borrow_mut() = Some(Arc::new(pm)));
 
     let mut stringmap: IntMap<u32, String> = Default::default();
     let all_global_packages = [
@@ -131,14 +134,14 @@ pub fn main() -> anyhow::Result<()> {
     ];
     {
         let _span = info_span!("Loading global strings").entered();
-        for (t, _) in package_manager
+        for (t, _) in package_manager()
             .get_all_by_reference(0x80809a88)
             .into_iter()
             .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
         {
-            let textset_header: StringSetHeader = package_manager.read_tag_struct(t)?;
+            let textset_header: StringSetHeader = package_manager().read_tag_struct(t)?;
 
-            let data = package_manager
+            let data = package_manager()
                 .read_tag(textset_header.language_english)
                 .unwrap();
             let mut cur = Cursor::new(&data);
@@ -192,10 +195,10 @@ pub fn main() -> anyhow::Result<()> {
     let mut terrain_headers = vec![];
     let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
-        let think: Unk80807dae = package_manager
+        let think: Unk80807dae = package_manager()
             .read_tag_struct((package.pkg_id(), index as _))
             .unwrap();
-        let child_map: Unk808091e0 = package_manager
+        let child_map: Unk808091e0 = package_manager()
             .read_tag_struct(think.child_map_reference)
             .unwrap();
 
@@ -204,14 +207,14 @@ pub fn main() -> anyhow::Result<()> {
         let mut terrains = vec![];
         for res in &child_map.map_resources {
             let thing2: Unk80808a54 = if res.is_hash32 != 0 {
-                package_manager.read_tag_struct(res.hash32).unwrap()
+                package_manager().read_tag_struct(res.hash32).unwrap()
             } else {
                 // TODO: Move TagHash64 to destiny-pkg
-                package_manager.read_hash_struct(res.hash64.0).unwrap()
+                package_manager().read_hash_struct(res.hash64.0).unwrap()
             };
 
             for tablehash in &thing2.data_tables {
-                let table_data = package_manager.read_tag(*tablehash).unwrap();
+                let table_data = package_manager().read_tag(*tablehash).unwrap();
                 let mut cur = Cursor::new(&table_data);
                 let table: Unk808099d6 = cur.read_le().unwrap();
 
@@ -224,7 +227,7 @@ pub fn main() -> anyhow::Result<()> {
                                     .unwrap();
                                 let preheader_tag: TagHash = cur.read_le().unwrap();
                                 let preheader: Unk80806ef4 =
-                                    package_manager.read_tag_struct(preheader_tag).unwrap();
+                                    package_manager().read_tag_struct(preheader_tag).unwrap();
 
                                 placement_group_tags.push(preheader.placement_group);
                             }
@@ -234,13 +237,13 @@ pub fn main() -> anyhow::Result<()> {
                                     .unwrap();
 
                                 let terrain_resource: Unk8080714b = cur.read_le().unwrap();
-                                let terrain: Unk8080714f = package_manager
+                                let terrain: Unk8080714f = package_manager()
                                     .read_tag_struct(terrain_resource.terrain)
                                     .unwrap();
 
                                 for p in &terrain.mesh_parts {
                                     let mat: material::Unk808071e8 =
-                                        package_manager.read_tag_struct(p.material).unwrap();
+                                        package_manager().read_tag_struct(p.material).unwrap();
                                     material_map.insert(p.material.0, mat);
                                 }
 
@@ -341,7 +344,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
     for (_, _, placement_group_tags, _, _) in &maps {
         for tag in placement_group_tags.iter() {
-            let placements: Unk8080966d = package_manager.read_tag_struct(*tag).unwrap();
+            let placements: Unk8080966d = package_manager().read_tag_struct(*tag).unwrap();
 
             for v in &placements.statics {
                 to_load.insert(*v, ());
@@ -362,7 +365,7 @@ pub fn main() -> anyhow::Result<()> {
                 to_load_textures.insert(t.dyemap, ());
             }
 
-            match TerrainRenderer::load(header, &dcs.device, &mut package_manager) {
+            match TerrainRenderer::load(header, &dcs.device) {
                 Ok(renderer) => {
                     terrain_renderers.insert(t.0, renderer);
                 }
@@ -377,13 +380,13 @@ pub fn main() -> anyhow::Result<()> {
 
     info_span!("Loading statics").in_scope(|| {
         for almostloadable in &to_load_statics {
-            let mheader: Unk808071a7 = package_manager.read_tag_struct(*almostloadable).unwrap();
+            let mheader: Unk808071a7 = package_manager().read_tag_struct(*almostloadable).unwrap();
             for m in &mheader.materials {
-                let mat: material::Unk808071e8 = package_manager.read_tag_struct(*m).unwrap();
+                let mat: material::Unk808071e8 = package_manager().read_tag_struct(*m).unwrap();
                 material_map.insert(m.0, mat);
             }
 
-            match StaticModel::load(mheader, &dcs.device, &mut package_manager) {
+            match StaticModel::load(mheader, &dcs.device) {
                 Ok(model) => {
                     static_map.insert(almostloadable.0, model);
                 }
@@ -452,11 +455,11 @@ pub fn main() -> anyhow::Result<()> {
                 to_load_samplers.insert(sampler.sampler, ());
             }
 
-            if let Ok(v) = package_manager.get_entry(m.vertex_shader) {
+            if let Ok(v) = package_manager().get_entry(m.vertex_shader) {
                 let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
 
                 vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
-                    let vs_data = package_manager.read_tag(v.reference).unwrap();
+                    let vs_data = package_manager().read_tag(v.reference).unwrap();
                     let mut vs_cur = Cursor::new(&vs_data);
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
                     let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
@@ -499,11 +502,11 @@ pub fn main() -> anyhow::Result<()> {
                 });
             }
 
-            if let Ok(v) = package_manager.get_entry(m.pixel_shader) {
+            if let Ok(v) = package_manager().get_entry(m.pixel_shader) {
                 let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
 
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
-                    let ps_data = package_manager.read_tag(v.reference).unwrap();
+                    let ps_data = package_manager().read_tag(v.reference).unwrap();
                     unsafe {
                         let v = dcs
                             .device
@@ -553,9 +556,9 @@ pub fn main() -> anyhow::Result<()> {
             }
 
             if m.unk34c.is_valid() {
-                let buffer_header_ref = package_manager.get_entry(m.unk34c).unwrap().reference;
+                let buffer_header_ref = package_manager().get_entry(m.unk34c).unwrap().reference;
 
-                let buffer = package_manager.read_tag(buffer_header_ref).unwrap();
+                let buffer = package_manager().read_tag(buffer_header_ref).unwrap();
                 trace!(
                     "Read {} bytes cbuffer from {buffer_header_ref:?}",
                     buffer.len()
@@ -644,15 +647,15 @@ pub fn main() -> anyhow::Result<()> {
             }
             let _span = debug_span!("load texture", texture = ?tex_hash).entered();
 
-            let texture_header_ref = package_manager.get_entry(tex_hash).unwrap().reference;
+            let texture_header_ref = package_manager().get_entry(tex_hash).unwrap().reference;
 
-            let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
+            let texture: TextureHeader = package_manager().read_tag_struct(tex_hash).unwrap();
             let mut texture_data = if let Some(t) = texture.large_buffer {
-                package_manager
+                package_manager()
                     .read_tag(t)
                     .expect("Failed to read texture data")
             } else {
-                package_manager
+                package_manager()
                     .read_tag(texture_header_ref)
                     .expect("Failed to read texture data")
                     .to_vec()
@@ -660,7 +663,7 @@ pub fn main() -> anyhow::Result<()> {
 
             let mut mips = 1;
             if texture.large_buffer.is_some() {
-                let ab = package_manager
+                let ab = package_manager()
                     .read_tag(texture_header_ref)
                     .expect("Failed to read texture data")
                     .to_vec();
@@ -815,8 +818,8 @@ pub fn main() -> anyhow::Result<()> {
 
     let to_load_samplers: Vec<TagHash> = to_load_samplers.keys().cloned().collect();
     for s in to_load_samplers {
-        let sampler_header_ref = package_manager.get_entry(s).unwrap().reference;
-        let sampler_data = package_manager.read_tag(sampler_header_ref).unwrap();
+        let sampler_header_ref = package_manager().get_entry(s).unwrap().reference;
+        let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
 
         let sampler = unsafe {
             dcs.device

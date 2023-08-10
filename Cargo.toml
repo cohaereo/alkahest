@@ -6,7 +6,7 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 
 [dependencies]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
-destiny-pkg = { version = "0.4.0", git = "https://github.com/v4nguard/destiny-pkg" }
+destiny-pkg = { version = "0.4.1", git = "https://github.com/v4nguard/destiny-pkg" }
 winit = { version = "0.27.2" }
 binrw = "0.11"
 itertools = "0.11.0"
@@ -38,6 +38,7 @@ tracy-client = "0.15.2"
 bitflags = "2.3.3"
 rayon = "1.7.0"
 frustum_query = "0.1.2"
+lazy_static = "1.4.0"
 
 [features]
 default = []

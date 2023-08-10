@@ -79,6 +79,7 @@ dependencies = [
  "imgui-dx11-renderer",
  "imgui-winit-support",
  "itertools",
+ "lazy_static",
  "nohash-hasher",
  "raw-window-handle 0.5.2",
  "rayon",
@@ -610,8 +611,8 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.4.0"
-source = "git+https://github.com/v4nguard/destiny-pkg#8fb635b1608d326c33a9eb0211f30028d3cde8d4"
+version = "0.4.1"
+source = "git+https://github.com/v4nguard/destiny-pkg#de6be7059397a274942db59527f8245134310af2"
 dependencies = [
  "aes",
  "aes-gcm",
