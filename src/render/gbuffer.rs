@@ -122,7 +122,7 @@ impl DepthState {
                             Height: size.1,
                             MipLevels: 1,
                             ArraySize: 1,
-                            Format: DXGI_FORMAT_D32_FLOAT,
+                            Format: DXGI_FORMAT_R32_TYPELESS,
                             SampleDesc: DXGI_SAMPLE_DESC {
                                 Count: 1,
                                 Quality: 0,
@@ -182,7 +182,7 @@ impl DepthState {
                 device.CreateShaderResourceView(
                     &texture,
                     Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: DXGI_FORMAT_D32_FLOAT,
+                        Format: DXGI_FORMAT_R32_FLOAT,
                         ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                             Texture2D: D3D11_TEX2D_SRV {
