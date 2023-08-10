@@ -1,5 +1,4 @@
 use crate::texture::TextureHeader;
-use binrw::BinWrite;
 use ddsfile::{AlphaMode, D3D10ResourceDimension};
 use std::io::{Seek, Write};
 use std::mem::transmute;

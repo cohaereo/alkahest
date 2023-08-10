@@ -4,10 +4,10 @@ extern crate windows;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, SeekFrom};
-use std::mem::transmute;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Context;
@@ -16,19 +16,17 @@ use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
 use glam::{Mat4, Quat, Vec3, Vec4};
 use nohash_hasher::IntMap;
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::Fxc::{
     D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
 };
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
-use windows::Win32::Graphics::Dxgi::*;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::{ElementState, MouseButton, VirtualKeyCode};
 use winit::{
@@ -46,14 +44,14 @@ use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay, COMPOSITOR_MODES};
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
-use crate::render::GBuffer;
-use crate::scopes::ScopeView;
+use crate::render::{DeviceContextSwapchain, GBuffer};
 use crate::static_render::{LoadedTexture, StaticModel, TextureHandle};
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::terrain::TerrainRenderer;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::TextureHeader;
 use crate::vertex_layout::InputElement;
+use render::scopes::ScopeView;
 
 mod camera;
 mod dds;
@@ -67,7 +65,6 @@ mod map_resources;
 mod material;
 mod overlays;
 mod render;
-mod scopes;
 mod static_render;
 mod statics;
 mod structure;
@@ -177,74 +174,11 @@ pub fn main() -> anyhow::Result<()> {
         .with_inner_size(PhysicalSize::new(1600u32, 900u32))
         .build(&event_loop)?;
 
-    let mut device: Option<ID3D11Device> = None;
-    let mut swap_chain: Option<IDXGISwapChain> = None;
-    let mut device_context: Option<ID3D11DeviceContext> = None;
-    let swap_chain_description: DXGI_SWAP_CHAIN_DESC = {
-        let buffer_descriptor = {
-            let refresh_rate = DXGI_RATIONAL {
-                Numerator: 0,
-                Denominator: 0,
-            };
-
-            DXGI_MODE_DESC {
-                Width: 0,
-                Height: 0,
-                RefreshRate: refresh_rate,
-                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                ScanlineOrdering: DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-                Scaling: DXGI_MODE_SCALING_UNSPECIFIED,
-            }
-        };
-
-        let sample_descriptor = DXGI_SAMPLE_DESC {
-            Count: 1,
-            Quality: 0,
-        };
-
-        DXGI_SWAP_CHAIN_DESC {
-            BufferDesc: buffer_descriptor,
-            SampleDesc: sample_descriptor,
-            BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT,
-            BufferCount: 1,
-            OutputWindow: match window.raw_window_handle() {
-                RawWindowHandle::Win32(h) => unsafe { transmute(h.hwnd) },
-                u => panic!("Can't open window for {u:?}"),
-            },
-            Windowed: BOOL(1),
-            SwapEffect: DXGI_SWAP_EFFECT_DISCARD,
-            Flags: 0,
-        }
-    };
-
-    unsafe {
-        D3D11CreateDeviceAndSwapChain(
-            None,
-            D3D_DRIVER_TYPE_HARDWARE,
-            HINSTANCE::default(),
-            D3D11_CREATE_DEVICE_SINGLETHREADED, // | D3D11_CREATE_DEVICE_DEBUG,
-            Some(&[D3D_FEATURE_LEVEL_11_1]),
-            D3D11_SDK_VERSION,
-            Some(&swap_chain_description),
-            Some(&mut swap_chain),
-            Some(&mut device),
-            Some(&mut D3D_FEATURE_LEVEL_11_1),
-            Some(&mut device_context),
-        )?;
-    }
-
-    let device = device.unwrap();
-    let device_context = device_context.unwrap();
-    let swap_chain = swap_chain.unwrap();
-
-    let mut swapchain_target = unsafe {
-        let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
-        Some(device.CreateRenderTargetView(&buffer, None)?)
-    };
-
+    // cohae: Slight concern for thread safety here. ID3D11Device is threadsafe, but ID3D11DeviceContext is *not*
+    let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
     let mut gbuffer = GBuffer::create(
         (window.inner_size().width, window.inner_size().height),
-        &device,
+        dcs.clone(),
     )?;
 
     let mut static_map: IntMap<u32, StaticModel> = Default::default();
@@ -428,7 +362,7 @@ pub fn main() -> anyhow::Result<()> {
                 to_load_textures.insert(t.dyemap, ());
             }
 
-            match TerrainRenderer::load(header, &device, &mut package_manager) {
+            match TerrainRenderer::load(header, &dcs.device, &mut package_manager) {
                 Ok(renderer) => {
                     terrain_renderers.insert(t.0, renderer);
                 }
@@ -449,7 +383,7 @@ pub fn main() -> anyhow::Result<()> {
                 material_map.insert(m.0, mat);
             }
 
-            match StaticModel::load(mheader, &device, &mut package_manager) {
+            match StaticModel::load(mheader, &dcs.device, &mut package_manager) {
                 Ok(model) => {
                     static_map.insert(almostloadable.0, model);
                 }
@@ -541,7 +475,8 @@ pub fn main() -> anyhow::Result<()> {
                             .collect::<Vec<InputElement>>(),
                     );
                     unsafe {
-                        let v = device
+                        let v = dcs
+                            .device
                             .CreateVertexShader(&vs_data, None)
                             .context("Failed to load vertex shader")
                             .unwrap();
@@ -554,7 +489,8 @@ pub fn main() -> anyhow::Result<()> {
                         )
                         .expect("Failed to set VS name");
 
-                        let input_layout = device
+                        let input_layout = dcs
+                            .device
                             .CreateInputLayout(&layout, &vs_data)
                             .expect("Failed to create input layout");
 
@@ -569,7 +505,8 @@ pub fn main() -> anyhow::Result<()> {
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
                     let ps_data = package_manager.read_tag(v.reference).unwrap();
                     unsafe {
-                        let v = device
+                        let v = dcs
+                            .device
                             .CreatePixelShader(&ps_data, None)
                             .context("Failed to load pixel shader")
                             .unwrap();
@@ -594,7 +531,7 @@ pub fn main() -> anyhow::Result<()> {
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
-                    device
+                    dcs.device
                         .CreateBuffer(
                             &D3D11_BUFFER_DESC {
                                 Usage: D3D11_USAGE_DYNAMIC,
@@ -624,7 +561,7 @@ pub fn main() -> anyhow::Result<()> {
                     buffer.len()
                 );
                 let buf = unsafe {
-                    device
+                    dcs.device
                         .CreateBuffer(
                             &D3D11_BUFFER_DESC {
                                 Usage: D3D11_USAGE_DYNAMIC,
@@ -650,7 +587,7 @@ pub fn main() -> anyhow::Result<()> {
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
                 let buf = unsafe {
-                    device
+                    dcs.device
                         .CreateBuffer(
                             &D3D11_BUFFER_DESC {
                                 Usage: D3D11_USAGE_DYNAMIC,
@@ -684,12 +621,12 @@ pub fn main() -> anyhow::Result<()> {
             vshader_fullscreen.GetBufferPointer() as *const u8,
             vshader_fullscreen.GetBufferSize(),
         );
-        let v2 = device.CreateVertexShader(vs_blob, None)?;
+        let v2 = dcs.device.CreateVertexShader(vs_blob, None)?;
         let ps_blob = std::slice::from_raw_parts(
             pshader_fullscreen.GetBufferPointer() as *const u8,
             pshader_fullscreen.GetBufferSize(),
         );
-        let v3 = device.CreatePixelShader(ps_blob, None)?;
+        let v3 = dcs.device.CreatePixelShader(ps_blob, None)?;
         (v2, v3)
     };
 
@@ -760,13 +697,14 @@ pub fn main() -> anyhow::Result<()> {
                 if texture.depth > 1 {
                     let (pitch, slice_pitch) =
                         calculate_pitch(texture.format, texture.width as _, texture.height as _);
-                    let mut initial_data = D3D11_SUBRESOURCE_DATA {
+                    let initial_data = D3D11_SUBRESOURCE_DATA {
                         pSysMem: texture_data.as_ptr() as _,
                         SysMemPitch: pitch as _,
                         SysMemSlicePitch: slice_pitch as _,
                     };
 
-                    let tex = device
+                    let tex = dcs
+                        .device
                         .CreateTexture3D(
                             &D3D11_TEXTURE3D_DESC {
                                 Width: texture.width as _,
@@ -784,7 +722,8 @@ pub fn main() -> anyhow::Result<()> {
                         .context("Failed to create 3D texture")
                         .unwrap();
 
-                    let view = device
+                    let view = dcs
+                        .device
                         .CreateShaderResourceView(
                             &tex,
                             Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
@@ -817,7 +756,8 @@ pub fn main() -> anyhow::Result<()> {
                         offset += size.1;
                     }
 
-                    let tex = device
+                    let tex = dcs
+                        .device
                         .CreateTexture2D(
                             &D3D11_TEXTURE2D_DESC {
                                 Width: texture.width as _,
@@ -839,7 +779,8 @@ pub fn main() -> anyhow::Result<()> {
                         .context("Failed to create texture")
                         .unwrap();
 
-                    let view = device
+                    let view = dcs
+                        .device
                         .CreateShaderResourceView(
                             &tex,
                             Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
@@ -878,7 +819,7 @@ pub fn main() -> anyhow::Result<()> {
         let sampler_data = package_manager.read_tag(sampler_header_ref).unwrap();
 
         let sampler = unsafe {
-            device
+            dcs.device
                 .CreateSamplerState(sampler_data.as_ptr() as _)
                 .expect("Failed to create sampler state")
         };
@@ -889,7 +830,7 @@ pub fn main() -> anyhow::Result<()> {
     info!("Loaded {} samplers", sampler_map.len());
 
     let _le_cbuffer = unsafe {
-        device.CreateBuffer(
+        dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
@@ -902,7 +843,7 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let _le_model_cbuffer = unsafe {
-        device.CreateBuffer(
+        dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
@@ -915,7 +856,7 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let le_model_cb0 = unsafe {
-        device.CreateBuffer(
+        dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
@@ -928,7 +869,7 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let le_vertex_cb11 = unsafe {
-        device.CreateBuffer(
+        dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
@@ -941,7 +882,7 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let le_vertex_cb12 = unsafe {
-        device.CreateBuffer(
+        dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
@@ -954,7 +895,7 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let cb_composite_options = unsafe {
-        device.CreateBuffer(
+        dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
@@ -967,10 +908,9 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let rasterizer_state = unsafe {
-        device
+        dcs.device
             .CreateRasterizerState(&D3D11_RASTERIZER_DESC {
                 FillMode: D3D11_FILL_SOLID,
-                // CullMode: D3D11_CULL_NONE,
                 CullMode: D3D11_CULL_BACK,
                 FrontCounterClockwise: true.into(),
                 DepthBias: 0,
@@ -1001,7 +941,8 @@ pub fn main() -> anyhow::Result<()> {
 
     unsafe {
         let cb11_data = vec![Vec4::splat(0.6); 128];
-        let bmap = device_context
+        let bmap = dcs
+            .context
             .Map(&le_model_cb0, 0, D3D11_MAP_WRITE_DISCARD, 0)
             .context("Failed to map model cbuffer11")
             .unwrap();
@@ -1009,12 +950,12 @@ pub fn main() -> anyhow::Result<()> {
         bmap.pData
             .copy_from_nonoverlapping(cb11_data.as_ptr() as _, std::mem::size_of::<Vec4>() * 64);
 
-        device_context.Unmap(&le_model_cb0, 0);
+        dcs.context.Unmap(&le_model_cb0, 0);
     }
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
-        device
+        dcs.device
             .CreateTexture2D(
                 &D3D11_TEXTURE2D_DESC {
                     Width: 128 as _,
@@ -1040,7 +981,7 @@ pub fn main() -> anyhow::Result<()> {
             .context("Failed to create texture")?
     };
     let matcap_view = unsafe {
-        device.CreateShaderResourceView(
+        dcs.device.CreateShaderResourceView(
             &matcap,
             Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
                 Format: DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -1056,7 +997,7 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let blend_state = unsafe {
-        device.CreateBlendState(&D3D11_BLEND_DESC {
+        dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
             RenderTarget: [D3D11_RENDER_TARGET_BLEND_DESC {
                 BlendEnable: false.into(),
                 SrcBlend: D3D11_BLEND_ONE,
@@ -1089,7 +1030,7 @@ pub fn main() -> anyhow::Result<()> {
         debug_overlay: gui_debug.clone(),
         map: (0, String::new(), vec![], vec![]),
     }));
-    let mut gui_manager = GuiManager::create(&window, &device);
+    let mut gui_manager = GuiManager::create(&window, &dcs.device);
     gui_manager.add_overlay(Box::new(gui_fps.clone()));
     gui_manager.add_overlay(Box::new(gui_debug.clone()));
     gui_manager.add_overlay(Box::new(gui_gbuffer.clone()));
@@ -1105,8 +1046,8 @@ pub fn main() -> anyhow::Result<()> {
             Event::WindowEvent { event, .. } => {
                 match event {
                     WindowEvent::Resized(new_dims) => unsafe {
-                        swapchain_target = None;
-                        swap_chain
+                        *dcs.swapchain_target.write().unwrap() = None;
+                        dcs.swap_chain
                             .ResizeBuffers(
                                 1,
                                 new_dims.width,
@@ -1116,16 +1057,16 @@ pub fn main() -> anyhow::Result<()> {
                             )
                             .expect("Failed to resize swapchain");
 
-                        let bb: ID3D11Texture2D = swap_chain.GetBuffer(0).unwrap();
+                        let bb: ID3D11Texture2D = dcs.swap_chain.GetBuffer(0).unwrap();
 
-                        let new_rtv = device.CreateRenderTargetView(&bb, None).unwrap();
+                        let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
 
-                        device_context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
+                        dcs.context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                        swapchain_target = Some(new_rtv);
+                        *dcs.swapchain_target.write().unwrap() = Some(new_rtv);
 
                         let render_scale = gui_debug.borrow().render_scale / 100.0;
-                        gbuffer.resize(((new_dims.width as f32 * render_scale) as u32, (new_dims.height as f32 * render_scale) as u32), &device).expect("Failed to resize GBuffers");
+                        gbuffer.resize(((new_dims.width as f32 * render_scale) as u32, (new_dims.height as f32 * render_scale) as u32)).expect("Failed to resize GBuffers");
                     },
                     WindowEvent::ScaleFactorChanged { .. } => {
                         // renderer.resize();
@@ -1192,7 +1133,7 @@ pub fn main() -> anyhow::Result<()> {
                 let render_scale = gui_debug.borrow().render_scale / 100.0;
                 if gui_debug.borrow().render_scale_changed {
                     let dims = window.inner_size();
-                    gbuffer.resize(((dims.width as f32 * render_scale) as u32, (dims.height as f32 * render_scale) as u32), &device).expect("Failed to resize GBuffers");
+                    gbuffer.resize(((dims.width as f32 * render_scale) as u32, (dims.height as f32 * render_scale) as u32)).expect("Failed to resize GBuffers");
                     // Just to be safe
                     gui_debug.borrow_mut().render_scale_changed = false;
                 }
@@ -1203,17 +1144,17 @@ pub fn main() -> anyhow::Result<()> {
                 last_frame = Instant::now();
 
                 unsafe {
-                    device_context.ClearRenderTargetView(&gbuffer.rt0.render_target, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
-                    device_context.ClearRenderTargetView(&gbuffer.rt1.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
-                    device_context.ClearRenderTargetView(&gbuffer.rt2.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
-                    device_context.ClearDepthStencilView(
+                    dcs.context.ClearRenderTargetView(&gbuffer.rt0.render_target, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
+                    dcs.context.ClearRenderTargetView(&gbuffer.rt1.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
+                    dcs.context.ClearRenderTargetView(&gbuffer.rt2.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
+                    dcs.context.ClearDepthStencilView(
                         &gbuffer.depth.view,
                         D3D11_CLEAR_DEPTH.0 as _,
                         0.0,
                         0,
                     );
 
-                    device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                    dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
                         Width: window_dims.width as f32 * render_scale,
@@ -1223,17 +1164,17 @@ pub fn main() -> anyhow::Result<()> {
                     }]));
 
 
-                    device_context.RSSetState(&rasterizer_state);
-                    device_context.OMSetBlendState(
+                    dcs.context.RSSetState(&rasterizer_state);
+                    dcs.context.OMSetBlendState(
                         &blend_state,
                         Some(&[1f32, 1., 1., 1.] as _),
                         0xffffffff,
                     );
-                    device_context.OMSetRenderTargets(
+                    dcs.context.OMSetRenderTargets(
                         Some(&[Some(gbuffer.rt0.render_target.clone()), Some(gbuffer.rt1.render_target.clone()), Some(gbuffer.rt2.render_target.clone())]),
                         &gbuffer.depth.view,
                     );
-                    device_context.OMSetDepthStencilState(
+                    dcs.context.OMSetDepthStencilState(
                         &gbuffer.depth.state,
                         0,
                     );
@@ -1246,7 +1187,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     let view = camera.borrow_mut().calculate_matrix();
 
-                    let bmap = device_context
+                    let bmap = &dcs.context
                         .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
 
@@ -1266,11 +1207,11 @@ pub fn main() -> anyhow::Result<()> {
                         std::mem::size_of::<ScopeView>(),
                     );
 
-                    device_context.Unmap(&le_vertex_cb12, 0);
+                    dcs.context.Unmap(&le_vertex_cb12, 0);
 
-                    device_context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                    dcs.context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
-                    device_context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                    dcs.context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
                     let map = &maps[gui_gbuffer.borrow().map_index % maps.len()];
                     gui_resources.borrow_mut().set_map_data(map.0, &map.1, map.2.clone(), map.3.clone());
@@ -1311,7 +1252,7 @@ pub fn main() -> anyhow::Result<()> {
 
                                         let combined_matrix = model.mesh_transform() * model_matrix;
 
-                                        let bmap = device_context
+                                        let bmap = &dcs.context
                                             .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
                                             .unwrap();
 
@@ -1329,14 +1270,14 @@ pub fn main() -> anyhow::Result<()> {
                                             std::mem::size_of::<Mat4>(),
                                         );
 
-                                        device_context.Unmap(&le_vertex_cb11, 0);
-                                        device_context.VSSetConstantBuffers(
+                                        dcs.context.Unmap(&le_vertex_cb11, 0);
+                                        dcs.context.VSSetConstantBuffers(
                                             11,
                                             Some(&[Some(le_vertex_cb11.clone())]),
                                         );
 
                                         model.draw(
-                                            &device_context,
+                                            &dcs.context,
                                             &material_map,
                                             &vshader_map,
                                             &pshader_map,
@@ -1355,7 +1296,7 @@ pub fn main() -> anyhow::Result<()> {
                     for th in &map.4 {
                         if let Some(t) = terrain_renderers.get(&th.0) {
                             t.draw(
-                                &device_context,
+                                &dcs.context,
                                 &material_map,
                                 &vshader_map,
                                 &pshader_map,
@@ -1369,11 +1310,11 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    device_context.OMSetRenderTargets(
-                        Some(&[Some(swapchain_target.as_ref().unwrap().clone())]),
+                    dcs.context.OMSetRenderTargets(
+                        Some(&[Some(dcs.swapchain_target.read().unwrap().as_ref().unwrap().clone())]),
                         None,
                     );
-                    device_context.PSSetShaderResources(
+                    dcs.context.PSSetShaderResources(
                         0,
                         Some(&[
                             Some(gbuffer.rt0.view.clone()),
@@ -1383,7 +1324,7 @@ pub fn main() -> anyhow::Result<()> {
                         ]),
                     );
 
-                    let bmap = device_context
+                    let bmap = &dcs.context
                         .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
                     bmap.pData.copy_from_nonoverlapping(
@@ -1391,11 +1332,11 @@ pub fn main() -> anyhow::Result<()> {
                         4,
                     );
 
-                    device_context.Unmap(&cb_composite_options, 0);
-                    device_context
+                    dcs.context.Unmap(&cb_composite_options, 0);
+                    dcs.context
                         .PSSetConstantBuffers(0, Some(&[Some(cb_composite_options.clone())]));
 
-                    device_context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                    dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
                         Width: window_dims.width as f32,
@@ -1404,16 +1345,16 @@ pub fn main() -> anyhow::Result<()> {
                         MaxDepth: 1.0,
                     }]));
 
-                    device_context.VSSetShader(&vshader_fullscreen, None);
-                    device_context.PSSetShader(&pshader_fullscreen, None);
-                    device_context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-                    device_context.Draw(3, 0);
+                    dcs.context.VSSetShader(&vshader_fullscreen, None);
+                    dcs.context.PSSetShader(&pshader_fullscreen, None);
+                    dcs.context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                    dcs.context.Draw(3, 0);
 
                     gui_manager.draw_frame(&window, last_frame.elapsed());
 
-                    device_context.OMSetDepthStencilState(None, 0);
+                    dcs.context.OMSetDepthStencilState(None, 0);
 
-                    swap_chain.Present(1, 0).unwrap();
+                    dcs.swap_chain.Present(1, 0).unwrap();
 
                     tracy_client::Client::running().map(|c| c.frame_mark());
                 };

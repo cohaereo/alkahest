@@ -1,5 +1,5 @@
 use crate::icons::{
-    ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_CIRCLE, ICON_LIGHTBULB_ON, ICON_PANORAMA, ICON_SPHERE,
+    ICON_CHESS_PAWN, ICON_HELP, ICON_LIGHTBULB_ON, ICON_SPHERE,
 };
 use crate::structure::RelPointer;
 use crate::types::{DestinyHash, Vector4};

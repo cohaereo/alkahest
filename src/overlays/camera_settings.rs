@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
 
-use crate::icons::{ICON_BUG, ICON_WRENCH};
+use crate::icons::{ICON_BUG};
 use crate::FpsCamera;
 
 use super::gui::OverlayProvider;
