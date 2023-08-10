@@ -91,4 +91,5 @@ pub struct CompositorOptions {
     pub camera_pos: Vec4,
     pub camera_dir: Vec4,
     pub mode: u32,
+    pub light_count: u32,
 }

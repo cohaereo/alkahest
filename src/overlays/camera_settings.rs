@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
 
-use crate::icons::{ICON_BUG};
+use crate::icons::ICON_BUG;
 use crate::FpsCamera;
 
 use super::gui::OverlayProvider;
@@ -14,6 +14,7 @@ pub struct CameraPositionOverlay {
 
     pub render_scale: f32,
     pub render_scale_changed: bool,
+    pub render_lights: bool,
 }
 
 impl OverlayProvider for CameraPositionOverlay {
@@ -25,6 +26,8 @@ impl OverlayProvider for CameraPositionOverlay {
             ui.separator();
             self.render_scale_changed =
                 ui.slider("Render Scale", 50.0, 200.0, &mut self.render_scale);
+            ui.checkbox("Render lights", &mut self.render_lights);
+            ui.separator();
             ui.checkbox("Show map resources", &mut self.show_map_resources);
             if self.show_map_resources {
                 ui.checkbox(

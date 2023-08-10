@@ -3,6 +3,11 @@ cbuffer CompositeOptions : register(b0) {
     float4 cameraPos;
     float4 cameraDir;
     uint tex_i;
+    uint lightCount;
+};
+
+cbuffer Lights : register(b1) {
+    float4 lights[1024];
 };
 
 struct VSOutput {
@@ -34,13 +39,171 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
 Texture2D RenderTarget0 : register(t0);
 Texture2D RenderTarget1 : register(t1);
 Texture2D RenderTarget2 : register(t2);
-Texture2D Depth : register(t2);
-
+Texture2D DepthTarget : register(t3);
 Texture2D Matcap : register(t4);
 SamplerState SampleType : register(s0);
 
 float3 GammaCorrect(float3 c) {
-    return pow(c, float3(1.0/2.2, 1.0/2.2, 1.0/2.2));
+    return pow(c, (1.0/2.2).xxx);
+}
+
+float3 FresnelSchlick(float cosTheta, float3 F0)
+{
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+{
+	return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+#define PI 3.14159265359
+
+float DistributionGGX(float3 N, float3 H, float roughness)
+{
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+
+    float num   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return num / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float num   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return num / denom;
+}
+
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+float3 WorldPosFromDepth(float depth, float2 uv) {
+    float4 clipSpacePos = float4(uv * 2.0 - 1.0, depth, 1.0);
+    clipSpacePos.y *= -1.0;
+
+    float4 worldSpacePos = mul(clipSpacePos, projViewMatrixInv);
+    return worldSpacePos.xyz / worldSpacePos.w;
+}
+
+float3 PositionGrid(float3 pos, float size) {
+    pos = pos / size;
+    float3 n = abs(pos) % 1.0;
+    float distFromZero = length(pos.xy);
+    if(distFromZero < 0.25) {
+        return float3(1.0, 0.0, 1.0);
+    }
+    if(abs(pos).x < 0.05 || abs(pos).y < 0.05 || abs(pos).z < 0.05) {
+        return float3(1.0, 0.0, 1.0);
+    }
+
+    float3 rgb = float3(0.0, 0.0, 0.0);
+    const float OFFSET = 0.96;
+    if(n.x > OFFSET) rgb.r = 1.0;
+    if(n.y > OFFSET) rgb.g = 1.0;
+    if(n.z > OFFSET) rgb.b = 1.0;
+
+    return rgb;
+}
+
+float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 uv) {
+    float3 albedo = rt0.xyz;
+    float3 normal = normalize(rt1.xyz);
+
+    float smoothness = 8 * length(rt1.xyz - float3(0.5,0.5,0.5)) - 3;
+    float roughness = 1.0 - saturate(smoothness);
+    float metallic = rt2.x;
+    float ao = rt2.y * 2.0;
+    float emission = rt2.y * 2.0 - 1.0;
+
+    float3 worldPos = WorldPosFromDepth(depth, uv);
+
+	float3 N = normalize(normal);
+    float3 V = normalize(cameraPos.xyz - worldPos);
+	float3 R = reflect(-V, N);
+
+    float3 F0 = float3(0.04, 0.04, 0.04);
+    F0 = lerp(F0, albedo, metallic);
+
+    // reflectance equation
+    float3 Lo = float3(0.0, 0.0, 0.0);
+    float3 LIGHT_POS = cameraPos.xyz;
+    float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 3.0;
+    for(int i = 0; i < lightCount; ++i)
+    {
+        float distance = length(lights[i].xyz - worldPos);
+        if(distance > 16.0) {
+            continue;
+        }
+
+        // calculate per-light radiance
+        float3 L = normalize(lights[i].xyz - worldPos);
+        float3 H = normalize(V + L);
+//         float distance    = length(lights[i].xyz - worldPos);
+        float attenuation = 1.0 / (distance * distance);
+        //float attenuation = 10.0 / (distance);
+		float3 radiance     = LIGHT_COL.xyz * attenuation;
+
+        // cook-torrance brdf
+        float NDF = DistributionGGX(N, H, roughness);
+        float G   = GeometrySmith(N, V, L, roughness);
+        float3 F    = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+        float3 kS = F;
+        float3 kD = float3(1.0, 1.0, 1.0) - kS;
+        kD *= 1.0 - metallic;
+
+        float3 numerator    = NDF * G * F;
+        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+        float3 specular     = numerator / max(denominator, 0.001);
+
+        // add to outgoing radiance Lo
+        float NdotL = max(dot(N, L), 0.0);
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+    }
+
+	float3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+
+	float3 kS = F;
+	float3 kD = 1.0 - kS;
+	kD *= 1.0 - metallic;
+
+// 	float3 irradiance = irradianceMap.Sample(textureSampler, N).rgb;
+// 	float3 diffuse = albedo;
+// 	float3 diffuse = irradiance * albedo;
+
+	const float MAX_REFLECTION_LOD = 4.0;
+// 	float3 prefilteredColor = preFilterMap.SampleLevel(textureSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
+// 	float2 envBRDF = brdfLUT.Sample(textureSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
+// 	float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+//
+// 	float3 ambient = (kD * diffuse /*+ specular*/) * ao;
+//     float3 ambient = 1.0;
+//     float3 ambient = kD * diffuse;
+    float3 ambient = float3(0.03, 0.03, 0.03) * albedo;
+
+    float3 color = ambient + Lo;
+
+    color = color / (color + float3(1.0, 1.0, 1.0));
+    color = GammaCorrect(color);
+
+    return float4(color, 1.0);
 }
 
 // Pixel Shader
@@ -48,6 +211,7 @@ float4 PShader(VSOutput input) : SV_Target {
     float4 diffuse = RenderTarget0.Sample(SampleType, input.uv);
     float4 normal = RenderTarget1.Sample(SampleType, input.uv);
     float4 pbr_stack = RenderTarget2.Sample(SampleType, input.uv);
+    float depth = DepthTarget.Sample(SampleType, input.uv).r;
 
     [branch] switch(tex_i) {
         case 1: // RT0 (gamma-corrected)
@@ -79,9 +243,18 @@ float4 PShader(VSOutput input) : SV_Target {
             return float4(diffuse.aaa, 1.0);
         }
         default: { // Combined
-            float2 muv = 0.5 * normal.xy + float2(0.5, 0.5);
-            float4 matcap = Matcap.Sample(SampleType, float2(muv.x, 1.0-muv.y));
-            return float4(GammaCorrect(diffuse.xyz * matcap.x) * (pbr_stack.y * 2.0), 1.0);
+            if(lightCount == 0) {
+                float2 muv = 0.5 * normal.xy + float2(0.5, 0.5);
+                float4 matcap = Matcap.Sample(SampleType, float2(muv.x, 1.0-muv.y));
+                return float4(GammaCorrect(diffuse.xyz * matcap.x) * (pbr_stack.y * 2.0), 1.0);
+            } else {
+                float4 c = PeanutButterRasputin(diffuse, normal, pbr_stack, depth, input.uv);
+                return c;
+            }
+//             return float4((WorldPosFromDepth(depth, input.uv) % 100.0) / 100.0, 1.0);
+//             float3 t = WorldPosFromDepth(depth, input.uv) / 100.0;
+//             float3 t = WorldPosFromDepth(depth, input.uv);
+//             return c + float4(PositionGrid(t, 8.0), 0.0) / 3.0;
         }
     }
 }

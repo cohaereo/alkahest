@@ -196,6 +196,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
     let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)> = vec![];
+    let mut point_lights = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let think: Unk80807dae = package_manager()
             .read_tag_struct((package.pkg_id(), index as _))
@@ -284,6 +285,12 @@ pub fn main() -> anyhow::Result<()> {
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::PointLight(tag),
                                 });
+                                point_lights.push(Vec4::new(
+                                    data.translation.x,
+                                    data.translation.y,
+                                    data.translation.z,
+                                    data.translation.w,
+                                ));
                             }
                             u => {
                                 debug!(
@@ -338,6 +345,8 @@ pub fn main() -> anyhow::Result<()> {
             terrains,
         ));
     }
+
+    info!("{} lights", point_lights.len());
 
     let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
 
@@ -899,6 +908,34 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
+    let cb_composite_lights = unsafe {
+        dcs.device.CreateBuffer(
+            &D3D11_BUFFER_DESC {
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
+                ByteWidth: (std::mem::size_of::<Vec4>() * 1024) as _,
+                ..Default::default()
+            },
+            None,
+        )?
+    };
+
+    unsafe {
+        let bmap = dcs
+            .context
+            .Map(&cb_composite_lights, 0, D3D11_MAP_WRITE_DISCARD, 0)
+            .context("Failed to map model cbuffer11")
+            .unwrap();
+
+        bmap.pData.copy_from_nonoverlapping(
+            point_lights.as_ptr() as _,
+            std::mem::size_of::<Vec4>() * point_lights.len(),
+        );
+
+        dcs.context.Unmap(&cb_composite_lights, 0);
+    }
+
     let cb_composite_options = unsafe {
         dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
@@ -1030,6 +1067,7 @@ pub fn main() -> anyhow::Result<()> {
         map_resource_distance: 2000.0,
         render_scale: 100.0,
         render_scale_changed: false,
+        render_lights: true,
     }));
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
         debug_overlay: gui_debug.clone(),
@@ -1338,6 +1376,7 @@ pub fn main() -> anyhow::Result<()> {
                         camera_pos: camera.borrow().position.extend(1.0),
                         camera_dir: camera.borrow().front.extend(1.0),
                         mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
+                        light_count: if gui_debug.borrow().render_lights { point_lights.len() as u32 } else { 0 },
                     };
                     bmap.pData.cast::<CompositorOptions>().copy_from_nonoverlapping(
                         &compositor_options, 1
@@ -1345,7 +1384,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.context.Unmap(&cb_composite_options, 0);
                     dcs.context
-                        .PSSetConstantBuffers(0, Some(&[Some(cb_composite_options.clone())]));
+                        .PSSetConstantBuffers(0, Some(&[Some(cb_composite_options.clone()), Some(cb_composite_lights.clone())]));
 
                     dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
