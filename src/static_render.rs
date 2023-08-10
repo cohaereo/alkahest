@@ -89,11 +89,7 @@ impl StaticModel {
                 continue;
             }
 
-            let t = pm
-                .get_entry_by_tag(*vertex_buffer_hash)
-                .unwrap()
-                .reference
-                .into();
+            let t = pm.get_entry(*vertex_buffer_hash).unwrap().reference;
 
             let vertex_data = pm.read_tag(t).unwrap();
 
@@ -102,18 +98,14 @@ impl StaticModel {
             if vertex2_buffer_hash.is_valid() {
                 let vertex2_header: VertexBufferHeader =
                     pm.read_tag_struct(*vertex2_buffer_hash).unwrap();
-                let t = pm
-                    .get_entry_by_tag(*vertex2_buffer_hash)
-                    .unwrap()
-                    .reference
-                    .into();
+                let t = pm.get_entry(*vertex2_buffer_hash).unwrap().reference;
 
                 vertex2_stride = Some(vertex2_header.stride as u32);
                 vertex2_data = Some(pm.read_tag(t).unwrap());
             }
 
             let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer).unwrap();
-            let t = pm.get_entry_by_tag(*index_buffer).unwrap().reference.into();
+            let t = pm.get_entry(*index_buffer).unwrap().reference;
             let index_data = pm.read_tag(t).unwrap();
 
             let index_buffer = unsafe {

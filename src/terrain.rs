@@ -34,11 +34,7 @@ impl TerrainRenderer {
     ) -> anyhow::Result<TerrainRenderer> {
         let vertex_header: VertexBufferHeader = pm.read_tag_struct(terrain.vertex_buffer).unwrap();
 
-        let t = pm
-            .get_entry_by_tag(terrain.vertex_buffer)
-            .unwrap()
-            .reference
-            .into();
+        let t = pm.get_entry(terrain.vertex_buffer).unwrap().reference;
 
         let vertex_data = pm.read_tag(t).unwrap();
 
@@ -47,22 +43,14 @@ impl TerrainRenderer {
         if terrain.vertex2_buffer.is_valid() {
             let vertex2_header: VertexBufferHeader =
                 pm.read_tag_struct(terrain.vertex2_buffer).unwrap();
-            let t = pm
-                .get_entry_by_tag(terrain.vertex2_buffer)
-                .unwrap()
-                .reference
-                .into();
+            let t = pm.get_entry(terrain.vertex2_buffer).unwrap().reference;
 
             vertex2_stride = Some(vertex2_header.stride as u32);
             vertex2_data = Some(pm.read_tag(t).unwrap());
         }
 
         let index_header: IndexBufferHeader = pm.read_tag_struct(terrain.indices).unwrap();
-        let t = pm
-            .get_entry_by_tag(terrain.indices)
-            .unwrap()
-            .reference
-            .into();
+        let t = pm.get_entry(terrain.indices).unwrap().reference;
         let index_data = pm.read_tag(t).unwrap();
 
         let index_buffer = unsafe {

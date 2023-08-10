@@ -134,13 +134,12 @@ pub fn main() -> anyhow::Result<()> {
     ];
     {
         let _span = info_span!("Loading global strings").entered();
-        for (p, e, _) in package_manager
+        for (t, _) in package_manager
             .get_all_by_reference(0x80809a88)
             .into_iter()
-            .filter(|(p, _, _)| all_global_packages.contains(p))
+            .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
         {
-            let textset_header: StringSetHeader =
-                package_manager.read_tag_struct(TagHash::new(p, e as _))?;
+            let textset_header: StringSetHeader = package_manager.read_tag_struct(t)?;
 
             let data = package_manager
                 .read_tag(textset_header.language_english)
@@ -259,8 +258,9 @@ pub fn main() -> anyhow::Result<()> {
     let mut terrain_headers = vec![];
     let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)> = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
-        let tag = TagHash::new(package.pkg_id(), index as _);
-        let think: Unk80807dae = package_manager.read_tag_struct(tag).unwrap();
+        let think: Unk80807dae = package_manager
+            .read_tag_struct((package.pkg_id(), index as _))
+            .unwrap();
         let child_map: Unk808091e0 = package_manager
             .read_tag_struct(think.child_map_reference)
             .unwrap();
@@ -518,11 +518,11 @@ pub fn main() -> anyhow::Result<()> {
                 to_load_samplers.insert(sampler.sampler, ());
             }
 
-            if let Ok(v) = package_manager.get_entry_by_tag(m.vertex_shader) {
+            if let Ok(v) = package_manager.get_entry(m.vertex_shader) {
                 let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
 
                 vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
-                    let vs_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                    let vs_data = package_manager.read_tag(v.reference).unwrap();
                     let mut vs_cur = Cursor::new(&vs_data);
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
                     let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
@@ -563,11 +563,11 @@ pub fn main() -> anyhow::Result<()> {
                 });
             }
 
-            if let Ok(v) = package_manager.get_entry_by_tag(m.pixel_shader) {
+            if let Ok(v) = package_manager.get_entry(m.pixel_shader) {
                 let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
 
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
-                    let ps_data = package_manager.read_tag(TagHash(v.reference)).unwrap();
+                    let ps_data = package_manager.read_tag(v.reference).unwrap();
                     unsafe {
                         let v = device
                             .CreatePixelShader(&ps_data, None)
@@ -616,12 +616,7 @@ pub fn main() -> anyhow::Result<()> {
             }
 
             if m.unk34c.is_valid() {
-                let buffer_header_ref = TagHash(
-                    package_manager
-                        .get_entry_by_tag(m.unk34c)
-                        .unwrap()
-                        .reference,
-                );
+                let buffer_header_ref = package_manager.get_entry(m.unk34c).unwrap().reference;
 
                 let buffer = package_manager.read_tag(buffer_header_ref).unwrap();
                 trace!(
@@ -712,42 +707,65 @@ pub fn main() -> anyhow::Result<()> {
             }
             let _span = debug_span!("load texture", texture = ?tex_hash).entered();
 
-            let texture_header_ref = TagHash(
-                package_manager
-                    .get_entry_by_tag(tex_hash)
-                    .unwrap()
-                    .reference,
-            );
+            let texture_header_ref = package_manager.get_entry(tex_hash).unwrap().reference;
 
             let texture: TextureHeader = package_manager.read_tag_struct(tex_hash).unwrap();
-            let texture_data = if let Some(t) = texture.large_buffer {
+            let mut texture_data = if let Some(t) = texture.large_buffer {
                 package_manager
                     .read_tag(t)
                     .expect("Failed to read texture data")
             } else {
                 package_manager
-                    .read_entry(
-                        texture_header_ref.pkg_id(),
-                        texture_header_ref.entry_index() as _,
-                    )
+                    .read_tag(texture_header_ref)
                     .expect("Failed to read texture data")
                     .to_vec()
             };
 
-            // info!("Uploading texture {} {texture:?}", tex_hash);
-            let (tex, view) = unsafe {
-                let mut initial_data =
-                    vec![D3D11_SUBRESOURCE_DATA::default(); texture.array_size as _];
-                let (pitch, slice_pitch) =
-                    calculate_pitch(texture.format, texture.width as _, texture.height as _);
+            let mut mips = 1;
+            if texture.large_buffer.is_some() {
+                let ab = package_manager
+                    .read_tag(texture_header_ref)
+                    .expect("Failed to read texture data")
+                    .to_vec();
 
-                for (i, d) in initial_data.iter_mut().enumerate() {
-                    d.pSysMem = texture_data.as_ptr().add(i * slice_pitch) as _;
-                    d.SysMemPitch = pitch as _;
-                    d.SysMemSlicePitch = slice_pitch as _;
+                texture_data.extend(ab);
+
+                let mut dim = texture.width.min(texture.width) as usize;
+                mips = 0;
+                while dim > 1 {
+                    dim >>= 1;
+                    mips += 1;
                 }
 
+                let mut required_mip_bytes = 0;
+                for i in 0..mips {
+                    let width = texture.width >> i;
+                    let height = texture.height >> i;
+                    let size = calculate_pitch(texture.format, width as usize, height as usize);
+                    required_mip_bytes += size.1;
+                }
+
+                if required_mip_bytes > texture_data.len() {
+                    warn!(
+                        "Not enough bytes to satisfy {} mips (needed 0x{:x} bytes, got 0x{:x})",
+                        mips,
+                        required_mip_bytes,
+                        texture_data.len()
+                    );
+                    mips = 1;
+                }
+            }
+
+            let (tex, view) = unsafe {
                 if texture.depth > 1 {
+                    let (pitch, slice_pitch) =
+                        calculate_pitch(texture.format, texture.width as _, texture.height as _);
+                    let mut initial_data = D3D11_SUBRESOURCE_DATA {
+                        pSysMem: texture_data.as_ptr() as _,
+                        SysMemPitch: pitch as _,
+                        SysMemSlicePitch: slice_pitch as _,
+                    };
+
                     let tex = device
                         .CreateTexture3D(
                             &D3D11_TEXTURE3D_DESC {
@@ -761,7 +779,7 @@ pub fn main() -> anyhow::Result<()> {
                                 CPUAccessFlags: Default::default(),
                                 MiscFlags: Default::default(),
                             },
-                            Some(initial_data.as_ptr()),
+                            Some([initial_data].as_ptr()),
                         )
                         .context("Failed to create 3D texture")
                         .unwrap();
@@ -784,13 +802,28 @@ pub fn main() -> anyhow::Result<()> {
 
                     (TextureHandle::Texture3D(tex), view)
                 } else {
+                    let mut initial_data = vec![];
+                    let mut offset = 0;
+                    for i in 0..mips {
+                        let width = texture.width >> i;
+                        let height = texture.height >> i;
+                        let size = calculate_pitch(texture.format, width as usize, height as usize);
+
+                        initial_data.push(D3D11_SUBRESOURCE_DATA {
+                            pSysMem: texture_data.as_ptr().add(offset) as _,
+                            SysMemPitch: size.0 as u32,
+                            SysMemSlicePitch: 0,
+                        });
+                        offset += size.1;
+                    }
+
                     let tex = device
                         .CreateTexture2D(
                             &D3D11_TEXTURE2D_DESC {
                                 Width: texture.width as _,
                                 Height: texture.height as _,
-                                MipLevels: 1,
-                                ArraySize: texture.array_size as _,
+                                MipLevels: mips as u32,
+                                ArraySize: 1 as _,
                                 Format: texture.format.into(),
                                 SampleDesc: DXGI_SAMPLE_DESC {
                                     Count: 1,
@@ -815,7 +848,7 @@ pub fn main() -> anyhow::Result<()> {
                                 Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                                     Texture2D: D3D11_TEX2D_SRV {
                                         MostDetailedMip: 0,
-                                        MipLevels: 1,
+                                        MipLevels: mips as _,
                                     },
                                 },
                             }),
@@ -841,7 +874,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let to_load_samplers: Vec<TagHash> = to_load_samplers.keys().cloned().collect();
     for s in to_load_samplers {
-        let sampler_header_ref = TagHash(package_manager.get_entry_by_tag(s).unwrap().reference);
+        let sampler_header_ref = package_manager.get_entry(s).unwrap().reference;
         let sampler_data = package_manager.read_tag(sampler_header_ref).unwrap();
 
         let sampler = unsafe {
