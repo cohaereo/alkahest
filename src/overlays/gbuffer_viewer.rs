@@ -1,4 +1,5 @@
 use destiny_pkg::TagHash;
+use glam::{Mat4, Vec4};
 use imgui::{Condition, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
@@ -82,4 +83,12 @@ impl Display for CompositorMode {
             CompositorMode::Iridescence => f.write_str("Iridescence"),
         }
     }
+}
+
+#[repr(C)]
+pub struct CompositorOptions {
+    pub proj_view_matrix_inv: Mat4,
+    pub camera_pos: Vec4,
+    pub camera_dir: Vec4,
+    pub mode: u32,
 }

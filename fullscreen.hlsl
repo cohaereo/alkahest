@@ -1,4 +1,7 @@
 cbuffer CompositeOptions : register(b0) {
+    row_major float4x4 projViewMatrixInv;
+    float4 cameraPos;
+    float4 cameraDir;
     uint tex_i;
 };
 
@@ -22,7 +25,7 @@ static float2 texcoords[3] = {
 VSOutput VShader(uint vertexID : SV_VertexID) {
     VSOutput output;
 
-    output.position = float4(screenPos[vertexID], 0.0, 1.0); // float4(screenPos, 0.0, 1.0);
+    output.position = float4(screenPos[vertexID], 0.0, 1.0);
     output.uv = texcoords[vertexID];
 
     return output;
@@ -31,7 +34,9 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
 Texture2D RenderTarget0 : register(t0);
 Texture2D RenderTarget1 : register(t1);
 Texture2D RenderTarget2 : register(t2);
-Texture2D Matcap : register(t3);
+Texture2D Depth : register(t2);
+
+Texture2D Matcap : register(t4);
 SamplerState SampleType : register(s0);
 
 float3 GammaCorrect(float3 c) {

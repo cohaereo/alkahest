@@ -41,7 +41,9 @@ use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0
 use crate::map_resources::{MapResource, Unk80806b7f, Unk8080714b};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay, COMPOSITOR_MODES};
+use crate::overlays::gbuffer_viewer::{
+    CompositorMode, CompositorOptions, GBufferInfoOverlay, COMPOSITOR_MODES,
+};
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
@@ -903,7 +905,7 @@ pub fn main() -> anyhow::Result<()> {
                 Usage: D3D11_USAGE_DYNAMIC,
                 BindFlags: D3D11_BIND_CONSTANT_BUFFER,
                 CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: 4 * 4,
+                ByteWidth: std::mem::size_of::<CompositorOptions> as _,
                 ..Default::default()
             },
             None,
@@ -1142,7 +1144,7 @@ pub fn main() -> anyhow::Result<()> {
                 }
 
                 camera.borrow_mut().update(&input_state, last_frame.elapsed().as_secs_f32());
-                gui_fps.borrow_mut().delta = last_frame.elapsed().as_secs_f32(); // TODO: There has to be a way not to do this...
+                gui_fps.borrow_mut().delta = last_frame.elapsed().as_secs_f32();
                 let window_dims = window.inner_size();
                 last_frame = Instant::now();
 
@@ -1323,16 +1325,22 @@ pub fn main() -> anyhow::Result<()> {
                             Some(gbuffer.rt0.view.clone()),
                             Some(gbuffer.rt1.view.clone()),
                             Some(gbuffer.rt2.view.clone()),
+                            Some(gbuffer.depth.texture_view.clone()),
                             Some(matcap_view.clone()),
                         ]),
                     );
-
-                    let bmap = &dcs.context
+                    let bmap = dcs.context
                         .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
-                    bmap.pData.copy_from_nonoverlapping(
-                        &(COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32) as *const u32 as _,
-                        4,
+
+                    let compositor_options = CompositorOptions {
+                        proj_view_matrix_inv: proj_view.inverse(),
+                        camera_pos: camera.borrow().position.extend(1.0),
+                        camera_dir: camera.borrow().front.extend(1.0),
+                        mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
+                    };
+                    bmap.pData.cast::<CompositorOptions>().copy_from_nonoverlapping(
+                        &compositor_options, 1
                     );
 
                     dcs.context.Unmap(&cb_composite_options, 0);
