@@ -39,6 +39,7 @@ bitflags = "2.3.3"
 rayon = "1.7.0"
 frustum_query = "0.1.2"
 lazy_static = "1.4.0"
+ringbuffer = "0.14.2"
 
 [features]
 default = []

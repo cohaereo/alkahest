@@ -40,6 +40,7 @@ use crate::dxgi::calculate_pitch;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
 use crate::map_resources::{MapResource, Unk80806b7f, Unk8080714b};
 use crate::overlays::camera_settings::CameraPositionOverlay;
+use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gbuffer_viewer::{
     CompositorMode, CompositorOptions, GBufferInfoOverlay, COMPOSITOR_MODES,
@@ -93,6 +94,7 @@ pub fn main() -> anyhow::Result<()> {
         tracing::subscriber::set_global_default(
             tracing_subscriber::registry()
                 .with(tracing_tracy::TracyLayer::new())
+                .with(overlays::console::ConsoleLogLayer)
                 .with(tracing_subscriber::fmt::layer())
                 .with(
                     EnvFilter::builder()
@@ -103,6 +105,7 @@ pub fn main() -> anyhow::Result<()> {
     } else {
         tracing::subscriber::set_global_default(
             tracing_subscriber::registry()
+                .with(overlays::console::ConsoleLogLayer)
                 .with(tracing_subscriber::fmt::layer())
                 .with(
                     EnvFilter::builder()
@@ -113,7 +116,7 @@ pub fn main() -> anyhow::Result<()> {
     }
     .expect("Failed to set up the tracing subscriber");
 
-    let (package, mut pm) = info_span!("Initializing package manager").in_scope(|| {
+    let (package, pm) = info_span!("Initializing package manager").in_scope(|| {
         let pkg_path = std::env::args().nth(1).expect("No package file was given!");
         (
             Destiny2PreBeyondLight
@@ -1074,10 +1077,12 @@ pub fn main() -> anyhow::Result<()> {
         map: (0, String::new(), vec![], vec![]),
     }));
     let mut gui_manager = GuiManager::create(&window, &dcs.device);
+    let mut gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui_manager.add_overlay(Box::new(gui_fps.clone()));
     gui_manager.add_overlay(Box::new(gui_debug.clone()));
     gui_manager.add_overlay(Box::new(gui_gbuffer.clone()));
     gui_manager.add_overlay(Box::new(gui_resources.clone()));
+    gui_manager.add_overlay(Box::new(gui_console.clone()));
 
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
@@ -1140,33 +1145,38 @@ pub fn main() -> anyhow::Result<()> {
                         input_state.ctrl = modifiers.ctrl();
                     }
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if input.state == ElementState::Pressed {
+                        if !gui_manager.imgui.io().want_capture_keyboard {
+                            if input.state == ElementState::Pressed {
+                                match input.virtual_keycode {
+                                    Some(VirtualKeyCode::Q) => {
+                                        if input.modifiers.ctrl() {
+                                            *control_flow = ControlFlow::Exit
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+
                             match input.virtual_keycode {
-                                Some(VirtualKeyCode::Escape) => {
-                                    *control_flow = ControlFlow::Exit
+                                Some(VirtualKeyCode::W) => {
+                                    input_state.w = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::A) => {
+                                    input_state.a = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::S) => {
+                                    input_state.s = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::D) => {
+                                    input_state.d = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::Space) => {
+                                    input_state.space = input.state == ElementState::Pressed
                                 }
                                 _ => {}
                             }
                         }
 
-                        match input.virtual_keycode {
-                            Some(VirtualKeyCode::W) => {
-                                input_state.w = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::A) => {
-                                input_state.a = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::S) => {
-                                input_state.s = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::D) => {
-                                input_state.d = input.state == ElementState::Pressed
-                            }
-                            Some(VirtualKeyCode::Space) => {
-                                input_state.space = input.state == ElementState::Pressed
-                            }
-                            _ => {}
-                        }
                     }
 
                     _ => (),
