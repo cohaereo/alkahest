@@ -44,7 +44,7 @@ Texture2D Matcap : register(t4);
 SamplerState SampleType : register(s0);
 
 float3 GammaCorrect(float3 c) {
-    return pow(c, (1.0/2.2).xxx);
+    return pow(abs(c), (1.0/2.2).xxx);
 }
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
@@ -145,7 +145,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     float3 Lo = float3(0.0, 0.0, 0.0);
     float3 LIGHT_POS = cameraPos.xyz;
     float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 3.0;
-    for(int i = 0; i < lightCount; ++i)
+    for(uint i = 0; i < lightCount; ++i)
     {
         float distance = length(lights[i].xyz - worldPos);
         if(distance > 16.0) {
