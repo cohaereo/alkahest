@@ -1066,7 +1066,7 @@ pub fn main() -> anyhow::Result<()> {
         })?
     };
 
-    let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay { delta: 0.0 }));
+    let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay::default()));
     let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
         composition_mode: CompositorMode::Combined as usize,
         map_index: 0,
@@ -1201,9 +1201,9 @@ pub fn main() -> anyhow::Result<()> {
                 }
 
                 camera.borrow_mut().update(&input_state, last_frame.elapsed().as_secs_f32());
-                gui_fps.borrow_mut().delta = last_frame.elapsed().as_secs_f32();
-                let window_dims = window.inner_size();
                 last_frame = Instant::now();
+
+                let window_dims = window.inner_size();
 
                 unsafe {
                     dcs.context.ClearRenderTargetView(&gbuffer.rt0.render_target, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
