@@ -2,7 +2,7 @@ use crate::entity::{IndexBufferHeader, VertexBufferHeader};
 use crate::map::Unk8080714f;
 use crate::material;
 use crate::packages::package_manager;
-use crate::static_render::LoadedTexture;
+use crate::render::static_render::LoadedTexture;
 use anyhow::Context;
 use glam::{Mat4, Vec4};
 use nohash_hasher::IntMap;

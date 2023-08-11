@@ -181,6 +181,7 @@ impl StaticModel {
         textures: &IntMap<u32, LoadedTexture>,
         samplers: &IntMap<u32, ID3D11SamplerState>,
         cbuffer_default: ID3D11Buffer,
+        instance_count: usize,
     ) {
         unsafe {
             for (iu, u) in self
@@ -343,7 +344,13 @@ impl StaticModel {
                         EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     });
 
-                    device_context.DrawIndexedInstanced(p.index_count, 1, p.index_start, 0, 0);
+                    device_context.DrawIndexedInstanced(
+                        p.index_count,
+                        instance_count as _,
+                        p.index_start,
+                        0,
+                        0,
+                    );
                 }
             }
         }

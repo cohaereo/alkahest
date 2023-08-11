@@ -14,7 +14,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Quat, Vec3, Vec4};
+use glam::{Mat4, Vec4};
 use nohash_hasher::IntMap;
 
 use tracing::level_filters::LevelFilter;
@@ -49,10 +49,10 @@ use crate::overlays::gbuffer_viewer::{
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
-use crate::render::{DeviceContextSwapchain, GBuffer};
-use crate::static_render::{LoadedTexture, StaticModel};
+use crate::render::static_render::{LoadedTexture, StaticModel};
+use crate::render::terrain::TerrainRenderer;
+use crate::render::{DeviceContextSwapchain, GBuffer, InstancedRenderer};
 use crate::statics::{Unk808071a7, Unk8080966d};
-use crate::terrain::TerrainRenderer;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::{TextureHandle, TextureHeader};
 use crate::vertex_layout::InputElement;
@@ -72,10 +72,8 @@ mod material;
 mod overlays;
 mod packages;
 mod render;
-mod static_render;
 mod statics;
 mod structure;
-mod terrain;
 mod text;
 mod texture;
 mod types;
@@ -204,7 +202,7 @@ pub fn main() -> anyhow::Result<()> {
         dcs.clone(),
     )?;
 
-    let mut static_map: IntMap<u32, StaticModel> = Default::default();
+    let mut static_map: IntMap<u32, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
     let mut vshader_map: IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)> = Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
@@ -366,7 +364,8 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("{} lights", point_lights.len());
 
-    let mut placement_groups: IntMap<u32, Unk8080966d> = IntMap::default();
+    let mut placement_groups: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
+        IntMap::default();
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
@@ -379,7 +378,7 @@ pub fn main() -> anyhow::Result<()> {
                 to_load.insert(*v, ());
             }
 
-            placement_groups.insert(tag.0, placements);
+            placement_groups.insert(tag.0, (placements, vec![]));
         }
     }
 
@@ -411,13 +410,14 @@ pub fn main() -> anyhow::Result<()> {
         for almostloadable in &to_load_statics {
             let mheader: Unk808071a7 = package_manager().read_tag_struct(*almostloadable).unwrap();
             for m in &mheader.materials {
-                let mat: material::Unk808071e8 = package_manager().read_tag_struct(*m).unwrap();
-                material_map.insert(m.0, mat);
+                if let Ok(mat) = package_manager().read_tag_struct(*m) {
+                    material_map.insert(m.0, mat);
+                }
             }
 
             match StaticModel::load(mheader, &dcs.device) {
                 Ok(model) => {
-                    static_map.insert(almostloadable.0, model);
+                    static_map.insert(almostloadable.0, Arc::new(model));
                 }
                 Err(e) => {
                     error!(model = ?almostloadable, "Failed to load model: {e}");
@@ -427,6 +427,32 @@ pub fn main() -> anyhow::Result<()> {
     });
 
     info!("Loaded {} statics", static_map.len());
+
+    info_span!("Constructing instance renderers").in_scope(|| {
+        let mut total_instance_data = 0;
+        for (placements, renderers) in placement_groups.values_mut() {
+            for instance in &placements.instances {
+                if let Some(model_hash) =
+                    placements.statics.iter().nth(instance.static_index as _)
+                {
+                    let _span =
+                        debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
+                            .entered();
+
+                    if let Some(model) = static_map.get(&model_hash.0) {
+                        let transforms = &placements.transforms[instance.instance_offset
+                            as usize
+                            ..(instance.instance_offset + instance.instance_count) as usize];
+
+                        renderers.push(InstancedRenderer::load(model.clone(), transforms, &dcs).unwrap());
+                    }
+
+                    total_instance_data += instance.instance_count as usize * 16 * 4;
+                }
+            }
+        }
+        debug!("Total instance data: {}kb", total_instance_data / 1024);
+    });
 
     let mut vshader_fullscreen = None;
     let mut pshader_fullscreen = None;
@@ -894,7 +920,7 @@ pub fn main() -> anyhow::Result<()> {
         )?
     };
 
-    let le_vertex_cb11 = unsafe {
+    let le_terrain_cb11 = unsafe {
         dcs.device.CreateBuffer(
             &D3D11_BUFFER_DESC {
                 Usage: D3D11_USAGE_DYNAMIC,
@@ -1118,12 +1144,18 @@ pub fn main() -> anyhow::Result<()> {
 
                         let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
 
-                        dcs.context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
+                        dcs.context
+                            .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
                         *dcs.swapchain_target.write() = Some(new_rtv);
 
                         let render_scale = gui_debug.borrow().render_scale / 100.0;
-                        gbuffer.resize(((new_dims.width as f32 * render_scale) as u32, (new_dims.height as f32 * render_scale) as u32)).expect("Failed to resize GBuffers");
+                        gbuffer
+                            .resize((
+                                (new_dims.width as f32 * render_scale) as u32,
+                                (new_dims.height as f32 * render_scale) as u32,
+                            ))
+                            .expect("Failed to resize GBuffers");
                     },
                     WindowEvent::ScaleFactorChanged { .. } => {
                         // renderer.resize();
@@ -1132,7 +1164,9 @@ pub fn main() -> anyhow::Result<()> {
                         *control_flow = ControlFlow::Exit;
                     }
                     WindowEvent::MouseInput { state, button, .. } => {
-                        if button == &MouseButton::Left && !gui_manager.imgui.io().want_capture_mouse {
+                        if button == &MouseButton::Left
+                            && !gui_manager.imgui.io().want_capture_mouse
+                        {
                             input_state.mouse1 = *state == ElementState::Pressed
                         }
                     }
@@ -1141,7 +1175,9 @@ pub fn main() -> anyhow::Result<()> {
                             let delta = (position.x - p.x, position.y - p.y);
 
                             if input_state.mouse1 && !gui_manager.imgui.io().want_capture_mouse {
-                                camera.borrow_mut().update_mouse((delta.0 as f32, delta.1 as f32).into());
+                                camera
+                                    .borrow_mut()
+                                    .update_mouse((delta.0 as f32, delta.1 as f32).into());
                             }
 
                             last_cursor_pos = Some(*position);
@@ -1185,7 +1221,6 @@ pub fn main() -> anyhow::Result<()> {
                                 _ => {}
                             }
                         }
-
                     }
 
                     _ => (),
@@ -1195,20 +1230,36 @@ pub fn main() -> anyhow::Result<()> {
                 let render_scale = gui_debug.borrow().render_scale / 100.0;
                 if gui_debug.borrow().render_scale_changed {
                     let dims = window.inner_size();
-                    gbuffer.resize(((dims.width as f32 * render_scale) as u32, (dims.height as f32 * render_scale) as u32)).expect("Failed to resize GBuffers");
+                    gbuffer
+                        .resize((
+                            (dims.width as f32 * render_scale) as u32,
+                            (dims.height as f32 * render_scale) as u32,
+                        ))
+                        .expect("Failed to resize GBuffers");
                     // Just to be safe
                     gui_debug.borrow_mut().render_scale_changed = false;
                 }
 
-                camera.borrow_mut().update(&input_state, last_frame.elapsed().as_secs_f32());
+                camera
+                    .borrow_mut()
+                    .update(&input_state, last_frame.elapsed().as_secs_f32());
                 last_frame = Instant::now();
 
                 let window_dims = window.inner_size();
 
                 unsafe {
-                    dcs.context.ClearRenderTargetView(&gbuffer.rt0.render_target, [0.0, 0.0, 0.0, 1.0].as_ptr() as _);
-                    dcs.context.ClearRenderTargetView(&gbuffer.rt1.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
-                    dcs.context.ClearRenderTargetView(&gbuffer.rt2.render_target, [0.0, 0.0, 0.0, 0.0].as_ptr() as _);
+                    dcs.context.ClearRenderTargetView(
+                        &gbuffer.rt0.render_target,
+                        [0.0, 0.0, 0.0, 1.0].as_ptr() as _,
+                    );
+                    dcs.context.ClearRenderTargetView(
+                        &gbuffer.rt1.render_target,
+                        [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+                    );
+                    dcs.context.ClearRenderTargetView(
+                        &gbuffer.rt2.render_target,
+                        [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+                    );
                     dcs.context.ClearDepthStencilView(
                         &gbuffer.depth.view,
                         D3D11_CLEAR_DEPTH.0 as _,
@@ -1225,7 +1276,6 @@ pub fn main() -> anyhow::Result<()> {
                         MaxDepth: 1.0,
                     }]));
 
-
                     dcs.context.RSSetState(&rasterizer_state);
                     dcs.context.OMSetBlendState(
                         &blend_state,
@@ -1233,13 +1283,14 @@ pub fn main() -> anyhow::Result<()> {
                         0xffffffff,
                     );
                     dcs.context.OMSetRenderTargets(
-                        Some(&[Some(gbuffer.rt0.render_target.clone()), Some(gbuffer.rt1.render_target.clone()), Some(gbuffer.rt2.render_target.clone())]),
+                        Some(&[
+                            Some(gbuffer.rt0.render_target.clone()),
+                            Some(gbuffer.rt1.render_target.clone()),
+                            Some(gbuffer.rt2.render_target.clone()),
+                        ]),
                         &gbuffer.depth.view,
                     );
-                    dcs.context.OMSetDepthStencilState(
-                        &gbuffer.depth.state,
-                        0,
-                    );
+                    dcs.context.OMSetDepthStencilState(&gbuffer.depth.state, 0);
 
                     let projection = Mat4::perspective_infinite_reverse_rh(
                         90f32.to_radians(),
@@ -1249,7 +1300,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     let view = camera.borrow_mut().calculate_matrix();
 
-                    let bmap = &dcs.context
+                    let bmap = &dcs
+                        .context
                         .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
 
@@ -1271,87 +1323,38 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.context.Unmap(&le_vertex_cb12, 0);
 
-                    dcs.context.VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                    dcs.context
+                        .VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
-                    dcs.context.PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                    dcs.context
+                        .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
 
                     let map = &maps[gui_gbuffer.borrow().map_index % maps.len()];
-                    gui_resources.borrow_mut().set_map_data(map.0, &map.1, map.2.clone(), map.3.clone());
+                    gui_resources.borrow_mut().set_map_data(
+                        map.0,
+                        &map.1,
+                        map.2.clone(),
+                        map.3.clone(),
+                    );
 
                     for ptag in &map.2 {
-                        let placements = &placement_groups[&ptag.0];
-                        for instance in &placements.instances {
-                            if let Some(model_hash) =
-                                placements.statics.iter().nth(instance.static_index as _)
-                            {
-                                let _span =
-                                    debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
-                                        .entered();
+                        let (_placements, instance_renderers) = &placement_groups[&ptag.0];
+                        for instance in instance_renderers.iter() {
+                            // let _span =
+                            //     debug_span!("Draw static instances", count = instance.instance_count, model = ?model_hash)
+                            //         .entered();
 
-                                if let Some(model) = static_map.get(&model_hash.0) {
-                                    for transform in &placements.transforms[instance.instance_offset
-                                        as usize
-                                        ..(instance.instance_offset + instance.instance_count) as usize]
-                                    {
-                                        let mm = Mat4::from_scale_rotation_translation(
-                                            Vec3::splat(transform.scale.x),
-                                            Quat::from_xyzw(
-                                                transform.rotation.x,
-                                                transform.rotation.y,
-                                                transform.rotation.z,
-                                                transform.rotation.w,
-                                            )
-                                                .inverse(),
-                                            Vec3::ZERO,
-                                        );
-
-                                        let model_matrix = Mat4::from_cols(
-                                            mm.x_axis.truncate().extend(transform.translation.x),
-                                            mm.y_axis.truncate().extend(transform.translation.y),
-                                            mm.z_axis.truncate().extend(transform.translation.z),
-                                            mm.w_axis,
-                                        );
-
-                                        let combined_matrix = model.mesh_transform() * model_matrix;
-
-                                        let bmap = &dcs.context
-                                            .Map(&le_vertex_cb11, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                                            .unwrap();
-
-                                        let scope_instance = Mat4 {
-                                            x_axis: combined_matrix.x_axis,
-                                            y_axis: combined_matrix.y_axis,
-                                            z_axis: combined_matrix.z_axis,
-                                            w_axis: model
-                                                .texcoord_transform()
-                                                .extend(f32::from_bits(u32::MAX)),
-                                        };
-
-                                        bmap.pData.copy_from_nonoverlapping(
-                                            &scope_instance as *const Mat4 as _,
-                                            std::mem::size_of::<Mat4>(),
-                                        );
-
-                                        dcs.context.Unmap(&le_vertex_cb11, 0);
-                                        dcs.context.VSSetConstantBuffers(
-                                            11,
-                                            Some(&[Some(le_vertex_cb11.clone())]),
-                                        );
-
-                                        model.draw(
-                                            &dcs.context,
-                                            &material_map,
-                                            &vshader_map,
-                                            &pshader_map,
-                                            &cbuffer_map_vs,
-                                            &cbuffer_map_ps,
-                                            &texture_map,
-                                            &sampler_map,
-                                            le_model_cb0.clone(),
-                                        );
-                                    }
-                                }
-                            }
+                            instance.draw(
+                                &dcs.context,
+                                &material_map,
+                                &vshader_map,
+                                &pshader_map,
+                                &cbuffer_map_vs,
+                                &cbuffer_map_ps,
+                                &texture_map,
+                                &sampler_map,
+                                le_model_cb0.clone(),
+                            )
                         }
                     }
 
@@ -1367,7 +1370,7 @@ pub fn main() -> anyhow::Result<()> {
                                 &texture_map,
                                 &sampler_map,
                                 le_model_cb0.clone(),
-                                &le_vertex_cb11,
+                                &le_terrain_cb11,
                             );
                         }
                     }
@@ -1386,7 +1389,8 @@ pub fn main() -> anyhow::Result<()> {
                             Some(matcap_view.clone()),
                         ]),
                     );
-                    let bmap = dcs.context
+                    let bmap = dcs
+                        .context
                         .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
                         .unwrap();
 
@@ -1395,15 +1399,24 @@ pub fn main() -> anyhow::Result<()> {
                         camera_pos: camera.borrow().position.extend(1.0),
                         camera_dir: camera.borrow().front.extend(1.0),
                         mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
-                        light_count: if gui_debug.borrow().render_lights { point_lights.len() as u32 } else { 0 },
+                        light_count: if gui_debug.borrow().render_lights {
+                            point_lights.len() as u32
+                        } else {
+                            0
+                        },
                     };
-                    bmap.pData.cast::<CompositorOptions>().copy_from_nonoverlapping(
-                        &compositor_options, 1
-                    );
+                    bmap.pData
+                        .cast::<CompositorOptions>()
+                        .copy_from_nonoverlapping(&compositor_options, 1);
 
                     dcs.context.Unmap(&cb_composite_options, 0);
-                    dcs.context
-                        .PSSetConstantBuffers(0, Some(&[Some(cb_composite_options.clone()), Some(cb_composite_lights.clone())]));
+                    dcs.context.PSSetConstantBuffers(
+                        0,
+                        Some(&[
+                            Some(cb_composite_options.clone()),
+                            Some(cb_composite_lights.clone()),
+                        ]),
+                    );
 
                     dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
@@ -1416,7 +1429,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.context.VSSetShader(&vshader_fullscreen, None);
                     dcs.context.PSSetShader(&pshader_fullscreen, None);
-                    dcs.context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                    dcs.context
+                        .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
                     dcs.context.Draw(3, 0);
 
                     gui_manager.draw_frame(&window, last_frame.elapsed());
@@ -1430,14 +1444,18 @@ pub fn main() -> anyhow::Result<()> {
             }
             Event::MainEventsCleared => {
                 let io = gui_manager.imgui.io_mut();
-                gui_manager.platform.prepare_frame(io, &window)
+                gui_manager
+                    .platform
+                    .prepare_frame(io, &window)
                     .expect("Failed to start frame");
                 window.request_redraw();
             }
             Event::LoopDestroyed => {
                 config::with_mut(|c| {
                     let size = window.inner_size();
-                    let pos = window.outer_position().unwrap_or(PhysicalPosition::default());
+                    let pos = window
+                        .outer_position()
+                        .unwrap_or(PhysicalPosition::default());
                     c.window = WindowConfig {
                         width: size.width,
                         height: size.height,
