@@ -696,17 +696,11 @@ pub fn main() -> anyhow::Result<()> {
                     let width = texture.width >> i;
                     let height = texture.height >> i;
                     let size = calculate_pitch(texture.format, width as usize, height as usize);
+                    if (required_mip_bytes + size.1) > texture_data.len() {
+                        mips = i + 1;
+                        break;
+                    }
                     required_mip_bytes += size.1;
-                }
-
-                if required_mip_bytes > texture_data.len() {
-                    warn!(
-                        "Not enough bytes to satisfy {} mips (needed 0x{:x} bytes, got 0x{:x})",
-                        mips,
-                        required_mip_bytes,
-                        texture_data.len()
-                    );
-                    mips = 1;
                 }
             }
 

@@ -98,6 +98,7 @@ impl OverlayProvider for ConsoleOverlay {
                         // .flags(WindowFlags::NO_TITLE_BAR)
                         .size([ui.window_size()[0] - 16.0, ui.window_size()[1] - 58.0])
                         .build(|| {
+                            is_focused |= ui.is_window_focused();
                             for e in c.iter() {
                                 let level_color = match e.level {
                                     Level::TRACE => [0.8, 0.4, 0.8, 1.0],
