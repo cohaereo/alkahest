@@ -42,6 +42,7 @@ lazy_static = "1.4.0"
 ringbuffer = "0.14.2"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_yaml = "0.9.25"
+parking_lot = "0.12.1"
 
 [features]
 default = []

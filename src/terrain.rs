@@ -4,7 +4,6 @@ use crate::material;
 use crate::packages::package_manager;
 use crate::static_render::LoadedTexture;
 use anyhow::Context;
-use destiny_pkg::PackageManager;
 use glam::{Mat4, Vec4};
 use nohash_hasher::IntMap;
 use windows::Win32::Graphics::Direct3D::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;

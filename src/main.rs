@@ -93,7 +93,7 @@ pub fn main() -> anyhow::Result<()> {
         .unwrap();
 
     if let Ok(c) = std::fs::read_to_string("config.yml") {
-        *CONFIGURATION.write().unwrap() = serde_yaml::from_str(&c)?;
+        *CONFIGURATION.write() = serde_yaml::from_str(&c)?;
     } else {
         info!("No config found, creating a new one");
         config::persist();
@@ -1103,7 +1103,7 @@ pub fn main() -> anyhow::Result<()> {
             Event::WindowEvent { event, .. } => {
                 match event {
                     WindowEvent::Resized(new_dims) => unsafe {
-                        *dcs.swapchain_target.write().unwrap() = None;
+                        *dcs.swapchain_target.write() = None;
                         dcs.swap_chain
                             .ResizeBuffers(
                                 1,
@@ -1120,7 +1120,7 @@ pub fn main() -> anyhow::Result<()> {
 
                         dcs.context.OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                        *dcs.swapchain_target.write().unwrap() = Some(new_rtv);
+                        *dcs.swapchain_target.write() = Some(new_rtv);
 
                         let render_scale = gui_debug.borrow().render_scale / 100.0;
                         gbuffer.resize(((new_dims.width as f32 * render_scale) as u32, (new_dims.height as f32 * render_scale) as u32)).expect("Failed to resize GBuffers");
@@ -1373,7 +1373,7 @@ pub fn main() -> anyhow::Result<()> {
                     }
 
                     dcs.context.OMSetRenderTargets(
-                        Some(&[Some(dcs.swapchain_target.read().unwrap().as_ref().unwrap().clone())]),
+                        Some(&[Some(dcs.swapchain_target.read().as_ref().unwrap().clone())]),
                         None,
                     );
                     dcs.context.PSSetShaderResources(

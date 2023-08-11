@@ -5,7 +5,6 @@ use std::time::Instant;
 
 use crate::material;
 use anyhow::{ensure, Context};
-use destiny_pkg::PackageManager;
 use glam::{Mat4, Vec3};
 use nohash_hasher::IntMap;
 

@@ -1,9 +1,10 @@
 use crate::overlays::gui::OverlayProvider;
 use imgui::Key;
 use lazy_static::lazy_static;
+use parking_lot::RwLock;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::fmt::Debug;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::layer::Context;
@@ -52,7 +53,7 @@ where
         }
 
         if let Some(message) = message {
-            MESSAGE_BUFFER.write().unwrap().push(CapturedEvent {
+            MESSAGE_BUFFER.write().push(CapturedEvent {
                 level: event.metadata().level().clone(),
                 target: event.metadata().target().to_string(),
                 message,
@@ -92,7 +93,7 @@ impl OverlayProvider for ConsoleOverlay {
             ui.window("Console").opened(&mut self.open).build(|| {
                 is_focused = ui.is_window_focused();
 
-                let c = MESSAGE_BUFFER.read().unwrap();
+                let c = MESSAGE_BUFFER.read();
                 ui.group(|| {
                     ui.child_window("Console log")
                         // .flags(WindowFlags::NO_TITLE_BAR)

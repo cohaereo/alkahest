@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
 use tracing::warn;
 
 lazy_static! {
@@ -10,8 +10,7 @@ lazy_static! {
 pub fn persist() {
     if let Err(e) = std::fs::write(
         "config.yml",
-        serde_yaml::to_string(&*CONFIGURATION.read().unwrap())
-            .expect("Fatal: failed to write config"),
+        serde_yaml::to_string(&*CONFIGURATION.read()).expect("Fatal: failed to write config"),
     ) {
         warn!("Failed to write config: {e}");
     }
@@ -21,20 +20,20 @@ pub fn with<F, T>(f: F) -> T
 where
     F: FnOnce(&Config) -> T,
 {
-    f(&*CONFIGURATION.read().unwrap())
+    f(&*CONFIGURATION.read())
 }
 
 pub fn with_mut<F, T>(f: F) -> T
 where
     F: FnOnce(&mut Config) -> T,
 {
-    f(&mut *CONFIGURATION.write().unwrap())
+    f(&mut *CONFIGURATION.write())
 }
 
 #[macro_export]
 macro_rules! config {
     () => {
-        (CONFIGURATION.read().unwrap())
+        (CONFIGURATION.read())
     };
 }
 

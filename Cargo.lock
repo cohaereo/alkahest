@@ -81,6 +81,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "nohash-hasher",
+ "parking_lot",
  "raw-window-handle 0.5.2",
  "rayon",
  "ringbuffer",
