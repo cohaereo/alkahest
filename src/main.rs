@@ -35,6 +35,7 @@ use winit::{
 };
 
 use crate::camera::{FpsCamera, InputState};
+use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
@@ -58,6 +59,7 @@ use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
 
 mod camera;
+mod config;
 mod dds;
 mod dxbc;
 mod dxgi;
@@ -89,6 +91,13 @@ pub fn main() -> anyhow::Result<()> {
         .thread_name(|i| format!("rayon-worker-{i}"))
         .build_global()
         .unwrap();
+
+    if let Ok(c) = std::fs::read_to_string("config.yml") {
+        *CONFIGURATION.write().unwrap() = serde_yaml::from_str(&c)?;
+    } else {
+        info!("No config found, creating a new one");
+        config::persist();
+    }
 
     if cfg!(feature = "tracy") {
         tracing::subscriber::set_global_default(
@@ -179,7 +188,13 @@ pub fn main() -> anyhow::Result<()> {
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
-        .with_inner_size(PhysicalSize::new(1600u32, 900u32))
+        .with_inner_size(config::with(|c| {
+            PhysicalSize::new(c.window.width, c.window.height)
+        }))
+        .with_position(config::with(|c| {
+            PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
+        }))
+        .with_maximized(config!().window.maximised)
         .build(&event_loop)?;
 
     // cohae: Slight concern for thread safety here. ID3D11Device is threadsafe, but ID3D11DeviceContext is *not*
@@ -1064,7 +1079,7 @@ pub fn main() -> anyhow::Result<()> {
         map_resource_distance: 2000.0,
         render_scale: 100.0,
         render_scale_changed: false,
-        render_lights: true,
+        render_lights: false,
     }));
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
         debug_overlay: gui_debug.clone(),
@@ -1418,6 +1433,20 @@ pub fn main() -> anyhow::Result<()> {
                 gui_manager.platform.prepare_frame(io, &window)
                     .expect("Failed to start frame");
                 window.request_redraw();
+            }
+            Event::LoopDestroyed => {
+                config::with_mut(|c| {
+                    let size = window.inner_size();
+                    let pos = window.outer_position().unwrap_or(PhysicalPosition::default());
+                    c.window = WindowConfig {
+                        width: size.width,
+                        height: size.height,
+                        pos_x: pos.x,
+                        pos_y: pos.y,
+                        maximised: window.is_maximized(),
+                    };
+                });
+                config::persist();
             }
             _ => (),
         }
