@@ -1,28 +1,28 @@
 use crate::material;
 use crate::render::scopes::ScopeStaticInstance;
 use crate::render::static_render::LoadedTexture;
-use crate::render::{DeviceContextSwapchain, StaticModel};
+use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 use crate::statics::Unk808071a3;
+use crate::types::Vector4;
 use glam::{Mat4, Quat, Vec3};
 use nohash_hasher::IntMap;
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Buffer, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader, ID3D11SamplerState,
-    ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BUFFER_DESC, D3D11_CPU_ACCESS_WRITE,
-    D3D11_SUBRESOURCE_DATA, D3D11_USAGE_DYNAMIC,
+    ID3D11VertexShader,
 };
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
     instance_count: usize,
-    instance_buffer: ID3D11Buffer,
+    instance_buffer: ConstantBuffer<ScopeStaticInstance>,
 }
 
 impl InstancedRenderer {
     pub fn load(
         model: Arc<StaticModel>,
         instances: &[Unk808071a3],
-        dcs: &DeviceContextSwapchain,
+        dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
         let mut instance_data: Vec<ScopeStaticInstance> = Vec::with_capacity(instances.len());
 
@@ -60,23 +60,7 @@ impl InstancedRenderer {
             instance_data.push(scope_instance);
         }
 
-        let instance_buffer = unsafe {
-            dcs.device.CreateBuffer(
-                &D3D11_BUFFER_DESC {
-                    Usage: D3D11_USAGE_DYNAMIC,
-                    BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                    CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                    ByteWidth: (std::mem::size_of::<ScopeStaticInstance>() * instance_data.len())
-                        as _,
-                    ..Default::default()
-                },
-                Some(&D3D11_SUBRESOURCE_DATA {
-                    pSysMem: instance_data.as_ptr() as _,
-                    SysMemPitch: std::mem::size_of::<ScopeStaticInstance>() as _,
-                    ..Default::default()
-                }),
-            )?
-        };
+        let instance_buffer = ConstantBuffer::create_array_init(dcs.clone(), &instance_data)?;
 
         Ok(Self {
             renderer: model,
@@ -91,14 +75,15 @@ impl InstancedRenderer {
         materials: &IntMap<u32, material::Unk808071e8>,
         vshaders: &IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
-        cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
+        cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
+        cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
         textures: &IntMap<u32, LoadedTexture>,
         samplers: &IntMap<u32, ID3D11SamplerState>,
         cbuffer_default: ID3D11Buffer,
     ) {
         unsafe {
-            device_context.VSSetConstantBuffers(11, Some(&[Some(self.instance_buffer.clone())]));
+            device_context
+                .VSSetConstantBuffers(11, Some(&[Some(self.instance_buffer.buffer().clone())]));
         }
 
         self.renderer.draw(

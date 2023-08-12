@@ -51,10 +51,11 @@ use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
-use crate::render::{DeviceContextSwapchain, GBuffer, InstancedRenderer};
+use crate::render::{ConstantBuffer, DeviceContextSwapchain, GBuffer, InstancedRenderer};
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::{TextureHandle, TextureHeader};
+use crate::types::Vector4;
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
 
@@ -206,8 +207,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
     let mut vshader_map: IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)> = Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
-    let mut cbuffer_map_vs: IntMap<u32, ID3D11Buffer> = Default::default();
-    let mut cbuffer_map_ps: IntMap<u32, ID3D11Buffer> = Default::default();
+    let mut cbuffer_map_vs: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
+    let mut cbuffer_map_ps: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
@@ -444,7 +445,7 @@ pub fn main() -> anyhow::Result<()> {
                             as usize
                             ..(instance.instance_offset + instance.instance_count) as usize];
 
-                        renderers.push(InstancedRenderer::load(model.clone(), transforms, &dcs).unwrap());
+                        renderers.push(InstancedRenderer::load(model.clone(), transforms, dcs.clone()).unwrap());
                     }
 
                     total_instance_data += instance.instance_count as usize * 16 * 4;
@@ -588,24 +589,7 @@ pub fn main() -> anyhow::Result<()> {
                     .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
-                let buf = unsafe {
-                    dcs.device
-                        .CreateBuffer(
-                            &D3D11_BUFFER_DESC {
-                                Usage: D3D11_USAGE_DYNAMIC,
-                                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                                ByteWidth: (m.unk98.len() * std::mem::size_of::<Vec4>()) as _,
-                                ..Default::default()
-                            },
-                            Some(&D3D11_SUBRESOURCE_DATA {
-                                pSysMem: m.unk98.as_ptr() as _,
-                                ..Default::default()
-                            }),
-                        )
-                        .context("Failed to load float4 cbuffer")
-                        .unwrap()
-                };
+                let buf = ConstantBuffer::create_array_init(dcs.clone(), &m.unk98).unwrap();
 
                 cbuffer_map_vs.insert(*t, buf);
             }
@@ -618,24 +602,9 @@ pub fn main() -> anyhow::Result<()> {
                     "Read {} bytes cbuffer from {buffer_header_ref:?}",
                     buffer.len()
                 );
-                let buf = unsafe {
-                    dcs.device
-                        .CreateBuffer(
-                            &D3D11_BUFFER_DESC {
-                                Usage: D3D11_USAGE_DYNAMIC,
-                                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                                ByteWidth: buffer.len() as _,
-                                ..Default::default()
-                            },
-                            Some(&D3D11_SUBRESOURCE_DATA {
-                                pSysMem: buffer.as_ptr() as _,
-                                ..Default::default()
-                            }),
-                        )
-                        .context("Failed to load variable cbuffer")
-                        .unwrap()
-                };
+                let buf =
+                    ConstantBuffer::create_array_init(dcs.clone(), bytemuck::cast_slice(&buffer))
+                        .unwrap();
 
                 cbuffer_map_ps.insert(*t, buf);
             } else if !m.unk318.is_empty()
@@ -644,24 +613,7 @@ pub fn main() -> anyhow::Result<()> {
                     .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
-                let buf = unsafe {
-                    dcs.device
-                        .CreateBuffer(
-                            &D3D11_BUFFER_DESC {
-                                Usage: D3D11_USAGE_DYNAMIC,
-                                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                                ByteWidth: (m.unk318.len() * std::mem::size_of::<Vec4>()) as _,
-                                ..Default::default()
-                            },
-                            Some(&D3D11_SUBRESOURCE_DATA {
-                                pSysMem: m.unk318.as_ptr() as _,
-                                ..Default::default()
-                            }),
-                        )
-                        .context("Failed to load float4 cbuffer")
-                        .unwrap()
-                };
+                let buf = ConstantBuffer::create_array_init(dcs.clone(), &m.unk318).unwrap();
 
                 cbuffer_map_ps.insert(*t, buf);
             }
@@ -881,111 +833,17 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} samplers", sampler_map.len());
 
-    let _le_cbuffer = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: 2 * (4 * 4 * 4) + 4 * 4,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
+    let le_model_cb0 =
+        ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &[Vec4::splat(0.6); 64])?;
 
-    let _le_model_cbuffer = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: (4 * 4 * 4) * 3,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
+    let le_terrain_cb11 = ConstantBuffer::<Mat4>::create(dcs.clone(), None)?;
 
-    let le_model_cb0 = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: (64 * 4) * 4,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
+    let le_vertex_cb12 = ConstantBuffer::<ScopeView>::create(dcs.clone(), None)?;
 
-    let le_terrain_cb11 = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: std::mem::size_of::<Mat4>() as _,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
+    let cb_composite_lights =
+        ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
 
-    let le_vertex_cb12 = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: std::mem::size_of::<ScopeView>() as _,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
-
-    let cb_composite_lights = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: (std::mem::size_of::<Vec4>() * 1024) as _,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
-
-    unsafe {
-        let bmap = dcs
-            .context
-            .Map(&cb_composite_lights, 0, D3D11_MAP_WRITE_DISCARD, 0)
-            .context("Failed to map model cbuffer11")
-            .unwrap();
-
-        bmap.pData.copy_from_nonoverlapping(
-            point_lights.as_ptr() as _,
-            std::mem::size_of::<Vec4>() * point_lights.len(),
-        );
-
-        dcs.context.Unmap(&cb_composite_lights, 0);
-    }
-
-    let cb_composite_options = unsafe {
-        dcs.device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                Usage: D3D11_USAGE_DYNAMIC,
-                BindFlags: D3D11_BIND_CONSTANT_BUFFER,
-                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE,
-                ByteWidth: std::mem::size_of::<CompositorOptions> as _,
-                ..Default::default()
-            },
-            None,
-        )?
-    };
+    let cb_composite_options = ConstantBuffer::<CompositorOptions>::create(dcs.clone(), None)?;
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -1018,20 +876,6 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let camera: Rc<RefCell<FpsCamera>> = Rc::new(RefCell::new(FpsCamera::default()));
-
-    unsafe {
-        let cb11_data = vec![Vec4::splat(0.6); 128];
-        let bmap = dcs
-            .context
-            .Map(&le_model_cb0, 0, D3D11_MAP_WRITE_DISCARD, 0)
-            .context("Failed to map model cbuffer11")
-            .unwrap();
-
-        bmap.pData
-            .copy_from_nonoverlapping(cb11_data.as_ptr() as _, std::mem::size_of::<Vec4>() * 64);
-
-        dcs.context.Unmap(&le_model_cb0, 0);
-    }
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
@@ -1112,7 +956,7 @@ pub fn main() -> anyhow::Result<()> {
         map: (0, String::new(), vec![], vec![]),
     }));
     let mut gui_manager = GuiManager::create(&window, &dcs.device);
-    let mut gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
+    let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui_manager.add_overlay(Box::new(gui_fps.clone()));
     gui_manager.add_overlay(Box::new(gui_debug.clone()));
     gui_manager.add_overlay(Box::new(gui_gbuffer.clone()));
@@ -1194,7 +1038,7 @@ pub fn main() -> anyhow::Result<()> {
                             if input.state == ElementState::Pressed {
                                 match input.virtual_keycode {
                                     Some(VirtualKeyCode::Q) => {
-                                        if input.modifiers.ctrl() {
+                                        if input_state.ctrl {
                                             *control_flow = ControlFlow::Exit
                                         }
                                     }
@@ -1300,11 +1144,6 @@ pub fn main() -> anyhow::Result<()> {
 
                     let view = camera.borrow_mut().calculate_matrix();
 
-                    let bmap = &dcs
-                        .context
-                        .Map(&le_vertex_cb12, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                        .unwrap();
-
                     let proj_view = projection * view;
                     let mut view2 = Mat4::IDENTITY;
                     view2.w_axis = camera.borrow_mut().position.extend(1.0);
@@ -1316,18 +1155,13 @@ pub fn main() -> anyhow::Result<()> {
                         view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
                         ..Default::default()
                     };
-                    bmap.pData.copy_from_nonoverlapping(
-                        &scope_view as *const ScopeView as _,
-                        std::mem::size_of::<ScopeView>(),
-                    );
-
-                    dcs.context.Unmap(&le_vertex_cb12, 0);
+                    le_vertex_cb12.write(&scope_view).unwrap();
 
                     dcs.context
-                        .VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                        .VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
 
                     dcs.context
-                        .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.clone())]));
+                        .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
 
                     let map = &maps[gui_gbuffer.borrow().map_index % maps.len()];
                     gui_resources.borrow_mut().set_map_data(
@@ -1340,10 +1174,6 @@ pub fn main() -> anyhow::Result<()> {
                     for ptag in &map.2 {
                         let (_placements, instance_renderers) = &placement_groups[&ptag.0];
                         for instance in instance_renderers.iter() {
-                            // let _span =
-                            //     debug_span!("Draw static instances", count = instance.instance_count, model = ?model_hash)
-                            //         .entered();
-
                             instance.draw(
                                 &dcs.context,
                                 &material_map,
@@ -1353,7 +1183,7 @@ pub fn main() -> anyhow::Result<()> {
                                 &cbuffer_map_ps,
                                 &texture_map,
                                 &sampler_map,
-                                le_model_cb0.clone(),
+                                le_model_cb0.buffer().clone(),
                             )
                         }
                     }
@@ -1369,8 +1199,8 @@ pub fn main() -> anyhow::Result<()> {
                                 &cbuffer_map_ps,
                                 &texture_map,
                                 &sampler_map,
-                                le_model_cb0.clone(),
-                                &le_terrain_cb11,
+                                le_model_cb0.buffer().clone(),
+                                le_terrain_cb11.buffer(),
                             );
                         }
                     }
@@ -1389,10 +1219,6 @@ pub fn main() -> anyhow::Result<()> {
                             Some(matcap_view.clone()),
                         ]),
                     );
-                    let bmap = dcs
-                        .context
-                        .Map(&cb_composite_options, 0, D3D11_MAP_WRITE_DISCARD, 0)
-                        .unwrap();
 
                     let compositor_options = CompositorOptions {
                         proj_view_matrix_inv: proj_view.inverse(),
@@ -1405,16 +1231,13 @@ pub fn main() -> anyhow::Result<()> {
                             0
                         },
                     };
-                    bmap.pData
-                        .cast::<CompositorOptions>()
-                        .copy_from_nonoverlapping(&compositor_options, 1);
+                    cb_composite_options.write(&compositor_options).unwrap();
 
-                    dcs.context.Unmap(&cb_composite_options, 0);
                     dcs.context.PSSetConstantBuffers(
                         0,
                         Some(&[
-                            Some(cb_composite_options.clone()),
-                            Some(cb_composite_lights.clone()),
+                            Some(cb_composite_options.buffer().clone()),
+                            Some(cb_composite_lights.buffer().clone()),
                         ]),
                     );
 

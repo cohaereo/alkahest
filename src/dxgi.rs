@@ -155,6 +155,7 @@ impl TryFrom<u32> for DxgiFormat {
     }
 }
 
+#[allow(unused)]
 impl DxgiFormat {
     // https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format#syntax
     // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFormat.html#_c_specification

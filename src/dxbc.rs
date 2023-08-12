@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use binrw::{BinRead, BinReaderExt, BinResult, Endian, FilePtr32, NullString};
-use bitflags::{bitflags, Flags};
+use bitflags::bitflags;
 use std::io::{Read, Seek, SeekFrom};
 use windows::core::PCSTR;
 
@@ -22,12 +22,12 @@ pub struct DxbcInputSignature {
     pub chunk_size: u32,
 
     #[br(try_calc(__binrw_generated_var_reader.stream_position()))]
-    string_base_offset: u64,
+    _string_base_offset: u64,
 
     pub element_count: u32,
     pub _unkc: u32,
 
-    #[br(count = element_count, args { inner: (string_base_offset,) })]
+    #[br(count = element_count, args { inner: (_string_base_offset,) })]
     pub elements: Vec<DxbcInputElement>,
 }
 

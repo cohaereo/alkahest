@@ -90,12 +90,6 @@ pub struct Vector4 {
     pub w: f32,
 }
 
-impl Vector4 {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
-        Self { x, y, z, w }
-    }
-}
-
 impl Debug for Vector2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("Vector2(x={:.3}, y={:.3})", self.x, self.y))

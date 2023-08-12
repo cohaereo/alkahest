@@ -1,4 +1,4 @@
-use glam::{Mat4, Quat, Vec2, Vec3};
+use glam::{Mat4, Vec2, Vec3};
 
 pub struct InputState {
     pub w: bool,
@@ -94,12 +94,8 @@ impl FpsCamera {
         Mat4::look_at_rh(self.position, self.position + self.front, Vec3::Z)
     }
 
-    pub fn rotation(&self) -> Quat {
-        Quat::from_rotation_y(self.orientation.y.to_radians())
-            * Quat::from_rotation_x(self.orientation.x.to_radians())
-    }
-
-    pub fn position(&mut self) -> Vec3 {
-        self.position
-    }
+    // pub fn rotation(&self) -> Quat {
+    //     Quat::from_rotation_y(self.orientation.y.to_radians())
+    //         * Quat::from_rotation_x(self.orientation.x.to_radians())
+    // }
 }

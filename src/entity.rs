@@ -112,10 +112,6 @@ impl ELodCategory {
                 | ELodCategory::Lod_Detail
         )
     }
-
-    pub fn is_lowest_detail(&self) -> bool {
-        matches!(self, ELodCategory::Lod_3_0)
-    }
 }
 
 #[derive(BinRead, Debug)]

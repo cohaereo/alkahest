@@ -113,94 +113,92 @@ pub struct DepthState {
 
 impl DepthState {
     pub fn create(size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<Self> {
-        unsafe {
-            let texture = unsafe {
-                device
-                    .CreateTexture2D(
-                        &D3D11_TEXTURE2D_DESC {
-                            Width: size.0,
-                            Height: size.1,
-                            MipLevels: 1,
-                            ArraySize: 1,
-                            Format: DXGI_FORMAT_R32_TYPELESS,
-                            SampleDesc: DXGI_SAMPLE_DESC {
-                                Count: 1,
-                                Quality: 0,
-                            },
-                            Usage: D3D11_USAGE_DEFAULT,
-                            BindFlags: D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-                            CPUAccessFlags: Default::default(),
-                            MiscFlags: Default::default(),
+        let texture = unsafe {
+            device
+                .CreateTexture2D(
+                    &D3D11_TEXTURE2D_DESC {
+                        Width: size.0,
+                        Height: size.1,
+                        MipLevels: 1,
+                        ArraySize: 1,
+                        Format: DXGI_FORMAT_R32_TYPELESS,
+                        SampleDesc: DXGI_SAMPLE_DESC {
+                            Count: 1,
+                            Quality: 0,
                         },
-                        None,
-                    )
-                    .context("Failed to create depth texture")?
-            };
+                        Usage: D3D11_USAGE_DEFAULT,
+                        BindFlags: D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
+                        CPUAccessFlags: Default::default(),
+                        MiscFlags: Default::default(),
+                    },
+                    None,
+                )
+                .context("Failed to create depth texture")?
+        };
 
-            let state = unsafe {
-                device
-                    .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
-                        DepthEnable: true.into(),
-                        DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ALL,
-                        DepthFunc: D3D11_COMPARISON_GREATER_EQUAL,
-                        StencilEnable: false.into(),
-                        StencilReadMask: 0xff,
-                        StencilWriteMask: 0xff,
-                        FrontFace: D3D11_DEPTH_STENCILOP_DESC {
-                            StencilFailOp: D3D11_STENCIL_OP_KEEP,
-                            StencilDepthFailOp: D3D11_STENCIL_OP_INCR,
-                            StencilPassOp: D3D11_STENCIL_OP_KEEP,
-                            StencilFunc: D3D11_COMPARISON_ALWAYS,
-                        },
-                        BackFace: D3D11_DEPTH_STENCILOP_DESC {
-                            StencilFailOp: D3D11_STENCIL_OP_KEEP,
-                            StencilDepthFailOp: D3D11_STENCIL_OP_DECR,
-                            StencilPassOp: D3D11_STENCIL_OP_KEEP,
-                            StencilFunc: D3D11_COMPARISON_ALWAYS,
-                        },
-                    })
-                    .context("Failed to create depth stencil state")?
-            };
+        let state = unsafe {
+            device
+                .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
+                    DepthEnable: true.into(),
+                    DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ALL,
+                    DepthFunc: D3D11_COMPARISON_GREATER_EQUAL,
+                    StencilEnable: false.into(),
+                    StencilReadMask: 0xff,
+                    StencilWriteMask: 0xff,
+                    FrontFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: D3D11_STENCIL_OP_KEEP,
+                        StencilDepthFailOp: D3D11_STENCIL_OP_INCR,
+                        StencilPassOp: D3D11_STENCIL_OP_KEEP,
+                        StencilFunc: D3D11_COMPARISON_ALWAYS,
+                    },
+                    BackFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: D3D11_STENCIL_OP_KEEP,
+                        StencilDepthFailOp: D3D11_STENCIL_OP_DECR,
+                        StencilPassOp: D3D11_STENCIL_OP_KEEP,
+                        StencilFunc: D3D11_COMPARISON_ALWAYS,
+                    },
+                })
+                .context("Failed to create depth stencil state")?
+        };
 
-            let view = unsafe {
-                device
-                    .CreateDepthStencilView(
-                        &texture,
-                        Some(&D3D11_DEPTH_STENCIL_VIEW_DESC {
-                            Format: DXGI_FORMAT_D32_FLOAT,
-                            ViewDimension: D3D11_DSV_DIMENSION_TEXTURE2D,
-                            Flags: 0,
-                            Anonymous: D3D11_DEPTH_STENCIL_VIEW_DESC_0 {
-                                Texture2D: { D3D11_TEX2D_DSV { MipSlice: 0 } },
-                            },
-                        }),
-                    )
-                    .context("Failed to create depth stencil view")?
-            };
-
-            let texture_view = unsafe {
-                device.CreateShaderResourceView(
+        let view = unsafe {
+            device
+                .CreateDepthStencilView(
                     &texture,
-                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: DXGI_FORMAT_R32_FLOAT,
-                        ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                            Texture2D: D3D11_TEX2D_SRV {
-                                MostDetailedMip: 0,
-                                MipLevels: 1,
-                            },
+                    Some(&D3D11_DEPTH_STENCIL_VIEW_DESC {
+                        Format: DXGI_FORMAT_D32_FLOAT,
+                        ViewDimension: D3D11_DSV_DIMENSION_TEXTURE2D,
+                        Flags: 0,
+                        Anonymous: D3D11_DEPTH_STENCIL_VIEW_DESC_0 {
+                            Texture2D: { D3D11_TEX2D_DSV { MipSlice: 0 } },
                         },
                     }),
-                )?
-            };
+                )
+                .context("Failed to create depth stencil view")?
+        };
 
-            Ok(Self {
-                texture,
-                state,
-                view,
-                texture_view,
-            })
-        }
+        let texture_view = unsafe {
+            device.CreateShaderResourceView(
+                &texture,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: DXGI_FORMAT_R32_FLOAT,
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Texture2D: D3D11_TEX2D_SRV {
+                            MostDetailedMip: 0,
+                            MipLevels: 1,
+                        },
+                    },
+                }),
+            )?
+        };
+
+        Ok(Self {
+            texture,
+            state,
+            view,
+            texture_view,
+        })
     }
 
     pub fn resize(&mut self, new_size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<()> {

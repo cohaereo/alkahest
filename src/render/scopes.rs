@@ -1,7 +1,5 @@
 use glam::{Mat4, Vec4};
 
-pub type Mat3x4 = [Vec4; 3];
-
 #[repr(C)]
 #[derive(Default)]
 pub struct ScopeView {

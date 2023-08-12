@@ -1,9 +1,9 @@
 use crate::dxgi::DxgiFormat;
 use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
-use std::time::Instant;
 
 use crate::material;
+use crate::types::Vector4;
 use anyhow::{ensure, Context};
 use glam::{Mat4, Vec3};
 use nohash_hasher::IntMap;
@@ -16,6 +16,8 @@ use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
 };
+
+use super::ConstantBuffer;
 
 pub struct StaticModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
@@ -42,9 +44,6 @@ pub struct StaticModel {
     mesh_groups: Vec<Unk8080719b>,
 
     model: Unk808071a7,
-
-    // TODO: Remove, just for testing
-    start_time: Instant,
 }
 
 impl StaticModel {
@@ -166,7 +165,6 @@ impl StaticModel {
             model,
             parts: header.parts.to_vec(),
             mesh_groups: header.unk8.to_vec(),
-            start_time: Instant::now(),
         })
     }
 
@@ -176,8 +174,8 @@ impl StaticModel {
         materials: &IntMap<u32, material::Unk808071e8>,
         vshaders: &IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
-        cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
+        cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
+        cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
         textures: &IntMap<u32, LoadedTexture>,
         samplers: &IntMap<u32, ID3D11SamplerState>,
         cbuffer_default: ID3D11Buffer,
@@ -222,15 +220,8 @@ impl StaticModel {
                         if let Some(cbuffer) =
                             cbuffers_ps.get(&self.model.materials.get(iu).unwrap().0)
                         {
-                            device_context.PSSetConstantBuffers(
-                                0,
-                                Some(&[
-                                    Some(cbuffer.clone()),
-                                    Some(cbuffer.clone()),
-                                    Some(cbuffer.clone()),
-                                    Some(cbuffer.clone()),
-                                ]),
-                            );
+                            device_context
+                                .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                         } else {
                             device_context.PSSetConstantBuffers(
                                 0,
@@ -258,15 +249,8 @@ impl StaticModel {
                             //     device_context.Unmap(cbuffer, 0);
                             // }
 
-                            device_context.VSSetConstantBuffers(
-                                0,
-                                Some(&[
-                                    Some(cbuffer.clone()),
-                                    Some(cbuffer.clone()),
-                                    Some(cbuffer.clone()),
-                                    Some(cbuffer.clone()),
-                                ]),
-                            );
+                            device_context
+                                .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                         } else {
                             device_context.VSSetConstantBuffers(
                                 0,

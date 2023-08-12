@@ -3,6 +3,7 @@ use crate::map::Unk8080714f;
 use crate::material;
 use crate::packages::package_manager;
 use crate::render::static_render::LoadedTexture;
+use crate::types::Vector4;
 use anyhow::Context;
 use glam::{Mat4, Vec4};
 use nohash_hasher::IntMap;
@@ -15,6 +16,8 @@ use windows::Win32::Graphics::Direct3D11::{
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
 };
+
+use super::ConstantBuffer;
 
 pub struct TerrainRenderer {
     terrain: Unk8080714f,
@@ -117,8 +120,8 @@ impl TerrainRenderer {
         materials: &IntMap<u32, material::Unk808071e8>,
         vshaders: &IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers_vs: &IntMap<u32, ID3D11Buffer>,
-        cbuffers_ps: &IntMap<u32, ID3D11Buffer>,
+        cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
+        cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
         textures: &IntMap<u32, LoadedTexture>,
         samplers: &IntMap<u32, ID3D11SamplerState>,
         cbuffer_default: ID3D11Buffer,
@@ -167,7 +170,7 @@ impl TerrainRenderer {
                 }
 
                 if let Some(cbuffer) = cbuffers_ps.get(&part.material.0) {
-                    device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer.clone())]));
+                    device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                 } else {
                     device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer_default.clone())]));
                 }
@@ -183,7 +186,7 @@ impl TerrainRenderer {
                 }
 
                 if let Some(cbuffer) = cbuffers_vs.get(&part.material.0) {
-                    device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer.clone())]));
+                    device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                 } else {
                     device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer_default.clone())]));
                 }

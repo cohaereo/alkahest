@@ -16,6 +16,7 @@ pub struct DeviceContextSwapchain {
 }
 
 impl DeviceContextSwapchain {
+    #[allow(const_item_mutation)]
     pub fn create(window: &Window) -> anyhow::Result<Self> {
         let mut device: Option<ID3D11Device> = None;
         let mut swap_chain: Option<IDXGISwapChain> = None;
