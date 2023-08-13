@@ -873,6 +873,8 @@ pub fn main() -> anyhow::Result<()> {
         shift: false,
         ctrl: false,
         space: false,
+        q: false,
+        e: false,
     };
 
     let camera: Rc<RefCell<FpsCamera>> = Rc::new(RefCell::new(FpsCamera::default()));
@@ -949,6 +951,8 @@ pub fn main() -> anyhow::Result<()> {
         map_resource_distance: 2000.0,
         render_scale: 100.0,
         render_scale_changed: false,
+        speed_multiplier: 1.0,
+        speed_multiplier_changed: false,
         render_lights: false,
     }));
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
@@ -1062,6 +1066,12 @@ pub fn main() -> anyhow::Result<()> {
                                 Some(VirtualKeyCode::Space) => {
                                     input_state.space = input.state == ElementState::Pressed
                                 }
+                                Some(VirtualKeyCode::Q) => {
+                                    input_state.q = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::E) => {
+                                    input_state.e = input.state == ElementState::Pressed
+                                }
                                 _ => {}
                             }
                         }
@@ -1082,6 +1092,11 @@ pub fn main() -> anyhow::Result<()> {
                         .expect("Failed to resize GBuffers");
                     // Just to be safe
                     gui_debug.borrow_mut().render_scale_changed = false;
+                }
+
+                if gui_debug.borrow().speed_multiplier_changed {
+                    gui_debug.borrow_mut().speed_multiplier_changed = false;
+                    camera.borrow_mut().speed_mul = gui_debug.borrow().speed_multiplier;
                 }
 
                 camera
