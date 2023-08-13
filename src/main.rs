@@ -783,6 +783,14 @@ pub fn main() -> anyhow::Result<()> {
                         .context("Failed to create texture")
                         .unwrap();
 
+                    let name = format!("Tex {:?}/0x{:08x}\0", tex_hash, tex_hash.0);
+                    tex.SetPrivateData(
+                        &WKPDID_D3DDebugObjectName,
+                        name.len() as u32 - 1,
+                        Some(name.as_ptr() as _),
+                    )
+                    .expect("Failed to set VS name");
+
                     let view = dcs
                         .device
                         .CreateShaderResourceView(

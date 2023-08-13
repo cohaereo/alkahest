@@ -147,8 +147,9 @@ impl TerrainRenderer {
                         self.terrain.unk30.w,
                     );
 
+                    // let texcoord_transform = Vec4::new(4.0, 4.0, 0.0, 0.0);
                     let texcoord_transform =
-                        Vec4::new(group.unk20.x, group.unk20.y, group.unk20.z, group.unk20.z);
+                        Vec4::new(group.unk20.x, group.unk20.y, group.unk20.z, group.unk20.w);
 
                     // * Not scope_instance, same buffer index but not the same format
                     let scope_terrain =

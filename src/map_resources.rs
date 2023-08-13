@@ -1,6 +1,4 @@
-use crate::icons::{
-    ICON_CHESS_PAWN, ICON_HELP, ICON_LIGHTBULB_ON, ICON_SPHERE,
-};
+use crate::icons::{ICON_CHESS_PAWN, ICON_HELP, ICON_LIGHTBULB_ON, ICON_SPHERE};
 use crate::structure::RelPointer;
 use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, NullString};
@@ -21,12 +19,16 @@ pub enum MapResource {
 impl MapResource {
     pub fn debug_string(&self) -> String {
         match self {
-            MapResource::Entity(e) => format!("Entity 0x{:08x}", e.0),
+            MapResource::Entity(e) => format!("Entity {:08X}", e.0.to_be()),
             MapResource::CubemapVolume(c) => {
-                format!("Cubemap Volume\n'{}'", c.cubemap_name.to_string())
+                format!(
+                    "Cubemap Volume\n'{}' ({:08X})",
+                    c.cubemap_name.to_string(),
+                    c.cubemap_texture.0.to_be()
+                )
             }
             MapResource::PointLight(_) => format!("Point light"),
-            MapResource::Unknown(u) => format!("Unknown {u:08x}"),
+            MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
         }
     }
 
