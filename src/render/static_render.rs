@@ -187,10 +187,6 @@ impl StaticModel {
                 .iter()
                 .enumerate()
                 .filter(|(_, u)| u.unk2 == 0)
-            // for p in self
-            //     .parts
-            //     .iter()
-            //     .filter(|p| p.lod_category.is_highest_detail())
             {
                 let p = &self.parts[u.part_index as usize];
                 if !p.lod_category.is_highest_detail() {

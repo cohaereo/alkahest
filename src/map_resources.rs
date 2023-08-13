@@ -5,9 +5,9 @@ use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
 use std::mem::MaybeUninit;
-use strum::{EnumCount, EnumVariantNames};
+use strum::{EnumCount, EnumIs, EnumVariantNames};
 
-#[derive(Clone, EnumVariantNames, EnumCount)]
+#[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
 #[repr(u8)]
 pub enum MapResource {
     // PlacementGroup(TagHash),
@@ -146,7 +146,7 @@ pub struct Unk80806e68 {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80806e6c {
-    pub material: TagHash, // Tag<material::Unk808071e8>,
+    pub material: TagHash,
     pub start: u16,
     pub count: u16,
 }

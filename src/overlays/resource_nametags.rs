@@ -96,11 +96,26 @@ impl OverlayProvider for ResourceTypeOverlay {
                             );
 
                             ui.set_window_font_scale(1.0);
-                            draw_list.add_text(
-                                (screen_point + Vec2::new(20.0, 0.0)).to_array(),
-                                color,
-                                res.resource.debug_string(),
-                            );
+                            if self.debug_overlay.borrow().show_map_resource_label {
+                                draw_list.add_text(
+                                    (screen_point + Vec2::new(20.0, 0.0)).to_array(),
+                                    color,
+                                    res.resource.debug_string(),
+                                );
+
+                                if res.entity.is_valid()
+                                    && !res.resource.is_entity()
+                                    && !res.resource.is_decal()
+                                {
+                                    let offset = ui.calc_text_size(res.resource.debug_string());
+                                    draw_list.add_text(
+                                        (screen_point + Vec2::new(20.0 + offset[0], 0.0))
+                                            .to_array(),
+                                        ImColor32::WHITE,
+                                        format!(" (ent {})", res.entity),
+                                    );
+                                }
+                            }
                         }
                     });
                 });
@@ -111,6 +126,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 #[derive(Clone)]
 pub struct ResourcePoint {
     pub position: Vec4,
+    pub entity: TagHash,
     pub resource_type: u32,
     pub resource: MapResource,
 }
