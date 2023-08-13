@@ -15,8 +15,10 @@ use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
 use glam::{Mat4, Vec4};
+use itertools::Itertools;
 use nohash_hasher::IntMap;
 
+use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, debug_span, error, info, info_span, trace, warn};
 use tracing_subscriber::layer::SubscriberExt;
@@ -39,7 +41,7 @@ use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
-use crate::map_resources::{MapResource, Unk80806b7f, Unk8080714b};
+use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
@@ -53,6 +55,7 @@ use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, GBuffer, InstancedRenderer};
 use crate::statics::{Unk808071a7, Unk8080966d};
+use crate::structure::Tag;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::{TextureHandle, TextureHeader};
 use crate::types::Vector4;
@@ -212,31 +215,32 @@ pub fn main() -> anyhow::Result<()> {
     let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
-    let mut maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)> = vec![];
+    let mut maps: Vec<(
+        u32,
+        String,
+        Vec<Tag<Unk8080966d>>,
+        Vec<ResourcePoint>,
+        Vec<TagHash>,
+    )> = vec![];
     let mut point_lights = vec![];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let think: Unk80807dae = package_manager()
             .read_tag_struct((package.pkg_id(), index as _))
             .unwrap();
-        let child_map: Unk808091e0 = package_manager()
-            .read_tag_struct(think.child_map_reference)
-            .unwrap();
 
-        let mut placement_group_tags = vec![];
+        let mut placement_groups = vec![];
         let mut resource_points = vec![];
         let mut terrains = vec![];
-        for res in &child_map.map_resources {
+        for res in &think.child_map.map_resources {
             let thing2: Unk80808a54 = if res.is_hash32 != 0 {
                 package_manager().read_tag_struct(res.hash32).unwrap()
             } else {
-                // TODO: Move TagHash64 to destiny-pkg
-                package_manager().read_hash_struct(res.hash64.0).unwrap()
+                package_manager().read_tag64_struct(res.hash64.0).unwrap()
             };
 
-            for tablehash in &thing2.data_tables {
-                let table_data = package_manager().read_tag(*tablehash).unwrap();
+            for table in &thing2.data_tables {
+                let table_data = package_manager().read_tag(table.tag()).unwrap();
                 let mut cur = Cursor::new(&table_data);
-                let table: Unk808099d6 = cur.read_le().unwrap();
 
                 for data in &table.data_entries {
                     if data.data_resource.is_valid {
@@ -249,7 +253,7 @@ pub fn main() -> anyhow::Result<()> {
                                 let preheader: Unk80806ef4 =
                                     package_manager().read_tag_struct(preheader_tag).unwrap();
 
-                                placement_group_tags.push(preheader.placement_group);
+                                placement_groups.push(preheader.placement_group);
                             }
                             // D2Class_7D6C8080 (terrain)
                             0x8080714b => {
@@ -309,6 +313,36 @@ pub fn main() -> anyhow::Result<()> {
                                     data.translation.w,
                                 ));
                             }
+                            // Decal collection
+                            0x80806e62 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80806e68 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for inst in &header.instances {
+                                    for i in inst.start..(inst.start + inst.count) {
+                                        let transform = header.transforms[i as usize];
+                                        resource_points.push(ResourcePoint {
+                                            position: Vec4::new(
+                                                transform.x,
+                                                transform.y,
+                                                transform.z,
+                                                transform.w,
+                                            ),
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::Decal {
+                                                material: inst.material,
+                                            },
+                                        })
+                                    }
+                                }
+                            }
                             u => {
                                 debug!(
                                     "Skipping unknown resource type {u:x} {:?}",
@@ -351,13 +385,13 @@ pub fn main() -> anyhow::Result<()> {
         info!(
             "Map {:x?} '{map_name}' - {} placement groups",
             think.map_name,
-            placement_group_tags.len()
+            placement_groups.len()
         ); // TODO(cohae): Map name lookup
 
         maps.push((
             think.map_name.0,
             map_name,
-            placement_group_tags,
+            placement_groups,
             resource_points,
             terrains,
         ));
@@ -371,15 +405,12 @@ pub fn main() -> anyhow::Result<()> {
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
-    for (_, _, placement_group_tags, _, _) in &maps {
-        for tag in placement_group_tags.iter() {
-            let placements: Unk8080966d = package_manager().read_tag_struct(*tag).unwrap();
-
+    for (_, _, placement_group, _, _) in &maps {
+        for placements in placement_group.iter() {
             for v in &placements.statics {
                 to_load.insert(*v, ());
             }
-
-            placement_groups.insert(tag.0, (placements, vec![]));
+            placement_groups.insert(placements.tag().0, (placements.0.clone(), vec![]));
         }
     }
 
@@ -950,12 +981,16 @@ pub fn main() -> anyhow::Result<()> {
     let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
         composition_mode: CompositorMode::Combined as usize,
         map_index: 0,
-        maps: maps.clone(),
+        maps: maps.iter().map(|m| (m.0, m.1.clone())).collect_vec(),
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         camera: camera.clone(),
         show_map_resources: false,
-        show_unknown_map_resources: true,
+        map_resource_filter: {
+            let mut f = [false; MapResource::COUNT];
+            f[0] = true;
+            f
+        },
         map_resource_distance: 2000.0,
         render_scale: 100.0,
         render_scale_changed: false,
@@ -963,6 +998,7 @@ pub fn main() -> anyhow::Result<()> {
         speed_multiplier_changed: false,
         render_lights: false,
     }));
+
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
         debug_overlay: gui_debug.clone(),
         map: (0, String::new(), vec![], vec![]),
@@ -1187,15 +1223,12 @@ pub fn main() -> anyhow::Result<()> {
                         .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
 
                     let map = &maps[gui_gbuffer.borrow().map_index % maps.len()];
-                    gui_resources.borrow_mut().set_map_data(
-                        map.0,
-                        &map.1,
-                        map.2.clone(),
-                        map.3.clone(),
-                    );
+                    gui_resources
+                        .borrow_mut()
+                        .set_map_data(map.0, &map.1, map.3.clone());
 
                     for ptag in &map.2 {
-                        let (_placements, instance_renderers) = &placement_groups[&ptag.0];
+                        let (_placements, instance_renderers) = &placement_groups[&ptag.tag().0];
                         for instance in instance_renderers.iter() {
                             instance.draw(
                                 &dcs.context,

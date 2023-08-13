@@ -3,29 +3,6 @@ use bytemuck::{Pod, Zeroable};
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]
-pub struct TagHash64(pub u64);
-
-impl TagHash64 {
-    pub fn is_none(&self) -> bool {
-        self.0 == 0
-    }
-}
-
-impl Debug for TagHash64 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_none() {
-            f.write_fmt(format_args!("TagHash64(NONE)"))
-        } else {
-            f.write_str("TagHash64(")?;
-
-            self.0.fmt(f)?;
-
-            f.write_char(')')
-        }
-    }
-}
-
-#[derive(BinRead, Copy, Clone, PartialEq)]
 pub struct DestinyHash(pub u32);
 
 impl From<DestinyHash> for u32 {

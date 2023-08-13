@@ -35,7 +35,7 @@ pub struct Unk8080719b {
     pub unk6: u16,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk8080966d {
     #[br(seek_before(SeekFrom::Current(0x40)))]
     pub transforms: TablePointer<Unk808071a3>,
@@ -44,7 +44,7 @@ pub struct Unk8080966d {
     pub instances: TablePointer<Unk80807190>,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk80807190 {
     pub instance_count: u16,
     pub instance_offset: u16,

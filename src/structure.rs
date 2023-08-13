@@ -1,9 +1,12 @@
 use binrw::{BinRead, BinReaderExt, BinResult, Endian};
+use destiny_pkg::TagHash;
 
 use std::fmt::{Debug, Formatter, Write};
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::Deref;
 use std::slice::Iter;
+
+use crate::packages::package_manager;
 
 pub type TablePointer32<T> = _TablePointer<i32, u32, T>;
 pub type TablePointer64<T> = _TablePointer<i64, u64, T>;
@@ -245,5 +248,51 @@ impl Debug for ResourcePointer {
             "ResourcePointer(type=0x{:08x})",
             self.resource_type
         ))
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Tag<T: BinRead>(pub T, TagHash);
+
+impl<T: BinRead> Tag<T> {
+    pub fn tag(&self) -> TagHash {
+        self.1
+    }
+}
+
+impl<'a, T: BinRead> BinRead for Tag<T>
+where
+    T::Args<'a>: Default + Clone,
+{
+    type Args<'b> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let taghash: TagHash = reader.read_type(endian)?;
+        Ok(Tag(
+            package_manager()
+                .read_tag_struct(taghash)
+                .map_err(|e| binrw::Error::Custom {
+                    pos: reader.stream_position().unwrap(),
+                    err: Box::new(e),
+                })?,
+            taghash,
+        ))
+    }
+}
+
+impl<T: BinRead> Deref for Tag<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: BinRead + Debug> Debug for Tag<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }

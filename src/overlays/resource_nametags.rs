@@ -4,6 +4,7 @@ use frustum_query::frustum::Frustum;
 use glam::{Mat4, Vec2, Vec4};
 use imgui::{Condition, ImColor32, WindowFlags};
 use std::{cell::RefCell, rc::Rc};
+use strum::VariantNames;
 use winit::window::Window;
 
 use super::{camera_settings::CameraPositionOverlay, gui::OverlayProvider};
@@ -14,14 +15,8 @@ pub struct ResourceTypeOverlay {
 }
 
 impl ResourceTypeOverlay {
-    pub fn set_map_data(
-        &mut self,
-        size: u32,
-        name: &String,
-        one: Vec<TagHash>,
-        two: Vec<ResourcePoint>,
-    ) {
-        self.map = (size, name.to_string(), one, two);
+    pub fn set_map_data(&mut self, size: u32, name: &String, two: Vec<ResourcePoint>) {
+        self.map = (size, name.to_string(), vec![], two);
     }
 }
 
@@ -85,10 +80,10 @@ impl OverlayProvider for ResourceTypeOverlay {
                                 ((1.0 - projected_point.y) * 0.5) * screen_size[1],
                             );
 
-                            if let MapResource::Unknown(_) = res.resource {
-                                if !self.debug_overlay.borrow_mut().show_unknown_map_resources {
-                                    continue;
-                                }
+                            if !self.debug_overlay.borrow().map_resource_filter
+                                [res.resource.index() as usize]
+                            {
+                                continue;
                             }
 
                             let c = res.resource.debug_color();

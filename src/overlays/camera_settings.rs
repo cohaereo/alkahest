@@ -1,7 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
+use strum::{EnumCount, VariantNames};
 use winit::window::Window;
 
 use crate::icons::ICON_BUG;
+use crate::map_resources::MapResource;
 use crate::FpsCamera;
 
 use super::gui::OverlayProvider;
@@ -9,7 +11,7 @@ use super::gui::OverlayProvider;
 pub struct CameraPositionOverlay {
     pub camera: Rc<RefCell<FpsCamera>>,
     pub show_map_resources: bool,
-    pub show_unknown_map_resources: bool,
+    pub map_resource_filter: [bool; MapResource::COUNT],
     pub map_resource_distance: f32,
 
     pub render_scale: f32,
@@ -35,10 +37,18 @@ impl OverlayProvider for CameraPositionOverlay {
             ui.separator();
             ui.checkbox("Show map resources", &mut self.show_map_resources);
             if self.show_map_resources {
-                ui.checkbox(
-                    "Show unknown resources",
-                    &mut self.show_unknown_map_resources,
-                );
+                ui.indent();
+                ui.group(|| {
+                    for (i, n) in MapResource::VARIANTS.iter().enumerate() {
+                        ui.checkbox(
+                            format!("{} {}", MapResource::get_icon_by_index(i as u8), n),
+                            &mut self.map_resource_filter[i],
+                        );
+                    }
+                });
+                ui.unindent();
+                ui.spacing();
+
                 ui.slider(
                     "Debug distance",
                     25.0,
