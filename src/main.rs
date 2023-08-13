@@ -40,7 +40,7 @@ use crate::camera::{FpsCamera, InputState};
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
-use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54, Unk808091e0, Unk808099d6};
+use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
 use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::console::ConsoleOverlay;
@@ -287,6 +287,7 @@ pub fn main() -> anyhow::Result<()> {
                                         data.translation.z,
                                         data.translation.w,
                                     ),
+                                    entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::CubemapVolume(cubemap_volume),
                                 });
@@ -303,6 +304,7 @@ pub fn main() -> anyhow::Result<()> {
                                         data.translation.z,
                                         data.translation.w,
                                     ),
+                                    entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::PointLight(tag),
                                 });
@@ -335,6 +337,7 @@ pub fn main() -> anyhow::Result<()> {
                                                 transform.z,
                                                 transform.w,
                                             ),
+                                            entity: data.entity,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Decal {
                                                 material: inst.material,
@@ -355,6 +358,7 @@ pub fn main() -> anyhow::Result<()> {
                                         data.translation.z,
                                         data.translation.w,
                                     ),
+                                    entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::Unknown(
                                         data.data_resource.resource_type,
@@ -370,6 +374,7 @@ pub fn main() -> anyhow::Result<()> {
                                 data.translation.z,
                                 data.translation.w,
                             ),
+                            entity: data.entity,
                             resource_type: u32::MAX,
                             resource: MapResource::Entity(data.entity),
                         });
@@ -984,6 +989,7 @@ pub fn main() -> anyhow::Result<()> {
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         camera: camera.clone(),
         show_map_resources: false,
+        show_map_resource_label: true,
         map_resource_filter: {
             let mut f = [false; MapResource::COUNT];
             f[0] = true;

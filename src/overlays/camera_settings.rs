@@ -11,6 +11,7 @@ use super::gui::OverlayProvider;
 pub struct CameraPositionOverlay {
     pub camera: Rc<RefCell<FpsCamera>>,
     pub show_map_resources: bool,
+    pub show_map_resource_label: bool,
     pub map_resource_filter: [bool; MapResource::COUNT],
     pub map_resource_distance: f32,
 
@@ -42,6 +43,7 @@ impl OverlayProvider for CameraPositionOverlay {
                     }
                 });
                 ui.unindent();
+                ui.checkbox("Show map resource label", &mut self.show_map_resource_label);
                 ui.spacing();
 
                 ui.slider(
