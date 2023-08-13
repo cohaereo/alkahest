@@ -17,19 +17,29 @@ pub struct GBuffer {
 impl GBuffer {
     pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         Ok(Self {
-            rt0: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)?,
-            rt1: RenderTarget::create(size, &dcs.device, DxgiFormat::R10G10B10A2_UNORM)?,
-            rt2: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)?,
-            depth: DepthState::create(size, &dcs.device)?,
+            rt0: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
+                .context("RT0")?,
+            rt1: RenderTarget::create(size, &dcs.device, DxgiFormat::R10G10B10A2_UNORM)
+                .context("RT1")?,
+            rt2: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
+                .context("RT2")?,
+            depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,
         })
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
-        self.rt0.resize(new_size, &self.dcs.device)?;
-        self.rt1.resize(new_size, &self.dcs.device)?;
-        self.rt2.resize(new_size, &self.dcs.device)?;
-        self.depth.resize(new_size, &self.dcs.device)?;
+        if new_size.0 == 0 || new_size.1 == 0 {
+            return Ok(());
+        }
+
+        self.rt0.resize(new_size, &self.dcs.device).context("RT0")?;
+        self.rt1.resize(new_size, &self.dcs.device).context("RT1")?;
+        self.rt2.resize(new_size, &self.dcs.device).context("RT2")?;
+        self.depth
+            .resize(new_size, &self.dcs.device)
+            .context("Depth")?;
+
         Ok(())
     }
 }
