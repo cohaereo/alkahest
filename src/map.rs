@@ -1,7 +1,8 @@
-use crate::structure::{ResourcePointer, TablePointer};
-use crate::types::{DestinyHash, TagHash64, Vector4};
+use crate::statics::Unk8080966d;
+use crate::structure::{ResourcePointer, TablePointer, Tag};
+use crate::types::{DestinyHash, Vector4};
 use binrw::BinRead;
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use std::io::SeekFrom;
 
 // D2Class_1E898080
@@ -9,7 +10,7 @@ use std::io::SeekFrom;
 pub struct Unk80807dae {
     pub file_size: u64,
     // 808091e0
-    pub child_map_reference: TagHash,
+    pub child_map: Tag<Unk808091e0>,
     pub unkc: u32,
 
     pub unk10: u64,
@@ -48,7 +49,7 @@ pub struct Unk808084c1 {
 pub struct Unk80808a54 {
     pub file_size: u64,
     #[br(seek_before(SeekFrom::Start(0x28)))]
-    pub data_tables: TablePointer<TagHash>, // 808099d6
+    pub data_tables: TablePointer<Tag<Unk808099d6>>,
 }
 
 // D2Class_83988080
@@ -78,8 +79,7 @@ pub struct Unk808099d8 {
 #[derive(BinRead, Debug)]
 pub struct Unk80806ef4 {
     pub unk0: u64,
-    // 8080966d
-    pub placement_group: TagHash,
+    pub placement_group: Tag<Unk8080966d>,
     pub unkc: [u32; 7],
 }
 

@@ -3,7 +3,7 @@ use crate::types::Vector4;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk808071e8 {
     pub file_size: u64,
     pub unk8: [u32; 16],
@@ -37,14 +37,14 @@ pub struct Unk808071e8 {
     pub unk34c: TagHash,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk80807211 {
     /// Material slot to assign to
     pub index: u32,
     pub texture: TagHash,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk808073f3 {
     pub sampler: TagHash,
     pub unk4: u32,

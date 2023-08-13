@@ -1,15 +1,14 @@
-use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use imgui::{Condition, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
-use super::{gui::OverlayProvider, resource_nametags::ResourcePoint};
+use super::gui::OverlayProvider;
 
 pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
     pub map_index: usize,
-    pub maps: Vec<(u32, String, Vec<TagHash>, Vec<ResourcePoint>, Vec<TagHash>)>,
+    pub maps: Vec<(u32, String)>,
 }
 
 impl OverlayProvider for GBufferInfoOverlay {
@@ -21,12 +20,9 @@ impl OverlayProvider for GBufferInfoOverlay {
                 ui.combo(" ", &mut self.composition_mode, &COMPOSITOR_MODES, |v| {
                     format!("{v}").into()
                 });
-                ui.combo(
-                    "Map",
-                    &mut self.map_index,
-                    &self.maps,
-                    |(i, map_name, _, _, _)| format!("{map_name} ({:08X})", i.to_be()).into(),
-                );
+                ui.combo("Map", &mut self.map_index, &self.maps, |(i, map_name)| {
+                    format!("{map_name} ({:08X})", i.to_be()).into()
+                });
             });
     }
 }

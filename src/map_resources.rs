@@ -1,11 +1,14 @@
-use crate::icons::{ICON_CHESS_PAWN, ICON_HELP, ICON_LIGHTBULB_ON, ICON_SPHERE};
-use crate::structure::RelPointer;
+use crate::icons::{ICON_CHESS_PAWN, ICON_HELP, ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER};
+use crate::structure::{RelPointer, TablePointer};
 use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
+use std::mem::MaybeUninit;
+use strum::{EnumCount, EnumVariantNames};
 
-#[derive(Clone)]
+#[derive(Clone, EnumVariantNames, EnumCount)]
+#[repr(u8)]
 pub enum MapResource {
     // PlacementGroup(TagHash),
     // Terrain(Unk8080714b),
@@ -13,6 +16,9 @@ pub enum MapResource {
     Entity(TagHash),
     CubemapVolume(Unk80806b7f),
     PointLight(TagHash),
+    Decal {
+        material: TagHash,
+    },
     Unknown(u32),
 }
 
@@ -27,6 +33,7 @@ impl MapResource {
                     c.cubemap_texture.0.to_be()
                 )
             }
+            MapResource::Decal { material } => format!("Decal (mat {material})"),
             MapResource::PointLight(_) => format!("Point light"),
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
         }
@@ -56,6 +63,7 @@ impl MapResource {
             MapResource::Entity(_) => [255, 255, 255],
             MapResource::CubemapVolume(_) => [50, 255, 50],
             MapResource::PointLight(_) => [220, 220, 20],
+            MapResource::Decal { .. } => [50, 255, 255],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
         }
     }
@@ -65,8 +73,29 @@ impl MapResource {
             MapResource::Entity(_) => ICON_CHESS_PAWN,
             MapResource::CubemapVolume(_) => ICON_SPHERE,
             MapResource::PointLight(_) => ICON_LIGHTBULB_ON,
+            MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown(_) => ICON_HELP,
         }
+    }
+
+    /// Creates a dud variant instance used for obtaining color and icon
+    unsafe fn get_by_index(i: u8) -> MapResource {
+        let e = (i, 0u32);
+        let mut mm: MaybeUninit<MapResource> = MaybeUninit::zeroed();
+        mm.as_mut_ptr().copy_from(&e as *const (u8, u32) as _, 1);
+        mm.assume_init()
+    }
+
+    // pub fn get_color_by_index(i: u8) -> [u8; 3] {
+    //     unsafe { Self::get_by_index(i) }.debug_color()
+    // }
+
+    pub fn get_icon_by_index(i: u8) -> char {
+        unsafe { Self::get_by_index(i) }.debug_icon()
+    }
+
+    pub fn index(&self) -> u8 {
+        unsafe { (self as *const MapResource as *const u8).read() }
     }
 }
 
@@ -105,4 +134,19 @@ pub struct Unk80806b7f {
     pub unk19c: u32,
     pub unk1a0: TagHash,
     pub unk1a4: [u32; 7],
+}
+
+/// Decal collection resource
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806e68 {
+    pub file_size: u64,
+    pub instances: TablePointer<Unk80806e6c>,
+    pub transforms: TablePointer<Vector4>, // 80806e6d
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806e6c {
+    pub material: TagHash, // Tag<material::Unk808071e8>,
+    pub start: u16,
+    pub count: u16,
 }
