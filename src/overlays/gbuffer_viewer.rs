@@ -25,7 +25,7 @@ impl OverlayProvider for GBufferInfoOverlay {
                     "Map",
                     &mut self.map_index,
                     &self.maps,
-                    |(i, map_name, _, _, _)| format!("{map_name} ({i:x})").into(),
+                    |(i, map_name, _, _, _)| format!("{map_name} ({:08X})", i.to_be()).into(),
                 );
             });
     }
