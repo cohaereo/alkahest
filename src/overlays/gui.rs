@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use crate::icons::{ICON_MAX, ICON_MIN};
+use crate::resources::Resources;
 use imgui::{Context, FontConfig, FontGlyphRanges, FontSource};
 use imgui_dx11_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
@@ -12,7 +13,7 @@ use winit::window::Window;
 
 //TODO: Pass GUI Manager to get other overlays
 pub trait OverlayProvider {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window);
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window, resources: &mut Resources);
 }
 
 pub struct GuiManager {
@@ -72,12 +73,15 @@ impl GuiManager {
             .handle_event(self.imgui.io_mut(), window, event)
     }
 
-    pub fn draw_frame(&mut self, window: &Window, delta: Duration) {
+    pub fn draw_frame(&mut self, window: &Window, delta: Duration, resources: &mut Resources) {
         self.imgui.io_mut().update_delta_time(delta);
         let ui = self.imgui.new_frame();
 
         for overlay in self.overlays.iter() {
-            overlay.as_ref().borrow_mut().create_overlay(ui, window);
+            overlay
+                .as_ref()
+                .borrow_mut()
+                .create_overlay(ui, window, resources);
         }
 
         self.platform.prepare_render(&ui, window);

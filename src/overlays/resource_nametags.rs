@@ -1,10 +1,9 @@
-use crate::map_resources::MapResource;
+use crate::{camera::FpsCamera, map_resources::MapResource, resources::Resources};
 use destiny_pkg::TagHash;
 use frustum_query::frustum::Frustum;
 use glam::{Mat4, Vec2, Vec4};
 use imgui::{Condition, ImColor32, WindowFlags};
 use std::{cell::RefCell, rc::Rc};
-use strum::VariantNames;
 use winit::window::Window;
 
 use super::{camera_settings::CameraPositionOverlay, gui::OverlayProvider};
@@ -21,7 +20,7 @@ impl ResourceTypeOverlay {
 }
 
 impl OverlayProvider for ResourceTypeOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window, resources: &mut Resources) {
         if self.debug_overlay.borrow().show_map_resources {
             let screen_size = ui.io().display_size;
             let window_dims = window.inner_size();
@@ -44,13 +43,9 @@ impl OverlayProvider for ResourceTypeOverlay {
                         0.0001,
                     );
 
-                    let view = &self
-                        .debug_overlay
-                        .borrow()
-                        .camera
-                        .borrow_mut()
-                        .calculate_matrix();
-                    let proj_view = projection.mul_mat4(view);
+                    let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                    let view = camera.calculate_matrix();
+                    let proj_view = projection.mul_mat4(&view);
                     let camera_frustum =
                         Frustum::from_modelview_projection(&proj_view.to_cols_array());
 
@@ -65,10 +60,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                                 continue;
                             }
 
-                            let distance = res
-                                .position
-                                .truncate()
-                                .distance(self.debug_overlay.borrow().camera.borrow().position);
+                            let distance = res.position.truncate().distance(camera.position);
                             if distance > self.debug_overlay.borrow().map_resource_distance {
                                 continue;
                             }

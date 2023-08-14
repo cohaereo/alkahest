@@ -3,6 +3,8 @@ use imgui::{Condition, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
+use crate::resources::Resources;
+
 use super::gui::OverlayProvider;
 
 pub struct GBufferInfoOverlay {
@@ -12,7 +14,7 @@ pub struct GBufferInfoOverlay {
 }
 
 impl OverlayProvider for GBufferInfoOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
         ui.window("Options")
             .flags(WindowFlags::NO_TITLE_BAR)
             .size([178.0, 72.0], Condition::FirstUseEver)

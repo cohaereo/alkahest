@@ -3,6 +3,8 @@ use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 use std::time::Instant;
 use winit::window::Window;
 
+use crate::resources::Resources;
+
 use super::gui::OverlayProvider;
 
 pub struct FpsDisplayOverlay {
@@ -20,7 +22,7 @@ impl Default for FpsDisplayOverlay {
 }
 
 impl OverlayProvider for FpsDisplayOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;
         ui.window("FPS")
             .flags(

@@ -36,10 +36,11 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
 };
 
-use crate::camera::{FpsCamera, InputState};
+use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
+use crate::input::InputState;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
 use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
 use crate::overlays::camera_settings::CameraPositionOverlay;
@@ -54,6 +55,7 @@ use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, GBuffer, InstancedRenderer};
+use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::Tag;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
@@ -69,6 +71,7 @@ mod dxbc;
 mod dxgi;
 mod entity;
 mod icons;
+mod input;
 mod map;
 mod map_data;
 mod map_resources;
@@ -76,6 +79,7 @@ mod material;
 mod overlays;
 mod packages;
 mod render;
+mod resources;
 mod statics;
 mod structure;
 mod text;
@@ -906,22 +910,9 @@ pub fn main() -> anyhow::Result<()> {
             .context("Failed to create Rasterizer State")?
     };
 
-    // let y_to_z_up: Mat4 = Mat4::from_rotation_x(-90f32.to_radians());
-
-    let mut input_state = InputState {
-        w: false,
-        a: false,
-        s: false,
-        d: false,
-        mouse1: false,
-        shift: false,
-        ctrl: false,
-        space: false,
-        q: false,
-        e: false,
-    };
-
-    let camera: Rc<RefCell<FpsCamera>> = Rc::new(RefCell::new(FpsCamera::default()));
+    let mut resources: Resources = Resources::default();
+    resources.insert(FpsCamera::default());
+    resources.insert(InputState::default());
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
@@ -989,7 +980,6 @@ pub fn main() -> anyhow::Result<()> {
         maps: maps.iter().map(|m| (m.0, m.1.clone())).collect_vec(),
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
-        camera: camera.clone(),
         show_map_resources: false,
         show_map_resource_label: true,
         map_resource_filter: {
@@ -1007,127 +997,82 @@ pub fn main() -> anyhow::Result<()> {
         debug_overlay: gui_debug.clone(),
         map: (0, String::new(), vec![], vec![]),
     }));
-    let mut gui_manager = GuiManager::create(&window, &dcs.device);
+    let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
-    gui_manager.add_overlay(Box::new(gui_fps.clone()));
-    gui_manager.add_overlay(Box::new(gui_debug.clone()));
-    gui_manager.add_overlay(Box::new(gui_gbuffer.clone()));
-    gui_manager.add_overlay(Box::new(gui_resources.clone()));
-    gui_manager.add_overlay(Box::new(gui_console.clone()));
+    gui.add_overlay(Box::new(gui_fps.clone()));
+    gui.add_overlay(Box::new(gui_debug.clone()));
+    gui.add_overlay(Box::new(gui_gbuffer.clone()));
+    gui.add_overlay(Box::new(gui_resources.clone()));
+    gui.add_overlay(Box::new(gui_console.clone()));
 
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
 
     event_loop.run(move |event, _, control_flow| {
-        gui_manager.handle_event(&event, &window);
+        gui.handle_event(&event, &window);
+        resources
+            .get_mut::<InputState>()
+            .unwrap()
+            .handle_event(&event);
+
         match &event {
-            Event::WindowEvent { event, .. } => {
-                match event {
-                    WindowEvent::Resized(new_dims) => unsafe {
-                        *dcs.swapchain_target.write() = None;
-                        dcs.swap_chain
-                            .ResizeBuffers(
-                                1,
-                                new_dims.width,
-                                new_dims.height,
-                                DXGI_FORMAT_B8G8R8A8_UNORM,
-                                0,
-                            )
-                            .expect("Failed to resize swapchain");
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::Resized(new_dims) => unsafe {
+                    *dcs.swapchain_target.write() = None;
+                    dcs.swap_chain
+                        .ResizeBuffers(
+                            1,
+                            new_dims.width,
+                            new_dims.height,
+                            DXGI_FORMAT_B8G8R8A8_UNORM,
+                            0,
+                        )
+                        .expect("Failed to resize swapchain");
 
-                        let bb: ID3D11Texture2D = dcs.swap_chain.GetBuffer(0).unwrap();
+                    let bb: ID3D11Texture2D = dcs.swap_chain.GetBuffer(0).unwrap();
 
-                        let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
+                    let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
 
-                        dcs.context
-                            .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
+                    dcs.context
+                        .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
-                        *dcs.swapchain_target.write() = Some(new_rtv);
+                    *dcs.swapchain_target.write() = Some(new_rtv);
 
-                        let render_scale = gui_debug.borrow().render_scale / 100.0;
-                        gbuffer
-                            .resize((
-                                (new_dims.width as f32 * render_scale) as u32,
-                                (new_dims.height as f32 * render_scale) as u32,
-                            ))
-                            .expect("Failed to resize GBuffers");
-                    },
-                    WindowEvent::ScaleFactorChanged { .. } => {
-                        // renderer.resize();
-                    }
-                    WindowEvent::CloseRequested => {
-                        *control_flow = ControlFlow::Exit;
-                    }
-                    WindowEvent::MouseInput { state, button, .. } => {
-                        if button == &MouseButton::Left
-                            && !gui_manager.imgui.io().want_capture_mouse
-                        {
-                            input_state.mouse1 = *state == ElementState::Pressed
-                        }
-                    }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        if let Some(ref mut p) = last_cursor_pos {
-                            let delta = (position.x - p.x, position.y - p.y);
-
-                            if input_state.mouse1 && !gui_manager.imgui.io().want_capture_mouse {
-                                camera
-                                    .borrow_mut()
-                                    .update_mouse((delta.0 as f32, delta.1 as f32).into());
-                            }
-
-                            last_cursor_pos = Some(*position);
-                        } else {
-                            last_cursor_pos = Some(*position);
-                        }
-                    }
-                    WindowEvent::ModifiersChanged(modifiers) => {
-                        input_state.shift = modifiers.shift();
-                        input_state.ctrl = modifiers.ctrl();
-                    }
-                    WindowEvent::KeyboardInput { input, .. } => {
-                        if !gui_manager.imgui.io().want_capture_keyboard {
-                            if input.state == ElementState::Pressed {
-                                match input.virtual_keycode {
-                                    Some(VirtualKeyCode::Q) => {
-                                        if input_state.ctrl {
-                                            *control_flow = ControlFlow::Exit
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-
-                            match input.virtual_keycode {
-                                Some(VirtualKeyCode::W) => {
-                                    input_state.w = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::A) => {
-                                    input_state.a = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::S) => {
-                                    input_state.s = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::D) => {
-                                    input_state.d = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::Space) => {
-                                    input_state.space = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::Q) => {
-                                    input_state.q = input.state == ElementState::Pressed
-                                }
-                                Some(VirtualKeyCode::E) => {
-                                    input_state.e = input.state == ElementState::Pressed
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-
-                    _ => (),
+                    let render_scale = gui_debug.borrow().render_scale / 100.0;
+                    gbuffer
+                        .resize((
+                            (new_dims.width as f32 * render_scale) as u32,
+                            (new_dims.height as f32 * render_scale) as u32,
+                        ))
+                        .expect("Failed to resize GBuffers");
+                },
+                WindowEvent::CloseRequested => {
+                    *control_flow = ControlFlow::Exit;
                 }
-            }
+                WindowEvent::CursorMoved { position, .. } => {
+                    if let Some(ref mut p) = last_cursor_pos {
+                        let delta = (position.x - p.x, position.y - p.y);
+                        let input = resources.get::<InputState>().unwrap();
+                        if input.mouse_left() && !gui.imgui.io().want_capture_mouse {
+                            let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                            camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
+                        }
+
+                        last_cursor_pos = Some(*position);
+                    } else {
+                        last_cursor_pos = Some(*position);
+                    }
+                }
+                WindowEvent::KeyboardInput { input, .. } => {
+                    let input = resources.get::<InputState>().unwrap();
+                    if input.ctrl() && input.is_key_down(VirtualKeyCode::Q) {
+                        *control_flow = ControlFlow::Exit
+                    }
+                }
+
+                _ => (),
+            },
             Event::RedrawRequested(..) => {
                 let render_scale = gui_debug.borrow().render_scale / 100.0;
                 if gui_debug.borrow().render_scale_changed {
@@ -1142,9 +1087,11 @@ pub fn main() -> anyhow::Result<()> {
                     gui_debug.borrow_mut().render_scale_changed = false;
                 }
 
-                camera
-                    .borrow_mut()
-                    .update(&input_state, last_frame.elapsed().as_secs_f32());
+                let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                if !gui.imgui.io().want_capture_keyboard {
+                    let input_state = resources.get::<InputState>().unwrap();
+                    camera.update(&input_state, last_frame.elapsed().as_secs_f32());
+                }
                 last_frame = Instant::now();
 
                 let window_dims = window.inner_size();
@@ -1200,11 +1147,11 @@ pub fn main() -> anyhow::Result<()> {
                         0.0001,
                     );
 
-                    let view = camera.borrow_mut().calculate_matrix();
+                    let view = camera.calculate_matrix();
 
                     let proj_view = projection * view;
                     let mut view2 = Mat4::IDENTITY;
-                    view2.w_axis = camera.borrow_mut().position.extend(1.0);
+                    view2.w_axis = camera.position.extend(1.0);
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view,
@@ -1277,8 +1224,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     let compositor_options = CompositorOptions {
                         proj_view_matrix_inv: proj_view.inverse(),
-                        camera_pos: camera.borrow().position.extend(1.0),
-                        camera_dir: camera.borrow().front.extend(1.0),
+                        camera_pos: camera.position.extend(1.0),
+                        camera_dir: camera.front.extend(1.0),
                         mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
                         light_count: if gui_debug.borrow().render_lights {
                             point_lights.len() as u32
@@ -1311,7 +1258,8 @@ pub fn main() -> anyhow::Result<()> {
                         .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
                     dcs.context.Draw(3, 0);
 
-                    gui_manager.draw_frame(&window, last_frame.elapsed());
+                    drop(camera);
+                    gui.draw_frame(&window, last_frame.elapsed(), &mut resources);
 
                     dcs.context.OMSetDepthStencilState(None, 0);
 
@@ -1321,9 +1269,8 @@ pub fn main() -> anyhow::Result<()> {
                 };
             }
             Event::MainEventsCleared => {
-                let io = gui_manager.imgui.io_mut();
-                gui_manager
-                    .platform
+                let io = gui.imgui.io_mut();
+                gui.platform
                     .prepare_frame(io, &window)
                     .expect("Failed to start frame");
                 window.request_redraw();

@@ -1,4 +1,6 @@
+use crate::input::InputState;
 use crate::overlays::gui::OverlayProvider;
+use crate::resources::Resources;
 use imgui::Key;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
@@ -9,6 +11,7 @@ use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::Layer;
+use winit::event::VirtualKeyCode;
 use winit::window::Window;
 
 lazy_static! {
@@ -81,8 +84,9 @@ impl Default for ConsoleOverlay {
 }
 
 impl OverlayProvider for ConsoleOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window) {
-        if (ui.is_key_pressed_no_repeat(Key::GraveAccent) || ui.is_key_pressed_no_repeat(Key::F10))
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
+        let input = resources.get::<InputState>().unwrap();
+        if (input.is_key_down(VirtualKeyCode::Grave) || input.is_key_down(VirtualKeyCode::F10))
             && !self.open
         {
             self.open = true;
@@ -138,14 +142,18 @@ impl OverlayProvider for ConsoleOverlay {
                     self.focus_input = true;
                 }
 
-                if ui.is_key_pressed_no_repeat(Key::F10) && !ui.is_window_focused() {
+                if (input.is_key_down(VirtualKeyCode::Grave)
+                    || input.is_key_down(VirtualKeyCode::F10))
+                    && !ui.is_window_focused()
+                {
                     self.focus_input = true;
                 }
             });
 
             if is_focused
-                && (ui.is_key_pressed_no_repeat(Key::Escape)
-                    || ui.is_key_pressed_no_repeat(Key::F10))
+                && (input.is_key_down(VirtualKeyCode::Escape)
+                    || input.is_key_down(VirtualKeyCode::Grave)
+                    || input.is_key_down(VirtualKeyCode::F10))
             {
                 self.open = false;
             }

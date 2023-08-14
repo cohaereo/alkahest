@@ -1,17 +1,7 @@
 use glam::{Mat4, Vec2, Vec3};
+use winit::event::VirtualKeyCode;
 
-pub struct InputState {
-    pub w: bool,
-    pub a: bool,
-    pub s: bool,
-    pub d: bool,
-    pub mouse1: bool,
-    pub shift: bool,
-    pub ctrl: bool,
-    pub space: bool,
-    pub q: bool,
-    pub e: bool,
-}
+use crate::input::InputState;
 
 #[derive(Clone)]
 pub struct FpsCamera {
@@ -26,7 +16,7 @@ impl Default for FpsCamera {
     fn default() -> Self {
         Self {
             front: Vec3::Y,
-            right: Vec3::Z,
+            right: -Vec3::X,
             position: Vec3::ZERO,
             orientation: Vec2::ZERO,
             speed_mul: 1.0,
@@ -52,36 +42,36 @@ impl FpsCamera {
 
     pub fn update(&mut self, input: &InputState, delta: f32) {
         let mut speed = delta * 35.0;
-        if input.shift {
+        if input.shift() {
             speed *= 3.0;
         }
-        if input.ctrl {
-            speed *= 0.25;
+        if input.ctrl() {
+            speed *= 0.10;
         }
         // We're gonna have to go right to... LUDICROUS SPEED
-        if input.space {
+        if input.is_key_down(VirtualKeyCode::Space) {
             speed *= 10.0;
         }
 
         let mut direction = Vec3::ZERO;
-        if input.w {
+        if input.is_key_down(VirtualKeyCode::W) {
             direction += self.front;
         }
-        if input.s {
+        if input.is_key_down(VirtualKeyCode::S) {
             direction -= self.front;
         }
 
-        if input.d {
+        if input.is_key_down(VirtualKeyCode::D) {
             direction -= self.right;
         }
-        if input.a {
+        if input.is_key_down(VirtualKeyCode::A) {
             direction += self.right;
         }
-        
-        if input.q {
+
+        if input.is_key_down(VirtualKeyCode::Q) {
             direction -= Vec3::Z;
         }
-        if input.e {
+        if input.is_key_down(VirtualKeyCode::E) {
             direction += Vec3::Z;
         }
 
