@@ -917,6 +917,8 @@ pub fn main() -> anyhow::Result<()> {
         shift: false,
         ctrl: false,
         space: false,
+        q: false,
+        e: false,
     };
 
     let camera: Rc<RefCell<FpsCamera>> = Rc::new(RefCell::new(FpsCamera::default()));
@@ -1111,6 +1113,12 @@ pub fn main() -> anyhow::Result<()> {
                                 }
                                 Some(VirtualKeyCode::Space) => {
                                     input_state.space = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::Q) => {
+                                    input_state.q = input.state == ElementState::Pressed
+                                }
+                                Some(VirtualKeyCode::E) => {
+                                    input_state.e = input.state == ElementState::Pressed
                                 }
                                 _ => {}
                             }

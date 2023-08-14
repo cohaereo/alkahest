@@ -9,6 +9,8 @@ pub struct InputState {
     pub shift: bool,
     pub ctrl: bool,
     pub space: bool,
+    pub q: bool,
+    pub e: bool,
 }
 
 #[derive(Clone)]
@@ -75,13 +77,15 @@ impl FpsCamera {
         if input.a {
             direction += self.right;
         }
-        //
-        // if ui.input(|i| i.key_down(egui::Key::Q)) {
-        //     direction -= Vec3::Y;
-        // }
-        // if ui.input(|i| i.key_down(egui::Key::E)) {
-        //     direction += Vec3::Y;
-        // }
+        
+        if input.q {
+            direction -= Vec3::Z;
+        }
+        if input.e {
+            direction += Vec3::Z;
+        }
+
+        speed *= self.speed_mul;
 
         self.position += direction * speed;
 
