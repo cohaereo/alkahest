@@ -18,9 +18,6 @@ pub struct CameraPositionOverlay {
     pub render_scale: f32,
     pub render_scale_changed: bool,
     pub render_lights: bool,
-
-    pub speed_multiplier: f32,
-    pub speed_multiplier_changed: bool,
 }
 
 impl OverlayProvider for CameraPositionOverlay {
@@ -32,8 +29,7 @@ impl OverlayProvider for CameraPositionOverlay {
             ui.separator();
             self.render_scale_changed =
                 ui.slider("Render Scale", 50.0, 200.0, &mut self.render_scale);
-            self.speed_multiplier_changed =
-                ui.slider("Speed Multiplier", 0.01, 10.0, &mut self.speed_multiplier);
+            ui.slider("Speed Multiplier", 0.01, 10.0, &mut self.camera.as_ref().borrow_mut().speed_mul);
             ui.checkbox("Render lights", &mut self.render_lights);
             ui.separator();
             ui.checkbox("Show map resources", &mut self.show_map_resources);

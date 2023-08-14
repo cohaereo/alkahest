@@ -1000,8 +1000,6 @@ pub fn main() -> anyhow::Result<()> {
         map_resource_distance: 2000.0,
         render_scale: 100.0,
         render_scale_changed: false,
-        speed_multiplier: 1.0,
-        speed_multiplier_changed: false,
         render_lights: false,
     }));
 
@@ -1142,11 +1140,6 @@ pub fn main() -> anyhow::Result<()> {
                         .expect("Failed to resize GBuffers");
                     // Just to be safe
                     gui_debug.borrow_mut().render_scale_changed = false;
-                }
-
-                if gui_debug.borrow().speed_multiplier_changed {
-                    gui_debug.borrow_mut().speed_multiplier_changed = false;
-                    camera.borrow_mut().speed_mul = gui_debug.borrow().speed_multiplier;
                 }
 
                 camera
