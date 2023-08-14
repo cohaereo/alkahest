@@ -88,10 +88,6 @@ mod types;
 mod unknown;
 mod vertex_layout;
 
-// #[global_allocator]
-// static GLOBAL: ProfiledAllocator<std::alloc::System> =
-//     ProfiledAllocator::new(std::alloc::System, 100);
-
 pub fn main() -> anyhow::Result<()> {
     rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("rayon-worker-{i}"))
@@ -105,30 +101,23 @@ pub fn main() -> anyhow::Result<()> {
         config::persist();
     }
 
-    if cfg!(feature = "tracy") {
-        tracing::subscriber::set_global_default(
-            tracing_subscriber::registry()
-                .with(tracing_tracy::TracyLayer::new())
-                .with(overlays::console::ConsoleLogLayer)
-                .with(tracing_subscriber::fmt::layer())
-                .with(
-                    EnvFilter::builder()
-                        .with_default_directive(LevelFilter::INFO.into())
-                        .from_env_lossy(),
-                ),
-        )
+    let tracy_layer = if cfg!(feature = "tracy") {
+        Some(tracing_tracy::TracyLayer::new())
     } else {
-        tracing::subscriber::set_global_default(
-            tracing_subscriber::registry()
-                .with(overlays::console::ConsoleLogLayer)
-                .with(tracing_subscriber::fmt::layer())
-                .with(
-                    EnvFilter::builder()
-                        .with_default_directive(LevelFilter::INFO.into())
-                        .from_env_lossy(),
-                ),
-        )
-    }
+        None
+    };
+
+    tracing::subscriber::set_global_default(
+        tracing_subscriber::registry()
+            .with(tracy_layer)
+            .with(overlays::console::ConsoleLogLayer)
+            .with(tracing_subscriber::fmt::layer())
+            .with(
+                EnvFilter::builder()
+                    .with_default_directive(LevelFilter::INFO.into())
+                    .from_env_lossy(),
+            ),
+    )
     .expect("Failed to set up the tracing subscriber");
 
     let (package, pm) = info_span!("Initializing package manager").in_scope(|| {
