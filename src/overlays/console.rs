@@ -1,4 +1,5 @@
 use crate::overlays::gui::OverlayProvider;
+use crate::resources::Resources;
 use imgui::Key;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
@@ -81,7 +82,7 @@ impl Default for ConsoleOverlay {
 }
 
 impl OverlayProvider for ConsoleOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
         if (ui.is_key_pressed_no_repeat(Key::GraveAccent) || ui.is_key_pressed_no_repeat(Key::F10))
             && !self.open
         {

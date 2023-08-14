@@ -1,15 +1,14 @@
-use std::{cell::RefCell, rc::Rc};
 use strum::{EnumCount, VariantNames};
 use winit::window::Window;
 
 use crate::icons::ICON_BUG;
 use crate::map_resources::MapResource;
+use crate::resources::Resources;
 use crate::FpsCamera;
 
 use super::gui::OverlayProvider;
 
 pub struct CameraPositionOverlay {
-    pub camera: Rc<RefCell<FpsCamera>>,
     pub show_map_resources: bool,
     pub show_map_resource_label: bool,
     pub map_resource_filter: [bool; MapResource::COUNT],
@@ -21,11 +20,12 @@ pub struct CameraPositionOverlay {
 }
 
 impl OverlayProvider for CameraPositionOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
         ui.window(format!("{} Debug", ICON_BUG)).build(|| {
-            ui.text(format!("X: {}", self.camera.as_ref().borrow().position.x));
-            ui.text(format!("Y: {}", self.camera.as_ref().borrow().position.y));
-            ui.text(format!("Z: {}", self.camera.as_ref().borrow().position.z));
+            let camera = resources.get::<FpsCamera>().unwrap();
+            ui.text(format!("X: {}", camera.position.x));
+            ui.text(format!("Y: {}", camera.position.y));
+            ui.text(format!("Z: {}", camera.position.z));
             ui.separator();
             self.render_scale_changed =
                 ui.slider("Render Scale", 50.0, 200.0, &mut self.render_scale);

@@ -54,6 +54,7 @@ use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, GBuffer, InstancedRenderer};
+use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::Tag;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
@@ -76,6 +77,7 @@ mod material;
 mod overlays;
 mod packages;
 mod render;
+mod resources;
 mod statics;
 mod structure;
 mod text;
@@ -919,7 +921,8 @@ pub fn main() -> anyhow::Result<()> {
         space: false,
     };
 
-    let camera: Rc<RefCell<FpsCamera>> = Rc::new(RefCell::new(FpsCamera::default()));
+    let mut resources: Resources = Resources::default();
+    resources.insert(FpsCamera::default());
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
@@ -987,7 +990,6 @@ pub fn main() -> anyhow::Result<()> {
         maps: maps.iter().map(|m| (m.0, m.1.clone())).collect_vec(),
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
-        camera: camera.clone(),
         show_map_resources: false,
         show_map_resource_label: true,
         map_resource_filter: {
@@ -1069,9 +1071,8 @@ pub fn main() -> anyhow::Result<()> {
                             let delta = (position.x - p.x, position.y - p.y);
 
                             if input_state.mouse1 && !gui_manager.imgui.io().want_capture_mouse {
-                                camera
-                                    .borrow_mut()
-                                    .update_mouse((delta.0 as f32, delta.1 as f32).into());
+                                let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                                camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
                             }
 
                             last_cursor_pos = Some(*position);
@@ -1134,9 +1135,8 @@ pub fn main() -> anyhow::Result<()> {
                     gui_debug.borrow_mut().render_scale_changed = false;
                 }
 
-                camera
-                    .borrow_mut()
-                    .update(&input_state, last_frame.elapsed().as_secs_f32());
+                let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                camera.update(&input_state, last_frame.elapsed().as_secs_f32());
                 last_frame = Instant::now();
 
                 let window_dims = window.inner_size();
@@ -1192,11 +1192,11 @@ pub fn main() -> anyhow::Result<()> {
                         0.0001,
                     );
 
-                    let view = camera.borrow_mut().calculate_matrix();
+                    let view = camera.calculate_matrix();
 
                     let proj_view = projection * view;
                     let mut view2 = Mat4::IDENTITY;
-                    view2.w_axis = camera.borrow_mut().position.extend(1.0);
+                    view2.w_axis = camera.position.extend(1.0);
 
                     let scope_view = ScopeView {
                         world_to_projective: proj_view,
@@ -1269,8 +1269,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     let compositor_options = CompositorOptions {
                         proj_view_matrix_inv: proj_view.inverse(),
-                        camera_pos: camera.borrow().position.extend(1.0),
-                        camera_dir: camera.borrow().front.extend(1.0),
+                        camera_pos: camera.position.extend(1.0),
+                        camera_dir: camera.front.extend(1.0),
                         mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
                         light_count: if gui_debug.borrow().render_lights {
                             point_lights.len() as u32
@@ -1303,7 +1303,8 @@ pub fn main() -> anyhow::Result<()> {
                         .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
                     dcs.context.Draw(3, 0);
 
-                    gui_manager.draw_frame(&window, last_frame.elapsed());
+                    drop(camera);
+                    gui_manager.draw_frame(&window, last_frame.elapsed(), &mut resources);
 
                     dcs.context.OMSetDepthStencilState(None, 0);
 
