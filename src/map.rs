@@ -62,7 +62,7 @@ pub struct Unk808099d6 {
 // D2Class_85988080
 #[derive(BinRead, Debug)]
 pub struct Unk808099d8 {
-    // 80809c0f ?
+    // 80809c0f
     pub entity: TagHash,
     pub unk4: [u32; 3],
     pub rotation: Vector4,

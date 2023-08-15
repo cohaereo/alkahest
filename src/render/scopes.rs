@@ -25,15 +25,15 @@ pub struct ScopeStaticInstance {
     pub texcoord_transform: Vec4,
 }
 
+// This scope uses official struct/field names from TFX intermediaries (scope_rigid_model)
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
-pub struct ScopeEntityModel {
-    pub mesh_to_world: Mat3x4,
-    pub unk3: Vec4,
-    pub unk4: Vec4,
-    pub unk5: Vec4,
-    pub texcoord_transform: Vec4,
-    pub unk7: Vec4,
+pub struct ScopeRigidModel {
+    pub mesh_to_world: Mat4,          // c0
+    pub position_scale: Vec4,         // c4
+    pub position_offset: Vec4,        // c5
+    pub texcoord0_scale_offset: Vec4, // c6
+    pub dynamic_sh_ao_values: Vec4,   // c7
 }
 
 pub trait MatrixConversion {

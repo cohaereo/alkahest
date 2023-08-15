@@ -56,6 +56,7 @@ impl StaticModel {
         )
     }
 
+    // TODO(cohae): Use more conventional methods + transpose
     pub fn mesh_transform(&self) -> Mat4 {
         Mat4::from_cols(
             [self.model.model_scale, 0.0, 0.0, self.model.model_offset.x].into(),

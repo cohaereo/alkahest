@@ -53,19 +53,20 @@ impl OverlayProvider for ResourceTypeOverlay {
                     draw_list.with_clip_rect([0.0, 0.0], screen_size, || {
                         for res in &mut self.map.3 {
                             if !camera_frustum.point_intersecting(
-                                &res.position.x,
-                                &res.position.y,
-                                &res.position.z,
+                                &res.translation.x,
+                                &res.translation.y,
+                                &res.translation.z,
                             ) {
                                 continue;
                             }
 
-                            let distance = res.position.truncate().distance(camera.position);
+                            let distance = res.translation.truncate().distance(camera.position);
                             if distance > self.debug_overlay.borrow().map_resource_distance {
                                 continue;
                             }
 
-                            let projected_point = proj_view.project_point3(res.position.truncate());
+                            let projected_point =
+                                proj_view.project_point3(res.translation.truncate());
 
                             let screen_point = Vec2::new(
                                 ((projected_point.x + 1.0) * 0.5) * screen_size[0],
@@ -117,7 +118,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 
 #[derive(Clone)]
 pub struct ResourcePoint {
-    pub position: Vec4,
+    pub translation: Vec4,
     pub rotation: Quat,
     pub entity: TagHash,
     pub resource_type: u32,

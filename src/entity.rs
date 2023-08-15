@@ -38,9 +38,9 @@ pub struct Unk808073a5 {
     pub meshes: TablePointer<Unk80807378>,
     #[br(seek_before(SeekFrom::Start(0x50)))]
     pub model_scale: Vector4,
-    pub model_translation: Vector4,
+    pub model_offset: Vector4,
     pub texcoord_scale: Vector2,
-    pub texcoord_translation: Vector2,
+    pub texcoord_offset: Vector2,
 }
 
 #[derive(BinRead, Debug)]

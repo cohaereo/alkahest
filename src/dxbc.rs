@@ -1,7 +1,10 @@
 use anyhow::anyhow;
 use binrw::{BinRead, BinReaderExt, BinResult, Endian, FilePtr32, NullString};
 use bitflags::bitflags;
-use std::io::{Read, Seek, SeekFrom};
+use std::{
+    fmt::Display,
+    io::{Read, Seek, SeekFrom},
+};
 use windows::core::PCSTR;
 
 #[derive(BinRead, Debug)]
@@ -45,7 +48,7 @@ pub struct DxbcInputElement {
     _pad: u16,
 }
 
-#[derive(BinRead, Debug, PartialEq)]
+#[derive(BinRead, Debug, PartialEq, Clone)]
 #[br(repr(u32))]
 pub enum DxbcInputType {
     Uint = 1,
@@ -53,49 +56,65 @@ pub enum DxbcInputType {
     Float = 3,
 }
 
+impl Display for DxbcInputType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DxbcInputType::Uint => f.write_str("uint"),
+            DxbcInputType::Int => f.write_str("int"),
+            DxbcInputType::Float => f.write_str("float"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
-pub enum SemanticType {
+pub enum DxbcSemanticType {
     Position,
     TexCoord,
     Normal,
     Tangent,
     Color,
+    BlendWeight,
+    BlendIndices,
 
     SystemVertexId,
     SystemInstanceId,
 }
 
-impl SemanticType {
-    pub fn from_str(s: &str) -> Option<SemanticType> {
+impl DxbcSemanticType {
+    pub fn from_str(s: &str) -> Option<DxbcSemanticType> {
         Some(match s {
-            "POSITION" => SemanticType::Position,
-            "TEXCOORD" => SemanticType::TexCoord,
-            "NORMAL" => SemanticType::Normal,
-            "TANGENT" => SemanticType::Tangent,
-            "COLOR" => SemanticType::Color,
-            "SV_VERTEXID" => SemanticType::SystemVertexId,
-            "SV_InstanceID" => SemanticType::SystemInstanceId,
+            "POSITION" => DxbcSemanticType::Position,
+            "TEXCOORD" => DxbcSemanticType::TexCoord,
+            "NORMAL" => DxbcSemanticType::Normal,
+            "TANGENT" => DxbcSemanticType::Tangent,
+            "COLOR" => DxbcSemanticType::Color,
+            "BLENDWEIGHT" => DxbcSemanticType::BlendWeight,
+            "BLENDINDICES" => DxbcSemanticType::BlendIndices,
+            "SV_VERTEXID" => DxbcSemanticType::SystemVertexId,
+            "SV_InstanceID" => DxbcSemanticType::SystemInstanceId,
             _ => return None,
         })
     }
 
     pub fn to_pcstr(&self) -> PCSTR {
         match self {
-            SemanticType::Position => s!("POSITION"),
-            SemanticType::TexCoord => s!("TEXCOORD"),
-            SemanticType::Normal => s!("NORMAL"),
-            SemanticType::Tangent => s!("TANGENT"),
-            SemanticType::Color => s!("COLOR"),
+            DxbcSemanticType::Position => s!("POSITION"),
+            DxbcSemanticType::TexCoord => s!("TEXCOORD"),
+            DxbcSemanticType::Normal => s!("NORMAL"),
+            DxbcSemanticType::Tangent => s!("TANGENT"),
+            DxbcSemanticType::Color => s!("COLOR"),
+            DxbcSemanticType::BlendWeight => s!("BLENDWEIGHT"),
+            DxbcSemanticType::BlendIndices => s!("BLENDINDICES"),
 
-            SemanticType::SystemVertexId => s!("SV_VERTEXID"),
-            SemanticType::SystemInstanceId => s!("SV_InstanceID"),
+            DxbcSemanticType::SystemVertexId => s!("SV_VERTEXID"),
+            DxbcSemanticType::SystemInstanceId => s!("SV_InstanceID"),
         }
     }
 
     pub fn is_system_value(&self) -> bool {
         matches!(
             self,
-            SemanticType::SystemVertexId | SemanticType::SystemInstanceId
+            DxbcSemanticType::SystemVertexId | DxbcSemanticType::SystemInstanceId
         )
     }
 }

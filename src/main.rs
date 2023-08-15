@@ -54,7 +54,7 @@ use crate::overlays::gbuffer_viewer::{
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
-use crate::render::scopes::{MatrixConversion, ScopeEntityModel};
+use crate::render::scopes::{MatrixConversion, ScopeRigidModel};
 use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{
@@ -221,7 +221,9 @@ pub fn main() -> anyhow::Result<()> {
         Vec<ResourcePoint>,
         Vec<TagHash>,
     )> = vec![];
-    let mut point_lights = vec![];
+
+    // First light reserved for camera light
+    let mut point_lights = vec![Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
         let think: Unk80807dae = package_manager()
             .read_tag_struct((package.pkg_id(), index as _))
@@ -280,7 +282,7 @@ pub fn main() -> anyhow::Result<()> {
 
                                 let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
                                 resource_points.push(ResourcePoint {
-                                    position: Vec4::new(
+                                    translation: Vec4::new(
                                         data.translation.x,
                                         data.translation.y,
                                         data.translation.z,
@@ -303,7 +305,7 @@ pub fn main() -> anyhow::Result<()> {
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
                                 resource_points.push(ResourcePoint {
-                                    position: Vec4::new(
+                                    translation: Vec4::new(
                                         data.translation.x,
                                         data.translation.y,
                                         data.translation.z,
@@ -342,7 +344,7 @@ pub fn main() -> anyhow::Result<()> {
                                     for i in inst.start..(inst.start + inst.count) {
                                         let transform = header.transforms[i as usize];
                                         resource_points.push(ResourcePoint {
-                                            position: Vec4::new(
+                                            translation: Vec4::new(
                                                 transform.x,
                                                 transform.y,
                                                 transform.z,
@@ -369,7 +371,7 @@ pub fn main() -> anyhow::Result<()> {
                                     data.translation
                                 );
                                 resource_points.push(ResourcePoint {
-                                    position: Vec4::new(
+                                    translation: Vec4::new(
                                         data.translation.x,
                                         data.translation.y,
                                         data.translation.z,
@@ -391,7 +393,7 @@ pub fn main() -> anyhow::Result<()> {
                         };
                     } else {
                         resource_points.push(ResourcePoint {
-                            position: Vec4::new(
+                            translation: Vec4::new(
                                 data.translation.x,
                                 data.translation.y,
                                 data.translation.z,
@@ -439,14 +441,16 @@ pub fn main() -> anyhow::Result<()> {
         .collect();
 
     let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
-    for (te, _) in to_load_entities {
+    for (te, _) in &to_load_entities {
         // println!("{te:?}");
-        let header: Unk80809c0f = package_manager().read_tag_struct(te)?;
+        let header: Unk80809c0f = package_manager().read_tag_struct(te.clone())?;
         // println!("{header:?}");
         // println!("{te:?}");
         for e in &header.unk10 {
-            match e.unk0.unk10.resource_type {
-                0x808072b8 => {
+            // match e.unk0.unk10.resource_type {
+            //     0x808072b8 => {
+            match e.unk0.unk18.resource_type {
+                0x808072BD => {
                     let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
                     cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x1dc))?;
                     let model: Tag<Unk808073a5> = cur.read_le()?;
@@ -470,7 +474,7 @@ pub fn main() -> anyhow::Result<()> {
                     }
 
                     entity_renderers.insert(
-                        te,
+                        te.clone(),
                         EntityRenderer::load(
                             model.0,
                             entity_material_map.to_vec(),
@@ -481,10 +485,19 @@ pub fn main() -> anyhow::Result<()> {
 
                     // println!(" - EntityModel {model:?}");
                 }
-                _ => {}
+                u => trace!(
+                    "Unknown entity resource type {u:08X} (0x{:08X})",
+                    e.unk0.unk10.resource_type
+                ),
             }
         }
     }
+
+    info!(
+        "Found {} entity models ({} entities)",
+        entity_renderers.len(),
+        to_load_entities.len()
+    );
 
     // return Ok(());
 
@@ -671,9 +684,23 @@ pub fn main() -> anyhow::Result<()> {
 
                         let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).ok();
                         if input_layout.is_none() {
+                            let layout_string = layout_converted
+                                .iter()
+                                .enumerate()
+                                .map(|(i, e)| {
+                                    format!(
+                                        "\t{}{} v{i} : {}{}",
+                                        e.component_type,
+                                        e.component_count,
+                                        e.semantic_type.to_pcstr().display(),
+                                        e.semantic_index
+                                    )
+                                })
+                                .join("\n");
+
                             error!(
-                                "Failed to load vertex layout for VS {:?}, layout={:?}",
-                                m.vertex_shader, layout_converted
+                                "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
+                                m.vertex_shader, layout_string
                             );
                         }
 
@@ -681,6 +708,8 @@ pub fn main() -> anyhow::Result<()> {
                     }
                 });
             }
+
+            // return Ok(());
 
             if let Ok(v) = package_manager().get_entry(m.pixel_shader) {
                 let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
@@ -969,7 +998,7 @@ pub fn main() -> anyhow::Result<()> {
         ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &[Vec4::splat(0.6); 64])?;
 
     let le_terrain_cb11 = ConstantBuffer::<Mat4>::create(dcs.clone(), None)?;
-    let le_entity_cb11 = ConstantBuffer::<ScopeEntityModel>::create(dcs.clone(), None)?;
+    let le_entity_cb11 = ConstantBuffer::<ScopeRigidModel>::create(dcs.clone(), None)?;
 
     let le_vertex_cb12 = ConstantBuffer::<ScopeView>::create(dcs.clone(), None)?;
 
@@ -1063,6 +1092,9 @@ pub fn main() -> anyhow::Result<()> {
         composition_mode: CompositorMode::Combined as usize,
         map_index: 0,
         maps: maps.iter().map(|m| (m.0, m.1.clone())).collect_vec(),
+        renderlayer_statics: true,
+        renderlayer_terrain: true,
+        renderlayer_entities: true,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
@@ -1259,81 +1291,91 @@ pub fn main() -> anyhow::Result<()> {
                         .borrow_mut()
                         .set_map_data(map.0, &map.1, map.3.clone());
 
-                    for ptag in &map.2 {
-                        let (_placements, instance_renderers) = &placement_groups[&ptag.tag().0];
-                        for instance in instance_renderers.iter() {
-                            instance.draw(
-                                &dcs.context,
-                                &material_map,
-                                &vshader_map,
-                                &pshader_map,
-                                &cbuffer_map_vs,
-                                &cbuffer_map_ps,
-                                &texture_map,
-                                &sampler_map,
-                                le_model_cb0.buffer().clone(),
-                            )
+                    {
+                        let gb = gui_gbuffer.borrow();
+
+                        if gb.renderlayer_statics {
+                            for ptag in &map.2 {
+                                let (_placements, instance_renderers) =
+                                    &placement_groups[&ptag.tag().0];
+                                for instance in instance_renderers.iter() {
+                                    instance.draw(
+                                        &dcs.context,
+                                        &material_map,
+                                        &vshader_map,
+                                        &pshader_map,
+                                        &cbuffer_map_vs,
+                                        &cbuffer_map_ps,
+                                        &texture_map,
+                                        &sampler_map,
+                                        le_model_cb0.buffer().clone(),
+                                    )
+                                }
+                            }
                         }
-                    }
 
-                    for th in &map.4 {
-                        if let Some(t) = terrain_renderers.get(&th.0) {
-                            t.draw(
-                                &dcs.context,
-                                &material_map,
-                                &vshader_map,
-                                &pshader_map,
-                                &cbuffer_map_vs,
-                                &cbuffer_map_ps,
-                                &texture_map,
-                                &sampler_map,
-                                le_model_cb0.buffer().clone(),
-                                le_terrain_cb11.buffer(),
-                            );
+                        if gb.renderlayer_terrain {
+                            for th in &map.4 {
+                                if let Some(t) = terrain_renderers.get(&th.0) {
+                                    t.draw(
+                                        &dcs.context,
+                                        &material_map,
+                                        &vshader_map,
+                                        &pshader_map,
+                                        &cbuffer_map_vs,
+                                        &cbuffer_map_ps,
+                                        &texture_map,
+                                        &sampler_map,
+                                        le_model_cb0.buffer().clone(),
+                                        le_terrain_cb11.buffer(),
+                                    );
+                                }
+                            }
                         }
-                    }
 
-                    for rp in &map.3 {
-                        if let Some(ent) = entity_renderers.get(&rp.entity) {
-                            let mm = Mat4::from_scale_rotation_translation(
-                                Vec3::splat(1.0),
-                                rp.rotation.inverse(),
-                                Vec3::ZERO,
-                            );
-                            let model_matrix = Mat4::from_cols(
-                                mm.x_axis.truncate().extend(rp.position.x),
-                                mm.y_axis.truncate().extend(rp.position.y),
-                                mm.z_axis.truncate().extend(rp.position.z),
-                                mm.w_axis,
-                            );
+                        if gb.renderlayer_entities {
+                            for rp in &map.3 {
+                                if let Some(ent) = entity_renderers.get(&rp.entity) {
+                                    let mm = Mat4::from_scale_rotation_translation(
+                                        Vec3::splat(rp.translation.w),
+                                        rp.rotation.inverse(),
+                                        Vec3::ZERO,
+                                    );
+                                    let model_matrix = Mat4::from_cols(
+                                        mm.x_axis.truncate().extend(rp.translation.x),
+                                        mm.y_axis.truncate().extend(rp.translation.y),
+                                        mm.z_axis.truncate().extend(rp.translation.z),
+                                        mm.w_axis,
+                                    );
 
-                            le_entity_cb11
-                                .write(&ScopeEntityModel {
-                                    mesh_to_world: (ent.mesh_transform() * model_matrix).to_3x4(),
-                                    unk3: Vec4::W,
-                                    unk4: Vec4::W,
-                                    unk5: Vec4::W,
-                                    texcoord_transform: ent.texcoord_transform(),
-                                    unk7: Vec4::W,
-                                })
-                                .unwrap();
+                                    le_entity_cb11
+                                        .write(&ScopeRigidModel {
+                                            mesh_to_world: model_matrix.transpose(),
+                                            position_scale: ent.mesh_scale(),
+                                            position_offset: ent.mesh_offset(),
+                                            texcoord0_scale_offset: ent.texcoord_transform(),
+                                            dynamic_sh_ao_values: Vec4::ZERO,
+                                        })
+                                        .unwrap();
 
-                            dcs.context.VSSetConstantBuffers(
-                                11,
-                                Some(&[Some(le_entity_cb11.buffer().clone())]),
-                            );
+                                    dcs.context.VSSetConstantBuffers(
+                                        11,
+                                        Some(&[Some(le_entity_cb11.buffer().clone())]),
+                                    );
 
-                            ent.draw(
-                                &dcs.context,
-                                &material_map,
-                                &vshader_map,
-                                &pshader_map,
-                                &cbuffer_map_vs,
-                                &cbuffer_map_ps,
-                                &texture_map,
-                                &sampler_map,
-                                le_model_cb0.buffer().clone(),
-                            );
+                                    ent.draw(
+                                        &dcs.context,
+                                        &material_map,
+                                        &vshader_map,
+                                        &pshader_map,
+                                        &cbuffer_map_vs,
+                                        &cbuffer_map_ps,
+                                        &texture_map,
+                                        &sampler_map,
+                                        le_model_cb0.buffer().clone(),
+                                    );
+                                }
+                            }
                         }
                     }
 

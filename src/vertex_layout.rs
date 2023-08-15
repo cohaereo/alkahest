@@ -1,4 +1,4 @@
-use crate::dxbc::{DxbcInputElement, SemanticType};
+use crate::dxbc::{DxbcInputElement, DxbcInputType, DxbcSemanticType};
 use crate::dxgi::DxgiFormat;
 use windows::Win32::Graphics::Direct3D11::{D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA};
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -7,43 +7,47 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 pub struct InputElement {
     pub format: DxgiFormat,
     pub semantic_index: u32,
-    pub semantic_type: SemanticType,
+    pub semantic_type: DxbcSemanticType,
+    pub component_count: usize,
+    pub component_type: DxbcInputType,
 }
 
 impl InputElement {
     pub fn from_dxbc(e: &DxbcInputElement, interpolated: bool, is_float: bool) -> InputElement {
         let ty = match e.component_mask.iter().count() {
-            1 => InputType::Float,
-            2 => InputType::Float2,
-            3 => InputType::Float3,
-            4 => InputType::Float4,
+            1 => InputType::Scalar,
+            2 => InputType::Scalar2,
+            3 => InputType::Scalar3,
+            4 => InputType::Scalar4,
             _ => unreachable!(),
         };
 
         InputElement {
             format: ty.to_dxgi_type(&e.semantic_name.to_string(), interpolated, is_float),
             semantic_index: e.semantic_index,
-            semantic_type: SemanticType::from_str(&e.semantic_name.to_string())
-                .unwrap_or(SemanticType::TexCoord),
+            semantic_type: DxbcSemanticType::from_str(&e.semantic_name.to_string())
+                .expect(format!("Unknown semantic type {}", e.semantic_name.to_string()).as_str()),
+            component_count: e.component_mask.bits().count_ones() as usize,
+            component_type: e.component_type.clone(),
         }
     }
 }
 
 pub enum InputType {
-    Float,
-    Float2,
-    Float3,
-    Float4,
+    Scalar,
+    Scalar2,
+    Scalar3,
+    Scalar4,
 }
 
 impl InputType {
     /// Align type to be usable with 16-bit formats
     pub fn align_16(self) -> InputType {
         match self {
-            InputType::Float => InputType::Float,
-            InputType::Float2 => InputType::Float2,
-            InputType::Float3 => InputType::Float4,
-            InputType::Float4 => InputType::Float4,
+            InputType::Scalar => InputType::Scalar,
+            InputType::Scalar2 => InputType::Scalar2,
+            InputType::Scalar3 => InputType::Scalar4,
+            InputType::Scalar4 => InputType::Scalar4,
         }
     }
 
@@ -56,7 +60,7 @@ impl InputType {
         is_float: bool,
     ) -> DxgiFormat {
         match if !is_float { self.align_16() } else { self } {
-            InputType::Float => {
+            InputType::Scalar => {
                 if is_float {
                     DxgiFormat::R32_FLOAT
                 } else {
@@ -67,7 +71,7 @@ impl InputType {
                     }
                 }
             }
-            InputType::Float2 => {
+            InputType::Scalar2 => {
                 if is_float {
                     DxgiFormat::R32G32_FLOAT
                 } else {
@@ -78,14 +82,14 @@ impl InputType {
                     }
                 }
             }
-            InputType::Float3 => {
+            InputType::Scalar3 => {
                 if is_float {
                     DxgiFormat::R32G32B32_FLOAT
                 } else {
                     unreachable!()
                 }
             }
-            InputType::Float4 => {
+            InputType::Scalar4 => {
                 if semantic_name.starts_with("COLOR") {
                     DxgiFormat::R8G8B8A8_UNORM
                 } else {

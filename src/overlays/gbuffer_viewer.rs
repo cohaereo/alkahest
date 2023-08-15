@@ -1,5 +1,5 @@
 use glam::{Mat4, Vec4};
-use imgui::{Condition, WindowFlags};
+use imgui::{Condition, TreeNodeFlags, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
@@ -11,6 +11,10 @@ pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
     pub map_index: usize,
     pub maps: Vec<(u32, String)>,
+
+    pub renderlayer_statics: bool,
+    pub renderlayer_terrain: bool,
+    pub renderlayer_entities: bool,
 }
 
 impl OverlayProvider for GBufferInfoOverlay {
@@ -25,6 +29,14 @@ impl OverlayProvider for GBufferInfoOverlay {
                 ui.combo("Map", &mut self.map_index, &self.maps, |(i, map_name)| {
                     format!("{map_name} ({:08X})", i.to_be()).into()
                 });
+                ui.separator();
+                if ui.collapsing_header("Render Layers", TreeNodeFlags::empty()) {
+                    ui.indent();
+                    ui.checkbox("Statics", &mut self.renderlayer_statics);
+                    ui.checkbox("Terrain", &mut self.renderlayer_terrain);
+                    ui.checkbox("Entities", &mut self.renderlayer_entities);
+                    ui.unindent();
+                }
             });
     }
 }
@@ -49,6 +61,7 @@ pub enum CompositorMode {
     Transmission = 8,
     VertexAO = 9,
     Iridescence = 10,
+    // Matcap = 11,
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
@@ -63,23 +76,27 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::Iridescence,
     CompositorMode::TextureAO,
     CompositorMode::VertexAO,
+    // CompositorMode::Matcap,
 ];
 
 impl Display for CompositorMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CompositorMode::Combined => f.write_str("Combined"),
-            CompositorMode::Albedo => f.write_str("Albedo (RT0)"),
-            CompositorMode::Normal => f.write_str("Normal (RT1)"),
-            CompositorMode::PbrStack => f.write_str("PBR Stack (RT2)"),
-            CompositorMode::SmoothnessFuzz => f.write_str("Smoothness/Fuzz"),
-            CompositorMode::Metalicness => f.write_str("Metalicness"),
-            CompositorMode::TextureAO => f.write_str("Texture AO"),
-            CompositorMode::Emission => f.write_str("Emission"),
-            CompositorMode::Transmission => f.write_str("Transmission"),
-            CompositorMode::VertexAO => f.write_str("Vertex AO"),
-            CompositorMode::Iridescence => f.write_str("Iridescence"),
-        }
+        let name = match self {
+            CompositorMode::Combined => "Combined",
+            CompositorMode::Albedo => "Albedo (RT0)",
+            CompositorMode::Normal => "Normal (RT1)",
+            CompositorMode::PbrStack => "PBR Stack (RT2)",
+            CompositorMode::SmoothnessFuzz => "Smoothness/Fuzz",
+            CompositorMode::Metalicness => "Metalicness",
+            CompositorMode::TextureAO => "Texture AO",
+            CompositorMode::Emission => "Emission",
+            CompositorMode::Transmission => "Transmission",
+            CompositorMode::VertexAO => "Vertex AO",
+            CompositorMode::Iridescence => "Iridescence",
+            // CompositorMode::Matcap => "Matcap",
+        };
+
+        f.write_str(name)
     }
 }
 
