@@ -1001,6 +1001,7 @@ pub fn main() -> anyhow::Result<()> {
     let le_entity_cb11 = ConstantBuffer::<ScopeRigidModel>::create(dcs.clone(), None)?;
 
     let le_vertex_cb12 = ConstantBuffer::<ScopeView>::create(dcs.clone(), None)?;
+    let le_entity_cb13 = ConstantBuffer::<Vec4>::create(dcs.clone(), None)?;
 
     let cb_composite_lights =
         ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
@@ -1122,7 +1123,7 @@ pub fn main() -> anyhow::Result<()> {
     gui.add_overlay(Box::new(gui_resources.clone()));
     gui.add_overlay(Box::new(gui_console.clone()));
 
-    let _start_time = Instant::now();
+    let start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
 
@@ -1334,6 +1335,13 @@ pub fn main() -> anyhow::Result<()> {
                         }
 
                         if gb.renderlayer_entities {
+                            le_entity_cb13
+                                .write(&Vec4::splat(start_time.elapsed().as_secs_f32()))
+                                .unwrap();
+                            dcs.context.VSSetConstantBuffers(
+                                13,
+                                Some(&[Some(le_entity_cb13.buffer().clone())]),
+                            );
                             for rp in &map.3 {
                                 if let Some(ent) = entity_renderers.get(&rp.entity) {
                                     let mm = Mat4::from_scale_rotation_translation(
