@@ -1,4 +1,3 @@
-use tracing::warn;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 
 pub type Key = VirtualKeyCode;
@@ -12,6 +11,7 @@ pub enum KeyState {
     Repeated,
 }
 
+#[allow(unused)]
 #[derive(PartialEq, Eq)]
 pub enum MouseButton {
     /// Alias for Mouse1
@@ -61,11 +61,14 @@ impl Default for InputState {
     }
 }
 
+#[allow(unused)]
 impl InputState {
     /// Handles winit events and updates the state accordingly
     pub fn handle_event(&mut self, event: &Event<'_, ()>) {
-        match event {
-            Event::WindowEvent { event, .. } => match event {
+        if let Event::WindowEvent { event, .. } = event {
+            // TODO(cohae): Resolve this lint
+            #[allow(clippy::collapsible_match)]
+            match event {
                 WindowEvent::KeyboardInput {
                     input:
                         KeyboardInput {
@@ -76,7 +79,7 @@ impl InputState {
                     ..
                 } => {
                     if let Some(vk) = virtual_keycode {
-                        let mut key = &mut self.keys[*vk as usize];
+                        let key = &mut self.keys[*vk as usize];
                         match state {
                             winit::event::ElementState::Pressed => match *key {
                                 KeyState::Up => *key = KeyState::Down,
@@ -108,8 +111,7 @@ impl InputState {
                     winit::event::MouseButton::Other(_) => {}
                 },
                 _ => {}
-            },
-            _ => {}
+            }
         }
     }
 

@@ -54,7 +54,7 @@ use crate::overlays::gbuffer_viewer::{
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
-use crate::render::scopes::{MatrixConversion, ScopeRigidModel};
+use crate::render::scopes::ScopeRigidModel;
 use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{
@@ -78,7 +78,7 @@ mod entity;
 mod icons;
 mod input;
 mod map;
-mod map_data;
+// mod map_data;
 mod map_resources;
 mod material;
 mod overlays;
@@ -140,7 +140,7 @@ pub fn main() -> anyhow::Result<()> {
         )
     });
 
-    PACKAGE_MANAGER.with(|v| *v.borrow_mut() = Some(Arc::new(pm)));
+    PACKAGE_MANAGER.with(|v| *v.borrow_mut() = Some(Rc::new(pm)));
 
     let mut stringmap: IntMap<u32, String> = Default::default();
     let all_global_packages = [
@@ -198,7 +198,7 @@ pub fn main() -> anyhow::Result<()> {
         .build(&event_loop)?;
 
     // cohae: Slight concern for thread safety here. ID3D11Device is threadsafe, but ID3D11DeviceContext is *not*
-    let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
+    let dcs = Rc::new(DeviceContextSwapchain::create(&window)?);
     let mut gbuffer = GBuffer::create(
         (window.inner_size().width, window.inner_size().height),
         dcs.clone(),
@@ -296,7 +296,7 @@ pub fn main() -> anyhow::Result<()> {
                                     ),
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::CubemapVolume(cubemap_volume),
+                                    resource: MapResource::CubemapVolume(Box::new(cubemap_volume)),
                                 });
                             }
                             // Point light
@@ -435,15 +435,14 @@ pub fn main() -> anyhow::Result<()> {
 
     let to_load_entities: IntMap<TagHash, ()> = maps
         .iter()
-        .map(|v| v.3.iter().map(|r| (r.entity, ())))
-        .flatten()
+        .flat_map(|v| v.3.iter().map(|r| (r.entity, ())))
         .filter(|(v, _)| v.is_valid())
         .collect();
 
     let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
-    for (te, _) in &to_load_entities {
+    for te in to_load_entities.keys() {
         // println!("{te:?}");
-        let header: Unk80809c0f = package_manager().read_tag_struct(te.clone())?;
+        let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
         // println!("{header:?}");
         // println!("{te:?}");
         for e in &header.unk10 {
@@ -474,7 +473,7 @@ pub fn main() -> anyhow::Result<()> {
                     }
 
                     entity_renderers.insert(
-                        te.clone(),
+                        *te,
                         EntityRenderer::load(
                             model.0,
                             entity_material_map.to_vec(),
@@ -1117,11 +1116,11 @@ pub fn main() -> anyhow::Result<()> {
     }));
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
-    gui.add_overlay(Box::new(gui_fps.clone()));
-    gui.add_overlay(Box::new(gui_debug.clone()));
-    gui.add_overlay(Box::new(gui_gbuffer.clone()));
-    gui.add_overlay(Box::new(gui_resources.clone()));
-    gui.add_overlay(Box::new(gui_console.clone()));
+    gui.add_overlay(gui_fps.clone());
+    gui.add_overlay(gui_debug.clone());
+    gui.add_overlay(gui_gbuffer.clone());
+    gui.add_overlay(gui_resources.clone());
+    gui.add_overlay(gui_console.clone());
 
     let start_time = Instant::now();
     let mut last_frame = Instant::now();
@@ -1445,7 +1444,9 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.swap_chain.Present(1, 0).unwrap();
 
-                    tracy_client::Client::running().map(|c| c.frame_mark());
+                    if let Some(c) = tracy_client::Client::running() {
+                        c.frame_mark()
+                    }
                 };
             }
             Event::MainEventsCleared => {

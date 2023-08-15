@@ -132,15 +132,15 @@ pub enum DxgiFormat {
     FORCE_UINT = 0xffffffff,
 }
 
-impl Into<DXGI_FORMAT> for DxgiFormat {
-    fn into(self) -> DXGI_FORMAT {
-        DXGI_FORMAT(self.into())
+impl From<DxgiFormat> for DXGI_FORMAT {
+    fn from(val: DxgiFormat) -> Self {
+        DXGI_FORMAT(val.into())
     }
 }
 
-impl Into<u32> for DxgiFormat {
-    fn into(self) -> u32 {
-        unsafe { transmute(self) }
+impl From<DxgiFormat> for u32 {
+    fn from(val: DxgiFormat) -> Self {
+        unsafe { transmute(val) }
     }
 }
 

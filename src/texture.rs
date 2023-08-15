@@ -4,9 +4,7 @@ use crate::types::IVector2;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11Texture3D,
-};
+use windows::Win32::Graphics::Direct3D11::{ID3D11Texture2D, ID3D11Texture3D};
 
 #[derive(BinRead, Debug)]
 pub struct TextureHeader {
@@ -54,13 +52,4 @@ pub struct TexturePlateSet {
 pub enum TextureHandle {
     Texture2D(ID3D11Texture2D),
     Texture3D(ID3D11Texture3D),
-}
-
-pub struct Texture {
-    pub texture: TextureHandle,
-    pub view: ID3D11ShaderResourceView,
-}
-
-impl Texture {
-    // pub fn load()
 }

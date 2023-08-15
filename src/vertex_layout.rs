@@ -23,10 +23,10 @@ impl InputElement {
         };
 
         InputElement {
-            format: ty.to_dxgi_type(&e.semantic_name.to_string(), interpolated, is_float),
+            format: ty.into_dxgi_type(&e.semantic_name.to_string(), interpolated, is_float),
             semantic_index: e.semantic_index,
             semantic_type: DxbcSemanticType::from_str(&e.semantic_name.to_string())
-                .expect(format!("Unknown semantic type {}", e.semantic_name.to_string()).as_str()),
+                .unwrap_or_else(|| panic!("Unknown semantic type {}", *e.semantic_name)),
             component_count: e.component_mask.bits().count_ones() as usize,
             component_type: e.component_type.clone(),
         }
@@ -53,7 +53,7 @@ impl InputType {
 
     /// Convert to a compatible DXGI_FORMAT
     /// This function aligns 16-bit types to 32-bit where necessary
-    pub fn to_dxgi_type(
+    pub fn into_dxgi_type(
         self,
         semantic_name: &str,
         interpolated: bool,
@@ -63,23 +63,19 @@ impl InputType {
             InputType::Scalar => {
                 if is_float {
                     DxgiFormat::R32_FLOAT
+                } else if interpolated {
+                    DxgiFormat::R16_SNORM
                 } else {
-                    if interpolated {
-                        DxgiFormat::R16_SNORM
-                    } else {
-                        DxgiFormat::R16_SINT
-                    }
+                    DxgiFormat::R16_SINT
                 }
             }
             InputType::Scalar2 => {
                 if is_float {
                     DxgiFormat::R32G32_FLOAT
+                } else if interpolated {
+                    DxgiFormat::R16G16_SNORM
                 } else {
-                    if interpolated {
-                        DxgiFormat::R16G16_SNORM
-                    } else {
-                        DxgiFormat::R16G16_SINT
-                    }
+                    DxgiFormat::R16G16_SINT
                 }
             }
             InputType::Scalar3 => {
@@ -92,16 +88,12 @@ impl InputType {
             InputType::Scalar4 => {
                 if semantic_name.starts_with("COLOR") {
                     DxgiFormat::R8G8B8A8_UNORM
+                } else if is_float {
+                    DxgiFormat::R32G32B32A32_FLOAT
+                } else if interpolated {
+                    DxgiFormat::R16G16B16A16_SNORM
                 } else {
-                    if is_float {
-                        DxgiFormat::R32G32B32A32_FLOAT
-                    } else {
-                        if interpolated {
-                            DxgiFormat::R16G16B16A16_SNORM
-                        } else {
-                            DxgiFormat::R16G16B16A16_SINT
-                        }
-                    }
+                    DxgiFormat::R16G16B16A16_SINT
                 }
             }
         }

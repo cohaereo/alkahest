@@ -20,7 +20,7 @@ pub struct GuiManager {
     pub imgui: Context,
     pub platform: WinitPlatform,
     renderer: Renderer,
-    overlays: Vec<Box<Rc<RefCell<dyn OverlayProvider>>>>,
+    overlays: Vec<Rc<RefCell<dyn OverlayProvider>>>,
 }
 
 // TODO: Way to obtain overlays by type
@@ -56,15 +56,16 @@ impl GuiManager {
         ]);
 
         let renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, device).unwrap() };
-        return GuiManager {
+
+        GuiManager {
             imgui,
             platform,
             renderer,
             overlays: vec![],
-        };
+        }
     }
 
-    pub fn add_overlay(&mut self, overlay: Box<Rc<RefCell<dyn OverlayProvider>>>) {
+    pub fn add_overlay(&mut self, overlay: Rc<RefCell<dyn OverlayProvider>>) {
         self.overlays.push(overlay);
     }
 
@@ -84,7 +85,7 @@ impl GuiManager {
                 .create_overlay(ui, window, resources);
         }
 
-        self.platform.prepare_render(&ui, window);
+        self.platform.prepare_render(ui, window);
         self.renderer
             .render(self.imgui.render())
             .expect("GuiManager failed to render!");

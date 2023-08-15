@@ -14,7 +14,7 @@ pub enum MapResource {
     // Terrain(Unk8080714b),
     /// Generic data entry with no resource
     Entity(TagHash),
-    CubemapVolume(Unk80806b7f),
+    CubemapVolume(Box<Unk80806b7f>),
     PointLight(TagHash),
     Decal {
         material: TagHash,
@@ -29,12 +29,12 @@ impl MapResource {
             MapResource::CubemapVolume(c) => {
                 format!(
                     "Cubemap Volume\n'{}' ({:08X})",
-                    c.cubemap_name.to_string(),
+                    *c.cubemap_name,
                     c.cubemap_texture.0.to_be()
                 )
             }
             MapResource::Decal { material } => format!("Decal (mat {material})"),
-            MapResource::PointLight(_) => format!("Point light"),
+            MapResource::PointLight(_) => "Point light".to_string(),
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
         }
     }

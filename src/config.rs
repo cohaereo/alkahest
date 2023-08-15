@@ -20,14 +20,14 @@ pub fn with<F, T>(f: F) -> T
 where
     F: FnOnce(&Config) -> T,
 {
-    f(&*CONFIGURATION.read())
+    f(&CONFIGURATION.read())
 }
 
 pub fn with_mut<F, T>(f: F) -> T
 where
     F: FnOnce(&mut Config) -> T,
 {
-    f(&mut *CONFIGURATION.write())
+    f(&mut CONFIGURATION.write())
 }
 
 #[macro_export]

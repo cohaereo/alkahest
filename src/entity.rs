@@ -113,7 +113,7 @@ pub enum ELodCategory {
 
 impl PartialOrd for ELodCategory {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.remap_order().partial_cmp(&other.remap_order())
+        Some(self.remap_order().cmp(&other.remap_order()))
     }
 }
 

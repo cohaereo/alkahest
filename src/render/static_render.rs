@@ -102,7 +102,9 @@ impl StaticModel {
             let index_data = pm.read_tag(t).unwrap();
 
             let index_buffer = unsafe {
-                let buffer = device
+                
+
+                device
                     .CreateBuffer(
                         &D3D11_BUFFER_DESC {
                             ByteWidth: index_data.len() as _,
@@ -115,17 +117,14 @@ impl StaticModel {
                             ..Default::default()
                         }),
                     )
-                    .context("Failed to create index buffer")?;
-
-                buffer
+                    .context("Failed to create index buffer")?
             };
 
             let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
                 vertex_data
                     .chunks_exact(vertex_header.stride as _)
                     .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-                    .map(|(v1, v2)| [v1, v2].concat())
-                    .flatten()
+                    .flat_map(|(v1, v2)| [v1, v2].concat())
                     .collect()
             } else {
                 vertex_data

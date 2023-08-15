@@ -6,6 +6,7 @@ use crate::statics::Unk808071a3;
 use crate::types::Vector4;
 use glam::{Mat4, Quat, Vec3};
 use nohash_hasher::IntMap;
+use std::rc::Rc;
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Buffer, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader, ID3D11SamplerState,
@@ -24,7 +25,7 @@ impl InstancedRenderer {
     pub fn load(
         model: Arc<StaticModel>,
         instances: &[Unk808071a3],
-        dcs: Arc<DeviceContextSwapchain>,
+        dcs: Rc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
         let mut instance_data: Vec<ScopeStaticInstance> = Vec::with_capacity(instances.len());
 

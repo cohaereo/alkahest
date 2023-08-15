@@ -1,12 +1,12 @@
 use destiny_pkg::PackageManager;
 use std::cell::RefCell;
-use std::sync::Arc;
+use std::rc::Rc;
 
 thread_local! {
-    pub static PACKAGE_MANAGER: RefCell<Option<Arc<PackageManager>>> = RefCell::new(None);
+    pub static PACKAGE_MANAGER: RefCell<Option<Rc<PackageManager>>> = RefCell::new(None);
 }
 
-pub fn package_manager_checked() -> anyhow::Result<Arc<PackageManager>> {
+pub fn package_manager_checked() -> anyhow::Result<Rc<PackageManager>> {
     PACKAGE_MANAGER.with(|v| {
         v.borrow()
             .as_ref()
@@ -15,6 +15,6 @@ pub fn package_manager_checked() -> anyhow::Result<Arc<PackageManager>> {
     })
 }
 
-pub fn package_manager() -> Arc<PackageManager> {
+pub fn package_manager() -> Rc<PackageManager> {
     package_manager_checked().unwrap()
 }

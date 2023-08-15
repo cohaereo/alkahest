@@ -8,11 +8,11 @@ use std::slice::Iter;
 
 use crate::packages::package_manager;
 
-pub type TablePointer32<T> = _TablePointer<i32, u32, T>;
+// pub type TablePointer32<T> = _TablePointer<i32, u32, T>;
 pub type TablePointer64<T> = _TablePointer<i64, u64, T>;
 pub type TablePointer<T> = TablePointer64<T>;
 
-pub type RelPointer32<T = ()> = _RelPointer<i32, T>;
+// pub type RelPointer32<T = ()> = _RelPointer<i32, T>;
 pub type RelPointer64<T = ()> = _RelPointer<i64, T>;
 pub type RelPointer<T = ()> = RelPointer64<T>;
 
@@ -177,9 +177,9 @@ impl<O: Into<i64> + Copy, T: BinRead + Debug> Debug for _RelPointer<O, T> {
     }
 }
 
-impl<O: Into<i64> + Copy, T: BinRead + Debug> Into<SeekFrom> for _RelPointer<O, T> {
-    fn into(self) -> SeekFrom {
-        SeekFrom::Start((self.offset_base as i64 + self.offset.into()) as u64)
+impl<O: Into<i64> + Copy, T: BinRead + Debug> From<_RelPointer<O, T>> for SeekFrom {
+    fn from(val: _RelPointer<O, T>) -> Self {
+        SeekFrom::Start((val.offset_base as i64 + val.offset.into()) as u64)
     }
 }
 

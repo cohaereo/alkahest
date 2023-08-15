@@ -23,7 +23,7 @@ impl OverlayProvider for GBufferInfoOverlay {
             .flags(WindowFlags::NO_TITLE_BAR)
             .size([178.0, 72.0], Condition::FirstUseEver)
             .build(|| {
-                ui.combo(" ", &mut self.composition_mode, &COMPOSITOR_MODES, |v| {
+                ui.combo(" ", &mut self.composition_mode, COMPOSITOR_MODES, |v| {
                     format!("{v}").into()
                 });
                 ui.combo("Map", &mut self.map_index, &self.maps, |(i, map_name)| {

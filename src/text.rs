@@ -74,8 +74,12 @@ pub fn decode_text(data: &[u8], cipher: u16) -> String {
                 result.push(char::REPLACEMENT_CHARACTER);
                 offset += 3
             }
-            0..=0x7f | _ => {
+            0..=0x7f => {
                 result.push(char::from(u0));
+                offset += 1
+            }
+            _ => {
+                result.push(char::REPLACEMENT_CHARACTER);
                 offset += 1
             }
         }

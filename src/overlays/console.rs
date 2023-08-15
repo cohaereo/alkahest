@@ -1,7 +1,7 @@
 use crate::input::InputState;
 use crate::overlays::gui::OverlayProvider;
 use crate::resources::Resources;
-use imgui::Key;
+
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -49,15 +49,14 @@ where
         event.record(&mut visitor);
         let mut message = None;
         for (f, v) in visitor.fields {
-            match f.as_str() {
-                "message" => message = Some(v),
-                _ => {}
+            if f.as_str() == "message" {
+                message = Some(v);
             }
         }
 
         if let Some(message) = message {
             MESSAGE_BUFFER.write().push(CapturedEvent {
-                level: event.metadata().level().clone(),
+                level: *event.metadata().level(),
                 target: event.metadata().target().to_string(),
                 message,
             })
