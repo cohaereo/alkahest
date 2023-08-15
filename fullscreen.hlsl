@@ -122,11 +122,16 @@ float3 PositionGrid(float3 pos, float size) {
     return rgb;
 }
 
+// Decode a packed normal (0.0-1.0 -> -1.0-1.0) 
+float3 DecodeNormal(float3 n) {
+    return n * 2.0 - 1.0;
+}
+
 float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 uv) {
     float3 albedo = rt0.xyz;
-    float3 normal = normalize(rt1.xyz);
+    float3 normal = DecodeNormal(rt1.xyz);
 
-    float smoothness = 8 * length(rt1.xyz - float3(0.5,0.5,0.5)) - 3;
+    float smoothness = 4 * (length(normal) - 0.75);
     float roughness = 1.0 - saturate(smoothness);
     float metallic = rt2.x;
     float ao = rt2.y * 2.0;
@@ -143,19 +148,23 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
     // reflectance equation
     float3 Lo = float3(0.0, 0.0, 0.0);
-    float3 LIGHT_POS = cameraPos.xyz;
     float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 3.0;
     for(uint i = 0; i < lightCount; ++i)
     {
-        float distance = length(lights[i].xyz - worldPos);
+        float3 light_pos = lights[i].xyz;
+        if(i == 0) {
+            light_pos = cameraPos.xyz;
+        }
+
+        float distance = length(light_pos - worldPos);
         if(distance > 16.0) {
             continue;
         }
 
         // calculate per-light radiance
-        float3 L = normalize(lights[i].xyz - worldPos);
+        float3 L = normalize(light_pos - worldPos);
         float3 H = normalize(V + L);
-//         float distance    = length(lights[i].xyz - worldPos);
+        // float distance    = length(lights[i].xyz - worldPos);
         float attenuation = 1.0 / (distance * distance);
         //float attenuation = 10.0 / (distance);
 		float3 radiance     = LIGHT_COL.xyz * attenuation;
@@ -184,18 +193,18 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 	float3 kD = 1.0 - kS;
 	kD *= 1.0 - metallic;
 
-// 	float3 irradiance = irradianceMap.Sample(textureSampler, N).rgb;
-// 	float3 diffuse = albedo;
-// 	float3 diffuse = irradiance * albedo;
+	// float3 irradiance = irradianceMap.Sample(textureSampler, N).rgb;
+	// float3 diffuse = albedo;
+	// float3 diffuse = irradiance * albedo;
 
-	const float MAX_REFLECTION_LOD = 4.0;
-// 	float3 prefilteredColor = preFilterMap.SampleLevel(textureSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
-// 	float2 envBRDF = brdfLUT.Sample(textureSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
-// 	float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
-//
-// 	float3 ambient = (kD * diffuse /*+ specular*/) * ao;
-//     float3 ambient = 1.0;
-//     float3 ambient = kD * diffuse;
+	// const float MAX_REFLECTION_LOD = 4.0;
+	// float3 prefilteredColor = preFilterMap.SampleLevel(textureSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
+	// float2 envBRDF = brdfLUT.Sample(textureSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
+	// float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+
+	// float3 ambient = (kD * diffuse /*+ specular*/) * ao;
+    // float3 ambient = 1.0;
+    // float3 ambient = kD * diffuse;
     float3 ambient = float3(0.03, 0.03, 0.03) * albedo;
 
     float3 color = ambient + Lo;
@@ -208,47 +217,48 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
-    float4 diffuse = RenderTarget0.Sample(SampleType, input.uv);
-    float4 normal = RenderTarget1.Sample(SampleType, input.uv);
-    float4 pbr_stack = RenderTarget2.Sample(SampleType, input.uv);
+    float4 albedo = RenderTarget0.Sample(SampleType, input.uv);
+    float4 rt1 = RenderTarget1.Sample(SampleType, input.uv);
+    float4 rt2 = RenderTarget2.Sample(SampleType, input.uv);
     float depth = DepthTarget.Sample(SampleType, input.uv).r;
 
     [branch] switch(tex_i) {
         case 1: // RT0 (gamma-corrected)
-            return float4(GammaCorrect(diffuse.xyz), 1.0);
+            return float4(GammaCorrect(albedo.xyz), 1.0);
         case 2: // RT1
-            return RenderTarget1.Sample(SampleType, input.uv);
+            return rt1;
         case 3: // RT2
-            return RenderTarget2.Sample(SampleType, input.uv);
+            return rt2;
         case 4: { // Smoothness
-            float smoothness = 8 * length(normal.xyz - float3(0.5,0.5,0.5)) - 3;
+            float3 normal = DecodeNormal(rt1.xyz);
+            float smoothness = 4 * (length(normal) - 0.75);
             return float4(smoothness, smoothness, smoothness, 1.0);
         }
         case 5: { // Metalicness
-            return float4(pbr_stack.xxx, 1.0);
+            return float4(rt2.xxx, 1.0);
         }
         case 6: { // Texture AO
-            return float4(pbr_stack.yyy * 2.0, 1.0);
+            return float4(rt2.yyy * 2.0, 1.0);
         }
         case 7: { // Emission
-            return float4(GammaCorrect(diffuse.xyz) * (pbr_stack.y * 2.0 - 1.0), 1.0);
+            return float4(GammaCorrect(albedo.xyz) * (rt2.y * 2.0 - 1.0), 1.0);
         }
         case 8: { // Transmission
-            return float4(pbr_stack.zzz, 1.0);
+            return float4(rt2.zzz, 1.0);
         }
         case 9: { // Vertex AO
-            return float4(pbr_stack.aaa, 1.0);
+            return float4(rt2.aaa, 1.0);
         }
         case 10: { // Iridescence
-            return float4(diffuse.aaa, 1.0);
+            return float4(albedo.aaa, 1.0);
         }
         default: { // Combined
             if(lightCount == 0) {
-                float2 muv = 0.5 * normal.xy + float2(0.5, 0.5);
+                float2 muv = 0.5 * rt1.xy + float2(0.5, 0.5);
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, 1.0-muv.y));
-                return float4(GammaCorrect(diffuse.xyz * matcap.x) * (pbr_stack.y * 2.0), 1.0);
+                return float4(GammaCorrect(albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
             } else {
-                float4 c = PeanutButterRasputin(diffuse, normal, pbr_stack, depth, input.uv);
+                float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.uv);
                 return c;
             }
 //             return float4((WorldPosFromDepth(depth, input.uv) % 100.0) / 100.0, 1.0);
