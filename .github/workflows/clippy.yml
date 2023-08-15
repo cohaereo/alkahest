@@ -1,4 +1,4 @@
-name: Check
+name: Clippy
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    name: Check (${{ matrix.platform }})
+    name: Clippy (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: true
@@ -28,4 +28,4 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo check --release
+        run: cargo clippy --release
