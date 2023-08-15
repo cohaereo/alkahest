@@ -14,7 +14,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 
@@ -30,7 +30,7 @@ use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::event::{ElementState, MouseButton, VirtualKeyCode};
+use winit::event::VirtualKeyCode;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -40,9 +40,11 @@ use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
+use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
 use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
+use crate::material::Unk808071e8;
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
@@ -52,12 +54,15 @@ use crate::overlays::gbuffer_viewer::{
 use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
+use crate::render::scopes::{MatrixConversion, ScopeEntityModel};
 use crate::render::static_render::{LoadedTexture, StaticModel};
 use crate::render::terrain::TerrainRenderer;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, GBuffer, InstancedRenderer};
+use crate::render::{
+    ConstantBuffer, DeviceContextSwapchain, EntityRenderer, GBuffer, InstancedRenderer,
+};
 use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
-use crate::structure::Tag;
+use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::{TextureHandle, TextureHeader};
 use crate::types::Vector4;
@@ -201,7 +206,8 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut static_map: IntMap<u32, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
-    let mut vshader_map: IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)> = Default::default();
+    let mut vshader_map: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
+        Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
     let mut cbuffer_map_vs: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut cbuffer_map_ps: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
@@ -280,6 +286,12 @@ pub fn main() -> anyhow::Result<()> {
                                         data.translation.z,
                                         data.translation.w,
                                     ),
+                                    rotation: Quat::from_xyzw(
+                                        data.rotation.x,
+                                        data.rotation.y,
+                                        data.rotation.z,
+                                        data.rotation.w,
+                                    ),
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::CubemapVolume(cubemap_volume),
@@ -296,6 +308,12 @@ pub fn main() -> anyhow::Result<()> {
                                         data.translation.y,
                                         data.translation.z,
                                         data.translation.w,
+                                    ),
+                                    rotation: Quat::from_xyzw(
+                                        data.rotation.x,
+                                        data.rotation.y,
+                                        data.rotation.z,
+                                        data.rotation.w,
                                     ),
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
@@ -330,6 +348,12 @@ pub fn main() -> anyhow::Result<()> {
                                                 transform.z,
                                                 transform.w,
                                             ),
+                                            rotation: Quat::from_xyzw(
+                                                data.rotation.x,
+                                                data.rotation.y,
+                                                data.rotation.z,
+                                                data.rotation.w,
+                                            ),
                                             entity: data.entity,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Decal {
@@ -351,6 +375,12 @@ pub fn main() -> anyhow::Result<()> {
                                         data.translation.z,
                                         data.translation.w,
                                     ),
+                                    rotation: Quat::from_xyzw(
+                                        data.rotation.x,
+                                        data.rotation.y,
+                                        data.rotation.z,
+                                        data.rotation.w,
+                                    ),
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::Unknown(
@@ -366,6 +396,12 @@ pub fn main() -> anyhow::Result<()> {
                                 data.translation.y,
                                 data.translation.z,
                                 data.translation.w,
+                            ),
+                            rotation: Quat::from_xyzw(
+                                data.rotation.x,
+                                data.rotation.y,
+                                data.rotation.z,
+                                data.rotation.w,
                             ),
                             entity: data.entity,
                             resource_type: u32::MAX,
@@ -394,6 +430,63 @@ pub fn main() -> anyhow::Result<()> {
             terrains,
         ));
     }
+
+    let to_load_entities: IntMap<TagHash, ()> = maps
+        .iter()
+        .map(|v| v.3.iter().map(|r| (r.entity, ())))
+        .flatten()
+        .filter(|(v, _)| v.is_valid())
+        .collect();
+
+    let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
+    for (te, _) in to_load_entities {
+        // println!("{te:?}");
+        let header: Unk80809c0f = package_manager().read_tag_struct(te)?;
+        // println!("{header:?}");
+        // println!("{te:?}");
+        for e in &header.unk10 {
+            match e.unk0.unk10.resource_type {
+                0x808072b8 => {
+                    let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
+                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x1dc))?;
+                    let model: Tag<Unk808073a5> = cur.read_le()?;
+                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x300))?;
+                    let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
+                    let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
+
+                    for m in &materials {
+                        material_map.insert(m.tag().0, m.0.clone());
+                    }
+
+                    for m in &model.meshes {
+                        for p in &m.parts {
+                            if p.material.is_valid() {
+                                material_map.insert(
+                                    p.material.0,
+                                    package_manager().read_tag_struct(p.material)?,
+                                );
+                            }
+                        }
+                    }
+
+                    entity_renderers.insert(
+                        te,
+                        EntityRenderer::load(
+                            model.0,
+                            entity_material_map.to_vec(),
+                            materials.iter().map(|m| m.tag()).collect_vec(),
+                            &dcs,
+                        )?,
+                    );
+
+                    // println!(" - EntityModel {model:?}");
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // return Ok(());
 
     info!("{} lights", point_lights.len());
 
@@ -549,19 +642,18 @@ pub fn main() -> anyhow::Result<()> {
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
                     let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
 
-                    let layout = vertex_layout::build_input_layout(
-                        &input_sig
-                            .elements
-                            .iter()
-                            .map(|e| {
-                                InputElement::from_dxbc(
-                                    e,
-                                    e.component_type == DxbcInputType::Float,
-                                    false,
-                                )
-                            })
-                            .collect::<Vec<InputElement>>(),
-                    );
+                    let layout_converted = input_sig
+                        .elements
+                        .iter()
+                        .map(|e| {
+                            InputElement::from_dxbc(
+                                e,
+                                e.component_type == DxbcInputType::Float,
+                                false,
+                            )
+                        })
+                        .collect_vec();
+                    let layout = vertex_layout::build_input_layout(&layout_converted);
                     unsafe {
                         let v = dcs
                             .device
@@ -577,10 +669,13 @@ pub fn main() -> anyhow::Result<()> {
                         )
                         .expect("Failed to set VS name");
 
-                        let input_layout = dcs
-                            .device
-                            .CreateInputLayout(&layout, &vs_data)
-                            .expect("Failed to create input layout");
+                        let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).ok();
+                        if input_layout.is_none() {
+                            error!(
+                                "Failed to load vertex layout for VS {:?}, layout={:?}",
+                                m.vertex_shader, layout_converted
+                            );
+                        }
 
                         (v, input_layout)
                     }
@@ -874,6 +969,7 @@ pub fn main() -> anyhow::Result<()> {
         ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &[Vec4::splat(0.6); 64])?;
 
     let le_terrain_cb11 = ConstantBuffer::<Mat4>::create(dcs.clone(), None)?;
+    let le_entity_cb11 = ConstantBuffer::<ScopeEntityModel>::create(dcs.clone(), None)?;
 
     let le_vertex_cb12 = ConstantBuffer::<ScopeView>::create(dcs.clone(), None)?;
 
@@ -1053,7 +1149,8 @@ pub fn main() -> anyhow::Result<()> {
                         last_cursor_pos = Some(*position);
                     }
                 }
-                WindowEvent::KeyboardInput { input, .. } => {
+                // TODO(cohae): Should this even be in here at this point?
+                WindowEvent::KeyboardInput { .. } => {
                     let input = resources.get::<InputState>().unwrap();
                     if input.ctrl() && input.is_key_down(VirtualKeyCode::Q) {
                         *control_flow = ControlFlow::Exit
@@ -1192,6 +1289,50 @@ pub fn main() -> anyhow::Result<()> {
                                 &sampler_map,
                                 le_model_cb0.buffer().clone(),
                                 le_terrain_cb11.buffer(),
+                            );
+                        }
+                    }
+
+                    for rp in &map.3 {
+                        if let Some(ent) = entity_renderers.get(&rp.entity) {
+                            let mm = Mat4::from_scale_rotation_translation(
+                                Vec3::splat(1.0),
+                                rp.rotation.inverse(),
+                                Vec3::ZERO,
+                            );
+                            let model_matrix = Mat4::from_cols(
+                                mm.x_axis.truncate().extend(rp.position.x),
+                                mm.y_axis.truncate().extend(rp.position.y),
+                                mm.z_axis.truncate().extend(rp.position.z),
+                                mm.w_axis,
+                            );
+
+                            le_entity_cb11
+                                .write(&ScopeEntityModel {
+                                    mesh_to_world: (ent.mesh_transform() * model_matrix).to_3x4(),
+                                    unk3: Vec4::W,
+                                    unk4: Vec4::W,
+                                    unk5: Vec4::W,
+                                    texcoord_transform: ent.texcoord_transform(),
+                                    unk7: Vec4::W,
+                                })
+                                .unwrap();
+
+                            dcs.context.VSSetConstantBuffers(
+                                11,
+                                Some(&[Some(le_entity_cb11.buffer().clone())]),
+                            );
+
+                            ent.draw(
+                                &dcs.context,
+                                &material_map,
+                                &vshader_map,
+                                &pshader_map,
+                                &cbuffer_map_vs,
+                                &cbuffer_map_ps,
+                                &texture_map,
+                                &sampler_map,
+                                le_model_cb0.buffer().clone(),
                             );
                         }
                     }

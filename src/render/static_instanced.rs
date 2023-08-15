@@ -12,6 +12,8 @@ use windows::Win32::Graphics::Direct3D11::{
     ID3D11VertexShader,
 };
 
+use super::scopes::MatrixConversion;
+
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
     instance_count: usize,
@@ -49,12 +51,8 @@ impl InstancedRenderer {
             let combined_matrix = model.mesh_transform() * model_matrix;
 
             let scope_instance = ScopeStaticInstance {
-                mesh_to_world: Mat4 {
-                    x_axis: combined_matrix.x_axis,
-                    y_axis: combined_matrix.y_axis,
-                    z_axis: combined_matrix.z_axis,
-                    w_axis: model.texcoord_transform().extend(f32::from_bits(u32::MAX)),
-                },
+                mesh_to_world: combined_matrix.to_3x4(),
+                texcoord_transform: model.texcoord_transform().extend(f32::from_bits(u32::MAX)),
             };
 
             instance_data.push(scope_instance);
@@ -73,7 +71,7 @@ impl InstancedRenderer {
         &self,
         device_context: &ID3D11DeviceContext,
         materials: &IntMap<u32, material::Unk808071e8>,
-        vshaders: &IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)>,
+        vshaders: &IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
         cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
         cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,

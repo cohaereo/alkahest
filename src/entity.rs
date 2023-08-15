@@ -1,4 +1,4 @@
-use crate::structure::{DeadBeefMarker, TablePointer};
+use crate::structure::{DeadBeefMarker, ResourcePointer, TablePointer, Tag};
 use crate::types::{Vector2, Vector4};
 
 use binrw::BinRead;
@@ -9,11 +9,34 @@ use std::cmp::Ordering;
 use std::io::SeekFrom;
 
 #[derive(BinRead, Debug)]
+pub struct Unk80809c0f {
+    pub file_size: u64,
+    #[br(seek_before(SeekFrom::Start(0x10)))]
+    pub unk10: TablePointer<Unk80809c04>,
+}
+
+#[derive(BinRead, Debug)]
+pub struct Unk80809c04 {
+    pub unk0: Tag<Unk80809c36>,
+    pub unk4: u32,
+    pub unk8: u32,
+}
+
+/// Entity resource
+#[derive(BinRead, Debug)]
+pub struct Unk80809c36 {
+    pub file_size: u64,
+    pub unk8: ResourcePointer,
+    pub unk10: ResourcePointer,
+    pub unk18: ResourcePointer,
+}
+
+#[derive(BinRead, Debug)]
 pub struct Unk808073a5 {
     pub file_size: u64,
     pub unk0: u64,
-    pub unk1: TablePointer<Unk80807378>,
-    #[br(seek_before(SeekFrom::Current(0x30)))]
+    pub meshes: TablePointer<Unk80807378>,
+    #[br(seek_before(SeekFrom::Start(0x50)))]
     pub model_scale: Vector4,
     pub model_translation: Vector4,
     pub texcoord_scale: Vector2,
@@ -27,15 +50,15 @@ pub struct Unk80807378 {
     pub buffer2: TagHash,
     pub buffer3: TagHash,
     pub index_buffer: TagHash,
-    pub unk0: u32,
-    pub unk1: TablePointer<Unk8080737e>,
-    pub unk2: [u16; 48],
+    pub unk1c: u32,
+    pub parts: TablePointer<Unk8080737e>,
+    pub unk30: [u16; 48],
 }
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk8080737e {
     pub material: TagHash,
-    pub unk4: u16,
+    pub variant_shader_index: u16,
     pub primitive_type: EPrimitiveType,
     pub unk7: u8,
     pub index_start: u32,
@@ -47,6 +70,14 @@ pub struct Unk8080737e {
     pub unk1a: u8,
     pub lod_category: ELodCategory,
     pub unk1c: u32,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk808072c5 {
+    pub material_count: u16,
+    pub material_start: i16,
+    pub unk4: u16,
+    pub unk6: i16,
 }
 
 #[derive(BinRead, Debug, PartialEq, Copy, Clone)]

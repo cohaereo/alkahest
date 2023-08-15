@@ -1,7 +1,7 @@
 use crate::{camera::FpsCamera, map_resources::MapResource, resources::Resources};
 use destiny_pkg::TagHash;
 use frustum_query::frustum::Frustum;
-use glam::{Mat4, Vec2, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec4};
 use imgui::{Condition, ImColor32, WindowFlags};
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
@@ -118,6 +118,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 #[derive(Clone)]
 pub struct ResourcePoint {
     pub position: Vec4,
+    pub rotation: Quat,
     pub entity: TagHash,
     pub resource_type: u32,
     pub resource: MapResource,

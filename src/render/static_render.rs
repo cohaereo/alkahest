@@ -47,7 +47,7 @@ pub struct StaticModel {
 }
 
 impl StaticModel {
-    /// Returns instance scope compatible texcoord (X + YZ)
+    /// Returns instance scope compatible texcoord transformation (X + YZ)
     pub fn texcoord_transform(&self) -> Vec3 {
         Vec3::new(
             self.model.texture_coordinate_scale.x,
@@ -172,7 +172,7 @@ impl StaticModel {
         &self,
         device_context: &ID3D11DeviceContext,
         materials: &IntMap<u32, material::Unk808071e8>,
-        vshaders: &IntMap<u32, (ID3D11VertexShader, ID3D11InputLayout)>,
+        vshaders: &IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
         pshaders: &IntMap<u32, ID3D11PixelShader>,
         cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
         cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
@@ -260,7 +260,7 @@ impl StaticModel {
                         }
 
                         // TODO(cohae): Might not go that well if it's None
-                        if let Some((vs, input_layout)) = vshaders.get(&mat.vertex_shader.0) {
+                        if let Some((vs, Some(input_layout))) = vshaders.get(&mat.vertex_shader.0) {
                             device_context.IASetInputLayout(input_layout);
                             device_context.VSSetShader(vs, None);
                         }

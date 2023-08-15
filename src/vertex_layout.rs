@@ -3,7 +3,7 @@ use crate::dxgi::DxgiFormat;
 use windows::Win32::Graphics::Direct3D11::{D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA};
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct InputElement {
     pub format: DxgiFormat,
     pub semantic_index: u32,
