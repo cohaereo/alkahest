@@ -6,10 +6,21 @@ use destiny_pkg::TagHash;
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk808071e8 {
     pub file_size: u64,
-    pub unk8: [u32; 16],
+    /// 1 = ??
+    /// 2 = depth prepass?
+    pub unk8: u32,
+    pub unkc: u32,
+    pub unk10: u32,
+    pub unk14: u32,
+    pub unk18: u32,
+    pub unk1c: u32,
+    pub unk20: u16,
+    pub unk22: u16,
+    pub unk24: u32,
+    pub unk28: [u32; 8],
 
     pub vertex_shader: TagHash,
-    pub unk24c: u32,
+    pub unk4c: u32,
     pub vs_textures: TablePointer<Unk80807211>,
     pub unk60: u32,
     pub unk64: u32,

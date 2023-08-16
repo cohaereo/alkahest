@@ -222,6 +222,10 @@ impl EntityRenderer {
 
                     if let Some(mat_hash) = mat_hash {
                         if let Some(mat) = materials.get(&mat_hash.0) {
+                            if mat.unk8 != 1 {
+                                continue;
+                            }
+
                             for (si, s) in mat.vs_samplers.iter().enumerate() {
                                 device_context.VSSetSamplers(
                                     1 + si as u32,

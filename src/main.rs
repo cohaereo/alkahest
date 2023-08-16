@@ -1341,6 +1341,11 @@ pub fn main() -> anyhow::Result<()> {
                                 13,
                                 Some(&[Some(le_entity_cb13.buffer().clone())]),
                             );
+
+                            dcs.context.PSSetShaderResources(
+                                10,
+                                Some(&[Some(gbuffer.depth.texture_view.clone())]),
+                            );
                             for rp in &map.3 {
                                 if let Some(ent) = entity_renderers.get(&rp.entity) {
                                     let mm = Mat4::from_scale_rotation_translation(

@@ -102,8 +102,6 @@ impl StaticModel {
             let index_data = pm.read_tag(t).unwrap();
 
             let index_buffer = unsafe {
-                
-
                 device
                     .CreateBuffer(
                         &D3D11_BUFFER_DESC {
@@ -200,6 +198,10 @@ impl StaticModel {
                         .get(iu)
                         .and_then(|m| materials.get(&m.0))
                     {
+                        if mat.unk8 != 1 {
+                            continue;
+                        }
+
                         for (si, s) in mat.vs_samplers.iter().enumerate() {
                             device_context.VSSetSamplers(
                                 1 + si as u32,
@@ -336,3 +338,38 @@ impl StaticModel {
         }
     }
 }
+
+// pub fn tmp_filter_material(mat: &material::Unk808071e8) -> bool {
+//     if mat.unk8 != 1 {
+//         return false;
+//     }
+
+//     // 0 ??
+//     // 2 double sided?
+//     // mat.unkc == 2
+
+//     // 0x0000 ??
+//     // 0x0081 seems almost perfect for double sided
+//     // mat.unk22 == 0x0081
+
+//     // (mat.unk1c & 0x4000) != 0
+//     true
+
+//     // 0x1 ?? (n)
+//     // 0x2 ?? (n)
+//     // 0x4 dynamics
+//     // 0x8 ?? (n)
+//     // 0x10 ?? (n)
+//     // 0x20 ?? (n)
+//     // 0x40
+//     // 0x80 ??
+//     // 0x100
+//     // 0x200 statics
+//     // 0x400 some kind of decals??
+//     // 0x800
+//     // 0x1000
+//     // 0x2000 ?? (n)
+//     // 0x4000
+//     // 0x8000 ?? (n)
+//     // (mat.unk18 & 0x8000) != 0
+// }
