@@ -3,14 +3,12 @@ use imgui::{Condition, TreeNodeFlags, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
-use crate::resources::Resources;
+use crate::{map::MapDataList, resources::Resources};
 
 use super::gui::OverlayProvider;
 
 pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
-    pub map_index: usize,
-    pub maps: Vec<(u32, String)>,
 
     pub renderlayer_statics: bool,
     pub renderlayer_terrain: bool,
@@ -18,7 +16,7 @@ pub struct GBufferInfoOverlay {
 }
 
 impl OverlayProvider for GBufferInfoOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
+    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
         ui.window("Options")
             .flags(WindowFlags::NO_TITLE_BAR)
             .size([178.0, 72.0], Condition::FirstUseEver)
@@ -26,9 +24,13 @@ impl OverlayProvider for GBufferInfoOverlay {
                 ui.combo(" ", &mut self.composition_mode, COMPOSITOR_MODES, |v| {
                     format!("{v}").into()
                 });
-                ui.combo("Map", &mut self.map_index, &self.maps, |(i, map_name)| {
-                    format!("{map_name} ({:08X})", i.to_be()).into()
+                let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                let mut current_map = maps.current_map;
+                ui.combo("Map", &mut current_map, &maps.maps, |m| {
+                    format!("{} ({})", m.name, m.hash).into()
                 });
+                maps.current_map = current_map;
+
                 ui.separator();
                 if ui.collapsing_header("Render Layers", TreeNodeFlags::empty()) {
                     ui.indent();

@@ -1,3 +1,4 @@
+use crate::overlays::resource_nametags::ResourcePoint;
 use crate::statics::Unk8080966d;
 use crate::structure::{ResourcePointer, TablePointer, Tag};
 use crate::types::{DestinyHash, Vector4};
@@ -136,4 +137,23 @@ pub struct Unk80807152 {
     pub index_count: u16,
     pub group_index: u8,
     pub detail_level: u8,
+}
+
+pub struct MapData {
+    pub hash: TagHash,
+    pub name: String,
+    pub placement_groups: Vec<Tag<Unk8080966d>>,
+    pub resource_points: Vec<ResourcePoint>,
+    pub terrains: Vec<TagHash>,
+}
+
+pub struct MapDataList {
+    pub current_map: usize, // TODO(cohae): Shouldn't be here
+    pub maps: Vec<MapData>,
+}
+
+impl MapDataList {
+    pub fn current_map(&self) -> Option<&MapData> {
+        self.maps.get(self.current_map % self.maps.len())
+    }
 }

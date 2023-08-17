@@ -2,6 +2,7 @@
 extern crate windows;
 
 use std::cell::RefCell;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::PathBuf;
@@ -42,7 +43,7 @@ use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
 use crate::dxgi::calculate_pitch;
 use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
-use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
+use crate::map::{MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
 use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
 use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::CameraPositionOverlay;
@@ -78,7 +79,6 @@ mod entity;
 mod icons;
 mod input;
 mod map;
-// mod map_data;
 mod map_resources;
 mod material;
 mod overlays;
@@ -214,13 +214,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut texture_map: IntMap<u32, Texture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
-    let mut maps: Vec<(
-        u32,
-        String,
-        Vec<Tag<Unk8080966d>>,
-        Vec<ResourcePoint>,
-        Vec<TagHash>,
-    )> = vec![];
+    let mut maps: Vec<MapData> = vec![];
 
     // First light reserved for camera light
     let mut point_lights = vec![Vec4::ZERO];
@@ -267,10 +261,15 @@ pub fn main() -> anyhow::Result<()> {
                                     .unwrap();
 
                                 for p in &terrain.mesh_parts {
-                                    material_map.insert(
-                                        p.material.0,
-                                        Material(package_manager().read_tag_struct(p.material)?),
-                                    );
+                                    if p.material.is_valid() {
+                                        material_map.insert(
+                                            p.material.0,
+                                            Material(
+                                                package_manager().read_tag_struct(p.material)?,
+                                                p.material,
+                                            ),
+                                        );
+                                    }
                                 }
 
                                 terrain_headers.push((terrain_resource.terrain, terrain));
@@ -368,8 +367,9 @@ pub fn main() -> anyhow::Result<()> {
                             }
                             u => {
                                 debug!(
-                                    "Skipping unknown resource type {u:x} {:?}",
-                                    data.translation
+                                    "Skipping unknown resource type {u:x} {:?} (table file {:?})",
+                                    data.translation,
+                                    table.tag()
                                 );
                                 resource_points.push(ResourcePoint {
                                     translation: Vec4::new(
@@ -423,32 +423,27 @@ pub fn main() -> anyhow::Result<()> {
             "Map {:x?} '{map_name}' - {} placement groups",
             think.map_name,
             placement_groups.len()
-        ); // TODO(cohae): Map name lookup
+        );
 
-        maps.push((
-            think.map_name.0,
-            map_name,
+        maps.push(MapData {
+            hash: (package.pkg_id(), index as _).into(),
+            name: map_name,
             placement_groups,
             resource_points,
             terrains,
-        ));
+        })
     }
 
     let to_load_entities: IntMap<TagHash, ()> = maps
         .iter()
-        .flat_map(|v| v.3.iter().map(|r| (r.entity, ())))
+        .flat_map(|v| v.resource_points.iter().map(|r| (r.entity, ())))
         .filter(|(v, _)| v.is_valid())
         .collect();
 
     let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
-    for te in to_load_entities.keys() {
-        // println!("{te:?}");
+    for te in to_load_entities.keys().filter(|h| h.is_valid()) {
         let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
-        // println!("{header:?}");
-        // println!("{te:?}");
         for e in &header.unk10 {
-            // match e.unk0.unk10.resource_type {
-            //     0x808072b8 => {
             match e.unk0.unk18.resource_type {
                 0x808072BD => {
                     let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
@@ -459,10 +454,7 @@ pub fn main() -> anyhow::Result<()> {
                     let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
 
                     for m in &materials {
-                        material_map.insert(
-                            m.tag().0,
-                            Material(package_manager().read_tag_struct(m.tag())?),
-                        );
+                        material_map.insert(m.tag().0, Material(m.0.clone(), m.tag()));
                     }
 
                     for m in &model.meshes {
@@ -470,7 +462,10 @@ pub fn main() -> anyhow::Result<()> {
                             if p.material.is_valid() {
                                 material_map.insert(
                                     p.material.0,
-                                    Material(package_manager().read_tag_struct(p.material)?),
+                                    Material(
+                                        package_manager().read_tag_struct(p.material)?,
+                                        p.material,
+                                    ),
                                 );
                             }
                         }
@@ -502,8 +497,6 @@ pub fn main() -> anyhow::Result<()> {
         to_load_entities.len()
     );
 
-    // return Ok(());
-
     info!("{} lights", point_lights.len());
 
     let mut placement_groups: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
@@ -512,8 +505,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
-    for (_, _, placement_group, _, _) in &maps {
-        for placements in placement_group.iter() {
+    for m in &maps {
+        for placements in m.placement_groups.iter() {
             for v in &placements.statics {
                 to_load.insert(*v, ());
             }
@@ -549,8 +542,11 @@ pub fn main() -> anyhow::Result<()> {
         for almostloadable in &to_load_statics {
             let mheader: Unk808071a7 = package_manager().read_tag_struct(*almostloadable).unwrap();
             for m in &mheader.materials {
-                if let Ok(mat) = package_manager().read_tag_struct(*m) {
-                    material_map.insert(m.0, Material(mat));
+                if m.is_valid() {
+                    material_map.insert(
+                        m.0,
+                        Material(package_manager().read_tag_struct(*m).unwrap(), *m),
+                    );
                 }
             }
 
@@ -863,6 +859,10 @@ pub fn main() -> anyhow::Result<()> {
     let mut resources: Resources = Resources::default();
     resources.insert(FpsCamera::default());
     resources.insert(InputState::default());
+    resources.insert(MapDataList {
+        current_map: 0,
+        maps,
+    });
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
@@ -926,8 +926,6 @@ pub fn main() -> anyhow::Result<()> {
     let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay::default()));
     let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
         composition_mode: CompositorMode::Combined as usize,
-        map_index: 0,
-        maps: maps.iter().map(|m| (m.0, m.1.clone())).collect_vec(),
         renderlayer_statics: true,
         renderlayer_terrain: true,
         renderlayer_entities: true,
@@ -948,7 +946,6 @@ pub fn main() -> anyhow::Result<()> {
 
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
         debug_overlay: gui_debug.clone(),
-        map: (0, String::new(), vec![], vec![]),
     }));
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
@@ -1133,26 +1130,24 @@ pub fn main() -> anyhow::Result<()> {
                     dcs.context
                         .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
 
-                    let map = &maps[gui_gbuffer.borrow().map_index % maps.len()];
-                    gui_resources
-                        .borrow_mut()
-                        .set_map_data(map.0, &map.1, map.3.clone());
+                    let maps = resources.get::<MapDataList>().unwrap();
+                    let map = &maps.maps[maps.current_map % maps.maps.len()];
 
                     {
                         let gb = gui_gbuffer.borrow();
 
                         if gb.renderlayer_statics {
-                            for ptag in &map.2 {
+                            for ptag in &map.placement_groups {
                                 let (_placements, instance_renderers) =
                                     &placement_groups[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
-                                    instance.draw(&dcs, &render_data);
+                                    instance.draw(&dcs, &render_data).unwrap();
                                 }
                             }
                         }
 
                         if gb.renderlayer_terrain {
-                            for th in &map.4 {
+                            for th in &map.terrains {
                                 if let Some(t) = terrain_renderers.get(&th.0) {
                                     t.draw(&dcs, &render_data, le_terrain_cb11.buffer());
                                 }
@@ -1172,7 +1167,7 @@ pub fn main() -> anyhow::Result<()> {
                                 10,
                                 Some(&[Some(gbuffer.depth.texture_view.clone())]),
                             );
-                            for rp in &map.3 {
+                            for rp in &map.resource_points {
                                 if let Some(ent) = entity_renderers.get(&rp.entity) {
                                     let mm = Mat4::from_scale_rotation_translation(
                                         Vec3::splat(rp.translation.w),
@@ -1259,6 +1254,7 @@ pub fn main() -> anyhow::Result<()> {
                     dcs.context.Draw(3, 0);
 
                     drop(camera);
+                    drop(maps);
                     gui.draw_frame(&window, last_frame.elapsed(), &mut resources);
 
                     dcs.context.OMSetDepthStencilState(None, 0);

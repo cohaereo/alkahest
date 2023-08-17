@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
 use crate::render::{DeviceContextSwapchain, RenderData};
-use crate::structure::{TablePointer, Tag};
+use crate::structure::{RelPointer, TablePointer, Tag};
 use crate::types::Vector4;
-use binrw::BinRead;
+use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 
 #[derive(BinRead, Debug, Clone)]
@@ -25,8 +25,7 @@ pub struct Unk808071e8 {
     pub vertex_shader: TagHash,
     pub unk4c: u32,
     pub vs_textures: TablePointer<Unk80807211>,
-    pub unk60: u32,
-    pub unk64: u32,
+    pub unk60: u64,
     pub unk68: TablePointer<u8>,
     pub unk78: TablePointer<Vector4>,
     pub vs_samplers: TablePointer<Unk808073f3>,
@@ -39,8 +38,7 @@ pub struct Unk808071e8 {
     pub pixel_shader: TagHash,
     pub unk2cc: u32,
     pub ps_textures: TablePointer<Unk80807211>,
-    pub unk2e0: u32,
-    pub unk2e4: u32,
+    pub unk2e0: u64,
     pub unk2e8: TablePointer<u8>,
     pub unk2f8: TablePointer<Vector4>,
     pub ps_samplers: TablePointer<Unk808073f3>,
@@ -66,9 +64,13 @@ pub struct Unk808073f3 {
     pub unkc: u32,
 }
 
-pub struct Material(pub Tag<Unk808071e8>);
+pub struct Material(pub Unk808071e8, pub TagHash);
 
 impl Material {
+    pub fn tag(&self) -> TagHash {
+        self.1
+    }
+
     pub fn bind(
         &self,
         dcs: &DeviceContextSwapchain,
@@ -88,14 +90,14 @@ impl Material {
                 );
             }
 
-            if let Some(cbuffer) = render_data.cbuffers_ps.get(&self.0.tag().0) {
+            if let Some(cbuffer) = render_data.cbuffers_ps.get(&self.tag().into()) {
                 dcs.context
                     .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
             } else {
                 dcs.context.PSSetConstantBuffers(0, Some(&[None]));
             }
 
-            if let Some(cbuffer) = render_data.cbuffers_vs.get(&self.0.tag().0) {
+            if let Some(cbuffer) = render_data.cbuffers_vs.get(&self.tag().into()) {
                 dcs.context
                     .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
             } else {
@@ -120,7 +122,7 @@ impl Material {
                 // TODO(cohae): Bind error texture on error
                 if let Some(t) = render_data.textures.get(&p.texture.0) {
                     dcs.context
-                        .VSSetShaderResources(0, Some(&[Some(t.view.clone())]));
+                        .VSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }
             }
 
@@ -128,7 +130,7 @@ impl Material {
                 // TODO(cohae): Bind error texture on error
                 if let Some(t) = render_data.textures.get(&p.texture.0) {
                     dcs.context
-                        .PSSetShaderResources(0, Some(&[Some(t.view.clone())]));
+                        .PSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }
             }
         }
@@ -144,3 +146,23 @@ impl Deref for Material {
         &self.0
     }
 }
+#[derive(BinRead, Debug)]
+pub struct Unk80806cb1 {
+    pub file_size: u64,
+    pub unk8: TagHash,
+    pub unkc: u32,
+    pub unk10: TablePointer<Unk80806cb6>,
+    pub unk20: TablePointer<Unk80806cb5>,
+    pub unk30: TagHash,
+    pub unk34: TagHash,
+    pub unk38: TagHash,
+}
+
+#[derive(BinRead, Debug)]
+pub struct Unk80806cb5 {
+    pub name: RelPointer<NullString>,
+    pub unk8: u32,
+    pub unkc: TagHash,
+}
+
+pub type Unk80806cb6 = Unk80806cb5;

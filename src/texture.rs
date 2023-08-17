@@ -61,7 +61,7 @@ pub struct TexturePlateSet {
 
 pub enum TextureHandle {
     Texture2D(ID3D11Texture2D),
-    TextureCube(ID3D11Texture2D),
+    // TextureCube(ID3D11Texture2D),
     Texture3D(ID3D11Texture3D),
 }
 

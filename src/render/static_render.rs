@@ -181,6 +181,11 @@ impl StaticModel {
                         }
 
                         mat.bind(dcs, render_data)?;
+                    } else {
+                        anyhow::bail!(
+                            "Could not find material {}",
+                            self.model.materials.get(iu).unwrap()
+                        );
                     }
 
                     dcs.context.IASetVertexBuffers(
@@ -221,6 +226,12 @@ impl StaticModel {
 //         return false;
 //     }
 
+//     // println!("{:x}", mat.unk10);
+
+//     // mat.unk60 == u32::from_be(0x25232284)
+//     // 0xD5720384F0E27726 - copper/silver cups, pots, plates, vases
+//     // mat.unk2e0 == u64::from_be(0xf21ce6afd506f7ff)
+
 //     // 0 ??
 //     // 2 double sided?
 //     // mat.unkc == 2
@@ -230,7 +241,7 @@ impl StaticModel {
 //     // mat.unk22 == 0x0081
 
 //     // (mat.unk1c & 0x4000) != 0
-//     true
+//     // true
 
 //     // 0x1 ?? (n)
 //     // 0x2 ?? (n)
@@ -248,5 +259,5 @@ impl StaticModel {
 //     // 0x2000 ?? (n)
 //     // 0x4000
 //     // 0x8000 ?? (n)
-//     // (mat.unk18 & 0x8000) != 0
+//     (mat.unk18 & 0x1) != 0
 // }

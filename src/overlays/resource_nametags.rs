@@ -1,4 +1,6 @@
-use crate::{camera::FpsCamera, map_resources::MapResource, resources::Resources};
+use crate::{
+    camera::FpsCamera, map::MapDataList, map_resources::MapResource, resources::Resources,
+};
 use destiny_pkg::TagHash;
 use frustum_query::frustum::Frustum;
 use glam::{Mat4, Quat, Vec2, Vec4};
@@ -10,13 +12,6 @@ use super::{camera_settings::CameraPositionOverlay, gui::OverlayProvider};
 
 pub struct ResourceTypeOverlay {
     pub debug_overlay: Rc<RefCell<CameraPositionOverlay>>,
-    pub map: (u32, String, Vec<TagHash>, Vec<ResourcePoint>),
-}
-
-impl ResourceTypeOverlay {
-    pub fn set_map_data(&mut self, size: u32, name: &String, two: Vec<ResourcePoint>) {
-        self.map = (size, name.to_string(), vec![], two);
-    }
 }
 
 impl OverlayProvider for ResourceTypeOverlay {
@@ -51,62 +46,65 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                     let draw_list = ui.get_background_draw_list();
                     draw_list.with_clip_rect([0.0, 0.0], screen_size, || {
-                        for res in &mut self.map.3 {
-                            if !camera_frustum.point_intersecting(
-                                &res.translation.x,
-                                &res.translation.y,
-                                &res.translation.z,
-                            ) {
-                                continue;
-                            }
+                        let maps = resources.get::<MapDataList>().unwrap();
+                        if let Some(m) = maps.current_map() {
+                            for res in m.resource_points.iter() {
+                                if !camera_frustum.point_intersecting(
+                                    &res.translation.x,
+                                    &res.translation.y,
+                                    &res.translation.z,
+                                ) {
+                                    continue;
+                                }
 
-                            let distance = res.translation.truncate().distance(camera.position);
-                            if distance > self.debug_overlay.borrow().map_resource_distance {
-                                continue;
-                            }
+                                let distance = res.translation.truncate().distance(camera.position);
+                                if distance > self.debug_overlay.borrow().map_resource_distance {
+                                    continue;
+                                }
 
-                            let projected_point =
-                                proj_view.project_point3(res.translation.truncate());
+                                let projected_point =
+                                    proj_view.project_point3(res.translation.truncate());
 
-                            let screen_point = Vec2::new(
-                                ((projected_point.x + 1.0) * 0.5) * screen_size[0],
-                                ((1.0 - projected_point.y) * 0.5) * screen_size[1],
-                            );
-
-                            if !self.debug_overlay.borrow().map_resource_filter
-                                [res.resource.index() as usize]
-                            {
-                                continue;
-                            }
-
-                            let c = res.resource.debug_color();
-                            let color = ImColor32::from_rgb(c[0], c[1], c[2]);
-                            ui.set_window_font_scale(1.5);
-                            draw_list.add_text(
-                                screen_point.to_array(),
-                                color,
-                                res.resource.debug_icon().to_string(),
-                            );
-
-                            ui.set_window_font_scale(1.0);
-                            if self.debug_overlay.borrow().show_map_resource_label {
-                                draw_list.add_text(
-                                    (screen_point + Vec2::new(20.0, 0.0)).to_array(),
-                                    color,
-                                    res.resource.debug_string(),
+                                let screen_point = Vec2::new(
+                                    ((projected_point.x + 1.0) * 0.5) * screen_size[0],
+                                    ((1.0 - projected_point.y) * 0.5) * screen_size[1],
                                 );
 
-                                if res.entity.is_valid()
-                                    && !res.resource.is_entity()
-                                    && !res.resource.is_decal()
+                                if !self.debug_overlay.borrow().map_resource_filter
+                                    [res.resource.index() as usize]
                                 {
-                                    let offset = ui.calc_text_size(res.resource.debug_string());
+                                    continue;
+                                }
+
+                                let c = res.resource.debug_color();
+                                let color = ImColor32::from_rgb(c[0], c[1], c[2]);
+                                ui.set_window_font_scale(1.5);
+                                draw_list.add_text(
+                                    screen_point.to_array(),
+                                    color,
+                                    res.resource.debug_icon().to_string(),
+                                );
+
+                                ui.set_window_font_scale(1.0);
+                                if self.debug_overlay.borrow().show_map_resource_label {
                                     draw_list.add_text(
-                                        (screen_point + Vec2::new(20.0 + offset[0], 0.0))
-                                            .to_array(),
-                                        ImColor32::WHITE,
-                                        format!(" (ent {})", res.entity),
+                                        (screen_point + Vec2::new(20.0, 0.0)).to_array(),
+                                        color,
+                                        res.resource.debug_string(),
                                     );
+
+                                    if res.entity.is_valid()
+                                        && !res.resource.is_entity()
+                                        && !res.resource.is_decal()
+                                    {
+                                        let offset = ui.calc_text_size(res.resource.debug_string());
+                                        draw_list.add_text(
+                                            (screen_point + Vec2::new(20.0 + offset[0], 0.0))
+                                                .to_array(),
+                                            ImColor32::WHITE,
+                                            format!(" (ent {})", res.entity),
+                                        );
+                                    }
                                 }
                             }
                         }
