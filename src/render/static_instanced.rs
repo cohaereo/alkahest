@@ -1,19 +1,18 @@
-use crate::material;
+
 use crate::render::scopes::ScopeStaticInstance;
-use crate::render::static_render::LoadedTexture;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 use crate::statics::Unk808071a3;
-use crate::types::Vector4;
+
 use glam::{Mat4, Quat, Vec3};
-use nohash_hasher::IntMap;
+
 use std::rc::Rc;
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Buffer, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader, ID3D11SamplerState,
-    ID3D11VertexShader,
+    ID3D11DeviceContext,
 };
 
 use super::scopes::MatrixConversion;
+use super::RenderData;
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
@@ -59,7 +58,7 @@ impl InstancedRenderer {
             instance_data.push(scope_instance);
         }
 
-        let instance_buffer = ConstantBuffer::create_array_init(dcs.clone(), &instance_data)?;
+        let instance_buffer = ConstantBuffer::create_array_init(dcs, &instance_data)?;
 
         Ok(Self {
             renderer: model,
@@ -68,34 +67,13 @@ impl InstancedRenderer {
         })
     }
 
-    pub fn draw(
-        &self,
-        device_context: &ID3D11DeviceContext,
-        materials: &IntMap<u32, material::Unk808071e8>,
-        vshaders: &IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
-        pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
-        cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
-        textures: &IntMap<u32, LoadedTexture>,
-        samplers: &IntMap<u32, ID3D11SamplerState>,
-        cbuffer_default: ID3D11Buffer,
-    ) {
+    pub fn draw(&self, device_context: &ID3D11DeviceContext, render_data: &RenderData) {
         unsafe {
             device_context
                 .VSSetConstantBuffers(11, Some(&[Some(self.instance_buffer.buffer().clone())]));
         }
 
-        self.renderer.draw(
-            device_context,
-            materials,
-            vshaders,
-            pshaders,
-            cbuffers_vs,
-            cbuffers_ps,
-            textures,
-            samplers,
-            cbuffer_default,
-            self.instance_count,
-        );
+        self.renderer
+            .draw(device_context, render_data, self.instance_count);
     }
 }

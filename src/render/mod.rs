@@ -1,4 +1,5 @@
 mod cbuffer;
+pub mod data;
 mod dcs;
 pub mod entity;
 mod gbuffer;
@@ -8,6 +9,7 @@ pub mod static_render;
 pub mod terrain;
 
 pub use cbuffer::ConstantBuffer;
+pub use data::RenderData;
 pub use dcs::DeviceContextSwapchain;
 pub use entity::EntityRenderer;
 pub use gbuffer::GBuffer;

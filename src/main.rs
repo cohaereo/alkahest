@@ -55,16 +55,16 @@ use crate::overlays::gui::GuiManager;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::scopes::ScopeRigidModel;
-use crate::render::static_render::{LoadedTexture, StaticModel};
+use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{
-    ConstantBuffer, DeviceContextSwapchain, EntityRenderer, GBuffer, InstancedRenderer,
+    ConstantBuffer, DeviceContextSwapchain, EntityRenderer, GBuffer, InstancedRenderer, RenderData,
 };
 use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::texture::{TextureHandle, TextureHeader};
+use crate::texture::{LoadedTexture, TextureHandle, TextureHeader};
 use crate::types::Vector4;
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
@@ -993,9 +993,6 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} samplers", sampler_map.len());
 
-    let le_model_cb0 =
-        ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &[Vec4::splat(0.6); 64])?;
-
     let le_terrain_cb11 = ConstantBuffer::<Mat4>::create(dcs.clone(), None)?;
     let le_entity_cb11 = ConstantBuffer::<ScopeRigidModel>::create(dcs.clone(), None)?;
 
@@ -1116,11 +1113,22 @@ pub fn main() -> anyhow::Result<()> {
     }));
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
-    gui.add_overlay(gui_fps.clone());
+    gui.add_overlay(gui_fps);
     gui.add_overlay(gui_debug.clone());
     gui.add_overlay(gui_gbuffer.clone());
     gui.add_overlay(gui_resources.clone());
-    gui.add_overlay(gui_console.clone());
+    gui.add_overlay(gui_console);
+
+    // TODO(cohae): resources should be added to renderdata directly
+    let render_data = RenderData {
+        materials: material_map,
+        vshaders: vshader_map,
+        pshaders: pshader_map,
+        cbuffers_vs: cbuffer_map_vs,
+        cbuffers_ps: cbuffer_map_ps,
+        textures: texture_map,
+        samplers: sampler_map,
+    };
 
     let start_time = Instant::now();
     let mut last_frame = Instant::now();
@@ -1299,17 +1307,7 @@ pub fn main() -> anyhow::Result<()> {
                                 let (_placements, instance_renderers) =
                                     &placement_groups[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
-                                    instance.draw(
-                                        &dcs.context,
-                                        &material_map,
-                                        &vshader_map,
-                                        &pshader_map,
-                                        &cbuffer_map_vs,
-                                        &cbuffer_map_ps,
-                                        &texture_map,
-                                        &sampler_map,
-                                        le_model_cb0.buffer().clone(),
-                                    )
+                                    instance.draw(&dcs.context, &render_data)
                                 }
                             }
                         }
@@ -1317,18 +1315,7 @@ pub fn main() -> anyhow::Result<()> {
                         if gb.renderlayer_terrain {
                             for th in &map.4 {
                                 if let Some(t) = terrain_renderers.get(&th.0) {
-                                    t.draw(
-                                        &dcs.context,
-                                        &material_map,
-                                        &vshader_map,
-                                        &pshader_map,
-                                        &cbuffer_map_vs,
-                                        &cbuffer_map_ps,
-                                        &texture_map,
-                                        &sampler_map,
-                                        le_model_cb0.buffer().clone(),
-                                        le_terrain_cb11.buffer(),
-                                    );
+                                    t.draw(&dcs.context, &render_data, le_terrain_cb11.buffer());
                                 }
                             }
                         }
@@ -1375,17 +1362,7 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_entity_cb11.buffer().clone())]),
                                     );
 
-                                    ent.draw(
-                                        &dcs.context,
-                                        &material_map,
-                                        &vshader_map,
-                                        &pshader_map,
-                                        &cbuffer_map_vs,
-                                        &cbuffer_map_ps,
-                                        &texture_map,
-                                        &sampler_map,
-                                        le_model_cb0.buffer().clone(),
-                                    );
+                                    ent.draw(&dcs.context, &render_data);
                                 }
                             }
                         }

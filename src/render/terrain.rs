@@ -1,23 +1,21 @@
 use crate::entity::{IndexBufferHeader, VertexBufferHeader};
 use crate::map::Unk8080714f;
-use crate::material;
+
 use crate::packages::package_manager;
-use crate::render::static_render::LoadedTexture;
-use crate::types::Vector4;
+
 use anyhow::Context;
 use glam::{Mat4, Vec4};
-use nohash_hasher::IntMap;
+
 use windows::Win32::Graphics::Direct3D::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader,
-    ID3D11SamplerState, ID3D11VertexShader, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
+    ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
     D3D11_BUFFER_DESC, D3D11_MAP_WRITE_DISCARD, D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
 };
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
 };
 
-use super::ConstantBuffer;
+use super::{RenderData};
 
 pub struct TerrainRenderer {
     terrain: Unk8080714f,
@@ -114,14 +112,7 @@ impl TerrainRenderer {
     pub fn draw(
         &self,
         device_context: &ID3D11DeviceContext,
-        materials: &IntMap<u32, material::Unk808071e8>,
-        vshaders: &IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
-        pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
-        cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
-        textures: &IntMap<u32, LoadedTexture>,
-        samplers: &IntMap<u32, ID3D11SamplerState>,
-        cbuffer_default: ID3D11Buffer,
+        render_data: &RenderData,
         cb11: &ID3D11Buffer,
     ) {
         unsafe {
@@ -160,42 +151,48 @@ impl TerrainRenderer {
                     device_context.Unmap(cb11, 0);
                     device_context.VSSetConstantBuffers(11, Some(&[Some(cb11.clone())]));
 
-                    if let Some(dyemap) = textures.get(&group.dyemap.0) {
+                    if let Some(dyemap) = render_data.textures.get(&group.dyemap.0) {
                         device_context.PSSetShaderResources(14, Some(&[Some(dyemap.view.clone())]));
                     } else {
                         device_context.PSSetShaderResources(14, Some(&[None]));
                     }
                 }
 
-                if let Some(cbuffer) = cbuffers_ps.get(&part.material.0) {
+                if let Some(cbuffer) = render_data.cbuffers_ps.get(&part.material.0) {
                     device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                 } else {
-                    device_context.PSSetConstantBuffers(0, Some(&[Some(cbuffer_default.clone())]));
+                    device_context.PSSetConstantBuffers(0, Some(&[None]));
                 }
 
-                let mat = materials.get(&part.material.0).unwrap();
+                let mat = render_data.materials.get(&part.material.0).unwrap();
                 for (si, s) in mat.vs_samplers.iter().enumerate() {
-                    device_context
-                        .VSSetSamplers(1 + si as u32, Some(&[samplers.get(&s.sampler.0).cloned()]));
+                    device_context.VSSetSamplers(
+                        1 + si as u32,
+                        Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
+                    );
                 }
                 for (si, s) in mat.ps_samplers.iter().enumerate() {
-                    device_context
-                        .PSSetSamplers(1 + si as u32, Some(&[samplers.get(&s.sampler.0).cloned()]));
+                    device_context.PSSetSamplers(
+                        1 + si as u32,
+                        Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
+                    );
                 }
 
-                if let Some(cbuffer) = cbuffers_vs.get(&part.material.0) {
+                if let Some(cbuffer) = render_data.cbuffers_vs.get(&part.material.0) {
                     device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                 } else {
-                    device_context.VSSetConstantBuffers(0, Some(&[Some(cbuffer_default.clone())]));
+                    device_context.VSSetConstantBuffers(0, Some(&[None]));
                 }
 
                 // TODO(cohae): Might not go that well if it's None
-                if let Some((vs, Some(input_layout))) = vshaders.get(&mat.vertex_shader.0) {
+                if let Some((vs, Some(input_layout))) =
+                    render_data.vshaders.get(&mat.vertex_shader.0)
+                {
                     device_context.IASetInputLayout(input_layout);
                     device_context.VSSetShader(vs, None);
                 }
 
-                if let Some(ps) = pshaders.get(&mat.pixel_shader.0) {
+                if let Some(ps) = render_data.pshaders.get(&mat.pixel_shader.0) {
                     device_context.PSSetShader(ps, None);
                 }
 
@@ -215,7 +212,7 @@ impl TerrainRenderer {
 
                 let mut vs_textures = vec![None; vs_tex_count];
                 for p in &mat.vs_textures {
-                    if let Some(t) = textures.get(&p.texture.0) {
+                    if let Some(t) = render_data.textures.get(&p.texture.0) {
                         vs_textures[p.index as usize] = Some(t.view.clone());
                     }
                 }
@@ -226,7 +223,7 @@ impl TerrainRenderer {
 
                 let mut ps_textures = vec![None; ps_tex_count];
                 for p in &mat.ps_textures {
-                    if let Some(t) = textures.get(&p.texture.0) {
+                    if let Some(t) = render_data.textures.get(&p.texture.0) {
                         ps_textures[p.index as usize] = Some(t.view.clone());
                     }
                 }

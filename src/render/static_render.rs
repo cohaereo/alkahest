@@ -1,15 +1,15 @@
-use crate::dxgi::DxgiFormat;
+
 use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
-use crate::material;
-use crate::types::Vector4;
+
+
 use anyhow::{ensure, Context};
 use glam::{Mat4, Vec3};
-use nohash_hasher::IntMap;
+
 
 use crate::packages::package_manager;
-use crate::texture::TextureHandle;
+
 use tracing::warn;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -17,7 +17,7 @@ use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
 };
 
-use super::ConstantBuffer;
+use super::{RenderData};
 
 pub struct StaticModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
@@ -30,12 +30,6 @@ pub struct StaticModelBuffer {
     // vertex2_stride: Option<u32>,
     index_buffer: ID3D11Buffer,
     index_format: DXGI_FORMAT,
-}
-
-pub struct LoadedTexture {
-    pub handle: TextureHandle,
-    pub view: ID3D11ShaderResourceView,
-    pub format: DxgiFormat,
 }
 
 pub struct StaticModel {
@@ -169,14 +163,7 @@ impl StaticModel {
     pub fn draw(
         &self,
         device_context: &ID3D11DeviceContext,
-        materials: &IntMap<u32, material::Unk808071e8>,
-        vshaders: &IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
-        pshaders: &IntMap<u32, ID3D11PixelShader>,
-        cbuffers_vs: &IntMap<u32, ConstantBuffer<Vector4>>,
-        cbuffers_ps: &IntMap<u32, ConstantBuffer<Vector4>>,
-        textures: &IntMap<u32, LoadedTexture>,
-        samplers: &IntMap<u32, ID3D11SamplerState>,
-        cbuffer_default: ID3D11Buffer,
+        render_data: &RenderData,
         instance_count: usize,
     ) {
         unsafe {
@@ -196,7 +183,7 @@ impl StaticModel {
                         .model
                         .materials
                         .get(iu)
-                        .and_then(|m| materials.get(&m.0))
+                        .and_then(|m| render_data.materials.get(&m.0))
                     {
                         if mat.unk8 != 1 {
                             continue;
@@ -205,34 +192,28 @@ impl StaticModel {
                         for (si, s) in mat.vs_samplers.iter().enumerate() {
                             device_context.VSSetSamplers(
                                 1 + si as u32,
-                                Some(&[samplers.get(&s.sampler.0).cloned()]),
+                                Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
                             );
                         }
                         for (si, s) in mat.ps_samplers.iter().enumerate() {
                             device_context.PSSetSamplers(
                                 1 + si as u32,
-                                Some(&[samplers.get(&s.sampler.0).cloned()]),
+                                Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
                             );
                         }
 
-                        if let Some(cbuffer) =
-                            cbuffers_ps.get(&self.model.materials.get(iu).unwrap().0)
+                        if let Some(cbuffer) = render_data
+                            .cbuffers_ps
+                            .get(&self.model.materials.get(iu).unwrap().0)
                         {
                             device_context
                                 .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                         } else {
-                            device_context.PSSetConstantBuffers(
-                                0,
-                                Some(&[
-                                    Some(cbuffer_default.clone()),
-                                    Some(cbuffer_default.clone()),
-                                    Some(cbuffer_default.clone()),
-                                    Some(cbuffer_default.clone()),
-                                ]),
-                            );
+                            device_context.PSSetConstantBuffers(0, Some(&[None]));
                         }
-                        if let Some(cbuffer) =
-                            cbuffers_vs.get(&self.model.materials.get(iu).unwrap().0)
+                        if let Some(cbuffer) = render_data
+                            .cbuffers_vs
+                            .get(&self.model.materials.get(iu).unwrap().0)
                         {
                             // Works for quite a few vertex animations, still a few non-functional/stretchy ones though
                             // very laggy because of cbuffer writes
@@ -250,24 +231,18 @@ impl StaticModel {
                             device_context
                                 .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
                         } else {
-                            device_context.VSSetConstantBuffers(
-                                0,
-                                Some(&[
-                                    Some(cbuffer_default.clone()),
-                                    Some(cbuffer_default.clone()),
-                                    Some(cbuffer_default.clone()),
-                                    Some(cbuffer_default.clone()),
-                                ]),
-                            );
+                            device_context.VSSetConstantBuffers(0, Some(&[None]));
                         }
 
                         // TODO(cohae): Might not go that well if it's None
-                        if let Some((vs, Some(input_layout))) = vshaders.get(&mat.vertex_shader.0) {
+                        if let Some((vs, Some(input_layout))) =
+                            render_data.vshaders.get(&mat.vertex_shader.0)
+                        {
                             device_context.IASetInputLayout(input_layout);
                             device_context.VSSetShader(vs, None);
                         }
 
-                        if let Some(ps) = pshaders.get(&mat.pixel_shader.0) {
+                        if let Some(ps) = render_data.pshaders.get(&mat.pixel_shader.0) {
                             device_context.PSSetShader(ps, None);
                         }
 
@@ -287,7 +262,7 @@ impl StaticModel {
 
                         let mut vs_textures = vec![None; vs_tex_count];
                         for p in &mat.vs_textures {
-                            if let Some(t) = textures.get(&p.texture.0) {
+                            if let Some(t) = render_data.textures.get(&p.texture.0) {
                                 vs_textures[p.index as usize] = Some(t.view.clone());
                             }
                         }
@@ -298,7 +273,7 @@ impl StaticModel {
 
                         let mut ps_textures = vec![None; ps_tex_count];
                         for p in &mat.ps_textures {
-                            if let Some(t) = textures.get(&p.texture.0) {
+                            if let Some(t) = render_data.textures.get(&p.texture.0) {
                                 ps_textures[p.index as usize] = Some(t.view.clone());
                             }
                         }
