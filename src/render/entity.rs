@@ -17,8 +17,6 @@ use crate::entity::VertexBufferHeader;
 
 use crate::packages::package_manager;
 
-
-
 use super::DeviceContextSwapchain;
 use super::RenderData;
 
@@ -192,7 +190,11 @@ impl EntityRenderer {
         //     .cloned()
     }
 
-    pub fn draw(&self, device_context: &ID3D11DeviceContext, render_data: &RenderData) {
+    pub fn draw(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        render_data: &RenderData,
+    ) -> anyhow::Result<()> {
         unsafe {
             for (buffers, parts) in self.meshes.iter()
             // .enumerate()
@@ -215,100 +217,11 @@ impl EntityRenderer {
                                 continue;
                             }
 
-                            for (si, s) in mat.vs_samplers.iter().enumerate() {
-                                device_context.VSSetSamplers(
-                                    1 + si as u32,
-                                    Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
-                                );
-                            }
-                            for (si, s) in mat.ps_samplers.iter().enumerate() {
-                                device_context.PSSetSamplers(
-                                    1 + si as u32,
-                                    Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
-                                );
-                            }
-
-                            if let Some(cbuffer) = render_data.cbuffers_ps.get(&mat_hash.0) {
-                                device_context.PSSetConstantBuffers(
-                                    0,
-                                    Some(&[Some(cbuffer.buffer().clone())]),
-                                );
-                            } else {
-                                device_context.PSSetConstantBuffers(0, Some(&[None]));
-                            }
-                            if let Some(cbuffer) = render_data.cbuffers_vs.get(&mat_hash.0) {
-                                device_context.VSSetConstantBuffers(
-                                    0,
-                                    Some(&[Some(cbuffer.buffer().clone())]),
-                                );
-                            } else {
-                                device_context.VSSetConstantBuffers(0, Some(&[None]));
-                            }
-
-                            // TODO(cohae): Handle invalid shaders
-                            if let Some((vs, Some(input_layout))) =
-                                render_data.vshaders.get(&mat.vertex_shader.0)
-                            {
-                                device_context.IASetInputLayout(input_layout);
-                                device_context.VSSetShader(vs, None);
-                            } else if let Some((vs, Some(input_layout))) = render_data
-                                .materials
-                                .get(&p.material.0)
-                                .and_then(|m| render_data.vshaders.get(&m.vertex_shader.0))
-                            {
-                                device_context.IASetInputLayout(input_layout);
-                                device_context.VSSetShader(vs, None);
-                                // } else {
-                                //     warn!("No VS/IL!");
-                            }
-
-                            if let Some(ps) = render_data.pshaders.get(&mat.pixel_shader.0) {
-                                device_context.PSSetShader(ps, None);
-                                // } else {
-                                //     warn!("No PS!");
-                            }
-
-                            let vs_tex_count =
-                                mat.vs_textures
-                                    .iter()
-                                    .map(|v| v.index + 1)
-                                    .max()
-                                    .unwrap_or_default() as usize;
-
-                            let ps_tex_count =
-                                mat.ps_textures
-                                    .iter()
-                                    .map(|v| v.index + 1)
-                                    .max()
-                                    .unwrap_or_default() as usize;
-
-                            let mut vs_textures = vec![None; vs_tex_count];
-                            for p in &mat.vs_textures {
-                                if let Some(t) = render_data.textures.get(&p.texture.0) {
-                                    vs_textures[p.index as usize] = Some(t.view.clone());
-                                }
-                            }
-
-                            if !vs_textures.is_empty() {
-                                device_context
-                                    .VSSetShaderResources(0, Some(vs_textures.as_slice()));
-                            }
-
-                            let mut ps_textures = vec![None; ps_tex_count];
-                            for p in &mat.ps_textures {
-                                if let Some(t) = render_data.textures.get(&p.texture.0) {
-                                    ps_textures[p.index as usize] = Some(t.view.clone());
-                                }
-                            }
-
-                            if !ps_textures.is_empty() {
-                                device_context
-                                    .PSSetShaderResources(0, Some(ps_textures.as_slice()));
-                            }
+                            mat.bind(dcs, render_data)?;
                         }
                     }
 
-                    device_context.IASetVertexBuffers(
+                    dcs.context.IASetVertexBuffers(
                         0,
                         1,
                         Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
@@ -316,19 +229,21 @@ impl EntityRenderer {
                         Some(&0),
                     );
 
-                    device_context.IASetIndexBuffer(
+                    dcs.context.IASetIndexBuffer(
                         Some(&buffers.index_buffer),
                         buffers.index_format,
                         0,
                     );
-                    device_context.IASetPrimitiveTopology(match p.primitive_type {
+                    dcs.context.IASetPrimitiveTopology(match p.primitive_type {
                         EPrimitiveType::Triangles => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                         EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     });
 
-                    device_context.DrawIndexed(p.index_count, p.index_start, 0);
+                    dcs.context.DrawIndexed(p.index_count, p.index_start, 0);
                 }
             }
         }
+
+        Ok(())
     }
 }

@@ -1,4 +1,7 @@
-use crate::structure::TablePointer;
+use std::ops::Deref;
+
+use crate::render::{DeviceContextSwapchain, RenderData};
+use crate::structure::{TablePointer, Tag};
 use crate::types::Vector4;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
@@ -61,4 +64,83 @@ pub struct Unk808073f3 {
     pub unk4: u32,
     pub unk8: u32,
     pub unkc: u32,
+}
+
+pub struct Material(pub Tag<Unk808071e8>);
+
+impl Material {
+    pub fn bind(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        render_data: &RenderData,
+    ) -> anyhow::Result<()> {
+        unsafe {
+            for (si, s) in self.vs_samplers.iter().enumerate() {
+                dcs.context.VSSetSamplers(
+                    1 + si as u32,
+                    Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
+                );
+            }
+            for (si, s) in self.ps_samplers.iter().enumerate() {
+                dcs.context.PSSetSamplers(
+                    1 + si as u32,
+                    Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
+                );
+            }
+
+            if let Some(cbuffer) = render_data.cbuffers_ps.get(&self.0.tag().0) {
+                dcs.context
+                    .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
+            } else {
+                dcs.context.PSSetConstantBuffers(0, Some(&[None]));
+            }
+
+            if let Some(cbuffer) = render_data.cbuffers_vs.get(&self.0.tag().0) {
+                dcs.context
+                    .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
+            } else {
+                dcs.context.VSSetConstantBuffers(0, Some(&[None]));
+            }
+
+            if let Some((vs, Some(input_layout))) = render_data.vshaders.get(&self.vertex_shader.0)
+            {
+                dcs.context.IASetInputLayout(input_layout);
+                dcs.context.VSSetShader(vs, None);
+            } else {
+                anyhow::bail!("No vertex shader/input layout bound");
+            }
+
+            if let Some(ps) = render_data.pshaders.get(&self.pixel_shader.0) {
+                dcs.context.PSSetShader(ps, None);
+            } else {
+                anyhow::bail!("No pixel shader bound");
+            }
+
+            for p in &self.vs_textures {
+                // TODO(cohae): Bind error texture on error
+                if let Some(t) = render_data.textures.get(&p.texture.0) {
+                    dcs.context
+                        .VSSetShaderResources(0, Some(&[Some(t.view.clone())]));
+                }
+            }
+
+            for p in &self.ps_textures {
+                // TODO(cohae): Bind error texture on error
+                if let Some(t) = render_data.textures.get(&p.texture.0) {
+                    dcs.context
+                        .PSSetShaderResources(0, Some(&[Some(t.view.clone())]));
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Deref for Material {
+    type Target = Unk808071e8;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }

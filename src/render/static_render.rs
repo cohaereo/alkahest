@@ -1,12 +1,8 @@
-
 use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
 use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
-
-
 use anyhow::{ensure, Context};
 use glam::{Mat4, Vec3};
-
 
 use crate::packages::package_manager;
 
@@ -17,17 +13,12 @@ use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
 };
 
-use super::{RenderData};
+use super::{DeviceContextSwapchain, RenderData};
 
 pub struct StaticModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
     combined_vertex_stride: u32,
 
-    // vertex_buffer: ID3D11Buffer,
-    // vertex_stride: u32,
-    //
-    // vertex2_buffer: Option<ID3D11Buffer>,
-    // vertex2_stride: Option<u32>,
     index_buffer: ID3D11Buffer,
     index_format: DXGI_FORMAT,
 }
@@ -162,10 +153,10 @@ impl StaticModel {
 
     pub fn draw(
         &self,
-        device_context: &ID3D11DeviceContext,
+        dcs: &DeviceContextSwapchain,
         render_data: &RenderData,
         instance_count: usize,
-    ) {
+    ) -> anyhow::Result<()> {
         unsafe {
             for (iu, u) in self
                 .mesh_groups
@@ -189,101 +180,10 @@ impl StaticModel {
                             continue;
                         }
 
-                        for (si, s) in mat.vs_samplers.iter().enumerate() {
-                            device_context.VSSetSamplers(
-                                1 + si as u32,
-                                Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
-                            );
-                        }
-                        for (si, s) in mat.ps_samplers.iter().enumerate() {
-                            device_context.PSSetSamplers(
-                                1 + si as u32,
-                                Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
-                            );
-                        }
-
-                        if let Some(cbuffer) = render_data
-                            .cbuffers_ps
-                            .get(&self.model.materials.get(iu).unwrap().0)
-                        {
-                            device_context
-                                .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
-                        } else {
-                            device_context.PSSetConstantBuffers(0, Some(&[None]));
-                        }
-                        if let Some(cbuffer) = render_data
-                            .cbuffers_vs
-                            .get(&self.model.materials.get(iu).unwrap().0)
-                        {
-                            // Works for quite a few vertex animations, still a few non-functional/stretchy ones though
-                            // very laggy because of cbuffer writes
-                            // {
-                            //     let cmap =
-                            //         device_context.Map(cbuffer, 0, D3D11_MAP_WRITE, 0).unwrap();
-                            //
-                            //     cmap.pData
-                            //         .cast::<f32>()
-                            //         .add(4 * 2 + 1)
-                            //         .write(self.start_time.elapsed().as_secs_f32() / 6.0);
-                            //     device_context.Unmap(cbuffer, 0);
-                            // }
-
-                            device_context
-                                .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
-                        } else {
-                            device_context.VSSetConstantBuffers(0, Some(&[None]));
-                        }
-
-                        // TODO(cohae): Might not go that well if it's None
-                        if let Some((vs, Some(input_layout))) =
-                            render_data.vshaders.get(&mat.vertex_shader.0)
-                        {
-                            device_context.IASetInputLayout(input_layout);
-                            device_context.VSSetShader(vs, None);
-                        }
-
-                        if let Some(ps) = render_data.pshaders.get(&mat.pixel_shader.0) {
-                            device_context.PSSetShader(ps, None);
-                        }
-
-                        let vs_tex_count =
-                            mat.vs_textures
-                                .iter()
-                                .map(|v| v.index + 1)
-                                .max()
-                                .unwrap_or_default() as usize;
-
-                        let ps_tex_count =
-                            mat.ps_textures
-                                .iter()
-                                .map(|v| v.index + 1)
-                                .max()
-                                .unwrap_or_default() as usize;
-
-                        let mut vs_textures = vec![None; vs_tex_count];
-                        for p in &mat.vs_textures {
-                            if let Some(t) = render_data.textures.get(&p.texture.0) {
-                                vs_textures[p.index as usize] = Some(t.view.clone());
-                            }
-                        }
-
-                        if !vs_textures.is_empty() {
-                            device_context.VSSetShaderResources(0, Some(vs_textures.as_slice()));
-                        }
-
-                        let mut ps_textures = vec![None; ps_tex_count];
-                        for p in &mat.ps_textures {
-                            if let Some(t) = render_data.textures.get(&p.texture.0) {
-                                ps_textures[p.index as usize] = Some(t.view.clone());
-                            }
-                        }
-
-                        if !ps_textures.is_empty() {
-                            device_context.PSSetShaderResources(0, Some(ps_textures.as_slice()));
-                        }
+                        mat.bind(dcs, render_data)?;
                     }
 
-                    device_context.IASetVertexBuffers(
+                    dcs.context.IASetVertexBuffers(
                         0,
                         1,
                         Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
@@ -291,17 +191,17 @@ impl StaticModel {
                         Some(&0),
                     );
 
-                    device_context.IASetIndexBuffer(
+                    dcs.context.IASetIndexBuffer(
                         Some(&buffers.index_buffer),
                         buffers.index_format,
                         0,
                     );
-                    device_context.IASetPrimitiveTopology(match p.primitive_type {
+                    dcs.context.IASetPrimitiveTopology(match p.primitive_type {
                         EPrimitiveType::Triangles => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                         EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     });
 
-                    device_context.DrawIndexedInstanced(
+                    dcs.context.DrawIndexedInstanced(
                         p.index_count,
                         instance_count as _,
                         p.index_start,
@@ -311,6 +211,8 @@ impl StaticModel {
                 }
             }
         }
+
+        Ok(())
     }
 }
 

@@ -1,4 +1,3 @@
-
 use crate::render::scopes::ScopeStaticInstance;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 use crate::statics::Unk808071a3;
@@ -7,9 +6,6 @@ use glam::{Mat4, Quat, Vec3};
 
 use std::rc::Rc;
 use std::sync::Arc;
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11DeviceContext,
-};
 
 use super::scopes::MatrixConversion;
 use super::RenderData;
@@ -67,13 +63,16 @@ impl InstancedRenderer {
         })
     }
 
-    pub fn draw(&self, device_context: &ID3D11DeviceContext, render_data: &RenderData) {
+    pub fn draw(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        render_data: &RenderData,
+    ) -> anyhow::Result<()> {
         unsafe {
-            device_context
+            dcs.context
                 .VSSetConstantBuffers(11, Some(&[Some(self.instance_buffer.buffer().clone())]));
         }
 
-        self.renderer
-            .draw(device_context, render_data, self.instance_count);
+        self.renderer.draw(dcs, render_data, self.instance_count)
     }
 }

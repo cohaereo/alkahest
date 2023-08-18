@@ -44,7 +44,7 @@ use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
 use crate::map::{Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
 use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
-use crate::material::Unk808071e8;
+use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
@@ -64,7 +64,7 @@ use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::texture::{LoadedTexture, TextureHandle, TextureHeader};
+use crate::texture::{Texture, TextureHandle, TextureHeader};
 use crate::types::Vector4;
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
@@ -205,13 +205,13 @@ pub fn main() -> anyhow::Result<()> {
     )?;
 
     let mut static_map: IntMap<u32, Arc<StaticModel>> = Default::default();
-    let mut material_map: IntMap<u32, material::Unk808071e8> = Default::default();
+    let mut material_map: IntMap<u32, Material> = Default::default();
     let mut vshader_map: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
         Default::default();
     let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
     let mut cbuffer_map_vs: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut cbuffer_map_ps: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
-    let mut texture_map: IntMap<u32, LoadedTexture> = Default::default();
+    let mut texture_map: IntMap<u32, Texture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
     let mut maps: Vec<(
@@ -267,9 +267,10 @@ pub fn main() -> anyhow::Result<()> {
                                     .unwrap();
 
                                 for p in &terrain.mesh_parts {
-                                    let mat: material::Unk808071e8 =
-                                        package_manager().read_tag_struct(p.material).unwrap();
-                                    material_map.insert(p.material.0, mat);
+                                    material_map.insert(
+                                        p.material.0,
+                                        Material(package_manager().read_tag_struct(p.material)?),
+                                    );
                                 }
 
                                 terrain_headers.push((terrain_resource.terrain, terrain));
@@ -458,7 +459,10 @@ pub fn main() -> anyhow::Result<()> {
                     let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
 
                     for m in &materials {
-                        material_map.insert(m.tag().0, m.0.clone());
+                        material_map.insert(
+                            m.tag().0,
+                            Material(package_manager().read_tag_struct(m.tag())?),
+                        );
                     }
 
                     for m in &model.meshes {
@@ -466,7 +470,7 @@ pub fn main() -> anyhow::Result<()> {
                             if p.material.is_valid() {
                                 material_map.insert(
                                     p.material.0,
-                                    package_manager().read_tag_struct(p.material)?,
+                                    Material(package_manager().read_tag_struct(p.material)?),
                                 );
                             }
                         }
@@ -546,7 +550,7 @@ pub fn main() -> anyhow::Result<()> {
             let mheader: Unk808071a7 = package_manager().read_tag_struct(*almostloadable).unwrap();
             for m in &mheader.materials {
                 if let Ok(mat) = package_manager().read_tag_struct(*m) {
-                    material_map.insert(m.0, mat);
+                    material_map.insert(m.0, Material(mat));
                 }
             }
 
@@ -966,7 +970,7 @@ pub fn main() -> anyhow::Result<()> {
 
             texture_map.insert(
                 tex_hash.0,
-                LoadedTexture {
+                Texture {
                     handle: tex,
                     view,
                     format: texture.format,
@@ -1307,7 +1311,7 @@ pub fn main() -> anyhow::Result<()> {
                                 let (_placements, instance_renderers) =
                                     &placement_groups[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
-                                    instance.draw(&dcs.context, &render_data)
+                                    instance.draw(&dcs, &render_data);
                                 }
                             }
                         }
@@ -1315,7 +1319,7 @@ pub fn main() -> anyhow::Result<()> {
                         if gb.renderlayer_terrain {
                             for th in &map.4 {
                                 if let Some(t) = terrain_renderers.get(&th.0) {
-                                    t.draw(&dcs.context, &render_data, le_terrain_cb11.buffer());
+                                    t.draw(&dcs, &render_data, le_terrain_cb11.buffer());
                                 }
                             }
                         }
@@ -1362,7 +1366,7 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_entity_cb11.buffer().clone())]),
                                     );
 
-                                    ent.draw(&dcs.context, &render_data);
+                                    ent.draw(&dcs, &render_data);
                                 }
                             }
                         }
