@@ -25,11 +25,9 @@ impl PackageDumper {
         let entry_header = package_manager().get_entry(tag);
         if entry_header.is_ok() {
             let entry = entry_header.unwrap();
-            let mut name = format!("{:#010X}", entry.reference);
-            name = name.strip_prefix("0x").unwrap().to_string();
-            let mut file = File::create(format!("{0}.{1}.{2}.tag", name, entry.file_subtype, entry.file_type)).unwrap();
+            let mut file = File::create(format!("{0}.{1}.{2}.tag", tag, entry.file_subtype, entry.file_type)).unwrap();
             if file.write_all(package_manager().read_tag(tag).unwrap().as_slice()).is_err() {
-                println!("Failed to write resource {0} to disk!", format!("{0}.{1}.{2}.tag", name, entry.file_subtype, entry.file_type));
+                println!("Failed to write resource {0} to disk!", format!("{0}.{1}.{2}.tag", tag, entry.file_subtype, entry.file_type));
                 return false;
             } else {
                 return true;
