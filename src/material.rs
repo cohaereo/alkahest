@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::render::{DeviceContextSwapchain, RenderData};
-use crate::structure::{RelPointer, TablePointer, Tag};
+use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;

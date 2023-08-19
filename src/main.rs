@@ -2,7 +2,7 @@
 extern crate windows;
 
 use std::cell::RefCell;
-use std::collections::hash_map::Entry;
+
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::PathBuf;
@@ -40,11 +40,13 @@ use winit::{
 use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
-use crate::dxgi::calculate_pitch;
+
 use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
 use crate::map::{MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
-use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
+use crate::map_resources::{
+    MapResource, Unk80806b7f, Unk80806df3, Unk80806e68, Unk8080714b, Unk80807268, Unk80809162,
+};
 use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::console::ConsoleOverlay;
@@ -65,7 +67,7 @@ use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::texture::{Texture, TextureHandle, TextureHeader};
+use crate::texture::Texture;
 use crate::types::Vector4;
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
@@ -364,6 +366,80 @@ pub fn main() -> anyhow::Result<()> {
                                             },
                                         })
                                     }
+                                }
+                            }
+                            // Unknown, every element has a mesh (material+index+vertex) and the required transforms
+                            0x80806df1 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80806df3 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for p in &header.unk8 {
+                                    resource_points.push(ResourcePoint {
+                                        translation: Vec4::new(
+                                            p.translation.x,
+                                            p.translation.y,
+                                            p.translation.z,
+                                            p.translation.w,
+                                        ),
+                                        rotation: Quat::IDENTITY,
+                                        entity: data.entity,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Unk80806df1,
+                                    });
+                                }
+                            }
+                            // Unknown, structure seems like that of an octree
+                            0x80806f38 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80807268 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for p in &header.unk50 {
+                                    resource_points.push(ResourcePoint {
+                                        translation: Vec4::new(
+                                            p.unk0.x, p.unk0.y, p.unk0.z, p.unk0.w,
+                                        ),
+                                        rotation: Quat::IDENTITY,
+                                        entity: data.entity,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Unk80806f38,
+                                    });
+                                }
+                            }
+                            0x80809160 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80809162 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for p in &header.unk8 {
+                                    resource_points.push(ResourcePoint {
+                                        translation: Vec4::new(
+                                            p.unk10.x, p.unk10.y, p.unk10.z, p.unk10.w,
+                                        ),
+                                        rotation: Quat::IDENTITY,
+                                        entity: data.entity,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::RespawnPoint,
+                                    });
                                 }
                             }
                             u => {

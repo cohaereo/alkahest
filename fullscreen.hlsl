@@ -148,7 +148,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
     // reflectance equation
     float3 Lo = float3(0.0, 0.0, 0.0);
-    float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 3.0;
+    float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 10.0;
     for(uint i = 0; i < lightCount; ++i)
     {
         float3 light_pos = lights[i].xyz;

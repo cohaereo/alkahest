@@ -1,4 +1,7 @@
-use crate::icons::{ICON_CHESS_PAWN, ICON_HELP, ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER};
+use crate::icons::{
+    ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON,
+    ICON_SPHERE, ICON_STICKER,
+};
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, NullString};
@@ -20,6 +23,9 @@ pub enum MapResource {
         material: TagHash,
     },
     Unknown(u32),
+    Unk80806df1,
+    Unk80806f38,
+    RespawnPoint,
 }
 
 impl MapResource {
@@ -36,6 +42,9 @@ impl MapResource {
             MapResource::Decal { material } => format!("Decal (mat {material})"),
             MapResource::PointLight(_) => "Point light".to_string(),
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
+            MapResource::Unk80806df1 => "Unk80806df1".to_string(),
+            MapResource::Unk80806f38 => "Unk80806f38".to_string(),
+            MapResource::RespawnPoint => "Respawn Point".to_string(),
         }
     }
 
@@ -65,6 +74,9 @@ impl MapResource {
             MapResource::PointLight(_) => [220, 220, 20],
             MapResource::Decal { .. } => [50, 255, 255],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
+            MapResource::Unk80806df1 => RANDOM_COLORS[0x80806df1 % 16],
+            MapResource::Unk80806f38 => RANDOM_COLORS[0x80806f38 % 16],
+            MapResource::RespawnPoint => [220, 20, 20],
         }
     }
 
@@ -75,6 +87,8 @@ impl MapResource {
             MapResource::PointLight(_) => ICON_LIGHTBULB_ON,
             MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown(_) => ICON_HELP,
+            MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
+            MapResource::Unk80806df1 | MapResource::Unk80806f38 => ICON_HELP_BOX_OUTLINE,
         }
     }
 
@@ -149,4 +163,67 @@ pub struct Unk80806e6c {
     pub material: TagHash,
     pub start: u16,
     pub count: u16,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806df3 {
+    pub file_size: u64,
+    pub unk8: TablePointer<Unk80806dec>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806dec {
+    pub material: TagHash,
+    pub index_buffer: TagHash,
+    pub vertex_buffer: TagHash,
+    pub unkc: u32,
+    pub unk10: [u32; 4],
+
+    pub translation: Vector4,
+
+    pub unk30: Vector4,
+    pub unk40: Vector4,
+    pub unk50: Vector4,
+}
+
+// Unknown resource (some kind of octree?)
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80807268 {
+    pub file_size: u64,
+    /// Vertex buffer
+    pub unk8: TagHash,
+    pub unkc: u32,
+    pub unk10: TablePointer<Unk8080726a>,
+    pub unk20: [u32; 6],
+    /// Vertex buffer
+    pub unk38: TagHash,
+    pub unk3c: u32,
+    pub unk40: TablePointer<Unk8080726a>,
+    pub unk50: TablePointer<Unk8080726d>,
+    pub unk60: TablePointer<u16>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk8080726a {
+    pub unk0: [u32; 4],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk8080726d {
+    pub unk0: Vector4,
+    pub unk10: Vector4,
+    pub unk20: Vector4,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80809162 {
+    pub file_size: u64,
+    pub unk8: TablePointer<Unk80809164>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80809164 {
+    pub unk0: Vector4,
+    pub unk10: Vector4,
+    pub unk20: [u32; 4],
 }

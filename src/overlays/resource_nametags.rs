@@ -93,10 +93,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                                         res.resource.debug_string(),
                                     );
 
-                                    if res.entity.is_valid()
-                                        && !res.resource.is_entity()
-                                        && !res.resource.is_decal()
-                                    {
+                                    if res.entity.is_valid() && res.resource.is_unknown() {
                                         let offset = ui.calc_text_size(res.resource.debug_string());
                                         draw_list.add_text(
                                             (screen_point + Vec2::new(20.0 + offset[0], 0.0))
