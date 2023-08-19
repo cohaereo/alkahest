@@ -69,6 +69,7 @@ use crate::texture::{Texture, TextureHandle, TextureHeader};
 use crate::types::Vector4;
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
+use crate::overlays::package_dump::PackageDumper;
 
 mod camera;
 mod config;
@@ -947,6 +948,9 @@ pub fn main() -> anyhow::Result<()> {
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
         debug_overlay: gui_debug.clone(),
     }));
+
+    let gui_dump = Rc::new(RefCell::new(PackageDumper::new()));
+
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui.add_overlay(gui_fps);
@@ -954,6 +958,7 @@ pub fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_gbuffer.clone());
     gui.add_overlay(gui_resources.clone());
     gui.add_overlay(gui_console);
+    gui.add_overlay(gui_dump.clone());
 
     // TODO(cohae): resources should be added to renderdata directly
     let render_data = RenderData {
