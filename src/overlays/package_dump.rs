@@ -20,21 +20,21 @@ impl PackageDumper {
         return PackageDumper{ package_id: "".to_string(), entry_id: "".to_string(), message: Ok("".to_string()) };
     }
 
-    fn dump_entry(&self, pkg_id: u16, entry_id: u16) -> bool {
+    fn dump_entry(&self, pkg_id: u16, entry_id: u16) -> Result<String, String> {
         let tag = TagHash::new(pkg_id, entry_id);
         let entry_header = package_manager().get_entry(tag);
         if entry_header.is_ok() {
             let entry = entry_header.unwrap();
-            let mut file = File::create(format!("{0}.{1}.{2}.tag", tag, entry.file_subtype, entry.file_type)).unwrap();
+            let mut file = File::create(format!("{tag}.{0}.{1}.tag", entry.file_subtype, entry.file_type)).unwrap();
             if file.write_all(package_manager().read_tag(tag).unwrap().as_slice()).is_err() {
-                println!("Failed to write resource {0} to disk!", format!("{0}.{1}.{2}.tag", tag, entry.file_subtype, entry.file_type));
-                return false;
+                println!("Failed to write resource {0} to disk!", format!("{tag}.{0}.{1}.tag", entry.file_subtype, entry.file_type));
+                return Err("Failed to dump tag!".to_string());
             } else {
-                return true;
+                return Ok("Dumped!".to_string());
             }
         } else {
             println!("Unable to find resource {0}!", tag);
-            return false;
+            return Err("Failed to dump tag!".to_string());
 
         }
     }
@@ -52,18 +52,13 @@ impl OverlayProvider for PackageDumper {
                         if pkg.is_err() || entry.is_err() {
                             self.message = Err("Malformed input tag.".to_string());
                         } else {
-                            if self.dump_entry(pkg.unwrap(), entry.unwrap()) {
-                                self.message = Ok("Dumped!".to_string());
-                            } else {
-                                self.message = Err("Failed to dump tag!".to_string());
-                            }
+                            self.message = self.dump_entry(pkg.unwrap(), entry.unwrap());
                         }
                     }
 
-                    if self.message.is_ok() {
-                        ui.text_colored([0.0, 1.0, 0.0, 1.0], self.message.as_ref().ok().unwrap());
-                    } else {
-                        ui.text_colored([1.0, 0.0, 0.0, 1.0], self.message.as_ref().err().unwrap());
+                    match self.message.as_ref() {
+                        Ok(msg) => ui.text_colored([0.0, 1.0, 0.0, 1.0], msg),
+                        Err(msg) => ui.text_colored([1.0, 0.0, 0.0, 1.0], msg)
                     }
                 });
             });
