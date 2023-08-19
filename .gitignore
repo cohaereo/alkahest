@@ -1,3 +1,7 @@
 /target
 /.vscode
+/.idea
 imgui.ini
+*.tag
+package_cache.json
+config.yml
