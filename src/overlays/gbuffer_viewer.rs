@@ -63,7 +63,7 @@ pub enum CompositorMode {
     Transmission = 8,
     VertexAO = 9,
     Iridescence = 10,
-    // Matcap = 11,
+    Cubemap = 11,
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
@@ -78,7 +78,7 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::Iridescence,
     CompositorMode::TextureAO,
     CompositorMode::VertexAO,
-    // CompositorMode::Matcap,
+    CompositorMode::Cubemap,
 ];
 
 impl Display for CompositorMode {
@@ -95,7 +95,7 @@ impl Display for CompositorMode {
             CompositorMode::Transmission => "Transmission",
             CompositorMode::VertexAO => "Vertex AO",
             CompositorMode::Iridescence => "Iridescence",
-            // CompositorMode::Matcap => "Matcap",
+            CompositorMode::Cubemap => "Cubemap",
         };
 
         f.write_str(name)
@@ -105,6 +105,8 @@ impl Display for CompositorMode {
 #[repr(C)]
 pub struct CompositorOptions {
     pub proj_view_matrix_inv: Mat4,
+    pub proj_matrix: Mat4,
+    pub view_matrix: Mat4,
     pub camera_pos: Vec4,
     pub camera_dir: Vec4,
     pub mode: u32,

@@ -26,6 +26,13 @@ impl OverlayProvider for CameraPositionOverlay {
             ui.text(format!("X: {}", camera.position.x));
             ui.text(format!("Y: {}", camera.position.y));
             ui.text(format!("Z: {}", camera.position.z));
+            ui.text(format!(
+                "Cubemap: {}",
+                match resources.get::<CurrentCubemap>().and_then(|c| c.0.clone()) {
+                    None => "None".to_string(),
+                    Some(s) => s,
+                }
+            ));
             ui.separator();
             self.render_scale_changed =
                 ui.slider("Render Scale", 50.0, 200.0, &mut self.render_scale);
@@ -57,3 +64,6 @@ impl OverlayProvider for CameraPositionOverlay {
         });
     }
 }
+
+// cohae: Hate it
+pub struct CurrentCubemap(pub Option<String>);

@@ -3,7 +3,7 @@ use crate::icons::{
     ICON_SPHERE, ICON_STICKER,
 };
 use crate::structure::{RelPointer, TablePointer};
-use crate::types::{DestinyHash, Vector4};
+use crate::types::{DestinyHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
@@ -17,7 +17,7 @@ pub enum MapResource {
     // Terrain(Unk8080714b),
     /// Generic data entry with no resource
     Entity(TagHash),
-    CubemapVolume(Box<Unk80806b7f>),
+    CubemapVolume(Box<Unk80806b7f>, AABB),
     PointLight(TagHash),
     Decal {
         material: TagHash,
@@ -32,9 +32,10 @@ impl MapResource {
     pub fn debug_string(&self) -> String {
         match self {
             MapResource::Entity(e) => format!("Entity {:08X}", e.0.to_be()),
-            MapResource::CubemapVolume(c) => {
+            MapResource::CubemapVolume(c, aabb) => {
                 format!(
-                    "Cubemap Volume\n'{}' ({:08X})",
+                    "Cubemap Volume ({:.0}m³)\n'{}' ({:08X})",
+                    aabb.volume(),
                     *c.cubemap_name,
                     c.cubemap_texture.0.to_be()
                 )
@@ -70,7 +71,7 @@ impl MapResource {
 
         match self {
             MapResource::Entity(_) => [255, 255, 255],
-            MapResource::CubemapVolume(_) => [50, 255, 50],
+            MapResource::CubemapVolume(..) => [50, 255, 50],
             MapResource::PointLight(_) => [220, 220, 20],
             MapResource::Decal { .. } => [50, 255, 255],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
@@ -83,7 +84,7 @@ impl MapResource {
     pub fn debug_icon(&self) -> char {
         match self {
             MapResource::Entity(_) => ICON_CHESS_PAWN,
-            MapResource::CubemapVolume(_) => ICON_SPHERE,
+            MapResource::CubemapVolume(..) => ICON_SPHERE,
             MapResource::PointLight(_) => ICON_LIGHTBULB_ON,
             MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown(_) => ICON_HELP,
@@ -128,8 +129,9 @@ pub struct Unk8080714b {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80806b7f {
     #[br(seek_before(SeekFrom::Current(0x20)))]
-    pub unk20: Vector4,
-    pub unk30: Vector4,
+    pub cubemap_size: Vector4,
+    /// Represents the visual center of the cubemap
+    pub cubemap_center: Vector4,
     pub unk40: f32,
     pub unk44: [u32; 3],
     pub unk50: Vector4,

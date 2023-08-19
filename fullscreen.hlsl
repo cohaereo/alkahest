@@ -1,5 +1,7 @@
 cbuffer CompositeOptions : register(b0) {
     row_major float4x4 projViewMatrixInv;
+    float4x4 projMatrix;
+    float4x4 viewMatrix;
     float4 cameraPos;
     float4 cameraDir;
     uint tex_i;
@@ -12,26 +14,38 @@ cbuffer Lights : register(b1) {
 
 struct VSOutput {
     float4 position : SV_POSITION;
+    float3 normal : NORMAL;
     float2 uv : TEXCOORD;
 };
 
-static float2 screenPos[3] = {
-    float2(3.0, 1.0), // top right
+static float2 screenPos[4] = {
     float2(-1.0, 1.0), // top left
-    float2(-1.0, -3.0), // bottom left
+    float2(-1.0, -1.0), // bottom left
+    float2(1.0, 1.0), // top right
+    float2(1.0, -1.0), // bottom right
 };
 
-static float2 texcoords[3] = {
-    float2(2.0, 0.0),
+static float2 texcoords[4] = {
     float2(0.0, 0.0),
-    float2(0.0, 2.0),
+    float2(0.0, 1.0),
+    float2(1.0, 0.0),
+    float2(1.0, 1.0),
 };
 
 VSOutput VShader(uint vertexID : SV_VertexID) {
     VSOutput output;
 
-    output.position = float4(screenPos[vertexID], 0.0, 1.0);
+    float3 multiply = float3 (0, 0, 0);
+    multiply.x = 1.0f / projMatrix[0][0];
+    multiply.y = 1.0f / projMatrix[1][1];
+
+    float4 position = float4(screenPos[vertexID], 0.0, 1.0);
+    output.position = position;
     output.uv = texcoords[vertexID];
+
+    float3 tempPos = (position.xyz * multiply) - float3(0, 0, 1);
+    output.normal = mul(transpose((float3x3)viewMatrix), normalize(tempPos));
+
 
     return output;
 }
@@ -41,6 +55,7 @@ Texture2D RenderTarget1 : register(t1);
 Texture2D RenderTarget2 : register(t2);
 Texture2D DepthTarget : register(t3);
 Texture2D Matcap : register(t4);
+TextureCube SpecularMap : register(t5);
 SamplerState SampleType : register(s0);
 
 float3 GammaCorrect(float3 c) {
@@ -122,6 +137,13 @@ float3 PositionGrid(float3 pos, float size) {
     return rgb;
 }
 
+uint QuerySpecularTextureLevels()
+{
+	uint width, height, levels;
+	SpecularMap.GetDimensions(0, width, height, levels);
+	return levels;
+}
+
 // Decode a packed normal (0.0-1.0 -> -1.0-1.0) 
 float3 DecodeNormal(float3 n) {
     return n * 2.0 - 1.0;
@@ -143,12 +165,16 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     float3 V = normalize(cameraPos.xyz - worldPos);
 	float3 R = reflect(-V, N);
 
+	float cosLo = max(0.0, dot(N, V));
+		
+	float3 Lr = 2.0 * cosLo * N - V;
+
     float3 F0 = float3(0.04, 0.04, 0.04);
     F0 = lerp(F0, albedo, metallic);
 
     // reflectance equation
-    float3 Lo = float3(0.0, 0.0, 0.0);
-    float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 10.0;
+    float3 directLighting = float3(0.0, 0.0, 0.0);
+    const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
     for(uint i = 0; i < lightCount; ++i)
     {
         float3 light_pos = lights[i].xyz;
@@ -157,7 +183,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         }
 
         float distance = length(light_pos - worldPos);
-        if(distance > 16.0) {
+        if(distance > 32.0) {
             continue;
         }
 
@@ -184,14 +210,20 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
         // add to outgoing radiance Lo
         float NdotL = max(dot(N, L), 0.0);
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+        directLighting += (kD * albedo / PI + specular) * radiance * NdotL;
     }
 
 	float3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
-	float3 kS = F;
-	float3 kD = 1.0 - kS;
-	kD *= 1.0 - metallic;
+    float3 kD = lerp(1.0 - F, 0.0, metallic);
+
+    float3 diffuseIBL = kD * (float3(0.03, 0.03, 0.03) * albedo);
+
+    uint specularTextureLevels = QuerySpecularTextureLevels();
+    float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb;
+
+    // Total specular IBL contribution.
+    float3 specularIBL = specularIrradiance;
 
 	// float3 irradiance = irradianceMap.Sample(textureSampler, N).rgb;
 	// float3 diffuse = albedo;
@@ -205,9 +237,9 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 	// float3 ambient = (kD * diffuse /*+ specular*/) * ao;
     // float3 ambient = 1.0;
     // float3 ambient = kD * diffuse;
-    float3 ambient = float3(0.03, 0.03, 0.03) * albedo;
+    float3 ambient = diffuseIBL + specularIBL;
 
-    float3 color = ambient + Lo;
+    float3 color = ambient + directLighting;
 
     color = color / (color + float3(1.0, 1.0, 1.0));
     color = GammaCorrect(color);
@@ -251,6 +283,9 @@ float4 PShader(VSOutput input) : SV_Target {
         }
         case 10: { // Iridescence
             return float4(albedo.aaa, 1.0);
+        }
+        case 11: { // Cubemap
+            return SpecularMap.Sample(SampleType, input.normal.xyz);
         }
         default: { // Combined
             if(lightCount == 0) {

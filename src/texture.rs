@@ -9,6 +9,7 @@ use destiny_pkg::TagHash;
 use std::io::SeekFrom;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
+    D3D11_SRV_DIMENSION_TEXTURECUBE,
 };
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Direct3D11::{
@@ -61,7 +62,7 @@ pub struct TexturePlateSet {
 
 pub enum TextureHandle {
     Texture2D(ID3D11Texture2D),
-    // TextureCube(ID3D11Texture2D),
+    TextureCube(ID3D11Texture2D),
     Texture3D(ID3D11Texture3D),
 }
 
@@ -163,6 +164,67 @@ impl Texture {
                     .unwrap();
 
                 (TextureHandle::Texture3D(tex), view)
+            } else if texture.array_size > 1 {
+                let mut initial_data = vec![];
+                let (pitch, slice_pitch) =
+                    calculate_pitch(texture.format, texture.width as _, texture.height as _);
+                for i in 0..texture.array_size as usize {
+                    initial_data.push(D3D11_SUBRESOURCE_DATA {
+                        pSysMem: texture_data.as_ptr().add(i * slice_pitch) as _,
+                        SysMemPitch: pitch as _,
+                        SysMemSlicePitch: 0,
+                    })
+                }
+
+                let tex = dcs
+                    .device
+                    .CreateTexture2D(
+                        &D3D11_TEXTURE2D_DESC {
+                            Width: texture.width as _,
+                            Height: texture.height as _,
+                            MipLevels: 1,
+                            ArraySize: texture.array_size as _,
+                            Format: texture.format.into(),
+                            SampleDesc: DXGI_SAMPLE_DESC {
+                                Count: 1,
+                                Quality: 0,
+                            },
+                            Usage: D3D11_USAGE_DEFAULT,
+                            BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                            CPUAccessFlags: Default::default(),
+                            MiscFlags: D3D11_RESOURCE_MISC_TEXTURECUBE,
+                        },
+                        Some(initial_data.as_ptr()),
+                    )
+                    .context("Failed to create texture cube")
+                    .unwrap();
+
+                let name = format!("Tex {:?}/0x{:08x}\0", hash, hash.0);
+                tex.SetPrivateData(
+                    &WKPDID_D3DDebugObjectName,
+                    name.len() as u32 - 1,
+                    Some(name.as_ptr() as _),
+                )
+                .context("Failed to set texture name")?;
+
+                let view = dcs
+                    .device
+                    .CreateShaderResourceView(
+                        &tex,
+                        Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                            Format: texture.format.into(),
+                            ViewDimension: D3D11_SRV_DIMENSION_TEXTURECUBE,
+                            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                TextureCube: D3D11_TEXCUBE_SRV {
+                                    MostDetailedMip: 0,
+                                    MipLevels: mips as _,
+                                },
+                            },
+                        }),
+                    )
+                    .unwrap();
+
+                (TextureHandle::TextureCube(tex), view)
             } else {
                 let mut initial_data = vec![];
                 let mut offset = 0;
@@ -187,7 +249,6 @@ impl Texture {
                             Width: texture.width as _,
                             Height: texture.height as _,
                             MipLevels: mips as u32,
-                            // TODO(cohae): Cubemaps
                             ArraySize: 1 as _,
                             Format: texture.format.into(),
                             SampleDesc: DXGI_SAMPLE_DESC {
@@ -201,7 +262,7 @@ impl Texture {
                         },
                         Some(initial_data.as_ptr()),
                     )
-                    .context("Failed to create texture")
+                    .context("Failed to create 2D texture")
                     .unwrap();
 
                 let name = format!("Tex {:?}/0x{:08x}\0", hash, hash.0);
@@ -210,7 +271,7 @@ impl Texture {
                     name.len() as u32 - 1,
                     Some(name.as_ptr() as _),
                 )
-                .context("Failed to set VS name")?;
+                .context("Failed to set texture name")?;
 
                 let view = dcs
                     .device

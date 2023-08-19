@@ -48,7 +48,7 @@ use crate::map_resources::{
     MapResource, Unk80806b7f, Unk80806df3, Unk80806e68, Unk8080714b, Unk80807268, Unk80809162,
 };
 use crate::material::{Material, Unk808071e8};
-use crate::overlays::camera_settings::CameraPositionOverlay;
+use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gbuffer_viewer::{
@@ -68,7 +68,7 @@ use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::Texture;
-use crate::types::Vector4;
+use crate::types::{Vector4, AABB};
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
 use crate::overlays::package_dump::PackageDumper;
@@ -219,6 +219,8 @@ pub fn main() -> anyhow::Result<()> {
     let mut terrain_headers = vec![];
     let mut maps: Vec<MapData> = vec![];
 
+    let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
+
     // First light reserved for camera light
     let mut point_lights = vec![Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
@@ -284,13 +286,26 @@ pub fn main() -> anyhow::Result<()> {
                                     .unwrap();
 
                                 let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
+                                let extents_center = Vec4::new(
+                                    cubemap_volume.cubemap_center.x,
+                                    cubemap_volume.cubemap_center.y,
+                                    cubemap_volume.cubemap_center.z,
+                                    cubemap_volume.cubemap_center.w,
+                                );
+                                let extents = Vec4::new(
+                                    cubemap_volume.cubemap_size.x,
+                                    cubemap_volume.cubemap_size.y,
+                                    cubemap_volume.cubemap_size.z,
+                                    cubemap_volume.cubemap_size.w,
+                                );
+                                let extents_half = extents / 2.0;
+
+                                let volume_min = extents_center - extents_half;
+                                let volume_max = extents_center + extents_half;
+
+                                to_load_textures.insert(cubemap_volume.cubemap_texture, ());
                                 resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
+                                    translation: extents_center,
                                     rotation: Quat::from_xyzw(
                                         data.rotation.x,
                                         data.rotation.y,
@@ -299,7 +314,13 @@ pub fn main() -> anyhow::Result<()> {
                                     ),
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::CubemapVolume(Box::new(cubemap_volume)),
+                                    resource: MapResource::CubemapVolume(
+                                        Box::new(cubemap_volume),
+                                        AABB {
+                                            min: volume_min.truncate().into(),
+                                            max: volume_max.truncate().into(),
+                                        },
+                                    ),
                                 });
                             }
                             // Point light
@@ -580,7 +601,6 @@ pub fn main() -> anyhow::Result<()> {
         IntMap::default();
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
-    let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
     for m in &maps {
         for placements in m.placement_groups.iter() {
@@ -905,6 +925,21 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} samplers", sampler_map.len());
 
+    let le_sampler = unsafe {
+        dcs.device.CreateSamplerState(&D3D11_SAMPLER_DESC {
+            Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+            AddressU: D3D11_TEXTURE_ADDRESS_WRAP,
+            AddressV: D3D11_TEXTURE_ADDRESS_WRAP,
+            AddressW: D3D11_TEXTURE_ADDRESS_WRAP,
+            MipLODBias: 0.,
+            MaxAnisotropy: 1,
+            ComparisonFunc: D3D11_COMPARISON_ALWAYS,
+            BorderColor: Default::default(),
+            MinLOD: 0.,
+            MaxLOD: f32::MAX,
+        })?
+    };
+
     let le_terrain_cb11 = ConstantBuffer::<Mat4>::create(dcs.clone(), None)?;
     let le_entity_cb11 = ConstantBuffer::<ScopeRigidModel>::create(dcs.clone(), None)?;
 
@@ -940,6 +975,8 @@ pub fn main() -> anyhow::Result<()> {
         current_map: 0,
         maps,
     });
+    // TODO(cohae): This is fucking terrible, just move it to the debug GUI when we can
+    resources.insert(CurrentCubemap(None));
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
@@ -1230,7 +1267,8 @@ pub fn main() -> anyhow::Result<()> {
                         if gb.renderlayer_terrain {
                             for th in &map.terrains {
                                 if let Some(t) = terrain_renderers.get(&th.0) {
-                                    t.draw(&dcs, &render_data, le_terrain_cb11.buffer());
+                                    t.draw(&dcs, &render_data, le_terrain_cb11.buffer())
+                                        .unwrap();
                                 }
                             }
                         }
@@ -1300,6 +1338,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     let compositor_options = CompositorOptions {
                         proj_view_matrix_inv: proj_view.inverse(),
+                        proj_matrix: projection,
+                        view_matrix: view,
                         camera_pos: camera.position.extend(1.0),
                         camera_dir: camera.front.extend(1.0),
                         mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
@@ -1310,6 +1350,11 @@ pub fn main() -> anyhow::Result<()> {
                         },
                     };
                     cb_composite_options.write(&compositor_options).unwrap();
+
+                    dcs.context.VSSetConstantBuffers(
+                        0,
+                        Some(&[Some(cb_composite_options.buffer().clone())]),
+                    );
 
                     dcs.context.PSSetConstantBuffers(
                         0,
@@ -1328,11 +1373,43 @@ pub fn main() -> anyhow::Result<()> {
                         MaxDepth: 1.0,
                     }]));
 
+                    let cubemap_texture = if let Some(MapResource::CubemapVolume(c, _)) = map
+                        .resource_points
+                        .iter()
+                        .find(|r| {
+                            if let MapResource::CubemapVolume(_, aabb) = &r.resource {
+                                aabb.contains_point(camera.position)
+                            } else {
+                                false
+                            }
+                        })
+                        .map(|r| &r.resource)
+                    {
+                        if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                            cr.0 = Some(c.cubemap_name.to_string());
+                        }
+                        render_data
+                            .textures
+                            .get(&c.cubemap_texture.0)
+                            .map(|t| t.view.clone())
+                    } else {
+                        if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                            cr.0 = None;
+                        }
+                        None
+                    };
+
+                    dcs.context
+                        .PSSetShaderResources(5, Some(&[cubemap_texture]));
+
+                    dcs.context
+                        .PSSetSamplers(0, Some(&[Some(le_sampler.clone())]));
+
                     dcs.context.VSSetShader(&vshader_fullscreen, None);
                     dcs.context.PSSetShader(&pshader_fullscreen, None);
                     dcs.context
                         .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-                    dcs.context.Draw(3, 0);
+                    dcs.context.Draw(4, 0);
 
                     drop(camera);
                     drop(maps);

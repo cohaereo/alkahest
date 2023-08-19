@@ -1,5 +1,6 @@
 use binrw::BinRead;
 use bytemuck::{Pod, Zeroable};
+use glam::{Vec3, Vec3A};
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]
@@ -155,3 +156,26 @@ macro_rules! impl_decode_float {
 
 impl_decode_float!(u8, u16);
 impl_decode_float!(i8, i16);
+
+#[derive(Debug, Clone)]
+pub struct AABB {
+    pub min: Vec3A,
+    pub max: Vec3A,
+}
+
+impl AABB {
+    pub fn contains_point(&self, point: Vec3) -> bool {
+        self.min.x <= point.x
+            && self.min.y <= point.y
+            && self.min.z <= point.z
+            && point.x <= self.max.x
+            && point.y <= self.max.y
+            && point.z <= self.max.z
+    }
+
+    /// In units cubed
+    pub fn volume(&self) -> f32 {
+        let dimensions = self.max - self.min;
+        dimensions.x * dimensions.y * dimensions.z
+    }
+}
