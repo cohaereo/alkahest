@@ -28,4 +28,4 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy --release
+        run: cargo clippy --release -- -Dclippy::correctness -Dclippy::suspicious -Dclippy::complexity
