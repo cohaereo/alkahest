@@ -44,6 +44,7 @@ serde = { version = "1.0.183", features = ["derive"] }
 serde_yaml = "0.9.25"
 parking_lot = "0.12.1"
 strum = { version = "0.25.0", features = ["derive"] }
+obj = "0.10.2"
 
 [features]
 default = []

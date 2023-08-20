@@ -27,5 +27,5 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Build
+      - name: Clippy
         run: cargo clippy --release

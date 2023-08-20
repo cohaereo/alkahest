@@ -109,6 +109,7 @@ pub struct CompositorOptions {
     pub view_matrix: Mat4,
     pub camera_pos: Vec4,
     pub camera_dir: Vec4,
+    pub time: f32,
     pub mode: u32,
     pub light_count: u32,
 }

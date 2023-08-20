@@ -1,3 +1,4 @@
+use anyhow::bail;
 use anyhow::Context;
 use destiny_pkg::TagHash;
 
@@ -219,6 +220,8 @@ impl EntityRenderer {
 
                             mat.bind(dcs, render_data)?;
                         }
+                    } else {
+                        bail!("Could not bind material");
                     }
 
                     dcs.context.IASetVertexBuffers(

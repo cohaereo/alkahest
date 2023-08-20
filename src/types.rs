@@ -157,6 +157,7 @@ macro_rules! impl_decode_float {
 impl_decode_float!(u8, u16);
 impl_decode_float!(i8, i16);
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone)]
 pub struct AABB {
     pub min: Vec3A,

@@ -1,8 +1,9 @@
-mod cbuffer;
+pub mod cbuffer;
 pub mod data;
-mod dcs;
+pub mod dcs;
 pub mod entity;
-mod gbuffer;
+pub mod error;
+pub mod gbuffer;
 pub mod scopes;
 pub mod static_instanced;
 pub mod static_render;

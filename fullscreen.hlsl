@@ -4,6 +4,7 @@ cbuffer CompositeOptions : register(b0) {
     float4x4 viewMatrix;
     float4 cameraPos;
     float4 cameraDir;
+    float time;
     uint tex_i;
     uint lightCount;
 };

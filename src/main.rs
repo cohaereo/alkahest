@@ -55,8 +55,10 @@ use crate::overlays::gbuffer_viewer::{
     CompositorMode, CompositorOptions, GBufferInfoOverlay, COMPOSITOR_MODES,
 };
 use crate::overlays::gui::GuiManager;
+use crate::overlays::package_dump::PackageDumper;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
+use crate::render::error::ErrorRenderer;
 use crate::render::scopes::ScopeRigidModel;
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
@@ -71,7 +73,6 @@ use crate::texture::Texture;
 use crate::types::{Vector4, AABB};
 use crate::vertex_layout::InputElement;
 use render::scopes::ScopeView;
-use crate::overlays::package_dump::PackageDumper;
 
 mod camera;
 mod config;
@@ -977,6 +978,7 @@ pub fn main() -> anyhow::Result<()> {
     });
     // TODO(cohae): This is fucking terrible, just move it to the debug GUI when we can
     resources.insert(CurrentCubemap(None));
+    resources.insert(ErrorRenderer::load(dcs.clone()));
 
     let matcap = unsafe {
         const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
@@ -1281,6 +1283,10 @@ pub fn main() -> anyhow::Result<()> {
                                 13,
                                 Some(&[Some(le_entity_cb13.buffer().clone())]),
                             );
+                            dcs.context.PSSetConstantBuffers(
+                                13,
+                                Some(&[Some(le_entity_cb13.buffer().clone())]),
+                            );
 
                             dcs.context.PSSetShaderResources(
                                 10,
@@ -1315,7 +1321,27 @@ pub fn main() -> anyhow::Result<()> {
                                         Some(&[Some(le_entity_cb11.buffer().clone())]),
                                     );
 
-                                    ent.draw(&dcs, &render_data);
+                                    if ent.draw(&dcs, &render_data).is_err() {
+                                        let mm2 = Mat4::from_scale_rotation_translation(
+                                            Vec3::splat(rp.translation.w),
+                                            rp.rotation.inverse(),
+                                            rp.translation.truncate(),
+                                        );
+                                        resources
+                                            .get::<ErrorRenderer>()
+                                            .unwrap()
+                                            .draw(&dcs, mm2, proj_view, view);
+                                    }
+                                } else if rp.resource.is_entity() {
+                                    let mm2 = Mat4::from_scale_rotation_translation(
+                                        Vec3::splat(rp.translation.w),
+                                        rp.rotation.inverse(),
+                                        rp.translation.truncate(),
+                                    );
+                                    resources
+                                        .get::<ErrorRenderer>()
+                                        .unwrap()
+                                        .draw(&dcs, mm2, proj_view, view);
                                 }
                             }
                         }
@@ -1342,6 +1368,7 @@ pub fn main() -> anyhow::Result<()> {
                         view_matrix: view,
                         camera_pos: camera.position.extend(1.0),
                         camera_dir: camera.front.extend(1.0),
+                        time: start_time.elapsed().as_secs_f32(),
                         mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
                         light_count: if gui_debug.borrow().render_lights {
                             point_lights.len() as u32
