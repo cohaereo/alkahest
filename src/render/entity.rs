@@ -238,8 +238,8 @@ impl EntityRenderer {
                         0,
                     );
                     dcs.context.IASetPrimitiveTopology(match p.primitive_type {
-                        EPrimitiveType::Triangles => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                        EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+                        EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                        EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     });
 
                     dcs.context.DrawIndexed(p.index_count, p.index_start, 0);

@@ -11,6 +11,7 @@ pub struct GBufferInfoOverlay {
     pub composition_mode: usize,
 
     pub renderlayer_statics: bool,
+    pub renderlayer_statics_transparent: bool,
     pub renderlayer_terrain: bool,
     pub renderlayer_entities: bool,
 }
@@ -35,6 +36,10 @@ impl OverlayProvider for GBufferInfoOverlay {
                 if ui.collapsing_header("Render Layers", TreeNodeFlags::empty()) {
                     ui.indent();
                     ui.checkbox("Statics", &mut self.renderlayer_statics);
+                    ui.checkbox(
+                        "Statics (transparent)",
+                        &mut self.renderlayer_statics_transparent,
+                    );
                     ui.checkbox("Terrain", &mut self.renderlayer_terrain);
                     ui.checkbox("Entities", &mut self.renderlayer_entities);
                     ui.unindent();

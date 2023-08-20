@@ -143,25 +143,21 @@ impl Texture {
                         },
                         Some([initial_data].as_ptr()),
                     )
-                    .context("Failed to create 3D texture")
-                    .unwrap();
+                    .context("Failed to create 3D texture")?;
 
-                let view = dcs
-                    .device
-                    .CreateShaderResourceView(
-                        &tex,
-                        Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                            Format: texture.format.into(),
-                            ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
-                            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                                Texture3D: D3D11_TEX3D_SRV {
-                                    MostDetailedMip: 0,
-                                    MipLevels: 1,
-                                },
+                let view = dcs.device.CreateShaderResourceView(
+                    &tex,
+                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                        Format: texture.format.into(),
+                        ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
+                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                            Texture3D: D3D11_TEX3D_SRV {
+                                MostDetailedMip: 0,
+                                MipLevels: 1,
                             },
-                        }),
-                    )
-                    .unwrap();
+                        },
+                    }),
+                )?;
 
                 (TextureHandle::Texture3D(tex), view)
             } else if texture.array_size > 1 {
@@ -196,8 +192,7 @@ impl Texture {
                         },
                         Some(initial_data.as_ptr()),
                     )
-                    .context("Failed to create texture cube")
-                    .unwrap();
+                    .context("Failed to create texture cube")?;
 
                 let name = format!("Tex {:?}/0x{:08x}\0", hash, hash.0);
                 tex.SetPrivateData(
@@ -222,7 +217,7 @@ impl Texture {
                             },
                         }),
                     )
-                    .unwrap();
+                    .context("Failed to create texture cube SRV")?;
 
                 (TextureHandle::TextureCube(tex), view)
             } else {
@@ -262,8 +257,7 @@ impl Texture {
                         },
                         Some(initial_data.as_ptr()),
                     )
-                    .context("Failed to create 2D texture")
-                    .unwrap();
+                    .context("Failed to create 2D texture")?;
 
                 let name = format!("Tex {:?}/0x{:08x}\0", hash, hash.0);
                 tex.SetPrivateData(
@@ -273,22 +267,19 @@ impl Texture {
                 )
                 .context("Failed to set texture name")?;
 
-                let view = dcs
-                    .device
-                    .CreateShaderResourceView(
-                        &tex,
-                        Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                            Format: texture.format.into(),
-                            ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                                Texture2D: D3D11_TEX2D_SRV {
-                                    MostDetailedMip: 0,
-                                    MipLevels: mips as _,
-                                },
+                let view = dcs.device.CreateShaderResourceView(
+                    &tex,
+                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                        Format: texture.format.into(),
+                        ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                            Texture2D: D3D11_TEX2D_SRV {
+                                MostDetailedMip: 0,
+                                MipLevels: mips as _,
                             },
-                        }),
-                    )
-                    .unwrap();
+                        },
+                    }),
+                )?;
 
                 (TextureHandle::Texture2D(tex), view)
             }

@@ -1,8 +1,10 @@
 use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
-use crate::statics::{Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
+use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
 use anyhow::{ensure, Context};
+use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3};
+use itertools::Itertools;
 
 use crate::packages::package_manager;
 
@@ -24,9 +26,11 @@ pub struct StaticModelBuffer {
 }
 
 pub struct StaticModel {
-    buffers: Vec<StaticModelBuffer>,
-    parts: Vec<Unk8080719a>,
-    mesh_groups: Vec<Unk8080719b>,
+    pub buffers: Vec<StaticModelBuffer>,
+    pub parts: Vec<Unk8080719a>,
+    pub mesh_groups: Vec<Unk8080719b>,
+
+    pub transparent_parts: Vec<StaticTranslucentModel>,
 
     model: Unk808071a7,
 }
@@ -51,14 +55,20 @@ impl StaticModel {
         )
     }
 
-    pub fn load(model: Unk808071a7, device: &ID3D11Device) -> anyhow::Result<StaticModel> {
+    pub fn load(
+        model: Unk808071a7,
+        device: &ID3D11Device,
+        model_hash: TagHash,
+    ) -> anyhow::Result<StaticModel> {
         let pm = package_manager();
         let header: Unk80807194 = pm.read_tag_struct(model.unk8).unwrap();
 
         ensure!(header.unk8.len() == model.materials.len());
 
         let mut buffers = vec![];
-        for (index_buffer, vertex_buffer_hash, vertex2_buffer_hash, _u3) in header.buffers.iter() {
+        for (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, _u3) in
+            header.buffers.iter()
+        {
             let vertex_header: VertexBufferHeader =
                 pm.read_tag_struct(*vertex_buffer_hash).unwrap();
 
@@ -82,8 +92,8 @@ impl StaticModel {
                 vertex2_data = Some(pm.read_tag(t).unwrap());
             }
 
-            let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer).unwrap();
-            let t = pm.get_entry(*index_buffer).unwrap().reference;
+            let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer_hash).unwrap();
+            let t = pm.get_entry(*index_buffer_hash).unwrap().reference;
             let index_data = pm.read_tag(t).unwrap();
 
             let index_buffer = unsafe {
@@ -129,6 +139,16 @@ impl StaticModel {
                     )
                     .context("Failed to create combined vertex buffer")?
             };
+            unsafe {
+                let name = format!("VB {} (model {})\0", vertex_buffer_hash, model_hash);
+                combined_vertex_buffer
+                    .SetPrivateData(
+                        &WKPDID_D3DDebugObjectName,
+                        name.len() as u32 - 1,
+                        Some(name.as_ptr() as _),
+                    )
+                    .expect("Failed to set VS name")
+            };
 
             buffers.push(StaticModelBuffer {
                 combined_vertex_buffer,
@@ -144,6 +164,11 @@ impl StaticModel {
         }
 
         Ok(StaticModel {
+            transparent_parts: model
+                .unk20
+                .iter()
+                .map(|m| StaticTranslucentModel::load(m.clone(), device).unwrap())
+                .collect_vec(),
             buffers,
             model,
             parts: header.parts.to_vec(),
@@ -156,63 +181,70 @@ impl StaticModel {
         dcs: &DeviceContextSwapchain,
         render_data: &RenderData,
         instance_count: usize,
+        draw_transparent: bool,
     ) -> anyhow::Result<()> {
-        unsafe {
-            for (iu, u) in self
-                .mesh_groups
-                .iter()
-                .enumerate()
-                .filter(|(_, u)| u.unk2 == 0)
-            {
-                let p = &self.parts[u.part_index as usize];
-                if !p.lod_category.is_highest_detail() {
-                    continue;
-                }
-
-                if let Some(buffers) = self.buffers.get(p.buffer_index as usize) {
-                    if let Some(mat) = self
-                        .model
-                        .materials
-                        .get(iu)
-                        .and_then(|m| render_data.materials.get(&m.0))
-                    {
-                        if mat.unk8 != 1 {
-                            continue;
-                        }
-
-                        mat.bind(dcs, render_data)?;
-                    } else {
-                        anyhow::bail!(
-                            "Could not find material {}",
-                            self.model.materials.get(iu).unwrap()
-                        );
+        if draw_transparent {
+            for u in &self.transparent_parts {
+                u.draw(dcs, render_data, instance_count)?;
+            }
+        } else {
+            unsafe {
+                for (iu, u) in self
+                    .mesh_groups
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, u)| u.unk2 == 0)
+                {
+                    let p = &self.parts[u.part_index as usize];
+                    if !p.lod_category.is_highest_detail() {
+                        continue;
                     }
 
-                    dcs.context.IASetVertexBuffers(
-                        0,
-                        1,
-                        Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
-                        Some([buffers.combined_vertex_stride].as_ptr()),
-                        Some(&0),
-                    );
+                    if let Some(buffers) = self.buffers.get(p.buffer_index as usize) {
+                        if let Some(mat) = self
+                            .model
+                            .materials
+                            .get(iu)
+                            .and_then(|m| render_data.materials.get(&m.0))
+                        {
+                            if mat.unk8 != 1 {
+                                continue;
+                            }
 
-                    dcs.context.IASetIndexBuffer(
-                        Some(&buffers.index_buffer),
-                        buffers.index_format,
-                        0,
-                    );
-                    dcs.context.IASetPrimitiveTopology(match p.primitive_type {
-                        EPrimitiveType::Triangles => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                        EPrimitiveType::TriangleStrip => D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-                    });
+                            mat.bind(dcs, render_data)?;
+                        } else {
+                            anyhow::bail!(
+                                "Could not find material {}",
+                                self.model.materials.get(iu).unwrap()
+                            );
+                        }
 
-                    dcs.context.DrawIndexedInstanced(
-                        p.index_count,
-                        instance_count as _,
-                        p.index_start,
-                        0,
-                        0,
-                    );
+                        dcs.context.IASetVertexBuffers(
+                            0,
+                            1,
+                            Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
+                            Some([buffers.combined_vertex_stride].as_ptr()),
+                            Some(&0),
+                        );
+
+                        dcs.context.IASetIndexBuffer(
+                            Some(&buffers.index_buffer),
+                            buffers.index_format,
+                            0,
+                        );
+                        dcs.context.IASetPrimitiveTopology(match p.primitive_type {
+                            EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                            EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+                        });
+
+                        dcs.context.DrawIndexedInstanced(
+                            p.index_count,
+                            instance_count as _,
+                            p.index_start,
+                            0,
+                            0,
+                        );
+                    }
                 }
             }
         }
@@ -221,43 +253,142 @@ impl StaticModel {
     }
 }
 
-// pub fn tmp_filter_material(mat: &material::Unk808071e8) -> bool {
-//     if mat.unk8 != 1 {
-//         return false;
-//     }
+pub struct StaticTranslucentModel {
+    buffers: StaticModelBuffer,
+    index_count: usize,
+    model: Unk80807193,
+}
 
-//     // println!("{:x}", mat.unk10);
+impl StaticTranslucentModel {
+    pub fn load(
+        model: Unk80807193,
+        device: &ID3D11Device,
+    ) -> anyhow::Result<StaticTranslucentModel> {
+        let pm = package_manager();
+        let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
 
-//     // mat.unk60 == u32::from_be(0x25232284)
-//     // 0xD5720384F0E27726 - copper/silver cups, pots, plates, vases
-//     // mat.unk2e0 == u64::from_be(0xf21ce6afd506f7ff)
+        if vertex_header.stride == 24 || vertex_header.stride == 48 {
+            anyhow::bail!("Support for 32-bit floats in vertex buffers are disabled");
+        }
 
-//     // 0 ??
-//     // 2 double sided?
-//     // mat.unkc == 2
+        let t = pm.get_entry(model.vertex_buffer).unwrap().reference;
 
-//     // 0x0000 ??
-//     // 0x0081 seems almost perfect for double sided
-//     // mat.unk22 == 0x0081
+        let vertex_data = pm.read_tag(t).unwrap();
 
-//     // (mat.unk1c & 0x4000) != 0
-//     // true
+        let mut vertex2_stride = None;
+        let mut vertex2_data = None;
+        if model.unk10.is_valid() {
+            let vertex2_header: VertexBufferHeader = pm.read_tag_struct(model.unk10).unwrap();
+            let t = pm.get_entry(model.unk10).unwrap().reference;
 
-//     // 0x1 ?? (n)
-//     // 0x2 ?? (n)
-//     // 0x4 dynamics
-//     // 0x8 ?? (n)
-//     // 0x10 ?? (n)
-//     // 0x20 ?? (n)
-//     // 0x40
-//     // 0x80 ??
-//     // 0x100
-//     // 0x200 statics
-//     // 0x400 some kind of decals??
-//     // 0x800
-//     // 0x1000
-//     // 0x2000 ?? (n)
-//     // 0x4000
-//     // 0x8000 ?? (n)
-//     (mat.unk18 & 0x1) != 0
-// }
+            vertex2_stride = Some(vertex2_header.stride as u32);
+            vertex2_data = Some(pm.read_tag(t).unwrap());
+        }
+
+        let index_header: IndexBufferHeader = pm.read_tag_struct(model.index_buffer).unwrap();
+        let t = pm.get_entry(model.index_buffer).unwrap().reference;
+        let index_data = pm.read_tag(t).unwrap();
+
+        let index_buffer = unsafe {
+            device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: index_data.len() as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_INDEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: index_data.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create index buffer")?
+        };
+
+        let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
+            vertex_data
+                .chunks_exact(vertex_header.stride as _)
+                .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
+                .flat_map(|(v1, v2)| [v1, v2].concat())
+                .collect()
+        } else {
+            vertex_data
+        };
+
+        let combined_vertex_buffer = unsafe {
+            device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: combined_vertex_data.len() as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_VERTEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: combined_vertex_data.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create combined vertex buffer")?
+        };
+
+        let index_count = index_data.len() / if index_header.is_32bit { 4 } else { 2 };
+
+        Ok(Self {
+            buffers: StaticModelBuffer {
+                combined_vertex_buffer,
+                combined_vertex_stride: (vertex_header.stride as u32
+                    + vertex2_stride.unwrap_or_default()),
+                index_buffer,
+                index_format: if index_header.is_32bit {
+                    DXGI_FORMAT_R32_UINT
+                } else {
+                    DXGI_FORMAT_R16_UINT
+                },
+            },
+            index_count,
+            model,
+        })
+    }
+
+    pub fn draw(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        render_data: &RenderData,
+        instance_count: usize,
+    ) -> anyhow::Result<()> {
+        unsafe {
+            if let Some(mat) = render_data.materials.get(&self.model.material.0) {
+                if mat.unk8 != 1 {
+                    return Ok(());
+                }
+
+                mat.bind(dcs, render_data)?;
+            } else {
+                anyhow::bail!("Could not find material {}", self.model.material);
+            }
+
+            dcs.context.IASetVertexBuffers(
+                0,
+                1,
+                Some([Some(self.buffers.combined_vertex_buffer.clone())].as_ptr()),
+                Some([self.buffers.combined_vertex_stride].as_ptr()),
+                Some(&0),
+            );
+
+            dcs.context.IASetIndexBuffer(
+                Some(&self.buffers.index_buffer),
+                self.buffers.index_format,
+                0,
+            );
+            dcs.context
+                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            dcs.context
+                .DrawIndexedInstanced(self.index_count as _, instance_count as _, 0, 0, 0);
+        }
+
+        Ok(())
+    }
+}

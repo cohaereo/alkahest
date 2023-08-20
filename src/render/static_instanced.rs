@@ -1,4 +1,4 @@
-use crate::render::scopes::ScopeStaticInstance;
+use crate::render::scopes::ScopeInstances;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 
 use crate::statics::Unk808071a3;
@@ -14,7 +14,7 @@ use super::RenderData;
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
     instance_count: usize,
-    instance_buffer: ConstantBuffer<ScopeStaticInstance>,
+    instance_buffer: ConstantBuffer<ScopeInstances>,
 }
 
 impl InstancedRenderer {
@@ -23,7 +23,7 @@ impl InstancedRenderer {
         instances: &[Unk808071a3],
         dcs: Rc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
-        let mut instance_data: Vec<ScopeStaticInstance> = Vec::with_capacity(instances.len());
+        let mut instance_data: Vec<ScopeInstances> = Vec::with_capacity(instances.len());
 
         for instance in instances {
             let mm = Mat4::from_scale_rotation_translation(
@@ -47,7 +47,7 @@ impl InstancedRenderer {
 
             let combined_matrix = model.mesh_transform() * model_matrix;
 
-            let scope_instance = ScopeStaticInstance {
+            let scope_instance = ScopeInstances {
                 mesh_to_world: combined_matrix.to_3x4(),
                 texcoord_transform: model.texcoord_transform().extend(f32::from_bits(u32::MAX)),
             };
@@ -68,12 +68,14 @@ impl InstancedRenderer {
         &self,
         dcs: &DeviceContextSwapchain,
         render_data: &RenderData,
+        draw_transparent: bool,
     ) -> anyhow::Result<()> {
         unsafe {
             dcs.context
                 .VSSetConstantBuffers(11, Some(&[Some(self.instance_buffer.buffer().clone())]));
         }
 
-        self.renderer.draw(dcs, render_data, self.instance_count)
+        self.renderer
+            .draw(dcs, render_data, self.instance_count, draw_transparent)
     }
 }

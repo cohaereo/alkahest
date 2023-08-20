@@ -20,7 +20,7 @@ pub struct ScopeView {
 
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
-pub struct ScopeStaticInstance {
+pub struct ScopeInstances {
     pub mesh_to_world: Mat3x4,
     pub texcoord_transform: Vec4,
 }
@@ -34,6 +34,16 @@ pub struct ScopeRigidModel {
     pub position_offset: Vec4,        // c5
     pub texcoord0_scale_offset: Vec4, // c6
     pub dynamic_sh_ao_values: Vec4,   // c7
+}
+
+// This scope uses official struct/field names from TFX intermediaries (scope_frame)
+#[repr(C)]
+#[derive(Default)]
+pub struct ScopeFrame {
+    pub time: Vec4,               // c0
+    pub exposure: Vec4,           // c1
+    pub random_seed_scales: Vec4, // c2
+    pub overrides: Vec4,          // c3
 }
 
 pub trait MatrixConversion {

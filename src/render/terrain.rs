@@ -6,7 +6,7 @@ use crate::packages::package_manager;
 use anyhow::Context;
 use glam::{Mat4, Vec4};
 
-use windows::Win32::Graphics::Direct3D::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Buffer, ID3D11Device, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
     D3D11_BUFFER_DESC, D3D11_MAP_WRITE_DISCARD, D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
@@ -176,7 +176,7 @@ impl TerrainRenderer {
                 dcs.context
                     .IASetIndexBuffer(Some(&self.index_buffer), self.index_format, 0);
                 dcs.context
-                    .IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                    .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
                 dcs.context
                     .DrawIndexed(part.index_count as _, part.index_start, 0);

@@ -59,7 +59,7 @@ use crate::overlays::package_dump::PackageDumper;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::error::ErrorRenderer;
-use crate::render::scopes::ScopeRigidModel;
+use crate::render::scopes::{ScopeFrame, ScopeRigidModel};
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{
@@ -251,6 +251,9 @@ pub fn main() -> anyhow::Result<()> {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let preheader_tag: TagHash = cur.read_le().unwrap();
+                                if preheader_tag.0 == 0x81a6001c {
+                                    warn!("6ef4 iz real");
+                                }
                                 let preheader: Unk80806ef4 =
                                     package_manager().read_tag_struct(preheader_tag).unwrap();
 
@@ -647,8 +650,17 @@ pub fn main() -> anyhow::Result<()> {
                     );
                 }
             }
+            for m in &mheader.unk20 {
+                let m = m.material;
+                if m.is_valid() {
+                    material_map.insert(
+                        m.0,
+                        Material(package_manager().read_tag_struct(m).unwrap(), m),
+                    );
+                }
+            }
 
-            match StaticModel::load(mheader, &dcs.device) {
+            match StaticModel::load(mheader, &dcs.device, *almostloadable) {
                 Ok(model) => {
                     static_map.insert(almostloadable.0, Arc::new(model));
                 }
@@ -678,9 +690,13 @@ pub fn main() -> anyhow::Result<()> {
                             ..(instance.instance_offset + instance.instance_count) as usize];
 
                         renderers.push(InstancedRenderer::load(model.clone(), transforms, dcs.clone()).unwrap());
+                    } else {
+                        error!("Couldn't get static model {model_hash}");
                     }
 
                     total_instance_data += instance.instance_count as usize * 16 * 4;
+                } else {
+                    error!("Couldn't get instance static #{}", instance.static_index);
                 }
             }
         }
@@ -904,7 +920,12 @@ pub fn main() -> anyhow::Result<()> {
             }
             let _span = debug_span!("load texture", texture = ?tex_hash).entered();
 
-            texture_map.insert(tex_hash.0, Texture::load(&dcs, tex_hash).unwrap());
+            match Texture::load(&dcs, tex_hash) {
+                Ok(texture) => {
+                    texture_map.insert(tex_hash.0, texture);
+                }
+                Err(e) => error!("Failed to load texture {tex_hash}: {e}"),
+            }
         }
     });
 
@@ -945,7 +966,7 @@ pub fn main() -> anyhow::Result<()> {
     let le_entity_cb11 = ConstantBuffer::<ScopeRigidModel>::create(dcs.clone(), None)?;
 
     let le_vertex_cb12 = ConstantBuffer::<ScopeView>::create(dcs.clone(), None)?;
-    let le_entity_cb13 = ConstantBuffer::<Vec4>::create(dcs.clone(), None)?;
+    let le_entity_cb13 = ConstantBuffer::<ScopeFrame>::create(dcs.clone(), None)?;
 
     let cb_composite_lights =
         ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
@@ -1043,6 +1064,7 @@ pub fn main() -> anyhow::Result<()> {
     let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
         composition_mode: CompositorMode::Combined as usize,
         renderlayer_statics: true,
+        renderlayer_statics_transparent: false,
         renderlayer_terrain: true,
         renderlayer_entities: true,
     }));
@@ -1071,9 +1093,9 @@ pub fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_fps);
     gui.add_overlay(gui_debug.clone());
     gui.add_overlay(gui_gbuffer.clone());
-    gui.add_overlay(gui_resources.clone());
+    gui.add_overlay(gui_resources);
     gui.add_overlay(gui_console);
-    gui.add_overlay(gui_dump.clone());
+    gui.add_overlay(gui_dump);
 
     // TODO(cohae): resources should be added to renderdata directly
     let render_data = RenderData {
@@ -1261,7 +1283,11 @@ pub fn main() -> anyhow::Result<()> {
                                 let (_placements, instance_renderers) =
                                     &placement_groups[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
-                                    instance.draw(&dcs, &render_data).unwrap();
+                                    instance.draw(&dcs, &render_data, false).unwrap();
+
+                                    if gui_gbuffer.borrow().renderlayer_statics_transparent {
+                                        instance.draw(&dcs, &render_data, true).unwrap();
+                                    }
                                 }
                             }
                         }
@@ -1277,7 +1303,17 @@ pub fn main() -> anyhow::Result<()> {
 
                         if gb.renderlayer_entities {
                             le_entity_cb13
-                                .write(&Vec4::splat(start_time.elapsed().as_secs_f32()))
+                                .write(&ScopeFrame {
+                                    time: Vec4::new(
+                                        start_time.elapsed().as_secs_f32(),
+                                        0.0,
+                                        0.0,
+                                        0.0,
+                                    ),
+                                    exposure: Vec4::ONE,
+                                    random_seed_scales: Vec4::ONE,
+                                    overrides: Vec4::ZERO,
+                                })
                                 .unwrap();
                             dcs.context.VSSetConstantBuffers(
                                 13,

@@ -250,7 +250,7 @@ impl ErrorRenderer {
             );
 
             dcs.context
-                .IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             dcs.context
                 .VSSetConstantBuffers(7, Some(&[Some(self.scope.buffer().clone())]));
