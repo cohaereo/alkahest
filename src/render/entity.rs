@@ -4,7 +4,6 @@ use destiny_pkg::TagHash;
 
 use glam::Vec4;
 
-use tracing::warn;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
