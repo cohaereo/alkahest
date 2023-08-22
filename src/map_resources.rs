@@ -16,16 +16,16 @@ pub enum MapResource {
     // PlacementGroup(TagHash),
     // Terrain(Unk8080714b),
     /// Generic data entry with no resource
-    Entity(TagHash),
-    CubemapVolume(Box<Unk80806b7f>, AABB),
-    PointLight(TagHash),
+    Entity(TagHash) = 0,
+    CubemapVolume(Box<Unk80806b7f>, AABB) = 1,
+    PointLight(TagHash) = 2,
     Decal {
         material: TagHash,
-    },
-    Unknown(u32),
-    Unk80806df1,
-    Unk80806f38,
-    RespawnPoint,
+    } = 3,
+    Unknown(u32) = 4,
+    Unk80806df1 = 5,
+    Unk80806f38 = 6,
+    RespawnPoint = 7,
 }
 
 impl MapResource {
@@ -93,20 +93,17 @@ impl MapResource {
         }
     }
 
-    /// Creates a dud variant instance used for obtaining color and icon
-    unsafe fn get_by_index(i: u8) -> MapResource {
-        let e = (i, 0u32);
-        let mut mm: MaybeUninit<MapResource> = MaybeUninit::zeroed();
-        mm.as_mut_ptr().copy_from(&e as *const (u8, u32) as _, 1);
-        mm.assume_init()
-    }
-
-    // pub fn get_color_by_index(i: u8) -> [u8; 3] {
-    //     unsafe { Self::get_by_index(i) }.debug_color()
-    // }
-
+    // TODO(cohae): Make this easier to work with
     pub fn get_icon_by_index(i: u8) -> char {
-        unsafe { Self::get_by_index(i) }.debug_icon()
+        match i {
+            0 => ICON_CHESS_PAWN,
+            1 => ICON_SPHERE,
+            2 => ICON_LIGHTBULB_ON,
+            3 => ICON_STICKER,
+            4 => ICON_HELP,
+            7 => ICON_ACCOUNT_CONVERT,
+            _ => ICON_HELP_BOX_OUTLINE,
+        }
     }
 
     pub fn index(&self) -> u8 {
