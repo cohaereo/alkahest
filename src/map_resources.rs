@@ -1,13 +1,13 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON,
-    ICON_SPHERE, ICON_STICKER,
+    ICON_SPHERE, ICON_STICKER, ICON_VOLUME_HIGH,
 };
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::{DestinyHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
+use itertools::Itertools;
 use std::io::SeekFrom;
-use std::mem::MaybeUninit;
 use strum::{EnumCount, EnumIs, EnumVariantNames};
 
 #[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
@@ -26,6 +26,7 @@ pub enum MapResource {
     Unk80806df1 = 5,
     Unk80806f38 = 6,
     RespawnPoint = 7,
+    AmbientSound(Unk80809802) = 8,
 }
 
 impl MapResource {
@@ -41,11 +42,16 @@ impl MapResource {
                 )
             }
             MapResource::Decal { material } => format!("Decal (mat {material})"),
-            MapResource::PointLight(_) => "Point light".to_string(),
+            MapResource::PointLight { .. } => "Point light".to_string(),
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
             MapResource::Unk80806df1 => "Unk80806df1".to_string(),
             MapResource::Unk80806f38 => "Unk80806f38".to_string(),
             MapResource::RespawnPoint => "Respawn Point".to_string(),
+            MapResource::AmbientSound(s) => format!(
+                "Ambient Sound (bank {})\n(streams [{}])",
+                s.soundbank,
+                s.streams.iter().map(|t| t.to_string()).join(", ")
+            ),
         }
     }
 
@@ -70,26 +76,28 @@ impl MapResource {
         ];
 
         match self {
-            MapResource::Entity(_) => [255, 255, 255],
+            MapResource::Entity { .. } => [255, 255, 255],
             MapResource::CubemapVolume(..) => [50, 255, 50],
-            MapResource::PointLight(_) => [220, 220, 20],
+            MapResource::PointLight { .. } => [220, 220, 20],
             MapResource::Decal { .. } => [50, 255, 255],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
             MapResource::Unk80806df1 => RANDOM_COLORS[0x80806df1 % 16],
             MapResource::Unk80806f38 => RANDOM_COLORS[0x80806f38 % 16],
             MapResource::RespawnPoint => [220, 20, 20],
+            MapResource::AmbientSound { .. } => RANDOM_COLORS[0x80806b5b % 16],
         }
     }
 
     pub fn debug_icon(&self) -> char {
         match self {
-            MapResource::Entity(_) => ICON_CHESS_PAWN,
+            MapResource::Entity { .. } => ICON_CHESS_PAWN,
             MapResource::CubemapVolume(..) => ICON_SPHERE,
-            MapResource::PointLight(_) => ICON_LIGHTBULB_ON,
+            MapResource::PointLight { .. } => ICON_LIGHTBULB_ON,
             MapResource::Decal { .. } => ICON_STICKER,
-            MapResource::Unknown(_) => ICON_HELP,
+            MapResource::Unknown { .. } => ICON_HELP,
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
             MapResource::Unk80806df1 | MapResource::Unk80806f38 => ICON_HELP_BOX_OUTLINE,
+            MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
         }
     }
 
@@ -102,6 +110,7 @@ impl MapResource {
             3 => ICON_STICKER,
             4 => ICON_HELP,
             7 => ICON_ACCOUNT_CONVERT,
+            8 => ICON_VOLUME_HIGH,
             _ => ICON_HELP_BOX_OUTLINE,
         }
     }
@@ -225,4 +234,15 @@ pub struct Unk80809164 {
     pub unk0: Vector4,
     pub unk10: Vector4,
     pub unk20: [u32; 4],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80809802 {
+    pub file_size: u64,
+    pub unk8: TagHash,
+    pub unkc: TagHash,
+    pub unk10: TagHash,
+    pub soundbank: TagHash,
+    pub streams: TablePointer<TagHash>,
+    pub unk28: TagHash,
 }
