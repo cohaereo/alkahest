@@ -8,8 +8,9 @@ use glam::{Mat4, Quat, Vec3};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use super::renderer::Renderer;
 use super::scopes::MatrixConversion;
-use super::RenderData;
+
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
@@ -64,18 +65,12 @@ impl InstancedRenderer {
         })
     }
 
-    pub fn draw(
-        &self,
-        dcs: &DeviceContextSwapchain,
-        render_data: &RenderData,
-        draw_transparent: bool,
-    ) -> anyhow::Result<()> {
-        unsafe {
-            dcs.context
-                .VSSetConstantBuffers(11, Some(&[Some(self.instance_buffer.buffer().clone())]));
-        }
-
-        self.renderer
-            .draw(dcs, render_data, self.instance_count, draw_transparent)
+    pub fn draw(&self, renderer: &mut Renderer, draw_transparent: bool) -> anyhow::Result<()> {
+        self.renderer.draw(
+            renderer,
+            self.instance_buffer.buffer().clone(),
+            self.instance_count,
+            draw_transparent,
+        )
     }
 }

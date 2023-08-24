@@ -1,9 +1,12 @@
 use crate::overlays::resource_nametags::ResourcePoint;
+use crate::render::scopes::ScopeRigidModel;
+use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ResourcePointer, TablePointer, Tag};
 use crate::types::{DestinyHash, Vector4};
 use binrw::BinRead;
 use destiny_pkg::{TagHash, TagHash64};
+
 use std::io::SeekFrom;
 
 // D2Class_1E898080
@@ -143,7 +146,7 @@ pub struct MapData {
     pub hash: TagHash,
     pub name: String,
     pub placement_groups: Vec<Tag<Unk8080966d>>,
-    pub resource_points: Vec<ResourcePoint>,
+    pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
     pub terrains: Vec<TagHash>,
 }
 

@@ -231,41 +231,48 @@ impl ErrorRenderer {
         }
     }
 
-    pub fn draw(&self, dcs: &DeviceContextSwapchain, transform: Mat4, proj_view: Mat4, view: Mat4) {
-        self.scope
-            .write(&AlkScopeError {
-                proj_view,
-                view,
-                model: transform,
-            })
-            .unwrap();
+    // TODO(cohae): Get this to work with the new renderer
+    // pub fn draw(
+    //     &self,
+    //     renderer: &mut Renderer,
+    //     transform: ID3D11Buffer,
+    //     proj_view: Mat4,
+    //     view: Mat4,
+    // ) {
+    //     self.scope
+    //         .write(&AlkScopeError {
+    //             proj_view,
+    //             view,
+    //             model: transform,
+    //         })
+    //         .unwrap();
 
-        unsafe {
-            dcs.context.IASetVertexBuffers(
-                0,
-                1,
-                Some([Some(self.vertex_buffer.clone())].as_ptr()),
-                Some([6 * 4].as_ptr()),
-                Some(&0),
-            );
+    //     unsafe {
+    //         dcs.context.IASetVertexBuffers(
+    //             0,
+    //             1,
+    //             Some([Some(self.vertex_buffer.clone())].as_ptr()),
+    //             Some([6 * 4].as_ptr()),
+    //             Some(&0),
+    //         );
 
-            dcs.context
-                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    //         dcs.context
+    //             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            dcs.context
-                .VSSetConstantBuffers(7, Some(&[Some(self.scope.buffer().clone())]));
+    //         dcs.context
+    //             .VSSetConstantBuffers(7, Some(&[Some(self.scope.buffer().clone())]));
 
-            dcs.context.IASetInputLayout(&self.vertex_layout);
-            dcs.context.VSSetShader(&self.vshader, None);
+    //         dcs.context.IASetInputLayout(&self.vertex_layout);
+    //         dcs.context.VSSetShader(&self.vshader, None);
 
-            dcs.context.PSSetShader(&self.pshader, None);
+    //         dcs.context.PSSetShader(&self.pshader, None);
 
-            dcs.context
-                .PSSetShaderResources(0, Some(&[Some(self.texture.view.clone())]));
+    //         dcs.context
+    //             .PSSetShaderResources(0, Some(&[Some(self.texture.view.clone())]));
 
-            dcs.context.Draw(self.vertex_count as u32, 0);
-        }
-    }
+    //         dcs.context.Draw(self.vertex_count as u32, 0);
+    //     }
+    // }
 }
 
 #[allow(unused)]

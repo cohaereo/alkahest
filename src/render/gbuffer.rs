@@ -117,6 +117,7 @@ pub struct DepthState {
     pub texture: ID3D11Texture2D,
     // TODO(cohae): Should this be here?
     pub state: ID3D11DepthStencilState,
+    pub state_readonly: ID3D11DepthStencilState,
     pub view: ID3D11DepthStencilView,
     pub texture_view: ID3D11ShaderResourceView,
 }
@@ -171,6 +172,31 @@ impl DepthState {
                 .context("Failed to create depth stencil state")?
         };
 
+        let state_readonly = unsafe {
+            device
+                .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
+                    DepthEnable: true.into(),
+                    DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ZERO,
+                    DepthFunc: D3D11_COMPARISON_GREATER_EQUAL,
+                    StencilEnable: false.into(),
+                    StencilReadMask: 0xff,
+                    StencilWriteMask: 0xff,
+                    FrontFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: D3D11_STENCIL_OP_KEEP,
+                        StencilDepthFailOp: D3D11_STENCIL_OP_INCR,
+                        StencilPassOp: D3D11_STENCIL_OP_KEEP,
+                        StencilFunc: D3D11_COMPARISON_ALWAYS,
+                    },
+                    BackFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: D3D11_STENCIL_OP_KEEP,
+                        StencilDepthFailOp: D3D11_STENCIL_OP_DECR,
+                        StencilPassOp: D3D11_STENCIL_OP_KEEP,
+                        StencilFunc: D3D11_COMPARISON_ALWAYS,
+                    },
+                })
+                .context("Failed to create read-only depth stencil state")?
+        };
+
         let view = unsafe {
             device
                 .CreateDepthStencilView(
@@ -206,6 +232,7 @@ impl DepthState {
         Ok(Self {
             texture,
             state,
+            state_readonly,
             view,
             texture_view,
         })

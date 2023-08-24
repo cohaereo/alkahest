@@ -1,3 +1,4 @@
+use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
 use std::marker::PhantomData;
@@ -26,15 +27,23 @@ impl<T> ConstantBuffer<T> {
                 },
                 initial_data.map(|d| &D3D11_SUBRESOURCE_DATA {
                     pSysMem: d as *const T as _,
+                    SysMemPitch: std::mem::size_of::<T>() as _,
                     ..Default::default()
                 } as *const D3D11_SUBRESOURCE_DATA),
             )?;
 
-            Ok(Self {
+            let b = Self {
                 dcs,
                 buffer,
                 _marker: Default::default(),
-            })
+            };
+
+            // FIXME: initial data does not work
+            if let Some(d) = initial_data {
+                b.write(d)?
+            }
+
+            Ok(b)
         }
     }
 
@@ -125,5 +134,27 @@ impl<T> ConstantBuffer<T> {
 
     pub fn buffer(&self) -> &ID3D11Buffer {
         &self.buffer
+    }
+
+    pub fn bind(&self, slot: u32, stages: ShaderStages) {
+        unsafe {
+            if stages.contains(ShaderStages::VERTEX) {
+                self.dcs
+                    .context
+                    .VSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
+            }
+
+            if stages.contains(ShaderStages::PIXEL) {
+                self.dcs
+                    .context
+                    .PSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
+            }
+
+            if stages.contains(ShaderStages::COMPUTE) {
+                self.dcs
+                    .context
+                    .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
+            }
+        }
     }
 }

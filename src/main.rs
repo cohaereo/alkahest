@@ -1,9 +1,13 @@
 #[macro_use]
 extern crate windows;
 
+#[macro_use]
+extern crate tracing;
+
 use std::cell::RefCell;
 
 use std::collections::HashMap;
+
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -21,12 +25,10 @@ use nohash_hasher::IntMap;
 
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
-use tracing::{debug, debug_span, error, info, info_span, trace, warn};
+use tracing::{debug, debug_span, error, info, info_span, trace};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-use windows::Win32::Graphics::Direct3D::Fxc::{
-    D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
-};
+
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
@@ -46,24 +48,24 @@ use crate::input::InputState;
 use crate::map::{MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
 use crate::map_resources::{
     MapResource, Unk80806b7f, Unk80806df3, Unk80806e68, Unk8080714b, Unk80807268, Unk80809162,
+    Unk80809802,
 };
 use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gbuffer_viewer::{
-    CompositorMode, CompositorOptions, GBufferInfoOverlay, COMPOSITOR_MODES,
-};
+use crate::overlays::gbuffer_viewer::{CompositorMode, CompositorOptions, GBufferInfoOverlay};
 use crate::overlays::gui::GuiManager;
 use crate::overlays::package_dump::PackageDumper;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::error::ErrorRenderer;
-use crate::render::scopes::{ScopeFrame, ScopeRigidModel};
+use crate::render::renderer::Renderer;
+use crate::render::scopes::ScopeRigidModel;
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
 use crate::render::{
-    ConstantBuffer, DeviceContextSwapchain, EntityRenderer, GBuffer, InstancedRenderer, RenderData,
+    ConstantBuffer, DeviceContextSwapchain, EntityRenderer, InstancedRenderer, RenderData,
 };
 use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
@@ -72,7 +74,6 @@ use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::texture::Texture;
 use crate::types::{Vector4, AABB};
 use crate::vertex_layout::InputElement;
-use render::scopes::ScopeView;
 
 mod camera;
 mod config;
@@ -187,6 +188,59 @@ pub fn main() -> anyhow::Result<()> {
         }
     }
 
+    // for (t, _) in package_manager().get_all_by_reference(0x80806cb1) {
+    //     let unk: Unk80806cb1 = package_manager().read_tag_struct(t)?;
+
+    //     for m in &unk.unk20 {
+    //         if !m.unkc.is_valid() {
+    //             warn!("Pipeline '{}' doesn't have a material", m.name.to_string());
+    //             continue;
+    //         }
+    //         let material: Unk808071e8 = package_manager().read_tag_struct(m.unkc)?;
+
+    //         println!(
+    //             "Extracting '{}' (vs={}, ps={}, {} textures)",
+    //             *m.name,
+    //             material.vertex_shader.is_valid(),
+    //             material.pixel_shader.is_valid(),
+    //             // material.compute_shader.is_valid(),
+    //             material.vs_textures.len() + material.ps_textures.len() // + material.cs_textures.len()
+    //         );
+
+    //         let pipeline_dir = PathBuf::from_str("./pipelines/")
+    //             .unwrap()
+    //             .join(m.name.to_string());
+    //         std::fs::create_dir_all(&pipeline_dir)?;
+
+    //         if material.vertex_shader.is_valid() {
+    //             let header_entry = package_manager().get_entry(material.vertex_shader)?;
+    //             let data = package_manager().read_tag(TagHash(header_entry.reference))?;
+    //             File::create(&pipeline_dir.join("vertex.cso"))?.write_all(&data)?;
+    //         }
+
+    //         if material.pixel_shader.is_valid() {
+    //             let header_entry = package_manager().get_entry(material.pixel_shader)?;
+    //             let data = package_manager().read_tag(TagHash(header_entry.reference))?;
+    //             File::create(&pipeline_dir.join("pixel.cso"))?.write_all(&data)?;
+    //         }
+
+    //         // if material.compute_shader.is_valid() {
+    //         //     let header_entry = package_manager.get_entry_by_tag(material.compute_shader)?;
+    //         //     let data = package_manager.read_tag(TagHash(header_entry.reference))?;
+    //         //     File::create(&pipeline_dir.join("compute.cso"))?.write_all(&data)?;
+    //         // }
+
+    //         let mut out = File::create(pipeline_dir.join("material.txt"))?;
+    //         write!(&mut out, "{material:#x?}")?;
+
+    //         let mut out = File::create(pipeline_dir.join("material.bin"))?;
+    //         let data = package_manager().read_tag(m.unkc)?;
+    //         out.write_all(&data)?;
+    //     }
+
+    //     // println!("{unk:#?}");
+    // }
+
     info!("Loaded {} global strings", stringmap.len());
 
     let event_loop = EventLoop::new();
@@ -203,10 +257,6 @@ pub fn main() -> anyhow::Result<()> {
 
     // cohae: Slight concern for thread safety here. ID3D11Device is threadsafe, but ID3D11DeviceContext is *not*
     let dcs = Rc::new(DeviceContextSwapchain::create(&window)?);
-    let mut gbuffer = GBuffer::create(
-        (window.inner_size().width, window.inner_size().height),
-        dcs.clone(),
-    )?;
 
     let mut static_map: IntMap<u32, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<u32, Material> = Default::default();
@@ -251,9 +301,6 @@ pub fn main() -> anyhow::Result<()> {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let preheader_tag: TagHash = cur.read_le().unwrap();
-                                if preheader_tag.0 == 0x81a6001c {
-                                    warn!("6ef4 iz real");
-                                }
                                 let preheader: Unk80806ef4 =
                                     package_manager().read_tag_struct(preheader_tag).unwrap();
 
@@ -467,6 +514,31 @@ pub fn main() -> anyhow::Result<()> {
                                     });
                                 }
                             }
+                            // (ambient) sound source
+                            0x80806b5b => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80809802 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                resource_points.push(ResourcePoint {
+                                    translation: Vec4::new(
+                                        data.translation.x,
+                                        data.translation.y,
+                                        data.translation.z,
+                                        data.translation.w,
+                                    ),
+                                    rotation: Quat::IDENTITY,
+                                    entity: data.entity,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::AmbientSound(header),
+                                });
+                            }
                             u => {
                                 debug!(
                                     "Skipping unknown resource type {u:x} {:?} (table file {:?})",
@@ -522,23 +594,34 @@ pub fn main() -> anyhow::Result<()> {
             .cloned()
             .unwrap_or(format!("[MissingString_{:08x}]", think.map_name.0));
         info!(
-            "Map {:x?} '{map_name}' - {} placement groups",
+            "Map {:x?} '{map_name}' - {} placement groups, {} decals",
             think.map_name,
-            placement_groups.len()
+            placement_groups.len(),
+            resource_points
+                .iter()
+                .filter(|r| r.resource.is_decal())
+                .count()
         );
 
         maps.push(MapData {
             hash: (package.pkg_id(), index as _).into(),
             name: map_name,
             placement_groups,
-            resource_points,
+            resource_points: resource_points
+                .into_iter()
+                .map(|rp| {
+                    let cb = ConstantBuffer::create(dcs.clone(), None).unwrap();
+
+                    (rp, cb)
+                })
+                .collect(),
             terrains,
         })
     }
 
     let to_load_entities: IntMap<TagHash, ()> = maps
         .iter()
-        .flat_map(|v| v.resource_points.iter().map(|r| (r.entity, ())))
+        .flat_map(|v| v.resource_points.iter().map(|(r, _)| (r.entity, ())))
         .filter(|(v, _)| v.is_valid())
         .collect();
 
@@ -601,6 +684,34 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("{} lights", point_lights.len());
 
+    // TODO(cohae): Maybe not the best idea?
+    info!("Updating resource constant buffers");
+    for m in &maps {
+        for (rp, cb) in &m.resource_points {
+            if let Some(ent) = entity_renderers.get(&rp.entity) {
+                let mm = Mat4::from_scale_rotation_translation(
+                    Vec3::splat(rp.translation.w),
+                    rp.rotation.inverse(),
+                    Vec3::ZERO,
+                );
+                let model_matrix = Mat4::from_cols(
+                    mm.x_axis.truncate().extend(rp.translation.x),
+                    mm.y_axis.truncate().extend(rp.translation.y),
+                    mm.z_axis.truncate().extend(rp.translation.z),
+                    mm.w_axis,
+                );
+
+                cb.write(&ScopeRigidModel {
+                    mesh_to_world: model_matrix.transpose(),
+                    position_scale: ent.mesh_scale(),
+                    position_offset: ent.mesh_offset(),
+                    texcoord0_scale_offset: ent.texcoord_transform(),
+                    dynamic_sh_ao_values: Vec4::ZERO,
+                })?;
+            }
+        }
+    }
+
     let mut placement_groups: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
         IntMap::default();
 
@@ -626,7 +737,7 @@ pub fn main() -> anyhow::Result<()> {
                 to_load_textures.insert(t.dyemap, ());
             }
 
-            match TerrainRenderer::load(header, &dcs.device) {
+            match TerrainRenderer::load(header, dcs.clone()) {
                 Ok(renderer) => {
                     terrain_renderers.insert(t.0, renderer);
                 }
@@ -702,56 +813,6 @@ pub fn main() -> anyhow::Result<()> {
         }
         debug!("Total instance data: {}kb", total_instance_data / 1024);
     });
-
-    let mut vshader_fullscreen = None;
-    let mut pshader_fullscreen = None;
-    let mut errors = None;
-
-    let flags = if cfg!(debug_assertions) {
-        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
-    } else {
-        0
-    };
-    unsafe {
-        (
-            D3DCompileFromFile(
-                w!("fullscreen.hlsl"),
-                None,
-                None,
-                s!("VShader"),
-                s!("vs_5_0"),
-                flags,
-                0,
-                &mut vshader_fullscreen,
-                Some(&mut errors),
-            )
-            .context("Failed to compile vertex shader")?,
-            D3DCompileFromFile(
-                w!("fullscreen.hlsl"),
-                None,
-                None,
-                s!("PShader"),
-                s!("ps_5_0"),
-                flags,
-                0,
-                &mut pshader_fullscreen,
-                Some(&mut errors),
-            )
-            .context("Failed to compile pixel shader")?,
-        )
-    };
-
-    if let Some(errors) = errors {
-        let estr = unsafe {
-            let eptr = errors.GetBufferPointer();
-            std::slice::from_raw_parts(eptr.cast(), errors.GetBufferSize())
-        };
-        let errors = String::from_utf8_lossy(estr);
-        warn!("{}", errors);
-    }
-
-    let vshader_fullscreen = vshader_fullscreen.unwrap();
-    let pshader_fullscreen = pshader_fullscreen.unwrap();
 
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
@@ -892,20 +953,6 @@ pub fn main() -> anyhow::Result<()> {
         pshader_map.len()
     );
 
-    let (vshader_fullscreen, pshader_fullscreen) = unsafe {
-        let vs_blob = std::slice::from_raw_parts(
-            vshader_fullscreen.GetBufferPointer() as *const u8,
-            vshader_fullscreen.GetBufferSize(),
-        );
-        let v2 = dcs.device.CreateVertexShader(vs_blob, None)?;
-        let ps_blob = std::slice::from_raw_parts(
-            pshader_fullscreen.GetBufferPointer() as *const u8,
-            pshader_fullscreen.GetBufferSize(),
-        );
-        let v3 = dcs.device.CreatePixelShader(ps_blob, None)?;
-        (v2, v3)
-    };
-
     for m in material_map.values() {
         for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
             to_load_textures.insert(t.texture, ());
@@ -947,31 +994,10 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} samplers", sampler_map.len());
 
-    let le_sampler = unsafe {
-        dcs.device.CreateSamplerState(&D3D11_SAMPLER_DESC {
-            Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-            AddressU: D3D11_TEXTURE_ADDRESS_WRAP,
-            AddressV: D3D11_TEXTURE_ADDRESS_WRAP,
-            AddressW: D3D11_TEXTURE_ADDRESS_WRAP,
-            MipLODBias: 0.,
-            MaxAnisotropy: 1,
-            ComparisonFunc: D3D11_COMPARISON_ALWAYS,
-            BorderColor: Default::default(),
-            MinLOD: 0.,
-            MaxLOD: f32::MAX,
-        })?
-    };
-
-    let le_terrain_cb11 = ConstantBuffer::<Mat4>::create(dcs.clone(), None)?;
-    let le_entity_cb11 = ConstantBuffer::<ScopeRigidModel>::create(dcs.clone(), None)?;
-
-    let le_vertex_cb12 = ConstantBuffer::<ScopeView>::create(dcs.clone(), None)?;
-    let le_entity_cb13 = ConstantBuffer::<ScopeFrame>::create(dcs.clone(), None)?;
-
-    let cb_composite_lights =
+    let _cb_composite_lights =
         ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
 
-    let cb_composite_options = ConstantBuffer::<CompositorOptions>::create(dcs.clone(), None)?;
+    let _cb_composite_options = ConstantBuffer::<CompositorOptions>::create(dcs.clone(), None)?;
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -1001,50 +1027,7 @@ pub fn main() -> anyhow::Result<()> {
     resources.insert(CurrentCubemap(None));
     resources.insert(ErrorRenderer::load(dcs.clone()));
 
-    let matcap = unsafe {
-        const MATCAP_DATA: &[u8] = include_bytes!("matte.data");
-        dcs.device
-            .CreateTexture2D(
-                &D3D11_TEXTURE2D_DESC {
-                    Width: 128 as _,
-                    Height: 128 as _,
-                    MipLevels: 1,
-                    ArraySize: 1 as _,
-                    Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                    CPUAccessFlags: Default::default(),
-                    MiscFlags: Default::default(),
-                },
-                Some(&D3D11_SUBRESOURCE_DATA {
-                    pSysMem: MATCAP_DATA.as_ptr() as _,
-                    SysMemPitch: 128 * 4,
-                    ..Default::default()
-                } as _),
-            )
-            .context("Failed to create texture")?
-    };
-    let matcap_view = unsafe {
-        dcs.device.CreateShaderResourceView(
-            &matcap,
-            Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                    Texture2D: D3D11_TEX2D_SRV {
-                        MostDetailedMip: 0,
-                        MipLevels: 1,
-                    },
-                },
-            }),
-        )?
-    };
-
-    let blend_state = unsafe {
+    let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
             RenderTarget: [D3D11_RENDER_TARGET_BLEND_DESC {
                 BlendEnable: false.into(),
@@ -1054,7 +1037,10 @@ pub fn main() -> anyhow::Result<()> {
                 SrcBlendAlpha: D3D11_BLEND_ONE,
                 DestBlendAlpha: D3D11_BLEND_ZERO,
                 BlendOpAlpha: D3D11_BLEND_OP_ADD,
-                RenderTargetWriteMask: D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8,
+                RenderTargetWriteMask: (D3D11_COLOR_WRITE_ENABLE_RED.0
+                    | D3D11_COLOR_WRITE_ENABLE_BLUE.0
+                    | D3D11_COLOR_WRITE_ENABLE_GREEN.0)
+                    as u8,
             }; 8],
             ..Default::default()
         })?
@@ -1098,7 +1084,8 @@ pub fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_dump);
 
     // TODO(cohae): resources should be added to renderdata directly
-    let render_data = RenderData {
+    let mut renderer = Renderer::create(&window, dcs.clone())?;
+    renderer.render_data = RenderData {
         materials: material_map,
         vshaders: vshader_map,
         pshaders: pshader_map,
@@ -1108,7 +1095,7 @@ pub fn main() -> anyhow::Result<()> {
         samplers: sampler_map,
     };
 
-    let start_time = Instant::now();
+    let _start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
 
@@ -1143,7 +1130,7 @@ pub fn main() -> anyhow::Result<()> {
                     *dcs.swapchain_target.write() = Some(new_rtv);
 
                     let render_scale = gui_debug.borrow().render_scale / 100.0;
-                    gbuffer
+                    renderer
                         .resize((
                             (new_dims.width as f32 * render_scale) as u32,
                             (new_dims.height as f32 * render_scale) as u32,
@@ -1181,7 +1168,7 @@ pub fn main() -> anyhow::Result<()> {
                 let render_scale = gui_debug.borrow().render_scale / 100.0;
                 if gui_debug.borrow().render_scale_changed {
                     let dims = window.inner_size();
-                    gbuffer
+                    renderer
                         .resize((
                             (dims.width as f32 * render_scale) as u32,
                             (dims.height as f32 * render_scale) as u32,
@@ -1191,8 +1178,8 @@ pub fn main() -> anyhow::Result<()> {
                     gui_debug.borrow_mut().render_scale_changed = false;
                 }
 
-                let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                 if !gui.imgui.io().want_capture_keyboard {
+                    let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                     let input_state = resources.get::<InputState>().unwrap();
                     camera.update(&input_state, last_frame.elapsed().as_secs_f32());
                 }
@@ -1201,49 +1188,18 @@ pub fn main() -> anyhow::Result<()> {
                 let window_dims = window.inner_size();
 
                 unsafe {
-                    dcs.context.ClearRenderTargetView(
-                        &gbuffer.rt0.render_target,
-                        [0.0, 0.0, 0.0, 1.0].as_ptr() as _,
-                    );
-                    dcs.context.ClearRenderTargetView(
-                        &gbuffer.rt1.render_target,
-                        [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
-                    );
-                    dcs.context.ClearRenderTargetView(
-                        &gbuffer.rt2.render_target,
-                        [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
-                    );
-                    dcs.context.ClearDepthStencilView(
-                        &gbuffer.depth.view,
-                        D3D11_CLEAR_DEPTH.0 as _,
-                        0.0,
-                        0,
-                    );
+                    renderer.clear_render_targets();
 
                     dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
-                        Width: window_dims.width as f32 * render_scale,
-                        Height: window_dims.height as f32 * render_scale,
+                        Width: window_dims.width as f32, // * render_scale,
+                        Height: window_dims.height as f32, // * render_scale,
                         MinDepth: 0.0,
                         MaxDepth: 1.0,
                     }]));
 
                     dcs.context.RSSetState(&rasterizer_state);
-                    dcs.context.OMSetBlendState(
-                        &blend_state,
-                        Some(&[1f32, 1., 1., 1.] as _),
-                        0xffffffff,
-                    );
-                    dcs.context.OMSetRenderTargets(
-                        Some(&[
-                            Some(gbuffer.rt0.render_target.clone()),
-                            Some(gbuffer.rt1.render_target.clone()),
-                            Some(gbuffer.rt2.render_target.clone()),
-                        ]),
-                        &gbuffer.depth.view,
-                    );
-                    dcs.context.OMSetDepthStencilState(&gbuffer.depth.state, 0);
 
                     let projection = Mat4::perspective_infinite_reverse_rh(
                         90f32.to_radians(),
@@ -1251,26 +1207,31 @@ pub fn main() -> anyhow::Result<()> {
                         0.0001,
                     );
 
-                    let view = camera.calculate_matrix();
-
-                    let proj_view = projection * view;
-                    let mut view2 = Mat4::IDENTITY;
-                    view2.w_axis = camera.position.extend(1.0);
-
-                    let scope_view = ScopeView {
-                        world_to_projective: proj_view,
-                        camera_to_world: view2,
-                        // Account for missing depth value in output
-                        view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
-                        ..Default::default()
+                    let view = {
+                        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                        camera.calculate_matrix()
                     };
-                    le_vertex_cb12.write(&scope_view).unwrap();
 
-                    dcs.context
-                        .VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
+                    let _proj_view = projection * view;
+                    // let mut view2 = Mat4::IDENTITY;
+                    // view2.w_axis = camera.position.extend(1.0);
 
-                    dcs.context
-                        .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
+                    // let scope_view = ScopeView {
+                    //     world_to_projective: proj_view,
+                    //     camera_to_world: view2,
+                    //     // Account for missing depth value in output
+                    //     view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
+                    //     ..Default::default()
+                    // };
+                    // le_vertex_cb12.write(&scope_view).unwrap();
+
+                    // dcs.context
+                    //     .VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
+
+                    // dcs.context
+                    //     .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
+
+                    renderer.begin_frame();
 
                     let maps = resources.get::<MapDataList>().unwrap();
                     let map = &maps.maps[maps.current_map % maps.maps.len()];
@@ -1283,10 +1244,10 @@ pub fn main() -> anyhow::Result<()> {
                                 let (_placements, instance_renderers) =
                                     &placement_groups[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
-                                    instance.draw(&dcs, &render_data, false).unwrap();
+                                    instance.draw(&mut renderer, false).unwrap();
 
                                     if gui_gbuffer.borrow().renderlayer_statics_transparent {
-                                        instance.draw(&dcs, &render_data, true).unwrap();
+                                        instance.draw(&mut renderer, true).unwrap();
                                     }
                                 }
                             }
@@ -1295,163 +1256,54 @@ pub fn main() -> anyhow::Result<()> {
                         if gb.renderlayer_terrain {
                             for th in &map.terrains {
                                 if let Some(t) = terrain_renderers.get(&th.0) {
-                                    t.draw(&dcs, &render_data, le_terrain_cb11.buffer())
-                                        .unwrap();
+                                    t.draw(&mut renderer).unwrap();
                                 }
                             }
                         }
 
                         if gb.renderlayer_entities {
-                            le_entity_cb13
-                                .write(&ScopeFrame {
-                                    time: Vec4::new(
-                                        start_time.elapsed().as_secs_f32(),
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                    ),
-                                    exposure: Vec4::ONE,
-                                    random_seed_scales: Vec4::ONE,
-                                    overrides: Vec4::ZERO,
-                                })
-                                .unwrap();
-                            dcs.context.VSSetConstantBuffers(
-                                13,
-                                Some(&[Some(le_entity_cb13.buffer().clone())]),
-                            );
-                            dcs.context.PSSetConstantBuffers(
-                                13,
-                                Some(&[Some(le_entity_cb13.buffer().clone())]),
-                            );
-
-                            dcs.context.PSSetShaderResources(
-                                10,
-                                Some(&[Some(gbuffer.depth.texture_view.clone())]),
-                            );
-                            for rp in &map.resource_points {
+                            for (rp, cb) in &map.resource_points {
                                 if let Some(ent) = entity_renderers.get(&rp.entity) {
-                                    let mm = Mat4::from_scale_rotation_translation(
-                                        Vec3::splat(rp.translation.w),
-                                        rp.rotation.inverse(),
-                                        Vec3::ZERO,
-                                    );
-                                    let model_matrix = Mat4::from_cols(
-                                        mm.x_axis.truncate().extend(rp.translation.x),
-                                        mm.y_axis.truncate().extend(rp.translation.y),
-                                        mm.z_axis.truncate().extend(rp.translation.z),
-                                        mm.w_axis,
-                                    );
-
-                                    le_entity_cb11
-                                        .write(&ScopeRigidModel {
-                                            mesh_to_world: model_matrix.transpose(),
-                                            position_scale: ent.mesh_scale(),
-                                            position_offset: ent.mesh_offset(),
-                                            texcoord0_scale_offset: ent.texcoord_transform(),
-                                            dynamic_sh_ao_values: Vec4::ZERO,
-                                        })
-                                        .unwrap();
-
-                                    dcs.context.VSSetConstantBuffers(
-                                        11,
-                                        Some(&[Some(le_entity_cb11.buffer().clone())]),
-                                    );
-
-                                    if ent.draw(&dcs, &render_data).is_err() {
-                                        let mm2 = Mat4::from_scale_rotation_translation(
-                                            Vec3::splat(rp.translation.w),
-                                            rp.rotation.inverse(),
-                                            rp.translation.truncate(),
-                                        );
-                                        resources
-                                            .get::<ErrorRenderer>()
-                                            .unwrap()
-                                            .draw(&dcs, mm2, proj_view, view);
+                                    if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
+                                        // resources.get::<ErrorRenderer>().unwrap().draw(
+                                        //     &mut renderer,
+                                        //     cb.buffer(),
+                                        //     proj_view,
+                                        //     view,
+                                        // );
                                     }
                                 } else if rp.resource.is_entity() {
-                                    let mm2 = Mat4::from_scale_rotation_translation(
-                                        Vec3::splat(rp.translation.w),
-                                        rp.rotation.inverse(),
-                                        rp.translation.truncate(),
-                                    );
-                                    resources
-                                        .get::<ErrorRenderer>()
-                                        .unwrap()
-                                        .draw(&dcs, mm2, proj_view, view);
+                                    // resources.get::<ErrorRenderer>().unwrap().draw(
+                                    //     &mut renderer,
+                                    //     cb.buffer(),
+                                    //     proj_view,
+                                    //     view,
+                                    // );
                                 }
                             }
                         }
                     }
 
-                    dcs.context.OMSetRenderTargets(
-                        Some(&[Some(dcs.swapchain_target.read().as_ref().unwrap().clone())]),
-                        None,
-                    );
-                    dcs.context.PSSetShaderResources(
-                        0,
-                        Some(&[
-                            Some(gbuffer.rt0.view.clone()),
-                            Some(gbuffer.rt1.view.clone()),
-                            Some(gbuffer.rt2.view.clone()),
-                            Some(gbuffer.depth.texture_view.clone()),
-                            Some(matcap_view.clone()),
-                        ]),
-                    );
+                    renderer.submit_frame(&resources);
 
-                    let compositor_options = CompositorOptions {
-                        proj_view_matrix_inv: proj_view.inverse(),
-                        proj_matrix: projection,
-                        view_matrix: view,
-                        camera_pos: camera.position.extend(1.0),
-                        camera_dir: camera.front.extend(1.0),
-                        time: start_time.elapsed().as_secs_f32(),
-                        mode: COMPOSITOR_MODES[gui_gbuffer.borrow().composition_mode] as u32,
-                        light_count: if gui_debug.borrow().render_lights {
-                            point_lights.len() as u32
-                        } else {
-                            0
-                        },
-                    };
-                    cb_composite_options.write(&compositor_options).unwrap();
-
-                    dcs.context.VSSetConstantBuffers(
-                        0,
-                        Some(&[Some(cb_composite_options.buffer().clone())]),
-                    );
-
-                    dcs.context.PSSetConstantBuffers(
-                        0,
-                        Some(&[
-                            Some(cb_composite_options.buffer().clone()),
-                            Some(cb_composite_lights.buffer().clone()),
-                        ]),
-                    );
-
-                    dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-                        TopLeftX: 0.0,
-                        TopLeftY: 0.0,
-                        Width: window_dims.width as f32,
-                        Height: window_dims.height as f32,
-                        MinDepth: 0.0,
-                        MaxDepth: 1.0,
-                    }]));
-
-                    let cubemap_texture = if let Some(MapResource::CubemapVolume(c, _)) = map
+                    let camera = resources.get::<FpsCamera>().unwrap();
+                    let _cubemap_texture = if let Some(MapResource::CubemapVolume(c, _)) = map
                         .resource_points
                         .iter()
-                        .find(|r| {
+                        .find(|(r, _)| {
                             if let MapResource::CubemapVolume(_, aabb) = &r.resource {
                                 aabb.contains_point(camera.position)
                             } else {
                                 false
                             }
                         })
-                        .map(|r| &r.resource)
+                        .map(|(r, _)| &r.resource)
                     {
                         if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
                             cr.0 = Some(c.cubemap_name.to_string());
                         }
-                        render_data
+                        renderer
+                            .render_data
                             .textures
                             .get(&c.cubemap_texture.0)
                             .map(|t| t.view.clone())
@@ -1461,18 +1313,6 @@ pub fn main() -> anyhow::Result<()> {
                         }
                         None
                     };
-
-                    dcs.context
-                        .PSSetShaderResources(5, Some(&[cubemap_texture]));
-
-                    dcs.context
-                        .PSSetSamplers(0, Some(&[Some(le_sampler.clone())]));
-
-                    dcs.context.VSSetShader(&vshader_fullscreen, None);
-                    dcs.context.PSSetShader(&pshader_fullscreen, None);
-                    dcs.context
-                        .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-                    dcs.context.Draw(4, 0);
 
                     drop(camera);
                     drop(maps);

@@ -18,8 +18,13 @@ use crate::entity::VertexBufferHeader;
 
 use crate::packages::package_manager;
 
+use super::drawcall::DrawCall;
+use super::drawcall::ShadingTechnique;
+use super::drawcall::SortValue3d;
+use super::drawcall::Transparency;
+use super::renderer::Renderer;
 use super::DeviceContextSwapchain;
-use super::RenderData;
+
 
 pub struct EntityModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
@@ -191,59 +196,53 @@ impl EntityRenderer {
         //     .cloned()
     }
 
-    pub fn draw(
-        &self,
-        dcs: &DeviceContextSwapchain,
-        render_data: &RenderData,
-    ) -> anyhow::Result<()> {
-        unsafe {
-            for (buffers, parts) in self.meshes.iter()
-            // .enumerate()
-            // .filter(|(_, u)| u.unk2 == 0)
-            {
-                for p in parts {
-                    if !p.lod_category.is_highest_detail() {
-                        continue;
-                    }
-
-                    let mat_hash = if p.variant_shader_index == u16::MAX {
-                        Some(p.material)
-                    } else {
-                        self.get_material(p.variant_shader_index)
-                    };
-
-                    if let Some(mat_hash) = mat_hash {
-                        if let Some(mat) = render_data.materials.get(&mat_hash.0) {
-                            if mat.unk8 != 1 {
-                                continue;
-                            }
-
-                            mat.bind(dcs, render_data)?;
-                        }
-                    } else {
-                        bail!("Could not bind material");
-                    }
-
-                    dcs.context.IASetVertexBuffers(
-                        0,
-                        1,
-                        Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
-                        Some([buffers.combined_vertex_stride].as_ptr()),
-                        Some(&0),
-                    );
-
-                    dcs.context.IASetIndexBuffer(
-                        Some(&buffers.index_buffer),
-                        buffers.index_format,
-                        0,
-                    );
-                    dcs.context.IASetPrimitiveTopology(match p.primitive_type {
-                        EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                        EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-                    });
-
-                    dcs.context.DrawIndexed(p.index_count, p.index_start, 0);
+    pub fn draw(&self, renderer: &mut Renderer, cb11: ID3D11Buffer) -> anyhow::Result<()> {
+        for (buffers, parts) in self.meshes.iter()
+        // .enumerate()
+        // .filter(|(_, u)| u.unk2 == 0)
+        {
+            for p in parts {
+                if !p.lod_category.is_highest_detail() {
+                    continue;
                 }
+
+                let mat_hash = if p.variant_shader_index == u16::MAX {
+                    Some(p.material)
+                } else {
+                    self.get_material(p.variant_shader_index)
+                };
+
+                let material = if let Some(mat_hash) = mat_hash {
+                    mat_hash
+                } else {
+                    bail!("Could not find material");
+                };
+
+                let primitive_type = match p.primitive_type {
+                    EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                    EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+                };
+
+                renderer.push_drawcall(
+                    SortValue3d::new()
+                        // TODO(cohae): calculate depth (need to draw instances separately)
+                        .with_depth(u32::MAX)
+                        .with_material(material.0)
+                        .with_technique(ShadingTechnique::Forward)
+                        .with_transparency(Transparency::Additive),
+                    DrawCall {
+                        vertex_buffer: buffers.combined_vertex_buffer.clone(),
+                        vertex_buffer_stride: buffers.combined_vertex_stride,
+                        index_buffer: buffers.index_buffer.clone(),
+                        index_format: buffers.index_format,
+                        cb11: Some(cb11.clone()),
+                        index_start: p.index_start,
+                        index_count: p.index_count,
+                        instance_start: None,
+                        instance_count: None,
+                        primitive_type,
+                    },
+                );
             }
         }
 

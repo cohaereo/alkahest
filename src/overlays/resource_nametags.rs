@@ -48,7 +48,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                     draw_list.with_clip_rect([0.0, 0.0], screen_size, || {
                         let maps = resources.get::<MapDataList>().unwrap();
                         if let Some(m) = maps.current_map() {
-                            for res in m.resource_points.iter() {
+                            for (res, _) in m.resource_points.iter() {
                                 if !camera_frustum.point_intersecting(
                                     &res.translation.x,
                                     &res.translation.y,

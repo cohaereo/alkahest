@@ -1,9 +1,11 @@
 pub mod cbuffer;
 pub mod data;
 pub mod dcs;
+pub mod drawcall;
 pub mod entity;
 pub mod error;
 pub mod gbuffer;
+pub mod renderer;
 pub mod scopes;
 pub mod static_instanced;
 pub mod static_render;

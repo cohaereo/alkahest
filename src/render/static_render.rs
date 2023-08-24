@@ -15,7 +15,8 @@ use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
 };
 
-use super::{DeviceContextSwapchain, RenderData};
+use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
+use super::renderer::Renderer;
 
 pub struct StaticModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
@@ -178,73 +179,55 @@ impl StaticModel {
 
     pub fn draw(
         &self,
-        dcs: &DeviceContextSwapchain,
-        render_data: &RenderData,
+        renderer: &mut Renderer,
+        instance_buffer: ID3D11Buffer,
         instance_count: usize,
         draw_transparent: bool,
     ) -> anyhow::Result<()> {
         if draw_transparent {
             for u in &self.transparent_parts {
-                u.draw(dcs, render_data, instance_count)?;
+                u.draw(renderer, instance_buffer.clone(), instance_count);
             }
         } else {
-            unsafe {
-                for (iu, u) in self
-                    .mesh_groups
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, u)| u.unk2 == 0)
-                {
-                    let p = &self.parts[u.part_index as usize];
-                    if !p.lod_category.is_highest_detail() {
-                        continue;
-                    }
+            for (iu, u) in self
+                .mesh_groups
+                .iter()
+                .enumerate()
+                .filter(|(_, u)| u.unk2 == 0)
+            {
+                let p = &self.parts[u.part_index as usize];
+                if !p.lod_category.is_highest_detail() {
+                    continue;
+                }
 
-                    if let Some(buffers) = self.buffers.get(p.buffer_index as usize) {
-                        if let Some(mat) = self
-                            .model
-                            .materials
-                            .get(iu)
-                            .and_then(|m| render_data.materials.get(&m.0))
-                        {
-                            if mat.unk8 != 1 {
-                                continue;
-                            }
+                if let Some(buffers) = self.buffers.get(p.buffer_index as usize) {
+                    let primitive_type = match p.primitive_type {
+                        EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                        EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+                    };
 
-                            mat.bind(dcs, render_data)?;
-                        } else {
-                            anyhow::bail!(
-                                "Could not find material {}",
-                                self.model.materials.get(iu).unwrap()
-                            );
-                        }
+                    let material = self.model.materials.get(iu).unwrap();
 
-                        dcs.context.IASetVertexBuffers(
-                            0,
-                            1,
-                            Some([Some(buffers.combined_vertex_buffer.clone())].as_ptr()),
-                            Some([buffers.combined_vertex_stride].as_ptr()),
-                            Some(&0),
-                        );
-
-                        dcs.context.IASetIndexBuffer(
-                            Some(&buffers.index_buffer),
-                            buffers.index_format,
-                            0,
-                        );
-                        dcs.context.IASetPrimitiveTopology(match p.primitive_type {
-                            EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                            EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-                        });
-
-                        dcs.context.DrawIndexedInstanced(
-                            p.index_count,
-                            instance_count as _,
-                            p.index_start,
-                            0,
-                            0,
-                        );
-                    }
+                    renderer.push_drawcall(
+                        SortValue3d::new()
+                            // TODO(cohae): calculate depth (need to draw instances separately)
+                            .with_depth(u32::MIN)
+                            .with_material(material.0)
+                            .with_technique(ShadingTechnique::Deferred)
+                            .with_transparency(Transparency::Blend),
+                        DrawCall {
+                            vertex_buffer: buffers.combined_vertex_buffer.clone(),
+                            vertex_buffer_stride: buffers.combined_vertex_stride,
+                            index_buffer: buffers.index_buffer.clone(),
+                            index_format: buffers.index_format,
+                            cb11: Some(instance_buffer.clone()),
+                            index_start: p.index_start,
+                            index_count: p.index_count,
+                            instance_start: None,
+                            instance_count: Some(instance_count as _),
+                            primitive_type,
+                        },
+                    );
                 }
             }
         }
@@ -354,41 +337,29 @@ impl StaticTranslucentModel {
 
     pub fn draw(
         &self,
-        dcs: &DeviceContextSwapchain,
-        render_data: &RenderData,
+        renderer: &mut Renderer,
+        instance_buffer: ID3D11Buffer,
         instance_count: usize,
-    ) -> anyhow::Result<()> {
-        unsafe {
-            if let Some(mat) = render_data.materials.get(&self.model.material.0) {
-                if mat.unk8 != 1 {
-                    return Ok(());
-                }
-
-                mat.bind(dcs, render_data)?;
-            } else {
-                anyhow::bail!("Could not find material {}", self.model.material);
-            }
-
-            dcs.context.IASetVertexBuffers(
-                0,
-                1,
-                Some([Some(self.buffers.combined_vertex_buffer.clone())].as_ptr()),
-                Some([self.buffers.combined_vertex_stride].as_ptr()),
-                Some(&0),
-            );
-
-            dcs.context.IASetIndexBuffer(
-                Some(&self.buffers.index_buffer),
-                self.buffers.index_format,
-                0,
-            );
-            dcs.context
-                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            dcs.context
-                .DrawIndexedInstanced(self.index_count as _, instance_count as _, 0, 0, 0);
-        }
-
-        Ok(())
+    ) {
+        renderer.push_drawcall(
+            SortValue3d::new()
+                // TODO(cohae): calculate depth (need to draw instances separately)
+                .with_depth(u32::MAX)
+                .with_material(self.model.material.0)
+                .with_technique(ShadingTechnique::Forward)
+                .with_transparency(Transparency::Additive),
+            DrawCall {
+                vertex_buffer: self.buffers.combined_vertex_buffer.clone(),
+                vertex_buffer_stride: self.buffers.combined_vertex_stride,
+                index_buffer: self.buffers.index_buffer.clone(),
+                index_format: self.buffers.index_format,
+                cb11: Some(instance_buffer),
+                index_start: 0,
+                index_count: self.index_count as _,
+                instance_start: None,
+                instance_count: Some(instance_count as _),
+                primitive_type: D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+            },
+        );
     }
 }
