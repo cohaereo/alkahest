@@ -47,6 +47,8 @@ pub struct Renderer {
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
 
     start_time: Instant,
+    last_frame: Instant,
+    delta_time: f32,
 
     pub render_data: RenderData,
 
@@ -273,6 +275,8 @@ impl Renderer {
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
             dcs,
             start_time: Instant::now(),
+            last_frame: Instant::now(),
+            delta_time: 0.016,
             render_data: RenderData {
                 materials: Default::default(),
                 vshaders: Default::default(),
@@ -298,6 +302,9 @@ impl Renderer {
         if self.state == RendererState::Recording {
             panic!("Called begin(), but a frame is already being recorded! Did you call submit()?")
         }
+
+        self.delta_time = self.last_frame.elapsed().as_secs_f32();
+        self.last_frame = Instant::now();
 
         self.draw_queue.clear();
         self.state = RendererState::Recording;
@@ -591,13 +598,16 @@ impl Renderer {
     fn update_buffers(&mut self, resources: &Resources) -> anyhow::Result<()> {
         let mut camera = resources.get_mut::<FpsCamera>().unwrap();
         self.scope_frame.write(&ScopeFrame {
-            time: Vec4::new(
-                self.start_time.elapsed().as_secs_f32(), // game_time
-                self.start_time.elapsed().as_secs_f32(), // render_time
-                0.0,                                     // delta_game_time
-                0.0,                                     // exposure_time
-            ),
-            exposure: Vec4::ZERO,
+            game_time: self.start_time.elapsed().as_secs_f32(),
+            render_time: self.start_time.elapsed().as_secs_f32(),
+            delta_game_time: self.delta_time,
+            exposure_time: 0.0,
+
+            exposure_scale: 1.0,
+            exposure_illum_relative_glow: 0.0,
+            exposure_scale_for_shading: 1.0,
+            exposure_illum_relative: 0.0,
+
             random_seed_scales: Vec4::ZERO,
             overrides: Vec4::ZERO,
         })?;
@@ -616,9 +626,17 @@ impl Renderer {
             world_to_projective,
             camera_to_world,
             target_pixel_to_camera: Mat4::IDENTITY,
-            target: Vec4::ZERO,
-            // Account for missing depth value in output
-            view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
+            target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
+            inverse_target_resolution: (
+                // TODO(cohae): Is this correct?
+                1. / (self.window_size.0 as f32),
+                1. / (self.window_size.1 as f32),
+            ),
+            maximum_depth_pre_projection: 0.0, // TODO
+            view_is_first_person: 0.0,
+            // Accounts for missing depth value in vertex output
+            misc_unk2: 0.0001,
+            misc_unk3: 0.0,
         })?;
 
         Ok(())
