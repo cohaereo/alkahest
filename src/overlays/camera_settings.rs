@@ -1,3 +1,4 @@
+use destiny_pkg::TagHash;
 use strum::{EnumCount, VariantNames};
 use winit::window::Window;
 
@@ -62,4 +63,4 @@ impl OverlayProvider for CameraPositionOverlay {
 }
 
 // cohae: Hate it
-pub struct CurrentCubemap(pub Option<String>);
+pub struct CurrentCubemap(pub Option<String>, pub Option<TagHash>);

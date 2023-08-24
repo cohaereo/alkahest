@@ -12,6 +12,7 @@ use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC};
 use winit::window::Window;
 
+use crate::overlays::camera_settings::CurrentCubemap;
 use crate::overlays::gbuffer_viewer::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::RenderData;
@@ -512,6 +513,16 @@ impl Renderer {
                     Some(self.matcap_view.clone()),
                 ]),
             );
+
+            let cubemap_texture = resources
+                .get::<CurrentCubemap>()
+                .unwrap()
+                .1
+                .and_then(|t| self.render_data.textures.get(&t.0).map(|t| t.view.clone()));
+
+            self.dcs
+                .context
+                .PSSetShaderResources(5, Some(&[cubemap_texture]));
 
             {
                 let mut camera = resources.get_mut::<FpsCamera>().unwrap();

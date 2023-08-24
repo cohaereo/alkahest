@@ -1022,7 +1022,7 @@ pub fn main() -> anyhow::Result<()> {
         maps,
     });
     // TODO(cohae): This is fucking terrible, just move it to the debug GUI when we can
-    resources.insert(CurrentCubemap(None));
+    resources.insert(CurrentCubemap(None, None));
     resources.insert(ErrorRenderer::load(dcs.clone()));
 
     let _blend_state = unsafe {
@@ -1271,7 +1271,7 @@ pub fn main() -> anyhow::Result<()> {
                     );
 
                     let camera = resources.get::<FpsCamera>().unwrap();
-                    let _cubemap_texture = if let Some(MapResource::CubemapVolume(c, _)) = map
+                    if let Some(MapResource::CubemapVolume(c, _)) = map
                         .resource_points
                         .iter()
                         .find(|(r, _)| {
