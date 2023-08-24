@@ -12,7 +12,7 @@ use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC};
 use winit::window::Window;
 
-use crate::overlays::gbuffer_viewer::{CompositorMode, CompositorOptions};
+use crate::overlays::gbuffer_viewer::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::RenderData;
 use crate::{camera::FpsCamera, resources::Resources};

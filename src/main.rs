@@ -54,7 +54,7 @@ use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gbuffer_viewer::{CompositorMode, CompositorOptions, GBufferInfoOverlay};
+use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay};
 use crate::overlays::gui::GuiManager;
 use crate::overlays::package_dump::PackageDumper;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
@@ -994,10 +994,8 @@ pub fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} samplers", sampler_map.len());
 
-    let _cb_composite_lights =
+    let cb_composite_lights =
         ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
-
-    let _cb_composite_options = ConstantBuffer::<CompositorOptions>::create(dcs.clone(), None)?;
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -1063,8 +1061,6 @@ pub fn main() -> anyhow::Result<()> {
             f
         },
         map_resource_distance: 2000.0,
-        render_scale: 100.0,
-        render_scale_changed: false,
         render_lights: false,
     }));
 
@@ -1129,12 +1125,8 @@ pub fn main() -> anyhow::Result<()> {
 
                     *dcs.swapchain_target.write() = Some(new_rtv);
 
-                    let render_scale = gui_debug.borrow().render_scale / 100.0;
                     renderer
-                        .resize((
-                            (new_dims.width as f32 * render_scale) as u32,
-                            (new_dims.height as f32 * render_scale) as u32,
-                        ))
+                        .resize((new_dims.width, new_dims.height))
                         .expect("Failed to resize GBuffers");
                 },
                 WindowEvent::CloseRequested => {
@@ -1165,19 +1157,6 @@ pub fn main() -> anyhow::Result<()> {
                 _ => (),
             },
             Event::RedrawRequested(..) => {
-                let render_scale = gui_debug.borrow().render_scale / 100.0;
-                if gui_debug.borrow().render_scale_changed {
-                    let dims = window.inner_size();
-                    renderer
-                        .resize((
-                            (dims.width as f32 * render_scale) as u32,
-                            (dims.height as f32 * render_scale) as u32,
-                        ))
-                        .expect("Failed to resize GBuffers");
-                    // Just to be safe
-                    gui_debug.borrow_mut().render_scale_changed = false;
-                }
-
                 if !gui.imgui.io().want_capture_keyboard {
                     let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                     let input_state = resources.get::<InputState>().unwrap();
@@ -1284,7 +1263,12 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    renderer.submit_frame(&resources);
+                    renderer.submit_frame(
+                        &resources,
+                        gui_debug.borrow().render_lights,
+                        gui_gbuffer.borrow().composition_mode,
+                        (cb_composite_lights.buffer().clone(), point_lights.len()),
+                    );
 
                     let camera = resources.get::<FpsCamera>().unwrap();
                     let _cubemap_texture = if let Some(MapResource::CubemapVolume(c, _)) = map

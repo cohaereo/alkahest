@@ -17,6 +17,7 @@ use crate::texture::{Texture, TextureHandle};
 
 use super::{ConstantBuffer, DeviceContextSwapchain};
 
+#[allow(unused)]
 pub struct ErrorRenderer {
     vertex_buffer: ID3D11Buffer,
     vertex_count: usize,

@@ -25,7 +25,6 @@ use super::drawcall::Transparency;
 use super::renderer::Renderer;
 use super::DeviceContextSwapchain;
 
-
 pub struct EntityModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
     combined_vertex_stride: u32,
@@ -229,7 +228,7 @@ impl EntityRenderer {
                         .with_depth(u32::MAX)
                         .with_material(material.0)
                         .with_technique(ShadingTechnique::Forward)
-                        .with_transparency(Transparency::Additive),
+                        .with_transparency(Transparency::None),
                     DrawCall {
                         vertex_buffer: buffers.combined_vertex_buffer.clone(),
                         vertex_buffer_stride: buffers.combined_vertex_stride,
