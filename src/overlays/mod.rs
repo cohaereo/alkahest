@@ -4,4 +4,4 @@ pub mod fps_display;
 pub mod gbuffer_viewer;
 pub mod gui;
 pub mod resource_nametags;
-pub mod package_dump;
+pub mod tag_dump;

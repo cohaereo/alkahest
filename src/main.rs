@@ -56,8 +56,8 @@ use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay};
 use crate::overlays::gui::GuiManager;
-use crate::overlays::package_dump::PackageDumper;
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
+use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::error::ErrorRenderer;
 use crate::render::renderer::Renderer;
@@ -1086,7 +1086,7 @@ pub fn main() -> anyhow::Result<()> {
         debug_overlay: gui_debug.clone(),
     }));
 
-    let gui_dump = Rc::new(RefCell::new(PackageDumper::new()));
+    let gui_dump = Rc::new(RefCell::new(TagDumper::new()));
 
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
