@@ -31,7 +31,7 @@ pub struct StaticModel {
     pub parts: Vec<Unk8080719a>,
     pub mesh_groups: Vec<Unk8080719b>,
 
-    pub transparent_parts: Vec<StaticTranslucentModel>,
+    pub decal_parts: Vec<StaticOverlayModel>,
 
     model: Unk808071a7,
 }
@@ -165,10 +165,10 @@ impl StaticModel {
         }
 
         Ok(StaticModel {
-            transparent_parts: model
+            decal_parts: model
                 .unk20
                 .iter()
-                .map(|m| StaticTranslucentModel::load(m.clone(), device).unwrap())
+                .map(|m| StaticOverlayModel::load(m.clone(), device).unwrap())
                 .collect_vec(),
             buffers,
             model,
@@ -185,7 +185,7 @@ impl StaticModel {
         draw_transparent: bool,
     ) -> anyhow::Result<()> {
         if draw_transparent {
-            for u in &self.transparent_parts {
+            for u in &self.decal_parts {
                 u.draw(renderer, instance_buffer.clone(), instance_count);
             }
         } else {
@@ -236,17 +236,14 @@ impl StaticModel {
     }
 }
 
-pub struct StaticTranslucentModel {
+pub struct StaticOverlayModel {
     buffers: StaticModelBuffer,
     index_count: usize,
     model: Unk80807193,
 }
 
-impl StaticTranslucentModel {
-    pub fn load(
-        model: Unk80807193,
-        device: &ID3D11Device,
-    ) -> anyhow::Result<StaticTranslucentModel> {
+impl StaticOverlayModel {
+    pub fn load(model: Unk80807193, device: &ID3D11Device) -> anyhow::Result<StaticOverlayModel> {
         let pm = package_manager();
         let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
 
