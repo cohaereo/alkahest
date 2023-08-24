@@ -112,7 +112,7 @@ impl Material {
                 anyhow::bail!("No vertex shader/input layout bound");
             }
 
-            if let Some(ps) = render_data.pshaders.get(&self.pixel_shader.0) {
+            if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader.0) {
                 dcs.context.PSSetShader(ps, None);
             } else {
                 anyhow::bail!("No pixel shader bound");

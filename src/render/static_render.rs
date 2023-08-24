@@ -346,7 +346,12 @@ impl StaticTranslucentModel {
                 // TODO(cohae): calculate depth (need to draw instances separately)
                 .with_depth(u32::MAX)
                 .with_material(self.model.material.0)
-                .with_technique(ShadingTechnique::Forward)
+                .with_technique(
+                    renderer
+                        .render_data
+                        .material_shading_technique(self.model.material)
+                        .unwrap_or(ShadingTechnique::Forward),
+                )
                 .with_transparency(Transparency::Additive),
             DrawCall {
                 vertex_buffer: self.buffers.combined_vertex_buffer.clone(),

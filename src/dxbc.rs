@@ -20,8 +20,7 @@ pub struct DxbcHeader {
 }
 
 #[derive(BinRead, Debug)]
-// #[br(magic = b"ISGN")]
-pub struct DxbcInputSignature {
+pub struct DxbcIoSignature {
     pub chunk_size: u32,
 
     #[br(try_calc(__binrw_generated_var_reader.stream_position()))]
@@ -78,6 +77,7 @@ pub enum DxbcSemanticType {
 
     SystemVertexId,
     SystemInstanceId,
+    SystemTarget,
 }
 
 impl DxbcSemanticType {
@@ -92,6 +92,7 @@ impl DxbcSemanticType {
             "BLENDINDICES" => DxbcSemanticType::BlendIndices,
             "SV_VERTEXID" => DxbcSemanticType::SystemVertexId,
             "SV_InstanceID" => DxbcSemanticType::SystemInstanceId,
+            "SV_TARGET" => DxbcSemanticType::SystemTarget,
             _ => return None,
         })
     }
@@ -108,6 +109,7 @@ impl DxbcSemanticType {
 
             DxbcSemanticType::SystemVertexId => s!("SV_VERTEXID"),
             DxbcSemanticType::SystemInstanceId => s!("SV_InstanceID"),
+            DxbcSemanticType::SystemTarget => s!("SV_TARGET"),
         }
     }
 
@@ -148,7 +150,7 @@ impl BinRead for ComponentMask {
 pub fn get_input_signature<R: Read + Seek>(
     reader: &mut R,
     header: &DxbcHeader,
-) -> anyhow::Result<DxbcInputSignature> {
+) -> anyhow::Result<DxbcIoSignature> {
     for chunk_offset in &header.chunk_offsets {
         reader.seek(SeekFrom::Start(*chunk_offset as _))?;
 
@@ -159,4 +161,21 @@ pub fn get_input_signature<R: Read + Seek>(
     }
 
     Err(anyhow!("Could not find ISGN chunk"))
+}
+
+/// Find OSGN chunk and read it
+pub fn get_output_signature<R: Read + Seek>(
+    reader: &mut R,
+    header: &DxbcHeader,
+) -> anyhow::Result<DxbcIoSignature> {
+    for chunk_offset in &header.chunk_offsets {
+        reader.seek(SeekFrom::Start(*chunk_offset as _))?;
+
+        let chunk_magic: [u8; 4] = reader.read_le()?;
+        if &chunk_magic == b"OSGN" {
+            return Ok(reader.read_le()?);
+        }
+    }
+
+    Err(anyhow!("Could not find OSGN chunk"))
 }

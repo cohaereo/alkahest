@@ -41,7 +41,7 @@ use winit::{
 
 use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
-use crate::dxbc::{get_input_signature, DxbcHeader, DxbcInputType};
+use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
 
 use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
@@ -262,7 +262,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut material_map: IntMap<u32, Material> = Default::default();
     let mut vshader_map: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
         Default::default();
-    let mut pshader_map: IntMap<u32, ID3D11PixelShader> = Default::default();
+    let mut pshader_map: IntMap<u32, (ID3D11PixelShader, Vec<InputElement>)> = Default::default();
     let mut cbuffer_map_vs: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut cbuffer_map_ps: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut texture_map: IntMap<u32, Texture> = Default::default();
@@ -841,6 +841,7 @@ pub fn main() -> anyhow::Result<()> {
                         })
                         .collect_vec();
                     let layout = vertex_layout::build_input_layout(&layout_converted);
+
                     unsafe {
                         let v = dcs
                             .device
@@ -890,6 +891,23 @@ pub fn main() -> anyhow::Result<()> {
 
                 pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
                     let ps_data = package_manager().read_tag(v.reference).unwrap();
+
+                    let mut ps_cur = Cursor::new(&ps_data);
+                    let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
+                    let output_sig = get_output_signature(&mut ps_cur, &dxbc_header).unwrap();
+
+                    let layout_converted = output_sig
+                        .elements
+                        .iter()
+                        .map(|e| {
+                            InputElement::from_dxbc(
+                                e,
+                                e.component_type == DxbcInputType::Float,
+                                false,
+                            )
+                        })
+                        .collect_vec();
+
                     unsafe {
                         let v = dcs
                             .device
@@ -905,7 +923,7 @@ pub fn main() -> anyhow::Result<()> {
                         )
                         .expect("Failed to set VS name");
 
-                        v
+                        (v, layout_converted)
                     }
                 });
             }
@@ -1172,43 +1190,13 @@ pub fn main() -> anyhow::Result<()> {
                     dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
-                        Width: window_dims.width as f32, // * render_scale,
-                        Height: window_dims.height as f32, // * render_scale,
+                        Width: window_dims.width as f32,
+                        Height: window_dims.height as f32,
                         MinDepth: 0.0,
                         MaxDepth: 1.0,
                     }]));
 
                     dcs.context.RSSetState(&rasterizer_state);
-
-                    let projection = Mat4::perspective_infinite_reverse_rh(
-                        90f32.to_radians(),
-                        window_dims.width as f32 / window_dims.height as f32,
-                        0.0001,
-                    );
-
-                    let view = {
-                        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
-                        camera.calculate_matrix()
-                    };
-
-                    let _proj_view = projection * view;
-                    // let mut view2 = Mat4::IDENTITY;
-                    // view2.w_axis = camera.position.extend(1.0);
-
-                    // let scope_view = ScopeView {
-                    //     world_to_projective: proj_view,
-                    //     camera_to_world: view2,
-                    //     // Account for missing depth value in output
-                    //     view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
-                    //     ..Default::default()
-                    // };
-                    // le_vertex_cb12.write(&scope_view).unwrap();
-
-                    // dcs.context
-                    //     .VSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
-
-                    // dcs.context
-                    //     .PSSetConstantBuffers(12, Some(&[Some(le_vertex_cb12.buffer().clone())]));
 
                     renderer.begin_frame();
 

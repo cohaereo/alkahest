@@ -222,13 +222,22 @@ impl EntityRenderer {
                     EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                 };
 
+                let shading_technique = renderer
+                    .render_data
+                    .material_shading_technique(material)
+                    .unwrap_or(ShadingTechnique::Forward);
+
                 renderer.push_drawcall(
                     SortValue3d::new()
                         // TODO(cohae): calculate depth (need to draw instances separately)
                         .with_depth(u32::MAX)
                         .with_material(material.0)
-                        .with_technique(ShadingTechnique::Forward)
-                        .with_transparency(Transparency::None),
+                        .with_transparency(if shading_technique == ShadingTechnique::Deferred {
+                            Transparency::None
+                        } else {
+                            Transparency::Additive
+                        })
+                        .with_technique(shading_technique),
                     DrawCall {
                         vertex_buffer: buffers.combined_vertex_buffer.clone(),
                         vertex_buffer_stride: buffers.combined_vertex_stride,
