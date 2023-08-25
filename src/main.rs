@@ -937,6 +937,20 @@ pub fn main() -> anyhow::Result<()> {
                 let buf = ConstantBuffer::create_array_init(dcs.clone(), &m.unk98).unwrap();
 
                 cbuffer_map_vs.insert(*t, buf);
+            } else {
+                trace!("Loading default float4 cbuffer");
+                let buf = ConstantBuffer::create_array_init(
+                    dcs.clone(),
+                    &[Vector4 {
+                        x: 1.0,
+                        y: 1.0,
+                        z: 1.0,
+                        w: 1.0,
+                    }],
+                )
+                .unwrap();
+
+                cbuffer_map_vs.insert(*t, buf);
             }
 
             if m.unk34c.is_valid() {
