@@ -212,7 +212,7 @@ impl Texture {
                             Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                                 TextureCube: D3D11_TEXCUBE_SRV {
                                     MostDetailedMip: 0,
-                                    MipLevels: mips as _,
+                                    MipLevels: 1,
                                 },
                             },
                         }),
