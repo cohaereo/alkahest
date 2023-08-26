@@ -625,16 +625,15 @@ impl Renderer {
 
         let view = camera.calculate_matrix();
         let world_to_projective = projection * view;
-        let camera_to_world = Mat4::from_cols(
-            camera.right.extend(0.0),
-            camera.up.extend(1.0),
-            -camera.front.extend(0.0),
-            camera.position.extend(1.0),
-        );
 
         self.scope_view.write(&ScopeView {
             world_to_projective,
-            camera_to_world,
+
+            camera_right: camera.right.extend(0.0),
+            camera_up: camera.up.extend(1.0),
+            camera_backward: -camera.front.extend(0.0),
+            camera_position: camera.position.extend(1.0),
+
             target_pixel_to_camera: Mat4::IDENTITY,
             target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
             inverse_target_resolution: (

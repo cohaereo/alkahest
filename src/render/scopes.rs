@@ -7,7 +7,13 @@ pub type Mat3x4 = [Vec4; 3];
 #[derive(Default)]
 pub struct ScopeView {
     pub world_to_projective: Mat4,
-    pub camera_to_world: Mat4,
+
+    // pub camera_to_world: mat4
+    pub camera_right: Vec4,
+    pub camera_up: Vec4,
+    pub camera_backward: Vec4,
+    pub camera_position: Vec4,
+
     pub target_pixel_to_camera: Mat4,
 
     // pub target: Vec4,
