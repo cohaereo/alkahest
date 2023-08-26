@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -29,9 +29,10 @@ use tracing::{debug, debug_span, error, info, info_span, trace};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 
+use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::*;
+use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 use winit::{
@@ -1141,6 +1142,7 @@ pub fn main() -> anyhow::Result<()> {
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
+    let mut present_parameters = 0;
 
     event_loop.run(move |event, _, control_flow| {
         gui.handle_event(&event, &window);
@@ -1321,7 +1323,12 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.context.OMSetDepthStencilState(None, 0);
 
-                    dcs.swap_chain.Present(1, 0).unwrap();
+                    if dcs.swap_chain.Present(1, present_parameters) == DXGI_STATUS_OCCLUDED {
+                        present_parameters = DXGI_PRESENT_TEST;
+                        std::thread::sleep(Duration::from_millis(50));
+                    } else {
+                        present_parameters = 0;
+                    }
 
                     if let Some(c) = tracy_client::Client::running() {
                         c.frame_mark()
