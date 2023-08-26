@@ -18,13 +18,13 @@ pub struct GBuffer {
 impl GBuffer {
     pub fn create(size: (u32, u32), dcs: Rc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         Ok(Self {
-            rt0: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
+            rt0: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM_SRGB)
                 .context("RT0")?,
             rt1: RenderTarget::create(size, &dcs.device, DxgiFormat::R10G10B10A2_UNORM)
                 .context("RT1")?,
             rt2: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
                 .context("RT2")?,
-            staging: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
+            staging: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM_SRGB)
                 .context("Staging")?,
             depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,

@@ -32,7 +32,7 @@ impl DeviceContextSwapchain {
                     Width: 0,
                     Height: 0,
                     RefreshRate: refresh_rate,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
                     ScanlineOrdering: DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
                     Scaling: DXGI_MODE_SCALING_UNSPECIFIED,
                 }
