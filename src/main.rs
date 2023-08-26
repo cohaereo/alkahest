@@ -282,6 +282,8 @@ pub fn main() -> anyhow::Result<()> {
         let mut placement_groups = vec![];
         let mut resource_points = vec![];
         let mut terrains = vec![];
+
+        let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
         for res in &think.child_map.map_resources {
             let thing2: Unk80808a54 = if res.is_hash32 != 0 {
                 package_manager().read_tag_struct(res.hash32).unwrap()
@@ -540,6 +542,15 @@ pub fn main() -> anyhow::Result<()> {
                                 });
                             }
                             u => {
+                                if data.translation.x == 0.0
+                                    && data.translation.y == 0.0
+                                    && data.translation.z == 0.0
+                                    && !unknown_root_resources.contains_key(&u)
+                                {
+                                    warn!("Root resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table.tag());
+                                    unknown_root_resources.insert(u, ());
+                                }
+
                                 debug!(
                                     "Skipping unknown resource type {u:x} {:?} (table file {:?})",
                                     data.translation,

@@ -625,7 +625,12 @@ impl Renderer {
 
         let view = camera.calculate_matrix();
         let world_to_projective = projection * view;
-        let camera_to_world = Mat4::from_translation(camera.position);
+        let camera_to_world = Mat4::from_cols(
+            camera.right.extend(0.0),
+            camera.up.extend(1.0),
+            -camera.front.extend(0.0),
+            camera.position.extend(1.0),
+        );
 
         self.scope_view.write(&ScopeView {
             world_to_projective,

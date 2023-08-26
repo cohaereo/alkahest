@@ -42,13 +42,13 @@ impl TagDumper {
                 .write_all(package_manager().read_tag(tag).unwrap().as_slice())
                 .is_err()
             {
-                error!("Failed to write resource {file_path} to disk!");
+                error!("Failed to write tag {file_path} to disk!");
                 Err("Failed to dump tag!".to_string())
             } else {
                 Ok("Dumped!".to_string())
             }
         } else {
-            error!("Unable to find resource {tag}!");
+            error!("Unable to find tag {tag}!");
             Err("Failed to dump tag!".to_string())
         }
     }
