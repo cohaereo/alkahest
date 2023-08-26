@@ -59,10 +59,6 @@ Texture2D Matcap : register(t4);
 TextureCube SpecularMap : register(t5);
 SamplerState SampleType : register(s0);
 
-float3 GammaCorrect(float3 c) {
-    return pow(abs(c), (1.0/2.2).xxx);
-}
-
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
@@ -243,7 +239,6 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     float3 color = ambient + directLighting;
 
     color = color / (color + float3(1.0, 1.0, 1.0));
-    color = GammaCorrect(color);
 
     return float4(color, 1.0);
 }
@@ -257,7 +252,7 @@ float4 PShader(VSOutput input) : SV_Target {
 
     [branch] switch(tex_i) {
         case 1: // RT0 (gamma-corrected)
-            return float4(GammaCorrect(albedo.xyz), 1.0);
+            return float4(albedo.xyz, 1.0);
         case 2: // RT1
             return rt1;
         case 3: // RT2
@@ -274,7 +269,7 @@ float4 PShader(VSOutput input) : SV_Target {
             return float4(rt2.yyy * 2.0, 1.0);
         }
         case 7: { // Emission
-            return float4(GammaCorrect(albedo.xyz) * (rt2.y * 2.0 - 1.0), 1.0);
+            return float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 1.0);
         }
         case 8: { // Transmission
             return float4(rt2.zzz, 1.0);
@@ -292,7 +287,7 @@ float4 PShader(VSOutput input) : SV_Target {
             if(lightCount == 0) {
                 float2 muv = 0.5 * rt1.xy + float2(0.5, 0.5);
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, 1.0-muv.y));
-                return float4(GammaCorrect(albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
+                return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
             } else {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.uv);
                 return c;
