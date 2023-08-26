@@ -39,6 +39,11 @@ pub struct ScopeFrame {
 
     pub random_seed_scales: Vec4, // c2
     pub overrides: Vec4,          // c3
+
+    pub unk4: Vec4, // c4
+    pub unk5: Vec4, // c5
+    pub unk6: Vec4, // c6
+    pub unk7: Vec4, // c7
 }
 
 #[repr(C)]

@@ -31,7 +31,7 @@ impl TagDumper {
     fn dump_entry(&self, tag: TagHash) -> Result<String, String> {
         let entry_header = package_manager().get_entry(tag);
         if let Ok(entry) = entry_header {
-            std::fs::create_dir("tags").unwrap();
+            std::fs::create_dir("tags").ok();
 
             let file_path = format!(
                 "tags/{tag}_{0}_{1}.bin",

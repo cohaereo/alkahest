@@ -194,7 +194,7 @@ impl Texture {
                     )
                     .context("Failed to create texture cube")?;
 
-                let name = format!("Tex {:?}/0x{:08x}\0", hash, hash.0);
+                let name = format!("Tex {0:?}/{0}\0", hash);
                 tex.SetPrivateData(
                     &WKPDID_D3DDebugObjectName,
                     name.len() as u32 - 1,
@@ -259,7 +259,7 @@ impl Texture {
                     )
                     .context("Failed to create 2D texture")?;
 
-                let name = format!("Tex {:?}/0x{:08x}\0", hash, hash.0);
+                let name = format!("Tex {0:?}/{0}\0", hash);
                 tex.SetPrivateData(
                     &WKPDID_D3DDebugObjectName,
                     name.len() as u32 - 1,

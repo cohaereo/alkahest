@@ -610,6 +610,11 @@ impl Renderer {
 
             random_seed_scales: Vec4::ZERO,
             overrides: Vec4::ZERO,
+
+            unk4: Vec4::ONE,
+            unk5: Vec4::ONE,
+            unk6: Vec4::ONE,
+            unk7: Vec4::ONE,
         })?;
 
         let projection = Mat4::perspective_infinite_reverse_rh(

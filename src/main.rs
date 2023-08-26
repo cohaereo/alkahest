@@ -849,7 +849,7 @@ pub fn main() -> anyhow::Result<()> {
                             .context("Failed to load vertex shader")
                             .unwrap();
 
-                        let name = format!("VS {:?} (mat 0x{:x})\0", m.vertex_shader, t);
+                        let name = format!("VS {:?} (mat {})\0", m.vertex_shader, TagHash(*t));
                         v.SetPrivateData(
                             &WKPDID_D3DDebugObjectName,
                             name.len() as u32 - 1,
@@ -915,7 +915,7 @@ pub fn main() -> anyhow::Result<()> {
                             .context("Failed to load pixel shader")
                             .unwrap();
 
-                        let name = format!("PS {:?} (mat 0x{:x})\0", m.pixel_shader, t);
+                        let name = format!("PS {:?} (mat {})\0", m.pixel_shader, TagHash(*t));
                         v.SetPrivateData(
                             &WKPDID_D3DDebugObjectName,
                             name.len() as u32 - 1,
