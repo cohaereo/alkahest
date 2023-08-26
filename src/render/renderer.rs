@@ -648,6 +648,7 @@ impl Renderer {
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
+        self.window_size = new_size;
         self.gbuffer.resize(new_size)
     }
 
