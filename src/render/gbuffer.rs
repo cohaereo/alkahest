@@ -10,6 +10,7 @@ pub struct GBuffer {
     pub rt0: RenderTarget,
     pub rt1: RenderTarget,
     pub rt2: RenderTarget,
+    pub staging: RenderTarget,
     pub depth: DepthState,
     dcs: Rc<DeviceContextSwapchain>,
 }
@@ -23,6 +24,8 @@ impl GBuffer {
                 .context("RT1")?,
             rt2: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
                 .context("RT2")?,
+            staging: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
+                .context("Staging")?,
             depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,
         })
@@ -36,6 +39,9 @@ impl GBuffer {
         self.rt0.resize(new_size, &self.dcs.device).context("RT0")?;
         self.rt1.resize(new_size, &self.dcs.device).context("RT1")?;
         self.rt2.resize(new_size, &self.dcs.device).context("RT2")?;
+        self.staging
+            .resize(new_size, &self.dcs.device)
+            .context("Staging")?;
         self.depth
             .resize(new_size, &self.dcs.device)
             .context("Depth")?;

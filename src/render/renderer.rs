@@ -64,6 +64,9 @@ pub struct Renderer {
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
+
+    final_vs: ID3D11VertexShader,
+    final_ps: ID3D11PixelShader,
 }
 
 impl Renderer {
@@ -262,6 +265,70 @@ impl Renderer {
             (v2, v3)
         };
 
+        let mut vshader_final = None;
+        let mut pshader_final = None;
+        let mut errors = None;
+
+        let flags = if cfg!(debug_assertions) {
+            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
+        } else {
+            0
+        };
+        unsafe {
+            (
+                D3DCompileFromFile(
+                    w!("final.hlsl"),
+                    None,
+                    None,
+                    s!("VShader"),
+                    s!("vs_5_0"),
+                    flags,
+                    0,
+                    &mut vshader_final,
+                    Some(&mut errors),
+                )
+                .context("Failed to compile vertex shader")?,
+                D3DCompileFromFile(
+                    w!("final.hlsl"),
+                    None,
+                    None,
+                    s!("PShader"),
+                    s!("ps_5_0"),
+                    flags,
+                    0,
+                    &mut pshader_final,
+                    Some(&mut errors),
+                )
+                .context("Failed to compile pixel shader")?,
+            )
+        };
+
+        if let Some(errors) = errors {
+            let estr = unsafe {
+                let eptr = errors.GetBufferPointer();
+                std::slice::from_raw_parts(eptr.cast(), errors.GetBufferSize())
+            };
+            let errors = String::from_utf8_lossy(estr);
+            warn!("{}", errors);
+        }
+
+        let vshader_final = vshader_final.unwrap();
+        let pshader_final = pshader_final.unwrap();
+
+        let (vshader_final, pshader_final) = unsafe {
+            let vs_blob = std::slice::from_raw_parts(
+                vshader_final.GetBufferPointer() as *const u8,
+                vshader_final.GetBufferSize(),
+            );
+            let v2 = dcs.device.CreateVertexShader(vs_blob, None)?;
+            let ps_blob = std::slice::from_raw_parts(
+                pshader_final.GetBufferPointer() as *const u8,
+                pshader_final.GetBufferSize(),
+            );
+            let v3 = dcs.device.CreatePixelShader(ps_blob, None)?;
+            (v2, v3)
+        };
+
         Ok(Renderer {
             draw_queue: Vec::with_capacity(8192),
             state: RendererState::Awaiting,
@@ -295,6 +362,8 @@ impl Renderer {
             matcap_view,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
+            final_vs: vshader_final,
+            final_ps: pshader_final,
         })
     }
 
@@ -375,9 +444,23 @@ impl Renderer {
 
             self.dcs.context.OMSetRenderTargets(
                 Some(&[Some(
-                    self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
+                    self.gbuffer.staging.render_target.clone(), // self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
                 )]),
                 &self.gbuffer.depth.view,
+            );
+
+            let rt = self.gbuffer.staging.view.clone();
+            self.dcs.context.PSSetShaderResources(
+                12,
+                Some(&[
+                    // TODO(cohae): Totally wrong, obviously
+                    Some(rt.clone()),
+                    Some(rt.clone()),
+                    Some(rt.clone()),
+                    Some(rt.clone()),
+                    Some(rt.clone()),
+                    Some(rt),
+                ]),
             );
         }
 
@@ -424,6 +507,8 @@ impl Renderer {
             self.draw(s, &d);
         }
         //endregion
+
+        self.run_final();
 
         self.state = RendererState::Awaiting;
     }
@@ -505,9 +590,7 @@ impl Renderer {
             );
 
             self.dcs.context.OMSetRenderTargets(
-                Some(&[Some(
-                    self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
-                )]),
+                Some(&[Some(self.gbuffer.staging.render_target.clone())]),
                 None,
             );
             self.dcs.context.PSSetShaderResources(
@@ -584,6 +667,45 @@ impl Renderer {
 
             self.dcs.context.VSSetShader(&self.composite_vs, None);
             self.dcs.context.PSSetShader(&self.composite_ps, None);
+            self.dcs
+                .context
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+            self.dcs.context.Draw(4, 0);
+
+            self.dcs
+                .context
+                .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
+        }
+    }
+    fn run_final(&mut self) {
+        unsafe {
+            self.dcs.context.OMSetBlendState(
+                &self.blend_state_none,
+                Some(&[1f32, 1., 1., 1.] as _),
+                0xffffffff,
+            );
+
+            self.dcs.context.OMSetRenderTargets(
+                Some(&[Some(
+                    self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
+                )]),
+                None,
+            );
+            self.dcs
+                .context
+                .PSSetShaderResources(0, Some(&[Some(self.gbuffer.staging.view.clone())]));
+
+            self.dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: self.window_size.0 as f32,
+                Height: self.window_size.1 as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
+
+            self.dcs.context.VSSetShader(&self.final_vs, None);
+            self.dcs.context.PSSetShader(&self.final_ps, None);
             self.dcs
                 .context
                 .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

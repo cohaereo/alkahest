@@ -945,7 +945,11 @@ pub fn main() -> anyhow::Result<()> {
                     .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
             {
                 trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
-                let buf = ConstantBuffer::create_array_init(dcs.clone(), &m.unk98).unwrap();
+                let mut data = m.unk98.to_vec();
+                if !data.is_empty() {
+                    data[0].x = 1.0;
+                }
+                let buf = ConstantBuffer::create_array_init(dcs.clone(), &data).unwrap();
 
                 cbuffer_map_vs.insert(*t, buf);
             } else {
