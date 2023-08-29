@@ -22,17 +22,6 @@ impl OverlayProvider for GBufferInfoOverlay {
             .flags(WindowFlags::NO_TITLE_BAR)
             .size([178.0, 72.0], Condition::FirstUseEver)
             .build(|| {
-                ui.combo(" ", &mut self.composition_mode, COMPOSITOR_MODES, |v| {
-                    format!("{v}").into()
-                });
-                let mut maps = resources.get_mut::<MapDataList>().unwrap();
-                let mut current_map = maps.current_map;
-                ui.combo("Map", &mut current_map, &maps.maps, |m| {
-                    format!("{} ({})", m.name, m.hash).into()
-                });
-                maps.current_map = current_map;
-
-                ui.separator();
                 if ui.collapsing_header("Render Layers", TreeNodeFlags::empty()) {
                     ui.indent();
                     ui.checkbox("Statics", &mut self.renderlayer_statics);
@@ -44,6 +33,35 @@ impl OverlayProvider for GBufferInfoOverlay {
                     ui.checkbox("Entities", &mut self.renderlayer_entities);
                     ui.unindent();
                 }
+            });
+
+        ui.window("Selectors")
+            .flags(
+                WindowFlags::NO_BACKGROUND
+                    | WindowFlags::NO_TITLE_BAR
+                    // | WindowFlags::NO_INPUTS
+                    | WindowFlags::NO_DECORATION
+                    | WindowFlags::NO_RESIZE
+                    | WindowFlags::NO_MOVE,
+            )
+            .save_settings(false)
+            // .size([416.0, 20.0], Condition::Always)
+            .position([0.0, 0.0], Condition::Always)
+            .build(|| {
+                let width = ui.push_item_width(128.0);
+                ui.combo("Pass", &mut self.composition_mode, COMPOSITOR_MODES, |v| {
+                    v.to_string().into()
+                });
+                width.end();
+                ui.same_line();
+                let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                let mut current_map = maps.current_map;
+                let width = ui.push_item_width(272.0);
+                ui.combo("Map", &mut current_map, &maps.maps, |m| {
+                    format!("{} ({})", m.name, m.hash).into()
+                });
+                width.end();
+                maps.current_map = current_map;
             });
     }
 }

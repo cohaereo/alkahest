@@ -29,6 +29,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                         | WindowFlags::NO_RESIZE
                         | WindowFlags::NO_MOVE,
                 )
+                .save_settings(false)
                 .size(screen_size, Condition::Always)
                 .position([0.0, 0.0], Condition::Always)
                 .build(|| {
