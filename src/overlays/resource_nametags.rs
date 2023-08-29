@@ -78,7 +78,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                                 let c = res.resource.debug_color();
                                 let color = ImColor32::from_rgb(c[0], c[1], c[2]);
-                                ui.set_window_font_scale(1.5);
+                                ui.set_window_font_scale(1.25);
                                 draw_list.add_text(
                                     screen_point.to_array(),
                                     color,
@@ -88,7 +88,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                                 ui.set_window_font_scale(1.0);
                                 if self.debug_overlay.borrow().show_map_resource_label {
                                     draw_list.add_text(
-                                        (screen_point + Vec2::new(20.0, 0.0)).to_array(),
+                                        (screen_point + Vec2::new(22.0, 0.0)).to_array(),
                                         color,
                                         res.resource.debug_string(),
                                     );
@@ -96,7 +96,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                                     if res.entity.is_valid() && res.resource.is_unknown() {
                                         let offset = ui.calc_text_size(res.resource.debug_string());
                                         draw_list.add_text(
-                                            (screen_point + Vec2::new(20.0 + offset[0], 0.0))
+                                            (screen_point + Vec2::new(22.0 + offset[0], 0.0))
                                                 .to_array(),
                                             ImColor32::WHITE,
                                             format!(" (ent {})", res.entity),
