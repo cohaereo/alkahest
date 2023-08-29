@@ -39,7 +39,6 @@ impl OverlayProvider for GBufferInfoOverlay {
             .flags(
                 WindowFlags::NO_BACKGROUND
                     | WindowFlags::NO_TITLE_BAR
-                    // | WindowFlags::NO_INPUTS
                     | WindowFlags::NO_DECORATION
                     | WindowFlags::NO_RESIZE
                     | WindowFlags::NO_MOVE,
@@ -96,11 +95,11 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::PbrStack,
     CompositorMode::SmoothnessFuzz,
     CompositorMode::Metalicness,
+    CompositorMode::TextureAO,
     CompositorMode::Emission,
     CompositorMode::Transmission,
-    CompositorMode::Iridescence,
-    CompositorMode::TextureAO,
     CompositorMode::VertexAO,
+    CompositorMode::Iridescence,
     CompositorMode::Cubemap,
 ];
 
