@@ -34,7 +34,6 @@ enum RendererState {
 }
 
 pub struct Renderer {
-    // ! TODO(cohae): value is probably not correct for 0->max == far->near
     draw_queue: Vec<(SortValue3d, DrawCall)>,
 
     state: RendererState,
@@ -159,7 +158,7 @@ impl Renderer {
         };
 
         let matcap = unsafe {
-            const MATCAP_DATA: &[u8] = include_bytes!("../matte.data");
+            const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matte.data");
             dcs.device
                 .CreateTexture2D(
                     &D3D11_TEXTURE2D_DESC {
@@ -213,7 +212,7 @@ impl Renderer {
         unsafe {
             (
                 D3DCompileFromFile(
-                    w!("composite.hlsl"),
+                    w!("assets/shaders/composite.hlsl"),
                     None,
                     None,
                     s!("VShader"),
@@ -225,7 +224,7 @@ impl Renderer {
                 )
                 .context("Failed to compile vertex shader")?,
                 D3DCompileFromFile(
-                    w!("composite.hlsl"),
+                    w!("assets/shaders/composite.hlsl"),
                     None,
                     None,
                     s!("PShader"),
@@ -277,7 +276,7 @@ impl Renderer {
         unsafe {
             (
                 D3DCompileFromFile(
-                    w!("final.hlsl"),
+                    w!("assets/shaders/final.hlsl"),
                     None,
                     None,
                     s!("VShader"),
@@ -289,7 +288,7 @@ impl Renderer {
                 )
                 .context("Failed to compile vertex shader")?,
                 D3DCompileFromFile(
-                    w!("final.hlsl"),
+                    w!("assets/shaders/final.hlsl"),
                     None,
                     None,
                     s!("PShader"),

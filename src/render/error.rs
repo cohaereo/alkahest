@@ -33,7 +33,7 @@ pub struct ErrorRenderer {
 impl ErrorRenderer {
     pub fn load(dcs: Rc<DeviceContextSwapchain>) -> Self {
         let matcap = unsafe {
-            const MATCAP_DATA: &[u8] = include_bytes!("error.data");
+            const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/error.data");
             dcs.device
                 .CreateTexture2D(
                     &D3D11_TEXTURE2D_DESC {
@@ -78,7 +78,7 @@ impl ErrorRenderer {
                 .expect("Failed to create error texture view")
         };
 
-        let obj_data = include_bytes!("error.obj");
+        let obj_data = include_bytes!("../../assets/models/error.obj");
         let reader = Cursor::new(obj_data);
         let obj = obj::ObjData::load_buf(reader).unwrap();
 
@@ -127,7 +127,7 @@ impl ErrorRenderer {
         unsafe {
             (
                 D3DCompileFromFile(
-                    w!("error.hlsl"),
+                    w!("assets/shaders/error.hlsl"),
                     None,
                     None,
                     s!("VShader"),
@@ -139,7 +139,7 @@ impl ErrorRenderer {
                 )
                 .expect("Failed to compile error vertex shader"),
                 D3DCompileFromFile(
-                    w!("error.hlsl"),
+                    w!("assets/shaders/error.hlsl"),
                     None,
                     None,
                     s!("PShader"),
