@@ -824,9 +824,9 @@ pub fn main() -> anyhow::Result<()> {
                             .entered();
 
                     if let Some(model) = static_map.get(&model_hash.0) {
-                        let transforms = &placements.transforms[instance.instance_offset
+                        let transforms = &placements.transforms[instance.instance_start
                             as usize
-                            ..(instance.instance_offset + instance.instance_count) as usize];
+                            ..(instance.instance_start + instance.instance_count) as usize];
 
                         renderers.push(InstancedRenderer::load(model.clone(), transforms, dcs.clone()).unwrap());
                     } else {

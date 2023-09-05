@@ -47,7 +47,7 @@ pub struct Unk8080966d {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80807190 {
     pub instance_count: u16,
-    pub instance_offset: u16,
+    pub instance_start: u16,
     pub static_index: u16,
     pub unk6: u16,
 }
@@ -86,7 +86,7 @@ pub struct Unk80807193 {
     pub index_buffer: TagHash,
     pub vertex_buffer: TagHash,
     pub unk10: TagHash,
-    pub unk14: u32,
-    pub unk18: u32,
+    pub index_start: u32,
+    pub index_count: u32,
     pub material: TagHash,
 }

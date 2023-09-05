@@ -239,7 +239,6 @@ impl StaticModel {
 
 pub struct StaticOverlayModel {
     buffers: StaticModelBuffer,
-    index_count: usize,
     model: Unk80807193,
 }
 
@@ -314,8 +313,6 @@ impl StaticOverlayModel {
                 .context("Failed to create combined vertex buffer")?
         };
 
-        let index_count = index_data.len() / if index_header.is_32bit { 4 } else { 2 };
-
         Ok(Self {
             buffers: StaticModelBuffer {
                 combined_vertex_buffer,
@@ -328,7 +325,6 @@ impl StaticOverlayModel {
                     DXGI_FORMAT_R16_UINT
                 },
             },
-            index_count,
             model,
         })
     }
@@ -358,8 +354,8 @@ impl StaticOverlayModel {
                 index_format: self.buffers.index_format,
                 cb11: Some(instance_buffer),
                 variant_material: None,
-                index_start: 0,
-                index_count: self.index_count as _,
+                index_start: self.model.index_start,
+                index_count: self.model.index_count,
                 instance_start: None,
                 instance_count: Some(instance_count as _),
                 primitive_type: D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
