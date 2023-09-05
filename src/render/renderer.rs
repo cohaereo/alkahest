@@ -384,6 +384,7 @@ impl Renderer {
         draw_lights: bool,
         alpha_blending: bool,
         compositor_mode: usize,
+        blend_override: usize,
         lights: (ID3D11Buffer, usize),
     ) {
         if self.state != RendererState::Recording {
@@ -493,19 +494,31 @@ impl Renderer {
                     }
 
                     unsafe {
-                        match s.transparency() {
-                            Transparency::Blend => self.dcs.context.OMSetBlendState(
+                        match blend_override {
+                            1 => self.dcs.context.OMSetBlendState(
                                 &self.blend_state_blend,
                                 Some(&[1f32, 1., 1., 1.] as _),
                                 0xffffffff,
                             ),
-
-                            Transparency::Additive => self.dcs.context.OMSetBlendState(
+                            2 => self.dcs.context.OMSetBlendState(
                                 &self.blend_state_additive,
                                 Some(&[1f32, 1., 1., 1.] as _),
                                 0xffffffff,
                             ),
-                            _ => {}
+                            _ => match s.transparency() {
+                                Transparency::Blend => self.dcs.context.OMSetBlendState(
+                                    &self.blend_state_blend,
+                                    Some(&[1f32, 1., 1., 1.] as _),
+                                    0xffffffff,
+                                ),
+
+                                Transparency::Additive => self.dcs.context.OMSetBlendState(
+                                    &self.blend_state_additive,
+                                    Some(&[1f32, 1., 1., 1.] as _),
+                                    0xffffffff,
+                                ),
+                                _ => {}
+                            },
                         }
                     }
                 }
@@ -762,9 +775,9 @@ impl Renderer {
         self.scope_view.write(&ScopeView {
             world_to_projective,
 
-            camera_right: camera.right.extend(0.0),
+            camera_right: camera.right.extend(1.0),
             camera_up: camera.up.extend(1.0),
-            camera_backward: -camera.front.extend(0.0),
+            camera_backward: -camera.front.extend(1.0),
             camera_position: camera.position.extend(1.0),
 
             target_pixel_to_camera: Mat4::IDENTITY,

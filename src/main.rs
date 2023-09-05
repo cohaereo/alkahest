@@ -1109,6 +1109,7 @@ pub fn main() -> anyhow::Result<()> {
 
         alpha_blending: true,
         render_lights: false,
+        blend_override: 0,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
@@ -1130,7 +1131,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui.add_overlay(gui_fps);
-    gui.add_overlay(gui_debug.clone());
+    gui.add_overlay(gui_debug);
     gui.add_overlay(gui_rendersettings.clone());
     gui.add_overlay(gui_resources);
     gui.add_overlay(gui_console);
@@ -1296,6 +1297,7 @@ pub fn main() -> anyhow::Result<()> {
                         gui_rendersettings.borrow().render_lights,
                         gui_rendersettings.borrow().alpha_blending,
                         gui_rendersettings.borrow().composition_mode,
+                        gui_rendersettings.borrow().blend_override,
                         (cb_composite_lights.buffer().clone(), point_lights.len()),
                     );
 
