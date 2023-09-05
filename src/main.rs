@@ -1103,7 +1103,7 @@ pub fn main() -> anyhow::Result<()> {
     let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
         composition_mode: CompositorMode::Combined as usize,
         renderlayer_statics: true,
-        renderlayer_statics_transparent: false,
+        renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
         renderlayer_entities: true,
     }));

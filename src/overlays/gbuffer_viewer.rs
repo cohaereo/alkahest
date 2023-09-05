@@ -22,7 +22,7 @@ impl OverlayProvider for GBufferInfoOverlay {
             .flags(WindowFlags::NO_TITLE_BAR)
             .size([178.0, 72.0], Condition::FirstUseEver)
             .build(|| {
-                if ui.collapsing_header("Render Layers", TreeNodeFlags::empty()) {
+                if ui.collapsing_header("Render Layers", TreeNodeFlags::DEFAULT_OPEN) {
                     ui.indent();
                     ui.checkbox("Statics", &mut self.renderlayer_statics);
                     ui.checkbox(
