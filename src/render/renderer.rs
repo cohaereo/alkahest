@@ -13,11 +13,13 @@ use crate::dxgi::DxgiFormat;
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::overlays::gbuffer_viewer::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
+use crate::render::scopes::ScopeUnk2;
 use crate::render::RenderData;
 use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
 
 use super::drawcall::Transparency;
+use super::scopes::ScopeUnk8;
 use super::{
     drawcall::{DrawCall, ShadingTechnique, SortValue3d},
     scopes::{ScopeFrame, ScopeView},
@@ -42,6 +44,8 @@ pub struct Renderer {
 
     scope_view: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
+    scope_unk2: ConstantBuffer<ScopeUnk2>,
+    scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
 
     start_time: Instant,
@@ -58,6 +62,10 @@ pub struct Renderer {
     rasterizer_state_nocull: ID3D11RasterizerState,
 
     matcap: Texture,
+    // A 4x4 white texture
+    white: Texture,
+    // A 4x4 mid-grey texture
+    gray: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -163,6 +171,24 @@ impl Renderer {
             MATCAP_DATA,
             DxgiFormat::R8G8B8A8_UNORM,
             Some("Basic shading matcap"),
+        )?;
+
+        let white = Texture::load_2d_raw(
+            &dcs,
+            4,
+            4,
+            &[0xffu8; 4 * 4 * 4],
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("4x4 white"),
+        )?;
+
+        let gray = Texture::load_2d_raw(
+            &dcs,
+            4,
+            4,
+            &[0x7fu8; 4 * 4 * 4],
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("4x4 white"),
         )?;
 
         let mut vshader_composite = None;
@@ -303,6 +329,8 @@ impl Renderer {
             window_size: (window.inner_size().width, window.inner_size().height),
             scope_frame: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
             dcs,
             start_time: Instant::now(),
@@ -323,6 +351,8 @@ impl Renderer {
             rasterizer_state,
             rasterizer_state_nocull,
             matcap,
+            white,
+            gray,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -365,6 +395,8 @@ impl Renderer {
         self.update_buffers(resources)
             .expect("Renderer::update_buffers");
 
+        self.scope_unk2.bind(2, ShaderStages::all());
+        self.scope_unk8.bind(8, ShaderStages::all());
         self.scope_view.bind(12, ShaderStages::all());
         self.scope_frame.bind(13, ShaderStages::all());
 
@@ -430,6 +462,17 @@ impl Renderer {
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..self.draw_queue.len() {
+            unsafe {
+                self.dcs.context.PSSetShaderResources(
+                    10,
+                    Some(&[Some(self.gbuffer.depth.texture_view.clone())]),
+                );
+            }
+
+            for slot in 11..18 {
+                self.white.bind(&self.dcs, slot, ShaderStages::all());
+            }
+
             if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {
                 continue;
             }
@@ -733,6 +776,26 @@ impl Renderer {
             // Accounts for missing depth value in vertex output
             misc_unk2: 0.0001,
             misc_unk3: 0.0,
+        })?;
+
+        self.scope_unk2.write(&ScopeUnk2 {
+            unk0: Vec4::ONE,
+            unk1: Vec4::ONE,
+            unk2: Vec4::ONE,
+            unk3: Vec4::ONE,
+            unk4: Vec4::ONE,
+            unk5: Vec4::ONE,
+        })?;
+
+        self.scope_unk8.write(&ScopeUnk8 {
+            unk0: Vec4::ONE,
+            unk1: Vec4::ONE,
+            unk2: Vec4::ONE,
+            unk3: Vec4::ONE,
+            unk4: Vec4::ONE,
+            unk5: Vec4::ONE,
+            unk6: Vec4::ONE,
+            unk7: Vec4::ONE,
         })?;
 
         Ok(())
