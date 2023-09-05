@@ -25,7 +25,6 @@ use nohash_hasher::IntMap;
 
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
-use tracing::{debug, debug_span, error, info, info_span, trace};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 

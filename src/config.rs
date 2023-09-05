@@ -1,7 +1,6 @@
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 lazy_static! {
     pub static ref CONFIGURATION: RwLock<Config> = RwLock::new(Config::default());

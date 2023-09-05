@@ -33,23 +33,27 @@ impl GuiManager {
 
         // Combine icon font with default
         imgui.fonts().add_font(&[
-            FontSource::DefaultFontData {
+            FontSource::TtfData {
+                data: include_bytes!("../../DroidSans.ttf"),
+                size_pixels: (16.0 * platform.hidpi_factor()) as f32,
                 config: Some(FontConfig {
-                    size_pixels: (13.0 * platform.hidpi_factor()) as f32,
+                    size_pixels: (16.0 * platform.hidpi_factor()) as f32,
                     glyph_ranges: FontGlyphRanges::default(),
                     ..FontConfig::default()
                 }),
             },
             FontSource::TtfData {
                 data: include_bytes!("../../materialdesignicons-webfont.ttf"),
-                size_pixels: (13.0 * platform.hidpi_factor()) as f32,
+                size_pixels: (16.0 * platform.hidpi_factor()) as f32,
                 config: Some(FontConfig {
-                    size_pixels: (13.0 * platform.hidpi_factor()) as f32,
+                    size_pixels: (16.0 * platform.hidpi_factor()) as f32,
                     glyph_ranges: FontGlyphRanges::from_slice(&[
                         ICON_MIN as u32,
                         ICON_MAX as u32,
                         0,
                     ]),
+                    oversample_h: 2,
+                    oversample_v: 2,
                     ..FontConfig::default()
                 }),
             },

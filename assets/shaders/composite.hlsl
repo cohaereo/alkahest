@@ -284,13 +284,14 @@ float4 PShader(VSOutput input) : SV_Target {
             return SpecularMap.Sample(SampleType, input.normal.xyz);
         }
         default: { // Combined
+            float4 emission = float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 0.0);
             if(lightCount == 0) {
                 float2 muv = 0.5 * rt1.xy + float2(0.5, 0.5);
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, 1.0-muv.y));
-                return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
+                return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0) + emission;
             } else {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.uv);
-                return c;
+                return c + emission;
             }
 //             return float4((WorldPosFromDepth(depth, input.uv) % 100.0) / 100.0, 1.0);
 //             float3 t = WorldPosFromDepth(depth, input.uv) / 100.0;

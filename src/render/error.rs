@@ -3,7 +3,6 @@
 use std::{io::Cursor, rc::Rc};
 
 use glam::Mat4;
-use tracing::warn;
 use windows::Win32::Graphics::{
     Direct3D::{
         Fxc::{D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION},
