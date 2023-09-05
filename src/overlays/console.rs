@@ -85,8 +85,7 @@ impl Default for ConsoleOverlay {
 impl OverlayProvider for ConsoleOverlay {
     fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
         let input = resources.get::<InputState>().unwrap();
-        if (input.is_key_pressed(VirtualKeyCode::Grave)
-            || input.is_key_pressed(VirtualKeyCode::F10))
+        if (input.is_key_pressed(VirtualKeyCode::Grave) || input.is_key_pressed(VirtualKeyCode::F1))
             && !self.open
         {
             self.open = true;
@@ -143,7 +142,7 @@ impl OverlayProvider for ConsoleOverlay {
                 }
 
                 if (input.is_key_pressed(VirtualKeyCode::Grave)
-                    || input.is_key_pressed(VirtualKeyCode::F10))
+                    || input.is_key_pressed(VirtualKeyCode::F1))
                     && !ui.is_window_focused()
                 {
                     self.focus_input = true;
@@ -152,7 +151,7 @@ impl OverlayProvider for ConsoleOverlay {
 
             if is_focused && (input.is_key_pressed(VirtualKeyCode::Escape))
             // || input.is_key_pressed(VirtualKeyCode::Grave)
-            // || input.is_key_pressed(VirtualKeyCode::F10))
+            // || input.is_key_pressed(VirtualKeyCode::F1))
             {
                 self.open = false;
             }
