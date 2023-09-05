@@ -62,10 +62,8 @@ pub struct Renderer {
     rasterizer_state_nocull: ID3D11RasterizerState,
 
     matcap: Texture,
-    // A 4x4 white texture
+    // A 2x2 white texture
     white: Texture,
-    // A 4x4 mid-grey texture
-    gray: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -175,20 +173,11 @@ impl Renderer {
 
         let white = Texture::load_2d_raw(
             &dcs,
-            4,
-            4,
-            &[0xffu8; 4 * 4 * 4],
+            2,
+            2,
+            &[0xffu8; 2 * 2 * 4],
             DxgiFormat::R8G8B8A8_UNORM,
-            Some("4x4 white"),
-        )?;
-
-        let gray = Texture::load_2d_raw(
-            &dcs,
-            4,
-            4,
-            &[0x7fu8; 4 * 4 * 4],
-            DxgiFormat::R8G8B8A8_UNORM,
-            Some("4x4 white"),
+            Some("2x2 white"),
         )?;
 
         let mut vshader_composite = None;
@@ -352,7 +341,6 @@ impl Renderer {
             rasterizer_state_nocull,
             matcap,
             white,
-            gray,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -551,10 +539,24 @@ impl Renderer {
 
             // TODO(cohae): How can we handle these errors?
             if mat.bind(&self.dcs, &self.render_data).is_err() {
-                return;
+                // return;
             }
         } else {
-            return;
+            // return;
+        }
+
+        if let Some(variant_material) = drawcall.variant_material {
+            if let Some(mat) = self.render_data.materials.get(&variant_material.0) {
+                if mat.unk8 != 1 {
+                    return;
+                }
+
+                if mat.bind(&self.dcs, &self.render_data).is_err() {
+                    // return;
+                }
+            } else {
+                // return;
+            }
         }
 
         unsafe {
@@ -592,6 +594,16 @@ impl Renderer {
                 self.dcs
                     .context
                     .DrawIndexed(drawcall.index_count, drawcall.index_start, 0);
+            }
+        }
+
+        if let Some(mat) = self.render_data.materials.get(&sort.material()) {
+            mat.unbind_textures(&self.dcs)
+        }
+
+        if let Some(variant_material) = drawcall.variant_material {
+            if let Some(mat) = self.render_data.materials.get(&variant_material.0) {
+                mat.unbind_textures(&self.dcs)
             }
         }
     }

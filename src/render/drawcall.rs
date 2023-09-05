@@ -1,5 +1,6 @@
 use bitfield_struct::bitfield;
 use bitflags::bitflags;
+use destiny_pkg::TagHash;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -95,6 +96,9 @@ pub struct DrawCall {
     // TODO(cohae): Will this be used for anything other than instances/rigid_model? Can just be a pointer or an id or whatevs otherwise
     // pub buffer_bindings: Vec<ConstantBufferBinding>,
     pub cb11: Option<ID3D11Buffer>,
+
+    /// Applied on top of the base material
+    pub variant_material: Option<TagHash>,
 
     pub index_start: u32,
     pub index_count: u32,

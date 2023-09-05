@@ -21,7 +21,7 @@ use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
 use glam::{Mat4, Quat, Vec3, Vec4};
 use itertools::Itertools;
-use nohash_hasher::IntMap;
+use nohash_hasher::{IntMap, IntSet};
 
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
@@ -630,19 +630,19 @@ pub fn main() -> anyhow::Result<()> {
         })
     }
 
-    let to_load_entities: IntMap<TagHash, ()> = maps
+    let to_load_entities: IntSet<TagHash> = maps
         .iter()
-        .flat_map(|v| v.resource_points.iter().map(|(r, _)| (r.entity, ())))
-        .filter(|(v, _)| v.is_valid())
+        .flat_map(|v| v.resource_points.iter().map(|(r, _)| r.entity))
+        .filter(|v| v.is_valid())
         .collect();
 
     let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
-    for te in to_load_entities.keys().filter(|h| h.is_valid()) {
+    for te in &to_load_entities {
         let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
         info!("Loading entity {te}");
         for e in &header.unk10 {
-            match e.unk0.unk18.resource_type {
-                0x808072BD => {
+            match e.unk0.unk10.resource_type {
+                0x808072b8 => {
                     info!(
                         "\t- EntityModel {:08x}/{}",
                         e.unk0.unk18.resource_type.to_be(),
@@ -673,15 +673,20 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    entity_renderers.insert(
-                        *te,
-                        EntityRenderer::load(
-                            model.0,
-                            entity_material_map.to_vec(),
-                            materials.iter().map(|m| m.tag()).collect_vec(),
-                            &dcs,
-                        )?,
-                    );
+                    if entity_renderers
+                        .insert(
+                            *te,
+                            EntityRenderer::load(
+                                model.0,
+                                entity_material_map.to_vec(),
+                                materials.iter().map(|m| m.tag()).collect_vec(),
+                                &dcs,
+                            )?,
+                        )
+                        .is_some()
+                    {
+                        error!("More than 1 model was loaded for entity {te}");
+                    }
 
                     // println!(" - EntityModel {model:?}");
                 }

@@ -109,13 +109,15 @@ impl Material {
                 dcs.context.IASetInputLayout(input_layout);
                 dcs.context.VSSetShader(vs, None);
             } else {
-                anyhow::bail!("No vertex shader/input layout bound");
+                // TODO: should still be handled, but not here
+                // anyhow::bail!("No vertex shader/input layout bound");
             }
 
             if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader.0) {
                 dcs.context.PSSetShader(ps, None);
             } else {
-                anyhow::bail!("No pixel shader bound");
+                // TODO: should still be handled, but not here
+                // anyhow::bail!("No pixel shader bound");
             }
 
             for p in &self.vs_textures {
@@ -136,6 +138,18 @@ impl Material {
         }
 
         Ok(())
+    }
+
+    pub fn unbind_textures(&self, dcs: &DeviceContextSwapchain) {
+        unsafe {
+            for p in &self.vs_textures {
+                dcs.context.VSSetShaderResources(p.index, Some(&[None]));
+            }
+
+            for p in &self.ps_textures {
+                dcs.context.PSSetShaderResources(p.index, Some(&[None]));
+            }
+        }
     }
 }
 

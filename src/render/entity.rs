@@ -1,4 +1,3 @@
-use anyhow::bail;
 use anyhow::Context;
 use destiny_pkg::TagHash;
 
@@ -85,8 +84,7 @@ impl EntityRenderer {
                 pm.read_tag_struct(mesh.position_buffer).unwrap();
 
             if vertex_header.stride == 24 || vertex_header.stride == 48 {
-                warn!("Support for 32-bit floats in vertex buffers are disabled");
-                continue;
+                panic!("Support for 32-bit floats in vertex buffers are disabled");
             }
 
             let t = pm.get_entry(mesh.position_buffer).unwrap().reference;
@@ -179,42 +177,58 @@ impl EntityRenderer {
         })
     }
 
-    fn get_material(&self, _index: u16) -> Option<TagHash> {
+    fn get_variant_material(&self, index: u16) -> Option<TagHash> {
         // let map = self.material_map.iter().find(|&v| {
         //     (v.material_start as isize..v.material_start as isize + v.material_count as isize)
         //         .contains(&(index as isize))
         // })?;
 
         // None
-        self.materials.first().cloned()
+        // self.materials.first().cloned()
         // self.material_map
         //     .get(index as usize)
         //     .map(|m| self.materials.get((m.material_start) as usize))
         //     .flatten()
         //     .cloned()
+
+        if index == u16::MAX {
+            None
+        } else {
+            // self.materials
+            //     .get(fastrand::usize(0..self.materials.len()))
+            //     .cloned()
+            self.materials.first().cloned()
+        }
     }
 
     pub fn draw(&self, renderer: &mut Renderer, cb11: ID3D11Buffer) -> anyhow::Result<()> {
-        for (buffers, parts) in self.meshes.iter()
-        // .enumerate()
-        // .filter(|(_, u)| u.unk2 == 0)
-        {
+        for (buffers, parts) in self.meshes.iter() {
             for p in parts {
                 if !p.lod_category.is_highest_detail() {
                     continue;
                 }
 
-                let mat_hash = if p.variant_shader_index == u16::MAX {
-                    Some(p.material)
-                } else {
-                    self.get_material(p.variant_shader_index)
-                };
+                // let mat_hash = self.materials.last().cloned();
+                // let mat_hash = Some(p.material);
+                // let mat_hash = if self.materials.is_empty() {
+                //     Some(p.material)
+                // } else {
+                //     self.materials
+                //         .get(fastrand::usize(0..self.materials.len()))
+                //         .cloned()
+                // };
+                let variant_material = self.get_variant_material(p.variant_shader_index);
+                // let mat_hash = if p.variant_shader_index == u16::MAX {
+                //     Some(p.material)
+                // } else {
+                //     self.get_material(p.variant_shader_index)
+                // };
 
-                let material = if let Some(mat_hash) = mat_hash {
-                    mat_hash
-                } else {
-                    bail!("Could not find material");
-                };
+                // let material = if let Some(mat_hash) = mat_hash {
+                //     mat_hash
+                // } else {
+                //     bail!("Could not find material");
+                // };
 
                 let primitive_type = match p.primitive_type {
                     EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
@@ -223,14 +237,14 @@ impl EntityRenderer {
 
                 let shading_technique = renderer
                     .render_data
-                    .material_shading_technique(material)
+                    .material_shading_technique(variant_material.unwrap_or(p.material))
                     .unwrap_or(ShadingTechnique::Forward);
 
                 renderer.push_drawcall(
                     SortValue3d::new()
                         // TODO(cohae): calculate depth (need to draw instances separately)
                         .with_depth(u32::MAX)
-                        .with_material(material.0)
+                        .with_material(p.material.0)
                         .with_transparency(if shading_technique == ShadingTechnique::Deferred {
                             Transparency::None
                         } else {
@@ -243,6 +257,7 @@ impl EntityRenderer {
                         index_buffer: buffers.index_buffer.clone(),
                         index_format: buffers.index_format,
                         cb11: Some(cb11.clone()),
+                        variant_material,
                         index_start: p.index_start,
                         index_count: p.index_count,
                         instance_start: None,

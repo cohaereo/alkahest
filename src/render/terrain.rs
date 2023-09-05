@@ -10,8 +10,8 @@ use glam::{Mat4, Vec4};
 
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
-    D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
+    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
+    D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
 };
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
@@ -170,6 +170,7 @@ impl TerrainRenderer {
                         index_buffer: self.index_buffer.clone(),
                         index_format: self.index_format,
                         cb11: Some(cb11.buffer().clone()),
+                        variant_material: None,
                         index_start: part.index_start,
                         index_count: part.index_count as _,
                         instance_start: None,
