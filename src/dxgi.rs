@@ -410,46 +410,46 @@ impl DxgiFormat {
                 | DxgiFormat::BC7_UNORM_SRGB
         )
     }
-}
 
-pub fn calculate_pitch(fmt: DxgiFormat, width: usize, height: usize) -> (usize, usize) {
-    match fmt {
-        DxgiFormat::BC1_TYPELESS
-        | DxgiFormat::BC1_UNORM
-        | DxgiFormat::BC1_UNORM_SRGB
-        | DxgiFormat::BC4_TYPELESS
-        | DxgiFormat::BC4_UNORM
-        | DxgiFormat::BC4_SNORM => {
-            let nbw = ((width as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
-            let nbh = ((height as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
+    pub fn calculate_pitch(&self, width: usize, height: usize) -> (usize, usize) {
+        match *self {
+            DxgiFormat::BC1_TYPELESS
+            | DxgiFormat::BC1_UNORM
+            | DxgiFormat::BC1_UNORM_SRGB
+            | DxgiFormat::BC4_TYPELESS
+            | DxgiFormat::BC4_UNORM
+            | DxgiFormat::BC4_SNORM => {
+                let nbw = ((width as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
+                let nbh = ((height as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
 
-            let pitch = nbw * 8;
-            (pitch, pitch * nbh)
-        }
-        DxgiFormat::BC2_TYPELESS
-        | DxgiFormat::BC2_UNORM
-        | DxgiFormat::BC2_UNORM_SRGB
-        | DxgiFormat::BC3_TYPELESS
-        | DxgiFormat::BC3_UNORM
-        | DxgiFormat::BC3_UNORM_SRGB
-        | DxgiFormat::BC5_TYPELESS
-        | DxgiFormat::BC5_UNORM
-        | DxgiFormat::BC5_SNORM
-        | DxgiFormat::BC6H_TYPELESS
-        | DxgiFormat::BC6H_UF16
-        | DxgiFormat::BC6H_SF16
-        | DxgiFormat::BC7_TYPELESS
-        | DxgiFormat::BC7_UNORM
-        | DxgiFormat::BC7_UNORM_SRGB => {
-            let nbw = ((width as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
-            let nbh = ((height as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
+                let pitch = nbw * 8;
+                (pitch, pitch * nbh)
+            }
+            DxgiFormat::BC2_TYPELESS
+            | DxgiFormat::BC2_UNORM
+            | DxgiFormat::BC2_UNORM_SRGB
+            | DxgiFormat::BC3_TYPELESS
+            | DxgiFormat::BC3_UNORM
+            | DxgiFormat::BC3_UNORM_SRGB
+            | DxgiFormat::BC5_TYPELESS
+            | DxgiFormat::BC5_UNORM
+            | DxgiFormat::BC5_SNORM
+            | DxgiFormat::BC6H_TYPELESS
+            | DxgiFormat::BC6H_UF16
+            | DxgiFormat::BC6H_SF16
+            | DxgiFormat::BC7_TYPELESS
+            | DxgiFormat::BC7_UNORM
+            | DxgiFormat::BC7_UNORM_SRGB => {
+                let nbw = ((width as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
+                let nbh = ((height as i64 + 3) / 4).clamp(1, i64::MAX) as usize;
 
-            let pitch = nbw * 16;
-            (pitch, pitch * nbh)
-        }
-        _ => {
-            let pitch = (width * fmt.bpp() + 7) / 8;
-            (pitch, height * pitch)
+                let pitch = nbw * 16;
+                (pitch, pitch * nbh)
+            }
+            _ => {
+                let pitch = (width * self.bpp() + 7) / 8;
+                (pitch, height * pitch)
+            }
         }
     }
 }

@@ -5,17 +5,16 @@ use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::Fxc::{
     D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
 };
-use windows::Win32::Graphics::Direct3D::{
-    D3D11_SRV_DIMENSION_TEXTURE2D, D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-};
+use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC};
 use winit::window::Window;
 
+use crate::dxgi::DxgiFormat;
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::overlays::gbuffer_viewer::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::RenderData;
+use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
 
 use super::drawcall::Transparency;
@@ -58,8 +57,7 @@ pub struct Renderer {
     rasterizer_state: ID3D11RasterizerState,
     rasterizer_state_nocull: ID3D11RasterizerState,
 
-    _matcap: ID3D11Texture2D,
-    matcap_view: ID3D11ShaderResourceView,
+    matcap: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -157,48 +155,15 @@ impl Renderer {
             })?
         };
 
-        let matcap = unsafe {
-            const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matte.data");
-            dcs.device
-                .CreateTexture2D(
-                    &D3D11_TEXTURE2D_DESC {
-                        Width: 128 as _,
-                        Height: 128 as _,
-                        MipLevels: 1,
-                        ArraySize: 1 as _,
-                        Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                        SampleDesc: DXGI_SAMPLE_DESC {
-                            Count: 1,
-                            Quality: 0,
-                        },
-                        Usage: D3D11_USAGE_DEFAULT,
-                        BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                        CPUAccessFlags: Default::default(),
-                        MiscFlags: Default::default(),
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: MATCAP_DATA.as_ptr() as _,
-                        SysMemPitch: 128 * 4,
-                        ..Default::default()
-                    } as _),
-                )
-                .context("Failed to create texture")?
-        };
-        let matcap_view = unsafe {
-            dcs.device.CreateShaderResourceView(
-                &matcap,
-                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                        Texture2D: D3D11_TEX2D_SRV {
-                            MostDetailedMip: 0,
-                            MipLevels: 1,
-                        },
-                    },
-                }),
-            )?
-        };
+        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matte.data");
+        let matcap = Texture::load_2d_raw(
+            &dcs,
+            128,
+            128,
+            MATCAP_DATA,
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("Basic shading matcap"),
+        )?;
 
         let mut vshader_composite = None;
         let mut pshader_composite = None;
@@ -357,8 +322,7 @@ impl Renderer {
             blend_state_additive,
             rasterizer_state,
             rasterizer_state_nocull,
-            _matcap: matcap,
-            matcap_view,
+            matcap,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -599,9 +563,10 @@ impl Renderer {
                     Some(self.gbuffer.rt1.view.clone()),
                     Some(self.gbuffer.rt2.view.clone()),
                     Some(self.gbuffer.depth.texture_view.clone()),
-                    Some(self.matcap_view.clone()),
                 ]),
             );
+
+            self.matcap.bind(&self.dcs, 4, ShaderStages::PIXEL);
 
             let cubemap_texture = resources
                 .get::<CurrentCubemap>()

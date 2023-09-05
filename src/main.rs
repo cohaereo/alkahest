@@ -694,7 +694,7 @@ pub fn main() -> anyhow::Result<()> {
             }
         }
 
-        if !entity_renderers.contains_key(&te) {
+        if !entity_renderers.contains_key(te) {
             warn!("Entity {te} does not contain any geometry!");
         }
     }

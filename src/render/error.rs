@@ -4,15 +4,12 @@ use std::{io::Cursor, rc::Rc};
 
 use glam::Mat4;
 use windows::Win32::Graphics::{
-    Direct3D::{
-        Fxc::{D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION},
-        *,
-    },
+    Direct3D::Fxc::{D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION},
     Direct3D11::*,
     Dxgi::Common::*,
 };
 
-use crate::texture::{Texture, TextureHandle};
+use crate::{dxgi::DxgiFormat, texture::Texture};
 
 use super::{ConstantBuffer, DeviceContextSwapchain};
 
@@ -31,51 +28,16 @@ pub struct ErrorRenderer {
 
 impl ErrorRenderer {
     pub fn load(dcs: Rc<DeviceContextSwapchain>) -> Self {
-        let matcap = unsafe {
-            const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/error.data");
-            dcs.device
-                .CreateTexture2D(
-                    &D3D11_TEXTURE2D_DESC {
-                        Width: 128 as _,
-                        Height: 128 as _,
-                        MipLevels: 1,
-                        ArraySize: 1 as _,
-                        Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                        SampleDesc: DXGI_SAMPLE_DESC {
-                            Count: 1,
-                            Quality: 0,
-                        },
-                        Usage: D3D11_USAGE_DEFAULT,
-                        BindFlags: D3D11_BIND_SHADER_RESOURCE,
-                        CPUAccessFlags: Default::default(),
-                        MiscFlags: Default::default(),
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: MATCAP_DATA.as_ptr() as _,
-                        SysMemPitch: 128 * 4,
-                        ..Default::default()
-                    } as _),
-                )
-                .expect("Failed to create error texture")
-        };
-
-        let matcap_view = unsafe {
-            dcs.device
-                .CreateShaderResourceView(
-                    &matcap,
-                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                        ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                            Texture2D: D3D11_TEX2D_SRV {
-                                MostDetailedMip: 0,
-                                MipLevels: 1,
-                            },
-                        },
-                    }),
-                )
-                .expect("Failed to create error texture view")
-        };
+        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/error.data");
+        let matcap = Texture::load_2d_raw(
+            &dcs,
+            128,
+            128,
+            MATCAP_DATA,
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("Error matcap"),
+        )
+        .expect("Failed to load error texture");
 
         let obj_data = include_bytes!("../../assets/models/error.obj");
         let reader = Cursor::new(obj_data);
@@ -220,11 +182,7 @@ impl ErrorRenderer {
             vertex_buffer,
             vertex_count: vertices.len(),
             vertex_layout,
-            texture: Texture {
-                view: matcap_view,
-                handle: TextureHandle::Texture2D(matcap),
-                format: crate::dxgi::DxgiFormat::R8G8B8A8_UNORM,
-            },
+            texture: matcap,
             vshader,
             pshader,
             scope: ConstantBuffer::create(dcs, None).unwrap(),
@@ -267,6 +225,7 @@ impl ErrorRenderer {
 
     //         dcs.context.PSSetShader(&self.pshader, None);
 
+    // TODO(cohae): use new texture bind API
     //         dcs.context
     //             .PSSetShaderResources(0, Some(&[Some(self.texture.view.clone())]));
 

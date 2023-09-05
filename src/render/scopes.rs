@@ -70,6 +70,30 @@ pub struct ScopeRigidModel {
     pub dynamic_sh_ao_values: Vec4,   // c7
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Default)]
+pub struct ScopeUnk2 {
+    pub unk0: Vec4,
+    pub unk1: Vec4,
+    pub unk2: Vec4,
+    pub unk3: Vec4,
+    pub unk4: Vec4,
+    pub unk5: Vec4,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default)]
+pub struct ScopeUnk8 {
+    pub unk0: Vec4,
+    pub unk1: Vec4,
+    pub unk2: Vec4,
+    pub unk3: Vec4,
+    pub unk4: Vec4,
+    pub unk5: Vec4,
+    pub unk6: Vec4,
+    pub unk7: Vec4,
+}
+
 pub trait MatrixConversion {
     /// Truncates/extends the given matrix to 3 rows, 4 columns
     fn to_3x4(&self) -> Mat3x4;
