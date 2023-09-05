@@ -72,18 +72,18 @@ pub enum CompositorMode {
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
-    CompositorMode::Combined,
-    CompositorMode::Albedo,
-    CompositorMode::Normal,
-    CompositorMode::PbrStack,
-    CompositorMode::SmoothnessFuzz,
-    CompositorMode::Metalicness,
-    CompositorMode::Emission,
-    CompositorMode::Transmission,
-    CompositorMode::Iridescence,
-    CompositorMode::TextureAO,
-    CompositorMode::VertexAO,
-    CompositorMode::Cubemap,
+    CompositorMode::Combined,       // 0
+    CompositorMode::Albedo,         // 1
+    CompositorMode::Normal,         // 2
+    CompositorMode::PbrStack,       // 3
+    CompositorMode::SmoothnessFuzz, // 4
+    CompositorMode::Metalicness,    // 5
+    CompositorMode::TextureAO,      // 6
+    CompositorMode::Emission,       // 7
+    CompositorMode::Transmission,   // 8
+    CompositorMode::VertexAO,       // 9
+    CompositorMode::Iridescence,    // 10
+    CompositorMode::Cubemap,        // 11
 ];
 
 impl Display for CompositorMode {
