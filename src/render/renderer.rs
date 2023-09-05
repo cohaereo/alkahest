@@ -11,7 +11,7 @@ use winit::window::Window;
 
 use crate::dxgi::DxgiFormat;
 use crate::overlays::camera_settings::CurrentCubemap;
-use crate::overlays::gbuffer_viewer::CompositorOptions;
+use crate::overlays::render_settings::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk2;
 use crate::render::RenderData;
@@ -382,6 +382,7 @@ impl Renderer {
         &mut self,
         resources: &Resources,
         draw_lights: bool,
+        alpha_blending: bool,
         compositor_mode: usize,
         lights: (ID3D11Buffer, usize),
     ) {
@@ -479,31 +480,33 @@ impl Renderer {
 
             let (s, d) = self.draw_queue[i].clone();
             if s.transparency() != transparency_mode {
-                // Swap to read-only depth state once we start rendering translucent geometry
-                if s.transparency() != Transparency::None
-                    && s.transparency() != Transparency::Cutout
-                {
-                    unsafe {
-                        self.dcs
-                            .context
-                            .OMSetDepthStencilState(&self.gbuffer.depth.state_readonly, 0);
+                if alpha_blending {
+                    // Swap to read-only depth state once we start rendering translucent geometry
+                    if s.transparency() != Transparency::None
+                        && s.transparency() != Transparency::Cutout
+                    {
+                        unsafe {
+                            self.dcs
+                                .context
+                                .OMSetDepthStencilState(&self.gbuffer.depth.state_readonly, 0);
+                        }
                     }
-                }
 
-                unsafe {
-                    match s.transparency() {
-                        Transparency::Blend => self.dcs.context.OMSetBlendState(
-                            &self.blend_state_blend,
-                            Some(&[1f32, 1., 1., 1.] as _),
-                            0xffffffff,
-                        ),
+                    unsafe {
+                        match s.transparency() {
+                            Transparency::Blend => self.dcs.context.OMSetBlendState(
+                                &self.blend_state_blend,
+                                Some(&[1f32, 1., 1., 1.] as _),
+                                0xffffffff,
+                            ),
 
-                        Transparency::Additive => self.dcs.context.OMSetBlendState(
-                            &self.blend_state_additive,
-                            Some(&[1f32, 1., 1., 1.] as _),
-                            0xffffffff,
-                        ),
-                        _ => {}
+                            Transparency::Additive => self.dcs.context.OMSetBlendState(
+                                &self.blend_state_additive,
+                                Some(&[1f32, 1., 1., 1.] as _),
+                                0xffffffff,
+                            ),
+                            _ => {}
+                        }
                     }
                 }
 

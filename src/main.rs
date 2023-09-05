@@ -54,8 +54,8 @@ use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gbuffer_viewer::{CompositorMode, GBufferInfoOverlay};
 use crate::overlays::gui::GuiManager;
+use crate::overlays::render_settings::{CompositorMode, RenderSettingsOverlay};
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
@@ -1100,12 +1100,15 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay::default()));
-    let gui_gbuffer = Rc::new(RefCell::new(GBufferInfoOverlay {
+    let gui_rendersettings = Rc::new(RefCell::new(RenderSettingsOverlay {
         composition_mode: CompositorMode::Combined as usize,
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
         renderlayer_entities: true,
+
+        alpha_blending: true,
+        render_lights: false,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
@@ -1116,7 +1119,6 @@ pub fn main() -> anyhow::Result<()> {
             f
         },
         map_resource_distance: 2000.0,
-        render_lights: false,
     }));
 
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
@@ -1129,7 +1131,7 @@ pub fn main() -> anyhow::Result<()> {
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui.add_overlay(gui_fps);
     gui.add_overlay(gui_debug.clone());
-    gui.add_overlay(gui_gbuffer.clone());
+    gui.add_overlay(gui_rendersettings.clone());
     gui.add_overlay(gui_resources);
     gui.add_overlay(gui_console);
     gui.add_overlay(gui_dump);
@@ -1242,7 +1244,7 @@ pub fn main() -> anyhow::Result<()> {
                     let map = &maps.maps[maps.current_map % maps.maps.len()];
 
                     {
-                        let gb = gui_gbuffer.borrow();
+                        let gb = gui_rendersettings.borrow();
 
                         for ptag in &map.placement_groups {
                             let (_placements, instance_renderers) =
@@ -1252,7 +1254,7 @@ pub fn main() -> anyhow::Result<()> {
                                     instance.draw(&mut renderer, false).unwrap();
                                 }
 
-                                if gui_gbuffer.borrow().renderlayer_statics_transparent {
+                                if gui_rendersettings.borrow().renderlayer_statics_transparent {
                                     instance.draw(&mut renderer, true).unwrap();
                                 }
                             }
@@ -1291,8 +1293,9 @@ pub fn main() -> anyhow::Result<()> {
 
                     renderer.submit_frame(
                         &resources,
-                        gui_debug.borrow().render_lights,
-                        gui_gbuffer.borrow().composition_mode,
+                        gui_rendersettings.borrow().render_lights,
+                        gui_rendersettings.borrow().alpha_blending,
+                        gui_rendersettings.borrow().composition_mode,
                         (cb_composite_lights.buffer().clone(), point_lights.len()),
                     );
 

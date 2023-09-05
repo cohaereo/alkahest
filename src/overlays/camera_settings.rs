@@ -14,8 +14,6 @@ pub struct CameraPositionOverlay {
     pub show_map_resource_label: bool,
     pub map_resource_filter: [bool; MapResource::COUNT],
     pub map_resource_distance: f32,
-
-    pub render_lights: bool,
 }
 
 impl OverlayProvider for CameraPositionOverlay {
@@ -34,7 +32,6 @@ impl OverlayProvider for CameraPositionOverlay {
             ));
             ui.separator();
             ui.slider("Speed Multiplier", 0.01, 10.0, &mut camera.speed_mul);
-            ui.checkbox("Render lights", &mut self.render_lights);
             ui.separator();
             ui.checkbox("Show map resources", &mut self.show_map_resources);
             if self.show_map_resources {
