@@ -1,5 +1,12 @@
-cbuffer Lights : register(b1) {
-    float4 lights[1024];
+cbuffer CompositeOptions : register(b0) {
+    row_major float4x4 projViewMatrixInv;
+    float4x4 projMatrix;
+    float4x4 viewMatrix;
+    float4 cameraPos;
+    float4 cameraDir;
+    float time;
+    uint tex_i;
+    uint lightCount;
 };
 
 struct VSOutput {
@@ -42,5 +49,8 @@ float3 GammaCorrect(float3 c) {
 float4 PShader(VSOutput input) : SV_Target {
     float4 albedo = RenderTargetStaging.Sample(SampleType, input.uv);
 
-    return float4(GammaCorrect(albedo.xyz), 1.0);
+    if(tex_i == 0 || tex_i == 1)
+        return float4(GammaCorrect(albedo.xyz), 1.0);
+    else
+        return float4(albedo.xyz, 1.0);
 }

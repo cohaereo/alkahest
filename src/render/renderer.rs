@@ -678,6 +678,7 @@ impl Renderer {
     }
     fn run_final(&mut self) {
         unsafe {
+            self.scope_alk_composite.bind(0, ShaderStages::all());
             self.dcs.context.OMSetBlendState(
                 &self.blend_state_none,
                 Some(&[1f32, 1., 1., 1.] as _),
