@@ -32,7 +32,7 @@ use tracing_subscriber::EnvFilter;
 use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST};
+use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 use winit::{
@@ -640,9 +640,15 @@ pub fn main() -> anyhow::Result<()> {
     let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
     for te in to_load_entities.keys().filter(|h| h.is_valid()) {
         let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
+        info!("Loading entity {te}");
         for e in &header.unk10 {
             match e.unk0.unk18.resource_type {
                 0x808072BD => {
+                    info!(
+                        "\t- EntityModel {:08x}/{}",
+                        e.unk0.unk18.resource_type.to_be(),
+                        e.unk0.unk10.resource_type.to_be(),
+                    );
                     let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
                     cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x1dc))?;
                     let model: Tag<Unk808073a5> = cur.read_le()?;
@@ -680,11 +686,17 @@ pub fn main() -> anyhow::Result<()> {
 
                     // println!(" - EntityModel {model:?}");
                 }
-                u => trace!(
-                    "Unknown entity resource type {u:08X} (0x{:08X})",
-                    e.unk0.unk10.resource_type
+                u => debug!(
+                    "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                    u.to_be(),
+                    e.unk0.unk10.resource_type.to_be(),
+                    e.unk0.tag()
                 ),
             }
+        }
+
+        if !entity_renderers.contains_key(&te) {
+            warn!("Entity {te} does not contain any geometry!");
         }
     }
 
@@ -718,7 +730,7 @@ pub fn main() -> anyhow::Result<()> {
                     position_scale: ent.mesh_scale(),
                     position_offset: ent.mesh_offset(),
                     texcoord0_scale_offset: ent.texcoord_transform(),
-                    dynamic_sh_ao_values: Vec4::ZERO,
+                    dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
                 })?;
             }
         }
@@ -1233,16 +1245,16 @@ pub fn main() -> anyhow::Result<()> {
                     {
                         let gb = gui_gbuffer.borrow();
 
-                        if gb.renderlayer_statics {
-                            for ptag in &map.placement_groups {
-                                let (_placements, instance_renderers) =
-                                    &placement_groups[&ptag.tag().0];
-                                for instance in instance_renderers.iter() {
+                        for ptag in &map.placement_groups {
+                            let (_placements, instance_renderers) =
+                                &placement_groups[&ptag.tag().0];
+                            for instance in instance_renderers.iter() {
+                                if gb.renderlayer_statics {
                                     instance.draw(&mut renderer, false).unwrap();
+                                }
 
-                                    if gui_gbuffer.borrow().renderlayer_statics_transparent {
-                                        instance.draw(&mut renderer, true).unwrap();
-                                    }
+                                if gui_gbuffer.borrow().renderlayer_statics_transparent {
+                                    instance.draw(&mut renderer, true).unwrap();
                                 }
                             }
                         }
@@ -1319,7 +1331,11 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.context.OMSetDepthStencilState(None, 0);
 
-                    if dcs.swap_chain.Present(1, present_parameters) == DXGI_STATUS_OCCLUDED {
+                    if dcs
+                        .swap_chain
+                        .Present(DXGI_SWAP_EFFECT_SEQUENTIAL.0 as _, present_parameters)
+                        == DXGI_STATUS_OCCLUDED
+                    {
                         present_parameters = DXGI_PRESENT_TEST;
                         std::thread::sleep(Duration::from_millis(50));
                     } else {
