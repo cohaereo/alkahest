@@ -27,6 +27,7 @@ pub enum MapResource {
     Unk80806f38 = 6,
     RespawnPoint = 7,
     AmbientSound(Unk80809802) = 8,
+    Unk808071ad = 9,
 }
 
 impl MapResource {
@@ -52,6 +53,7 @@ impl MapResource {
                 s.soundbank,
                 s.streams.iter().map(|t| t.to_string()).join(", ")
             ),
+            MapResource::Unk808071ad => "Unk808071ad (volume)".to_string(),
         }
     }
 
@@ -85,6 +87,7 @@ impl MapResource {
             MapResource::Unk80806f38 => RANDOM_COLORS[0x80806f38 % 16],
             MapResource::RespawnPoint => [220, 20, 20],
             MapResource::AmbientSound { .. } => RANDOM_COLORS[0x80806b5b % 16],
+            MapResource::Unk808071ad => RANDOM_COLORS[0x808071ad % 16],
         }
     }
 
@@ -96,7 +99,9 @@ impl MapResource {
             MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown { .. } => ICON_HELP,
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
-            MapResource::Unk80806df1 | MapResource::Unk80806f38 => ICON_HELP_BOX_OUTLINE,
+            MapResource::Unk80806df1 | MapResource::Unk80806f38 | MapResource::Unk808071ad => {
+                ICON_HELP_BOX_OUTLINE
+            }
             MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
         }
     }

@@ -459,7 +459,7 @@ impl Renderer {
                 );
             }
 
-            for slot in 11..18 {
+            for slot in (11..18).filter(|&v| v != 14) {
                 self.white.bind(&self.dcs, slot, ShaderStages::all());
             }
 
@@ -762,9 +762,9 @@ impl Renderer {
             exposure_time: 0.0,
 
             exposure_scale: 1.0,
-            exposure_illum_relative_glow: 0.0,
+            exposure_illum_relative_glow: 1.0,
             exposure_scale_for_shading: 1.0,
-            exposure_illum_relative: 0.0,
+            exposure_illum_relative: 1.0,
 
             random_seed_scales: Vec4::ZERO,
             overrides: Vec4::ZERO,

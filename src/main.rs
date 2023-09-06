@@ -45,7 +45,9 @@ use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInp
 
 use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
-use crate::map::{MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54};
+use crate::map::{
+    MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807164, Unk80807dae, Unk80808a54,
+};
 use crate::map_resources::{
     MapResource, Unk80806b7f, Unk80806df3, Unk80806e68, Unk8080714b, Unk80807268, Unk80809162,
     Unk80809802,
@@ -307,6 +309,26 @@ pub fn main() -> anyhow::Result<()> {
                                     package_manager().read_tag_struct(preheader_tag).unwrap();
 
                                 placement_groups.push(preheader.placement_group);
+                            }
+                            0x808071ad => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let header_tag: TagHash = cur.read_le().unwrap();
+                                let header: Unk80807164 =
+                                    package_manager().read_tag_struct(header_tag).unwrap();
+
+                                resource_points.push(ResourcePoint {
+                                    translation: Vec4::new(
+                                        (header.unk70.x + header.unk80.x) / 2.,
+                                        (header.unk70.y + header.unk80.y) / 2.,
+                                        (header.unk70.z + header.unk80.z) / 2.,
+                                        (header.unk70.w + header.unk80.w) / 2.,
+                                    ),
+                                    rotation: Quat::IDENTITY,
+                                    entity: data.entity,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::Unk808071ad,
+                                });
                             }
                             // D2Class_7D6C8080 (terrain)
                             0x8080714b => {
