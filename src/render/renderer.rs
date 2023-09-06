@@ -1,7 +1,7 @@
 use std::{rc::Rc, time::Instant};
 
 use anyhow::Context;
-use glam::{Mat4, Vec4};
+use glam::Mat4;
 use windows::Win32::Graphics::Direct3D::Fxc::{
     D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
 };
@@ -755,24 +755,26 @@ impl Renderer {
 
     fn update_buffers(&mut self, resources: &Resources) -> anyhow::Result<()> {
         let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+        let overrides = resources.get::<ScopeOverrides>().unwrap();
+
         self.scope_frame.write(&ScopeFrame {
             game_time: self.start_time.elapsed().as_secs_f32(),
             render_time: self.start_time.elapsed().as_secs_f32(),
             delta_game_time: self.delta_time,
-            exposure_time: 0.0,
+            // exposure_time: 0.0,
 
-            exposure_scale: 1.0,
-            exposure_illum_relative_glow: 1.0,
-            exposure_scale_for_shading: 1.0,
-            exposure_illum_relative: 1.0,
+            // exposure_scale: 1.0,
+            // exposure_illum_relative_glow: 1.0,
+            // exposure_scale_for_shading: 1.0,
+            // exposure_illum_relative: 1.0,
+            // random_seed_scales: Vec4::ONE,
+            // overrides: Vec4::splat(0.5),
 
-            random_seed_scales: Vec4::ZERO,
-            overrides: Vec4::ZERO,
-
-            unk4: Vec4::ONE,
-            unk5: Vec4::ONE,
-            unk6: Vec4::ONE,
-            unk7: Vec4::ONE,
+            // unk4: Vec4::ONE,
+            // unk5: Vec4::ONE,
+            // unk6: Vec4::ONE,
+            // unk7: Vec4::ONE,
+            ..overrides.frame
         })?;
 
         let projection = Mat4::perspective_infinite_reverse_rh(
@@ -792,39 +794,24 @@ impl Renderer {
             camera_backward: -camera.front.extend(1.0),
             camera_position: camera.position.extend(1.0),
 
-            target_pixel_to_camera: Mat4::IDENTITY,
+            // target_pixel_to_camera: Mat4::IDENTITY,
             target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
             inverse_target_resolution: (
                 // TODO(cohae): Is this correct?
                 1. / (self.window_size.0 as f32),
                 1. / (self.window_size.1 as f32),
             ),
-            maximum_depth_pre_projection: 0.0, // TODO
-            view_is_first_person: 0.0,
+            // maximum_depth_pre_projection: 0.0, // TODO
+            // view_is_first_person: 0.0,
             // Accounts for missing depth value in vertex output
             misc_unk2: 0.0001,
-            misc_unk3: 0.0,
+            // misc_unk3: 0.0,
+            ..overrides.view
         })?;
 
-        self.scope_unk2.write(&ScopeUnk2 {
-            unk0: Vec4::ONE,
-            unk1: Vec4::ONE,
-            unk2: Vec4::ONE,
-            unk3: Vec4::ONE,
-            unk4: Vec4::ONE,
-            unk5: Vec4::ONE,
-        })?;
+        self.scope_unk2.write(&overrides.unk2)?;
 
-        self.scope_unk8.write(&ScopeUnk8 {
-            unk0: Vec4::ONE,
-            unk1: Vec4::ONE,
-            unk2: Vec4::ONE,
-            unk3: Vec4::ONE,
-            unk4: Vec4::ONE,
-            unk5: Vec4::ONE,
-            unk6: Vec4::ONE,
-            unk7: Vec4::ONE,
-        })?;
+        self.scope_unk8.write(&overrides.unk8)?;
 
         Ok(())
     }
@@ -856,4 +843,12 @@ impl Renderer {
             );
         }
     }
+}
+
+#[derive(Default)]
+pub struct ScopeOverrides {
+    pub view: ScopeView,
+    pub frame: ScopeFrame,
+    pub unk2: ScopeUnk2,
+    pub unk8: ScopeUnk8,
 }

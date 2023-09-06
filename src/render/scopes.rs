@@ -4,7 +4,6 @@ pub type Mat3x4 = [Vec4; 3];
 
 // This scope uses official struct/field names from TFX intermediaries (scope_view)
 #[repr(C)]
-#[derive(Default)]
 pub struct ScopeView {
     pub world_to_projective: Mat4,
 
@@ -21,15 +20,33 @@ pub struct ScopeView {
     pub inverse_target_resolution: (f32, f32),
 
     // pub view_miscellaneous: Vec4,
-    pub maximum_depth_pre_projection: f32,
-    pub view_is_first_person: f32,
+    pub misc_unk0: f32,
+    pub misc_unk1: f32,
     pub misc_unk2: f32,
     pub misc_unk3: f32,
 }
 
+impl Default for ScopeView {
+    fn default() -> Self {
+        ScopeView {
+            world_to_projective: Default::default(),
+            camera_right: Default::default(),
+            camera_up: Default::default(),
+            camera_backward: Default::default(),
+            camera_position: Default::default(),
+            target_pixel_to_camera: Default::default(),
+            target_resolution: Default::default(),
+            inverse_target_resolution: Default::default(),
+            misc_unk0: Default::default(),
+            misc_unk1: Default::default(),
+            misc_unk2: 0.0001,
+            misc_unk3: Default::default(),
+        }
+    }
+}
+
 // This scope uses official struct/field names from TFX intermediaries (scope_frame)
 #[repr(C)]
-#[derive(Default)]
 pub struct ScopeFrame {
     // pub time: Vec4,               // c0
     pub game_time: f32,
@@ -52,6 +69,27 @@ pub struct ScopeFrame {
     pub unk7: Vec4, // c7
 }
 
+impl Default for ScopeFrame {
+    fn default() -> Self {
+        ScopeFrame {
+            game_time: Default::default(),
+            render_time: Default::default(),
+            delta_game_time: Default::default(),
+            exposure_time: Default::default(),
+            exposure_scale: 1.0,
+            exposure_illum_relative_glow: 1.0,
+            exposure_scale_for_shading: 1.0,
+            exposure_illum_relative: 1.0,
+            random_seed_scales: Default::default(),
+            overrides: Default::default(),
+            unk4: Default::default(),
+            unk5: Default::default(),
+            unk6: Default::default(),
+            unk7: Default::default(),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
 pub struct ScopeInstances {
@@ -71,7 +109,7 @@ pub struct ScopeRigidModel {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 pub struct ScopeUnk2 {
     pub unk0: Vec4,
     pub unk1: Vec4,
@@ -81,8 +119,21 @@ pub struct ScopeUnk2 {
     pub unk5: Vec4,
 }
 
+impl Default for ScopeUnk2 {
+    fn default() -> Self {
+        ScopeUnk2 {
+            unk0: Vec4::ONE,
+            unk1: Vec4::ONE,
+            unk2: Vec4::ONE,
+            unk3: Vec4::ONE,
+            unk4: Vec4::ONE,
+            unk5: Vec4::ONE,
+        }
+    }
+}
+
 #[repr(C)]
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 pub struct ScopeUnk8 {
     pub unk0: Vec4,
     pub unk1: Vec4,
@@ -92,6 +143,21 @@ pub struct ScopeUnk8 {
     pub unk5: Vec4,
     pub unk6: Vec4,
     pub unk7: Vec4,
+}
+
+impl Default for ScopeUnk8 {
+    fn default() -> Self {
+        ScopeUnk8 {
+            unk0: Vec4::ONE,
+            unk1: Vec4::ONE,
+            unk2: Vec4::ONE,
+            unk3: Vec4::ONE,
+            unk4: Vec4::ONE,
+            unk5: Vec4::ONE,
+            unk6: Vec4::ONE,
+            unk7: Vec4::ONE,
+        }
+    }
 }
 
 pub trait MatrixConversion {

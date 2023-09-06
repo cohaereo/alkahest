@@ -62,7 +62,7 @@ use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::error::ErrorRenderer;
-use crate::render::renderer::Renderer;
+use crate::render::renderer::{Renderer, ScopeOverrides};
 use crate::render::scopes::ScopeRigidModel;
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
@@ -978,7 +978,20 @@ pub fn main() -> anyhow::Result<()> {
                 });
             }
 
-            if m.unk98.len() > 1
+            if m.unkcc.is_valid() {
+                let buffer_header_ref = package_manager().get_entry(m.unkcc).unwrap().reference;
+
+                let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
+                let data = bytemuck::cast_slice(&data_raw);
+
+                trace!(
+                    "Read {} elements cbuffer from {buffer_header_ref:?}",
+                    data.len()
+                );
+                let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
+
+                cbuffer_map_vs.insert(*t, buf);
+            } else if m.unk98.len() > 1
                 && m.unk98
                     .iter()
                     .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
@@ -1006,14 +1019,22 @@ pub fn main() -> anyhow::Result<()> {
             if m.unk34c.is_valid() {
                 let buffer_header_ref = package_manager().get_entry(m.unk34c).unwrap().reference;
 
-                let buffer = package_manager().read_tag(buffer_header_ref).unwrap();
+                let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
+                // {
+                //     let data_mod: &mut [Vec4] = bytemuck::cast_slice_mut(&mut data_raw);
+                //     if data_mod.len() >= 2 {
+                //         if data_mod[1].abs().max_element() == 0.0 {
+                //             data_mod[1] = Vec4::ONE;
+                //         }
+                //     }
+                // }
+
+                let data = bytemuck::cast_slice(&data_raw);
                 trace!(
-                    "Read {} bytes cbuffer from {buffer_header_ref:?}",
-                    buffer.len()
+                    "Read {} elements cbuffer from {buffer_header_ref:?}",
+                    data.len()
                 );
-                let buf =
-                    ConstantBuffer::create_array_init(dcs.clone(), bytemuck::cast_slice(&buffer))
-                        .unwrap();
+                let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
 
                 cbuffer_map_ps.insert(*t, buf);
             } else if !m.unk318.is_empty()
@@ -1106,6 +1127,7 @@ pub fn main() -> anyhow::Result<()> {
     // TODO(cohae): This is fucking terrible, just move it to the debug GUI when we can
     resources.insert(CurrentCubemap(None, None));
     resources.insert(ErrorRenderer::load(dcs.clone()));
+    resources.insert(ScopeOverrides::default());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {

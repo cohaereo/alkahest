@@ -3,7 +3,7 @@ use imgui::{Condition, TreeNodeFlags, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
-use crate::{map::MapDataList, resources::Resources};
+use crate::{map::MapDataList, render::renderer::ScopeOverrides, resources::Resources};
 
 use super::gui::OverlayProvider;
 
@@ -45,6 +45,123 @@ impl OverlayProvider for RenderSettingsOverlay {
                     ui.checkbox("Terrain", &mut self.renderlayer_terrain);
                     ui.checkbox("Entities", &mut self.renderlayer_entities);
                     ui.unindent();
+                }
+
+                if ui.collapsing_header("Scope Overrides", TreeNodeFlags::empty()) {
+                    let mut overrides = resources.get_mut::<ScopeOverrides>().unwrap();
+
+                    if ui.collapsing_header("view", TreeNodeFlags::empty()) {
+                        ui.input_float4(
+                            "tptc.x",
+                            &mut overrides.view.target_pixel_to_camera.x_axis,
+                        )
+                        .build();
+                        ui.input_float4(
+                            "tptc.y",
+                            &mut overrides.view.target_pixel_to_camera.y_axis,
+                        )
+                        .build();
+                        ui.input_float4(
+                            "tptc.z",
+                            &mut overrides.view.target_pixel_to_camera.z_axis,
+                        )
+                        .build();
+                        ui.input_float4(
+                            "tptc.w",
+                            &mut overrides.view.target_pixel_to_camera.w_axis,
+                        )
+                        .build();
+
+                        // ui.input_float("misc_unk0", &mut overrides.view.misc_unk0)
+                        //     .build();
+                        // ui.input_float("misc_unk1", &mut overrides.view.misc_unk1)
+                        //     .build();
+                        // ui.input_float("misc_unk3", &mut overrides.view.misc_unk3)
+                        //     .build();
+                    }
+
+                    if ui.collapsing_header("frame", TreeNodeFlags::empty()) {
+                        ui.slider(
+                            "exposure_time",
+                            0.0,
+                            10.0,
+                            &mut overrides.frame.exposure_time,
+                        );
+                        ui.slider(
+                            "exposure_scale",
+                            0.0,
+                            1.0,
+                            &mut overrides.frame.exposure_scale,
+                        );
+                        ui.slider(
+                            "exposure_illum_relative_glow",
+                            0.0,
+                            1.0,
+                            &mut overrides.frame.exposure_illum_relative_glow,
+                        );
+                        ui.slider(
+                            "exposure_scale_for_shading",
+                            0.0,
+                            1.0,
+                            &mut overrides.frame.exposure_scale_for_shading,
+                        );
+                        ui.slider(
+                            "exposure_illum_relative",
+                            0.0,
+                            1.0,
+                            &mut overrides.frame.exposure_illum_relative,
+                        );
+
+                        ui.input_float4(
+                            "random_seed_scales",
+                            &mut overrides.frame.random_seed_scales,
+                        )
+                        .build();
+                        ui.input_float4("overrides", &mut overrides.frame.overrides)
+                            .build();
+                        ui.input_float4("frame.unk4", &mut overrides.frame.unk4)
+                            .build();
+                        ui.input_float4("frame.unk5", &mut overrides.frame.unk5)
+                            .build();
+                        ui.input_float4("frame.unk6", &mut overrides.frame.unk6)
+                            .build();
+                        ui.input_float4("frame.unk7", &mut overrides.frame.unk7)
+                            .build();
+                    }
+
+                    if ui.collapsing_header("unk2", TreeNodeFlags::empty()) {
+                        ui.input_float4("unk2.unk0", &mut overrides.unk2.unk0)
+                            .build();
+                        ui.input_float4("unk2.unk1", &mut overrides.unk2.unk1)
+                            .build();
+                        ui.input_float4("unk2.unk2", &mut overrides.unk2.unk2)
+                            .build();
+                        ui.input_float4("unk2.unk3", &mut overrides.unk2.unk3)
+                            .build();
+                        ui.input_float4("unk2.unk4", &mut overrides.unk2.unk4)
+                            .build();
+                        ui.input_float4("unk2.unk5", &mut overrides.unk2.unk5)
+                            .build();
+                    }
+
+                    if ui.collapsing_header("unk8", TreeNodeFlags::empty()) {
+                        ui.input_float4("unk8.unk0", &mut overrides.unk8.unk0)
+                            .build();
+                        ui.input_float4("unk8.unk1", &mut overrides.unk8.unk1)
+                            .build();
+                        ui.input_float4("unk8.unk2", &mut overrides.unk8.unk2)
+                            .build();
+                        ui.input_float4("unk8.unk3", &mut overrides.unk8.unk3)
+                            .build();
+                        ui.input_float4("unk8.unk4", &mut overrides.unk8.unk4)
+                            .build();
+                        ui.input_float4("unk8.unk5", &mut overrides.unk8.unk5)
+                            .build();
+                        ui.input_float4("unk8.unk6", &mut overrides.unk8.unk6)
+                            .build();
+                        ui.input_float4("unk8.unk7", &mut overrides.unk8.unk7)
+                            .build();
+                    }
                 }
             });
 
