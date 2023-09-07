@@ -2,18 +2,15 @@ use std::rc::Rc;
 
 use anyhow::Context;
 use glam::{Mat4, Quat, Vec3, Vec4};
-use windows::{
-    core::PCSTR,
-    Win32::Graphics::{
-        Direct3D::D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-        Direct3D11::{
-            ID3D11Buffer, ID3D11InputLayout, ID3D11PixelShader, ID3D11VertexShader,
-            D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
-            D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_SUBRESOURCE_DATA,
-            D3D11_USAGE_IMMUTABLE,
-        },
-        Dxgi::Common::{DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT},
+use windows::Win32::Graphics::{
+    Direct3D::D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+    Direct3D11::{
+        ID3D11Buffer, ID3D11InputLayout, ID3D11PixelShader, ID3D11VertexShader,
+        D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
+        D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_SUBRESOURCE_DATA,
+        D3D11_USAGE_IMMUTABLE,
     },
+    Dxgi::Common::{DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT},
 };
 
 use crate::types::AABB;
@@ -74,26 +71,26 @@ impl DebugShapes {
         ))
     }
 
-    pub fn line_2point<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
-        self.shapes
-            .push((DebugShape::Line { start, end }, color.into()))
-    }
+    // pub fn line_2point<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
+    //     self.shapes
+    //         .push((DebugShape::Line { start, end }, color.into()))
+    // }
 
-    pub fn line_orientation<C: Into<Color>>(
-        &mut self,
-        point: Vec3,
-        orientation: Quat,
-        length: f32,
-        color: C,
-    ) {
-        self.shapes.push((
-            DebugShape::Line {
-                start: point,
-                end: point + (orientation * Vec3::Y) * length,
-            },
-            color.into(),
-        ))
-    }
+    // pub fn line_orientation<C: Into<Color>>(
+    //     &mut self,
+    //     point: Vec3,
+    //     orientation: Quat,
+    //     length: f32,
+    //     color: C,
+    // ) {
+    //     self.shapes.push((
+    //         DebugShape::Line {
+    //             start: point,
+    //             end: point + (orientation * Vec3::Y) * length,
+    //         },
+    //         color.into(),
+    //     ))
+    // }
 
     /// Returns the drawlist. The internal list is cleared after this call
     pub fn shape_list(&mut self) -> Vec<(DebugShape, Color)> {
@@ -219,11 +216,7 @@ impl DebugShapeRenderer {
     pub fn draw_all(&self, shapes: &mut DebugShapes) {
         for (shape, color) in shapes.shape_list() {
             match shape {
-                DebugShape::Cube {
-                    cube,
-                    rotation,
-                    sides,
-                } => {
+                DebugShape::Cube { cube, rotation, .. } => {
                     // TODO(cohae): Sides
                     self.scope
                         .write(&ScopeAlkDebugShape {
@@ -263,7 +256,7 @@ impl DebugShapeRenderer {
                         self.dcs.context.DrawIndexed(self.cube_index_count, 0, 0);
                     }
                 }
-                DebugShape::Line { start, end } => todo!(),
+                DebugShape::Line { .. } => todo!(),
             }
         }
     }

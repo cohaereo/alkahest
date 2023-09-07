@@ -168,7 +168,7 @@ pub struct Unk8080714b {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80806b7f {
     #[br(seek_before(SeekFrom::Current(0x20)))]
-    pub cubemap_size: Vector4,
+    pub cubemap_extents: Vector4,
     /// Represents the visual center of the cubemap
     pub cubemap_center: Vector4,
     pub unk40: f32,

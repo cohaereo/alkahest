@@ -374,21 +374,20 @@ pub fn main() -> anyhow::Result<()> {
 
                                 let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
                                 let extents_center = Vec4::new(
-                                    cubemap_volume.cubemap_center.x,
-                                    cubemap_volume.cubemap_center.y,
-                                    cubemap_volume.cubemap_center.z,
-                                    cubemap_volume.cubemap_center.w,
+                                    data.translation.x,
+                                    data.translation.y,
+                                    data.translation.z,
+                                    data.translation.w,
                                 );
                                 let extents = Vec4::new(
-                                    cubemap_volume.cubemap_size.x,
-                                    cubemap_volume.cubemap_size.y,
-                                    cubemap_volume.cubemap_size.z,
-                                    cubemap_volume.cubemap_size.w,
+                                    cubemap_volume.cubemap_extents.x,
+                                    cubemap_volume.cubemap_extents.y,
+                                    cubemap_volume.cubemap_extents.z,
+                                    cubemap_volume.cubemap_extents.w,
                                 );
-                                let extents_half = extents / 2.0;
 
-                                let volume_min = extents_center - extents_half;
-                                let volume_max = extents_center + extents_half;
+                                let volume_min = extents_center - extents;
+                                let volume_max = extents_center + extents;
 
                                 to_load_textures.insert(cubemap_volume.cubemap_texture, ());
                                 resource_points.push(ResourcePoint {
