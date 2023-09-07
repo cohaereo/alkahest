@@ -124,11 +124,14 @@ impl MapResource {
                 translation.xyz(),
                 Vec3::splat(*scale),
                 rotation,
-                self.debug_color(),
+                darken_color(self.debug_color()),
                 false,
             ),
             MapResource::CubemapVolume(_, bounds) => {
-                debug_shapes.cube_aabb(*bounds, rotation, self.debug_color(), false)
+                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
+            }
+            MapResource::Unk808071ad(bounds) => {
+                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
             }
             _ => {}
         }
@@ -151,6 +154,14 @@ impl MapResource {
     pub fn index(&self) -> u8 {
         unsafe { (self as *const MapResource as *const u8).read() }
     }
+}
+
+fn darken_color(v: [u8; 3]) -> [u8; 3] {
+    [
+        (v[0] as f32 * 0.75) as u8,
+        (v[1] as f32 * 0.75) as u8,
+        (v[2] as f32 * 0.75) as u8,
+    ]
 }
 
 /// Terrain resource

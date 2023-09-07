@@ -33,5 +33,5 @@ VSOutput VShader(float4 position : POSITION) {
 
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
-    return float4(color.xyz, 1.0);
+    return color;
 }

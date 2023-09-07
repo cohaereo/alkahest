@@ -46,6 +46,7 @@ parking_lot = "0.12.1"
 strum = { version = "0.25.0", features = ["derive"] }
 obj = "0.10.2"
 bitfield-struct = "0.5.3"
+genmesh = "0.6.2"
 
 [features]
 default = []

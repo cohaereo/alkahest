@@ -1,9 +1,14 @@
 use std::rc::Rc;
 
+use super::{color::Color, drawcall::ShaderStages, shader, ConstantBuffer, DeviceContextSwapchain};
+use crate::types::AABB;
 use anyhow::Context;
+use genmesh::generators::IndexedPolygon;
+use genmesh::generators::SharedVertex;
+use genmesh::Triangulate;
 use glam::{Mat4, Quat, Vec3, Vec4};
 use windows::Win32::Graphics::{
-    Direct3D::D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+    Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
     Direct3D11::{
         ID3D11Buffer, ID3D11InputLayout, ID3D11PixelShader, ID3D11VertexShader,
         D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
@@ -12,10 +17,6 @@ use windows::Win32::Graphics::{
     },
     Dxgi::Common::{DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT},
 };
-
-use crate::types::AABB;
-
-use super::{color::Color, drawcall::ShaderStages, shader, ConstantBuffer, DeviceContextSwapchain};
 
 #[derive(Debug, Copy, Clone)]
 pub enum DebugShape {
@@ -111,29 +112,12 @@ pub struct DebugShapeRenderer {
     input_layout: ID3D11InputLayout,
     vb_cube: ID3D11Buffer,
     ib_cube: ID3D11Buffer,
+    ib_cube_sides: ID3D11Buffer,
+    cube_outline_index_count: u32,
     cube_index_count: u32,
 }
 
 impl DebugShapeRenderer {
-    const VERTICES_CUBE: &[Vec4] = &[
-        // Bottom
-        Vec4::new(-0.5, -0.5, -0.5, 1.0), // 0 - Bottom left
-        Vec4::new(-0.5, 0.5, -0.5, 1.0),  // 1 - Top left
-        Vec4::new(0.5, 0.5, -0.5, 1.0),   // 2 - Top right
-        Vec4::new(0.5, -0.5, -0.5, 1.0),  // 3 - Bottom right
-        // Top
-        Vec4::new(-0.5, -0.5, 0.5, 1.0), // 4 - Bottom left
-        Vec4::new(-0.5, 0.5, 0.5, 1.0),  // 5 - Top left
-        Vec4::new(0.5, 0.5, 0.5, 1.0),   // 6 - Top right
-        Vec4::new(0.5, -0.5, 0.5, 1.0),  // 7 - Bottom right
-    ];
-
-    const INDICES_CUBE: &[u16] = &[
-        0, 4, 1, 5, 2, 6, 3, 7, // Vertical
-        0, 1, 1, 2, 2, 3, 3, 0, // Bottom horizontal
-        4, 5, 5, 6, 6, 7, 7, 4, // Top horizontal
-    ];
-
     pub fn new(dcs: Rc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         let data = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug.hlsl"),
@@ -167,17 +151,55 @@ impl DebugShapeRenderer {
         .unwrap();
         let pshader = shader::load_pshader(&dcs, &data)?;
 
+        let mesh = genmesh::generators::Cube::new();
+        let vertices: Vec<[f32; 4]> = mesh
+            .shared_vertex_iter()
+            .map(|v| {
+                let v = <[f32; 3]>::from(v.pos);
+                [v[0], v[1], v[2], 1.0]
+            })
+            .collect();
+        let mut indices = vec![];
+        let mut indices_outline = vec![];
+        for i in mesh.indexed_polygon_iter().triangulate() {
+            indices.extend_from_slice(&[i.x as u16, i.y as u16, i.z as u16]);
+        }
+
+        for i in mesh.indexed_polygon_iter() {
+            indices_outline.extend_from_slice(&[
+                i.x as u16, i.y as u16, i.y as u16, i.z as u16, i.z as u16, i.w as u16, i.w as u16,
+                i.x as u16,
+            ]);
+        }
+
         let ib_cube = unsafe {
             dcs.device
                 .CreateBuffer(
                     &D3D11_BUFFER_DESC {
-                        ByteWidth: (Self::INDICES_CUBE.len() * 2) as _,
+                        ByteWidth: (indices_outline.len() * 2) as _,
                         Usage: D3D11_USAGE_IMMUTABLE,
                         BindFlags: D3D11_BIND_INDEX_BUFFER,
                         ..Default::default()
                     },
                     Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: Self::INDICES_CUBE.as_ptr() as _,
+                        pSysMem: indices_outline.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create index buffer")?
+        };
+
+        let ib_cube_sides = unsafe {
+            dcs.device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: (indices.len() * 2) as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_INDEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: indices.as_ptr() as _,
                         ..Default::default()
                     }),
                 )
@@ -188,13 +210,13 @@ impl DebugShapeRenderer {
             dcs.device
                 .CreateBuffer(
                     &D3D11_BUFFER_DESC {
-                        ByteWidth: (Self::VERTICES_CUBE.len() * 16) as _,
+                        ByteWidth: (vertices.len() * 16) as _,
                         Usage: D3D11_USAGE_IMMUTABLE,
                         BindFlags: D3D11_BIND_VERTEX_BUFFER,
                         ..Default::default()
                     },
                     Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: Self::VERTICES_CUBE.as_ptr() as _,
+                        pSysMem: vertices.as_ptr() as _,
                         ..Default::default()
                     }),
                 )
@@ -209,14 +231,20 @@ impl DebugShapeRenderer {
             input_layout,
             vb_cube,
             ib_cube,
-            cube_index_count: Self::INDICES_CUBE.len() as _,
+            ib_cube_sides,
+            cube_index_count: indices.len() as _,
+            cube_outline_index_count: indices_outline.len() as _,
         })
     }
 
     pub fn draw_all(&self, shapes: &mut DebugShapes) {
         for (shape, color) in shapes.shape_list() {
             match shape {
-                DebugShape::Cube { cube, rotation, .. } => {
+                DebugShape::Cube {
+                    cube,
+                    rotation,
+                    sides,
+                } => {
                     // TODO(cohae): Sides
                     self.scope
                         .write(&ScopeAlkDebugShape {
@@ -253,7 +281,44 @@ impl DebugShapeRenderer {
                             .context
                             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
-                        self.dcs.context.DrawIndexed(self.cube_index_count, 0, 0);
+                        self.dcs
+                            .context
+                            .DrawIndexed(self.cube_outline_index_count as _, 0, 0);
+                    }
+
+                    if sides {
+                        self.scope
+                            .write(&ScopeAlkDebugShape {
+                                model: Mat4::from_scale_rotation_translation(
+                                    cube.dimensions(),
+                                    rotation,
+                                    cube.center(),
+                                ),
+                                color: Color(color.0.truncate().extend(0.25)),
+                            })
+                            .unwrap();
+
+                        unsafe {
+                            self.dcs.context.IASetVertexBuffers(
+                                0,
+                                1,
+                                Some([Some(self.vb_cube.clone())].as_ptr()),
+                                Some([16].as_ptr()),
+                                Some(&0),
+                            );
+
+                            self.dcs.context.IASetIndexBuffer(
+                                Some(&self.ib_cube_sides),
+                                DXGI_FORMAT_R16_UINT,
+                                0,
+                            );
+
+                            self.dcs
+                                .context
+                                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+                            self.dcs.context.DrawIndexed(self.cube_index_count, 0, 0);
+                        }
                     }
                 }
                 DebugShape::Line { .. } => todo!(),
