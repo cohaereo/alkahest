@@ -19,7 +19,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Quat, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec3A, Vec4};
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 
@@ -61,6 +61,7 @@ use crate::overlays::render_settings::{CompositorMode, RenderSettingsOverlay};
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
+use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
 use crate::render::renderer::{Renderer, ScopeOverrides};
 use crate::render::scopes::ScopeRigidModel;
@@ -327,7 +328,18 @@ pub fn main() -> anyhow::Result<()> {
                                     rotation: Quat::IDENTITY,
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::Unk808071ad,
+                                    resource: MapResource::Unk808071ad(AABB {
+                                        min: Vec3A::new(
+                                            header.unk70.x,
+                                            header.unk70.y,
+                                            header.unk70.z,
+                                        ),
+                                        max: Vec3A::new(
+                                            header.unk80.x,
+                                            header.unk80.y,
+                                            header.unk80.z,
+                                        ),
+                                    }),
                                 });
                             }
                             // D2Class_7D6C8080 (terrain)
@@ -459,6 +471,7 @@ pub fn main() -> anyhow::Result<()> {
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Decal {
                                                 material: inst.material,
+                                                scale: transform.w,
                                             },
                                         })
                                     }
@@ -1128,6 +1141,7 @@ pub fn main() -> anyhow::Result<()> {
     resources.insert(CurrentCubemap(None, None));
     resources.insert(ErrorRenderer::load(dcs.clone()));
     resources.insert(ScopeOverrides::default());
+    resources.insert(DebugShapes::default());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {

@@ -13,14 +13,35 @@ pub struct SortValue3d {
     #[bits(24)]
     pub depth: u32,
 
+    #[bits(5)]
+    pub special: SpecialDrawMode,
+
     #[bits(2)]
     pub transparency: Transparency,
 
     #[bits(1)]
     pub technique: ShadingTechnique,
+}
 
-    #[bits(5)]
-    __: u8,
+#[repr(u64)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum SpecialDrawMode {
+    Normal = 0,
+    Decal = 1,
+}
+
+impl SpecialDrawMode {
+    const fn into_bits(self) -> u64 {
+        self as _
+    }
+
+    const fn from_bits(value: u64) -> Self {
+        match value {
+            0 => Self::Normal,
+            1 => Self::Decal,
+            _ => Self::Normal,
+        }
+    }
 }
 
 #[repr(u64)]

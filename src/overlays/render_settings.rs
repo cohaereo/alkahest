@@ -257,6 +257,7 @@ impl Display for CompositorMode {
 #[repr(C)]
 pub struct CompositorOptions {
     pub proj_view_matrix_inv: Mat4,
+    pub proj_view_matrix: Mat4,
     pub proj_matrix: Mat4,
     pub view_matrix: Mat4,
     pub camera_pos: Vec4,

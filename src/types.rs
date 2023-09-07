@@ -158,7 +158,7 @@ impl_decode_float!(u8, u16);
 impl_decode_float!(i8, i16);
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct AABB {
     pub min: Vec3A,
     pub max: Vec3A,
@@ -178,5 +178,13 @@ impl AABB {
     pub fn volume(&self) -> f32 {
         let dimensions = self.max - self.min;
         dimensions.x * dimensions.y * dimensions.z
+    }
+
+    pub fn center(&self) -> Vec3 {
+        ((self.min + self.max) / 2.0).into()
+    }
+
+    pub fn dimensions(&self) -> Vec3 {
+        (self.max - self.min).into()
     }
 }

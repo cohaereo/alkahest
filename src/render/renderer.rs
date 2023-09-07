@@ -18,6 +18,7 @@ use crate::render::RenderData;
 use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
 
+use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::Transparency;
 use super::scopes::ScopeUnk8;
 use super::{
@@ -70,6 +71,8 @@ pub struct Renderer {
 
     final_vs: ID3D11VertexShader,
     final_ps: ID3D11PixelShader,
+
+    debug_shape_renderer: DebugShapeRenderer,
 }
 
 impl Renderer {
@@ -309,6 +312,7 @@ impl Renderer {
         };
 
         Ok(Renderer {
+            debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
             draw_queue: Vec::with_capacity(8192),
             state: RendererState::Awaiting,
             gbuffer: GBuffer::create(
@@ -520,6 +524,11 @@ impl Renderer {
 
         self.run_final();
 
+        self.scope_alk_composite.bind(0, ShaderStages::all());
+        if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
+            self.debug_shape_renderer.draw_all(&mut shapes);
+        }
+
         self.state = RendererState::Awaiting;
     }
 
@@ -662,6 +671,7 @@ impl Renderer {
                 let view = Mat4::from_translation(camera.position);
                 let compositor_options = CompositorOptions {
                     proj_view_matrix_inv: proj_view.inverse(),
+                    proj_view_matrix: proj_view,
                     proj_matrix: projection,
                     view_matrix: view,
                     camera_pos: camera.position.extend(1.0),

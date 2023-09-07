@@ -2,10 +2,12 @@ use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON,
     ICON_SPHERE, ICON_STICKER, ICON_VOLUME_HIGH,
 };
+use crate::render::debug::DebugShapes;
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::{DestinyHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
+use glam::{Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use std::io::SeekFrom;
 use strum::{EnumCount, EnumIs, EnumVariantNames};
@@ -21,13 +23,14 @@ pub enum MapResource {
     PointLight(TagHash) = 2,
     Decal {
         material: TagHash,
+        scale: f32,
     } = 3,
     Unknown(u32) = 4,
     Unk80806df1 = 5,
     Unk80806f38 = 6,
     RespawnPoint = 7,
     AmbientSound(Unk80809802) = 8,
-    Unk808071ad = 9,
+    Unk808071ad(AABB) = 9,
 }
 
 impl MapResource {
@@ -42,7 +45,9 @@ impl MapResource {
                     c.cubemap_texture.0.to_be()
                 )
             }
-            MapResource::Decal { material } => format!("Decal (mat {material})"),
+            MapResource::Decal { material, scale } => {
+                format!("Decal (mat {material}, scale {scale})")
+            }
             MapResource::PointLight { .. } => "Point light".to_string(),
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
             MapResource::Unk80806df1 => "Unk80806df1".to_string(),
@@ -53,7 +58,9 @@ impl MapResource {
                 s.soundbank,
                 s.streams.iter().map(|t| t.to_string()).join(", ")
             ),
-            MapResource::Unk808071ad => "Unk808071ad (volume)".to_string(),
+            MapResource::Unk808071ad(volume) => {
+                format!("Unk808071ad (volume {}m³)", volume.volume())
+            }
         }
     }
 
@@ -72,7 +79,7 @@ impl MapResource {
             [0x80, 0x80, 0x00],
             [0x80, 0x00, 0x80],
             [0x00, 0x80, 0x80],
-            [0x80, 0x80, 0x80],
+            [0x80, 0xFF, 0x80],
             [0xC0, 0x00, 0x00],
             [0x00, 0xC0, 0x00],
         ];
@@ -87,7 +94,7 @@ impl MapResource {
             MapResource::Unk80806f38 => RANDOM_COLORS[0x80806f38 % 16],
             MapResource::RespawnPoint => [220, 20, 20],
             MapResource::AmbientSound { .. } => RANDOM_COLORS[0x80806b5b % 16],
-            MapResource::Unk808071ad => RANDOM_COLORS[0x808071ad % 16],
+            MapResource::Unk808071ad { .. } => RANDOM_COLORS[0x808071ad % 16],
         }
     }
 
@@ -99,10 +106,31 @@ impl MapResource {
             MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown { .. } => ICON_HELP,
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
-            MapResource::Unk80806df1 | MapResource::Unk80806f38 | MapResource::Unk808071ad => {
-                ICON_HELP_BOX_OUTLINE
-            }
+            MapResource::Unk80806df1
+            | MapResource::Unk80806f38
+            | MapResource::Unk808071ad { .. } => ICON_HELP_BOX_OUTLINE,
             MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
+        }
+    }
+
+    pub fn draw_debug_shape(
+        &self,
+        translation: Vec4,
+        rotation: Quat,
+        debug_shapes: &mut DebugShapes,
+    ) {
+        match self {
+            MapResource::Decal { scale, .. } => debug_shapes.cube_extents(
+                translation.xyz(),
+                Vec3::splat(*scale),
+                rotation,
+                self.debug_color(),
+                false,
+            ),
+            MapResource::CubemapVolume(_, bounds) => {
+                debug_shapes.cube_aabb(*bounds, rotation, self.debug_color(), false)
+            }
+            _ => {}
         }
     }
 

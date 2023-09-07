@@ -1,5 +1,6 @@
 use crate::{
-    camera::FpsCamera, map::MapDataList, map_resources::MapResource, resources::Resources,
+    camera::FpsCamera, map::MapDataList, map_resources::MapResource, render::debug::DebugShapes,
+    resources::Resources,
 };
 use destiny_pkg::TagHash;
 use frustum_query::frustum::Frustum;
@@ -104,6 +105,13 @@ impl OverlayProvider for ResourceTypeOverlay {
                                         );
                                     }
                                 }
+
+                                let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
+                                res.resource.draw_debug_shape(
+                                    res.translation,
+                                    res.rotation,
+                                    &mut debug_shapes,
+                                );
                             }
                         }
                     });
