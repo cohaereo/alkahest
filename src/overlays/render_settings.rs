@@ -216,6 +216,7 @@ pub enum CompositorMode {
     VertexAO = 9,
     Iridescence = 10,
     Cubemap = 11,
+    Matcap = 12,
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
@@ -231,6 +232,7 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::VertexAO,       // 9
     CompositorMode::Iridescence,    // 10
     CompositorMode::Cubemap,        // 11
+    CompositorMode::Matcap,         // 12
 ];
 
 impl Display for CompositorMode {
@@ -248,6 +250,7 @@ impl Display for CompositorMode {
             CompositorMode::VertexAO => "Vertex AO",
             CompositorMode::Iridescence => "Iridescence",
             CompositorMode::Cubemap => "Cubemap",
+            CompositorMode::Matcap => "Matcap",
         };
 
         f.write_str(name)
