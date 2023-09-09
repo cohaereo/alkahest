@@ -1,10 +1,6 @@
 use std::{rc::Rc, time::Instant};
 
-use anyhow::Context;
 use glam::Mat4;
-use windows::Win32::Graphics::Direct3D::Fxc::{
-    D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION,
-};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use winit::window::Window;
@@ -14,7 +10,7 @@ use crate::overlays::camera_settings::CurrentCubemap;
 use crate::overlays::render_settings::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk2;
-use crate::render::RenderData;
+use crate::render::{shader, RenderData};
 use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
 
@@ -183,133 +179,37 @@ impl Renderer {
             Some("2x2 white"),
         )?;
 
-        let mut vshader_composite = None;
-        let mut pshader_composite = None;
-        let mut errors = None;
+        let vshader_composite_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/composite.hlsl"),
+            "VShader",
+            "vs_5_0",
+        )
+        .unwrap();
+        let pshader_composite_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/composite.hlsl"),
+            "PShader",
+            "ps_5_0",
+        )
+        .unwrap();
 
-        let flags = if cfg!(debug_assertions) {
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
-        } else {
-            0
-        };
-        unsafe {
-            (
-                D3DCompileFromFile(
-                    w!("assets/shaders/composite.hlsl"),
-                    None,
-                    None,
-                    s!("VShader"),
-                    s!("vs_5_0"),
-                    flags,
-                    0,
-                    &mut vshader_composite,
-                    Some(&mut errors),
-                )
-                .context("Failed to compile vertex shader")?,
-                D3DCompileFromFile(
-                    w!("assets/shaders/composite.hlsl"),
-                    None,
-                    None,
-                    s!("PShader"),
-                    s!("ps_5_0"),
-                    flags,
-                    0,
-                    &mut pshader_composite,
-                    Some(&mut errors),
-                )
-                .context("Failed to compile pixel shader")?,
-            )
-        };
+        let vshader_composite = shader::load_vshader(&dcs, &vshader_composite_blob)?;
+        let pshader_composite = shader::load_pshader(&dcs, &pshader_composite_blob)?;
 
-        if let Some(errors) = errors {
-            let estr = unsafe {
-                let eptr = errors.GetBufferPointer();
-                std::slice::from_raw_parts(eptr.cast(), errors.GetBufferSize())
-            };
-            let errors = String::from_utf8_lossy(estr);
-            warn!("{}", errors);
-        }
+        let vshader_final_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/final.hlsl"),
+            "VShader",
+            "vs_5_0",
+        )
+        .unwrap();
+        let pshader_final_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/final.hlsl"),
+            "PShader",
+            "ps_5_0",
+        )
+        .unwrap();
 
-        let vshader_composite = vshader_composite.unwrap();
-        let pshader_composite = pshader_composite.unwrap();
-
-        let (vshader_composite, pshader_composite) = unsafe {
-            let vs_blob = std::slice::from_raw_parts(
-                vshader_composite.GetBufferPointer() as *const u8,
-                vshader_composite.GetBufferSize(),
-            );
-            let v2 = dcs.device.CreateVertexShader(vs_blob, None)?;
-            let ps_blob = std::slice::from_raw_parts(
-                pshader_composite.GetBufferPointer() as *const u8,
-                pshader_composite.GetBufferSize(),
-            );
-            let v3 = dcs.device.CreatePixelShader(ps_blob, None)?;
-            (v2, v3)
-        };
-
-        let mut vshader_final = None;
-        let mut pshader_final = None;
-        let mut errors = None;
-
-        let flags = if cfg!(debug_assertions) {
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
-        } else {
-            0
-        };
-        unsafe {
-            (
-                D3DCompileFromFile(
-                    w!("assets/shaders/final.hlsl"),
-                    None,
-                    None,
-                    s!("VShader"),
-                    s!("vs_5_0"),
-                    flags,
-                    0,
-                    &mut vshader_final,
-                    Some(&mut errors),
-                )
-                .context("Failed to compile vertex shader")?,
-                D3DCompileFromFile(
-                    w!("assets/shaders/final.hlsl"),
-                    None,
-                    None,
-                    s!("PShader"),
-                    s!("ps_5_0"),
-                    flags,
-                    0,
-                    &mut pshader_final,
-                    Some(&mut errors),
-                )
-                .context("Failed to compile pixel shader")?,
-            )
-        };
-
-        if let Some(errors) = errors {
-            let estr = unsafe {
-                let eptr = errors.GetBufferPointer();
-                std::slice::from_raw_parts(eptr.cast(), errors.GetBufferSize())
-            };
-            let errors = String::from_utf8_lossy(estr);
-            warn!("{}", errors);
-        }
-
-        let vshader_final = vshader_final.unwrap();
-        let pshader_final = pshader_final.unwrap();
-
-        let (vshader_final, pshader_final) = unsafe {
-            let vs_blob = std::slice::from_raw_parts(
-                vshader_final.GetBufferPointer() as *const u8,
-                vshader_final.GetBufferSize(),
-            );
-            let v2 = dcs.device.CreateVertexShader(vs_blob, None)?;
-            let ps_blob = std::slice::from_raw_parts(
-                pshader_final.GetBufferPointer() as *const u8,
-                pshader_final.GetBufferSize(),
-            );
-            let v3 = dcs.device.CreatePixelShader(ps_blob, None)?;
-            (v2, v3)
-        };
+        let vshader_final = shader::load_vshader(&dcs, &vshader_final_blob)?;
+        let pshader_final = shader::load_pshader(&dcs, &pshader_final_blob)?;
 
         Ok(Renderer {
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,

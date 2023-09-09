@@ -3,13 +3,9 @@
 use std::{io::Cursor, rc::Rc};
 
 use glam::Mat4;
-use windows::Win32::Graphics::{
-    Direct3D::Fxc::{D3DCompileFromFile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION},
-    Direct3D11::*,
-    Dxgi::Common::*,
-};
+use windows::Win32::Graphics::{Direct3D11::*, Dxgi::Common::*};
 
-use crate::{dxgi::DxgiFormat, texture::Texture};
+use crate::{dxgi::DxgiFormat, render::shader, texture::Texture};
 
 use super::{ConstantBuffer, DeviceContextSwapchain};
 
@@ -76,81 +72,23 @@ impl ErrorRenderer {
                 .expect("Failed to create error vertex buffer")
         };
 
-        let mut vshader = None;
-        let mut pshader = None;
-        let mut errors = None;
+        let vshader_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/error.hlsl"),
+            "VShader",
+            "vs_5_0",
+        )
+        .unwrap();
+        let pshader_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/error.hlsl"),
+            "PShader",
+            "ps_5_0",
+        )
+        .unwrap();
 
-        let flags = if cfg!(debug_assertions) {
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
-        } else {
-            0
-        };
-        unsafe {
-            (
-                D3DCompileFromFile(
-                    w!("assets/shaders/error.hlsl"),
-                    None,
-                    None,
-                    s!("VShader"),
-                    s!("vs_5_0"),
-                    flags,
-                    0,
-                    &mut vshader,
-                    Some(&mut errors),
-                )
-                .expect("Failed to compile error vertex shader"),
-                D3DCompileFromFile(
-                    w!("assets/shaders/error.hlsl"),
-                    None,
-                    None,
-                    s!("PShader"),
-                    s!("ps_5_0"),
-                    flags,
-                    0,
-                    &mut pshader,
-                    Some(&mut errors),
-                )
-                .expect("Failed to compile error pixel shader"),
-            )
-        };
-
-        if let Some(errors) = errors {
-            let estr = unsafe {
-                let eptr = errors.GetBufferPointer();
-                std::slice::from_raw_parts(eptr.cast(), errors.GetBufferSize())
-            };
-            let errors = String::from_utf8_lossy(estr);
-            warn!("{}", errors);
-        }
-
-        let vshader_blob = vshader.unwrap();
-        let pshader_blob = pshader.unwrap();
-
-        let (vshader, pshader) = unsafe {
-            let vs_blob = std::slice::from_raw_parts(
-                vshader_blob.GetBufferPointer() as *const u8,
-                vshader_blob.GetBufferSize(),
-            );
-            let v2 = dcs
-                .device
-                .CreateVertexShader(vs_blob, None)
-                .expect("Failed to load error vertex shader");
-            let ps_blob = std::slice::from_raw_parts(
-                pshader_blob.GetBufferPointer() as *const u8,
-                pshader_blob.GetBufferSize(),
-            );
-            let v3 = dcs
-                .device
-                .CreatePixelShader(ps_blob, None)
-                .expect("Failed to load error pixel shader");
-            (v2, v3)
-        };
+        let vshader = shader::load_vshader(&dcs, &vshader_blob).unwrap();
+        let pshader = shader::load_pshader(&dcs, &pshader_blob).unwrap();
 
         let vertex_layout = unsafe {
-            let vs_blob = std::slice::from_raw_parts(
-                vshader_blob.GetBufferPointer() as *const u8,
-                vshader_blob.GetBufferSize(),
-            );
             dcs.device
                 .CreateInputLayout(
                     &[
@@ -173,7 +111,7 @@ impl ErrorRenderer {
                             InstanceDataStepRate: 0,
                         },
                     ],
-                    vs_blob,
+                    &vshader_blob,
                 )
                 .expect("Failed to create error vertex layout")
         };
