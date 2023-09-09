@@ -5,12 +5,10 @@ use crate::statics::Unk808071a3;
 
 use glam::{Mat4, Quat, Vec3};
 
-use std::rc::Rc;
 use std::sync::Arc;
 
 use super::renderer::Renderer;
 use super::scopes::MatrixConversion;
-
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
@@ -22,7 +20,7 @@ impl InstancedRenderer {
     pub fn load(
         model: Arc<StaticModel>,
         instances: &[Unk808071a3],
-        dcs: Rc<DeviceContextSwapchain>,
+        dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
         let mut instance_data: Vec<ScopeInstances> = Vec::with_capacity(instances.len());
 

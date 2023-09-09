@@ -47,6 +47,7 @@ strum = { version = "0.25.0", features = ["derive"] }
 obj = "0.10.2"
 bitfield-struct = "0.5.3"
 genmesh = "0.6.2"
+crossbeam = "0.8.2"
 
 [features]
 default = []
@@ -59,4 +60,7 @@ targets = ["x86_64-pc-windows-gnu"]
 targets = ["x86_64-pc-windows-gnu"]
 
 [profile.dev.package.destiny-pkg]
+opt-level = 3
+
+[profile.dev]
 opt-level = 3

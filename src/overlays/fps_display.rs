@@ -31,6 +31,7 @@ impl OverlayProvider for FpsDisplayOverlay {
                     | WindowFlags::NO_BACKGROUND
                     | WindowFlags::NO_INPUTS,
             )
+            .save_settings(false)
             .position([ui.io().display_size[0] - 36.0, 0.0], Condition::Always)
             .build(|| ui.text(format!("{:3.0}", 1.0 / average_delta)));
 

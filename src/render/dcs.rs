@@ -1,6 +1,7 @@
 use parking_lot::RwLock;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::mem::transmute;
+use std::thread::ThreadId;
 use windows::Win32::Foundation::{BOOL, HINSTANCE};
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -9,8 +10,10 @@ use windows::Win32::Graphics::Dxgi::*;
 use winit::window::Window;
 
 pub struct DeviceContextSwapchain {
+    main_thread_id: ThreadId,
+
     pub device: ID3D11Device,
-    pub context: ID3D11DeviceContext,
+    context: ID3D11DeviceContext,
     pub swap_chain: IDXGISwapChain,
     pub swapchain_target: RwLock<Option<ID3D11RenderTargetView>>,
 }
@@ -84,10 +87,22 @@ impl DeviceContextSwapchain {
         };
 
         Ok(Self {
+            main_thread_id: std::thread::current().id(),
             device,
             context: device_context,
             swap_chain,
             swapchain_target: RwLock::new(swapchain_target),
         })
     }
+
+    /// The device context may only be accessed from the thread that the DCS was created on
+    /// Panics if the current thread is not the main thread
+    pub fn context(&self) -> &ID3D11DeviceContext {
+        assert_eq!(std::thread::current().id(), self.main_thread_id);
+
+        &self.context
+    }
 }
+
+unsafe impl Send for DeviceContextSwapchain {}
+unsafe impl Sync for DeviceContextSwapchain {}

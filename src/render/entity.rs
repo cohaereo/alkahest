@@ -237,11 +237,12 @@ impl EntityRenderer {
 
                 let shading_technique = renderer
                     .render_data
+                    .data()
                     .material_shading_technique(variant_material.unwrap_or(p.material))
                     .unwrap_or(ShadingTechnique::Forward);
 
                 renderer.push_drawcall(
-                    SortValue3d::new()
+                    SortValue3d::empty()
                         // TODO(cohae): calculate depth (need to draw instances separately)
                         .with_depth(u32::MAX)
                         .with_material(p.material.0)

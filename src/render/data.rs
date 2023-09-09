@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
+use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::material::Material;
@@ -8,8 +12,9 @@ use crate::types::Vector4;
 use crate::vertex_layout::InputElement;
 
 use super::drawcall::ShadingTechnique;
-use super::ConstantBuffer;
+use super::{resource_mt, ConstantBuffer, DeviceContextSwapchain};
 
+#[derive(Default)]
 pub struct RenderData {
     pub materials: IntMap<u32, Material>,
     pub vshaders: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
@@ -30,5 +35,38 @@ impl RenderData {
         } else {
             Some(ShadingTechnique::Deferred)
         }
+    }
+}
+
+pub struct RenderDataManager {
+    tx_textures: Sender<TagHash>,
+    // tx_buffers: Sender<TagHash>,
+    // tx_shaders: Sender<TagHash>,
+    render_data: Arc<RwLock<RenderData>>,
+}
+
+impl RenderDataManager {
+    pub fn new(dcs: Arc<DeviceContextSwapchain>) -> Self {
+        let render_data = Arc::new(RwLock::new(RenderData::default()));
+        let tx_textures = resource_mt::thread_textures(dcs.clone(), render_data.clone());
+
+        Self {
+            tx_textures,
+            render_data,
+        }
+    }
+
+    pub fn data(&self) -> RwLockReadGuard<RenderData> {
+        self.render_data.read()
+    }
+
+    pub fn data_mut(&self) -> RwLockWriteGuard<RenderData> {
+        self.render_data.write()
+    }
+
+    pub fn load_texture(&self, texture: TagHash) {
+        self.tx_textures
+            .send(texture)
+            .expect("Failed to send load texture request");
     }
 }

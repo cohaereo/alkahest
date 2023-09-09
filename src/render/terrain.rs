@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::entity::{IndexBufferHeader, VertexBufferHeader};
 use crate::map::Unk8080714f;
@@ -35,7 +35,7 @@ pub struct TerrainRenderer {
 impl TerrainRenderer {
     pub fn load(
         terrain: Unk8080714f,
-        dcs: Rc<DeviceContextSwapchain>,
+        dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<TerrainRenderer> {
         let pm = package_manager();
         let vertex_header: VertexBufferHeader = pm.read_tag_struct(terrain.vertex_buffer).unwrap();
@@ -154,11 +154,11 @@ impl TerrainRenderer {
                 //     dcs.context
                 //         .PSSetShaderResources(14, Some(&[Some(dyemap.view.clone())]));
                 // } else {
-                //     dcs.context.PSSetShaderResources(14, Some(&[None]));
+                //     dcs.context().PSSetShaderResources(14, Some(&[None]));
                 // }
 
                 renderer.push_drawcall(
-                    SortValue3d::new()
+                    SortValue3d::empty()
                         // TODO(cohae): calculate depth
                         .with_depth(u32::MIN)
                         .with_material(part.material.0)

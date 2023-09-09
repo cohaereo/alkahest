@@ -1,6 +1,6 @@
 // Contains the error mesh used when an object fails to render for whatever reason
 
-use std::{io::Cursor, rc::Rc};
+use std::{io::Cursor, sync::Arc};
 
 use glam::Mat4;
 use windows::Win32::Graphics::{Direct3D11::*, Dxgi::Common::*};
@@ -23,7 +23,7 @@ pub struct ErrorRenderer {
 }
 
 impl ErrorRenderer {
-    pub fn load(dcs: Rc<DeviceContextSwapchain>) -> Self {
+    pub fn load(dcs: Arc<DeviceContextSwapchain>) -> Self {
         const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/error.data");
         let matcap = Texture::load_2d_raw(
             &dcs,
@@ -144,7 +144,7 @@ impl ErrorRenderer {
     //         .unwrap();
 
     //     unsafe {
-    //         dcs.context.IASetVertexBuffers(
+    //         dcs.context().IASetVertexBuffers(
     //             0,
     //             1,
     //             Some([Some(self.vertex_buffer.clone())].as_ptr()),
@@ -158,16 +158,16 @@ impl ErrorRenderer {
     //         dcs.context
     //             .VSSetConstantBuffers(7, Some(&[Some(self.scope.buffer().clone())]));
 
-    //         dcs.context.IASetInputLayout(&self.vertex_layout);
-    //         dcs.context.VSSetShader(&self.vshader, None);
+    //         dcs.context().IASetInputLayout(&self.vertex_layout);
+    //         dcs.context().VSSetShader(&self.vshader, None);
 
-    //         dcs.context.PSSetShader(&self.pshader, None);
+    //         dcs.context().PSSetShader(&self.pshader, None);
 
     // TODO(cohae): use new texture bind API
     //         dcs.context
     //             .PSSetShaderResources(0, Some(&[Some(self.texture.view.clone())]));
 
-    //         dcs.context.Draw(self.vertex_count as u32, 0);
+    //         dcs.context().Draw(self.vertex_count as u32, 0);
     //     }
     // }
 }

@@ -1,7 +1,7 @@
 use crate::dxgi::DxgiFormat;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
-use std::rc::Rc;
+use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::D3D11_SRV_DIMENSION_TEXTURE2D;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
@@ -12,11 +12,11 @@ pub struct GBuffer {
     pub rt2: RenderTarget,
     pub staging: RenderTarget,
     pub depth: DepthState,
-    dcs: Rc<DeviceContextSwapchain>,
+    dcs: Arc<DeviceContextSwapchain>,
 }
 
 impl GBuffer {
-    pub fn create(size: (u32, u32), dcs: Rc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
+    pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         Ok(Self {
             rt0: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM_SRGB)
                 .context("RT0")?,

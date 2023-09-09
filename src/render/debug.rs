@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::{color::Color, drawcall::ShaderStages, shader, ConstantBuffer, DeviceContextSwapchain};
 use crate::types::AABB;
@@ -104,7 +104,7 @@ impl DebugShapes {
 
 // TODO(cohae): We can improve performance by instancing each type of shape using instance buffers
 pub struct DebugShapeRenderer {
-    dcs: Rc<DeviceContextSwapchain>,
+    dcs: Arc<DeviceContextSwapchain>,
     scope: ConstantBuffer<ScopeAlkDebugShape>,
     vshader: ID3D11VertexShader,
     pshader: ID3D11PixelShader,
@@ -118,7 +118,7 @@ pub struct DebugShapeRenderer {
 }
 
 impl DebugShapeRenderer {
-    pub fn new(dcs: Rc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
+    pub fn new(dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         let data = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug.hlsl"),
             "VShader",
@@ -259,11 +259,11 @@ impl DebugShapeRenderer {
 
                     self.scope.bind(1, ShaderStages::all());
                     unsafe {
-                        self.dcs.context.IASetInputLayout(&self.input_layout);
-                        self.dcs.context.VSSetShader(&self.vshader, None);
-                        self.dcs.context.PSSetShader(&self.pshader, None);
+                        self.dcs.context().IASetInputLayout(&self.input_layout);
+                        self.dcs.context().VSSetShader(&self.vshader, None);
+                        self.dcs.context().PSSetShader(&self.pshader, None);
 
-                        self.dcs.context.IASetVertexBuffers(
+                        self.dcs.context().IASetVertexBuffers(
                             0,
                             1,
                             Some([Some(self.vb_cube.clone())].as_ptr()),
@@ -271,18 +271,18 @@ impl DebugShapeRenderer {
                             Some(&0),
                         );
 
-                        self.dcs.context.IASetIndexBuffer(
+                        self.dcs.context().IASetIndexBuffer(
                             Some(&self.ib_cube),
                             DXGI_FORMAT_R16_UINT,
                             0,
                         );
 
                         self.dcs
-                            .context
+                            .context()
                             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
                         self.dcs
-                            .context
+                            .context()
                             .DrawIndexed(self.cube_outline_index_count as _, 0, 0);
                     }
 
@@ -299,7 +299,7 @@ impl DebugShapeRenderer {
                             .unwrap();
 
                         unsafe {
-                            self.dcs.context.IASetVertexBuffers(
+                            self.dcs.context().IASetVertexBuffers(
                                 0,
                                 1,
                                 Some([Some(self.vb_cube.clone())].as_ptr()),
@@ -307,17 +307,17 @@ impl DebugShapeRenderer {
                                 Some(&0),
                             );
 
-                            self.dcs.context.IASetIndexBuffer(
+                            self.dcs.context().IASetIndexBuffer(
                                 Some(&self.ib_cube_sides),
                                 DXGI_FORMAT_R16_UINT,
                                 0,
                             );
 
                             self.dcs
-                                .context
+                                .context()
                                 .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-                            self.dcs.context.DrawIndexed(self.cube_index_count, 0, 0);
+                            self.dcs.context().DrawIndexed(self.cube_index_count, 0, 0);
                         }
                     }
                 }

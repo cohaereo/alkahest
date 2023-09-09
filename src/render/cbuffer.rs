@@ -2,18 +2,18 @@ use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
 use std::marker::PhantomData;
-use std::rc::Rc;
+use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::*;
 
 pub struct ConstantBuffer<T: Sized> {
-    dcs: Rc<DeviceContextSwapchain>,
+    dcs: Arc<DeviceContextSwapchain>,
     buffer: ID3D11Buffer,
     _marker: PhantomData<T>,
 }
 
 impl<T> ConstantBuffer<T> {
     pub fn create(
-        dcs: Rc<DeviceContextSwapchain>,
+        dcs: Arc<DeviceContextSwapchain>,
         initial_data: Option<&T>,
     ) -> anyhow::Result<Self> {
         unsafe {
@@ -47,7 +47,7 @@ impl<T> ConstantBuffer<T> {
         }
     }
 
-    // pub fn create_array(dcs: Rc<DeviceContextSwapchain>, length: usize) -> anyhow::Result<Self> {
+    // pub fn create_array(dcs: Arc<DeviceContextSwapchain>, length: usize) -> anyhow::Result<Self> {
     //     unsafe {
     //         let buffer = dcs.device.CreateBuffer(
     //             &D3D11_BUFFER_DESC {
@@ -69,7 +69,7 @@ impl<T> ConstantBuffer<T> {
     // }
 
     pub fn create_array_init(
-        dcs: Rc<DeviceContextSwapchain>,
+        dcs: Arc<DeviceContextSwapchain>,
         initial_data: &[T],
     ) -> anyhow::Result<Self> {
         unsafe {
@@ -100,7 +100,7 @@ impl<T> ConstantBuffer<T> {
         unsafe {
             let memory = self
                 .dcs
-                .context
+                .context()
                 .Map(&self.buffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
                 .context("Failed to map ConstantBuffer for writing")?;
 
@@ -108,7 +108,7 @@ impl<T> ConstantBuffer<T> {
                 .pData
                 .copy_from_nonoverlapping(data as *const T as _, std::mem::size_of::<T>());
 
-            self.dcs.context.Unmap(&self.buffer, 0);
+            self.dcs.context().Unmap(&self.buffer, 0);
         }
 
         Ok(())
@@ -126,7 +126,7 @@ impl<T> ConstantBuffer<T> {
     //             .pData
     //             .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
 
-    //         self.dcs.context.Unmap(&self.buffer, 0);
+    //         self.dcs.context().Unmap(&self.buffer, 0);
     //     }
 
     //     Ok(())
@@ -140,19 +140,19 @@ impl<T> ConstantBuffer<T> {
         unsafe {
             if stages.contains(ShaderStages::VERTEX) {
                 self.dcs
-                    .context
+                    .context()
                     .VSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
 
             if stages.contains(ShaderStages::PIXEL) {
                 self.dcs
-                    .context
+                    .context()
                     .PSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
 
             if stages.contains(ShaderStages::COMPUTE) {
                 self.dcs
-                    .context
+                    .context()
                     .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
         }

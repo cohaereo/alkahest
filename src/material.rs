@@ -78,43 +78,43 @@ impl Material {
     ) -> anyhow::Result<()> {
         unsafe {
             for (si, s) in self.vs_samplers.iter().enumerate() {
-                dcs.context.VSSetSamplers(
+                dcs.context().VSSetSamplers(
                     1 + si as u32,
                     Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
                 );
             }
             for (si, s) in self.ps_samplers.iter().enumerate() {
-                dcs.context.PSSetSamplers(
+                dcs.context().PSSetSamplers(
                     1 + si as u32,
                     Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
                 );
             }
 
             if let Some(cbuffer) = render_data.cbuffers_ps.get(&self.tag().into()) {
-                dcs.context
+                dcs.context()
                     .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
             } else {
-                dcs.context.PSSetConstantBuffers(0, Some(&[None]));
+                dcs.context().PSSetConstantBuffers(0, Some(&[None]));
             }
 
             if let Some(cbuffer) = render_data.cbuffers_vs.get(&self.tag().into()) {
-                dcs.context
+                dcs.context()
                     .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
             } else {
-                dcs.context.VSSetConstantBuffers(0, Some(&[None]));
+                dcs.context().VSSetConstantBuffers(0, Some(&[None]));
             }
 
             if let Some((vs, Some(input_layout))) = render_data.vshaders.get(&self.vertex_shader.0)
             {
-                dcs.context.IASetInputLayout(input_layout);
-                dcs.context.VSSetShader(vs, None);
+                dcs.context().IASetInputLayout(input_layout);
+                dcs.context().VSSetShader(vs, None);
             } else {
                 // TODO: should still be handled, but not here
                 // anyhow::bail!("No vertex shader/input layout bound");
             }
 
             if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader.0) {
-                dcs.context.PSSetShader(ps, None);
+                dcs.context().PSSetShader(ps, None);
             } else {
                 // TODO: should still be handled, but not here
                 // anyhow::bail!("No pixel shader bound");
@@ -123,7 +123,7 @@ impl Material {
             for p in &self.vs_textures {
                 // TODO(cohae): Bind error texture on error
                 if let Some(t) = render_data.textures.get(&p.texture.0) {
-                    dcs.context
+                    dcs.context()
                         .VSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }
             }
@@ -131,7 +131,7 @@ impl Material {
             for p in &self.ps_textures {
                 // TODO(cohae): Bind error texture on error
                 if let Some(t) = render_data.textures.get(&p.texture.0) {
-                    dcs.context
+                    dcs.context()
                         .PSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }
             }
@@ -143,11 +143,11 @@ impl Material {
     pub fn unbind_textures(&self, dcs: &DeviceContextSwapchain) {
         unsafe {
             for p in &self.vs_textures {
-                dcs.context.VSSetShaderResources(p.index, Some(&[None]));
+                dcs.context().VSSetShaderResources(p.index, Some(&[None]));
             }
 
             for p in &self.ps_textures {
-                dcs.context.PSSetShaderResources(p.index, Some(&[None]));
+                dcs.context().PSSetShaderResources(p.index, Some(&[None]));
             }
         }
     }

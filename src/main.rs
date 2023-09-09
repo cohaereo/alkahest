@@ -57,6 +57,7 @@ use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gui::GuiManager;
+use crate::overlays::load_indicator::LoadIndicatorOverlay;
 use crate::overlays::render_settings::{CompositorMode, RenderSettingsOverlay};
 use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
 use crate::overlays::tag_dump::TagDumper;
@@ -67,14 +68,11 @@ use crate::render::renderer::{Renderer, ScopeOverrides};
 use crate::render::scopes::ScopeRigidModel;
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
-use crate::render::{
-    ConstantBuffer, DeviceContextSwapchain, EntityRenderer, InstancedRenderer, RenderData,
-};
+use crate::render::{ConstantBuffer, DeviceContextSwapchain, EntityRenderer, InstancedRenderer};
 use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::texture::Texture;
 use crate::types::{Vector4, AABB};
 use crate::vertex_layout::InputElement;
 
@@ -258,8 +256,10 @@ pub fn main() -> anyhow::Result<()> {
         .with_maximized(config!().window.maximised)
         .build(&event_loop)?;
 
-    // cohae: Slight concern for thread safety here. ID3D11Device is threadsafe, but ID3D11DeviceContext is *not*
-    let dcs = Rc::new(DeviceContextSwapchain::create(&window)?);
+    let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
+
+    // TODO(cohae): resources should be added to renderdata directly
+    let mut renderer = Renderer::create(&window, dcs.clone())?;
 
     let mut static_map: IntMap<u32, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<u32, Material> = Default::default();
@@ -268,12 +268,9 @@ pub fn main() -> anyhow::Result<()> {
     let mut pshader_map: IntMap<u32, (ID3D11PixelShader, Vec<InputElement>)> = Default::default();
     let mut cbuffer_map_vs: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut cbuffer_map_ps: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
-    let mut texture_map: IntMap<u32, Texture> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
     let mut maps: Vec<MapData> = vec![];
-
-    let mut to_load_textures: HashMap<TagHash, ()> = Default::default();
 
     // First light reserved for camera light
     let mut point_lights = vec![Vec4::ZERO];
@@ -389,7 +386,10 @@ pub fn main() -> anyhow::Result<()> {
                                 let volume_min = extents_center - extents;
                                 let volume_max = extents_center + extents;
 
-                                to_load_textures.insert(cubemap_volume.cubemap_texture, ());
+                                renderer
+                                    .render_data
+                                    .load_texture(cubemap_volume.cubemap_texture);
+
                                 resource_points.push(ResourcePoint {
                                     translation: extents_center,
                                     rotation: Quat::from_xyzw(
@@ -796,7 +796,7 @@ pub fn main() -> anyhow::Result<()> {
     info_span!("Loading terrain").in_scope(|| {
         for (t, header) in terrain_headers.into_iter() {
             for t in &header.mesh_groups {
-                to_load_textures.insert(t.dyemap, ());
+                renderer.render_data.load_texture(t.dyemap);
             }
 
             match TerrainRenderer::load(header, dcs.clone()) {
@@ -1070,28 +1070,27 @@ pub fn main() -> anyhow::Result<()> {
 
     for m in material_map.values() {
         for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
-            to_load_textures.insert(t.texture, ());
+            renderer.render_data.load_texture(t.texture);
         }
     }
 
-    let to_load_textures: Vec<TagHash> = to_load_textures.keys().cloned().collect();
-    info_span!("Loading textures").in_scope(|| {
-        for tex_hash in to_load_textures.into_iter() {
-            if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
-                continue;
-            }
-            let _span = debug_span!("load texture", texture = ?tex_hash).entered();
+    // info_span!("Loading textures").in_scope(|| {
+    //     for tex_hash in to_load_textures.into_iter() {
+    //         if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
+    //             continue;
+    //         }
+    //         let _span = debug_span!("load texture", texture = ?tex_hash).entered();
 
-            match Texture::load(&dcs, tex_hash) {
-                Ok(texture) => {
-                    texture_map.insert(tex_hash.0, texture);
-                }
-                Err(e) => error!("Failed to load texture {tex_hash}: {e}"),
-            }
-        }
-    });
+    //         match Texture::load(&dcs, tex_hash) {
+    //             Ok(texture) => {
+    //                 texture_map.insert(tex_hash.0, texture);
+    //             }
+    //             Err(e) => error!("Failed to load texture {tex_hash}: {e}"),
+    //         }
+    //     }
+    // });
 
-    info!("Loaded {} textures", texture_map.len());
+    // info!("Loaded {} textures", texture_map.len());
 
     let to_load_samplers: Vec<TagHash> = to_load_samplers.keys().cloned().collect();
     for s in to_load_samplers {
@@ -1189,26 +1188,26 @@ pub fn main() -> anyhow::Result<()> {
     }));
 
     let gui_dump = Rc::new(RefCell::new(TagDumper::new()));
+    let gui_loading = Rc::new(RefCell::new(LoadIndicatorOverlay::default()));
 
     let mut gui = GuiManager::create(&window, &dcs.device);
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
-    gui.add_overlay(gui_fps);
     gui.add_overlay(gui_debug);
     gui.add_overlay(gui_rendersettings.clone());
     gui.add_overlay(gui_resources);
     gui.add_overlay(gui_console);
     gui.add_overlay(gui_dump);
+    gui.add_overlay(gui_loading);
+    gui.add_overlay(gui_fps);
 
-    // TODO(cohae): resources should be added to renderdata directly
-    let mut renderer = Renderer::create(&window, dcs.clone())?;
-    renderer.render_data = RenderData {
-        materials: material_map,
-        vshaders: vshader_map,
-        pshaders: pshader_map,
-        cbuffers_vs: cbuffer_map_vs,
-        cbuffers_ps: cbuffer_map_ps,
-        textures: texture_map,
-        samplers: sampler_map,
+    {
+        let mut data = renderer.render_data.data_mut();
+        data.materials = material_map;
+        data.vshaders = vshader_map;
+        data.pshaders = pshader_map;
+        data.cbuffers_vs = cbuffer_map_vs;
+        data.cbuffers_ps = cbuffer_map_ps;
+        data.samplers = sampler_map;
     };
 
     let _start_time = Instant::now();
@@ -1241,7 +1240,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
 
-                    dcs.context
+                    dcs.context()
                         .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
 
                     *dcs.swapchain_target.write() = Some(new_rtv);
@@ -1290,7 +1289,7 @@ pub fn main() -> anyhow::Result<()> {
                 unsafe {
                     renderer.clear_render_targets();
 
-                    dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                    dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
                         TopLeftY: 0.0,
                         Width: window_dims.width as f32,
@@ -1299,7 +1298,7 @@ pub fn main() -> anyhow::Result<()> {
                         MaxDepth: 1.0,
                     }]));
 
-                    dcs.context.RSSetState(&rasterizer_state);
+                    dcs.context().RSSetState(&rasterizer_state);
 
                     renderer.begin_frame();
 
@@ -1381,6 +1380,7 @@ pub fn main() -> anyhow::Result<()> {
                         }
                         renderer
                             .render_data
+                            .data()
                             .textures
                             .get(&c.cubemap_texture.0)
                             .map(|t| t.view.clone())
@@ -1395,7 +1395,7 @@ pub fn main() -> anyhow::Result<()> {
                     drop(maps);
                     gui.draw_frame(&window, last_frame.elapsed(), &mut resources);
 
-                    dcs.context.OMSetDepthStencilState(None, 0);
+                    dcs.context().OMSetDepthStencilState(None, 0);
 
                     if dcs
                         .swap_chain

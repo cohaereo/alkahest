@@ -368,17 +368,17 @@ impl Texture {
     pub fn bind(&self, dcs: &DeviceContextSwapchain, slot: u32, stages: ShaderStages) {
         unsafe {
             if stages.contains(ShaderStages::VERTEX) {
-                dcs.context
+                dcs.context()
                     .VSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
             }
 
             if stages.contains(ShaderStages::PIXEL) {
-                dcs.context
+                dcs.context()
                     .PSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
             }
 
             if stages.contains(ShaderStages::COMPUTE) {
-                dcs.context
+                dcs.context()
                     .CSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
             }
         }

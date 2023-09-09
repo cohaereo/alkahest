@@ -1,4 +1,4 @@
-use std::{rc::Rc, time::Instant};
+use std::{sync::Arc, time::Instant};
 
 use glam::Mat4;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
@@ -10,10 +10,11 @@ use crate::overlays::camera_settings::CurrentCubemap;
 use crate::overlays::render_settings::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk2;
-use crate::render::{shader, RenderData};
+use crate::render::shader;
 use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
 
+use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::Transparency;
 use super::scopes::ScopeUnk8;
@@ -37,7 +38,7 @@ pub struct Renderer {
     state: RendererState,
     pub gbuffer: GBuffer,
     window_size: (u32, u32),
-    dcs: Rc<DeviceContextSwapchain>,
+    dcs: Arc<DeviceContextSwapchain>,
 
     scope_view: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
@@ -49,7 +50,7 @@ pub struct Renderer {
     last_frame: Instant,
     delta_time: f32,
 
-    pub render_data: RenderData,
+    pub render_data: RenderDataManager,
 
     blend_state_none: ID3D11BlendState,
     blend_state_blend: ID3D11BlendState,
@@ -72,7 +73,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn create(window: &Window, dcs: Rc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
+    pub fn create(window: &Window, dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         let blend_state_none = unsafe {
             dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
                 RenderTarget: [D3D11_RENDER_TARGET_BLEND_DESC {
@@ -225,19 +226,11 @@ impl Renderer {
             scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
+            render_data: RenderDataManager::new(dcs.clone()),
             dcs,
             start_time: Instant::now(),
             last_frame: Instant::now(),
             delta_time: 0.016,
-            render_data: RenderData {
-                materials: Default::default(),
-                vshaders: Default::default(),
-                pshaders: Default::default(),
-                cbuffers_vs: Default::default(),
-                cbuffers_ps: Default::default(),
-                textures: Default::default(),
-                samplers: Default::default(),
-            },
             blend_state_none,
             blend_state_blend,
             blend_state_additive,
@@ -295,7 +288,7 @@ impl Renderer {
         self.scope_frame.bind(13, ShaderStages::all());
 
         unsafe {
-            self.dcs.context.OMSetRenderTargets(
+            self.dcs.context().OMSetRenderTargets(
                 Some(&[
                     Some(self.gbuffer.rt0.render_target.clone()),
                     Some(self.gbuffer.rt1.render_target.clone()),
@@ -304,9 +297,9 @@ impl Renderer {
                 &self.gbuffer.depth.view,
             );
             self.dcs
-                .context
+                .context()
                 .OMSetDepthStencilState(&self.gbuffer.depth.state, 0);
-            self.dcs.context.OMSetBlendState(
+            self.dcs.context().OMSetBlendState(
                 &self.blend_state_none,
                 Some(&[1f32, 1., 1., 1.] as _),
                 0xffffffff,
@@ -328,10 +321,10 @@ impl Renderer {
 
         unsafe {
             self.dcs
-                .context
+                .context()
                 .OMSetDepthStencilState(&self.gbuffer.depth.state, 0);
 
-            self.dcs.context.OMSetRenderTargets(
+            self.dcs.context().OMSetRenderTargets(
                 Some(&[Some(
                     self.gbuffer.staging.render_target.clone(), // self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
                 )]),
@@ -339,7 +332,7 @@ impl Renderer {
             );
 
             let rt = self.gbuffer.staging.view.clone();
-            self.dcs.context.PSSetShaderResources(
+            self.dcs.context().PSSetShaderResources(
                 12,
                 Some(&[
                     // TODO(cohae): Totally wrong, obviously
@@ -357,7 +350,7 @@ impl Renderer {
         let mut transparency_mode = Transparency::None;
         for i in 0..self.draw_queue.len() {
             unsafe {
-                self.dcs.context.PSSetShaderResources(
+                self.dcs.context().PSSetShaderResources(
                     10,
                     Some(&[Some(self.gbuffer.depth.texture_view.clone())]),
                 );
@@ -380,31 +373,31 @@ impl Renderer {
                     {
                         unsafe {
                             self.dcs
-                                .context
+                                .context()
                                 .OMSetDepthStencilState(&self.gbuffer.depth.state_readonly, 0);
                         }
                     }
 
                     unsafe {
                         match blend_override {
-                            1 => self.dcs.context.OMSetBlendState(
+                            1 => self.dcs.context().OMSetBlendState(
                                 &self.blend_state_blend,
                                 Some(&[1f32, 1., 1., 1.] as _),
                                 0xffffffff,
                             ),
-                            2 => self.dcs.context.OMSetBlendState(
+                            2 => self.dcs.context().OMSetBlendState(
                                 &self.blend_state_additive,
                                 Some(&[1f32, 1., 1., 1.] as _),
                                 0xffffffff,
                             ),
                             _ => match s.transparency() {
-                                Transparency::Blend => self.dcs.context.OMSetBlendState(
+                                Transparency::Blend => self.dcs.context().OMSetBlendState(
                                     &self.blend_state_blend,
                                     Some(&[1f32, 1., 1., 1.] as _),
                                     0xffffffff,
                                 ),
 
-                                Transparency::Additive => self.dcs.context.OMSetBlendState(
+                                Transparency::Additive => self.dcs.context().OMSetBlendState(
                                     &self.blend_state_additive,
                                     Some(&[1f32, 1., 1., 1.] as _),
                                     0xffffffff,
@@ -427,18 +420,18 @@ impl Renderer {
         self.scope_alk_composite.bind(0, ShaderStages::all());
         if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
             unsafe {
-                // self.dcs.context.OMSetRenderTargets(
+                // self.dcs.context().OMSetRenderTargets(
                 //     Some(&[Some(
                 //         self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
                 //     )]),
                 //     &self.gbuffer.depth.view,
                 // );
-                self.dcs.context.OMSetBlendState(
+                self.dcs.context().OMSetBlendState(
                     &self.blend_state_blend,
                     Some(&[1f32, 1., 1., 1.] as _),
                     0xffffffff,
                 );
-                self.dcs.context.RSSetState(&self.rasterizer_state);
+                self.dcs.context().RSSetState(&self.rasterizer_state);
             }
             self.debug_shape_renderer.draw_all(&mut shapes);
         }
@@ -447,21 +440,22 @@ impl Renderer {
     }
 
     fn draw(&mut self, sort: SortValue3d, drawcall: &DrawCall) {
-        if let Some(mat) = self.render_data.materials.get(&sort.material()) {
+        let render_data = self.render_data.data();
+        if let Some(mat) = render_data.materials.get(&sort.material()) {
             if mat.unk8 != 1 {
                 return;
             }
 
             unsafe {
                 if mat.unk22 != 0 {
-                    self.dcs.context.RSSetState(&self.rasterizer_state_nocull);
+                    self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
                 } else {
-                    self.dcs.context.RSSetState(&self.rasterizer_state);
+                    self.dcs.context().RSSetState(&self.rasterizer_state);
                 }
             }
 
             // TODO(cohae): How can we handle these errors?
-            if mat.bind(&self.dcs, &self.render_data).is_err() {
+            if mat.bind(&self.dcs, &render_data).is_err() {
                 // return;
             }
         } else {
@@ -469,12 +463,12 @@ impl Renderer {
         }
 
         if let Some(variant_material) = drawcall.variant_material {
-            if let Some(mat) = self.render_data.materials.get(&variant_material.0) {
+            if let Some(mat) = render_data.materials.get(&variant_material.0) {
                 if mat.unk8 != 1 {
                     return;
                 }
 
-                if mat.bind(&self.dcs, &self.render_data).is_err() {
+                if mat.bind(&self.dcs, &render_data).is_err() {
                     // return;
                 }
             } else {
@@ -484,10 +478,10 @@ impl Renderer {
 
         unsafe {
             self.dcs
-                .context
+                .context()
                 .VSSetConstantBuffers(11, Some(&[drawcall.cb11.clone()]));
 
-            self.dcs.context.IASetVertexBuffers(
+            self.dcs.context().IASetVertexBuffers(
                 0,
                 1,
                 Some([Some(drawcall.vertex_buffer.clone())].as_ptr()),
@@ -495,18 +489,18 @@ impl Renderer {
                 Some(&0),
             );
 
-            self.dcs.context.IASetIndexBuffer(
+            self.dcs.context().IASetIndexBuffer(
                 Some(&drawcall.index_buffer),
                 drawcall.index_format,
                 0,
             );
 
             self.dcs
-                .context
+                .context()
                 .IASetPrimitiveTopology(drawcall.primitive_type);
 
             if drawcall.instance_start.is_some() || drawcall.instance_count.is_some() {
-                self.dcs.context.DrawIndexedInstanced(
+                self.dcs.context().DrawIndexedInstanced(
                     drawcall.index_count,
                     drawcall.instance_count.unwrap_or(1) as _,
                     drawcall.index_start,
@@ -515,17 +509,17 @@ impl Renderer {
                 );
             } else {
                 self.dcs
-                    .context
+                    .context()
                     .DrawIndexed(drawcall.index_count, drawcall.index_start, 0);
             }
         }
 
-        if let Some(mat) = self.render_data.materials.get(&sort.material()) {
+        if let Some(mat) = render_data.materials.get(&sort.material()) {
             mat.unbind_textures(&self.dcs)
         }
 
         if let Some(variant_material) = drawcall.variant_material {
-            if let Some(mat) = self.render_data.materials.get(&variant_material.0) {
+            if let Some(mat) = render_data.materials.get(&variant_material.0) {
                 mat.unbind_textures(&self.dcs)
             }
         }
@@ -540,17 +534,17 @@ impl Renderer {
         lights: (ID3D11Buffer, usize),
     ) {
         unsafe {
-            self.dcs.context.OMSetBlendState(
+            self.dcs.context().OMSetBlendState(
                 &self.blend_state_none,
                 Some(&[1f32, 1., 1., 1.] as _),
                 0xffffffff,
             );
 
-            self.dcs.context.OMSetRenderTargets(
+            self.dcs.context().OMSetRenderTargets(
                 Some(&[Some(self.gbuffer.staging.render_target.clone())]),
                 None,
             );
-            self.dcs.context.PSSetShaderResources(
+            self.dcs.context().PSSetShaderResources(
                 0,
                 Some(&[
                     Some(self.gbuffer.rt0.view.clone()),
@@ -562,14 +556,16 @@ impl Renderer {
 
             self.matcap.bind(&self.dcs, 4, ShaderStages::PIXEL);
 
-            let cubemap_texture = resources
-                .get::<CurrentCubemap>()
-                .unwrap()
-                .1
-                .and_then(|t| self.render_data.textures.get(&t.0).map(|t| t.view.clone()));
+            let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
+                self.render_data
+                    .data()
+                    .textures
+                    .get(&t.0)
+                    .map(|t| t.view.clone())
+            });
 
             self.dcs
-                .context
+                .context()
                 .PSSetShaderResources(5, Some(&[cubemap_texture]));
 
             {
@@ -604,10 +600,10 @@ impl Renderer {
             //     .VSSetConstantBuffers(0, Some(&[Some(cb_composite_options.buffer().clone())]));
 
             self.dcs
-                .context
+                .context()
                 .PSSetConstantBuffers(1, Some(&[Some(lights.0)]));
 
-            self.dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
                 Width: self.window_size.0 as f32,
@@ -624,38 +620,38 @@ impl Renderer {
             //     .context
             //     .PSSetSamplers(0, Some(&[Some(le_sampler.clone())]));
 
-            self.dcs.context.VSSetShader(&self.composite_vs, None);
-            self.dcs.context.PSSetShader(&self.composite_ps, None);
+            self.dcs.context().VSSetShader(&self.composite_vs, None);
+            self.dcs.context().PSSetShader(&self.composite_ps, None);
             self.dcs
-                .context
+                .context()
                 .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-            self.dcs.context.Draw(4, 0);
+            self.dcs.context().Draw(4, 0);
 
             self.dcs
-                .context
+                .context()
                 .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
         }
     }
     fn run_final(&mut self) {
         unsafe {
             self.scope_alk_composite.bind(0, ShaderStages::all());
-            self.dcs.context.OMSetBlendState(
+            self.dcs.context().OMSetBlendState(
                 &self.blend_state_none,
                 Some(&[1f32, 1., 1., 1.] as _),
                 0xffffffff,
             );
 
-            self.dcs.context.OMSetRenderTargets(
+            self.dcs.context().OMSetRenderTargets(
                 Some(&[Some(
                     self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
                 )]),
                 None,
             );
             self.dcs
-                .context
+                .context()
                 .PSSetShaderResources(0, Some(&[Some(self.gbuffer.staging.view.clone())]));
 
-            self.dcs.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
                 Width: self.window_size.0 as f32,
@@ -664,15 +660,15 @@ impl Renderer {
                 MaxDepth: 1.0,
             }]));
 
-            self.dcs.context.VSSetShader(&self.final_vs, None);
-            self.dcs.context.PSSetShader(&self.final_ps, None);
+            self.dcs.context().VSSetShader(&self.final_vs, None);
+            self.dcs.context().PSSetShader(&self.final_ps, None);
             self.dcs
-                .context
+                .context()
                 .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-            self.dcs.context.Draw(4, 0);
+            self.dcs.context().Draw(4, 0);
 
             self.dcs
-                .context
+                .context()
                 .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
         }
     }
@@ -747,19 +743,19 @@ impl Renderer {
 
     pub fn clear_render_targets(&mut self) {
         unsafe {
-            self.dcs.context.ClearRenderTargetView(
+            self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt0.render_target,
                 [0.5, 0.5, 0.5, 1.0].as_ptr() as _,
             );
-            self.dcs.context.ClearRenderTargetView(
+            self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt1.render_target,
                 [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
-            self.dcs.context.ClearRenderTargetView(
+            self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt2.render_target,
                 [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
-            self.dcs.context.ClearDepthStencilView(
+            self.dcs.context().ClearDepthStencilView(
                 &self.gbuffer.depth.view,
                 D3D11_CLEAR_DEPTH.0 as _,
                 0.0,

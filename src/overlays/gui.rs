@@ -25,6 +25,12 @@ pub struct GuiManager {
 
 // TODO: Way to obtain overlays by type
 impl GuiManager {
+    const GLYPH_RANGES: &'static [u32] = &[
+        0x0020, 0x00ff, // Basic latin + supplemental
+        0x25a0, 0x25ff, // Geometric Shapes
+        0,
+    ];
+
     pub fn create(window: &Window, device: &ID3D11Device) -> Self {
         let mut imgui = imgui::Context::create();
         imgui.style_mut().window_rounding = 4.0;
@@ -38,7 +44,7 @@ impl GuiManager {
                 size_pixels: (16.0 * platform.hidpi_factor()) as f32,
                 config: Some(FontConfig {
                     size_pixels: (16.0 * platform.hidpi_factor()) as f32,
-                    glyph_ranges: FontGlyphRanges::default(),
+                    glyph_ranges: FontGlyphRanges::from_slice(Self::GLYPH_RANGES),
                     ..FontConfig::default()
                 }),
             },

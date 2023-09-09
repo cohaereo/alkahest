@@ -209,7 +209,7 @@ impl StaticModel {
                     let material = self.model.materials.get(iu).unwrap();
 
                     renderer.push_drawcall(
-                        SortValue3d::new()
+                        SortValue3d::empty()
                             // TODO(cohae): calculate depth (need to draw instances separately)
                             .with_depth(u32::MIN)
                             .with_material(material.0)
@@ -335,17 +335,18 @@ impl StaticOverlayModel {
         instance_buffer: ID3D11Buffer,
         instance_count: usize,
     ) {
+        let technique = renderer
+            .render_data
+            .data()
+            .material_shading_technique(self.model.material)
+            .unwrap_or(ShadingTechnique::Forward);
+
         renderer.push_drawcall(
-            SortValue3d::new()
+            SortValue3d::empty()
                 // TODO(cohae): calculate depth (need to draw instances separately)
                 .with_depth(u32::MAX)
                 .with_material(self.model.material.0)
-                .with_technique(
-                    renderer
-                        .render_data
-                        .material_shading_technique(self.model.material)
-                        .unwrap_or(ShadingTechnique::Forward),
-                )
+                .with_technique(technique)
                 .with_transparency(Transparency::Additive),
             DrawCall {
                 vertex_buffer: self.buffers.combined_vertex_buffer.clone(),

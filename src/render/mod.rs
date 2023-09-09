@@ -8,6 +8,7 @@ pub mod entity;
 pub mod error;
 pub mod gbuffer;
 pub mod renderer;
+pub mod resource_mt;
 pub mod scopes;
 pub mod shader;
 pub mod static_instanced;
