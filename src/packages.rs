@@ -1,20 +1,20 @@
 use destiny_pkg::PackageManager;
-use std::cell::RefCell;
-use std::rc::Rc;
+use lazy_static::lazy_static;
+use parking_lot::RwLock;
+use std::sync::Arc;
 
-thread_local! {
-    pub static PACKAGE_MANAGER: RefCell<Option<Rc<PackageManager>>> = RefCell::new(None);
+lazy_static! {
+    pub static ref PACKAGE_MANAGER: RwLock<Option<Arc<PackageManager>>> = RwLock::new(None);
 }
 
-pub fn package_manager_checked() -> anyhow::Result<Rc<PackageManager>> {
-    PACKAGE_MANAGER.with(|v| {
-        v.borrow()
-            .as_ref()
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("Package manager is not initialized!"))
-    })
+pub fn package_manager_checked() -> anyhow::Result<Arc<PackageManager>> {
+    PACKAGE_MANAGER
+        .read()
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("Package manager is not initialized!"))
 }
 
-pub fn package_manager() -> Rc<PackageManager> {
+pub fn package_manager() -> Arc<PackageManager> {
     package_manager_checked().unwrap()
 }

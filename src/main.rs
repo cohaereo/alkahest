@@ -148,7 +148,7 @@ pub fn main() -> anyhow::Result<()> {
         )
     });
 
-    PACKAGE_MANAGER.with(|v| *v.borrow_mut() = Some(Rc::new(pm)));
+    *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
     let mut stringmap: IntMap<u32, String> = Default::default();
     let all_global_packages = [

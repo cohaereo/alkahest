@@ -649,7 +649,7 @@ dependencies = [
 [[package]]
 name = "destiny-pkg"
 version = "0.4.2"
-source = "git+https://github.com/v4nguard/destiny-pkg#ba9dedd61cc056f2e0c5c9e789e121aabb4c2f0c"
+source = "git+https://github.com/v4nguard/destiny-pkg#4b6723e2a1909430813b0b61e849eb57a86ddbd8"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -657,10 +657,12 @@ dependencies = [
  "binrw",
  "clap",
  "clap-num",
+ "ddsfile",
  "json",
  "lazy_static",
  "libloading",
  "nohash-hasher",
+ "parking_lot",
  "rayon",
  "tracing",
 ]

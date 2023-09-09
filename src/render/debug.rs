@@ -6,7 +6,7 @@ use anyhow::Context;
 use genmesh::generators::IndexedPolygon;
 use genmesh::generators::SharedVertex;
 use genmesh::Triangulate;
-use glam::{Mat4, Quat, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec3};
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
     Direct3D11::{
