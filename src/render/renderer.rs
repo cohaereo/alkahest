@@ -266,11 +266,13 @@ impl Renderer {
     pub fn submit_frame(
         &mut self,
         resources: &Resources,
+        // TODO: These options need to be moved to a resource
         draw_lights: bool,
         alpha_blending: bool,
         compositor_mode: usize,
         blend_override: usize,
         lights: (ID3D11Buffer, usize),
+        evaluate_bytecode: bool,
     ) {
         if self.state != RendererState::Recording {
             panic!("Called submit(), but the renderer is not recording! Did you call begin()?")
@@ -282,7 +284,9 @@ impl Renderer {
         self.update_buffers(resources)
             .expect("Renderer::update_buffers");
 
-        self.evaluate_tfx_expressions();
+        if evaluate_bytecode {
+            self.evaluate_tfx_expressions();
+        }
 
         self.scope_unk2.bind(2, ShaderStages::all());
         self.scope_unk8.bind(8, ShaderStages::all());

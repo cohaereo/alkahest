@@ -1112,6 +1112,7 @@ pub fn main() -> anyhow::Result<()> {
         alpha_blending: true,
         render_lights: false,
         blend_override: 0,
+        evaluate_bytecode: false,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
@@ -1299,6 +1300,7 @@ pub fn main() -> anyhow::Result<()> {
                         gui_rendersettings.borrow().composition_mode,
                         gui_rendersettings.borrow().blend_override,
                         (cb_composite_lights.buffer().clone(), point_lights.len()),
+                        gui_rendersettings.borrow().evaluate_bytecode,
                     );
 
                     let camera = resources.get::<FpsCamera>().unwrap();

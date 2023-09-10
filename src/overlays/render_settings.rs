@@ -18,6 +18,7 @@ pub struct RenderSettingsOverlay {
     pub render_lights: bool,
     pub alpha_blending: bool,
     pub blend_override: usize,
+    pub evaluate_bytecode: bool,
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
@@ -27,6 +28,7 @@ impl OverlayProvider for RenderSettingsOverlay {
             .size([178.0, 72.0], Condition::FirstUseEver)
             .build(|| {
                 ui.checkbox("Render lights", &mut self.render_lights);
+                ui.checkbox("Evaluate TFX bytecode (WIP)", &mut self.evaluate_bytecode);
                 ui.checkbox("Enable color blending", &mut self.alpha_blending);
                 if self.alpha_blending {
                     ui.combo_simple_string(
