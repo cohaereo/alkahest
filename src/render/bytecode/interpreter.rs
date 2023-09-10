@@ -3,7 +3,7 @@ use windows::Win32::Graphics::Direct3D11::D3D11_MAP_WRITE_NO_OVERWRITE;
 
 use crate::render::{renderer::Renderer, ConstantBuffer};
 
-use super::opcodes::TfxBytecodeOp;
+use super::{externs::TfxExtern, opcodes::TfxBytecodeOp};
 
 pub struct TfxBytecodeInterpreter {
     opcodes: Vec<TfxBytecodeOp>,
@@ -20,7 +20,7 @@ impl TfxBytecodeInterpreter {
 
     pub fn evaluate(
         &mut self,
-        _renderer: &Renderer,
+        renderer: &Renderer,
         buffer: &ConstantBuffer<Vec4>,
         constants: &[Vec4],
     ) -> anyhow::Result<()> {
@@ -33,7 +33,10 @@ impl TfxBytecodeInterpreter {
 
         for op in &self.opcodes {
             match op {
-                // TfxBytecodeOp::LoadExtern { extern_, element } => {}
+                TfxBytecodeOp::LoadExtern { extern_, element } => {
+                    let v = self.get_extern(renderer, *extern_, *element)?;
+                    self.stack.push(v);
+                }
                 TfxBytecodeOp::LoadConstant { constant_index } => {
                     self.stack.push(constants[*constant_index as usize]);
                 }
@@ -47,5 +50,29 @@ impl TfxBytecodeInterpreter {
         }
 
         Ok(())
+    }
+
+    pub fn get_extern(
+        &self,
+        renderer: &Renderer,
+        extern_: TfxExtern,
+        element: u8,
+    ) -> anyhow::Result<Vec4> {
+        match extern_ {
+            TfxExtern::Frame => match element {
+                0 => Ok(Vec4::new(
+                    renderer.start_time.elapsed().as_secs_f32(),
+                    renderer.start_time.elapsed().as_secs_f32(),
+                    renderer.delta_time,
+                    1.0,
+                )),
+                1 => Ok(Vec4::ONE),  // Exposure scales
+                4 => Ok(Vec4::ZERO), // Stubbed
+                u => anyhow::bail!("Unsupported element {u} for extern {extern_:?}"),
+            },
+            u => {
+                anyhow::bail!("Unsupported extern {u:?}[{element}]")
+            }
+        }
     }
 }
