@@ -46,9 +46,9 @@ pub struct Renderer {
     scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
 
-    start_time: Instant,
-    last_frame: Instant,
-    delta_time: f32,
+    pub start_time: Instant,
+    pub last_frame: Instant,
+    pub delta_time: f32,
 
     pub render_data: RenderDataManager,
 
@@ -281,6 +281,8 @@ impl Renderer {
 
         self.update_buffers(resources)
             .expect("Renderer::update_buffers");
+
+        self.evaluate_tfx_expressions();
 
         self.scope_unk2.bind(2, ShaderStages::all());
         self.scope_unk8.bind(8, ShaderStages::all());
@@ -763,6 +765,17 @@ impl Renderer {
                 0.0,
                 0,
             );
+        }
+    }
+
+    fn evaluate_tfx_expressions(&self) {
+        let _span = info_span!(
+            "Evaluating TFX bytecode",
+            shader_count = self.render_data.data().materials.len()
+        )
+        .entered();
+        for m in self.render_data.data_mut().materials.values_mut() {
+            m.evaluate_bytecode(self)
         }
     }
 }

@@ -48,6 +48,8 @@ obj = "0.10.2"
 bitfield-struct = "0.5.3"
 genmesh = "0.6.2"
 crossbeam = "0.8.2"
+num-traits = "0.2.16"
+num-derive = "0.4.0"
 
 [features]
 default = []

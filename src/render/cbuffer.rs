@@ -132,6 +132,21 @@ impl<T> ConstantBuffer<T> {
     //     Ok(())
     // }
 
+    pub fn map(&self, mode: D3D11_MAP) -> anyhow::Result<BufferMapGuard<T>> {
+        let ptr = unsafe {
+            self.dcs
+                .context()
+                .Map(&self.buffer, 0, mode, 0)
+                .context("Failed to map ConstantBuffer")?
+        };
+
+        Ok(BufferMapGuard {
+            ptr: ptr.pData as _,
+            buffer: self.buffer.clone(),
+            dcs: self.dcs.clone(),
+        })
+    }
+
     pub fn buffer(&self) -> &ID3D11Buffer {
         &self.buffer
     }
@@ -156,5 +171,17 @@ impl<T> ConstantBuffer<T> {
                     .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
         }
+    }
+}
+
+pub struct BufferMapGuard<T: Sized> {
+    pub ptr: *mut T,
+    buffer: ID3D11Buffer,
+    dcs: Arc<DeviceContextSwapchain>,
+}
+
+impl<T> Drop for BufferMapGuard<T> {
+    fn drop(&mut self) {
+        unsafe { self.dcs.context().Unmap(&self.buffer, 0) }
     }
 }

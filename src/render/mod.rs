@@ -1,3 +1,4 @@
+pub mod bytecode;
 pub mod cbuffer;
 pub mod color;
 pub mod data;

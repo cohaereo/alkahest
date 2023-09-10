@@ -1,10 +1,16 @@
 use std::ops::Deref;
+use std::sync::Arc;
 
-use crate::render::{DeviceContextSwapchain, RenderData};
+use crate::packages::package_manager;
+use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
+use crate::render::bytecode::opcodes::TfxBytecodeOp;
+use crate::render::renderer::Renderer;
+use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
+use glam::Vec4;
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk808071e8 {
@@ -26,8 +32,8 @@ pub struct Unk808071e8 {
     pub unk4c: u32,
     pub vs_textures: TablePointer<Unk80807211>,
     pub unk60: u64,
-    pub unk68: TablePointer<u8>,
-    pub unk78: TablePointer<Vector4>,
+    pub vs_bytecode: TablePointer<u8>,
+    pub vs_bytecode_constants: TablePointer<Vector4>,
     pub vs_samplers: TablePointer<Unk808073f3>,
     pub unk98: TablePointer<Vector4>,
     pub unka8: [u32; 9],
@@ -39,8 +45,8 @@ pub struct Unk808071e8 {
     pub unk2cc: u32,
     pub ps_textures: TablePointer<Unk80807211>,
     pub unk2e0: u64,
-    pub unk2e8: TablePointer<u8>,
-    pub unk2f8: TablePointer<Vector4>,
+    pub ps_bytecode: TablePointer<u8>,
+    pub ps_bytecode_constants: TablePointer<Vector4>,
     pub ps_samplers: TablePointer<Unk808073f3>,
     pub unk318: TablePointer<Vector4>,
     pub unk328: [u32; 9],
@@ -66,13 +72,100 @@ pub struct Unk808073f3 {
 
 pub struct Material {
     pub mat: Unk808071e8,
-    pub tag: TagHash,
+    tag: TagHash,
+
+    pub cb0_vs: Option<ConstantBuffer<Vec4>>,
+    tfx_bytecode_vs: Option<TfxBytecodeInterpreter>,
+    pub cb0_ps: Option<ConstantBuffer<Vec4>>,
+    tfx_bytecode_ps: Option<TfxBytecodeInterpreter>,
 }
 
 impl Material {
-    pub fn tag(&self) -> TagHash {
-        self.tag
+    pub fn load(dcs: Arc<DeviceContextSwapchain>, mat: Unk808071e8, tag: TagHash) -> Self {
+        let cb0_vs = if mat.unkcc.is_valid() {
+            let buffer_header_ref = package_manager().get_entry(mat.unkcc).unwrap().reference;
+
+            let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
+            let data = bytemuck::cast_slice(&data_raw);
+
+            trace!(
+                "Read {} elements cbuffer from {buffer_header_ref:?}",
+                data.len()
+            );
+            let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
+
+            Some(buf)
+        } else if mat.unk98.len() > 1
+            && mat
+                .unk98
+                .iter()
+                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+        {
+            trace!("Loading float4 cbuffer with {} elements", mat.unk318.len());
+            let buf =
+                ConstantBuffer::create_array_init(dcs.clone(), bytemuck::cast_slice(&mat.unk98))
+                    .unwrap();
+
+            Some(buf)
+        } else {
+            trace!("Loading default float4 cbuffer");
+            let buf =
+                ConstantBuffer::create_array_init(dcs.clone(), &[Vec4::new(1.0, 1.0, 1.0, 1.0)])
+                    .unwrap();
+
+            Some(buf)
+        };
+
+        let cb0_ps = if mat.unk34c.is_valid() {
+            let buffer_header_ref = package_manager().get_entry(mat.unk34c).unwrap().reference;
+
+            let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
+
+            let data = bytemuck::cast_slice(&data_raw);
+            trace!(
+                "Read {} elements cbuffer from {buffer_header_ref:?}",
+                data.len()
+            );
+            let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
+
+            Some(buf)
+        } else if !mat.unk318.is_empty()
+            && mat
+                .unk318
+                .iter()
+                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
+        {
+            trace!("Loading float4 cbuffer with {} elements", mat.unk318.len());
+            let buf =
+                ConstantBuffer::create_array_init(dcs.clone(), bytemuck::cast_slice(&mat.unk318))
+                    .unwrap();
+
+            Some(buf)
+        } else {
+            None
+        };
+
+        let tfx_bytecode_vs = TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little)
+            .ok()
+            .map(TfxBytecodeInterpreter::new);
+
+        let tfx_bytecode_ps = TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little)
+            .ok()
+            .map(TfxBytecodeInterpreter::new);
+
+        Self {
+            mat,
+            tag,
+            cb0_vs,
+            tfx_bytecode_vs,
+            cb0_ps,
+            tfx_bytecode_ps,
+        }
     }
+
+    // pub fn tag(&self) -> TagHash {
+    //     self.tag
+    // }
 
     pub fn bind(
         &self,
@@ -93,14 +186,14 @@ impl Material {
                 );
             }
 
-            if let Some(cbuffer) = render_data.cbuffers_ps.get(&self.tag().into()) {
+            if let Some(ref cbuffer) = self.cb0_ps {
                 dcs.context()
                     .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
             } else {
                 dcs.context().PSSetConstantBuffers(0, Some(&[None]));
             }
 
-            if let Some(cbuffer) = render_data.cbuffers_vs.get(&self.tag().into()) {
+            if let Some(ref cbuffer) = self.cb0_vs {
                 dcs.context()
                     .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
             } else {
@@ -141,6 +234,52 @@ impl Material {
         }
 
         Ok(())
+    }
+
+    pub fn evaluate_bytecode(&mut self, renderer: &Renderer) {
+        if let Some(ref cb0_vs) = self.cb0_vs {
+            if self.tfx_bytecode_vs.is_some() {
+                let _span = info_span!("Evaluating TFX bytecode (VS)").entered();
+                let res = self.tfx_bytecode_vs.as_mut().unwrap().evaluate(
+                    renderer,
+                    cb0_vs,
+                    if self.mat.vs_bytecode_constants.is_empty() {
+                        &[]
+                    } else {
+                        bytemuck::cast_slice(&self.mat.vs_bytecode_constants)
+                    },
+                );
+                if let Err(e) = res {
+                    error!(
+                        "TFX bytecode evaluation failed for {} (VS), disabling: {e}",
+                        self.tag
+                    );
+                    self.tfx_bytecode_vs = None;
+                }
+            }
+        }
+
+        if let Some(ref cb0_ps) = self.cb0_ps {
+            if self.tfx_bytecode_ps.is_some() {
+                let _span = info_span!("Evaluating TFX bytecode (PS)").entered();
+                let res = self.tfx_bytecode_ps.as_mut().unwrap().evaluate(
+                    renderer,
+                    cb0_ps,
+                    if self.mat.ps_bytecode_constants.is_empty() {
+                        &[]
+                    } else {
+                        bytemuck::cast_slice(&self.mat.ps_bytecode_constants)
+                    },
+                );
+                if let Err(e) = res {
+                    error!(
+                        "TFX bytecode evaluation failed for {} (PS), disabling: {e}",
+                        self.tag
+                    );
+                    self.tfx_bytecode_ps = None;
+                }
+            }
+        }
     }
 
     pub fn unbind_textures(&self, dcs: &DeviceContextSwapchain) {

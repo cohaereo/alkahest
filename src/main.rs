@@ -73,7 +73,7 @@ use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::types::{Vector4, AABB};
+use crate::types::AABB;
 use crate::vertex_layout::InputElement;
 
 mod camera;
@@ -266,8 +266,6 @@ pub fn main() -> anyhow::Result<()> {
     let mut vshader_map: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
         Default::default();
     let mut pshader_map: IntMap<u32, (ID3D11PixelShader, Vec<InputElement>)> = Default::default();
-    let mut cbuffer_map_vs: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
-    let mut cbuffer_map_ps: IntMap<u32, ConstantBuffer<Vector4>> = Default::default();
     let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
     let mut maps: Vec<MapData> = vec![];
@@ -353,11 +351,11 @@ pub fn main() -> anyhow::Result<()> {
                                     if p.material.is_valid() {
                                         material_map.insert(
                                             p.material.0,
-                                            Material {
-                                                mat: package_manager()
-                                                    .read_tag_struct(p.material)?,
-                                                tag: p.material,
-                                            },
+                                            Material::load(
+                                                dcs.clone(),
+                                                package_manager().read_tag_struct(p.material)?,
+                                                p.material,
+                                            ),
                                         );
                                     }
                                 }
@@ -691,13 +689,8 @@ pub fn main() -> anyhow::Result<()> {
                     let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
 
                     for m in &materials {
-                        material_map.insert(
-                            m.tag().0,
-                            Material {
-                                mat: m.0.clone(),
-                                tag: m.tag(),
-                            },
-                        );
+                        material_map
+                            .insert(m.tag().0, Material::load(dcs.clone(), m.0.clone(), m.tag()));
                     }
 
                     for m in &model.meshes {
@@ -705,10 +698,11 @@ pub fn main() -> anyhow::Result<()> {
                             if p.material.is_valid() {
                                 material_map.insert(
                                     p.material.0,
-                                    Material {
-                                        mat: package_manager().read_tag_struct(p.material)?,
-                                        tag: p.material,
-                                    },
+                                    Material::load(
+                                        dcs.clone(),
+                                        package_manager().read_tag_struct(p.material)?,
+                                        p.material,
+                                    ),
                                 );
                             }
                         }
@@ -826,10 +820,11 @@ pub fn main() -> anyhow::Result<()> {
                 if m.is_valid() {
                     material_map.insert(
                         m.0,
-                        Material {
-                            mat: package_manager().read_tag_struct(*m).unwrap(),
-                            tag: *m,
-                        },
+                        Material::load(
+                            dcs.clone(),
+                            package_manager().read_tag_struct(*m).unwrap(),
+                            *m,
+                        ),
                     );
                 }
             }
@@ -838,10 +833,11 @@ pub fn main() -> anyhow::Result<()> {
                 if m.is_valid() {
                     material_map.insert(
                         m.0,
-                        Material {
-                            mat: package_manager().read_tag_struct(m).unwrap(),
-                            tag: m,
-                        },
+                        Material::load(
+                            dcs.clone(),
+                            package_manager().read_tag_struct(m).unwrap(),
+                            m,
+                        ),
                     );
                 }
             }
@@ -1002,76 +998,6 @@ pub fn main() -> anyhow::Result<()> {
                     }
                 });
             }
-
-            if m.unkcc.is_valid() {
-                let buffer_header_ref = package_manager().get_entry(m.unkcc).unwrap().reference;
-
-                let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
-                let data = bytemuck::cast_slice(&data_raw);
-
-                trace!(
-                    "Read {} elements cbuffer from {buffer_header_ref:?}",
-                    data.len()
-                );
-                let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
-
-                cbuffer_map_vs.insert(*t, buf);
-            } else if m.unk98.len() > 1
-                && m.unk98
-                    .iter()
-                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-            {
-                trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
-                let buf = ConstantBuffer::create_array_init(dcs.clone(), &m.unk98).unwrap();
-
-                cbuffer_map_vs.insert(*t, buf);
-            } else {
-                trace!("Loading default float4 cbuffer");
-                let buf = ConstantBuffer::create_array_init(
-                    dcs.clone(),
-                    &[Vector4 {
-                        x: 1.0,
-                        y: 1.0,
-                        z: 1.0,
-                        w: 1.0,
-                    }],
-                )
-                .unwrap();
-
-                cbuffer_map_vs.insert(*t, buf);
-            }
-
-            if m.unk34c.is_valid() {
-                let buffer_header_ref = package_manager().get_entry(m.unk34c).unwrap().reference;
-
-                let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
-                // {
-                //     let data_mod: &mut [Vec4] = bytemuck::cast_slice_mut(&mut data_raw);
-                //     if data_mod.len() >= 2 {
-                //         if data_mod[1].abs().max_element() == 0.0 {
-                //             data_mod[1] = Vec4::ONE;
-                //         }
-                //     }
-                // }
-
-                let data = bytemuck::cast_slice(&data_raw);
-                trace!(
-                    "Read {} elements cbuffer from {buffer_header_ref:?}",
-                    data.len()
-                );
-                let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
-
-                cbuffer_map_ps.insert(*t, buf);
-            } else if !m.unk318.is_empty()
-                && m.unk318
-                    .iter()
-                    .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-            {
-                trace!("Loading float4 cbuffer with {} elements", m.unk318.len());
-                let buf = ConstantBuffer::create_array_init(dcs.clone(), &m.unk318).unwrap();
-
-                cbuffer_map_ps.insert(*t, buf);
-            }
         }
     });
 
@@ -1080,6 +1006,8 @@ pub fn main() -> anyhow::Result<()> {
         vshader_map.len(),
         pshader_map.len()
     );
+
+    info!("Loaded {} materials", material_map.len());
 
     for m in material_map.values() {
         for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
@@ -1218,8 +1146,6 @@ pub fn main() -> anyhow::Result<()> {
         data.materials = material_map;
         data.vshaders = vshader_map;
         data.pshaders = pshader_map;
-        data.cbuffers_vs = cbuffer_map_vs;
-        data.cbuffers_ps = cbuffer_map_ps;
         data.samplers = sampler_map;
     };
 
