@@ -8,6 +8,7 @@ use super::{externs::TfxExtern, opcodes::TfxBytecodeOp};
 pub struct TfxBytecodeInterpreter {
     opcodes: Vec<TfxBytecodeOp>,
     stack: Vec<Vec4>,
+    operand_stack: Vec<Vec4>,
 }
 
 impl TfxBytecodeInterpreter {
@@ -15,6 +16,7 @@ impl TfxBytecodeInterpreter {
         Self {
             opcodes,
             stack: Vec::with_capacity(8),
+            operand_stack: Vec::with_capacity(8),
         }
     }
 
@@ -37,8 +39,17 @@ impl TfxBytecodeInterpreter {
                     let v = self.get_extern(renderer, *extern_, *element)?;
                     self.stack.push(v);
                 }
-                TfxBytecodeOp::LoadConstant { constant_index } => {
+                TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     self.stack.push(constants[*constant_index as usize]);
+                }
+                TfxBytecodeOp::UnkLoadConstant2 { constant_index } => {
+                    self.operand_stack.push(constants[*constant_index as usize]);
+                }
+                // TODO(cohae): Seems to be an arithmic op
+                TfxBytecodeOp::Unk03 => {
+                    if let (Some(v1), Some(v2)) = (self.stack.pop(), self.operand_stack.pop()) {
+                        self.stack.push(v1 * v2);
+                    }
                 }
                 TfxBytecodeOp::StoreToBuffer { element } => {
                     if let Some(value) = self.stack.pop() {
