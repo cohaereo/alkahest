@@ -317,6 +317,8 @@ impl Renderer {
         }
         //endregion
 
+        self.gbuffer.depth.copy_depth(self.dcs.context());
+
         self.run_deferred_shading(resources, draw_lights, compositor_mode, lights);
 
         unsafe {
@@ -352,7 +354,7 @@ impl Renderer {
             unsafe {
                 self.dcs.context().PSSetShaderResources(
                     10,
-                    Some(&[Some(self.gbuffer.depth.texture_view.clone())]),
+                    Some(&[Some(self.gbuffer.depth.texture_copy_view.clone())]),
                 );
             }
 

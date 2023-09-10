@@ -126,6 +126,9 @@ pub struct DepthState {
     pub state_readonly: ID3D11DepthStencilState,
     pub view: ID3D11DepthStencilView,
     pub texture_view: ID3D11ShaderResourceView,
+
+    pub texture_copy: ID3D11Texture2D,
+    pub texture_copy_view: ID3D11ShaderResourceView,
 }
 
 impl DepthState {
@@ -235,13 +238,61 @@ impl DepthState {
             )?
         };
 
+        let texture_copy = unsafe {
+            device
+                .CreateTexture2D(
+                    &D3D11_TEXTURE2D_DESC {
+                        Width: size.0,
+                        Height: size.1,
+                        MipLevels: 1,
+                        ArraySize: 1,
+                        Format: DXGI_FORMAT_R32_TYPELESS,
+                        SampleDesc: DXGI_SAMPLE_DESC {
+                            Count: 1,
+                            Quality: 0,
+                        },
+                        Usage: D3D11_USAGE_DEFAULT,
+                        BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                        CPUAccessFlags: Default::default(),
+                        MiscFlags: Default::default(),
+                    },
+                    None,
+                )
+                .context("Failed to create depth texture")?
+        };
+
+        let texture_copy_view = unsafe {
+            device.CreateShaderResourceView(
+                &texture_copy,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: DXGI_FORMAT_R32_FLOAT,
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Texture2D: D3D11_TEX2D_SRV {
+                            MostDetailedMip: 0,
+                            MipLevels: 1,
+                        },
+                    },
+                }),
+            )?
+        };
+
         Ok(Self {
             texture,
             state,
             state_readonly,
             view,
             texture_view,
+            texture_copy,
+            texture_copy_view,
         })
+    }
+
+    /// Copies the depth texture to texture_copy
+    pub fn copy_depth(&self, context: &ID3D11DeviceContext) {
+        unsafe {
+            context.CopyResource(&self.texture_copy, &self.texture);
+        }
     }
 
     pub fn resize(&mut self, new_size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<()> {

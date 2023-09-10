@@ -353,10 +353,11 @@ pub fn main() -> anyhow::Result<()> {
                                     if p.material.is_valid() {
                                         material_map.insert(
                                             p.material.0,
-                                            Material(
-                                                package_manager().read_tag_struct(p.material)?,
-                                                p.material,
-                                            ),
+                                            Material {
+                                                mat: package_manager()
+                                                    .read_tag_struct(p.material)?,
+                                                tag: p.material,
+                                            },
                                         );
                                     }
                                 }
@@ -690,7 +691,13 @@ pub fn main() -> anyhow::Result<()> {
                     let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
 
                     for m in &materials {
-                        material_map.insert(m.tag().0, Material(m.0.clone(), m.tag()));
+                        material_map.insert(
+                            m.tag().0,
+                            Material {
+                                mat: m.0.clone(),
+                                tag: m.tag(),
+                            },
+                        );
                     }
 
                     for m in &model.meshes {
@@ -698,10 +705,10 @@ pub fn main() -> anyhow::Result<()> {
                             if p.material.is_valid() {
                                 material_map.insert(
                                     p.material.0,
-                                    Material(
-                                        package_manager().read_tag_struct(p.material)?,
-                                        p.material,
-                                    ),
+                                    Material {
+                                        mat: package_manager().read_tag_struct(p.material)?,
+                                        tag: p.material,
+                                    },
                                 );
                             }
                         }
@@ -819,7 +826,10 @@ pub fn main() -> anyhow::Result<()> {
                 if m.is_valid() {
                     material_map.insert(
                         m.0,
-                        Material(package_manager().read_tag_struct(*m).unwrap(), *m),
+                        Material {
+                            mat: package_manager().read_tag_struct(*m).unwrap(),
+                            tag: *m,
+                        },
                     );
                 }
             }
@@ -828,7 +838,10 @@ pub fn main() -> anyhow::Result<()> {
                 if m.is_valid() {
                     material_map.insert(
                         m.0,
-                        Material(package_manager().read_tag_struct(m).unwrap(), m),
+                        Material {
+                            mat: package_manager().read_tag_struct(m).unwrap(),
+                            tag: m,
+                        },
                     );
                 }
             }

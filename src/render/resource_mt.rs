@@ -26,40 +26,44 @@ pub fn thread_textures(
     data: Arc<RwLock<RenderData>>,
 ) -> mpsc::Sender<TagHash> {
     let (tx, rx) = mpsc::unbounded::<TagHash>();
-    std::thread::spawn(move || {
-        while let Ok(hash) = rx.recv() {
-            if hash.is_valid() && !data.read().textures.contains_key(&hash.0) {
-                match Texture::load(&dcs, hash) {
-                    Ok(t) => {
-                        data.write().textures.insert(hash.0, t);
+
+    std::thread::Builder::new()
+        .name("Texture loader".into())
+        .spawn(move || {
+            while let Ok(hash) = rx.recv() {
+                if hash.is_valid() && !data.read().textures.contains_key(&hash.0) {
+                    match Texture::load(&dcs, hash) {
+                        Ok(t) => {
+                            data.write().textures.insert(hash.0, t);
+                        }
+                        Err(e) => error!("Failed to load texture {hash}: {e}"),
                     }
-                    Err(e) => error!("Failed to load texture {hash}: {e}"),
+                }
+
+                let status = STATUS_TEXTURES.read().clone();
+                if rx.is_empty() {
+                    *STATUS_TEXTURES.write() = LoadingThreadState::Idle;
+                } else {
+                    match status {
+                        LoadingThreadState::Idle => {
+                            *STATUS_TEXTURES.write() = LoadingThreadState::Loading {
+                                start_time: Instant::now(),
+                                remaining: rx.len(),
+                            }
+                        }
+                        LoadingThreadState::Loading { start_time, .. } => {
+                            *STATUS_TEXTURES.write() = LoadingThreadState::Loading {
+                                start_time,
+                                remaining: rx.len(),
+                            }
+                        }
+                    }
                 }
             }
 
-            let status = STATUS_TEXTURES.read().clone();
-            if rx.is_empty() {
-                *STATUS_TEXTURES.write() = LoadingThreadState::Idle;
-            } else {
-                match status {
-                    LoadingThreadState::Idle => {
-                        *STATUS_TEXTURES.write() = LoadingThreadState::Loading {
-                            start_time: Instant::now(),
-                            remaining: rx.len(),
-                        }
-                    }
-                    LoadingThreadState::Loading { start_time, .. } => {
-                        *STATUS_TEXTURES.write() = LoadingThreadState::Loading {
-                            start_time,
-                            remaining: rx.len(),
-                        }
-                    }
-                }
-            }
-        }
-
-        info!("Texture loading thread exited");
-    });
+            info!("Texture loading thread exited");
+        })
+        .unwrap();
 
     tx
 }

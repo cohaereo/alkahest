@@ -28,7 +28,7 @@ pub struct RenderData {
 impl RenderData {
     // Get the shading technique for a material based on it's pixel shader output signature
     pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingTechnique> {
-        let pixel_shader = self.materials.get(&material.0)?.0.pixel_shader;
+        let pixel_shader = self.materials.get(&material.0)?.pixel_shader;
 
         if self.pshaders.get(&pixel_shader.0)?.1.len() == 1 {
             Some(ShadingTechnique::Forward)

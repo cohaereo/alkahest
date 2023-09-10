@@ -77,6 +77,10 @@ impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> _TablePointer<O, C, T
     pub fn len(&self) -> usize {
         self.data.len()
     }
+
+    pub fn data(&self) -> &[T] {
+        &self.data
+    }
 }
 
 impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> Deref for _TablePointer<O, C, T> {

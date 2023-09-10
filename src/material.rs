@@ -64,11 +64,14 @@ pub struct Unk808073f3 {
     pub unkc: u32,
 }
 
-pub struct Material(pub Unk808071e8, pub TagHash);
+pub struct Material {
+    pub mat: Unk808071e8,
+    pub tag: TagHash,
+}
 
 impl Material {
     pub fn tag(&self) -> TagHash {
-        self.1
+        self.tag
     }
 
     pub fn bind(
@@ -157,7 +160,7 @@ impl Deref for Material {
     type Target = Unk808071e8;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.mat
     }
 }
 #[derive(BinRead, Debug)]
