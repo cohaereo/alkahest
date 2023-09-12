@@ -2,7 +2,6 @@ use bitflags::bitflags;
 use destiny_pkg::TagHash;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 // #[bitfield(u64)]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -158,8 +157,7 @@ pub struct DrawCall {
     // TODO: Get these from render data
     pub vertex_buffer: ID3D11Buffer,
     pub vertex_buffer_stride: u32,
-    pub index_buffer: ID3D11Buffer,
-    pub index_format: DXGI_FORMAT,
+    pub index_buffer: TagHash,
 
     // TODO(cohae): Will this be used for anything other than instances/rigid_model? Can just be a pointer or an id or whatevs otherwise
     // pub buffer_bindings: Vec<ConstantBufferBinding>,

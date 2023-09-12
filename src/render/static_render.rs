@@ -1,4 +1,4 @@
-use crate::entity::{EPrimitiveType, IndexBufferHeader, VertexBufferHeader};
+use crate::entity::{EPrimitiveType, VertexBufferHeader};
 use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
 use anyhow::{ensure, Context};
@@ -11,9 +11,6 @@ use crate::packages::package_manager;
 use tracing::warn;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::{
-    DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
-};
 
 use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
 use super::renderer::Renderer;
@@ -22,8 +19,7 @@ pub struct StaticModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
     combined_vertex_stride: u32,
 
-    index_buffer: ID3D11Buffer,
-    index_format: DXGI_FORMAT,
+    index_buffer: TagHash,
 }
 
 pub struct StaticModel {
@@ -59,6 +55,7 @@ impl StaticModel {
     pub fn load(
         model: Unk808071a7,
         device: &ID3D11Device,
+        renderer: &Renderer,
         model_hash: TagHash,
     ) -> anyhow::Result<StaticModel> {
         let pm = package_manager();
@@ -93,26 +90,7 @@ impl StaticModel {
                 vertex2_data = Some(pm.read_tag(t).unwrap());
             }
 
-            let index_header: IndexBufferHeader = pm.read_tag_struct(*index_buffer_hash).unwrap();
-            let t = pm.get_entry(*index_buffer_hash).unwrap().reference;
-            let index_data = pm.read_tag(t).unwrap();
-
-            let index_buffer = unsafe {
-                device
-                    .CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            ByteWidth: index_data.len() as _,
-                            Usage: D3D11_USAGE_IMMUTABLE,
-                            BindFlags: D3D11_BIND_INDEX_BUFFER,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: index_data.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                    )
-                    .context("Failed to create index buffer")?
-            };
+            renderer.render_data.load_buffer(*index_buffer_hash);
 
             let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
                 vertex_data
@@ -155,12 +133,7 @@ impl StaticModel {
                 combined_vertex_buffer,
                 combined_vertex_stride: (vertex_header.stride as u32
                     + vertex2_stride.unwrap_or_default()),
-                index_buffer,
-                index_format: if index_header.is_32bit {
-                    DXGI_FORMAT_R32_UINT
-                } else {
-                    DXGI_FORMAT_R16_UINT
-                },
+                index_buffer: *index_buffer_hash,
             })
         }
 
@@ -168,7 +141,7 @@ impl StaticModel {
             decal_parts: model
                 .unk20
                 .iter()
-                .map(|m| StaticOverlayModel::load(m.clone(), device).unwrap())
+                .map(|m| StaticOverlayModel::load(m.clone(), device, renderer).unwrap())
                 .collect_vec(),
             buffers,
             model,
@@ -218,8 +191,7 @@ impl StaticModel {
                         DrawCall {
                             vertex_buffer: buffers.combined_vertex_buffer.clone(),
                             vertex_buffer_stride: buffers.combined_vertex_stride,
-                            index_buffer: buffers.index_buffer.clone(),
-                            index_format: buffers.index_format,
+                            index_buffer: buffers.index_buffer,
                             cb11: Some(instance_buffer.clone()),
                             variant_material: None,
                             index_start: p.index_start,
@@ -243,7 +215,11 @@ pub struct StaticOverlayModel {
 }
 
 impl StaticOverlayModel {
-    pub fn load(model: Unk80807193, device: &ID3D11Device) -> anyhow::Result<StaticOverlayModel> {
+    pub fn load(
+        model: Unk80807193,
+        device: &ID3D11Device,
+        renderer: &Renderer,
+    ) -> anyhow::Result<StaticOverlayModel> {
         let pm = package_manager();
         let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
 
@@ -265,26 +241,7 @@ impl StaticOverlayModel {
             vertex2_data = Some(pm.read_tag(t).unwrap());
         }
 
-        let index_header: IndexBufferHeader = pm.read_tag_struct(model.index_buffer).unwrap();
-        let t = pm.get_entry(model.index_buffer).unwrap().reference;
-        let index_data = pm.read_tag(t).unwrap();
-
-        let index_buffer = unsafe {
-            device
-                .CreateBuffer(
-                    &D3D11_BUFFER_DESC {
-                        ByteWidth: index_data.len() as _,
-                        Usage: D3D11_USAGE_IMMUTABLE,
-                        BindFlags: D3D11_BIND_INDEX_BUFFER,
-                        ..Default::default()
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: index_data.as_ptr() as _,
-                        ..Default::default()
-                    }),
-                )
-                .context("Failed to create index buffer")?
-        };
+        renderer.render_data.load_buffer(model.index_buffer);
 
         let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
             vertex_data
@@ -318,12 +275,7 @@ impl StaticOverlayModel {
                 combined_vertex_buffer,
                 combined_vertex_stride: (vertex_header.stride as u32
                     + vertex2_stride.unwrap_or_default()),
-                index_buffer,
-                index_format: if index_header.is_32bit {
-                    DXGI_FORMAT_R32_UINT
-                } else {
-                    DXGI_FORMAT_R16_UINT
-                },
+                index_buffer: model.index_buffer,
             },
             model,
         })
@@ -351,8 +303,7 @@ impl StaticOverlayModel {
             DrawCall {
                 vertex_buffer: self.buffers.combined_vertex_buffer.clone(),
                 vertex_buffer_stride: self.buffers.combined_vertex_stride,
-                index_buffer: self.buffers.index_buffer.clone(),
-                index_format: self.buffers.index_format,
+                index_buffer: self.buffers.index_buffer,
                 cb11: Some(instance_buffer),
                 variant_material: None,
                 index_start: self.model.index_start,

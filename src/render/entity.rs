@@ -5,10 +5,8 @@ use glam::Vec4;
 
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::*;
 
 use crate::entity::EPrimitiveType;
-use crate::entity::IndexBufferHeader;
 use crate::entity::Unk808072c5;
 use crate::entity::Unk8080737e;
 use crate::entity::Unk808073a5;
@@ -27,8 +25,7 @@ pub struct EntityModelBuffer {
     combined_vertex_buffer: ID3D11Buffer,
     combined_vertex_stride: u32,
 
-    index_buffer: ID3D11Buffer,
-    index_format: DXGI_FORMAT,
+    index_buffer: TagHash,
 }
 
 pub struct EntityRenderer {
@@ -74,6 +71,7 @@ impl EntityRenderer {
         model: Unk808073a5,
         material_map: Vec<Unk808072c5>,
         materials: Vec<TagHash>,
+        renderer: &Renderer,
         dcs: &DeviceContextSwapchain,
     ) -> anyhow::Result<Self> {
         let mut meshes = vec![];
@@ -105,26 +103,7 @@ impl EntityRenderer {
                 vertex2_data = Some(pm.read_tag(t).unwrap());
             }
 
-            let index_header: IndexBufferHeader = pm.read_tag_struct(mesh.index_buffer).unwrap();
-            let t = pm.get_entry(mesh.index_buffer).unwrap().reference;
-            let index_data = pm.read_tag(t).unwrap();
-
-            let index_buffer = unsafe {
-                dcs.device
-                    .CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            ByteWidth: index_data.len() as _,
-                            Usage: D3D11_USAGE_IMMUTABLE,
-                            BindFlags: D3D11_BIND_INDEX_BUFFER,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: index_data.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                    )
-                    .context("Failed to create index buffer")?
-            };
+            renderer.render_data.load_buffer(mesh.index_buffer);
 
             let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
                 vertex_data
@@ -158,12 +137,7 @@ impl EntityRenderer {
                     combined_vertex_buffer,
                     combined_vertex_stride: (vertex_header.stride as u32
                         + vertex2_stride.unwrap_or_default()),
-                    index_buffer,
-                    index_format: if index_header.is_32bit {
-                        DXGI_FORMAT_R32_UINT
-                    } else {
-                        DXGI_FORMAT_R16_UINT
-                    },
+                    index_buffer: mesh.index_buffer,
                 },
                 mesh.parts.to_vec(),
             ))
@@ -255,8 +229,7 @@ impl EntityRenderer {
                     DrawCall {
                         vertex_buffer: buffers.combined_vertex_buffer.clone(),
                         vertex_buffer_stride: buffers.combined_vertex_stride,
-                        index_buffer: buffers.index_buffer.clone(),
-                        index_format: buffers.index_format,
+                        index_buffer: buffers.index_buffer,
                         cb11: Some(cb11.clone()),
                         variant_material,
                         index_start: p.index_start,

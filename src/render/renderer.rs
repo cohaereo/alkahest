@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Instant};
 use glam::Mat4;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
+use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use winit::window::Window;
 
 use crate::dxgi::DxgiFormat;
@@ -497,11 +498,17 @@ impl Renderer {
                 Some(&0),
             );
 
-            self.dcs.context().IASetIndexBuffer(
-                Some(&drawcall.index_buffer),
-                drawcall.index_format,
-                0,
-            );
+            if let Some((index_buffer, index_buffer_format)) =
+                render_data.index_buffers.get(&drawcall.index_buffer.0)
+            {
+                self.dcs.context().IASetIndexBuffer(
+                    Some(index_buffer),
+                    DXGI_FORMAT(*index_buffer_format as _),
+                    0,
+                );
+            } else {
+                return;
+            }
 
             self.dcs
                 .context()

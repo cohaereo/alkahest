@@ -1,20 +1,18 @@
 use std::sync::Arc;
 
-use crate::entity::{IndexBufferHeader, VertexBufferHeader};
+use crate::entity::VertexBufferHeader;
 use crate::map::Unk8080714f;
 
 use crate::packages::package_manager;
 
 use anyhow::Context;
+use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
-    D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
-};
-use windows::Win32::Graphics::Dxgi::Common::{
-    DXGI_FORMAT, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT,
+    ID3D11Buffer, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,
+    D3D11_USAGE_IMMUTABLE,
 };
 
 use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
@@ -28,14 +26,14 @@ pub struct TerrainRenderer {
     combined_vertex_buffer: ID3D11Buffer,
     combined_vertex_stride: u32,
 
-    index_buffer: ID3D11Buffer,
-    index_format: DXGI_FORMAT,
+    index_buffer: TagHash,
 }
 
 impl TerrainRenderer {
     pub fn load(
         terrain: Unk8080714f,
         dcs: Arc<DeviceContextSwapchain>,
+        renderer: &Renderer,
     ) -> anyhow::Result<TerrainRenderer> {
         let pm = package_manager();
         let vertex_header: VertexBufferHeader = pm.read_tag_struct(terrain.vertex_buffer).unwrap();
@@ -55,26 +53,7 @@ impl TerrainRenderer {
             vertex2_data = Some(pm.read_tag(t).unwrap());
         }
 
-        let index_header: IndexBufferHeader = pm.read_tag_struct(terrain.indices).unwrap();
-        let t = pm.get_entry(terrain.indices).unwrap().reference;
-        let index_data = pm.read_tag(t).unwrap();
-
-        let index_buffer = unsafe {
-            dcs.device
-                .CreateBuffer(
-                    &D3D11_BUFFER_DESC {
-                        ByteWidth: index_data.len() as _,
-                        Usage: D3D11_USAGE_IMMUTABLE,
-                        BindFlags: D3D11_BIND_INDEX_BUFFER,
-                        ..Default::default()
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: index_data.as_ptr() as _,
-                        ..Default::default()
-                    }),
-                )
-                .context("Failed to create index buffer")?
-        };
+        renderer.render_data.load_buffer(terrain.indices);
 
         let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
             vertex_data
@@ -125,17 +104,12 @@ impl TerrainRenderer {
         }
 
         Ok(TerrainRenderer {
-            terrain,
             group_cbuffers,
             combined_vertex_buffer,
             combined_vertex_stride: (vertex_header.stride as u32
                 + vertex2_stride.unwrap_or_default()),
-            index_buffer,
-            index_format: if index_header.is_32bit {
-                DXGI_FORMAT_R32_UINT
-            } else {
-                DXGI_FORMAT_R16_UINT
-            },
+            index_buffer: terrain.indices,
+            terrain,
         })
     }
 
@@ -167,8 +141,7 @@ impl TerrainRenderer {
                     DrawCall {
                         vertex_buffer: self.combined_vertex_buffer.clone(),
                         vertex_buffer_stride: self.combined_vertex_stride,
-                        index_buffer: self.index_buffer.clone(),
-                        index_format: self.index_format,
+                        index_buffer: self.index_buffer,
                         cb11: Some(cb11.buffer().clone()),
                         variant_material: None,
                         index_start: part.index_start,

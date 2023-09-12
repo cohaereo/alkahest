@@ -715,6 +715,7 @@ pub fn main() -> anyhow::Result<()> {
                                 model.0,
                                 entity_material_map.to_vec(),
                                 materials.iter().map(|m| m.tag()).collect_vec(),
+                                &renderer,
                                 &dcs,
                             )?,
                         )
@@ -800,7 +801,7 @@ pub fn main() -> anyhow::Result<()> {
                 renderer.render_data.load_texture(t.dyemap);
             }
 
-            match TerrainRenderer::load(header, dcs.clone()) {
+            match TerrainRenderer::load(header, dcs.clone(), &renderer) {
                 Ok(renderer) => {
                     terrain_renderers.insert(t.0, renderer);
                 }
@@ -842,7 +843,7 @@ pub fn main() -> anyhow::Result<()> {
                 }
             }
 
-            match StaticModel::load(mheader, &dcs.device, *almostloadable) {
+            match StaticModel::load(mheader, &dcs.device, &renderer, *almostloadable) {
                 Ok(model) => {
                     static_map.insert(almostloadable.0, Arc::new(model));
                 }
