@@ -1,5 +1,5 @@
 use anyhow::Context;
-use crossbeam::channel as mpsc;
+use crossbeam::channel::{self as mpsc, Receiver};
 use destiny_pkg::TagHash;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -53,14 +53,14 @@ fn update_status(state: &RwLock<LoadingThreadState>, remaining: usize) {
     }
 }
 
-pub fn thread_textures(
+fn spawn_thread_textures(
     dcs: Arc<DeviceContextSwapchain>,
     data: Arc<RwLock<RenderData>>,
-) -> mpsc::Sender<TagHash> {
-    let (tx, rx) = mpsc::unbounded::<TagHash>();
-
+    rx: Receiver<TagHash>,
+    name: &'static str,
+) {
     std::thread::Builder::new()
-        .name("Texture loader".into())
+        .name(name.to_string())
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
                 if hash.is_valid() && !data.read().textures.contains_key(&hash) {
@@ -78,6 +78,16 @@ pub fn thread_textures(
             info!("Texture loading thread exited");
         })
         .unwrap();
+}
+
+pub fn thread_textures(
+    dcs: Arc<DeviceContextSwapchain>,
+    data: Arc<RwLock<RenderData>>,
+) -> mpsc::Sender<TagHash> {
+    let (tx, rx) = mpsc::unbounded::<TagHash>();
+
+    spawn_thread_textures(dcs.clone(), data.clone(), rx.clone(), "Texture loader 1");
+    spawn_thread_textures(dcs, data, rx, "Texture loader 2");
 
     tx
 }
