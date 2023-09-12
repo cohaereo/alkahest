@@ -145,6 +145,24 @@ impl Material {
             None
         };
 
+        // if tag.0 == u32::from_be(0x5c44eb80) {
+        // println!("{}", hex::encode(&mat.ps_bytecode.data()));
+        // let e =
+        //     TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little).unwrap_or_default();
+        // if !e.is_empty() {
+        //     println!("VS {tag} length={}", e.len());
+        //     println!("\t{:#?}", mat.vs_bytecode_constants);
+        //     println!("\t{e:#x?}");
+        // }
+        // let e =
+        //     TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little).unwrap_or_default();
+        // if !e.is_empty() {
+        //     println!("PS {tag} length={}", e.len());
+        //     println!("\t{:#?}", mat.ps_bytecode_constants);
+        //     println!("\t{e:#x?}");
+        // }
+
+        // TODO(cohae): error checking
         let tfx_bytecode_vs = TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little)
             .ok()
             .map(TfxBytecodeInterpreter::new);
