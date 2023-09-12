@@ -16,22 +16,22 @@ use super::{resource_mt, DeviceContextSwapchain};
 
 #[derive(Default)]
 pub struct RenderData {
-    pub materials: IntMap<u32, Material>,
-    pub vshaders: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
-    pub pshaders: IntMap<u32, (ID3D11PixelShader, Vec<InputElement>)>,
-    pub textures: IntMap<u32, Texture>,
-    pub samplers: IntMap<u32, ID3D11SamplerState>,
+    pub materials: IntMap<TagHash, Material>,
+    pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
+    pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)>,
+    pub textures: IntMap<TagHash, Texture>,
+    pub samplers: IntMap<TagHash, ID3D11SamplerState>,
 
-    pub vertex_buffers: IntMap<u32, (ID3D11Buffer, u32)>,
-    pub index_buffers: IntMap<u32, (ID3D11Buffer, DxgiFormat)>,
+    pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32)>,
+    pub index_buffers: IntMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
 }
 
 impl RenderData {
     // Get the shading technique for a material based on it's pixel shader output signature
     pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingTechnique> {
-        let pixel_shader = self.materials.get(&material.0)?.pixel_shader;
+        let pixel_shader = self.materials.get(&material)?.pixel_shader;
 
-        if self.pshaders.get(&pixel_shader.0)?.1.len() == 1 {
+        if self.pshaders.get(&pixel_shader)?.1.len() == 1 {
             Some(ShadingTechnique::Forward)
         } else {
             Some(ShadingTechnique::Deferred)

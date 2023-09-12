@@ -194,13 +194,13 @@ impl Material {
             for (si, s) in self.vs_samplers.iter().enumerate() {
                 dcs.context().VSSetSamplers(
                     1 + si as u32,
-                    Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
+                    Some(&[render_data.samplers.get(&s.sampler).cloned()]),
                 );
             }
             for (si, s) in self.ps_samplers.iter().enumerate() {
                 dcs.context().PSSetSamplers(
                     1 + si as u32,
-                    Some(&[render_data.samplers.get(&s.sampler.0).cloned()]),
+                    Some(&[render_data.samplers.get(&s.sampler).cloned()]),
                 );
             }
 
@@ -218,8 +218,7 @@ impl Material {
                 dcs.context().VSSetConstantBuffers(0, Some(&[None]));
             }
 
-            if let Some((vs, Some(input_layout))) = render_data.vshaders.get(&self.vertex_shader.0)
-            {
+            if let Some((vs, Some(input_layout))) = render_data.vshaders.get(&self.vertex_shader) {
                 dcs.context().IASetInputLayout(input_layout);
                 dcs.context().VSSetShader(vs, None);
             } else {
@@ -227,7 +226,7 @@ impl Material {
                 // anyhow::bail!("No vertex shader/input layout bound");
             }
 
-            if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader.0) {
+            if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader) {
                 dcs.context().PSSetShader(ps, None);
             } else {
                 // TODO: should still be handled, but not here
@@ -236,7 +235,7 @@ impl Material {
 
             for p in &self.vs_textures {
                 // TODO(cohae): Bind error texture on error
-                if let Some(t) = render_data.textures.get(&p.texture.0) {
+                if let Some(t) = render_data.textures.get(&p.texture) {
                     dcs.context()
                         .VSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }
@@ -244,7 +243,7 @@ impl Material {
 
             for p in &self.ps_textures {
                 // TODO(cohae): Bind error texture on error
-                if let Some(t) = render_data.textures.get(&p.texture.0) {
+                if let Some(t) = render_data.textures.get(&p.texture) {
                     dcs.context()
                         .PSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }

@@ -450,7 +450,7 @@ impl Renderer {
 
     fn draw(&mut self, sort: SortValue3d, drawcall: &DrawCall) {
         let render_data = self.render_data.data();
-        if let Some(mat) = render_data.materials.get(&sort.material()) {
+        if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             if mat.unk8 != 1 {
                 return;
             }
@@ -472,7 +472,7 @@ impl Renderer {
         }
 
         if let Some(variant_material) = drawcall.variant_material {
-            if let Some(mat) = render_data.materials.get(&variant_material.0) {
+            if let Some(mat) = render_data.materials.get(&variant_material) {
                 if mat.unk8 != 1 {
                     return;
                 }
@@ -499,7 +499,7 @@ impl Renderer {
             );
 
             if let Some((index_buffer, index_buffer_format)) =
-                render_data.index_buffers.get(&drawcall.index_buffer.0)
+                render_data.index_buffers.get(&drawcall.index_buffer)
             {
                 self.dcs.context().IASetIndexBuffer(
                     Some(index_buffer),
@@ -529,12 +529,12 @@ impl Renderer {
             }
         }
 
-        if let Some(mat) = render_data.materials.get(&sort.material()) {
+        if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             mat.unbind_textures(&self.dcs)
         }
 
         if let Some(variant_material) = drawcall.variant_material {
-            if let Some(mat) = render_data.materials.get(&variant_material.0) {
+            if let Some(mat) = render_data.materials.get(&variant_material) {
                 mat.unbind_textures(&self.dcs)
             }
         }
@@ -575,7 +575,7 @@ impl Renderer {
                 self.render_data
                     .data()
                     .textures
-                    .get(&t.0)
+                    .get(&t)
                     .map(|t| t.view.clone())
             });
 

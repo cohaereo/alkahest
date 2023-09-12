@@ -63,10 +63,10 @@ pub fn thread_textures(
         .name("Texture loader".into())
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
-                if hash.is_valid() && !data.read().textures.contains_key(&hash.0) {
+                if hash.is_valid() && !data.read().textures.contains_key(&hash) {
                     match Texture::load(&dcs, hash) {
                         Ok(t) => {
-                            data.write().textures.insert(hash.0, t);
+                            data.write().textures.insert(hash, t);
                         }
                         Err(e) => error!("Failed to load texture {hash}: {e}"),
                     }
@@ -93,8 +93,8 @@ pub fn thread_buffers(
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
                 if hash.is_valid()
-                    && !render_data.read().vertex_buffers.contains_key(&hash.0)
-                    && !render_data.read().index_buffers.contains_key(&hash.0)
+                    && !render_data.read().vertex_buffers.contains_key(&hash)
+                    && !render_data.read().index_buffers.contains_key(&hash)
                 {
                     if let Ok(entry) = package_manager().get_entry(hash) {
                         match (entry.file_type, entry.file_subtype) {
@@ -124,7 +124,7 @@ pub fn thread_buffers(
                                     };
 
                                     render_data.write().vertex_buffers.insert(
-                                        hash.0,
+                                        hash,
                                         (vertex_buffer, vertex_buffer_header.stride as u32),
                                     );
                                 }
@@ -156,7 +156,7 @@ pub fn thread_buffers(
                                     };
 
                                     render_data.write().index_buffers.insert(
-                                        hash.0,
+                                        hash,
                                         (
                                             index_buffer,
                                             if index_buffer_header.is_32bit {

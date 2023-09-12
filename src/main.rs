@@ -261,12 +261,13 @@ pub fn main() -> anyhow::Result<()> {
     // TODO(cohae): resources should be added to renderdata directly
     let mut renderer = Renderer::create(&window, dcs.clone())?;
 
-    let mut static_map: IntMap<u32, Arc<StaticModel>> = Default::default();
-    let mut material_map: IntMap<u32, Material> = Default::default();
-    let mut vshader_map: IntMap<u32, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
+    let mut static_map: IntMap<TagHash, Arc<StaticModel>> = Default::default();
+    let mut material_map: IntMap<TagHash, Material> = Default::default();
+    let mut vshader_map: IntMap<TagHash, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
         Default::default();
-    let mut pshader_map: IntMap<u32, (ID3D11PixelShader, Vec<InputElement>)> = Default::default();
-    let mut sampler_map: IntMap<u32, ID3D11SamplerState> = Default::default();
+    let mut pshader_map: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
+        Default::default();
+    let mut sampler_map: IntMap<TagHash, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
     let mut maps: Vec<MapData> = vec![];
 
@@ -350,7 +351,7 @@ pub fn main() -> anyhow::Result<()> {
                                 for p in &terrain.mesh_parts {
                                     if p.material.is_valid() {
                                         material_map.insert(
-                                            p.material.0,
+                                            p.material,
                                             Material::load(
                                                 dcs.clone(),
                                                 package_manager().read_tag_struct(p.material)?,
@@ -690,14 +691,14 @@ pub fn main() -> anyhow::Result<()> {
 
                     for m in &materials {
                         material_map
-                            .insert(m.tag().0, Material::load(dcs.clone(), m.0.clone(), m.tag()));
+                            .insert(m.tag(), Material::load(dcs.clone(), m.0.clone(), m.tag()));
                     }
 
                     for m in &model.meshes {
                         for p in &m.parts {
                             if p.material.is_valid() {
                                 material_map.insert(
-                                    p.material.0,
+                                    p.material,
                                     Material::load(
                                         dcs.clone(),
                                         package_manager().read_tag_struct(p.material)?,
@@ -820,7 +821,7 @@ pub fn main() -> anyhow::Result<()> {
             for m in &mheader.materials {
                 if m.is_valid() {
                     material_map.insert(
-                        m.0,
+                        *m,
                         Material::load(
                             dcs.clone(),
                             package_manager().read_tag_struct(*m).unwrap(),
@@ -833,7 +834,7 @@ pub fn main() -> anyhow::Result<()> {
                 let m = m.material;
                 if m.is_valid() {
                     material_map.insert(
-                        m.0,
+                        m,
                         Material::load(
                             dcs.clone(),
                             package_manager().read_tag_struct(m).unwrap(),
@@ -845,7 +846,7 @@ pub fn main() -> anyhow::Result<()> {
 
             match StaticModel::load(mheader, &dcs.device, &renderer, *almostloadable) {
                 Ok(model) => {
-                    static_map.insert(almostloadable.0, Arc::new(model));
+                    static_map.insert(*almostloadable, Arc::new(model));
                 }
                 Err(e) => {
                     error!(model = ?almostloadable, "Failed to load model: {e}");
@@ -867,7 +868,7 @@ pub fn main() -> anyhow::Result<()> {
                         debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
                             .entered();
 
-                    if let Some(model) = static_map.get(&model_hash.0) {
+                    if let Some(model) = static_map.get(model_hash) {
                         let transforms = &placements.transforms[instance.instance_start
                             as usize
                             ..(instance.instance_start + instance.instance_count) as usize];
@@ -895,7 +896,7 @@ pub fn main() -> anyhow::Result<()> {
             if let Ok(v) = package_manager().get_entry(m.vertex_shader) {
                 let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
 
-                vshader_map.entry(m.vertex_shader.0).or_insert_with(|| {
+                vshader_map.entry(m.vertex_shader).or_insert_with(|| {
                     let vs_data = package_manager().read_tag(v.reference).unwrap();
                     let mut vs_cur = Cursor::new(&vs_data);
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
@@ -921,7 +922,7 @@ pub fn main() -> anyhow::Result<()> {
                             .context("Failed to load vertex shader")
                             .unwrap();
 
-                        let name = format!("VS {:?} (mat {})\0", m.vertex_shader, TagHash(*t));
+                        let name = format!("VS {:?} (mat {})\0", m.vertex_shader, t);
                         v.SetPrivateData(
                             &WKPDID_D3DDebugObjectName,
                             name.len() as u32 - 1,
@@ -961,7 +962,7 @@ pub fn main() -> anyhow::Result<()> {
             if let Ok(v) = package_manager().get_entry(m.pixel_shader) {
                 let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
 
-                pshader_map.entry(m.pixel_shader.0).or_insert_with(|| {
+                pshader_map.entry(m.pixel_shader).or_insert_with(|| {
                     let ps_data = package_manager().read_tag(v.reference).unwrap();
 
                     let mut ps_cur = Cursor::new(&ps_data);
@@ -987,7 +988,7 @@ pub fn main() -> anyhow::Result<()> {
                             .context("Failed to load pixel shader")
                             .unwrap();
 
-                        let name = format!("PS {:?} (mat {})\0", m.pixel_shader, TagHash(*t));
+                        let name = format!("PS {:?} (mat {})\0", m.pixel_shader, t);
                         v.SetPrivateData(
                             &WKPDID_D3DDebugObjectName,
                             name.len() as u32 - 1,
@@ -1045,7 +1046,7 @@ pub fn main() -> anyhow::Result<()> {
                 .expect("Failed to create sampler state")
         };
 
-        sampler_map.insert(s.0, sampler);
+        sampler_map.insert(s, sampler);
     }
 
     info!("Loaded {} samplers", sampler_map.len());
@@ -1324,7 +1325,7 @@ pub fn main() -> anyhow::Result<()> {
                             .render_data
                             .data()
                             .textures
-                            .get(&c.cubemap_texture.0)
+                            .get(&c.cubemap_texture)
                             .map(|t| t.view.clone())
                     } else {
                         if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
