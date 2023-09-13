@@ -82,6 +82,7 @@ pub struct Material {
 
 impl Material {
     pub fn load(dcs: Arc<DeviceContextSwapchain>, mat: Unk808071e8, tag: TagHash) -> Self {
+        let _span = debug_span!("Load material", hash = %tag).entered();
         let cb0_vs = if mat.unkcc.is_valid() {
             let buffer_header_ref = package_manager().get_entry(mat.unkcc).unwrap().reference;
 

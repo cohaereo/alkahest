@@ -274,9 +274,9 @@ pub fn main() -> anyhow::Result<()> {
     // First light reserved for camera light
     let mut point_lights = vec![Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(0x80807dae) {
-        let think: Unk80807dae = package_manager()
-            .read_tag_struct((package.pkg_id(), index as _))
-            .unwrap();
+        let hash = TagHash::new(package.pkg_id(), index as _);
+        let _span = debug_span!("Load map", %hash).entered();
+        let think: Unk80807dae = package_manager().read_tag_struct(hash).unwrap();
 
         let mut placement_groups = vec![];
         let mut resource_points = vec![];
@@ -672,12 +672,13 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
     for te in &to_load_entities {
+        let _span = debug_span!("Load entity", hash = %te).entered();
         let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
-        info!("Loading entity {te}");
+        debug!("Loading entity {te}");
         for e in &header.unk10 {
             match e.unk0.unk10.resource_type {
                 0x808072b8 => {
-                    info!(
+                    debug!(
                         "\t- EntityModel {:08x}/{}",
                         e.unk0.unk18.resource_type.to_be(),
                         e.unk0.unk10.resource_type.to_be(),

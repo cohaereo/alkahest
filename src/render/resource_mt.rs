@@ -75,7 +75,7 @@ fn spawn_thread_textures(
                 update_status(&STATUS_TEXTURES, rx.len());
             }
 
-            info!("Texture loading thread exited");
+            info!("Thread '{}' exited", name);
         })
         .unwrap();
 }

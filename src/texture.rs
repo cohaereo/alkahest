@@ -75,6 +75,7 @@ pub struct Texture {
 
 impl Texture {
     pub fn load(dcs: &DeviceContextSwapchain, hash: TagHash) -> anyhow::Result<Texture> {
+        let _span = debug_span!("Load texture", %hash).entered();
         let texture_header_ref = package_manager().get_entry(hash)?.reference;
 
         let texture: TextureHeader = package_manager().read_tag_struct(hash)?;
@@ -131,6 +132,7 @@ impl Texture {
                     SysMemSlicePitch: slice_pitch as _,
                 };
 
+                let _span_load = debug_span!("Load texture3d").entered();
                 let tex = dcs
                     .device
                     .CreateTexture3D(
@@ -177,6 +179,7 @@ impl Texture {
                     })
                 }
 
+                let _span_load = debug_span!("Load texturecube").entered();
                 let tex = dcs
                     .device
                     .CreateTexture2D(
@@ -243,6 +246,7 @@ impl Texture {
                     offset += slice_pitch;
                 }
 
+                let _span_load = debug_span!("Load texture2d").entered();
                 let tex = dcs
                     .device
                     .CreateTexture2D(
