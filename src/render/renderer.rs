@@ -429,12 +429,17 @@ impl Renderer {
         self.scope_alk_composite.bind(0, ShaderStages::all());
         if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
             unsafe {
-                // self.dcs.context().OMSetRenderTargets(
-                //     Some(&[Some(
-                //         self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
-                //     )]),
-                //     &self.gbuffer.depth.view,
-                // );
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[Some(
+                        self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
+                    )]),
+                    &self.gbuffer.depth.view,
+                );
+
+                self.dcs
+                    .context()
+                    .OMSetDepthStencilState(&self.gbuffer.depth.state_readonly, 0);
+
                 self.dcs.context().OMSetBlendState(
                     &self.blend_state_blend,
                     Some(&[1f32, 1., 1., 1.] as _),
