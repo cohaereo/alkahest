@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
@@ -8,22 +9,37 @@ use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::dxgi::DxgiFormat;
 use crate::material::Material;
+use crate::packages::package_manager;
+use crate::render::vertex_layout::InputElement;
 use crate::texture::Texture;
-use crate::vertex_layout::InputElement;
+use crate::util::LockTracker;
 
 use super::drawcall::ShadingTechnique;
+use super::renderer::Renderer;
+use super::shader::{load_pshader, load_vshader};
+use super::vertex_layout::OutputElement;
 use super::{resource_mt, DeviceContextSwapchain};
+
+macro_rules! caller_frame {
+    () => {{
+        let caller_location = std::panic::Location::caller();
+        let caller_file = caller_location.file();
+        let caller_line = caller_location.line();
+        format!("{caller_file}:{caller_line}")
+    }};
+}
 
 #[derive(Default)]
 pub struct RenderData {
     pub materials: IntMap<TagHash, Material>,
-    pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Option<ID3D11InputLayout>)>,
-    pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)>,
+    pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
+    pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<OutputElement>)>,
     pub textures: IntMap<TagHash, Texture>,
     pub samplers: IntMap<TagHash, ID3D11SamplerState>,
 
     pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32)>,
     pub index_buffers: IntMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
+    pub input_layouts: IntMap<u64, ID3D11InputLayout>,
 }
 
 impl RenderData {
@@ -59,12 +75,56 @@ impl RenderDataManager {
         }
     }
 
-    pub fn data(&self) -> RwLockReadGuard<RenderData> {
-        self.render_data.read()
+    #[track_caller]
+    pub fn data(&self) -> LockTracker<RwLockReadGuard<RenderData>> {
+        // #[cfg(feature = "debug_lock")]
+        // debug!(
+        //     "Thread {:?} acquiring RenderData (read) ({})",
+        //     std::thread::current().id(),
+        //     caller_frame!(),
+        // );
+
+        let l = LockTracker::wrap(
+            self.render_data
+                .try_read_for(Duration::from_secs(5))
+                .expect("Lock timeout"),
+        );
+
+        #[cfg(feature = "debug_lock")]
+        debug!(
+            "Thread {:?} acquired lock #{} (read) ({})",
+            std::thread::current().id(),
+            l.id(),
+            caller_frame!(),
+        );
+
+        l
     }
 
-    pub fn data_mut(&self) -> RwLockWriteGuard<RenderData> {
-        self.render_data.write()
+    #[track_caller]
+    pub fn data_mut(&self) -> LockTracker<RwLockWriteGuard<RenderData>> {
+        // #[cfg(feature = "debug_lock")]
+        // debug!(
+        //     "Thread {:?} acquiring RenderData (write) ({})",
+        //     std::thread::current().id(),
+        //     caller_frame!(),
+        // );
+
+        let l = LockTracker::wrap(
+            self.render_data
+                .try_write_for(Duration::from_secs(5))
+                .expect("Lock timeout"),
+        );
+
+        #[cfg(feature = "debug_lock")]
+        debug!(
+            "Thread {:?} acquired lock #{} (write) ({})",
+            std::thread::current().id(),
+            l.id(),
+            caller_frame!(),
+        );
+
+        l
     }
 
     /// Load a Texture2D, Texture2D or TextureCube from a hash
@@ -79,5 +139,70 @@ impl RenderDataManager {
         self.tx_buffers
             .send(buffer)
             .expect("Failed to send load buffer request");
+    }
+
+    pub fn load_sampler(&self, dcs: &DeviceContextSwapchain, hash: TagHash) {
+        if !hash.is_valid() {
+            return;
+        }
+
+        let sampler_header_ref = package_manager().get_entry(hash).unwrap().reference;
+        let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
+
+        let sampler = unsafe {
+            dcs.device
+                .CreateSamplerState(sampler_data.as_ptr() as _)
+                .expect("Failed to create sampler state")
+        };
+
+        self.data_mut().samplers.insert(hash, sampler);
+    }
+
+    pub fn load_vshader(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        hash: TagHash,
+    ) -> Option<(ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> {
+        if !hash.is_valid() {
+            return None;
+        }
+
+        Some(self.data_mut().vshaders.entry(hash).or_insert_with(|| {
+            let shader_header_ref = package_manager().get_entry(hash).unwrap().reference;
+            let shader_data = package_manager().read_tag(shader_header_ref).unwrap();
+            let v = load_vshader(dcs, &shader_data).unwrap();
+            (v.0, v.1, shader_data)
+        }))
+        .cloned()
+    }
+
+    pub fn load_pshader(&self, dcs: &DeviceContextSwapchain, hash: TagHash) {
+        if !hash.is_valid() {
+            return;
+        }
+
+        self.data_mut().pshaders.entry(hash).or_insert_with(|| {
+            let shader_header_ref = package_manager().get_entry(hash).unwrap().reference;
+            let shader_data = package_manager().read_tag(shader_header_ref).unwrap();
+            load_pshader(dcs, &shader_data).unwrap()
+        });
+    }
+
+    pub fn load_material(&self, renderer: &Renderer, material: TagHash) {
+        if !material.is_valid() {
+            return;
+        }
+
+        self.data_mut()
+            .materials
+            .entry(material)
+            .or_insert_with(|| {
+                Material::load(
+                    renderer,
+                    package_manager().read_tag_struct(material).unwrap(),
+                    material,
+                    false,
+                )
+            });
     }
 }

@@ -99,7 +99,7 @@ pub struct Unk8080714f {
     pub mesh_groups: TablePointer<Unk80807154>,
 
     pub vertex_buffer: TagHash,
-    pub vertex2_buffer: TagHash,
+    pub vertex_buffer2: TagHash,
     pub indices: TagHash,
     pub material1: TagHash,
     pub material2: TagHash,

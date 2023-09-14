@@ -39,7 +39,7 @@ pub struct Renderer {
     state: RendererState,
     pub gbuffer: GBuffer,
     window_size: (u32, u32),
-    dcs: Arc<DeviceContextSwapchain>,
+    pub dcs: Arc<DeviceContextSwapchain>,
 
     scope_view: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
@@ -194,8 +194,8 @@ impl Renderer {
         )
         .unwrap();
 
-        let vshader_composite = shader::load_vshader(&dcs, &vshader_composite_blob)?;
-        let pshader_composite = shader::load_pshader(&dcs, &pshader_composite_blob)?;
+        let (vshader_composite, _) = shader::load_vshader(&dcs, &vshader_composite_blob)?;
+        let (pshader_composite, _) = shader::load_pshader(&dcs, &pshader_composite_blob)?;
 
         let vshader_final_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/final.hlsl"),
@@ -210,8 +210,8 @@ impl Renderer {
         )
         .unwrap();
 
-        let vshader_final = shader::load_vshader(&dcs, &vshader_final_blob)?;
-        let pshader_final = shader::load_pshader(&dcs, &pshader_final_blob)?;
+        let (vshader_final, _) = shader::load_vshader(&dcs, &vshader_final_blob)?;
+        let (pshader_final, _) = shader::load_pshader(&dcs, &pshader_final_blob)?;
 
         Ok(Renderer {
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
@@ -494,6 +494,15 @@ impl Renderer {
             self.dcs
                 .context()
                 .VSSetConstantBuffers(11, Some(&[drawcall.cb11.clone()]));
+
+            if let Some(input_layout) = render_data.input_layouts.get(&drawcall.input_layout_hash) {
+                self.dcs.context().IASetInputLayout(input_layout);
+            } else {
+                panic!(
+                    "Couldn't find input layout 0x{:x}",
+                    drawcall.input_layout_hash
+                );
+            }
 
             self.dcs.context().IASetVertexBuffers(
                 0,

@@ -5,7 +5,7 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 #[allow(non_camel_case_types, dead_code, clippy::upper_case_acronyms)]
 #[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, BinRead)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, BinRead)]
 #[br(repr(u32))]
 pub enum DxgiFormat {
     Unknown = 0,

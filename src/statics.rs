@@ -12,7 +12,7 @@ use crate::{
 #[derive(BinRead, Debug)]
 pub struct Unk80807194 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk8080719b>,
+    pub mesh_groups: TablePointer<Unk8080719b>,
     pub parts: TablePointer<Unk8080719a>,
     pub buffers: TablePointer<(TagHash, TagHash, TagHash, u32)>,
 }
@@ -85,7 +85,7 @@ pub struct Unk80807193 {
     pub unk4: u32,
     pub index_buffer: TagHash,
     pub vertex_buffer: TagHash,
-    pub unk10: TagHash,
+    pub vertex_buffer2: TagHash,
     pub index_start: u32,
     pub index_count: u32,
     pub material: TagHash,

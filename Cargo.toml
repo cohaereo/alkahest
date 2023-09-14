@@ -54,6 +54,7 @@ num-derive = "0.4.0"
 [features]
 default = []
 tracy = []
+debug_lock = []
 
 [package.metadata.imgui-dx11-renderer]
 targets = ["x86_64-pc-windows-gnu"]

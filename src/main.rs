@@ -74,7 +74,7 @@ use crate::statics::{Unk808071a7, Unk8080966d};
 use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::types::AABB;
-use crate::vertex_layout::InputElement;
+use render::vertex_layout::InputElement;
 
 mod camera;
 mod config;
@@ -97,7 +97,7 @@ mod text;
 mod texture;
 mod types;
 mod unknown;
-mod vertex_layout;
+mod util;
 
 pub fn main() -> anyhow::Result<()> {
     rayon::ThreadPoolBuilder::new()
@@ -263,7 +263,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut static_map: IntMap<TagHash, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<TagHash, Material> = Default::default();
-    let mut vshader_map: IntMap<TagHash, (ID3D11VertexShader, Option<ID3D11InputLayout>)> =
+    let mut vshader_map: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> =
         Default::default();
     let mut pshader_map: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
         Default::default();
@@ -353,9 +353,10 @@ pub fn main() -> anyhow::Result<()> {
                                         material_map.insert(
                                             p.material,
                                             Material::load(
-                                                dcs.clone(),
+                                                &renderer,
                                                 package_manager().read_tag_struct(p.material)?,
                                                 p.material,
+                                                true,
                                             ),
                                         );
                                     }
@@ -691,8 +692,10 @@ pub fn main() -> anyhow::Result<()> {
                     let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
 
                     for m in &materials {
-                        material_map
-                            .insert(m.tag(), Material::load(dcs.clone(), m.0.clone(), m.tag()));
+                        material_map.insert(
+                            m.tag(),
+                            Material::load(&renderer, m.0.clone(), m.tag(), true),
+                        );
                     }
 
                     for m in &model.meshes {
@@ -701,9 +704,10 @@ pub fn main() -> anyhow::Result<()> {
                                 material_map.insert(
                                     p.material,
                                     Material::load(
-                                        dcs.clone(),
+                                        &renderer,
                                         package_manager().read_tag_struct(p.material)?,
                                         p.material,
+                                        true,
                                     ),
                                 );
                             }
@@ -797,6 +801,7 @@ pub fn main() -> anyhow::Result<()> {
     }
 
     let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
+    info!("Loading terrain");
     info_span!("Loading terrain").in_scope(|| {
         for (t, header) in terrain_headers.into_iter() {
             for t in &header.mesh_groups {
@@ -816,6 +821,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
 
+    info!("Loading statics");
     info_span!("Loading statics").in_scope(|| {
         for almostloadable in &to_load_statics {
             let mheader: Unk808071a7 = package_manager().read_tag_struct(*almostloadable).unwrap();
@@ -824,9 +830,10 @@ pub fn main() -> anyhow::Result<()> {
                     material_map.insert(
                         *m,
                         Material::load(
-                            dcs.clone(),
+                            &renderer,
                             package_manager().read_tag_struct(*m).unwrap(),
                             *m,
+                            true,
                         ),
                     );
                 }
@@ -837,9 +844,10 @@ pub fn main() -> anyhow::Result<()> {
                     material_map.insert(
                         m,
                         Material::load(
-                            dcs.clone(),
+                            &renderer,
                             package_manager().read_tag_struct(m).unwrap(),
                             m,
+                            true,
                         ),
                     );
                 }
@@ -914,7 +922,6 @@ pub fn main() -> anyhow::Result<()> {
                             )
                         })
                         .collect_vec();
-                    let layout = vertex_layout::build_input_layout(&layout_converted);
 
                     unsafe {
                         let v = dcs
@@ -931,29 +938,27 @@ pub fn main() -> anyhow::Result<()> {
                         )
                         .expect("Failed to set VS name");
 
-                        let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).ok();
-                        if input_layout.is_none() {
-                            let layout_string = layout_converted
-                                .iter()
-                                .enumerate()
-                                .map(|(i, e)| {
-                                    format!(
-                                        "\t{}{} v{i} : {}{}",
-                                        e.component_type,
-                                        e.component_count,
-                                        e.semantic_type.to_pcstr().display(),
-                                        e.semantic_index
-                                    )
-                                })
-                                .join("\n");
+                        // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
+                        // let layout_string = layout_converted
+                        //     .iter()
+                        //     .enumerate()
+                        //     .map(|(i, e)| {
+                        //         format!(
+                        //             "\t{}{} v{i} : {}{}",
+                        //             e.component_type,
+                        //             e.component_count,
+                        //             e.semantic_type.to_pcstr().display(),
+                        //             e.semantic_index
+                        //         )
+                        //     })
+                        //     .join("\n");
 
-                            error!(
-                                "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
-                                m.vertex_shader, layout_string
-                            );
-                        }
+                        // error!(
+                        //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
+                        //     m.vertex_shader, layout_string
+                        // );
 
-                        (v, input_layout)
+                        (v, layout_converted, vs_data)
                     }
                 });
             }

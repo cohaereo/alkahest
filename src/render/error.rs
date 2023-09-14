@@ -85,8 +85,8 @@ impl ErrorRenderer {
         )
         .unwrap();
 
-        let vshader = shader::load_vshader(&dcs, &vshader_blob).unwrap();
-        let pshader = shader::load_pshader(&dcs, &pshader_blob).unwrap();
+        let (vshader, _) = shader::load_vshader(&dcs, &vshader_blob).unwrap();
+        let (pshader, _) = shader::load_pshader(&dcs, &pshader_blob).unwrap();
 
         let vertex_layout = unsafe {
             dcs.device

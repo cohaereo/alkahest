@@ -17,6 +17,7 @@ use windows::Win32::Graphics::Direct3D11::{
 
 use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
 use super::renderer::Renderer;
+use super::vertex_buffers::load_vertex_buffers;
 use super::{ConstantBuffer, DeviceContextSwapchain};
 
 pub struct TerrainRenderer {
@@ -25,6 +26,7 @@ pub struct TerrainRenderer {
 
     combined_vertex_buffer: ID3D11Buffer,
     combined_vertex_stride: u32,
+    input_layout: u64,
 
     index_buffer: TagHash,
 }
@@ -44,10 +46,10 @@ impl TerrainRenderer {
 
         let mut vertex2_stride = None;
         let mut vertex2_data = None;
-        if terrain.vertex2_buffer.is_valid() {
+        if terrain.vertex_buffer2.is_valid() {
             let vertex2_header: VertexBufferHeader =
-                pm.read_tag_struct(terrain.vertex2_buffer).unwrap();
-            let t = pm.get_entry(terrain.vertex2_buffer).unwrap().reference;
+                pm.read_tag_struct(terrain.vertex_buffer2).unwrap();
+            let t = pm.get_entry(terrain.vertex_buffer2).unwrap().reference;
 
             vertex2_stride = Some(vertex2_header.stride as u32);
             vertex2_data = Some(pm.read_tag(t).unwrap());
@@ -103,12 +105,34 @@ impl TerrainRenderer {
             group_cbuffers.push(cb);
         }
 
+        for p in &terrain.mesh_parts {
+            renderer.render_data.load_material(renderer, p.material);
+        }
+
+        // Find the first normal material to use for the input layout
+        let mut buffer_layout_material = TagHash(u32::MAX);
+        for m in terrain.mesh_parts.iter() {
+            if let Some(mat) = renderer.render_data.data().materials.get(&m.material) {
+                if mat.unk8 == 1 {
+                    buffer_layout_material = m.material;
+                    break;
+                }
+            }
+        }
+
+        let input_layout = load_vertex_buffers(
+            renderer,
+            buffer_layout_material,
+            &[terrain.vertex_buffer, terrain.vertex_buffer2],
+        )?;
+
         Ok(TerrainRenderer {
             group_cbuffers,
             combined_vertex_buffer,
             combined_vertex_stride: (vertex_header.stride as u32
                 + vertex2_stride.unwrap_or_default()),
             index_buffer: terrain.indices,
+            input_layout,
             terrain,
         })
     }
@@ -142,6 +166,7 @@ impl TerrainRenderer {
                         vertex_buffer: self.combined_vertex_buffer.clone(),
                         vertex_buffer_stride: self.combined_vertex_stride,
                         index_buffer: self.index_buffer,
+                        input_layout_hash: self.input_layout,
                         cb11: Some(cb11.buffer().clone()),
                         variant_material: None,
                         index_start: part.index_start,

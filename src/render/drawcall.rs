@@ -158,6 +158,7 @@ pub struct DrawCall {
     pub vertex_buffer: ID3D11Buffer,
     pub vertex_buffer_stride: u32,
     pub index_buffer: TagHash,
+    pub input_layout_hash: u64,
 
     // TODO(cohae): Will this be used for anything other than instances/rigid_model? Can just be a pointer or an id or whatevs otherwise
     // pub buffer_bindings: Vec<ConstantBufferBinding>,

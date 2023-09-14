@@ -1,5 +1,4 @@
 use std::ops::Deref;
-use std::sync::Arc;
 
 use crate::packages::package_manager;
 use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
@@ -15,7 +14,7 @@ use glam::Vec4;
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk808071e8 {
     pub file_size: u64,
-    /// 1 = ??
+    /// 1 = normal
     /// 2 = depth prepass?
     pub unk8: u32,
     pub unkc: u32,
@@ -81,7 +80,8 @@ pub struct Material {
 }
 
 impl Material {
-    pub fn load(dcs: Arc<DeviceContextSwapchain>, mat: Unk808071e8, tag: TagHash) -> Self {
+    // TODO(cohae): load_shaders is a hack, i fucking hate locks
+    pub fn load(renderer: &Renderer, mat: Unk808071e8, tag: TagHash, load_shaders: bool) -> Self {
         let _span = debug_span!("Load material", hash = %tag).entered();
         let cb0_vs = if mat.unkcc.is_valid() {
             let buffer_header_ref = package_manager().get_entry(mat.unkcc).unwrap().reference;
@@ -93,7 +93,7 @@ impl Material {
                 "Read {} elements cbuffer from {buffer_header_ref:?}",
                 data.len()
             );
-            let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
+            let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
         } else if mat.unk98.len() > 1
@@ -103,16 +103,20 @@ impl Material {
                 .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
         {
             trace!("Loading float4 cbuffer with {} elements", mat.unk318.len());
-            let buf =
-                ConstantBuffer::create_array_init(dcs.clone(), bytemuck::cast_slice(&mat.unk98))
-                    .unwrap();
+            let buf = ConstantBuffer::create_array_init(
+                renderer.dcs.clone(),
+                bytemuck::cast_slice(&mat.unk98),
+            )
+            .unwrap();
 
             Some(buf)
         } else {
             trace!("Loading default float4 cbuffer");
-            let buf =
-                ConstantBuffer::create_array_init(dcs.clone(), &[Vec4::new(1.0, 1.0, 1.0, 1.0)])
-                    .unwrap();
+            let buf = ConstantBuffer::create_array_init(
+                renderer.dcs.clone(),
+                &[Vec4::new(1.0, 1.0, 1.0, 1.0)],
+            )
+            .unwrap();
 
             Some(buf)
         };
@@ -127,7 +131,7 @@ impl Material {
                 "Read {} elements cbuffer from {buffer_header_ref:?}",
                 data.len()
             );
-            let buf = ConstantBuffer::create_array_init(dcs.clone(), data).unwrap();
+            let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
         } else if !mat.unk318.is_empty()
@@ -137,14 +141,36 @@ impl Material {
                 .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
         {
             trace!("Loading float4 cbuffer with {} elements", mat.unk318.len());
-            let buf =
-                ConstantBuffer::create_array_init(dcs.clone(), bytemuck::cast_slice(&mat.unk318))
-                    .unwrap();
+            let buf = ConstantBuffer::create_array_init(
+                renderer.dcs.clone(),
+                bytemuck::cast_slice(&mat.unk318),
+            )
+            .unwrap();
 
             Some(buf)
         } else {
             None
         };
+
+        if load_shaders {
+            renderer
+                .render_data
+                .load_vshader(&renderer.dcs, mat.vertex_shader);
+            renderer
+                .render_data
+                .load_pshader(&renderer.dcs, mat.pixel_shader);
+        }
+
+        // let vs_data = package_manager().read_tag(v.reference).unwrap();
+        // let mut vs_cur = Cursor::new(&vs_data);
+        // let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
+        // let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
+
+        // let bash_input_layout = input_sig
+        //     .elements
+        //     .iter()
+        //     .map(|e| InputElement::from_dxbc(e, e.component_type == DxbcInputType::Float, false))
+        //     .collect_vec();
 
         // if tag.0 == u32::from_be(0x5c44eb80) {
         // println!("{}", hex::encode(&mat.ps_bytecode.data()));
@@ -219,8 +245,7 @@ impl Material {
                 dcs.context().VSSetConstantBuffers(0, Some(&[None]));
             }
 
-            if let Some((vs, Some(input_layout))) = render_data.vshaders.get(&self.vertex_shader) {
-                dcs.context().IASetInputLayout(input_layout);
+            if let Some((vs, _, _)) = render_data.vshaders.get(&self.vertex_shader) {
                 dcs.context().VSSetShader(vs, None);
             } else {
                 // TODO: should still be handled, but not here

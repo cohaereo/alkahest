@@ -15,6 +15,8 @@ pub mod shader;
 pub mod static_instanced;
 pub mod static_render;
 pub mod terrain;
+mod vertex_buffers;
+pub mod vertex_layout;
 
 pub use cbuffer::ConstantBuffer;
 pub use data::RenderData;

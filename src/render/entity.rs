@@ -13,6 +13,7 @@ use crate::entity::Unk808073a5;
 use crate::entity::VertexBufferHeader;
 
 use crate::packages::package_manager;
+use crate::render::vertex_buffers::load_vertex_buffers;
 
 use super::drawcall::DrawCall;
 use super::drawcall::ShadingTechnique;
@@ -26,6 +27,7 @@ pub struct EntityModelBuffer {
     combined_vertex_stride: u32,
 
     index_buffer: TagHash,
+    input_layout: u64,
 }
 
 pub struct EntityRenderer {
@@ -79,25 +81,22 @@ impl EntityRenderer {
         for mesh in &model.meshes {
             let pm = package_manager();
             let vertex_header: VertexBufferHeader =
-                pm.read_tag_struct(mesh.position_buffer).unwrap();
+                pm.read_tag_struct(mesh.vertex_buffer1).unwrap();
 
             if vertex_header.stride == 24 || vertex_header.stride == 48 {
                 panic!("Support for 32-bit floats in vertex buffers are disabled");
             }
 
-            let t = pm.get_entry(mesh.position_buffer).unwrap().reference;
+            let t = pm.get_entry(mesh.vertex_buffer1).unwrap().reference;
 
             let vertex_data = pm.read_tag(t).unwrap();
 
             let mut vertex2_stride = None;
             let mut vertex2_data = None;
-            if mesh.secondary_vertex_buffer.is_valid() {
+            if mesh.vertex_buffer2.is_valid() {
                 let vertex2_header: VertexBufferHeader =
-                    pm.read_tag_struct(mesh.secondary_vertex_buffer).unwrap();
-                let t = pm
-                    .get_entry(mesh.secondary_vertex_buffer)
-                    .unwrap()
-                    .reference;
+                    pm.read_tag_struct(mesh.vertex_buffer2).unwrap();
+                let t = pm.get_entry(mesh.vertex_buffer2).unwrap().reference;
 
                 vertex2_stride = Some(vertex2_header.stride as u32);
                 vertex2_data = Some(pm.read_tag(t).unwrap());
@@ -132,12 +131,24 @@ impl EntityRenderer {
                     .context("Failed to create combined vertex buffer")?
             };
 
+            let input_layout = load_vertex_buffers(
+                renderer,
+                mesh.parts
+                    .iter()
+                    .find(|v| v.material.is_valid())
+                    .map(|v| v.material)
+                    .or_else(|| materials.first().cloned())
+                    .unwrap(),
+                &[mesh.vertex_buffer1, mesh.vertex_buffer2],
+            )?;
+
             meshes.push((
                 EntityModelBuffer {
                     combined_vertex_buffer,
                     combined_vertex_stride: (vertex_header.stride as u32
                         + vertex2_stride.unwrap_or_default()),
                     index_buffer: mesh.index_buffer,
+                    input_layout,
                 },
                 mesh.parts.to_vec(),
             ))
@@ -182,27 +193,7 @@ impl EntityRenderer {
                     continue;
                 }
 
-                // let mat_hash = self.materials.last().cloned();
-                // let mat_hash = Some(p.material);
-                // let mat_hash = if self.materials.is_empty() {
-                //     Some(p.material)
-                // } else {
-                //     self.materials
-                //         .get(fastrand::usize(0..self.materials.len()))
-                //         .cloned()
-                // };
                 let variant_material = self.get_variant_material(p.variant_shader_index);
-                // let mat_hash = if p.variant_shader_index == u16::MAX {
-                //     Some(p.material)
-                // } else {
-                //     self.get_material(p.variant_shader_index)
-                // };
-
-                // let material = if let Some(mat_hash) = mat_hash {
-                //     mat_hash
-                // } else {
-                //     bail!("Could not find material");
-                // };
 
                 let primitive_type = match p.primitive_type {
                     EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
@@ -230,6 +221,7 @@ impl EntityRenderer {
                         vertex_buffer: buffers.combined_vertex_buffer.clone(),
                         vertex_buffer_stride: buffers.combined_vertex_stride,
                         index_buffer: buffers.index_buffer,
+                        input_layout_hash: buffers.input_layout,
                         cb11: Some(cb11.clone()),
                         variant_material,
                         index_start: p.index_start,

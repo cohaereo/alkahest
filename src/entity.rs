@@ -45,8 +45,8 @@ pub struct Unk808073a5 {
 
 #[derive(BinRead, Debug)]
 pub struct Unk80807378 {
-    pub position_buffer: TagHash,
-    pub secondary_vertex_buffer: TagHash,
+    pub vertex_buffer1: TagHash,
+    pub vertex_buffer2: TagHash,
     pub buffer2: TagHash,
     pub buffer3: TagHash,
     pub index_buffer: TagHash,

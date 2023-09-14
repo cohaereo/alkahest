@@ -1,4 +1,5 @@
 use crate::entity::{EPrimitiveType, VertexBufferHeader};
+use crate::render::vertex_buffers::load_vertex_buffers;
 use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
 use anyhow::{ensure, Context};
@@ -20,6 +21,7 @@ pub struct StaticModelBuffer {
     combined_vertex_stride: u32,
 
     index_buffer: TagHash,
+    input_layout: u64,
 }
 
 pub struct StaticModel {
@@ -61,11 +63,11 @@ impl StaticModel {
         let pm = package_manager();
         let header: Unk80807194 = pm.read_tag_struct(model.unk8).unwrap();
 
-        ensure!(header.unk8.len() == model.materials.len());
+        ensure!(header.mesh_groups.len() == model.materials.len());
 
         let mut buffers = vec![];
-        for (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, _u3) in
-            header.buffers.iter()
+        for (buffer_index, (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, _u3)) in
+            header.buffers.iter().enumerate()
         {
             let vertex_header: VertexBufferHeader =
                 pm.read_tag_struct(*vertex_buffer_hash).unwrap();
@@ -129,11 +131,50 @@ impl StaticModel {
                     .expect("Failed to set VS name")
             };
 
+            for m in &model.materials {
+                renderer.render_data.load_material(renderer, *m);
+            }
+
+            // Find the first normal material to use for the input layout
+            let mut buffer_layout_material = TagHash(u32::MAX);
+            for (iu, u) in header.mesh_groups.iter().enumerate() {
+                let p = &header.parts[u.part_index as usize];
+
+                if p.buffer_index == buffer_index as u8 {
+                    let material = model.materials[iu];
+                    if let Some(mat) = renderer.render_data.data().materials.get(&material) {
+                        if mat.unk8 == 1 {
+                            buffer_layout_material = material;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fall back to any working material in the material array
+            if !buffer_layout_material.is_valid() {
+                for material in &model.materials {
+                    if let Some(mat) = renderer.render_data.data().materials.get(material) {
+                        if mat.unk8 == 1 {
+                            buffer_layout_material = *material;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let input_layout = load_vertex_buffers(
+                renderer,
+                buffer_layout_material,
+                &[*vertex_buffer_hash, *vertex2_buffer_hash],
+            )?;
+
             buffers.push(StaticModelBuffer {
                 combined_vertex_buffer,
                 combined_vertex_stride: (vertex_header.stride as u32
                     + vertex2_stride.unwrap_or_default()),
                 index_buffer: *index_buffer_hash,
+                input_layout,
             })
         }
 
@@ -146,7 +187,7 @@ impl StaticModel {
             buffers,
             model,
             parts: header.parts.to_vec(),
-            mesh_groups: header.unk8.to_vec(),
+            mesh_groups: header.mesh_groups.to_vec(),
         })
     }
 
@@ -179,7 +220,7 @@ impl StaticModel {
                         EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                     };
 
-                    let material = self.model.materials.get(iu).unwrap();
+                    let material = self.model.materials[iu];
 
                     renderer.push_drawcall(
                         SortValue3d::empty()
@@ -192,6 +233,7 @@ impl StaticModel {
                             vertex_buffer: buffers.combined_vertex_buffer.clone(),
                             vertex_buffer_stride: buffers.combined_vertex_stride,
                             index_buffer: buffers.index_buffer,
+                            input_layout_hash: buffers.input_layout,
                             cb11: Some(instance_buffer.clone()),
                             variant_material: None,
                             index_start: p.index_start,
@@ -233,9 +275,10 @@ impl StaticOverlayModel {
 
         let mut vertex2_stride = None;
         let mut vertex2_data = None;
-        if model.unk10.is_valid() {
-            let vertex2_header: VertexBufferHeader = pm.read_tag_struct(model.unk10).unwrap();
-            let t = pm.get_entry(model.unk10).unwrap().reference;
+        if model.vertex_buffer2.is_valid() {
+            let vertex2_header: VertexBufferHeader =
+                pm.read_tag_struct(model.vertex_buffer2).unwrap();
+            let t = pm.get_entry(model.vertex_buffer2).unwrap().reference;
 
             vertex2_stride = Some(vertex2_header.stride as u32);
             vertex2_data = Some(pm.read_tag(t).unwrap());
@@ -270,12 +313,19 @@ impl StaticOverlayModel {
                 .context("Failed to create combined vertex buffer")?
         };
 
+        let input_layout = load_vertex_buffers(
+            renderer,
+            model.material,
+            &[model.vertex_buffer, model.vertex_buffer2],
+        )?;
+
         Ok(Self {
             buffers: StaticModelBuffer {
                 combined_vertex_buffer,
                 combined_vertex_stride: (vertex_header.stride as u32
                     + vertex2_stride.unwrap_or_default()),
                 index_buffer: model.index_buffer,
+                input_layout,
             },
             model,
         })
@@ -304,6 +354,7 @@ impl StaticOverlayModel {
                 vertex_buffer: self.buffers.combined_vertex_buffer.clone(),
                 vertex_buffer_stride: self.buffers.combined_vertex_stride,
                 index_buffer: self.buffers.index_buffer,
+                input_layout_hash: self.buffers.input_layout,
                 cb11: Some(instance_buffer),
                 variant_material: None,
                 index_start: self.model.index_start,

@@ -47,7 +47,7 @@ pub struct DxbcInputElement {
     _pad: u16,
 }
 
-#[derive(BinRead, Debug, PartialEq, Clone)]
+#[derive(BinRead, Debug, PartialEq, Copy, Clone, Hash)]
 #[br(repr(u32))]
 pub enum DxbcInputType {
     Uint = 1,
@@ -65,7 +65,7 @@ impl Display for DxbcInputType {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Hash)]
 pub enum DxbcSemanticType {
     Position,
     TexCoord,
@@ -78,6 +78,8 @@ pub enum DxbcSemanticType {
     SystemVertexId,
     SystemInstanceId,
     SystemTarget,
+    SystemPosition,
+    SystemIsFrontFace,
 }
 
 impl DxbcSemanticType {
@@ -91,13 +93,17 @@ impl DxbcSemanticType {
             "BLENDWEIGHT" => DxbcSemanticType::BlendWeight,
             "BLENDINDICES" => DxbcSemanticType::BlendIndices,
             "SV_VERTEXID" => DxbcSemanticType::SystemVertexId,
+            "SV_VertexID" => DxbcSemanticType::SystemVertexId,
             "SV_InstanceID" => DxbcSemanticType::SystemInstanceId,
             "SV_TARGET" => DxbcSemanticType::SystemTarget,
+            "SV_POSITION" => DxbcSemanticType::SystemPosition,
+            "SV_isFrontFace" => DxbcSemanticType::SystemIsFrontFace,
+            "SV_Target" => DxbcSemanticType::SystemTarget,
             _ => return None,
         })
     }
 
-    pub fn to_pcstr(&self) -> PCSTR {
+    pub fn to_pcstr(self) -> PCSTR {
         match self {
             DxbcSemanticType::Position => s!("POSITION"),
             DxbcSemanticType::TexCoord => s!("TEXCOORD"),
@@ -110,13 +116,19 @@ impl DxbcSemanticType {
             DxbcSemanticType::SystemVertexId => s!("SV_VERTEXID"),
             DxbcSemanticType::SystemInstanceId => s!("SV_InstanceID"),
             DxbcSemanticType::SystemTarget => s!("SV_TARGET"),
+            DxbcSemanticType::SystemPosition => s!("SV_POSITION"),
+            DxbcSemanticType::SystemIsFrontFace => s!("SV_isFrontFace"),
         }
     }
 
     pub fn is_system_value(&self) -> bool {
         matches!(
             self,
-            DxbcSemanticType::SystemVertexId | DxbcSemanticType::SystemInstanceId
+            DxbcSemanticType::SystemVertexId
+                | DxbcSemanticType::SystemInstanceId
+                | DxbcSemanticType::SystemTarget
+                | DxbcSemanticType::SystemPosition
+                | DxbcSemanticType::SystemIsFrontFace
         )
     }
 }

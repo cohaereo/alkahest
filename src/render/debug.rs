@@ -125,7 +125,7 @@ impl DebugShapeRenderer {
             "vs_5_0",
         )
         .unwrap();
-        let vshader = shader::load_vshader(&dcs, &data)?;
+        let (vshader, _) = shader::load_vshader(&dcs, &data)?;
 
         let input_layout = unsafe {
             dcs.device.CreateInputLayout(
@@ -149,7 +149,7 @@ impl DebugShapeRenderer {
             "ps_5_0",
         )
         .unwrap();
-        let pshader = shader::load_pshader(&dcs, &data)?;
+        let (pshader, _) = shader::load_pshader(&dcs, &data)?;
 
         let mesh = genmesh::generators::Cube::new();
         let vertices: Vec<[f32; 4]> = mesh

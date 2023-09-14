@@ -1,3 +1,8 @@
+use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
+use crate::render::vertex_layout::InputElement;
+use binrw::BinReaderExt;
+use itertools::Itertools;
+use std::io::Cursor;
 use windows::{
     core::PCSTR,
     Win32::Graphics::{
@@ -6,6 +11,7 @@ use windows::{
     },
 };
 
+use super::vertex_layout::OutputElement;
 use super::DeviceContextSwapchain;
 
 pub fn compile_hlsl(source: &str, entrypoint: &str, target: &str) -> Result<Vec<u8>, String> {
@@ -68,13 +74,39 @@ pub fn compile_hlsl(source: &str, entrypoint: &str, target: &str) -> Result<Vec<
 pub fn load_vshader(
     dcs: &DeviceContextSwapchain,
     data: &[u8],
-) -> anyhow::Result<ID3D11VertexShader> {
-    Ok(unsafe { dcs.device.CreateVertexShader(data, None)? })
+) -> anyhow::Result<(ID3D11VertexShader, Vec<InputElement>)> {
+    let mut vs_cur = Cursor::new(&data);
+    let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
+    let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
+
+    let base_layout = input_sig
+        .elements
+        .iter()
+        .map(|e| InputElement::from_dxbc(e, e.component_type == DxbcInputType::Float, false))
+        .collect_vec();
+
+    Ok((
+        unsafe { dcs.device.CreateVertexShader(data, None)? },
+        base_layout,
+    ))
 }
 
 pub fn load_pshader(
     dcs: &DeviceContextSwapchain,
     data: &[u8],
-) -> anyhow::Result<ID3D11PixelShader> {
-    Ok(unsafe { dcs.device.CreatePixelShader(data, None)? })
+) -> anyhow::Result<(ID3D11PixelShader, Vec<OutputElement>)> {
+    let mut vs_cur = Cursor::new(&data);
+    let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
+    let output_sig = get_output_signature(&mut vs_cur, &dxbc_header).unwrap();
+
+    let base_layout = output_sig
+        .elements
+        .iter()
+        .map(|e| InputElement::from_dxbc(e, e.component_type == DxbcInputType::Float, false))
+        .collect_vec();
+
+    Ok((
+        unsafe { dcs.device.CreatePixelShader(data, None)? },
+        base_layout,
+    ))
 }
