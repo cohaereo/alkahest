@@ -1,9 +1,6 @@
-use crate::material::Material;
-use crate::packages::package_manager;
 use crate::render::renderer::Renderer;
-use crate::render::{self, vertex_layout};
+use crate::render::vertex_layout;
 use destiny_pkg::TagHash;
-use itertools::Itertools;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 

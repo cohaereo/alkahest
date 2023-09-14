@@ -12,22 +12,13 @@ use crate::material::Material;
 use crate::packages::package_manager;
 use crate::render::vertex_layout::InputElement;
 use crate::texture::Texture;
-use crate::util::LockTracker;
+use crate::util::{caller_frame, LockTracker};
 
 use super::drawcall::ShadingTechnique;
 use super::renderer::Renderer;
 use super::shader::{load_pshader, load_vshader};
 use super::vertex_layout::OutputElement;
 use super::{resource_mt, DeviceContextSwapchain};
-
-macro_rules! caller_frame {
-    () => {{
-        let caller_location = std::panic::Location::caller();
-        let caller_file = caller_location.file();
-        let caller_line = caller_location.line();
-        format!("{caller_file}:{caller_line}")
-    }};
-}
 
 #[derive(Default)]
 pub struct RenderData {
@@ -141,22 +132,22 @@ impl RenderDataManager {
             .expect("Failed to send load buffer request");
     }
 
-    pub fn load_sampler(&self, dcs: &DeviceContextSwapchain, hash: TagHash) {
-        if !hash.is_valid() {
-            return;
-        }
+    // pub fn load_sampler(&self, dcs: &DeviceContextSwapchain, hash: TagHash) {
+    //     if !hash.is_valid() {
+    //         return;
+    //     }
 
-        let sampler_header_ref = package_manager().get_entry(hash).unwrap().reference;
-        let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
+    //     let sampler_header_ref = package_manager().get_entry(hash).unwrap().reference;
+    //     let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
 
-        let sampler = unsafe {
-            dcs.device
-                .CreateSamplerState(sampler_data.as_ptr() as _)
-                .expect("Failed to create sampler state")
-        };
+    //     let sampler = unsafe {
+    //         dcs.device
+    //             .CreateSamplerState(sampler_data.as_ptr() as _)
+    //             .expect("Failed to create sampler state")
+    //     };
 
-        self.data_mut().samplers.insert(hash, sampler);
-    }
+    //     self.data_mut().samplers.insert(hash, sampler);
+    // }
 
     pub fn load_vshader(
         &self,
