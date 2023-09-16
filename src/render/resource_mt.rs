@@ -1,9 +1,9 @@
 use anyhow::Context;
 use crossbeam::channel::{self as mpsc, Receiver};
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use parking_lot::RwLock;
+use std::sync::Arc;
 use std::time::Instant;
-use std::{sync::Arc};
 use windows::Win32::Graphics::Direct3D11::{
     D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,
     D3D11_USAGE_IMMUTABLE,
@@ -12,6 +12,7 @@ use windows::Win32::Graphics::Direct3D11::{
 use crate::{
     dxgi::DxgiFormat,
     entity::{IndexBufferHeader, VertexBufferHeader},
+    map::ExtendedHash,
     packages::package_manager,
     texture::Texture,
 };
@@ -56,19 +57,21 @@ fn update_status(state: &RwLock<LoadingThreadState>, remaining: usize) {
 fn spawn_thread_textures(
     dcs: Arc<DeviceContextSwapchain>,
     data: Arc<RwLock<RenderData>>,
-    rx: Receiver<TagHash>,
+    rx: Receiver<ExtendedHash>,
     name: &'static str,
 ) {
     std::thread::Builder::new()
         .name(name.to_string())
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
-                if hash.is_valid() && !data.read().textures.contains_key(&hash) {
+                if
+                /* hash.is_valid() && */
+                !data.read().textures.contains_key(&hash.key()) {
                     match Texture::load(&dcs, hash) {
                         Ok(t) => {
-                            data.write().textures.insert(hash, t);
+                            data.write().textures.insert(hash.key(), t);
                         }
-                        Err(e) => error!("Failed to load texture {hash}: {e}"),
+                        Err(e) => error!("Failed to load texture {hash:?}: {e}"),
                     }
                 }
 
@@ -83,8 +86,8 @@ fn spawn_thread_textures(
 pub fn thread_textures(
     dcs: Arc<DeviceContextSwapchain>,
     data: Arc<RwLock<RenderData>>,
-) -> mpsc::Sender<TagHash> {
-    let (tx, rx) = mpsc::unbounded::<TagHash>();
+) -> mpsc::Sender<ExtendedHash> {
+    let (tx, rx) = mpsc::unbounded::<ExtendedHash>();
 
     spawn_thread_textures(dcs.clone(), data.clone(), rx.clone(), "Texture loader 1");
     spawn_thread_textures(dcs, data, rx, "Texture loader 2");
@@ -103,7 +106,6 @@ fn spawn_thread_buffers(
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
                 if hash.is_valid() {
-                    info!("Loadin buffer {hash}");
                     if let Ok(entry) = package_manager().get_entry(hash) {
                         match (entry.file_type, entry.file_subtype) {
                             // Vertex buffer

@@ -1,4 +1,5 @@
 use crate::dxgi::DxgiFormat;
+use crate::map::ExtendedHash;
 use crate::packages::package_manager;
 use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
@@ -6,7 +7,7 @@ use crate::structure::{CafeMarker, TablePointer};
 use crate::types::IVector2;
 use anyhow::Context;
 use binrw::BinRead;
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use std::io::SeekFrom;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
@@ -24,6 +25,7 @@ pub struct TextureHeader {
     pub format: DxgiFormat,
     pub _unk8: u32,
 
+    #[br(seek_before = SeekFrom::Start(0x20))]
     pub cafe: CafeMarker,
 
     pub width: u16,
@@ -31,7 +33,7 @@ pub struct TextureHeader {
     pub depth: u16,
     pub array_size: u16,
 
-    #[br(seek_before = SeekFrom::Start(0x24))]
+    #[br(seek_before = SeekFrom::Start(0x3c))]
     #[br(map(|v: u32| (v != u32::MAX).then_some(TagHash(v))))]
     pub large_buffer: Option<TagHash>,
 }
@@ -74,11 +76,16 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn load(dcs: &DeviceContextSwapchain, hash: TagHash) -> anyhow::Result<Texture> {
-        let _span = debug_span!("Load texture", %hash).entered();
-        let texture_header_ref = package_manager().get_entry(hash)?.reference;
+    pub fn load(dcs: &DeviceContextSwapchain, hash: ExtendedHash) -> anyhow::Result<Texture> {
+        let _span = debug_span!("Load texture", ?hash).entered();
+        let texture_header_ref = package_manager()
+            .get_entry(
+                hash.hash32()
+                    .ok_or_else(|| anyhow::anyhow!("Could not match hash {hash:?}"))?,
+            )?
+            .reference;
 
-        let texture: TextureHeader = package_manager().read_tag_struct(hash)?;
+        let texture: TextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;
         let mut texture_data = if let Some(t) = texture.large_buffer {
             package_manager()
                 .read_tag(t)
@@ -202,7 +209,7 @@ impl Texture {
                     )
                     .context("Failed to create texture cube")?;
 
-                let name = format!("Tex {0:?}/{0}\0", hash);
+                let name = format!("Tex {0:?}\0", hash);
                 tex.SetPrivateData(
                     &WKPDID_D3DDebugObjectName,
                     name.len() as u32 - 1,
@@ -269,7 +276,7 @@ impl Texture {
                     )
                     .context("Failed to create 2D texture")?;
 
-                let name = format!("Tex {0:?}/{0}\0", hash);
+                let name = format!("Tex {0:?}\0", hash);
                 tex.SetPrivateData(
                     &WKPDID_D3DDebugObjectName,
                     name.len() as u32 - 1,

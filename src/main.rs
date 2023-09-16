@@ -6,9 +6,9 @@ extern crate tracing;
 
 use std::cell::RefCell;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -17,8 +17,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
-use destiny_pkg::PackageVersion::Destiny2PreBeyondLight;
-use destiny_pkg::{PackageManager, TagHash};
+use destiny_pkg::PackageVersion::{self, Destiny2PreBeyondLight};
+use destiny_pkg::{PackageManager, TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec3A, Vec4};
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
@@ -46,7 +46,8 @@ use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInp
 use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
 use crate::map::{
-    MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807164, Unk80807dae, Unk80808a54,
+    ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807164, Unk80807dae,
+    Unk80808a54,
 };
 use crate::map_resources::{
     MapResource, Unk80806b7f, Unk80806df3, Unk80806e68, Unk8080714b, Unk80807268, Unk80809162,
@@ -134,12 +135,12 @@ pub fn main() -> anyhow::Result<()> {
     let (package, pm) = info_span!("Initializing package manager").in_scope(|| {
         let pkg_path = std::env::args().nth(1).expect("No package file was given!");
         (
-            Destiny2PreBeyondLight
+            PackageVersion::Destiny2Lightfall
                 .open(&pkg_path)
                 .expect("Failed to open package"),
             PackageManager::new(
                 PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
-                Destiny2PreBeyondLight,
+                PackageVersion::Destiny2Lightfall,
                 true,
             )
             .unwrap(),
@@ -150,12 +151,13 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut stringmap: IntMap<u32, String> = Default::default();
     let all_global_packages = [
-        0x019a, 0x01cf, 0x01fe, 0x0211, 0x0238, 0x03ab, 0x03d1, 0x03ed, 0x03f5, 0x06dc,
+        0x012d, 0x0195, 0x0196, 0x0197, 0x0198, 0x0199, 0x019a, 0x019b, 0x019c, 0x019d, 0x019e,
+        0x03dd,
     ];
     {
         let _span = info_span!("Loading global strings").entered();
         for (t, _) in package_manager()
-            .get_all_by_reference(0x80809a88)
+            .get_all_by_reference(u32::from_be(0xEF998080))
             .into_iter()
             .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
         {
@@ -267,16 +269,24 @@ pub fn main() -> anyhow::Result<()> {
         Default::default();
     let mut pshader_map: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
         Default::default();
-    let mut sampler_map: IntMap<TagHash, ID3D11SamplerState> = Default::default();
-    let mut terrain_headers = vec![];
+    let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
+    // let mut terrain_headers = vec![];
     let mut maps: Vec<MapData> = vec![];
+
+    // for (tag, entry) in package_manager().get_all_by_reference(u32::from_be(0x1E898080)) {
+    //     println!("{} - {tag}", package_manager().package_paths[&tag.pkg_id()]);
+    // }
 
     // First light reserved for camera light
     let mut point_lights = vec![Vec4::ZERO];
-    for (index, _) in package.get_all_by_reference(0x80807dae) {
+    for (index, _) in package.get_all_by_reference(u32::from_be(0x1E898080)) {
         let hash = TagHash::new(package.pkg_id(), index as _);
         let _span = debug_span!("Load map", %hash).entered();
         let think: Unk80807dae = package_manager().read_tag_struct(hash).unwrap();
+
+        // if stringmap.get(&think.map_name.0) != Some(&"Quagmire".to_string()) {
+        //     continue;
+        // }
 
         let mut placement_groups = vec![];
         let mut resource_points = vec![];
@@ -284,11 +294,9 @@ pub fn main() -> anyhow::Result<()> {
 
         let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
         for res in &think.child_map.map_resources {
-            let thing2: Unk80808a54 = if res.is_hash32 != 0 {
-                package_manager().read_tag_struct(res.hash32).unwrap()
-            } else {
-                package_manager().read_tag64_struct(res.hash64.0).unwrap()
-            };
+            let thing2: Unk80808a54 = package_manager()
+                .read_tag_struct(res.hash32().unwrap())
+                .unwrap();
 
             for table in &thing2.data_tables {
                 let table_data = package_manager().read_tag(table.tag()).unwrap();
@@ -298,7 +306,7 @@ pub fn main() -> anyhow::Result<()> {
                     if data.data_resource.is_valid {
                         match data.data_resource.resource_type {
                             // D2Class_C96C8080 (placement)
-                            0x808071b3 => {
+                            0x80806cc9 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let preheader_tag: TagHash = cur.read_le().unwrap();
@@ -307,140 +315,140 @@ pub fn main() -> anyhow::Result<()> {
 
                                 placement_groups.push(preheader.placement_group);
                             }
-                            0x808071ad => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let header_tag: TagHash = cur.read_le().unwrap();
-                                let header: Unk80807164 =
-                                    package_manager().read_tag_struct(header_tag).unwrap();
+                            // 0x808071ad => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            //         .unwrap();
+                            //     let header_tag: TagHash = cur.read_le().unwrap();
+                            //     let header: Unk80807164 =
+                            //         package_manager().read_tag_struct(header_tag).unwrap();
 
-                                resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        (header.unk70.x + header.unk80.x) / 2.,
-                                        (header.unk70.y + header.unk80.y) / 2.,
-                                        (header.unk70.z + header.unk80.z) / 2.,
-                                        (header.unk70.w + header.unk80.w) / 2.,
-                                    ),
-                                    rotation: Quat::IDENTITY,
-                                    entity: data.entity,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::Unk808071ad(AABB {
-                                        min: Vec3A::new(
-                                            header.unk70.x,
-                                            header.unk70.y,
-                                            header.unk70.z,
-                                        ),
-                                        max: Vec3A::new(
-                                            header.unk80.x,
-                                            header.unk80.y,
-                                            header.unk80.z,
-                                        ),
-                                    }),
-                                });
-                            }
-                            // D2Class_7D6C8080 (terrain)
-                            0x8080714b => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset))
-                                    .unwrap();
+                            //     resource_points.push(ResourcePoint {
+                            //         translation: Vec4::new(
+                            //             (header.unk70.x + header.unk80.x) / 2.,
+                            //             (header.unk70.y + header.unk80.y) / 2.,
+                            //             (header.unk70.z + header.unk80.z) / 2.,
+                            //             (header.unk70.w + header.unk80.w) / 2.,
+                            //         ),
+                            //         rotation: Quat::IDENTITY,
+                            //         entity: data.entity,
+                            //         resource_type: data.data_resource.resource_type,
+                            //         resource: MapResource::Unk808071ad(AABB {
+                            //             min: Vec3A::new(
+                            //                 header.unk70.x,
+                            //                 header.unk70.y,
+                            //                 header.unk70.z,
+                            //             ),
+                            //             max: Vec3A::new(
+                            //                 header.unk80.x,
+                            //                 header.unk80.y,
+                            //                 header.unk80.z,
+                            //             ),
+                            //         }),
+                            //     });
+                            // }
+                            // // D2Class_7D6C8080 (terrain)
+                            // 0x80806c7d => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset))
+                            //         .unwrap();
 
-                                let terrain_resource: Unk8080714b = cur.read_le().unwrap();
-                                let terrain: Unk8080714f = package_manager()
-                                    .read_tag_struct(terrain_resource.terrain)
-                                    .unwrap();
+                            //     let terrain_resource: Unk8080714b = cur.read_le().unwrap();
+                            //     let terrain: Unk8080714f = package_manager()
+                            //         .read_tag_struct(terrain_resource.terrain)
+                            //         .unwrap();
 
-                                for p in &terrain.mesh_parts {
-                                    if p.material.is_valid() {
-                                        material_map.insert(
-                                            p.material,
-                                            Material::load(
-                                                &renderer,
-                                                package_manager().read_tag_struct(p.material)?,
-                                                p.material,
-                                                true,
-                                            ),
-                                        );
-                                    }
-                                }
+                            //     for p in &terrain.mesh_parts {
+                            //         if p.material.is_valid() {
+                            //             material_map.insert(
+                            //                 p.material,
+                            //                 Material::load(
+                            //                     &renderer,
+                            //                     package_manager().read_tag_struct(p.material)?,
+                            //                     p.material,
+                            //                     true,
+                            //                 ),
+                            //             );
+                            //         }
+                            //     }
 
-                                terrain_headers.push((terrain_resource.terrain, terrain));
-                                terrains.push(terrain_resource.terrain);
-                            }
-                            // Cubemap volume
-                            0x80806b7f => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset))
-                                    .unwrap();
+                            //     terrain_headers.push((terrain_resource.terrain, terrain));
+                            //     terrains.push(terrain_resource.terrain);
+                            // }
+                            // // Cubemap volume
+                            // 0x80806b7f => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset))
+                            //         .unwrap();
 
-                                let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
-                                let extents_center = Vec4::new(
-                                    data.translation.x,
-                                    data.translation.y,
-                                    data.translation.z,
-                                    data.translation.w,
-                                );
-                                let extents = Vec4::new(
-                                    cubemap_volume.cubemap_extents.x,
-                                    cubemap_volume.cubemap_extents.y,
-                                    cubemap_volume.cubemap_extents.z,
-                                    cubemap_volume.cubemap_extents.w,
-                                );
+                            //     let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
+                            //     let extents_center = Vec4::new(
+                            //         data.translation.x,
+                            //         data.translation.y,
+                            //         data.translation.z,
+                            //         data.translation.w,
+                            //     );
+                            //     let extents = Vec4::new(
+                            //         cubemap_volume.cubemap_extents.x,
+                            //         cubemap_volume.cubemap_extents.y,
+                            //         cubemap_volume.cubemap_extents.z,
+                            //         cubemap_volume.cubemap_extents.w,
+                            //     );
 
-                                let volume_min = extents_center - extents;
-                                let volume_max = extents_center + extents;
+                            //     let volume_min = extents_center - extents;
+                            //     let volume_max = extents_center + extents;
 
-                                renderer
-                                    .render_data
-                                    .load_texture(cubemap_volume.cubemap_texture);
+                            //     renderer
+                            //         .render_data
+                            //         .load_texture(cubemap_volume.cubemap_texture);
 
-                                resource_points.push(ResourcePoint {
-                                    translation: extents_center,
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
-                                    entity: data.entity,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::CubemapVolume(
-                                        Box::new(cubemap_volume),
-                                        AABB {
-                                            min: volume_min.truncate().into(),
-                                            max: volume_max.truncate().into(),
-                                        },
-                                    ),
-                                });
-                            }
-                            // Point light
-                            0x80806cbf => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
-                                    entity: data.entity,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::PointLight(tag),
-                                });
-                                point_lights.push(Vec4::new(
-                                    data.translation.x,
-                                    data.translation.y,
-                                    data.translation.z,
-                                    data.translation.w,
-                                ));
-                            }
+                            //     resource_points.push(ResourcePoint {
+                            //         translation: extents_center,
+                            //         rotation: Quat::from_xyzw(
+                            //             data.rotation.x,
+                            //             data.rotation.y,
+                            //             data.rotation.z,
+                            //             data.rotation.w,
+                            //         ),
+                            //         entity: data.entity,
+                            //         resource_type: data.data_resource.resource_type,
+                            //         resource: MapResource::CubemapVolume(
+                            //             Box::new(cubemap_volume),
+                            //             AABB {
+                            //                 min: volume_min.truncate().into(),
+                            //                 max: volume_max.truncate().into(),
+                            //             },
+                            //         ),
+                            //     });
+                            // }
+                            // // Point light
+                            // 0x80806cbf => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            //         .unwrap();
+                            //     let tag: TagHash = cur.read_le().unwrap();
+                            //     resource_points.push(ResourcePoint {
+                            //         translation: Vec4::new(
+                            //             data.translation.x,
+                            //             data.translation.y,
+                            //             data.translation.z,
+                            //             data.translation.w,
+                            //         ),
+                            //         rotation: Quat::from_xyzw(
+                            //             data.rotation.x,
+                            //             data.rotation.y,
+                            //             data.rotation.z,
+                            //             data.rotation.w,
+                            //         ),
+                            //         entity: data.entity,
+                            //         resource_type: data.data_resource.resource_type,
+                            //         resource: MapResource::PointLight(tag),
+                            //     });
+                            //     point_lights.push(Vec4::new(
+                            //         data.translation.x,
+                            //         data.translation.y,
+                            //         data.translation.z,
+                            //         data.translation.w,
+                            //     ));
+                            // }
                             // Decal collection
-                            0x80806e62 => {
+                            0x80806955 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
@@ -477,105 +485,105 @@ pub fn main() -> anyhow::Result<()> {
                                     }
                                 }
                             }
-                            // Unknown, every element has a mesh (material+index+vertex) and the required transforms
-                            0x80806df1 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
+                            // // Unknown, every element has a mesh (material+index+vertex) and the required transforms
+                            // 0x80806df1 => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            //         .unwrap();
+                            //     let tag: TagHash = cur.read_le().unwrap();
+                            //     if !tag.is_valid() {
+                            //         continue;
+                            //     }
 
-                                let header: Unk80806df3 =
-                                    package_manager().read_tag_struct(tag).unwrap();
+                            //     let header: Unk80806df3 =
+                            //         package_manager().read_tag_struct(tag).unwrap();
 
-                                for p in &header.unk8 {
-                                    resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            p.translation.x,
-                                            p.translation.y,
-                                            p.translation.z,
-                                            p.translation.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
-                                        entity: data.entity,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806df1,
-                                    });
-                                }
-                            }
-                            // Unknown, structure seems like that of an octree
-                            0x80806f38 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
+                            //     for p in &header.unk8 {
+                            //         resource_points.push(ResourcePoint {
+                            //             translation: Vec4::new(
+                            //                 p.translation.x,
+                            //                 p.translation.y,
+                            //                 p.translation.z,
+                            //                 p.translation.w,
+                            //             ),
+                            //             rotation: Quat::IDENTITY,
+                            //             entity: data.entity,
+                            //             resource_type: data.data_resource.resource_type,
+                            //             resource: MapResource::Unk80806df1,
+                            //         });
+                            //     }
+                            // }
+                            // // Unknown, structure seems like that of an octree
+                            // 0x80806f38 => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            //         .unwrap();
+                            //     let tag: TagHash = cur.read_le().unwrap();
+                            //     if !tag.is_valid() {
+                            //         continue;
+                            //     }
 
-                                let header: Unk80807268 =
-                                    package_manager().read_tag_struct(tag).unwrap();
+                            //     let header: Unk80807268 =
+                            //         package_manager().read_tag_struct(tag).unwrap();
 
-                                for p in &header.unk50 {
-                                    resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            p.unk0.x, p.unk0.y, p.unk0.z, p.unk0.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
-                                        entity: data.entity,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806f38,
-                                    });
-                                }
-                            }
-                            0x80809160 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
+                            //     for p in &header.unk50 {
+                            //         resource_points.push(ResourcePoint {
+                            //             translation: Vec4::new(
+                            //                 p.unk0.x, p.unk0.y, p.unk0.z, p.unk0.w,
+                            //             ),
+                            //             rotation: Quat::IDENTITY,
+                            //             entity: data.entity,
+                            //             resource_type: data.data_resource.resource_type,
+                            //             resource: MapResource::Unk80806f38,
+                            //         });
+                            //     }
+                            // }
+                            // 0x80809160 => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            //         .unwrap();
+                            //     let tag: TagHash = cur.read_le().unwrap();
+                            //     if !tag.is_valid() {
+                            //         continue;
+                            //     }
 
-                                let header: Unk80809162 =
-                                    package_manager().read_tag_struct(tag).unwrap();
+                            //     let header: Unk80809162 =
+                            //         package_manager().read_tag_struct(tag).unwrap();
 
-                                for p in &header.unk8 {
-                                    resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            p.unk10.x, p.unk10.y, p.unk10.z, p.unk10.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
-                                        entity: data.entity,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::RespawnPoint,
-                                    });
-                                }
-                            }
-                            // (ambient) sound source
-                            0x80806b5b => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
+                            //     for p in &header.unk8 {
+                            //         resource_points.push(ResourcePoint {
+                            //             translation: Vec4::new(
+                            //                 p.unk10.x, p.unk10.y, p.unk10.z, p.unk10.w,
+                            //             ),
+                            //             rotation: Quat::IDENTITY,
+                            //             entity: data.entity,
+                            //             resource_type: data.data_resource.resource_type,
+                            //             resource: MapResource::RespawnPoint,
+                            //         });
+                            //     }
+                            // }
+                            // // (ambient) sound source
+                            // 0x80806b5b => {
+                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                            //         .unwrap();
+                            //     let tag: TagHash = cur.read_le().unwrap();
+                            //     if !tag.is_valid() {
+                            //         continue;
+                            //     }
 
-                                let header: Unk80809802 =
-                                    package_manager().read_tag_struct(tag).unwrap();
+                            //     let header: Unk80809802 =
+                            //         package_manager().read_tag_struct(tag).unwrap();
 
-                                resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
-                                    rotation: Quat::IDENTITY,
-                                    entity: data.entity,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::AmbientSound(header),
-                                });
-                            }
+                            //     resource_points.push(ResourcePoint {
+                            //         translation: Vec4::new(
+                            //             data.translation.x,
+                            //             data.translation.y,
+                            //             data.translation.z,
+                            //             data.translation.w,
+                            //         ),
+                            //         rotation: Quat::IDENTITY,
+                            //         entity: data.entity,
+                            //         resource_type: data.data_resource.resource_type,
+                            //         resource: MapResource::AmbientSound(header),
+                            //     });
+                            // }
                             u => {
                                 if data.translation.x == 0.0
                                     && data.translation.y == 0.0
@@ -665,128 +673,128 @@ pub fn main() -> anyhow::Result<()> {
         })
     }
 
-    let to_load_entities: IntSet<TagHash> = maps
-        .iter()
-        .flat_map(|v| v.resource_points.iter().map(|(r, _)| r.entity))
-        .filter(|v| v.is_valid())
-        .collect();
+    // let to_load_entities: IntSet<TagHash> = maps
+    //     .iter()
+    //     .flat_map(|v| v.resource_points.iter().map(|(r, _)| r.entity))
+    //     .filter(|v| v.is_valid())
+    //     .collect();
 
-    let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
-    for te in &to_load_entities {
-        let _span = debug_span!("Load entity", hash = %te).entered();
-        let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
-        debug!("Loading entity {te}");
-        for e in &header.unk10 {
-            match e.unk0.unk10.resource_type {
-                0x808072b8 => {
-                    debug!(
-                        "\t- EntityModel {:08x}/{}",
-                        e.unk0.unk18.resource_type.to_be(),
-                        e.unk0.unk10.resource_type.to_be(),
-                    );
-                    let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
-                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x1dc))?;
-                    let model: Tag<Unk808073a5> = cur.read_le()?;
-                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x300))?;
-                    let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
-                    let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
+    // let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
+    // for te in &to_load_entities {
+    //     let _span = debug_span!("Load entity", hash = %te).entered();
+    //     let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
+    //     debug!("Loading entity {te}");
+    //     for e in &header.unk10 {
+    //         match e.unk0.unk10.resource_type {
+    //             0x808072b8 => {
+    //                 debug!(
+    //                     "\t- EntityModel {:08x}/{}",
+    //                     e.unk0.unk18.resource_type.to_be(),
+    //                     e.unk0.unk10.resource_type.to_be(),
+    //                 );
+    //                 let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
+    //                 cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x1dc))?;
+    //                 let model: Tag<Unk808073a5> = cur.read_le()?;
+    //                 cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x300))?;
+    //                 let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
+    //                 let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
 
-                    for m in &materials {
-                        material_map.insert(
-                            m.tag(),
-                            Material::load(&renderer, m.0.clone(), m.tag(), true),
-                        );
-                    }
+    //                 for m in &materials {
+    //                     material_map.insert(
+    //                         m.tag(),
+    //                         Material::load(&renderer, m.0.clone(), m.tag(), true),
+    //                     );
+    //                 }
 
-                    for m in &model.meshes {
-                        for p in &m.parts {
-                            if p.material.is_valid() {
-                                material_map.insert(
-                                    p.material,
-                                    Material::load(
-                                        &renderer,
-                                        package_manager().read_tag_struct(p.material)?,
-                                        p.material,
-                                        true,
-                                    ),
-                                );
-                            }
-                        }
-                    }
+    //                 for m in &model.meshes {
+    //                     for p in &m.parts {
+    //                         if p.material.is_valid() {
+    //                             material_map.insert(
+    //                                 p.material,
+    //                                 Material::load(
+    //                                     &renderer,
+    //                                     package_manager().read_tag_struct(p.material)?,
+    //                                     p.material,
+    //                                     true,
+    //                                 ),
+    //                             );
+    //                         }
+    //                     }
+    //                 }
 
-                    if entity_renderers
-                        .insert(
-                            *te,
-                            EntityRenderer::load(
-                                model.0,
-                                entity_material_map.to_vec(),
-                                materials.iter().map(|m| m.tag()).collect_vec(),
-                                &renderer,
-                                &dcs,
-                            )?,
-                        )
-                        .is_some()
-                    {
-                        error!("More than 1 model was loaded for entity {te}");
-                    }
+    //                 if entity_renderers
+    //                     .insert(
+    //                         *te,
+    //                         EntityRenderer::load(
+    //                             model.0,
+    //                             entity_material_map.to_vec(),
+    //                             materials.iter().map(|m| m.tag()).collect_vec(),
+    //                             &renderer,
+    //                             &dcs,
+    //                         )?,
+    //                     )
+    //                     .is_some()
+    //                 {
+    //                     error!("More than 1 model was loaded for entity {te}");
+    //                 }
 
-                    // println!(" - EntityModel {model:?}");
-                }
-                u => debug!(
-                    "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-                    u.to_be(),
-                    e.unk0.unk10.resource_type.to_be(),
-                    e.unk0.tag()
-                ),
-            }
-        }
+    //                 // println!(" - EntityModel {model:?}");
+    //             }
+    //             u => debug!(
+    //                 "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+    //                 u.to_be(),
+    //                 e.unk0.unk10.resource_type.to_be(),
+    //                 e.unk0.tag()
+    //             ),
+    //         }
+    //     }
 
-        if !entity_renderers.contains_key(te) {
-            warn!("Entity {te} does not contain any geometry!");
-        }
-    }
+    //     if !entity_renderers.contains_key(te) {
+    //         warn!("Entity {te} does not contain any geometry!");
+    //     }
+    // }
 
-    info!(
-        "Found {} entity models ({} entities)",
-        entity_renderers.len(),
-        to_load_entities.len()
-    );
+    // info!(
+    //     "Found {} entity models ({} entities)",
+    //     entity_renderers.len(),
+    //     to_load_entities.len()
+    // );
 
     info!("{} lights", point_lights.len());
 
-    // TODO(cohae): Maybe not the best idea?
-    info!("Updating resource constant buffers");
-    for m in &maps {
-        for (rp, cb) in &m.resource_points {
-            if let Some(ent) = entity_renderers.get(&rp.entity) {
-                let mm = Mat4::from_scale_rotation_translation(
-                    Vec3::splat(rp.translation.w),
-                    rp.rotation.inverse(),
-                    Vec3::ZERO,
-                );
-                let model_matrix = Mat4::from_cols(
-                    mm.x_axis.truncate().extend(rp.translation.x),
-                    mm.y_axis.truncate().extend(rp.translation.y),
-                    mm.z_axis.truncate().extend(rp.translation.z),
-                    mm.w_axis,
-                );
+    // // TODO(cohae): Maybe not the best idea?
+    // info!("Updating resource constant buffers");
+    // for m in &maps {
+    //     for (rp, cb) in &m.resource_points {
+    //         if let Some(ent) = entity_renderers.get(&rp.entity) {
+    //             let mm = Mat4::from_scale_rotation_translation(
+    //                 Vec3::splat(rp.translation.w),
+    //                 rp.rotation.inverse(),
+    //                 Vec3::ZERO,
+    //             );
+    //             let model_matrix = Mat4::from_cols(
+    //                 mm.x_axis.truncate().extend(rp.translation.x),
+    //                 mm.y_axis.truncate().extend(rp.translation.y),
+    //                 mm.z_axis.truncate().extend(rp.translation.z),
+    //                 mm.w_axis,
+    //             );
 
-                cb.write(&ScopeRigidModel {
-                    mesh_to_world: model_matrix.transpose(),
-                    position_scale: ent.mesh_scale(),
-                    position_offset: ent.mesh_offset(),
-                    texcoord0_scale_offset: ent.texcoord_transform(),
-                    dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                })?;
-            }
-        }
-    }
+    //             cb.write(&ScopeRigidModel {
+    //                 mesh_to_world: model_matrix.transpose(),
+    //                 position_scale: ent.mesh_scale(),
+    //                 position_offset: ent.mesh_offset(),
+    //                 texcoord0_scale_offset: ent.texcoord_transform(),
+    //                 dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+    //             })?;
+    //         }
+    //     }
+    // }
 
     let mut placement_groups: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
         IntMap::default();
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
-    let mut to_load_samplers: HashMap<TagHash, ()> = Default::default();
+    let mut to_load_samplers: HashSet<ExtendedHash> = Default::default();
     for m in &maps {
         for placements in m.placement_groups.iter() {
             for v in &placements.statics {
@@ -801,23 +809,23 @@ pub fn main() -> anyhow::Result<()> {
     }
 
     let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
-    info!("Loading terrain");
-    info_span!("Loading terrain").in_scope(|| {
-        for (t, header) in terrain_headers.into_iter() {
-            for t in &header.mesh_groups {
-                renderer.render_data.load_texture(t.dyemap);
-            }
+    // info!("Loading terrain");
+    // info_span!("Loading terrain").in_scope(|| {
+    //     for (t, header) in terrain_headers.into_iter() {
+    //         // for t in &header.mesh_groups {
+    //         //     renderer.render_data.load_texture(t.dyemap);
+    //         // }
 
-            match TerrainRenderer::load(header, dcs.clone(), &renderer) {
-                Ok(renderer) => {
-                    terrain_renderers.insert(t.0, renderer);
-                }
-                Err(e) => {
-                    error!("Failed to load terrain: {e}");
-                }
-            }
-        }
-    });
+    //         match TerrainRenderer::load(header, dcs.clone(), &renderer) {
+    //             Ok(renderer) => {
+    //                 terrain_renderers.insert(t.0, renderer);
+    //             }
+    //             Err(e) => {
+    //                 error!("Failed to load terrain: {e}");
+    //             }
+    //         }
+    //     }
+    // });
 
     let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
 
@@ -838,22 +846,22 @@ pub fn main() -> anyhow::Result<()> {
                     );
                 }
             }
-            for m in &mheader.unk20 {
-                let m = m.material;
-                if m.is_valid() {
-                    material_map.insert(
-                        m,
-                        Material::load(
-                            &renderer,
-                            package_manager().read_tag_struct(m).unwrap(),
-                            m,
-                            true,
-                        ),
-                    );
-                }
-            }
+            // for m in &mheader.unk20 {
+            //     let m = m.material;
+            //     if m.is_valid() {
+            //         material_map.insert(
+            //             m,
+            //             Material::load(
+            //                 &renderer,
+            //                 package_manager().read_tag_struct(m).unwrap(),
+            //                 m,
+            //                 true,
+            //             ),
+            //         );
+            //     }
+            // }
 
-            match StaticModel::load(mheader, &dcs.device, &renderer, *almostloadable) {
+            match StaticModel::load(mheader, &renderer, *almostloadable) {
                 Ok(model) => {
                     static_map.insert(*almostloadable, Arc::new(model));
                 }
@@ -899,7 +907,7 @@ pub fn main() -> anyhow::Result<()> {
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
             for sampler in m.vs_samplers.iter().chain(m.ps_samplers.iter()) {
-                to_load_samplers.insert(sampler.sampler, ());
+                to_load_samplers.insert(sampler.clone());
             }
 
             if let Ok(v) = package_manager().get_entry(m.vertex_shader) {
@@ -907,6 +915,12 @@ pub fn main() -> anyhow::Result<()> {
 
                 vshader_map.entry(m.vertex_shader).or_insert_with(|| {
                     let vs_data = package_manager().read_tag(v.reference).unwrap();
+
+                    std::fs::File::create(format!("shaders/{}_vs.cso", m.vertex_shader))
+                        .unwrap()
+                        .write_all(&vs_data)
+                        .ok();
+
                     let mut vs_cur = Cursor::new(&vs_data);
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
                     let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
@@ -970,6 +984,10 @@ pub fn main() -> anyhow::Result<()> {
 
                 pshader_map.entry(m.pixel_shader).or_insert_with(|| {
                     let ps_data = package_manager().read_tag(v.reference).unwrap();
+                    std::fs::File::create(format!("shaders/{}_ps.cso", m.pixel_shader))
+                        .unwrap()
+                        .write_all(&ps_data)
+                        .ok();
 
                     let mut ps_cur = Cursor::new(&ps_data);
                     let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
@@ -1041,18 +1059,18 @@ pub fn main() -> anyhow::Result<()> {
 
     // info!("Loaded {} textures", texture_map.len());
 
-    let to_load_samplers: Vec<TagHash> = to_load_samplers.keys().cloned().collect();
     for s in to_load_samplers {
-        let sampler_header_ref = package_manager().get_entry(s).unwrap().reference;
+        let sampler_header_ref = package_manager()
+            .get_entry(s.hash32().unwrap())
+            .unwrap()
+            .reference;
         let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
 
-        let sampler = unsafe {
-            dcs.device
-                .CreateSamplerState(sampler_data.as_ptr() as _)
-                .expect("Failed to create sampler state")
-        };
+        let sampler = unsafe { dcs.device.CreateSamplerState(sampler_data.as_ptr() as _) };
 
-        sampler_map.insert(s, sampler);
+        if let Ok(sampler) = sampler {
+            sampler_map.insert(s.key(), sampler);
+        }
     }
 
     info!("Loaded {} samplers", sampler_map.len());
@@ -1270,35 +1288,35 @@ pub fn main() -> anyhow::Result<()> {
                             }
                         }
 
-                        if gb.renderlayer_terrain {
-                            for th in &map.terrains {
-                                if let Some(t) = terrain_renderers.get(&th.0) {
-                                    t.draw(&mut renderer).unwrap();
-                                }
-                            }
-                        }
+                        // if gb.renderlayer_terrain {
+                        //     for th in &map.terrains {
+                        //         if let Some(t) = terrain_renderers.get(&th.0) {
+                        //             t.draw(&mut renderer).unwrap();
+                        //         }
+                        //     }
+                        // }
 
-                        if gb.renderlayer_entities {
-                            for (rp, cb) in &map.resource_points {
-                                if let Some(ent) = entity_renderers.get(&rp.entity) {
-                                    if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
-                                        // resources.get::<ErrorRenderer>().unwrap().draw(
-                                        //     &mut renderer,
-                                        //     cb.buffer(),
-                                        //     proj_view,
-                                        //     view,
-                                        // );
-                                    }
-                                } else if rp.resource.is_entity() {
-                                    // resources.get::<ErrorRenderer>().unwrap().draw(
-                                    //     &mut renderer,
-                                    //     cb.buffer(),
-                                    //     proj_view,
-                                    //     view,
-                                    // );
-                                }
-                            }
-                        }
+                        // if gb.renderlayer_entities {
+                        //     for (rp, cb) in &map.resource_points {
+                        //         if let Some(ent) = entity_renderers.get(&rp.entity) {
+                        //             if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
+                        //                 // resources.get::<ErrorRenderer>().unwrap().draw(
+                        //                 //     &mut renderer,
+                        //                 //     cb.buffer(),
+                        //                 //     proj_view,
+                        //                 //     view,
+                        //                 // );
+                        //             }
+                        //         } else if rp.resource.is_entity() {
+                        //             // resources.get::<ErrorRenderer>().unwrap().draw(
+                        //             //     &mut renderer,
+                        //             //     cb.buffer(),
+                        //             //     proj_view,
+                        //             //     view,
+                        //             // );
+                        //         }
+                        //     }
+                        // }
                     }
 
                     renderer.submit_frame(
@@ -1311,36 +1329,36 @@ pub fn main() -> anyhow::Result<()> {
                         gui_rendersettings.borrow().evaluate_bytecode,
                     );
 
-                    let camera = resources.get::<FpsCamera>().unwrap();
-                    if let Some(MapResource::CubemapVolume(c, _)) = map
-                        .resource_points
-                        .iter()
-                        .find(|(r, _)| {
-                            if let MapResource::CubemapVolume(_, aabb) = &r.resource {
-                                aabb.contains_point(camera.position)
-                            } else {
-                                false
-                            }
-                        })
-                        .map(|(r, _)| &r.resource)
-                    {
-                        if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                            cr.0 = Some(c.cubemap_name.to_string());
-                        }
-                        renderer
-                            .render_data
-                            .data()
-                            .textures
-                            .get(&c.cubemap_texture)
-                            .map(|t| t.view.clone())
-                    } else {
-                        if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                            cr.0 = None;
-                        }
-                        None
-                    };
+                    // let camera = resources.get::<FpsCamera>().unwrap();
+                    // if let Some(MapResource::CubemapVolume(c, _)) = map
+                    //     .resource_points
+                    //     .iter()
+                    //     .find(|(r, _)| {
+                    //         if let MapResource::CubemapVolume(_, aabb) = &r.resource {
+                    //             aabb.contains_point(camera.position)
+                    //         } else {
+                    //             false
+                    //         }
+                    //     })
+                    //     .map(|(r, _)| &r.resource)
+                    // {
+                    //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                    //         cr.0 = Some(c.cubemap_name.to_string());
+                    //     }
+                    //     renderer
+                    //         .render_data
+                    //         .data()
+                    //         .textures
+                    //         .get(&c.cubemap_texture)
+                    //         .map(|t| t.view.clone())
+                    // } else {
+                    //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                    //         cr.0 = None;
+                    //     }
+                    //     None
+                    // };
 
-                    drop(camera);
+                    // drop(camera);
                     drop(maps);
                     gui.draw_frame(&window, last_frame.elapsed(), &mut resources);
 

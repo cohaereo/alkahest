@@ -1,10 +1,11 @@
 use crate::overlays::resource_nametags::ResourcePoint;
+use crate::packages::package_manager;
 use crate::render::scopes::ScopeRigidModel;
 use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ResourcePointer, TablePointer, Tag};
 use crate::types::{DestinyHash, Vector4};
-use binrw::BinRead;
+use binrw::{BinRead, BinReaderExt};
 use destiny_pkg::{TagHash, TagHash64};
 
 use std::io::SeekFrom;
@@ -36,16 +37,52 @@ pub struct Unk80809644 {
 #[derive(BinRead, Debug)]
 pub struct Unk808091e0 {
     pub file_size: u64,
-    pub map_resources: TablePointer<Unk808084c1>,
+    pub map_resources: TablePointer<ExtendedHash>,
 }
 
 // TODO: Custom reader once new tag parser comes around
-#[derive(BinRead, Debug)]
-pub struct Unk808084c1 {
-    // 80808a54
-    pub hash32: TagHash,
-    pub is_hash32: u32,
-    pub hash64: TagHash64, // 80808a54
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+pub enum ExtendedHash {
+    Hash32(TagHash),
+    Hash64(TagHash64),
+}
+
+impl ExtendedHash {
+    /// Key that is safe to use for caching/lookup tables
+    pub fn key(&self) -> u64 {
+        match self {
+            ExtendedHash::Hash32(v) => v.0 as u64,
+            ExtendedHash::Hash64(v) => v.0,
+        }
+    }
+
+    /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
+    pub fn hash32(&self) -> Option<TagHash> {
+        match self {
+            ExtendedHash::Hash32(v) => Some(*v),
+            ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
+        }
+    }
+}
+
+impl BinRead for ExtendedHash {
+    type Args<'a> = ();
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        endian: binrw::Endian,
+        args: Self::Args<'_>,
+    ) -> binrw::BinResult<Self> {
+        let hash32: TagHash = reader.read_type(endian)?;
+        let is_hash32: u32 = reader.read_type(endian)?;
+        let hash64: TagHash64 = reader.read_type(endian)?;
+
+        if is_hash32 != 0 {
+            Ok(ExtendedHash::Hash32(hash32))
+        } else {
+            Ok(ExtendedHash::Hash64(hash64))
+        }
+    }
 }
 
 // D2Class_07878080
@@ -67,11 +104,13 @@ pub struct Unk808099d6 {
 #[derive(BinRead, Debug)]
 pub struct Unk808099d8 {
     // 80809c0f
-    pub entity: TagHash,
-    pub unk4: [u32; 3],
-    pub rotation: Vector4,
-    pub translation: Vector4,
-    pub unk30: [u32; 11],
+    pub rotation: Vector4,    // 0x0
+    pub translation: Vector4, // 0x10
+    pub entity: TagHash,      // 0x20
+    pub unk24: u32,
+    pub entity2: TagHash,
+    pub unk2c: u32,
+    pub unk30: [u32; 11], //
     pub unk5c: f32,
     pub unk60: u32,
     pub unk64: DestinyHash,
@@ -95,7 +134,7 @@ pub struct Unk8080714f {
     pub unk10: Vector4,
     pub unk20: Vector4,
     pub unk30: Vector4,
-    #[br(seek_before(SeekFrom::Start(0x58)))]
+    #[br(seek_before(SeekFrom::Start(0x50)))]
     pub mesh_groups: TablePointer<Unk80807154>,
 
     pub vertex_buffer: TagHash,
@@ -104,7 +143,7 @@ pub struct Unk8080714f {
     pub material1: TagHash,
     pub material2: TagHash,
 
-    #[br(seek_before(SeekFrom::Start(0x80)))]
+    #[br(seek_before(SeekFrom::Start(0x78)))]
     pub mesh_parts: TablePointer<Unk80807152>,
 }
 

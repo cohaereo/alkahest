@@ -2,12 +2,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crossbeam::channel::Sender;
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use nohash_hasher::IntMap;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::dxgi::DxgiFormat;
+use crate::map::ExtendedHash;
 use crate::material::Material;
 use crate::packages::package_manager;
 use crate::render::vertex_layout::InputElement;
@@ -25,8 +26,8 @@ pub struct RenderData {
     pub materials: IntMap<TagHash, Material>,
     pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
     pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<OutputElement>)>,
-    pub textures: IntMap<TagHash, Texture>,
-    pub samplers: IntMap<TagHash, ID3D11SamplerState>,
+    pub textures: IntMap<u64, Texture>,
+    pub samplers: IntMap<u64, ID3D11SamplerState>,
 
     pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32)>,
     pub index_buffers: IntMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
@@ -47,7 +48,7 @@ impl RenderData {
 }
 
 pub struct RenderDataManager {
-    tx_textures: Sender<TagHash>,
+    tx_textures: Sender<ExtendedHash>,
     tx_buffers: Sender<TagHash>,
     // tx_shaders: Sender<TagHash>,
     render_data: Arc<RwLock<RenderData>>,
@@ -119,7 +120,7 @@ impl RenderDataManager {
     }
 
     /// Load a Texture2D, Texture2D or TextureCube from a hash
-    pub fn load_texture(&self, texture: TagHash) {
+    pub fn load_texture(&self, texture: ExtendedHash) {
         self.tx_textures
             .send(texture)
             .expect("Failed to send load texture request");

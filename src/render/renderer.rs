@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
-use glam::Mat4;
+use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -493,7 +493,7 @@ impl Renderer {
         unsafe {
             self.dcs
                 .context()
-                .VSSetConstantBuffers(11, Some(&[drawcall.cb11.clone()]));
+                .VSSetConstantBuffers(1, Some(&[drawcall.cb11.clone()]));
 
             if let Some(input_layout) = render_data.input_layouts.get(&drawcall.input_layout_hash) {
                 self.dcs.context().IASetInputLayout(input_layout);
@@ -601,7 +601,7 @@ impl Renderer {
                 self.render_data
                     .data()
                     .textures
-                    .get(&t)
+                    .get(&t.key())
                     .map(|t| t.view.clone())
             });
 
@@ -762,10 +762,11 @@ impl Renderer {
                 1. / (self.window_size.0 as f32),
                 1. / (self.window_size.1 as f32),
             ),
+            // Z value accounts for missing depth value
+            view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
             // maximum_depth_pre_projection: 0.0, // TODO
             // view_is_first_person: 0.0,
-            // Accounts for missing depth value in vertex output
-            misc_unk2: 0.0001,
+            // misc_unk2: 0.0001,
             // misc_unk3: 0.0,
             ..overrides.view
         })?;

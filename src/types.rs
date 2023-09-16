@@ -1,6 +1,6 @@
 use binrw::BinRead;
 use bytemuck::{Pod, Zeroable};
-use glam::{Vec3, Vec3A};
+use glam::{Vec2, Vec3, Vec3A};
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]
@@ -51,12 +51,24 @@ pub struct Vector2 {
     pub y: f32,
 }
 
+impl Into<Vec2> for Vector2 {
+    fn into(self) -> Vec2 {
+        Vec2::new(self.x, self.y)
+    }
+}
+
 #[repr(C)]
 #[derive(BinRead, Copy, Clone, Default, Pod, Zeroable)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl Into<Vec3> for Vector3 {
+    fn into(self) -> Vec3 {
+        Vec3::new(self.x, self.y, self.z)
+    }
 }
 
 #[repr(C)]

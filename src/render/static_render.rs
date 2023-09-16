@@ -1,14 +1,13 @@
-use crate::entity::{EPrimitiveType};
+use crate::entity::EPrimitiveType;
 use crate::render::vertex_buffers::load_vertex_buffers;
 use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
-use anyhow::{ensure};
+use anyhow::ensure;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3};
 use itertools::Itertools;
 
 use crate::packages::package_manager;
-
 
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -26,37 +25,54 @@ pub struct StaticModelBuffer {
 
 pub struct StaticModel {
     pub buffers: Vec<StaticModelBuffer>,
-    pub parts: Vec<Unk8080719a>,
-    pub mesh_groups: Vec<Unk8080719b>,
 
-    pub decal_parts: Vec<StaticOverlayModel>,
+    pub overlay_models: Vec<StaticOverlayModel>,
+
+    pub subheader: Unk80807194,
 
     model: Unk808071a7,
 }
 
 impl StaticModel {
-    /// Returns instance scope compatible texcoord transformation (X + YZ)
-    pub fn texcoord_transform(&self) -> Vec3 {
-        Vec3::new(
-            self.model.texture_coordinate_scale.x,
-            self.model.texture_coordinate_offset.x,
-            self.model.texture_coordinate_offset.y,
-        )
-    }
+    // /// Returns instance scope compatible texcoord transformation (X + YZ)
+    // pub fn texcoord_transform(&self) -> Vec3 {
+    //     Vec3::new(
+    //         self.subheader.texture_coordinate_scale.x,
+    //         self.subheader.texture_coordinate_offset.x,
+    //         self.subheader.texture_coordinate_offset.y,
+    //     )
+    // }
 
-    // TODO(cohae): Use more conventional methods + transpose
-    pub fn mesh_transform(&self) -> Mat4 {
-        Mat4::from_cols(
-            [self.model.model_scale, 0.0, 0.0, self.model.model_offset.x].into(),
-            [0.0, self.model.model_scale, 0.0, self.model.model_offset.y].into(),
-            [0.0, 0.0, self.model.model_scale, self.model.model_offset.z].into(),
-            [0.0, 0.0, 0.0, 1.0].into(),
-        )
-    }
+    // // TODO(cohae): Use more conventional methods + transpose
+    // pub fn mesh_transform(&self) -> Mat4 {
+    //     Mat4::from_cols(
+    //         [
+    //             self.subheader.model_scale,
+    //             0.0,
+    //             0.0,
+    //             self.subheader.model_offset.x,
+    //         ]
+    //         .into(),
+    //         [
+    //             0.0,
+    //             self.subheader.model_scale,
+    //             0.0,
+    //             self.subheader.model_offset.y,
+    //         ]
+    //         .into(),
+    //         [
+    //             0.0,
+    //             0.0,
+    //             self.subheader.model_scale,
+    //             self.subheader.model_offset.z,
+    //         ]
+    //         .into(),
+    //         [0.0, 0.0, 0.0, 1.0].into(),
+    //     )
+    // }
 
     pub fn load(
         model: Unk808071a7,
-        device: &ID3D11Device,
         renderer: &Renderer,
         _model_hash: TagHash,
     ) -> anyhow::Result<StaticModel> {
@@ -180,15 +196,15 @@ impl StaticModel {
         }
 
         Ok(StaticModel {
-            decal_parts: model
-                .unk20
-                .iter()
-                .map(|m| StaticOverlayModel::load(m.clone(), device, renderer).unwrap())
-                .collect_vec(),
+            overlay_models: vec![],
+            // overlay_models: model
+            //     .unk20
+            //     .iter()
+            //     .map(|m| StaticOverlayModel::load(m.clone(), device, renderer).unwrap())
+            //     .collect_vec(),
             buffers,
             model,
-            parts: header.parts.to_vec(),
-            mesh_groups: header.mesh_groups.to_vec(),
+            subheader: header,
         })
     }
 
@@ -200,17 +216,18 @@ impl StaticModel {
         draw_transparent: bool,
     ) -> anyhow::Result<()> {
         if draw_transparent {
-            for u in &self.decal_parts {
+            for u in &self.overlay_models {
                 u.draw(renderer, instance_buffer.clone(), instance_count);
             }
         } else {
             for (iu, u) in self
+                .subheader
                 .mesh_groups
                 .iter()
                 .enumerate()
                 .filter(|(_, u)| u.unk2 == 0)
             {
-                let p = &self.parts[u.part_index as usize];
+                let p = &self.subheader.parts[u.part_index as usize];
                 if !p.lod_category.is_highest_detail() {
                     continue;
                 }

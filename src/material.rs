@@ -1,5 +1,7 @@
+use std::io::SeekFrom;
 use std::ops::Deref;
 
+use crate::map::ExtendedHash;
 use crate::packages::package_manager;
 use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
@@ -8,7 +10,7 @@ use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
 use binrw::{BinRead, NullString};
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
 
 #[derive(BinRead, Debug, Clone)]
@@ -27,47 +29,50 @@ pub struct Unk808071e8 {
     pub unk24: u32,
     pub unk28: [u32; 8],
 
+    #[br(seek_before(SeekFrom::Start(0x70)))]
     pub vertex_shader: TagHash,
-    pub unk4c: u32,
+    pub unk5c: u32,
     pub vs_textures: TablePointer<Unk80807211>,
-    pub unk60: u64,
+    pub unk70: u64,
     pub vs_bytecode: TablePointer<u8>,
     pub vs_bytecode_constants: TablePointer<Vector4>,
-    pub vs_samplers: TablePointer<Unk808073f3>,
-    pub unk98: TablePointer<Vector4>,
-    pub unka8: [u32; 9],
+    pub vs_samplers: TablePointer<ExtendedHash>,
+    pub unka8: TablePointer<Vector4>,
+    pub unkb8: [u32; 9],
 
-    pub unkcc: TagHash,
-    pub unkd0: [u32; 126],
+    #[br(seek_before(SeekFrom::Start(0xe4)))]
+    pub unke4: TagHash,
 
+    // pub unke0: [u32; 126],
+    #[br(seek_before(SeekFrom::Start(0x2b0)))]
     pub pixel_shader: TagHash,
-    pub unk2cc: u32,
+    pub unk2b4: u32,
     pub ps_textures: TablePointer<Unk80807211>,
-    pub unk2e0: u64,
+    pub unk2c8: u64,
     pub ps_bytecode: TablePointer<u8>,
     pub ps_bytecode_constants: TablePointer<Vector4>,
-    pub ps_samplers: TablePointer<Unk808073f3>,
-    pub unk318: TablePointer<Vector4>,
-    pub unk328: [u32; 9],
-
+    pub ps_samplers: TablePointer<ExtendedHash>,
+    pub unk2f8: TablePointer<Vector4>,
+    // pub unk2f8: [u32; 9],
     /// Pointer to a float4 buffer, usually passed into cbuffer0
-    pub unk34c: TagHash,
+    #[br(seek_before(SeekFrom::Start(0x324)))]
+    pub unk334: TagHash,
 }
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80807211 {
     /// Material slot to assign to
     pub index: u32,
-    pub texture: TagHash,
+    _pad: u32,
+    pub texture: ExtendedHash,
 }
 
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk808073f3 {
-    pub sampler: TagHash,
-    pub unk4: u32,
-    pub unk8: u32,
-    pub unkc: u32,
-}
+// #[derive(BinRead, Debug, Clone)]
+// pub struct Unk808073f3 {
+//     pub sampler: TagHash64,
+//     pub unk8: u32,
+//     pub unkc: u32,
+// }
 
 pub struct Material {
     pub mat: Unk808071e8,
@@ -83,8 +88,8 @@ impl Material {
     // TODO(cohae): load_shaders is a hack, i fucking hate locks
     pub fn load(renderer: &Renderer, mat: Unk808071e8, tag: TagHash, load_shaders: bool) -> Self {
         let _span = debug_span!("Load material", hash = %tag).entered();
-        let cb0_vs = if mat.unkcc.is_valid() {
-            let buffer_header_ref = package_manager().get_entry(mat.unkcc).unwrap().reference;
+        let cb0_vs = if mat.unke4.is_valid() {
+            let buffer_header_ref = package_manager().get_entry(mat.unke4).unwrap().reference;
 
             let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
             let data = bytemuck::cast_slice(&data_raw);
@@ -96,16 +101,16 @@ impl Material {
             let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
-        } else if mat.unk98.len() > 1
+        } else if mat.unka8.len() > 1
             && mat
-                .unk98
+                .unka8
                 .iter()
                 .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
         {
-            trace!("Loading float4 cbuffer with {} elements", mat.unk318.len());
+            trace!("Loading float4 cbuffer with {} elements", mat.unk2f8.len());
             let buf = ConstantBuffer::create_array_init(
                 renderer.dcs.clone(),
-                bytemuck::cast_slice(&mat.unk98),
+                bytemuck::cast_slice(&mat.unka8),
             )
             .unwrap();
 
@@ -121,8 +126,8 @@ impl Material {
             Some(buf)
         };
 
-        let cb0_ps = if mat.unk34c.is_valid() {
-            let buffer_header_ref = package_manager().get_entry(mat.unk34c).unwrap().reference;
+        let cb0_ps = if mat.unk334.is_valid() {
+            let buffer_header_ref = package_manager().get_entry(mat.unk334).unwrap().reference;
 
             let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
 
@@ -134,16 +139,16 @@ impl Material {
             let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
-        } else if !mat.unk318.is_empty()
+        } else if !mat.unk2f8.is_empty()
             && mat
-                .unk318
+                .unk2f8
                 .iter()
                 .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
         {
-            trace!("Loading float4 cbuffer with {} elements", mat.unk318.len());
+            trace!("Loading float4 cbuffer with {} elements", mat.unk2f8.len());
             let buf = ConstantBuffer::create_array_init(
                 renderer.dcs.clone(),
-                bytemuck::cast_slice(&mat.unk318),
+                bytemuck::cast_slice(&mat.unk2f8),
             )
             .unwrap();
 
@@ -193,13 +198,13 @@ impl Material {
             for (si, s) in self.vs_samplers.iter().enumerate() {
                 dcs.context().VSSetSamplers(
                     1 + si as u32,
-                    Some(&[render_data.samplers.get(&s.sampler).cloned()]),
+                    Some(&[render_data.samplers.get(&s.key()).cloned()]),
                 );
             }
             for (si, s) in self.ps_samplers.iter().enumerate() {
                 dcs.context().PSSetSamplers(
                     1 + si as u32,
-                    Some(&[render_data.samplers.get(&s.sampler).cloned()]),
+                    Some(&[render_data.samplers.get(&s.key()).cloned()]),
                 );
             }
 
@@ -233,7 +238,7 @@ impl Material {
 
             for p in &self.vs_textures {
                 // TODO(cohae): Bind error texture on error
-                if let Some(t) = render_data.textures.get(&p.texture) {
+                if let Some(t) = render_data.textures.get(&p.texture.key()) {
                     dcs.context()
                         .VSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }
@@ -241,7 +246,7 @@ impl Material {
 
             for p in &self.ps_textures {
                 // TODO(cohae): Bind error texture on error
-                if let Some(t) = render_data.textures.get(&p.texture) {
+                if let Some(t) = render_data.textures.get(&p.texture.key()) {
                     dcs.context()
                         .PSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
                 }

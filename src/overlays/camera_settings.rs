@@ -1,8 +1,9 @@
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use strum::{EnumCount, VariantNames};
 use winit::window::Window;
 
 use crate::icons::ICON_BUG;
+use crate::map::ExtendedHash;
 use crate::map_resources::MapResource;
 use crate::resources::Resources;
 use crate::FpsCamera;
@@ -60,4 +61,4 @@ impl OverlayProvider for CameraPositionOverlay {
 }
 
 // cohae: Hate it
-pub struct CurrentCubemap(pub Option<String>, pub Option<TagHash>);
+pub struct CurrentCubemap(pub Option<String>, pub Option<ExtendedHash>);

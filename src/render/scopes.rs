@@ -1,4 +1,7 @@
-use glam::{Mat4, Vec4};
+use std::io::Write;
+
+use binrw::BinWrite;
+use glam::{Mat4, Vec2, Vec3, Vec4};
 
 pub type Mat3x4 = [Vec4; 3];
 
@@ -19,11 +22,8 @@ pub struct ScopeView {
     pub target_resolution: (f32, f32),
     pub inverse_target_resolution: (f32, f32),
 
-    // pub view_miscellaneous: Vec4,
-    pub misc_unk0: f32,
-    pub misc_unk1: f32,
-    pub misc_unk2: f32,
-    pub misc_unk3: f32,
+    pub unk13: f32,
+    pub view_miscellaneous: Vec4,
 }
 
 impl Default for ScopeView {
@@ -37,10 +37,8 @@ impl Default for ScopeView {
             target_pixel_to_camera: Default::default(),
             target_resolution: Default::default(),
             inverse_target_resolution: Default::default(),
-            misc_unk0: Default::default(),
-            misc_unk1: Default::default(),
-            misc_unk2: 0.0001,
-            misc_unk3: Default::default(),
+            unk13: 1.0,
+            view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
         }
     }
 }
@@ -91,10 +89,40 @@ impl Default for ScopeFrame {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct ScopeInstances {
-    pub mesh_to_world: Mat3x4,
-    pub texcoord_transform: Vec4,
+    pub mesh_offset: Vec3,
+    pub mesh_scale: f32,
+    pub uv_scale: f32,
+    pub uv_offset: Vec2,
+    pub pad: f32,
+
+    pub transforms: Vec<Mat4>,
+}
+
+impl ScopeInstances {
+    pub fn write(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+
+        buffer
+            .write_all(bytemuck::cast_slice(&[
+                self.mesh_offset.x,
+                self.mesh_offset.y,
+                self.mesh_offset.z,
+                self.mesh_scale,
+                self.uv_scale,
+                self.uv_offset.x,
+                self.uv_offset.y,
+                self.pad,
+            ]))
+            .unwrap();
+
+        buffer
+            .write_all(bytemuck::cast_slice(&self.transforms))
+            .unwrap();
+
+        buffer
+    }
 }
 
 // This scope uses official struct/field names from TFX intermediaries (scope_rigid_model)
