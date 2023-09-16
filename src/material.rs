@@ -10,7 +10,7 @@ use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
 use binrw::{BinRead, NullString};
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use glam::Vec4;
 
 #[derive(BinRead, Debug, Clone)]

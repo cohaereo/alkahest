@@ -8,7 +8,6 @@ use glam::{Mat4, Quat, Vec3};
 use std::sync::Arc;
 
 use super::renderer::Renderer;
-use super::scopes::MatrixConversion;
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,

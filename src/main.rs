@@ -17,11 +17,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
-use destiny_pkg::PackageVersion::{self, Destiny2PreBeyondLight};
-use destiny_pkg::{PackageManager, TagHash, TagHash64};
-use glam::{Mat4, Quat, Vec3, Vec3A, Vec4};
+use destiny_pkg::PackageVersion::{self};
+use destiny_pkg::{PackageManager, TagHash};
+use glam::{Quat, Vec4};
 use itertools::Itertools;
-use nohash_hasher::{IntMap, IntSet};
+use nohash_hasher::IntMap;
 
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
@@ -43,17 +43,10 @@ use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
 
-use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
-use crate::map::{
-    ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807164, Unk80807dae,
-    Unk80808a54,
-};
-use crate::map_resources::{
-    MapResource, Unk80806b7f, Unk80806df3, Unk80806e68, Unk8080714b, Unk80807268, Unk80809162,
-    Unk80809802,
-};
-use crate::material::{Material, Unk808071e8};
+use crate::map::{ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk80807dae, Unk80808a54};
+use crate::map_resources::{MapResource, Unk80806e68};
+use crate::material::Material;
 use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
@@ -66,15 +59,15 @@ use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
 use crate::render::renderer::{Renderer, ScopeOverrides};
-use crate::render::scopes::ScopeRigidModel;
+
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, EntityRenderer, InstancedRenderer};
+use crate::render::{ConstantBuffer, DeviceContextSwapchain, InstancedRenderer};
 use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
-use crate::structure::{TablePointer, Tag};
+
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::types::AABB;
+
 use render::vertex_layout::InputElement;
 
 mod camera;
@@ -278,7 +271,7 @@ pub fn main() -> anyhow::Result<()> {
     // }
 
     // First light reserved for camera light
-    let mut point_lights = vec![Vec4::ZERO];
+    let point_lights = vec![Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(u32::from_be(0x1E898080)) {
         let hash = TagHash::new(package.pkg_id(), index as _);
         let _span = debug_span!("Load map", %hash).entered();
@@ -290,7 +283,7 @@ pub fn main() -> anyhow::Result<()> {
 
         let mut placement_groups = vec![];
         let mut resource_points = vec![];
-        let mut terrains = vec![];
+        let terrains = vec![];
 
         let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
         for res in &think.child_map.map_resources {
@@ -808,7 +801,7 @@ pub fn main() -> anyhow::Result<()> {
         panic!("No map placements found in package");
     }
 
-    let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
+    let _terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
     // info!("Loading terrain");
     // info_span!("Loading terrain").in_scope(|| {
     //     for (t, header) in terrain_headers.into_iter() {
@@ -846,20 +839,20 @@ pub fn main() -> anyhow::Result<()> {
                     );
                 }
             }
-            // for m in &mheader.unk20 {
-            //     let m = m.material;
-            //     if m.is_valid() {
-            //         material_map.insert(
-            //             m,
-            //             Material::load(
-            //                 &renderer,
-            //                 package_manager().read_tag_struct(m).unwrap(),
-            //                 m,
-            //                 true,
-            //             ),
-            //         );
-            //     }
-            // }
+            for m in &mheader.unk20 {
+                let m = m.material;
+                if m.is_valid() {
+                    material_map.insert(
+                        m,
+                        Material::load(
+                            &renderer,
+                            package_manager().read_tag_struct(m).unwrap(),
+                            m,
+                            true,
+                        ),
+                    );
+                }
+            }
 
             match StaticModel::load(mheader, &renderer, *almostloadable) {
                 Ok(model) => {
@@ -907,7 +900,7 @@ pub fn main() -> anyhow::Result<()> {
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
             for sampler in m.vs_samplers.iter().chain(m.ps_samplers.iter()) {
-                to_load_samplers.insert(sampler.clone());
+                to_load_samplers.insert(*sampler);
             }
 
             if let Ok(v) = package_manager().get_entry(m.vertex_shader) {
@@ -915,11 +908,6 @@ pub fn main() -> anyhow::Result<()> {
 
                 vshader_map.entry(m.vertex_shader).or_insert_with(|| {
                     let vs_data = package_manager().read_tag(v.reference).unwrap();
-
-                    std::fs::File::create(format!("shaders/{}_vs.cso", m.vertex_shader))
-                        .unwrap()
-                        .write_all(&vs_data)
-                        .ok();
 
                     let mut vs_cur = Cursor::new(&vs_data);
                     let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
@@ -984,10 +972,6 @@ pub fn main() -> anyhow::Result<()> {
 
                 pshader_map.entry(m.pixel_shader).or_insert_with(|| {
                     let ps_data = package_manager().read_tag(v.reference).unwrap();
-                    std::fs::File::create(format!("shaders/{}_ps.cso", m.pixel_shader))
-                        .unwrap()
-                        .write_all(&ps_data)
-                        .ok();
 
                     let mut ps_cur = Cursor::new(&ps_data);
                     let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
@@ -1132,8 +1116,8 @@ pub fn main() -> anyhow::Result<()> {
         composition_mode: CompositorMode::Combined as usize,
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
-        renderlayer_terrain: true,
-        renderlayer_entities: true,
+        renderlayer_terrain: false,
+        renderlayer_entities: false,
 
         alpha_blending: true,
         render_lights: false,

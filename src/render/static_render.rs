@@ -1,10 +1,10 @@
 use crate::entity::EPrimitiveType;
 use crate::render::vertex_buffers::load_vertex_buffers;
-use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
+use crate::statics::{Unk80807193, Unk80807194, Unk808071a7};
 
 use anyhow::ensure;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Vec3};
+
 use itertools::Itertools;
 
 use crate::packages::package_manager;
@@ -34,43 +34,6 @@ pub struct StaticModel {
 }
 
 impl StaticModel {
-    // /// Returns instance scope compatible texcoord transformation (X + YZ)
-    // pub fn texcoord_transform(&self) -> Vec3 {
-    //     Vec3::new(
-    //         self.subheader.texture_coordinate_scale.x,
-    //         self.subheader.texture_coordinate_offset.x,
-    //         self.subheader.texture_coordinate_offset.y,
-    //     )
-    // }
-
-    // // TODO(cohae): Use more conventional methods + transpose
-    // pub fn mesh_transform(&self) -> Mat4 {
-    //     Mat4::from_cols(
-    //         [
-    //             self.subheader.model_scale,
-    //             0.0,
-    //             0.0,
-    //             self.subheader.model_offset.x,
-    //         ]
-    //         .into(),
-    //         [
-    //             0.0,
-    //             self.subheader.model_scale,
-    //             0.0,
-    //             self.subheader.model_offset.y,
-    //         ]
-    //         .into(),
-    //         [
-    //             0.0,
-    //             0.0,
-    //             self.subheader.model_scale,
-    //             self.subheader.model_offset.z,
-    //         ]
-    //         .into(),
-    //         [0.0, 0.0, 0.0, 1.0].into(),
-    //     )
-    // }
-
     pub fn load(
         model: Unk808071a7,
         renderer: &Renderer,
@@ -196,12 +159,11 @@ impl StaticModel {
         }
 
         Ok(StaticModel {
-            overlay_models: vec![],
-            // overlay_models: model
-            //     .unk20
-            //     .iter()
-            //     .map(|m| StaticOverlayModel::load(m.clone(), device, renderer).unwrap())
-            //     .collect_vec(),
+            overlay_models: model
+                .unk20
+                .iter()
+                .map(|m| StaticOverlayModel::load(m.clone(), renderer).unwrap())
+                .collect_vec(),
             buffers,
             model,
             subheader: header,
@@ -274,11 +236,7 @@ pub struct StaticOverlayModel {
 }
 
 impl StaticOverlayModel {
-    pub fn load(
-        model: Unk80807193,
-        _device: &ID3D11Device,
-        renderer: &Renderer,
-    ) -> anyhow::Result<StaticOverlayModel> {
+    pub fn load(model: Unk80807193, renderer: &Renderer) -> anyhow::Result<StaticOverlayModel> {
         let _pm = package_manager();
         // let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
 

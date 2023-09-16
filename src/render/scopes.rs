@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use binrw::BinWrite;
 use glam::{Mat4, Vec2, Vec3, Vec4};
 
 pub type Mat3x4 = [Vec4; 3];

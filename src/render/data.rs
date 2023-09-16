@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crossbeam::channel::Sender;
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;

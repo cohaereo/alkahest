@@ -51,9 +51,9 @@ pub struct Vector2 {
     pub y: f32,
 }
 
-impl Into<Vec2> for Vector2 {
-    fn into(self) -> Vec2 {
-        Vec2::new(self.x, self.y)
+impl From<Vector2> for Vec2 {
+    fn from(val: Vector2) -> Self {
+        Vec2::new(val.x, val.y)
     }
 }
 
@@ -65,9 +65,9 @@ pub struct Vector3 {
     pub z: f32,
 }
 
-impl Into<Vec3> for Vector3 {
-    fn into(self) -> Vec3 {
-        Vec3::new(self.x, self.y, self.z)
+impl From<Vector3> for Vec3 {
+    fn from(val: Vector3) -> Self {
+        Vec3::new(val.x, val.y, val.z)
     }
 }
 

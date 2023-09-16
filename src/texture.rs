@@ -7,7 +7,7 @@ use crate::structure::{CafeMarker, TablePointer};
 use crate::types::IVector2;
 use anyhow::Context;
 use binrw::BinRead;
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use std::io::SeekFrom;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,

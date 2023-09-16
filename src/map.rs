@@ -71,7 +71,7 @@ impl BinRead for ExtendedHash {
     fn read_options<R: std::io::Read + std::io::Seek>(
         reader: &mut R,
         endian: binrw::Endian,
-        args: Self::Args<'_>,
+        _args: Self::Args<'_>,
     ) -> binrw::BinResult<Self> {
         let hash32: TagHash = reader.read_type(endian)?;
         let is_hash32: u32 = reader.read_type(endian)?;

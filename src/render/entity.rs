@@ -1,4 +1,3 @@
-
 use destiny_pkg::TagHash;
 
 use glam::Vec4;
@@ -10,7 +9,6 @@ use crate::entity::EPrimitiveType;
 use crate::entity::Unk808072c5;
 use crate::entity::Unk8080737e;
 use crate::entity::Unk808073a5;
-
 
 use crate::packages::package_manager;
 use crate::render::vertex_buffers::load_vertex_buffers;

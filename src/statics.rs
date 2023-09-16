@@ -75,8 +75,7 @@ pub struct Unk808071a7 {
     pub unk8: TagHash,
     pub unkc: u32,
     pub materials: TablePointer<TagHash>,
-    // pub unk20: TablePointer<Unk80807193>, // Overlay/transparent meshes
-    pub unk20: [u64; 2],
+    pub unk20: TablePointer<Unk80807193>, // Overlay/transparent meshes
     pub unk30: [u32; 2],
     pub unk38: [f32; 6],
     pub unk50: Vector3, // ? Similar to model_offset, but not quite right...
@@ -91,6 +90,7 @@ pub struct Unk80807193 {
     pub index_buffer: TagHash,
     pub vertex_buffer: TagHash,
     pub vertex_buffer2: TagHash,
+    pub color_buffer: TagHash,
     pub index_start: u32,
     pub index_count: u32,
     pub material: TagHash,

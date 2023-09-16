@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
-
 use crate::map::Unk8080714f;
 
 use crate::packages::package_manager;
-
 
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
 
 use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
 use super::renderer::Renderer;

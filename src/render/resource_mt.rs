@@ -1,6 +1,6 @@
 use anyhow::Context;
 use crossbeam::channel::{self as mpsc, Receiver};
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::Instant;
