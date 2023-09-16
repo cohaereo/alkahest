@@ -44,8 +44,10 @@ use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
 
 use crate::input::InputState;
-use crate::map::{ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk80807dae, Unk80808a54};
-use crate::map_resources::{MapResource, Unk80806e68};
+use crate::map::{
+    ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54,
+};
+use crate::map_resources::{MapResource, Unk80806e68, Unk8080714b};
 use crate::material::Material;
 use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
@@ -263,7 +265,7 @@ pub fn main() -> anyhow::Result<()> {
     let mut pshader_map: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
         Default::default();
     let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
-    // let mut terrain_headers = vec![];
+    let mut terrain_headers = vec![];
     let mut maps: Vec<MapData> = vec![];
 
     // for (tag, entry) in package_manager().get_all_by_reference(u32::from_be(0x1E898080)) {
@@ -283,7 +285,7 @@ pub fn main() -> anyhow::Result<()> {
 
         let mut placement_groups = vec![];
         let mut resource_points = vec![];
-        let terrains = vec![];
+        let mut terrains = vec![];
 
         let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
         for res in &think.child_map.map_resources {
@@ -340,32 +342,32 @@ pub fn main() -> anyhow::Result<()> {
                             //     });
                             // }
                             // // D2Class_7D6C8080 (terrain)
-                            // 0x80806c7d => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset))
-                            //         .unwrap();
+                            0x80806c7d => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset))
+                                    .unwrap();
 
-                            //     let terrain_resource: Unk8080714b = cur.read_le().unwrap();
-                            //     let terrain: Unk8080714f = package_manager()
-                            //         .read_tag_struct(terrain_resource.terrain)
-                            //         .unwrap();
+                                let terrain_resource: Unk8080714b = cur.read_le().unwrap();
+                                let terrain: Unk8080714f = package_manager()
+                                    .read_tag_struct(terrain_resource.terrain)
+                                    .unwrap();
 
-                            //     for p in &terrain.mesh_parts {
-                            //         if p.material.is_valid() {
-                            //             material_map.insert(
-                            //                 p.material,
-                            //                 Material::load(
-                            //                     &renderer,
-                            //                     package_manager().read_tag_struct(p.material)?,
-                            //                     p.material,
-                            //                     true,
-                            //                 ),
-                            //             );
-                            //         }
-                            //     }
+                                for p in &terrain.mesh_parts {
+                                    if p.material.is_valid() {
+                                        material_map.insert(
+                                            p.material,
+                                            Material::load(
+                                                &renderer,
+                                                package_manager().read_tag_struct(p.material)?,
+                                                p.material,
+                                                true,
+                                            ),
+                                        );
+                                    }
+                                }
 
-                            //     terrain_headers.push((terrain_resource.terrain, terrain));
-                            //     terrains.push(terrain_resource.terrain);
-                            // }
+                                terrain_headers.push((terrain_resource.terrain, terrain));
+                                terrains.push(terrain_resource.terrain);
+                            }
                             // // Cubemap volume
                             // 0x80806b7f => {
                             //     cur.seek(SeekFrom::Start(data.data_resource.offset))
@@ -801,24 +803,26 @@ pub fn main() -> anyhow::Result<()> {
         panic!("No map placements found in package");
     }
 
-    let _terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
-    // info!("Loading terrain");
-    // info_span!("Loading terrain").in_scope(|| {
-    //     for (t, header) in terrain_headers.into_iter() {
-    //         // for t in &header.mesh_groups {
-    //         //     renderer.render_data.load_texture(t.dyemap);
-    //         // }
+    let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
+    info!("Loading {} terrain renderers", terrain_headers.len());
+    info_span!("Loading terrain").in_scope(|| {
+        for (t, header) in terrain_headers.into_iter() {
+            for t in &header.mesh_groups {
+                renderer
+                    .render_data
+                    .load_texture(ExtendedHash::Hash32(t.dyemap));
+            }
 
-    //         match TerrainRenderer::load(header, dcs.clone(), &renderer) {
-    //             Ok(renderer) => {
-    //                 terrain_renderers.insert(t.0, renderer);
-    //             }
-    //             Err(e) => {
-    //                 error!("Failed to load terrain: {e}");
-    //             }
-    //         }
-    //     }
-    // });
+            match TerrainRenderer::load(header, dcs.clone(), &renderer) {
+                Ok(renderer) => {
+                    terrain_renderers.insert(t.0, renderer);
+                }
+                Err(e) => {
+                    error!("Failed to load terrain: {e}");
+                }
+            }
+        }
+    });
 
     let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
 
@@ -1025,24 +1029,6 @@ pub fn main() -> anyhow::Result<()> {
         }
     }
 
-    // info_span!("Loading textures").in_scope(|| {
-    //     for tex_hash in to_load_textures.into_iter() {
-    //         if !tex_hash.is_valid() || texture_map.contains_key(&tex_hash.0) {
-    //             continue;
-    //         }
-    //         let _span = debug_span!("load texture", texture = ?tex_hash).entered();
-
-    //         match Texture::load(&dcs, tex_hash) {
-    //             Ok(texture) => {
-    //                 texture_map.insert(tex_hash.0, texture);
-    //             }
-    //             Err(e) => error!("Failed to load texture {tex_hash}: {e}"),
-    //         }
-    //     }
-    // });
-
-    // info!("Loaded {} textures", texture_map.len());
-
     for s in to_load_samplers {
         let sampler_header_ref = package_manager()
             .get_entry(s.hash32().unwrap())
@@ -1116,7 +1102,7 @@ pub fn main() -> anyhow::Result<()> {
         composition_mode: CompositorMode::Combined as usize,
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
-        renderlayer_terrain: false,
+        renderlayer_terrain: true,
         renderlayer_entities: false,
 
         alpha_blending: true,
@@ -1272,13 +1258,13 @@ pub fn main() -> anyhow::Result<()> {
                             }
                         }
 
-                        // if gb.renderlayer_terrain {
-                        //     for th in &map.terrains {
-                        //         if let Some(t) = terrain_renderers.get(&th.0) {
-                        //             t.draw(&mut renderer).unwrap();
-                        //         }
-                        //     }
-                        // }
+                        if gb.renderlayer_terrain {
+                            for th in &map.terrains {
+                                if let Some(t) = terrain_renderers.get(&th.0) {
+                                    t.draw(&mut renderer).unwrap();
+                                }
+                            }
+                        }
 
                         // if gb.renderlayer_entities {
                         //     for (rp, cb) in &map.resource_points {

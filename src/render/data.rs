@@ -29,7 +29,7 @@ pub struct RenderData {
     pub textures: IntMap<u64, Texture>,
     pub samplers: IntMap<u64, ID3D11SamplerState>,
 
-    pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32)>,
+    pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32, Option<ID3D11ShaderResourceView>)>,
     pub index_buffers: IntMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
     pub input_layouts: IntMap<u64, ID3D11InputLayout>,
 }
@@ -49,7 +49,7 @@ impl RenderData {
 
 pub struct RenderDataManager {
     tx_textures: Sender<ExtendedHash>,
-    tx_buffers: Sender<TagHash>,
+    tx_buffers: Sender<(TagHash, bool)>,
     // tx_shaders: Sender<TagHash>,
     render_data: Arc<RwLock<RenderData>>,
 }
@@ -127,9 +127,9 @@ impl RenderDataManager {
     }
 
     /// Load a vertex or index buffer from a hash
-    pub fn load_buffer(&self, buffer: TagHash) {
+    pub fn load_buffer(&self, buffer: TagHash, create_srv: bool) {
         self.tx_buffers
-            .send(buffer)
+            .send((buffer, create_srv))
             .expect("Failed to send load buffer request");
     }
 

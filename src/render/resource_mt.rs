@@ -4,9 +4,15 @@ use destiny_pkg::TagHash;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::Instant;
-use windows::Win32::Graphics::Direct3D11::{
-    D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,
-    D3D11_USAGE_IMMUTABLE,
+use windows::Win32::Graphics::{
+    Direct3D::D3D11_SRV_DIMENSION_BUFFER,
+    Direct3D11::{
+        D3D11_BIND_INDEX_BUFFER, D3D11_BIND_SHADER_RESOURCE, D3D11_BIND_VERTEX_BUFFER,
+        D3D11_BUFFER_DESC, D3D11_BUFFER_SRV, D3D11_BUFFER_SRV_0, D3D11_BUFFER_SRV_1,
+        D3D11_SHADER_RESOURCE_VIEW_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC_0, D3D11_SUBRESOURCE_DATA,
+        D3D11_USAGE_IMMUTABLE,
+    },
+    Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
 };
 
 use crate::{
@@ -98,13 +104,13 @@ pub fn thread_textures(
 fn spawn_thread_buffers(
     dcs: Arc<DeviceContextSwapchain>,
     data: Arc<RwLock<RenderData>>,
-    rx: Receiver<TagHash>,
+    rx: Receiver<(TagHash, bool)>,
     name: &'static str,
 ) {
     std::thread::Builder::new()
         .name(name.to_string())
         .spawn(move || {
-            while let Ok(hash) = rx.recv() {
+            while let Ok((hash, create_srv)) = rx.recv() {
                 if hash.is_valid() {
                     if let Ok(entry) = package_manager().get_entry(hash) {
                         match (entry.file_type, entry.file_subtype) {
@@ -126,7 +132,8 @@ fn spawn_thread_buffers(
                                                     &D3D11_BUFFER_DESC {
                                                         ByteWidth: vertex_data.len() as _,
                                                         Usage: D3D11_USAGE_IMMUTABLE,
-                                                        BindFlags: D3D11_BIND_VERTEX_BUFFER,
+                                                        BindFlags: D3D11_BIND_VERTEX_BUFFER
+                                                            | D3D11_BIND_SHADER_RESOURCE,
                                                         ..Default::default()
                                                     },
                                                     Some(&D3D11_SUBRESOURCE_DATA {
@@ -138,9 +145,48 @@ fn spawn_thread_buffers(
                                                 .unwrap()
                                         };
 
+                                        let view = if create_srv {
+                                            Some(unsafe {
+                                                dcs.device
+                                                    .CreateShaderResourceView(
+                                                        &vertex_buffer,
+                                                        Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                                                            Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                                                            ViewDimension:
+                                                                D3D11_SRV_DIMENSION_BUFFER,
+                                                            Anonymous:
+                                                                D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                                                                    Buffer: D3D11_BUFFER_SRV {
+                                                                        Anonymous1:
+                                                                            D3D11_BUFFER_SRV_0 {
+                                                                                ElementOffset: 0,
+                                                                            },
+                                                                        Anonymous2:
+                                                                            D3D11_BUFFER_SRV_1 {
+                                                                                NumElements:
+                                                                                    vertex_data
+                                                                                        .len()
+                                                                                        as u32
+                                                                                        / 4,
+                                                                            },
+                                                                    },
+                                                                },
+                                                        }),
+                                                    )
+                                                    .context("Failed to create vertex buffer SRV")
+                                                    .unwrap()
+                                            })
+                                        } else {
+                                            None
+                                        };
+
                                         data.write().vertex_buffers.insert(
                                             hash,
-                                            (vertex_buffer, vertex_buffer_header.stride as u32),
+                                            (
+                                                vertex_buffer,
+                                                vertex_buffer_header.stride as u32,
+                                                view,
+                                            ),
                                         );
                                     }
                                     Err(e) => error!("Failed to load vertex buffer {hash}: {e}"),
@@ -207,8 +253,8 @@ fn spawn_thread_buffers(
 pub fn thread_buffers(
     dcs: Arc<DeviceContextSwapchain>,
     data: Arc<RwLock<RenderData>>,
-) -> mpsc::Sender<TagHash> {
-    let (tx, rx) = mpsc::unbounded::<TagHash>();
+) -> mpsc::Sender<(TagHash, bool)> {
+    let (tx, rx) = mpsc::unbounded::<(TagHash, bool)>();
 
     spawn_thread_buffers(dcs.clone(), data.clone(), rx.clone(), "Buffer loader 1");
     // spawn_thread_buffers(dcs, data, rx, "Buffer loader 2");

@@ -490,6 +490,16 @@ impl Renderer {
             }
         }
 
+        if let Some(color_buffer) = drawcall.color_buffer {
+            if let Some((buffer, _, Some(srv))) = render_data.vertex_buffers.get(&color_buffer) {
+                unsafe {
+                    self.dcs
+                        .context()
+                        .VSSetShaderResources(0, Some(&[Some(srv.clone())]))
+                }
+            }
+        }
+
         unsafe {
             self.dcs
                 .context()
@@ -509,7 +519,7 @@ impl Renderer {
                     continue;
                 }
 
-                if let Some((buffer, stride)) = render_data.vertex_buffers.get(vb) {
+                if let Some((buffer, stride, _)) = render_data.vertex_buffers.get(vb) {
                     self.dcs.context().IASetVertexBuffers(
                         buffer_index as _,
                         1,

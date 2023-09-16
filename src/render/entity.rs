@@ -127,9 +127,9 @@ impl EntityRenderer {
             //         .context("Failed to create combined vertex buffer")?
             // };
 
-            renderer.render_data.load_buffer(mesh.index_buffer);
-            renderer.render_data.load_buffer(mesh.vertex_buffer1);
-            renderer.render_data.load_buffer(mesh.vertex_buffer2);
+            renderer.render_data.load_buffer(mesh.index_buffer, false);
+            renderer.render_data.load_buffer(mesh.vertex_buffer1, false);
+            renderer.render_data.load_buffer(mesh.vertex_buffer2, false);
 
             let input_layout = load_vertex_buffers(
                 renderer,
@@ -219,6 +219,7 @@ impl EntityRenderer {
                     DrawCall {
                         vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                         index_buffer: buffers.index_buffer,
+                        color_buffer: None,
                         input_layout_hash: buffers.input_layout,
                         cb11: Some(cb11.clone()),
                         variant_material,

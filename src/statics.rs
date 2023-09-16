@@ -14,7 +14,7 @@ pub struct Unk80807194 {
     pub file_size: u64,
     pub mesh_groups: TablePointer<Unk8080719b>,
     pub parts: TablePointer<Unk8080719a>,
-    pub buffers: TablePointer<(TagHash, TagHash, TagHash, u32)>,
+    pub buffers: TablePointer<(TagHash, TagHash, TagHash, TagHash)>,
 
     #[br(seek_before(SeekFrom::Start(0x40)))]
     pub mesh_offset: Vector3,

@@ -31,54 +31,13 @@ impl TerrainRenderer {
         dcs: Arc<DeviceContextSwapchain>,
         renderer: &Renderer,
     ) -> anyhow::Result<TerrainRenderer> {
-        let _pm = package_manager();
-        // let vertex_header: VertexBufferHeader = pm.read_tag_struct(terrain.vertex_buffer).unwrap();
-
-        // let t = pm.get_entry(terrain.vertex_buffer).unwrap().reference;
-
-        // let vertex_data = pm.read_tag(t).unwrap();
-
-        // let mut vertex2_stride = None;
-        // let mut vertex2_data = None;
-        // if terrain.vertex_buffer2.is_valid() {
-        //     let vertex2_header: VertexBufferHeader =
-        //         pm.read_tag_struct(terrain.vertex_buffer2).unwrap();
-        //     let t = pm.get_entry(terrain.vertex_buffer2).unwrap().reference;
-
-        //     vertex2_stride = Some(vertex2_header.stride as u32);
-        //     vertex2_data = Some(pm.read_tag(t).unwrap());
-        // }
-
-        // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-        //     vertex_data
-        //         .chunks_exact(vertex_header.stride as _)
-        //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-        //         .flat_map(|(v1, v2)| [v1, v2].concat())
-        //         .collect()
-        // } else {
-        //     vertex_data
-        // };
-
-        // let combined_vertex_buffer = unsafe {
-        //     dcs.device
-        //         .CreateBuffer(
-        //             &D3D11_BUFFER_DESC {
-        //                 ByteWidth: combined_vertex_data.len() as _,
-        //                 Usage: D3D11_USAGE_IMMUTABLE,
-        //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
-        //                 ..Default::default()
-        //             },
-        //             Some(&D3D11_SUBRESOURCE_DATA {
-        //                 pSysMem: combined_vertex_data.as_ptr() as _,
-        //                 ..Default::default()
-        //             }),
-        //         )
-        //         .context("Failed to create combined vertex buffer")?
-        // };
-
-        renderer.render_data.load_buffer(terrain.indices);
-        renderer.render_data.load_buffer(terrain.vertex_buffer);
-        renderer.render_data.load_buffer(terrain.vertex_buffer2);
+        renderer.render_data.load_buffer(terrain.indices, false);
+        renderer
+            .render_data
+            .load_buffer(terrain.vertex_buffer, false);
+        renderer
+            .render_data
+            .load_buffer(terrain.vertex_buffer2, false);
 
         let mut group_cbuffers = vec![];
         for group in &terrain.mesh_groups {
@@ -133,11 +92,8 @@ impl TerrainRenderer {
     }
 
     pub fn draw(&self, renderer: &mut Renderer) -> anyhow::Result<()> {
-        for part in self
-            .terrain
-            .mesh_parts
-            .iter()
-            .filter(|u| u.detail_level == 0)
+        for part in self.terrain.mesh_parts.iter()
+        // .filter(|u| u.detail_level == 0)
         {
             if let Some(_group) = self.terrain.mesh_groups.get(part.group_index as usize) {
                 let cb11 = &self.group_cbuffers[part.group_index as usize];
@@ -160,6 +116,7 @@ impl TerrainRenderer {
                     DrawCall {
                         vertex_buffers: vec![self.vertex_buffer1, self.vertex_buffer2],
                         index_buffer: self.index_buffer,
+                        color_buffer: None,
                         input_layout_hash: self.input_layout,
                         cb11: Some(cb11.buffer().clone()),
                         variant_material: None,

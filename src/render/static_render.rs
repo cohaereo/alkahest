@@ -18,6 +18,7 @@ use super::renderer::Renderer;
 pub struct StaticModelBuffer {
     vertex_buffer1: TagHash,
     vertex_buffer2: TagHash,
+    color_buffer: TagHash,
 
     index_buffer: TagHash,
     input_layout: u64,
@@ -45,8 +46,10 @@ impl StaticModel {
         ensure!(header.mesh_groups.len() == model.materials.len());
 
         let mut buffers = vec![];
-        for (buffer_index, (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, _u3)) in
-            header.buffers.iter().enumerate()
+        for (
+            buffer_index,
+            (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, color_buffer_hash),
+        ) in header.buffers.iter().enumerate()
         {
             // let vertex_header: VertexBufferHeader =
             //     pm.read_tag_struct(*vertex_buffer_hash).unwrap();
@@ -108,9 +111,12 @@ impl StaticModel {
             //         .expect("Failed to set VS name")
             // };
 
-            renderer.render_data.load_buffer(*index_buffer_hash);
-            renderer.render_data.load_buffer(*vertex_buffer_hash);
-            renderer.render_data.load_buffer(*vertex2_buffer_hash);
+            renderer.render_data.load_buffer(*index_buffer_hash, false);
+            renderer.render_data.load_buffer(*vertex_buffer_hash, false);
+            renderer
+                .render_data
+                .load_buffer(*vertex2_buffer_hash, false);
+            renderer.render_data.load_buffer(*color_buffer_hash, true);
 
             for m in &model.materials {
                 renderer.render_data.load_material(renderer, *m);
@@ -154,6 +160,7 @@ impl StaticModel {
                 vertex_buffer1: *vertex_buffer_hash,
                 vertex_buffer2: *vertex2_buffer_hash,
                 index_buffer: *index_buffer_hash,
+                color_buffer: *color_buffer_hash,
                 input_layout,
             })
         }
@@ -162,7 +169,15 @@ impl StaticModel {
             overlay_models: model
                 .unk20
                 .iter()
-                .map(|m| StaticOverlayModel::load(m.clone(), renderer).unwrap())
+                .map(|m| {
+                    let r = StaticOverlayModel::load(m.clone(), renderer);
+                    if let Err(e) = &r {
+                        error!("Failed to load static overlay mesh: {e}");
+                    }
+
+                    r
+                })
+                .filter_map(Result::ok)
                 .collect_vec(),
             buffers,
             model,
@@ -212,6 +227,7 @@ impl StaticModel {
                         DrawCall {
                             vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                             index_buffer: buffers.index_buffer,
+                            color_buffer: Some(buffers.color_buffer),
                             input_layout_hash: buffers.input_layout,
                             cb11: Some(instance_buffer.clone()),
                             variant_material: None,
@@ -286,9 +302,12 @@ impl StaticOverlayModel {
         //         .context("Failed to create combined vertex buffer")?
         // };
 
-        renderer.render_data.load_buffer(model.index_buffer);
-        renderer.render_data.load_buffer(model.vertex_buffer);
-        renderer.render_data.load_buffer(model.vertex_buffer2);
+        renderer.render_data.load_buffer(model.index_buffer, false);
+        renderer.render_data.load_buffer(model.vertex_buffer, false);
+        renderer
+            .render_data
+            .load_buffer(model.vertex_buffer2, false);
+        renderer.render_data.load_buffer(model.color_buffer, true);
 
         let input_layout = load_vertex_buffers(
             renderer,
@@ -301,6 +320,7 @@ impl StaticOverlayModel {
                 vertex_buffer1: model.vertex_buffer,
                 vertex_buffer2: model.vertex_buffer2,
                 index_buffer: model.index_buffer,
+                color_buffer: model.color_buffer,
                 input_layout,
             },
             model,
@@ -329,6 +349,7 @@ impl StaticOverlayModel {
             DrawCall {
                 vertex_buffers: vec![self.buffers.vertex_buffer1, self.buffers.vertex_buffer2],
                 index_buffer: self.buffers.index_buffer,
+                color_buffer: Some(self.buffers.color_buffer),
                 input_layout_hash: self.buffers.input_layout,
                 cb11: Some(instance_buffer),
                 variant_material: None,

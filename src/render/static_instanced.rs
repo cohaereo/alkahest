@@ -26,9 +26,9 @@ impl InstancedRenderer {
             mesh_scale: model.subheader.mesh_scale,
             uv_scale: model.subheader.texture_coordinate_scale,
             uv_offset: model.subheader.texture_coordinate_offset.into(),
-            transforms: Vec::with_capacity(instances.len()),
+            unk1_w: u32::MAX,
 
-            ..Default::default()
+            transforms: Vec::with_capacity(instances.len()),
         };
 
         for instance in instances {
