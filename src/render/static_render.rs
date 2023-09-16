@@ -1,15 +1,15 @@
-use crate::entity::{EPrimitiveType, VertexBufferHeader};
+use crate::entity::{EPrimitiveType};
 use crate::render::vertex_buffers::load_vertex_buffers;
 use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
-use anyhow::{ensure, Context};
+use anyhow::{ensure};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3};
 use itertools::Itertools;
 
 use crate::packages::package_manager;
 
-use tracing::warn;
+
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
@@ -17,8 +17,8 @@ use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
 use super::renderer::Renderer;
 
 pub struct StaticModelBuffer {
-    combined_vertex_buffer: ID3D11Buffer,
-    combined_vertex_stride: u32,
+    vertex_buffer1: TagHash,
+    vertex_buffer2: TagHash,
 
     index_buffer: TagHash,
     input_layout: u64,
@@ -58,7 +58,7 @@ impl StaticModel {
         model: Unk808071a7,
         device: &ID3D11Device,
         renderer: &Renderer,
-        model_hash: TagHash,
+        _model_hash: TagHash,
     ) -> anyhow::Result<StaticModel> {
         let pm = package_manager();
         let header: Unk80807194 = pm.read_tag_struct(model.unk8).unwrap();
@@ -69,67 +69,69 @@ impl StaticModel {
         for (buffer_index, (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, _u3)) in
             header.buffers.iter().enumerate()
         {
-            let vertex_header: VertexBufferHeader =
-                pm.read_tag_struct(*vertex_buffer_hash).unwrap();
+            // let vertex_header: VertexBufferHeader =
+            //     pm.read_tag_struct(*vertex_buffer_hash).unwrap();
 
-            if vertex_header.stride == 24 || vertex_header.stride == 48 {
-                warn!("Support for 32-bit floats in vertex buffers are disabled");
-                continue;
-            }
+            // if vertex_header.stride == 24 || vertex_header.stride == 48 {
+            //     warn!("Support for 32-bit floats in vertex buffers are disabled");
+            //     continue;
+            // }
 
-            let t = pm.get_entry(*vertex_buffer_hash).unwrap().reference;
+            // let t = pm.get_entry(*vertex_buffer_hash).unwrap().reference;
 
-            let vertex_data = pm.read_tag(t).unwrap();
+            // let vertex_data = pm.read_tag(t).unwrap();
 
-            let mut vertex2_stride = None;
-            let mut vertex2_data = None;
-            if vertex2_buffer_hash.is_valid() {
-                let vertex2_header: VertexBufferHeader =
-                    pm.read_tag_struct(*vertex2_buffer_hash).unwrap();
-                let t = pm.get_entry(*vertex2_buffer_hash).unwrap().reference;
+            // let mut vertex2_stride = None;
+            // let mut vertex2_data = None;
+            // if vertex2_buffer_hash.is_valid() {
+            //     let vertex2_header: VertexBufferHeader =
+            //         pm.read_tag_struct(*vertex2_buffer_hash).unwrap();
+            //     let t = pm.get_entry(*vertex2_buffer_hash).unwrap().reference;
 
-                vertex2_stride = Some(vertex2_header.stride as u32);
-                vertex2_data = Some(pm.read_tag(t).unwrap());
-            }
+            //     vertex2_stride = Some(vertex2_header.stride as u32);
+            //     vertex2_data = Some(pm.read_tag(t).unwrap());
+            // }
+
+            // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
+            //     vertex_data
+            //         .chunks_exact(vertex_header.stride as _)
+            //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
+            //         .flat_map(|(v1, v2)| [v1, v2].concat())
+            //         .collect()
+            // } else {
+            //     vertex_data
+            // };
+
+            // let combined_vertex_buffer = unsafe {
+            //     device
+            //         .CreateBuffer(
+            //             &D3D11_BUFFER_DESC {
+            //                 ByteWidth: combined_vertex_data.len() as _,
+            //                 Usage: D3D11_USAGE_IMMUTABLE,
+            //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
+            //                 ..Default::default()
+            //             },
+            //             Some(&D3D11_SUBRESOURCE_DATA {
+            //                 pSysMem: combined_vertex_data.as_ptr() as _,
+            //                 ..Default::default()
+            //             }),
+            //         )
+            //         .context("Failed to create combined vertex buffer")?
+            // };
+            // unsafe {
+            //     let name = format!("VB {} (model {})\0", vertex_buffer_hash, model_hash);
+            //     combined_vertex_buffer
+            //         .SetPrivateData(
+            //             &WKPDID_D3DDebugObjectName,
+            //             name.len() as u32 - 1,
+            //             Some(name.as_ptr() as _),
+            //         )
+            //         .expect("Failed to set VS name")
+            // };
 
             renderer.render_data.load_buffer(*index_buffer_hash);
-
-            let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-                vertex_data
-                    .chunks_exact(vertex_header.stride as _)
-                    .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-                    .flat_map(|(v1, v2)| [v1, v2].concat())
-                    .collect()
-            } else {
-                vertex_data
-            };
-
-            let combined_vertex_buffer = unsafe {
-                device
-                    .CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            ByteWidth: combined_vertex_data.len() as _,
-                            Usage: D3D11_USAGE_IMMUTABLE,
-                            BindFlags: D3D11_BIND_VERTEX_BUFFER,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: combined_vertex_data.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                    )
-                    .context("Failed to create combined vertex buffer")?
-            };
-            unsafe {
-                let name = format!("VB {} (model {})\0", vertex_buffer_hash, model_hash);
-                combined_vertex_buffer
-                    .SetPrivateData(
-                        &WKPDID_D3DDebugObjectName,
-                        name.len() as u32 - 1,
-                        Some(name.as_ptr() as _),
-                    )
-                    .expect("Failed to set VS name")
-            };
+            renderer.render_data.load_buffer(*vertex_buffer_hash);
+            renderer.render_data.load_buffer(*vertex2_buffer_hash);
 
             for m in &model.materials {
                 renderer.render_data.load_material(renderer, *m);
@@ -170,9 +172,8 @@ impl StaticModel {
             )?;
 
             buffers.push(StaticModelBuffer {
-                combined_vertex_buffer,
-                combined_vertex_stride: (vertex_header.stride as u32
-                    + vertex2_stride.unwrap_or_default()),
+                vertex_buffer1: *vertex_buffer_hash,
+                vertex_buffer2: *vertex2_buffer_hash,
                 index_buffer: *index_buffer_hash,
                 input_layout,
             })
@@ -230,8 +231,7 @@ impl StaticModel {
                             .with_technique(ShadingTechnique::Deferred)
                             .with_transparency(Transparency::Blend),
                         DrawCall {
-                            vertex_buffer: buffers.combined_vertex_buffer.clone(),
-                            vertex_buffer_stride: buffers.combined_vertex_stride,
+                            vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                             index_buffer: buffers.index_buffer,
                             input_layout_hash: buffers.input_layout,
                             cb11: Some(instance_buffer.clone()),
@@ -259,59 +259,61 @@ pub struct StaticOverlayModel {
 impl StaticOverlayModel {
     pub fn load(
         model: Unk80807193,
-        device: &ID3D11Device,
+        _device: &ID3D11Device,
         renderer: &Renderer,
     ) -> anyhow::Result<StaticOverlayModel> {
-        let pm = package_manager();
-        let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
+        let _pm = package_manager();
+        // let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
 
-        if vertex_header.stride == 24 || vertex_header.stride == 48 {
-            anyhow::bail!("Support for 32-bit floats in vertex buffers are disabled");
-        }
+        // if vertex_header.stride == 24 || vertex_header.stride == 48 {
+        //     anyhow::bail!("Support for 32-bit floats in vertex buffers are disabled");
+        // }
 
-        let t = pm.get_entry(model.vertex_buffer).unwrap().reference;
+        // let t = pm.get_entry(model.vertex_buffer).unwrap().reference;
 
-        let vertex_data = pm.read_tag(t).unwrap();
+        // let vertex_data = pm.read_tag(t).unwrap();
 
-        let mut vertex2_stride = None;
-        let mut vertex2_data = None;
-        if model.vertex_buffer2.is_valid() {
-            let vertex2_header: VertexBufferHeader =
-                pm.read_tag_struct(model.vertex_buffer2).unwrap();
-            let t = pm.get_entry(model.vertex_buffer2).unwrap().reference;
+        // let mut vertex2_stride = None;
+        // let mut vertex2_data = None;
+        // if model.vertex_buffer2.is_valid() {
+        //     let vertex2_header: VertexBufferHeader =
+        //         pm.read_tag_struct(model.vertex_buffer2).unwrap();
+        //     let t = pm.get_entry(model.vertex_buffer2).unwrap().reference;
 
-            vertex2_stride = Some(vertex2_header.stride as u32);
-            vertex2_data = Some(pm.read_tag(t).unwrap());
-        }
+        //     vertex2_stride = Some(vertex2_header.stride as u32);
+        //     vertex2_data = Some(pm.read_tag(t).unwrap());
+        // }
+
+        // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
+        //     vertex_data
+        //         .chunks_exact(vertex_header.stride as _)
+        //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
+        //         .flat_map(|(v1, v2)| [v1, v2].concat())
+        //         .collect()
+        // } else {
+        //     vertex_data
+        // };
+
+        // let combined_vertex_buffer = unsafe {
+        //     device
+        //         .CreateBuffer(
+        //             &D3D11_BUFFER_DESC {
+        //                 ByteWidth: combined_vertex_data.len() as _,
+        //                 Usage: D3D11_USAGE_IMMUTABLE,
+        //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
+        //                 ..Default::default()
+        //             },
+        //             Some(&D3D11_SUBRESOURCE_DATA {
+        //                 pSysMem: combined_vertex_data.as_ptr() as _,
+        //                 ..Default::default()
+        //             }),
+        //         )
+        //         .context("Failed to create combined vertex buffer")?
+        // };
 
         renderer.render_data.load_buffer(model.index_buffer);
-
-        let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-            vertex_data
-                .chunks_exact(vertex_header.stride as _)
-                .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-                .flat_map(|(v1, v2)| [v1, v2].concat())
-                .collect()
-        } else {
-            vertex_data
-        };
-
-        let combined_vertex_buffer = unsafe {
-            device
-                .CreateBuffer(
-                    &D3D11_BUFFER_DESC {
-                        ByteWidth: combined_vertex_data.len() as _,
-                        Usage: D3D11_USAGE_IMMUTABLE,
-                        BindFlags: D3D11_BIND_VERTEX_BUFFER,
-                        ..Default::default()
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: combined_vertex_data.as_ptr() as _,
-                        ..Default::default()
-                    }),
-                )
-                .context("Failed to create combined vertex buffer")?
-        };
+        renderer.render_data.load_buffer(model.vertex_buffer);
+        renderer.render_data.load_buffer(model.vertex_buffer2);
 
         let input_layout = load_vertex_buffers(
             renderer,
@@ -321,9 +323,8 @@ impl StaticOverlayModel {
 
         Ok(Self {
             buffers: StaticModelBuffer {
-                combined_vertex_buffer,
-                combined_vertex_stride: (vertex_header.stride as u32
-                    + vertex2_stride.unwrap_or_default()),
+                vertex_buffer1: model.vertex_buffer,
+                vertex_buffer2: model.vertex_buffer2,
                 index_buffer: model.index_buffer,
                 input_layout,
             },
@@ -351,8 +352,7 @@ impl StaticOverlayModel {
                 .with_technique(technique)
                 .with_transparency(Transparency::Additive),
             DrawCall {
-                vertex_buffer: self.buffers.combined_vertex_buffer.clone(),
-                vertex_buffer_stride: self.buffers.combined_vertex_stride,
+                vertex_buffers: vec![self.buffers.vertex_buffer1, self.buffers.vertex_buffer2],
                 index_buffer: self.buffers.index_buffer,
                 input_layout_hash: self.buffers.input_layout,
                 cb11: Some(instance_buffer),

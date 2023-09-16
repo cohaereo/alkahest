@@ -106,7 +106,15 @@ impl InputType {
 
 pub fn build_input_layout(elements: &[InputElement]) -> Vec<D3D11_INPUT_ELEMENT_DESC> {
     let mut map = vec![];
-    let mut offset = 0;
+    let mut offsets = vec![
+        0;
+        elements
+            .iter()
+            .max_by_key(|e| e.input_slot)
+            .map(|e| e.input_slot as usize)
+            .unwrap_or(0)
+            + 1
+    ];
     for e in elements
         .iter()
         .filter(|e| !e.semantic_type.is_system_value())
@@ -116,12 +124,12 @@ pub fn build_input_layout(elements: &[InputElement]) -> Vec<D3D11_INPUT_ELEMENT_
             SemanticIndex: e.semantic_index,
             Format: DXGI_FORMAT(e.format.into()),
             InputSlot: e.input_slot,
-            AlignedByteOffset: offset,
+            AlignedByteOffset: offsets[e.input_slot as usize],
             InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
             InstanceDataStepRate: 0,
         });
 
-        offset += (e.format.bpp() / 8) as u32;
+        offsets[e.input_slot as usize] += (e.format.bpp() / 8) as u32;
     }
 
     map

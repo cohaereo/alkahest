@@ -1,4 +1,4 @@
-use anyhow::Context;
+
 use destiny_pkg::TagHash;
 
 use glam::Vec4;
@@ -10,7 +10,7 @@ use crate::entity::EPrimitiveType;
 use crate::entity::Unk808072c5;
 use crate::entity::Unk8080737e;
 use crate::entity::Unk808073a5;
-use crate::entity::VertexBufferHeader;
+
 
 use crate::packages::package_manager;
 use crate::render::vertex_buffers::load_vertex_buffers;
@@ -23,8 +23,8 @@ use super::renderer::Renderer;
 use super::DeviceContextSwapchain;
 
 pub struct EntityModelBuffer {
-    combined_vertex_buffer: ID3D11Buffer,
-    combined_vertex_stride: u32,
+    vertex_buffer1: TagHash,
+    vertex_buffer2: TagHash,
 
     index_buffer: TagHash,
     input_layout: u64,
@@ -74,62 +74,64 @@ impl EntityRenderer {
         material_map: Vec<Unk808072c5>,
         materials: Vec<TagHash>,
         renderer: &Renderer,
-        dcs: &DeviceContextSwapchain,
+        _dcs: &DeviceContextSwapchain,
     ) -> anyhow::Result<Self> {
         let mut meshes = vec![];
 
         for mesh in &model.meshes {
-            let pm = package_manager();
-            let vertex_header: VertexBufferHeader =
-                pm.read_tag_struct(mesh.vertex_buffer1).unwrap();
+            let _pm = package_manager();
+            // let vertex_header: VertexBufferHeader =
+            //     pm.read_tag_struct(mesh.vertex_buffer1).unwrap();
 
-            if vertex_header.stride == 24 || vertex_header.stride == 48 {
-                panic!("Support for 32-bit floats in vertex buffers are disabled");
-            }
+            // if vertex_header.stride == 24 || vertex_header.stride == 48 {
+            //     panic!("Support for 32-bit floats in vertex buffers are disabled");
+            // }
 
-            let t = pm.get_entry(mesh.vertex_buffer1).unwrap().reference;
+            // let t = pm.get_entry(mesh.vertex_buffer1).unwrap().reference;
 
-            let vertex_data = pm.read_tag(t).unwrap();
+            // let vertex_data = pm.read_tag(t).unwrap();
 
-            let mut vertex2_stride = None;
-            let mut vertex2_data = None;
-            if mesh.vertex_buffer2.is_valid() {
-                let vertex2_header: VertexBufferHeader =
-                    pm.read_tag_struct(mesh.vertex_buffer2).unwrap();
-                let t = pm.get_entry(mesh.vertex_buffer2).unwrap().reference;
+            // let mut vertex2_stride = None;
+            // let mut vertex2_data = None;
+            // if mesh.vertex_buffer2.is_valid() {
+            //     let vertex2_header: VertexBufferHeader =
+            //         pm.read_tag_struct(mesh.vertex_buffer2).unwrap();
+            //     let t = pm.get_entry(mesh.vertex_buffer2).unwrap().reference;
 
-                vertex2_stride = Some(vertex2_header.stride as u32);
-                vertex2_data = Some(pm.read_tag(t).unwrap());
-            }
+            //     vertex2_stride = Some(vertex2_header.stride as u32);
+            //     vertex2_data = Some(pm.read_tag(t).unwrap());
+            // }
+
+            // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
+            //     vertex_data
+            //         .chunks_exact(vertex_header.stride as _)
+            //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
+            //         .flat_map(|(v1, v2)| [v1, v2].concat())
+            //         .collect()
+            // } else {
+            //     vertex_data
+            // };
+
+            // let combined_vertex_buffer = unsafe {
+            //     dcs.device
+            //         .CreateBuffer(
+            //             &D3D11_BUFFER_DESC {
+            //                 ByteWidth: combined_vertex_data.len() as _,
+            //                 Usage: D3D11_USAGE_IMMUTABLE,
+            //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
+            //                 ..Default::default()
+            //             },
+            //             Some(&D3D11_SUBRESOURCE_DATA {
+            //                 pSysMem: combined_vertex_data.as_ptr() as _,
+            //                 ..Default::default()
+            //             }),
+            //         )
+            //         .context("Failed to create combined vertex buffer")?
+            // };
 
             renderer.render_data.load_buffer(mesh.index_buffer);
-
-            let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-                vertex_data
-                    .chunks_exact(vertex_header.stride as _)
-                    .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-                    .flat_map(|(v1, v2)| [v1, v2].concat())
-                    .collect()
-            } else {
-                vertex_data
-            };
-
-            let combined_vertex_buffer = unsafe {
-                dcs.device
-                    .CreateBuffer(
-                        &D3D11_BUFFER_DESC {
-                            ByteWidth: combined_vertex_data.len() as _,
-                            Usage: D3D11_USAGE_IMMUTABLE,
-                            BindFlags: D3D11_BIND_VERTEX_BUFFER,
-                            ..Default::default()
-                        },
-                        Some(&D3D11_SUBRESOURCE_DATA {
-                            pSysMem: combined_vertex_data.as_ptr() as _,
-                            ..Default::default()
-                        }),
-                    )
-                    .context("Failed to create combined vertex buffer")?
-            };
+            renderer.render_data.load_buffer(mesh.vertex_buffer1);
+            renderer.render_data.load_buffer(mesh.vertex_buffer2);
 
             let input_layout = load_vertex_buffers(
                 renderer,
@@ -144,9 +146,8 @@ impl EntityRenderer {
 
             meshes.push((
                 EntityModelBuffer {
-                    combined_vertex_buffer,
-                    combined_vertex_stride: (vertex_header.stride as u32
-                        + vertex2_stride.unwrap_or_default()),
+                    vertex_buffer1: mesh.vertex_buffer1,
+                    vertex_buffer2: mesh.vertex_buffer2,
                     index_buffer: mesh.index_buffer,
                     input_layout,
                 },
@@ -218,8 +219,7 @@ impl EntityRenderer {
                         })
                         .with_technique(shading_technique),
                     DrawCall {
-                        vertex_buffer: buffers.combined_vertex_buffer.clone(),
-                        vertex_buffer_stride: buffers.combined_vertex_stride,
+                        vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                         index_buffer: buffers.index_buffer,
                         input_layout_hash: buffers.input_layout,
                         cb11: Some(cb11.clone()),

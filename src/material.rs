@@ -161,34 +161,6 @@ impl Material {
                 .load_pshader(&renderer.dcs, mat.pixel_shader);
         }
 
-        // let vs_data = package_manager().read_tag(v.reference).unwrap();
-        // let mut vs_cur = Cursor::new(&vs_data);
-        // let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
-        // let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
-
-        // let bash_input_layout = input_sig
-        //     .elements
-        //     .iter()
-        //     .map(|e| InputElement::from_dxbc(e, e.component_type == DxbcInputType::Float, false))
-        //     .collect_vec();
-
-        // if tag.0 == u32::from_be(0x5c44eb80) {
-        // println!("{}", hex::encode(&mat.ps_bytecode.data()));
-        // let e =
-        //     TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little).unwrap_or_default();
-        // if !e.is_empty() {
-        //     println!("VS {tag} length={}", e.len());
-        //     println!("\t{:#?}", mat.vs_bytecode_constants);
-        //     println!("\t{e:#x?}");
-        // }
-        // let e =
-        //     TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little).unwrap_or_default();
-        // if !e.is_empty() {
-        //     println!("PS {tag} length={}", e.len());
-        //     println!("\t{:#?}", mat.ps_bytecode_constants);
-        //     println!("\t{e:#x?}");
-        // }
-
         // TODO(cohae): error checking
         let tfx_bytecode_vs = TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little)
             .ok()

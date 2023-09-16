@@ -38,8 +38,8 @@ const SPINNER_INTERVAL: usize = 50;
 impl OverlayProvider for LoadIndicatorOverlay {
     fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
         let open = *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
-            || *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
-            || *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle;
+            || *resource_mt::STATUS_BUFFERS.read() != LoadingThreadState::Idle;
+        // || *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle;
 
         if open {
             ui.window("Loading")
@@ -62,6 +62,20 @@ impl OverlayProvider for LoadIndicatorOverlay {
                         let time_millis = start_time.elapsed().as_millis() as usize;
                         ui.text(format!(
                             "{} Loading {} textures ({:.1}s)",
+                            SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
+                            remaining,
+                            start_time.elapsed().as_secs_f32()
+                        ));
+                    }
+
+                    if let LoadingThreadState::Loading {
+                        start_time,
+                        remaining,
+                    } = *resource_mt::STATUS_BUFFERS.read()
+                    {
+                        let time_millis = start_time.elapsed().as_millis() as usize;
+                        ui.text(format!(
+                            "{} Loading {} buffers ({:.1}s)",
                             SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
                             remaining,
                             start_time.elapsed().as_secs_f32()

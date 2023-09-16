@@ -64,4 +64,5 @@ macro_rules! caller_frame {
     }};
 }
 
+#[allow(unused)]
 pub(crate) use caller_frame;

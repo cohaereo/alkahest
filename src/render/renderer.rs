@@ -504,13 +504,24 @@ impl Renderer {
                 );
             }
 
-            self.dcs.context().IASetVertexBuffers(
-                0,
-                1,
-                Some([Some(drawcall.vertex_buffer.clone())].as_ptr()),
-                Some([drawcall.vertex_buffer_stride].as_ptr()),
-                Some(&0),
-            );
+            for (buffer_index, vb) in drawcall.vertex_buffers.iter().enumerate() {
+                if !vb.is_valid() {
+                    continue;
+                }
+
+                if let Some((buffer, stride)) = render_data.vertex_buffers.get(vb) {
+                    self.dcs.context().IASetVertexBuffers(
+                        buffer_index as _,
+                        1,
+                        Some([Some(buffer.clone())].as_ptr()),
+                        Some([*stride].as_ptr()),
+                        Some(&0),
+                    );
+                } else {
+                    // error!("Couldn't bind vertex buffer {}", vb);
+                    return;
+                }
+            }
 
             if let Some((index_buffer, index_buffer_format)) =
                 render_data.index_buffers.get(&drawcall.index_buffer)
@@ -521,6 +532,7 @@ impl Renderer {
                     0,
                 );
             } else {
+                // error!("Couldn't bind index buffer {}", drawcall.index_buffer);
                 return;
             }
 

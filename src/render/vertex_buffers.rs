@@ -1,6 +1,10 @@
+
+use crate::entity::VertexBufferHeader;
+use crate::packages::package_manager;
 use crate::render::renderer::Renderer;
 use crate::render::vertex_layout;
 use destiny_pkg::TagHash;
+use itertools::Itertools;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -13,6 +17,25 @@ pub fn load_vertex_buffers(
     if !material.is_valid() {
         anyhow::bail!("Invalid material {material}");
     }
+
+    let mut buffer_strides = vec![];
+    for b in buffers {
+        if b.is_valid() {
+            let vertex_header: VertexBufferHeader = package_manager().read_tag_struct(*b).unwrap();
+            buffer_strides.push(vertex_header.stride as usize);
+        } else {
+            buffer_strides.push(0);
+        }
+    }
+
+    let buffer_offsets = buffer_strides
+        .iter()
+        .scan(0, |offset, &stride| {
+            let current_offset = *offset;
+            *offset += stride;
+            Some(current_offset)
+        })
+        .collect_vec();
 
     let (material_vshader, material_pshader) = {
         renderer.render_data.load_material(renderer, material);
@@ -31,27 +54,38 @@ pub fn load_vertex_buffers(
         .render_data
         .load_pshader(&renderer.dcs, material_pshader);
 
-    let base_input_layout = vshader.1.clone();
+    let mut new_input_layout = vshader.1.clone();
+    let mut layout_offset = 0;
+    for element in new_input_layout.iter_mut() {
+        element.input_slot = buffer_offsets
+            .iter()
+            .positions(|v| layout_offset >= *v)
+            .last()
+            .unwrap_or(buffer_offsets.len() - 1) as u32;
+
+        layout_offset += element.format.bpp() / 8;
+    }
 
     let mut s = DefaultHasher::new();
-    base_input_layout.hash(&mut s);
+    new_input_layout.hash(&mut s);
     let hash = s.finish();
 
-    // let layout_string = base_input_layout
+    // let layout_string = new_input_layout
     //     .iter()
     //     .filter(|e| !e.semantic_type.is_system_value())
     //     .enumerate()
     //     .map(|(i, e)| {
     //         format!(
-    //             "\t{}{} v{i} : {}{}",
+    //             "\t{}{} v{i} : {}{} (slot {})",
     //             e.component_type,
     //             e.component_count,
     //             unsafe { e.semantic_type.to_pcstr().display() },
-    //             e.semantic_index
+    //             e.semantic_index,
+    //             e.input_slot
     //         )
     //     })
     //     .join("\n");
-    // println!("0x{hash:x}\n{layout_string}\n");
+    // println!("0x{hash:x}, {} buffers\n{layout_string}\n", buffers.len());
 
     if !renderer
         .render_data
@@ -59,7 +93,21 @@ pub fn load_vertex_buffers(
         .input_layouts
         .contains_key(&hash)
     {
-        let layout_converted = vertex_layout::build_input_layout(&base_input_layout);
+        let layout_converted = vertex_layout::build_input_layout(&new_input_layout);
+
+        // println!("Input offsets: {:?}", buffer_offsets);
+        // println!("Input strides: {:?}", buffer_strides);
+        // println!(
+        //     "Converted layout offsets: {:?}",
+        //     layout_converted
+        //         .iter()
+        //         .map(|v| (
+        //             v.InputSlot,
+        //             v.AlignedByteOffset,
+        //             DxgiFormat::try_from(v.Format.0).unwrap().bpp() / 8
+        //         ))
+        //         .collect_vec()
+        // );
 
         let input_layout = {
             let vs_data = &renderer.render_data.data().vshaders[&material_vshader].2;
@@ -71,26 +119,6 @@ pub fn load_vertex_buffers(
             }
             .unwrap()
         };
-
-        // let layout_string = base_input_layout
-        //     .iter()
-        //     .filter(|e| !e.semantic_type.is_system_value())
-        //     .enumerate()
-        //     .map(|(i, e)| {
-        //         format!(
-        //             "\t{}{} v{i} : {}{}",
-        //             e.component_type,
-        //             e.component_count,
-        //             unsafe { e.semantic_type.to_pcstr().display() },
-        //             e.semantic_index
-        //         )
-        //     })
-        //     .join("\n");
-
-        // info!(
-        //     "Loaded vertex layout for VS {:?}, layout:\n{}\n",
-        //     material_vshader, layout_string
-        // );
 
         renderer
             .render_data

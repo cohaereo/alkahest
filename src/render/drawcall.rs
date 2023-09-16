@@ -154,9 +154,7 @@ bitflags! {
 
 #[derive(Clone)]
 pub struct DrawCall {
-    // TODO: Get these from render data
-    pub vertex_buffer: ID3D11Buffer,
-    pub vertex_buffer_stride: u32,
+    pub vertex_buffers: Vec<TagHash>,
     pub index_buffer: TagHash,
     pub input_layout_hash: u64,
 

@@ -28,4 +28,4 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy -- --deny "clippy::correctness" --deny "clippy::suspicious" --deny "clippy::complexity"
+        run: cargo clippy -- --deny "clippy::correctness" --deny "clippy::suspicious" --deny "clippy::complexity" --features debug_lock

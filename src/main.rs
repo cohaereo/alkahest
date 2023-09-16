@@ -582,7 +582,7 @@ pub fn main() -> anyhow::Result<()> {
                                     && data.translation.z == 0.0
                                     && !unknown_root_resources.contains_key(&u)
                                 {
-                                    warn!("Root resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table.tag());
+                                    warn!("World origin resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table.tag());
                                     unknown_root_resources.insert(u, ());
                                 }
 

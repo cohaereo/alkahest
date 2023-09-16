@@ -12,7 +12,7 @@ use crate::material::Material;
 use crate::packages::package_manager;
 use crate::render::vertex_layout::InputElement;
 use crate::texture::Texture;
-use crate::util::{caller_frame, LockTracker};
+use crate::util::LockTracker;
 
 use super::drawcall::ShadingTechnique;
 use super::renderer::Renderer;
@@ -68,12 +68,12 @@ impl RenderDataManager {
 
     #[track_caller]
     pub fn data(&self) -> LockTracker<RwLockReadGuard<RenderData>> {
-        // #[cfg(feature = "debug_lock")]
-        // debug!(
-        //     "Thread {:?} acquiring RenderData (read) ({})",
-        //     std::thread::current().id(),
-        //     caller_frame!(),
-        // );
+        #[cfg(feature = "debug_lock")]
+        debug!(
+            "Thread {:?} acquiring RenderData (read) ({})",
+            std::thread::current().id(),
+            crate::util::caller_frame!(),
+        );
 
         let l = LockTracker::wrap(
             self.render_data
@@ -86,7 +86,7 @@ impl RenderDataManager {
             "Thread {:?} acquired lock #{} (read) ({})",
             std::thread::current().id(),
             l.id(),
-            caller_frame!(),
+            crate::util::caller_frame!(),
         );
 
         l
@@ -94,12 +94,12 @@ impl RenderDataManager {
 
     #[track_caller]
     pub fn data_mut(&self) -> LockTracker<RwLockWriteGuard<RenderData>> {
-        // #[cfg(feature = "debug_lock")]
-        // debug!(
-        //     "Thread {:?} acquiring RenderData (write) ({})",
-        //     std::thread::current().id(),
-        //     caller_frame!(),
-        // );
+        #[cfg(feature = "debug_lock")]
+        debug!(
+            "Thread {:?} acquiring RenderData (write) ({})",
+            std::thread::current().id(),
+            crate::util::caller_frame!(),
+        );
 
         let l = LockTracker::wrap(
             self.render_data
@@ -112,7 +112,7 @@ impl RenderDataManager {
             "Thread {:?} acquired lock #{} (write) ({})",
             std::thread::current().id(),
             l.id(),
-            caller_frame!(),
+            crate::util::caller_frame!(),
         );
 
         l
