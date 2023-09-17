@@ -17,6 +17,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
+use color_eyre::eyre::Result;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
 use glam::{Quat, Vec4};
@@ -85,6 +86,7 @@ mod map_resources;
 mod material;
 mod overlays;
 mod packages;
+mod panic_handler;
 mod render;
 mod resources;
 mod statics;
@@ -96,6 +98,11 @@ mod unknown;
 mod util;
 
 pub fn main() -> anyhow::Result<()> {
+    panic_handler::install_hook();
+
+    #[cfg(debug_assertions)]
+    std::env::set_var("RUST_BACKTRACE", "1");
+
     rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("rayon-worker-{i}"))
         .build_global()
@@ -271,6 +278,8 @@ pub fn main() -> anyhow::Result<()> {
     // for (tag, entry) in package_manager().get_all_by_reference(u32::from_be(0x1E898080)) {
     //     println!("{} - {tag}", package_manager().package_paths[&tag.pkg_id()]);
     // }
+
+    panic!("Hey");
 
     // First light reserved for camera light
     let point_lights = vec![Vec4::ZERO, Vec4::ZERO];

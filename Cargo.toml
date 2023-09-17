@@ -50,6 +50,8 @@ genmesh = "0.6.2"
 crossbeam = "0.8.2"
 num-traits = "0.2.16"
 num-derive = "0.4.0"
+color-eyre = "0.6.2"
+regex = "1.9.5"
 
 [features]
 default = []
