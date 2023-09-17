@@ -6,7 +6,7 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 
 [dependencies]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
-destiny-pkg = { version = "0.4.3", git = "https://github.com/v4nguard/destiny-pkg" }
+destiny-pkg = { version = "0.4.4", git = "https://github.com/v4nguard/destiny-pkg" }
 winit = { version = "0.27.2" }
 binrw = "0.11"
 itertools = "0.11.0"
