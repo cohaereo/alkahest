@@ -279,8 +279,6 @@ pub fn main() -> anyhow::Result<()> {
     //     println!("{} - {tag}", package_manager().package_paths[&tag.pkg_id()]);
     // }
 
-    panic!("Hey");
-
     // First light reserved for camera light
     let point_lights = vec![Vec4::ZERO, Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(u32::from_be(0x1E898080)) {
