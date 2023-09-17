@@ -17,7 +17,6 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
-use color_eyre::eyre::Result;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
 use glam::{Quat, Vec4};

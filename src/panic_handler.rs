@@ -2,13 +2,32 @@ use std::{
     backtrace::{Backtrace, BacktraceStatus},
     io::Write,
     panic::PanicInfo,
+    sync::Arc,
 };
+
+use lazy_static::lazy_static;
+use parking_lot::Mutex;
+
+lazy_static! {
+    static ref PANIC_FILE: Arc<Mutex<Option<std::fs::File>>> = Arc::new(Mutex::new(None));
+    static ref PANIC_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+}
 
 pub fn install_hook() {
     std::panic::set_hook(Box::new(|info| {
+        let _guard = PANIC_LOCK.lock();
+        let this_thread = std::thread::current();
+
         // First call color-eyre's fancy CLI backtrace
         let (panic_hook, _) = color_eyre::config::HookBuilder::new().into_hooks();
-        eprintln!("{}", panic_hook.panic_report(info));
+        eprintln!(
+            "Thread '{}' panicked:\n{}",
+            this_thread
+                .name()
+                .map(|name| name.to_string())
+                .unwrap_or(format!("{:?}", this_thread.id())),
+            panic_hook.panic_report(info)
+        );
 
         // Write a panic file
         match write_panic_to_file(info, Backtrace::capture()) {
@@ -41,7 +60,12 @@ pub fn install_hook() {
 }
 
 fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
-    let mut f = std::fs::File::create("panic.log")?;
+    let mut file_lock = PANIC_FILE.lock();
+    if file_lock.is_none() {
+        *file_lock = Some(std::fs::File::create("panic.log")?);
+    }
+
+    let f = file_lock.as_mut().unwrap();
 
     writeln!(f, "{}", info)?;
     if bt.status() == BacktraceStatus::Captured {
@@ -49,7 +73,6 @@ fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<(
         writeln!(f, "Backtrace:")?;
         writeln!(f, "{}", bt)?;
     }
-
     Ok(())
 }
 
