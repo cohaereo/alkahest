@@ -144,13 +144,20 @@ bitflags! {
     }
 }
 
-// // TODO(cohae): Can be crammed into 32 bits?
-// pub struct ConstantBufferBinding {
-//     pub buffer: ID3D11Buffer, // at least 25 bits for a hash
-//     pub slot: u8,             // 4 bits
-//     pub stages: ShaderStages, // 2 bits
-//                               // Total: 31 (+1 more bit, put that in buffer hash)
-// }
+// TODO(cohae): Can be crammed into 32 bits?
+#[derive(Clone)]
+pub struct ConstantBufferBinding {
+    pub buffer: ID3D11Buffer, // at least 25 bits for a hash
+    pub slot: u32,            // 4 bits
+                              // pub stages: ShaderStages, // 2 bits
+                              // Total: 31 (+1 more bit, put that in buffer hash)
+}
+
+impl ConstantBufferBinding {
+    pub fn new(slot: u32, buffer: ID3D11Buffer) -> ConstantBufferBinding {
+        ConstantBufferBinding { buffer, slot }
+    }
+}
 
 #[derive(Clone)]
 pub struct DrawCall {
@@ -160,9 +167,8 @@ pub struct DrawCall {
     pub input_layout_hash: u64,
 
     // TODO(cohae): Will this be used for anything other than instances/rigid_model? Can just be a pointer or an id or whatevs otherwise
-    // pub buffer_bindings: Vec<ConstantBufferBinding>,
-    pub cb11: Option<ID3D11Buffer>,
-
+    pub buffer_bindings: Vec<ConstantBufferBinding>,
+    // pub cb11: Option<ID3D11Buffer>,
     /// Applied on top of the base material
     pub variant_material: Option<TagHash>,
 

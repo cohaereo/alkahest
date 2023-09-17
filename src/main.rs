@@ -5,10 +5,8 @@ extern crate windows;
 extern crate tracing;
 
 use std::cell::RefCell;
-
 use std::collections::{HashMap, HashSet};
-
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -22,12 +20,10 @@ use destiny_pkg::{PackageManager, TagHash};
 use glam::{Quat, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
-
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-
 use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;

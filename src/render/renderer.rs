@@ -501,9 +501,11 @@ impl Renderer {
         }
 
         unsafe {
-            self.dcs
-                .context()
-                .VSSetConstantBuffers(1, Some(&[drawcall.cb11.clone()]));
+            for b in &drawcall.buffer_bindings {
+                self.dcs
+                    .context()
+                    .VSSetConstantBuffers(b.slot, Some(&[Some(b.buffer.clone())]));
+            }
 
             if let Some(input_layout) = render_data.input_layouts.get(&drawcall.input_layout_hash) {
                 self.dcs.context().IASetInputLayout(input_layout);

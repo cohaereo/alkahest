@@ -12,7 +12,9 @@ use crate::packages::package_manager;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
-use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
+use super::drawcall::{
+    ConstantBufferBinding, DrawCall, ShadingTechnique, SortValue3d, Transparency,
+};
 use super::renderer::Renderer;
 
 pub struct StaticModelBuffer {
@@ -229,7 +231,10 @@ impl StaticModel {
                             index_buffer: buffers.index_buffer,
                             color_buffer: Some(buffers.color_buffer),
                             input_layout_hash: buffers.input_layout,
-                            cb11: Some(instance_buffer.clone()),
+                            buffer_bindings: vec![ConstantBufferBinding::new(
+                                1,
+                                instance_buffer.clone(),
+                            )],
                             variant_material: None,
                             index_start: p.index_start,
                             index_count: p.index_count,
@@ -351,7 +356,7 @@ impl StaticOverlayModel {
                 index_buffer: self.buffers.index_buffer,
                 color_buffer: Some(self.buffers.color_buffer),
                 input_layout_hash: self.buffers.input_layout,
-                cb11: Some(instance_buffer),
+                buffer_bindings: vec![ConstantBufferBinding::new(1, instance_buffer)],
                 variant_material: None,
                 index_start: self.model.index_start,
                 index_count: self.model.index_count,

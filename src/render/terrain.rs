@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use crate::map::Unk8080714f;
 
-use crate::packages::package_manager;
-
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
-use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
+use super::drawcall::{
+    ConstantBufferBinding, DrawCall, ShadingTechnique, SortValue3d, Transparency,
+};
 use super::renderer::Renderer;
 use super::vertex_buffers::load_vertex_buffers;
 use super::{ConstantBuffer, DeviceContextSwapchain};
@@ -118,7 +118,10 @@ impl TerrainRenderer {
                         index_buffer: self.index_buffer,
                         color_buffer: None,
                         input_layout_hash: self.input_layout,
-                        cb11: Some(cb11.buffer().clone()),
+                        buffer_bindings: vec![ConstantBufferBinding::new(
+                            11,
+                            cb11.buffer().clone(),
+                        )],
                         variant_material: None,
                         index_start: part.index_start,
                         index_count: part.index_count as _,

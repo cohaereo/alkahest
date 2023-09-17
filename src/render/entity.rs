@@ -13,6 +13,7 @@ use crate::entity::Unk808073a5;
 use crate::packages::package_manager;
 use crate::render::vertex_buffers::load_vertex_buffers;
 
+use super::drawcall::ConstantBufferBinding;
 use super::drawcall::DrawCall;
 use super::drawcall::ShadingTechnique;
 use super::drawcall::SortValue3d;
@@ -221,7 +222,7 @@ impl EntityRenderer {
                         index_buffer: buffers.index_buffer,
                         color_buffer: None,
                         input_layout_hash: buffers.input_layout,
-                        cb11: Some(cb11.clone()),
+                        buffer_bindings: vec![ConstantBufferBinding::new(1, cb11.clone())],
                         variant_material,
                         index_start: p.index_start,
                         index_count: p.index_count,
