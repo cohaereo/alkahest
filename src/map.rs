@@ -112,9 +112,10 @@ pub struct Unk808099d8 {
     pub unk2c: u32,
     pub unk30: [u32; 11], //
     pub unk5c: f32,
-    pub unk60: u32,
-    pub unk64: DestinyHash,
-    pub unk68: [u32; 4],
+    pub unk60: f32,
+    pub unk64: TagHash,
+    pub unk68: DestinyHash,
+    pub unk6c: [u32; 3],
     pub data_resource: ResourcePointer,
     pub unk80: [u32; 4],
 }

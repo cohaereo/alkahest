@@ -173,7 +173,13 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     // reflectance equation
     float3 directLighting = float3(0.0, 0.0, 0.0);
     const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
-    for(uint i = 0; i < lightCount; ++i)
+    float3 DIR_LIGHT_DIR = float3(
+        sin(time*0.25),
+        cos(time*0.25),
+        0.40f
+    );
+
+    for (uint i = 0; i < lightCount; ++i)
     {
         float3 light_pos = lights[i].xyz;
         if(i == 0) {
@@ -181,7 +187,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         }
 
         float distance = length(light_pos - worldPos);
-        if(distance > 32.0) {
+        if(distance > 32.0 && i != 1) {
             continue;
         }
 
@@ -191,7 +197,16 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         // float distance    = length(lights[i].xyz - worldPos);
         float attenuation = 1.0 / (distance * distance);
         //float attenuation = 10.0 / (distance);
-		float3 radiance     = LIGHT_COL.xyz * attenuation;
+        float3 radiance     = LIGHT_COL.xyz * attenuation;
+
+        if(i == 1) {
+            float3 light_dir = DIR_LIGHT_DIR; // -normalize(lights[i].xyz);
+            radiance = LIGHT_COL.xyz;
+            
+            // Cook-Torrance BRDF calculations
+            L = light_dir;
+            H = normalize(V + L);
+        }
 
         // cook-torrance brdf
         float NDF = DistributionGGX(N, H, roughness);

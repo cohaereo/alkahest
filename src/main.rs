@@ -273,7 +273,7 @@ pub fn main() -> anyhow::Result<()> {
     // }
 
     // First light reserved for camera light
-    let point_lights = vec![Vec4::ZERO];
+    let point_lights = vec![Vec4::ZERO, Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(u32::from_be(0x1E898080)) {
         let hash = TagHash::new(package.pkg_id(), index as _);
         let _span = debug_span!("Load map", %hash).entered();
@@ -580,6 +580,7 @@ pub fn main() -> anyhow::Result<()> {
                             //     });
                             // }
                             u => {
+                                // println!("{data:x?}");
                                 if data.translation.x == 0.0
                                     && data.translation.y == 0.0
                                     && data.translation.z == 0.0
