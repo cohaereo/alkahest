@@ -201,7 +201,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
         if(i == 1) {
             float3 light_dir = DIR_LIGHT_DIR; // -normalize(lights[i].xyz);
-            radiance = float3(1.0, 1.0, 1.0) * 4.0;
+            radiance = float3(1.0, 1.0, 1.0) * 5.0;
             
             // Cook-Torrance BRDF calculations
             L = light_dir;

@@ -43,7 +43,7 @@ use crate::input::InputState;
 use crate::map::{
     ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54,
 };
-use crate::map_resources::{MapResource, Unk80806e68, Unk8080714b};
+use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
 use crate::material::Material;
 use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
 use crate::overlays::console::ConsoleOverlay;
@@ -65,6 +65,7 @@ use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
+use crate::types::AABB;
 
 use render::vertex_layout::InputElement;
 
@@ -275,7 +276,7 @@ pub fn main() -> anyhow::Result<()> {
     // }
 
     // First light reserved for camera light
-    let point_lights = vec![Vec4::ZERO, Vec4::ZERO];
+    let mut point_lights = vec![Vec4::ZERO, Vec4::ZERO];
     for (index, _) in package.get_all_by_reference(u32::from_be(0x1E898080)) {
         let hash = TagHash::new(package.pkg_id(), index as _);
         let _span = debug_span!("Load map", %hash).entered();
@@ -343,7 +344,7 @@ pub fn main() -> anyhow::Result<()> {
                             //         }),
                             //     });
                             // }
-                            // // D2Class_7D6C8080 (terrain)
+                            // D2Class_7D6C8080 (terrain)
                             0x80806c7d => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset))
                                     .unwrap();
@@ -370,80 +371,80 @@ pub fn main() -> anyhow::Result<()> {
                                 terrain_headers.push((terrain_resource.terrain, terrain));
                                 terrains.push(terrain_resource.terrain);
                             }
-                            // // Cubemap volume
-                            // 0x80806b7f => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset))
-                            //         .unwrap();
+                            // Cubemap volume
+                            0x80806695 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset))
+                                    .unwrap();
 
-                            //     let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
-                            //     let extents_center = Vec4::new(
-                            //         data.translation.x,
-                            //         data.translation.y,
-                            //         data.translation.z,
-                            //         data.translation.w,
-                            //     );
-                            //     let extents = Vec4::new(
-                            //         cubemap_volume.cubemap_extents.x,
-                            //         cubemap_volume.cubemap_extents.y,
-                            //         cubemap_volume.cubemap_extents.z,
-                            //         cubemap_volume.cubemap_extents.w,
-                            //     );
+                                let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
+                                let extents_center = Vec4::new(
+                                    data.translation.x,
+                                    data.translation.y,
+                                    data.translation.z,
+                                    data.translation.w,
+                                );
+                                let extents = Vec4::new(
+                                    cubemap_volume.cubemap_extents.x,
+                                    cubemap_volume.cubemap_extents.y,
+                                    cubemap_volume.cubemap_extents.z,
+                                    cubemap_volume.cubemap_extents.w,
+                                );
 
-                            //     let volume_min = extents_center - extents;
-                            //     let volume_max = extents_center + extents;
+                                let volume_min = extents_center - extents / 2.0;
+                                let volume_max = extents_center + extents / 2.0;
 
-                            //     renderer
-                            //         .render_data
-                            //         .load_texture(cubemap_volume.cubemap_texture);
+                                renderer.render_data.load_texture(ExtendedHash::Hash32(
+                                    cubemap_volume.cubemap_texture,
+                                ));
 
-                            //     resource_points.push(ResourcePoint {
-                            //         translation: extents_center,
-                            //         rotation: Quat::from_xyzw(
-                            //             data.rotation.x,
-                            //             data.rotation.y,
-                            //             data.rotation.z,
-                            //             data.rotation.w,
-                            //         ),
-                            //         entity: data.entity,
-                            //         resource_type: data.data_resource.resource_type,
-                            //         resource: MapResource::CubemapVolume(
-                            //             Box::new(cubemap_volume),
-                            //             AABB {
-                            //                 min: volume_min.truncate().into(),
-                            //                 max: volume_max.truncate().into(),
-                            //             },
-                            //         ),
-                            //     });
-                            // }
-                            // // Point light
-                            // 0x80806cbf => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     resource_points.push(ResourcePoint {
-                            //         translation: Vec4::new(
-                            //             data.translation.x,
-                            //             data.translation.y,
-                            //             data.translation.z,
-                            //             data.translation.w,
-                            //         ),
-                            //         rotation: Quat::from_xyzw(
-                            //             data.rotation.x,
-                            //             data.rotation.y,
-                            //             data.rotation.z,
-                            //             data.rotation.w,
-                            //         ),
-                            //         entity: data.entity,
-                            //         resource_type: data.data_resource.resource_type,
-                            //         resource: MapResource::PointLight(tag),
-                            //     });
-                            //     point_lights.push(Vec4::new(
-                            //         data.translation.x,
-                            //         data.translation.y,
-                            //         data.translation.z,
-                            //         data.translation.w,
-                            //     ));
-                            // }
+                                resource_points.push(ResourcePoint {
+                                    translation: extents_center,
+                                    rotation: Quat::from_xyzw(
+                                        data.rotation.x,
+                                        data.rotation.y,
+                                        data.rotation.z,
+                                        data.rotation.w,
+                                    ),
+                                    entity: data.entity,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::CubemapVolume(
+                                        Box::new(cubemap_volume),
+                                        AABB {
+                                            min: volume_min.truncate().into(),
+                                            max: volume_max.truncate().into(),
+                                        },
+                                    ),
+                                });
+                            }
+                            // Point light
+                            0x808067b5 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                resource_points.push(ResourcePoint {
+                                    translation: Vec4::new(
+                                        data.translation.x,
+                                        data.translation.y,
+                                        data.translation.z,
+                                        data.translation.w,
+                                    ),
+                                    rotation: Quat::from_xyzw(
+                                        data.rotation.x,
+                                        data.rotation.y,
+                                        data.rotation.z,
+                                        data.rotation.w,
+                                    ),
+                                    entity: data.entity,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::PointLight(tag),
+                                });
+                                point_lights.push(Vec4::new(
+                                    data.translation.x,
+                                    data.translation.y,
+                                    data.translation.z,
+                                    data.translation.w,
+                                ));
+                            }
                             // Decal collection
                             0x80806955 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))

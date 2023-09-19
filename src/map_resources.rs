@@ -1,7 +1,9 @@
-use crate::icons::{ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_STICKER};
+use crate::icons::{
+    ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER,
+};
 use crate::render::debug::DebugShapes;
 use crate::structure::{RelPointer, TablePointer};
-use crate::types::{DestinyHash, Vector4};
+use crate::types::{DestinyHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::{Quat, Vec3, Vec4, Vec4Swizzles};
@@ -20,6 +22,8 @@ pub enum MapResource {
         scale: f32,
     } = 1,
     Unknown(u32) = 2,
+    PointLight(TagHash) = 3,
+    CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
 }
 
 impl MapResource {
@@ -30,6 +34,15 @@ impl MapResource {
                 format!("Decal (mat {material}, scale {scale})")
             }
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
+            MapResource::PointLight { .. } => "Point light".to_string(),
+            MapResource::CubemapVolume(c, aabb) => {
+                format!(
+                    "Cubemap Volume ({:.0}m³)\n'{}' ({:08X})",
+                    aabb.volume(),
+                    *c.cubemap_name,
+                    c.cubemap_texture.0.to_be()
+                )
+            }
         }
     }
 
@@ -57,6 +70,8 @@ impl MapResource {
             MapResource::Entity { .. } => [255, 255, 255],
             MapResource::Decal { .. } => [50, 255, 255],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
+            MapResource::PointLight { .. } => [220, 220, 20],
+            MapResource::CubemapVolume(..) => [50, 255, 50],
         }
     }
 
@@ -65,6 +80,8 @@ impl MapResource {
             MapResource::Entity { .. } => ICON_CHESS_PAWN,
             MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown { .. } => ICON_HELP,
+            MapResource::PointLight { .. } => ICON_LIGHTBULB_ON,
+            MapResource::CubemapVolume(..) => ICON_SPHERE,
         }
     }
 
@@ -82,6 +99,9 @@ impl MapResource {
                 darken_color(self.debug_color()),
                 false,
             ),
+            MapResource::CubemapVolume(_, bounds) => {
+                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
+            }
             _ => {}
         }
     }
@@ -92,6 +112,8 @@ impl MapResource {
             0 => ICON_CHESS_PAWN,
             1 => ICON_STICKER,
             2 => ICON_HELP,
+            3 => ICON_LIGHTBULB_ON,
+            4 => ICON_SPHERE,
             _ => ICON_HELP_BOX_OUTLINE,
         }
     }
@@ -138,13 +160,13 @@ pub struct Unk80806b7f {
     pub unkc0: [Vector4; 4],
     pub unk100: [Vector4; 4],
 
-    pub unk140: [u32; 20],
+    pub unk140: [u32; 28],
 
     pub cubemap_name: RelPointer<NullString>,
     pub cubemap_texture: TagHash,
-    pub unk19c: u32,
-    pub unk1a0: TagHash,
-    pub unk1a4: [u32; 7],
+    pub unk1bc: u32,
+    pub unk1c0: TagHash,
+    pub unk1c4: [u32; 7],
 }
 
 /// Decal collection resource
