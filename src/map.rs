@@ -63,6 +63,14 @@ impl ExtendedHash {
             ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
         }
     }
+
+    pub fn is_valid(&self) -> bool {
+        match self {
+            ExtendedHash::Hash32(h) => h.is_valid(),
+            // TODO(cohae): Double check this
+            ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
+        }
+    }
 }
 
 impl BinRead for ExtendedHash {

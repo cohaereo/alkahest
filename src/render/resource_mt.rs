@@ -70,9 +70,7 @@ fn spawn_thread_textures(
         .name(name.to_string())
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
-                if
-                /* hash.is_valid() && */
-                !data.read().textures.contains_key(&hash.key()) {
+                if hash.is_valid() && !data.read().textures.contains_key(&hash.key()) {
                     match Texture::load(&dcs, hash) {
                         Ok(t) => {
                             data.write().textures.insert(hash.key(), t);
