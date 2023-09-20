@@ -166,14 +166,29 @@ impl Material {
                 .load_pshader(&renderer.dcs, mat.pixel_shader);
         }
 
-        // TODO(cohae): error checking
-        let tfx_bytecode_vs = TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little)
-            .ok()
-            .map(TfxBytecodeInterpreter::new);
+        let tfx_bytecode_vs =
+            match TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little) {
+                Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
+                Err(e) => {
+                    error!(
+                        "Failed to parse VS TFX bytecode: {e} (data={})",
+                        hex::encode(mat.vs_bytecode.data())
+                    );
+                    None
+                }
+            };
 
-        let tfx_bytecode_ps = TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little)
-            .ok()
-            .map(TfxBytecodeInterpreter::new);
+        let tfx_bytecode_ps =
+            match TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little) {
+                Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
+                Err(e) => {
+                    error!(
+                        "Failed to parse PS TFX bytecode: {e} (data={})",
+                        hex::encode(mat.ps_bytecode.data())
+                    );
+                    None
+                }
+            };
 
         Self {
             mat,
