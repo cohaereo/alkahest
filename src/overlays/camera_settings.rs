@@ -17,13 +17,13 @@ pub struct CameraPositionOverlay {
 }
 
 impl OverlayProvider for CameraPositionOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
-        ui.window(format!("{} Debug", ICON_BUG)).build(|| {
+    fn draw(&mut self, ctx: &egui::Context, _window: &Window, resources: &mut Resources) {
+        egui::Window::new(format!("{} Debug", ICON_BUG)).show(ctx, |ui| {
             let mut camera = resources.get_mut::<FpsCamera>().unwrap();
-            ui.text(format!("X: {}", camera.position.x));
-            ui.text(format!("Y: {}", camera.position.y));
-            ui.text(format!("Z: {}", camera.position.z));
-            ui.text(format!(
+            ui.label(format!("X: {}", camera.position.x));
+            ui.label(format!("Y: {}", camera.position.y));
+            ui.label(format!("Z: {}", camera.position.z));
+            ui.label(format!(
                 "Cubemap: {}",
                 match resources.get::<CurrentCubemap>().and_then(|c| c.0.clone()) {
                     None => "None".to_string(),
@@ -31,28 +31,24 @@ impl OverlayProvider for CameraPositionOverlay {
                 }
             ));
             ui.separator();
-            ui.slider("Speed Multiplier", 0.01, 10.0, &mut camera.speed_mul);
+            ui.add(egui::Slider::new(&mut camera.speed_mul, 0.01..=10.0).text("Speed Multiplier"));
             ui.separator();
-            ui.checkbox("Show map resources", &mut self.show_map_resources);
+            ui.checkbox(&mut self.show_map_resources, "Show map resources");
             if self.show_map_resources {
-                ui.indent();
-                ui.group(|| {
+                ui.indent("mapres_indent", |ui| {
                     for (i, n) in MapResource::VARIANTS.iter().enumerate() {
                         ui.checkbox(
-                            format!("{} {}", MapResource::get_icon_by_index(i as u8), n),
                             &mut self.map_resource_filter[i],
+                            format!("{} {}", MapResource::get_icon_by_index(i as u8), n),
                         );
                     }
                 });
-                ui.unindent();
-                ui.checkbox("Show map resource label", &mut self.show_map_resource_label);
+                ui.checkbox(&mut self.show_map_resource_label, "Show map resource label");
                 ui.spacing();
 
-                ui.slider(
-                    "Debug distance",
-                    25.0,
-                    4000.0,
-                    &mut self.map_resource_distance,
+                ui.add(
+                    egui::Slider::new(&mut self.map_resource_distance, 25.0..=4000.0)
+                        .text("Max Resource Distance"),
                 );
             }
         });

@@ -2,6 +2,7 @@ use crate::input::InputState;
 use crate::overlays::gui::OverlayProvider;
 use crate::resources::Resources;
 
+use egui::{Color32, RichText};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -83,7 +84,7 @@ impl Default for ConsoleOverlay {
 }
 
 impl OverlayProvider for ConsoleOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
+    fn draw(&mut self, ctx: &egui::Context, _window: &Window, resources: &mut Resources) {
         let input = resources.get::<InputState>().unwrap();
         if (input.is_key_pressed(VirtualKeyCode::Grave) || input.is_key_pressed(VirtualKeyCode::F1))
             && !self.open
@@ -92,68 +93,107 @@ impl OverlayProvider for ConsoleOverlay {
             self.focus_input = true;
         }
 
-        // TODO(cohae): Imgui does not handle the open bool all by itself??
         if self.open {
-            let mut is_focused = false;
-            ui.window("Console").opened(&mut self.open).build(|| {
-                is_focused = ui.is_window_focused();
+            let response = egui::Window::new("Console")
+                .open(&mut self.open)
+                .show(ctx, |ui| {
+                    let c = MESSAGE_BUFFER.read();
+                    // ui.child_window("Console log")
+                    //     // .flags(WindowFlags::NO_TITLE_BAR)
+                    //     .size([ui.window_size()[0] - 16.0, ui.window_size()[1] - 58.0])
+                    //     .build(|| {
+                    //         is_focused |= ui.is_window_focused();
+                    //         for e in c.iter() {
+                    //             let level_color = match e.level {
+                    //                 Level::TRACE => [0.8, 0.4, 0.8, 1.0],
+                    //                 Level::DEBUG => [0.35, 0.35, 1.0, 1.0],
+                    //                 Level::INFO => [0.25, 1.0, 0.25, 1.0],
+                    //                 Level::WARN => [1.0, 1.0, 0.15, 1.0],
+                    //                 Level::ERROR => [1.0, 0.15, 0.15, 1.0],
+                    //             };
+                    //             ui.text_colored(level_color, format!("{:5} ", e.level));
+                    //             ui.same_line();
+                    //             ui.text_colored(
+                    //                 [0.6, 0.6, 0.6, 1.0],
+                    //                 format!("{}: ", e.target),
+                    //             );
+                    //             ui.same_line();
+                    //             ui.text(&e.message);
+                    //         }
 
-                let c = MESSAGE_BUFFER.read();
-                ui.group(|| {
-                    ui.child_window("Console log")
-                        // .flags(WindowFlags::NO_TITLE_BAR)
-                        .size([ui.window_size()[0] - 16.0, ui.window_size()[1] - 58.0])
-                        .build(|| {
-                            is_focused |= ui.is_window_focused();
-                            for e in c.iter() {
-                                let level_color = match e.level {
-                                    Level::TRACE => [0.8, 0.4, 0.8, 1.0],
-                                    Level::DEBUG => [0.35, 0.35, 1.0, 1.0],
-                                    Level::INFO => [0.25, 1.0, 0.25, 1.0],
-                                    Level::WARN => [1.0, 1.0, 0.15, 1.0],
-                                    Level::ERROR => [1.0, 0.15, 0.15, 1.0],
+                    //         if self.autoscroll {
+                    //             ui.set_scroll_here_y();
+                    //         }
+                    //     });
+
+                    egui::ScrollArea::new([false, true]).show_rows(
+                        ui,
+                        14.0,
+                        c.len(),
+                        |ui, row_range| {
+                            for row in row_range {
+                                let event = &c[row as isize];
+                                let level_color = match event.level {
+                                    Level::TRACE => [0.8, 0.4, 0.8],
+                                    Level::DEBUG => [0.35, 0.35, 1.0],
+                                    Level::INFO => [0.25, 1.0, 0.25],
+                                    Level::WARN => [1.0, 1.0, 0.15],
+                                    Level::ERROR => [1.0, 0.15, 0.15],
                                 };
-                                ui.text_colored(level_color, format!("{:5} ", e.level));
-                                ui.same_line();
-                                ui.text_colored([0.6, 0.6, 0.6, 1.0], format!("{}: ", e.target));
-                                ui.same_line();
-                                ui.text(&e.message);
-                            }
+                                let level_color = Color32::from_rgb(
+                                    (level_color[0] * 255.0) as u8,
+                                    (level_color[1] * 255.0) as u8,
+                                    (level_color[2] * 255.0) as u8,
+                                );
 
-                            if self.autoscroll {
-                                ui.set_scroll_here_y();
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        RichText::new(format!("{:5} ", event.level))
+                                            .color(level_color)
+                                            .monospace(),
+                                    );
+                                    ui.label(
+                                        RichText::new(format!("{}: ", event.target))
+                                            .color(Color32::GRAY)
+                                            .monospace(),
+                                    );
+                                    ui.label(RichText::new(&event.message).monospace());
+                                });
                             }
-                        });
+                        },
+                    );
+
+                    if self.focus_input {
+                        ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
+                        self.focus_input = false;
+                    }
+
+                    if egui::TextEdit::singleline(&mut self.command_buffer)
+                        .id(egui::Id::new("console_input_line"))
+                        .show(ui)
+                        .response
+                        .lost_focus()
+                        && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                    {
+                        self.command_buffer.clear();
+                        self.focus_input = true;
+                    }
                 });
 
-                ui.set_next_item_width(ui.content_region_avail()[0]);
-                if self.focus_input {
-                    ui.set_keyboard_focus_here();
-                    self.focus_input = false;
-                }
-
-                if ui
-                    .input_text(" ", &mut self.command_buffer)
-                    .enter_returns_true(true)
-                    .build()
-                {
-                    self.command_buffer.clear();
-                    self.focus_input = true;
-                }
-
+            if let Some(response) = response {
                 if (input.is_key_pressed(VirtualKeyCode::Grave)
                     || input.is_key_pressed(VirtualKeyCode::F1))
-                    && !ui.is_window_focused()
+                    && !response.response.has_focus()
                 {
                     self.focus_input = true;
                 }
-            });
 
-            if is_focused && (input.is_key_pressed(VirtualKeyCode::Escape))
-            // || input.is_key_pressed(VirtualKeyCode::Grave)
-            // || input.is_key_pressed(VirtualKeyCode::F1))
-            {
-                self.open = false;
+                if response.response.has_focus() && (input.is_key_pressed(VirtualKeyCode::Escape))
+                // || input.is_key_pressed(VirtualKeyCode::Grave)
+                // || input.is_key_pressed(VirtualKeyCode::F1))
+                {
+                    self.open = false;
+                }
             }
         }
     }

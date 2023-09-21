@@ -1,4 +1,4 @@
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
 
 pub type Key = VirtualKeyCode;
 const WINIT_KEY_COUNT: usize = Key::Cut as usize + 1;
@@ -64,54 +64,46 @@ impl Default for InputState {
 #[allow(unused)]
 impl InputState {
     /// Handles winit events and updates the state accordingly
-    pub fn handle_event(&mut self, event: &Event<'_, ()>) {
-        if let Event::WindowEvent { event, .. } = event {
-            // TODO(cohae): Resolve this lint
-            #[allow(clippy::collapsible_match)]
-            match event {
-                WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            virtual_keycode,
-                            state,
-                            ..
+    pub fn handle_event(&mut self, event: &WindowEvent<'_>) {
+        // TODO(cohae): Resolve this lint
+        #[allow(clippy::collapsible_match)]
+        match event {
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        virtual_keycode,
+                        state,
+                        ..
+                    },
+                ..
+            } => {
+                if let Some(vk) = virtual_keycode {
+                    let key = &mut self.keys[*vk as usize];
+                    match state {
+                        winit::event::ElementState::Pressed => match *key {
+                            KeyState::Up => *key = KeyState::Down,
+                            KeyState::Down => *key = KeyState::Repeated,
+                            KeyState::Repeated => {}
                         },
-                    ..
-                } => {
-                    if let Some(vk) = virtual_keycode {
-                        let key = &mut self.keys[*vk as usize];
-                        match state {
-                            winit::event::ElementState::Pressed => match *key {
-                                KeyState::Up => *key = KeyState::Down,
-                                KeyState::Down => *key = KeyState::Repeated,
-                                KeyState::Repeated => {}
-                            },
-                            winit::event::ElementState::Released => {
-                                *key = KeyState::Up;
-                            }
+                        winit::event::ElementState::Released => {
+                            *key = KeyState::Up;
                         }
                     }
                 }
-                WindowEvent::ModifiersChanged(modifiers) => {
-                    self.ctrl = modifiers.ctrl();
-                    self.alt = modifiers.alt();
-                    self.shift = modifiers.shift();
-                }
-                // WindowEvent::MouseWheel { device_id, delta, phase, modifiers } => todo!(),
-                WindowEvent::MouseInput { state, button, .. } => match button {
-                    winit::event::MouseButton::Left => {
-                        self.mouse1 = *state == ElementState::Pressed
-                    }
-                    winit::event::MouseButton::Right => {
-                        self.mouse2 = *state == ElementState::Pressed
-                    }
-                    winit::event::MouseButton::Middle => {
-                        self.mouse3 = *state == ElementState::Pressed
-                    }
-                    winit::event::MouseButton::Other(_) => {}
-                },
-                _ => {}
             }
+            WindowEvent::ModifiersChanged(modifiers) => {
+                self.ctrl = modifiers.ctrl();
+                self.alt = modifiers.alt();
+                self.shift = modifiers.shift();
+            }
+            // WindowEvent::MouseWheel { device_id, delta, phase, modifiers } => todo!(),
+            WindowEvent::MouseInput { state, button, .. } => match button {
+                winit::event::MouseButton::Left => self.mouse1 = *state == ElementState::Pressed,
+                winit::event::MouseButton::Right => self.mouse2 = *state == ElementState::Pressed,
+                winit::event::MouseButton::Middle => self.mouse3 = *state == ElementState::Pressed,
+                winit::event::MouseButton::Other(_) => {}
+            },
+            _ => {}
         }
     }
 

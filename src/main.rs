@@ -7,6 +7,7 @@ extern crate tracing;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::mem::transmute;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -43,15 +44,15 @@ use crate::input::InputState;
 use crate::map::{
     ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54,
 };
-use crate::map_resources::{MapResource, Unk80806b7f, Unk80806e68, Unk8080714b};
+use crate::map_resources::{MapResource, ResourcePoint, Unk80806b7f, Unk80806e68, Unk8080714b};
 use crate::material::Material;
-use crate::overlays::camera_settings::{CameraPositionOverlay, CurrentCubemap};
-use crate::overlays::console::ConsoleOverlay;
+use crate::overlays::camera_settings::CameraPositionOverlay;
+
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gui::GuiManager;
 use crate::overlays::load_indicator::LoadIndicatorOverlay;
 use crate::overlays::render_settings::{CompositorMode, RenderSettingsOverlay};
-use crate::overlays::resource_nametags::{ResourcePoint, ResourceTypeOverlay};
+use crate::overlays::resource_nametags::ResourceTypeOverlay;
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
@@ -255,6 +256,7 @@ pub fn main() -> anyhow::Result<()> {
         }))
         .with_maximized(config!().window.maximised)
         .build(&event_loop)?;
+    let window = Arc::new(window);
 
     let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
 
@@ -1076,8 +1078,6 @@ pub fn main() -> anyhow::Result<()> {
         current_map: 0,
         maps,
     });
-    // TODO(cohae): This is fucking terrible, just move it to the debug GUI when we can
-    resources.insert(CurrentCubemap(None, None));
     resources.insert(ErrorRenderer::load(dcs.clone()));
     resources.insert(ScopeOverrides::default());
     resources.insert(DebugShapes::default());
@@ -1132,12 +1132,12 @@ pub fn main() -> anyhow::Result<()> {
     let gui_dump = Rc::new(RefCell::new(TagDumper::new()));
     let gui_loading = Rc::new(RefCell::new(LoadIndicatorOverlay::default()));
 
-    let mut gui = GuiManager::create(&window, &dcs.device);
-    let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
+    let mut gui = GuiManager::create(&window, dcs.clone());
+    // let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui.add_overlay(gui_debug);
     gui.add_overlay(gui_rendersettings.clone());
     gui.add_overlay(gui_resources);
-    gui.add_overlay(gui_console);
+    // gui.add_overlay(gui_console);
     gui.add_overlay(gui_dump);
     gui.add_overlay(gui_loading);
     gui.add_overlay(gui_fps);
@@ -1156,68 +1156,81 @@ pub fn main() -> anyhow::Result<()> {
     let mut present_parameters = 0;
 
     event_loop.run(move |event, _, control_flow| {
-        gui.handle_event(&event, &window);
-        resources
-            .get_mut::<InputState>()
-            .unwrap()
-            .handle_event(&event);
-
         match &event {
-            Event::WindowEvent { event, .. } => match event {
-                WindowEvent::Resized(new_dims) => unsafe {
-                    *dcs.swapchain_target.write() = None;
-                    dcs.swap_chain
-                        .ResizeBuffers(
-                            1,
-                            new_dims.width,
-                            new_dims.height,
-                            DXGI_FORMAT_B8G8R8A8_UNORM,
-                            0,
-                        )
-                        .expect("Failed to resize swapchain");
+            Event::WindowEvent { event, .. } => {
+                let gui_event_captured = gui.handle_event(event).consumed;
 
-                    let bb: ID3D11Texture2D = dcs.swap_chain.GetBuffer(0).unwrap();
-
-                    let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
-
-                    dcs.context()
-                        .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
-
-                    *dcs.swapchain_target.write() = Some(new_rtv);
-
-                    renderer
-                        .resize((new_dims.width, new_dims.height))
-                        .expect("Failed to resize GBuffers");
-                },
-                WindowEvent::CloseRequested => {
-                    *control_flow = ControlFlow::Exit;
+                if !gui_event_captured {
+                    resources
+                        .get_mut::<InputState>()
+                        .unwrap()
+                        .handle_event(event);
                 }
-                WindowEvent::CursorMoved { position, .. } => {
-                    if let Some(ref mut p) = last_cursor_pos {
-                        let delta = (position.x - p.x, position.y - p.y);
-                        let input = resources.get::<InputState>().unwrap();
-                        if input.mouse_left() && !gui.imgui.io().want_capture_mouse {
-                            let mut camera = resources.get_mut::<FpsCamera>().unwrap();
-                            camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
+
+                match event {
+                    WindowEvent::Resized(new_dims) => unsafe {
+                        let _ = gui
+                            .renderer
+                            .resize_buffers(transmute(&dcs.swap_chain), || {
+                                *dcs.swapchain_target.write() = None;
+                                dcs.swap_chain
+                                    .ResizeBuffers(
+                                        1,
+                                        new_dims.width,
+                                        new_dims.height,
+                                        DXGI_FORMAT_B8G8R8A8_UNORM,
+                                        0,
+                                    )
+                                    .expect("Failed to resize swapchain");
+
+                                let bb: ID3D11Texture2D = dcs.swap_chain.GetBuffer(0).unwrap();
+
+                                let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
+
+                                dcs.context()
+                                    .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
+
+                                *dcs.swapchain_target.write() = Some(new_rtv);
+
+                                renderer
+                                    .resize((new_dims.width, new_dims.height))
+                                    .expect("Failed to resize GBuffers");
+
+                                transmute(0i32)
+                            })
+                            .unwrap();
+                    },
+                    WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        if let Some(ref mut p) = last_cursor_pos {
+                            let delta = (position.x - p.x, position.y - p.y);
+                            let input = resources.get::<InputState>().unwrap();
+                            if input.mouse_left() && !gui_event_captured {
+                                let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                                camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
+                            }
+
+                            last_cursor_pos = Some(*position);
+                        } else {
+                            last_cursor_pos = Some(*position);
                         }
-
-                        last_cursor_pos = Some(*position);
-                    } else {
-                        last_cursor_pos = Some(*position);
                     }
-                }
-                // TODO(cohae): Should this even be in here at this point?
-                WindowEvent::KeyboardInput { .. } => {
-                    let input = resources.get::<InputState>().unwrap();
-                    if input.ctrl() && input.is_key_down(VirtualKeyCode::Q) {
-                        *control_flow = ControlFlow::Exit
+                    // TODO(cohae): Should this even be in here at this point?
+                    WindowEvent::KeyboardInput { .. } => {
+                        let input = resources.get::<InputState>().unwrap();
+                        if input.ctrl() && input.is_key_down(VirtualKeyCode::Q) {
+                            *control_flow = ControlFlow::Exit
+                        }
                     }
-                }
 
-                _ => (),
-            },
+                    _ => (),
+                }
+            }
             Event::RedrawRequested(..) => {
-                if !gui.imgui.io().want_capture_keyboard {
+                // if !gui_event_captured
+                {
                     let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                     let input_state = resources.get::<InputState>().unwrap();
                     camera.update(&input_state, last_frame.elapsed().as_secs_f32());
@@ -1334,7 +1347,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     // drop(camera);
                     drop(maps);
-                    gui.draw_frame(&window, last_frame.elapsed(), &mut resources);
+                    gui.draw_frame(window.clone(), &mut resources);
 
                     dcs.context().OMSetDepthStencilState(None, 0);
 
@@ -1355,10 +1368,6 @@ pub fn main() -> anyhow::Result<()> {
                 };
             }
             Event::MainEventsCleared => {
-                let io = gui.imgui.io_mut();
-                gui.platform
-                    .prepare_frame(io, &window)
-                    .expect("Failed to start frame");
                 window.request_redraw();
             }
             Event::LoopDestroyed => {

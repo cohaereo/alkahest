@@ -2,7 +2,6 @@ use crate::overlays::gui::OverlayProvider;
 use crate::packages::package_manager;
 use crate::resources::Resources;
 use destiny_pkg::TagHash;
-use imgui::Ui;
 use std::fs::File;
 use std::io::Write;
 use tracing::error;
@@ -10,7 +9,7 @@ use winit::window::Window;
 
 pub struct TagDumper {
     package_id: String,
-    entry_id: String,
+    entry_index: String,
     tag_string: String,
     message: Result<String, String>,
 
@@ -21,7 +20,7 @@ impl TagDumper {
     pub fn new() -> TagDumper {
         TagDumper {
             package_id: String::new(),
-            entry_id: String::new(),
+            entry_index: String::new(),
             tag_string: String::new(),
             message: Ok(String::new()),
             use_full_hash: true,
@@ -55,54 +54,51 @@ impl TagDumper {
 }
 
 impl OverlayProvider for TagDumper {
-    fn create_overlay(&mut self, ui: &mut Ui, _window: &Window, _resources: &mut Resources) {
-        ui.window("Tag Dumper").build(|| {
-            ui.group(|| {
-                ui.radio_button("Full hash", &mut self.use_full_hash, true);
-                ui.same_line();
-                ui.radio_button("Split hash", &mut self.use_full_hash, false);
+    fn draw(&mut self, ctx: &egui::Context, _window: &Window, _resources: &mut Resources) {
+        egui::Window::new("Tag Dumper").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut self.use_full_hash, true, "Full hash");
+                ui.radio_value(&mut self.use_full_hash, false, "Split hash");
+            });
 
-                let pressed_enter = if self.use_full_hash {
-                    ui.input_text("Tag", &mut self.tag_string)
-                        .hint("XXXXXXXX")
-                        .enter_returns_true(true)
-                        .build()
-                } else {
-                    ui.input_text("Package ID", &mut self.package_id)
-                        .hint("XXXX")
-                        .build();
+            let pressed_enter = if self.use_full_hash {
+                ui.label("Tag");
+                ui.text_edit_singleline(&mut self.tag_string).lost_focus()
+                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+            } else {
+                ui.label("Package ID");
+                ui.text_edit_singleline(&mut self.package_id);
 
-                    ui.input_text("Entry Index", &mut self.entry_id)
-                        .enter_returns_true(true)
-                        .build()
-                };
+                ui.label("Entry Index");
+                ui.text_edit_singleline(&mut self.entry_index).lost_focus()
+                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+            };
 
-                if ui.button("Dump!") || pressed_enter {
-                    if self.use_full_hash {
-                        let tag = u32::from_str_radix(&self.tag_string, 16);
+            if ui.button("Dump!").clicked() || pressed_enter {
+                if self.use_full_hash {
+                    let tag = u32::from_str_radix(&self.tag_string, 16);
 
-                        if let Ok(tag) = tag {
-                            self.message = self.dump_entry(TagHash(u32::from_be(tag)));
-                        } else {
-                            self.message = Err("Malformed input tag.".to_string());
-                        }
+                    if let Ok(tag) = tag {
+                        self.message = self.dump_entry(TagHash(u32::from_be(tag)));
                     } else {
-                        let pkg = u16::from_str_radix(&self.package_id, 16);
-                        let entry = self.entry_id.parse();
+                        self.message = Err("Malformed input tag.".to_string());
+                    }
+                } else {
+                    let pkg = u16::from_str_radix(&self.package_id, 16);
+                    let entry = self.entry_index.parse();
 
-                        if let (Ok(pkg), Ok(entry)) = (pkg, entry) {
-                            self.message = self.dump_entry(TagHash::new(pkg, entry));
-                        } else {
-                            self.message = Err("Malformed input tag.".to_string());
-                        }
+                    if let (Ok(pkg), Ok(entry)) = (pkg, entry) {
+                        self.message = self.dump_entry(TagHash::new(pkg, entry));
+                    } else {
+                        self.message = Err("Malformed input tag.".to_string());
                     }
                 }
+            }
 
-                match self.message.as_ref() {
-                    Ok(msg) => ui.text_colored([0.0, 1.0, 0.0, 1.0], msg),
-                    Err(msg) => ui.text_colored([1.0, 0.0, 0.0, 1.0], msg),
-                }
-            });
+            match self.message.as_ref() {
+                Ok(msg) => ui.label(egui::RichText::new(msg).color(egui::Color32::GREEN)),
+                Err(msg) => ui.label(egui::RichText::new(msg).color(egui::Color32::RED)),
+            }
         });
     }
 }

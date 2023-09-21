@@ -1,4 +1,4 @@
-use imgui::{Condition, WindowFlags};
+use egui::Color32;
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 use std::time::Instant;
 use winit::window::Window;
@@ -22,18 +22,17 @@ impl Default for FpsDisplayOverlay {
 }
 
 impl OverlayProvider for FpsDisplayOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
+    fn draw(&mut self, ctx: &egui::Context, _window: &Window, _resources: &mut Resources) {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;
-        ui.window("FPS")
-            .flags(
-                WindowFlags::NO_TITLE_BAR
-                    | WindowFlags::NO_RESIZE
-                    | WindowFlags::NO_BACKGROUND
-                    | WindowFlags::NO_INPUTS,
-            )
-            .save_settings(false)
-            .position([ui.io().display_size[0] - 36.0, 0.0], Condition::Always)
-            .build(|| ui.text(format!("{:3.0}", 1.0 / average_delta)));
+
+        let painter = ctx.layer_painter(egui::LayerId::debug());
+        painter.text(
+            [ctx.input(|i| i.screen_rect.right()) - 8.0, 8.0].into(),
+            egui::Align2::RIGHT_TOP,
+            format!("{:3.0}", 1.0 / average_delta),
+            egui::FontId::default(),
+            Color32::WHITE,
+        );
 
         let now = Instant::now();
         let delta = self.last_frame.elapsed().as_secs_f32();

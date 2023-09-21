@@ -1,4 +1,4 @@
-use crate::overlays::resource_nametags::ResourcePoint;
+use crate::map_resources::ResourcePoint;
 use crate::packages::package_manager;
 use crate::render::scopes::ScopeRigidModel;
 use crate::render::ConstantBuffer;

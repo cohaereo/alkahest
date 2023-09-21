@@ -1,9 +1,8 @@
 use glam::{Mat4, Vec4};
-use imgui::{Condition, TreeNodeFlags, WindowFlags};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
-use crate::{map::MapDataList, render::renderer::ScopeOverrides, resources::Resources};
+use crate::{map::MapDataList, resources::Resources};
 
 use super::gui::OverlayProvider;
 
@@ -22,180 +21,173 @@ pub struct RenderSettingsOverlay {
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, resources: &mut Resources) {
-        ui.window("Options")
-            .flags(WindowFlags::NO_TITLE_BAR)
-            .size([178.0, 72.0], Condition::FirstUseEver)
-            .build(|| {
-                ui.checkbox("Render lights", &mut self.render_lights);
-                ui.checkbox("Evaluate TFX bytecode (WIP)", &mut self.evaluate_bytecode);
-                ui.checkbox("Enable color blending", &mut self.alpha_blending);
-                if self.alpha_blending {
-                    ui.combo_simple_string(
-                        "Blend Override",
-                        &mut self.blend_override,
-                        &["Default", "Blend", "Additive"],
-                    );
-                }
-                if ui.collapsing_header("Render Layers", TreeNodeFlags::DEFAULT_OPEN) {
-                    ui.indent();
-                    ui.checkbox("Statics", &mut self.renderlayer_statics);
-                    ui.checkbox(
-                        "Statics (overlay/transparent)",
-                        &mut self.renderlayer_statics_transparent,
-                    );
-                    ui.checkbox("Terrain", &mut self.renderlayer_terrain);
-                    ui.disabled(true, || {
-                        ui.checkbox("Entities", &mut self.renderlayer_entities);
-                    });
-                    ui.unindent();
-                }
+    fn draw(&mut self, ctx: &egui::Context, _window: &Window, resources: &mut Resources) {
+        egui::Window::new("Options").show(ctx, |ui| {
+            ui.checkbox(&mut self.render_lights, "Render lights");
+            ui.checkbox(&mut self.evaluate_bytecode, "Evaluate TFX bytecode (WIP)");
+            ui.checkbox(&mut self.alpha_blending, "Enable color blending");
+            if self.alpha_blending {
+                egui::ComboBox::from_label("Blend Override").show_index(
+                    ui,
+                    &mut self.blend_override,
+                    3,
+                    |i| ["Default", "Blend", "Additive"][i],
+                );
+            }
 
-                if ui.collapsing_header("Scope Overrides", TreeNodeFlags::empty()) {
-                    let mut overrides = resources.get_mut::<ScopeOverrides>().unwrap();
-
-                    if ui.collapsing_header("view", TreeNodeFlags::empty()) {
-                        ui.input_float4(
-                            "tptc.x",
-                            &mut overrides.view.target_pixel_to_camera.x_axis,
-                        )
-                        .build();
-                        ui.input_float4(
-                            "tptc.y",
-                            &mut overrides.view.target_pixel_to_camera.y_axis,
-                        )
-                        .build();
-                        ui.input_float4(
-                            "tptc.z",
-                            &mut overrides.view.target_pixel_to_camera.z_axis,
-                        )
-                        .build();
-                        ui.input_float4(
-                            "tptc.w",
-                            &mut overrides.view.target_pixel_to_camera.w_axis,
-                        )
-                        .build();
-
-                        // ui.input_float("misc_unk0", &mut overrides.view.misc_unk0)
-                        //     .build();
-                        // ui.input_float("misc_unk1", &mut overrides.view.misc_unk1)
-                        //     .build();
-                        // ui.input_float("misc_unk3", &mut overrides.view.misc_unk3)
-                        //     .build();
-                    }
-
-                    if ui.collapsing_header("frame", TreeNodeFlags::empty()) {
-                        ui.slider(
-                            "exposure_time",
-                            0.0,
-                            10.0,
-                            &mut overrides.frame.exposure_time,
-                        );
-                        ui.slider(
-                            "exposure_scale",
-                            0.0,
-                            1.0,
-                            &mut overrides.frame.exposure_scale,
-                        );
-                        ui.slider(
-                            "exposure_illum_relative_glow",
-                            0.0,
-                            1.0,
-                            &mut overrides.frame.exposure_illum_relative_glow,
-                        );
-                        ui.slider(
-                            "exposure_scale_for_shading",
-                            0.0,
-                            1.0,
-                            &mut overrides.frame.exposure_scale_for_shading,
-                        );
-                        ui.slider(
-                            "exposure_illum_relative",
-                            0.0,
-                            1.0,
-                            &mut overrides.frame.exposure_illum_relative,
-                        );
-
-                        ui.input_float4(
-                            "random_seed_scales",
-                            &mut overrides.frame.random_seed_scales,
-                        )
-                        .build();
-                        ui.input_float4("overrides", &mut overrides.frame.overrides)
-                            .build();
-                        ui.input_float4("frame.unk4", &mut overrides.frame.unk4)
-                            .build();
-                        ui.input_float4("frame.unk5", &mut overrides.frame.unk5)
-                            .build();
-                        ui.input_float4("frame.unk6", &mut overrides.frame.unk6)
-                            .build();
-                        ui.input_float4("frame.unk7", &mut overrides.frame.unk7)
-                            .build();
-                    }
-
-                    if ui.collapsing_header("unk2", TreeNodeFlags::empty()) {
-                        ui.input_float4("unk2.unk0", &mut overrides.unk2.unk0)
-                            .build();
-                        ui.input_float4("unk2.unk1", &mut overrides.unk2.unk1)
-                            .build();
-                        ui.input_float4("unk2.unk2", &mut overrides.unk2.unk2)
-                            .build();
-                        ui.input_float4("unk2.unk3", &mut overrides.unk2.unk3)
-                            .build();
-                        ui.input_float4("unk2.unk4", &mut overrides.unk2.unk4)
-                            .build();
-                        ui.input_float4("unk2.unk5", &mut overrides.unk2.unk5)
-                            .build();
-                    }
-
-                    if ui.collapsing_header("unk8", TreeNodeFlags::empty()) {
-                        ui.input_float4("unk8.unk0", &mut overrides.unk8.unk0)
-                            .build();
-                        ui.input_float4("unk8.unk1", &mut overrides.unk8.unk1)
-                            .build();
-                        ui.input_float4("unk8.unk2", &mut overrides.unk8.unk2)
-                            .build();
-                        ui.input_float4("unk8.unk3", &mut overrides.unk8.unk3)
-                            .build();
-                        ui.input_float4("unk8.unk4", &mut overrides.unk8.unk4)
-                            .build();
-                        ui.input_float4("unk8.unk5", &mut overrides.unk8.unk5)
-                            .build();
-                        ui.input_float4("unk8.unk6", &mut overrides.unk8.unk6)
-                            .build();
-                        ui.input_float4("unk8.unk7", &mut overrides.unk8.unk7)
-                            .build();
-                    }
-                }
-            });
-
-        ui.window("Selectors")
-            .flags(
-                WindowFlags::NO_BACKGROUND
-                    | WindowFlags::NO_TITLE_BAR
-                    | WindowFlags::NO_DECORATION
-                    | WindowFlags::NO_RESIZE
-                    | WindowFlags::NO_MOVE,
-            )
-            .save_settings(false)
-            // .size([416.0, 20.0], Condition::Always)
-            .position([0.0, 0.0], Condition::Always)
-            .build(|| {
-                let width = ui.push_item_width(128.0);
-                ui.combo("Pass", &mut self.composition_mode, COMPOSITOR_MODES, |v| {
-                    v.to_string().into()
+            ui.collapsing("Render Layers", |ui| {
+                ui.checkbox(&mut self.renderlayer_statics, "Statics");
+                ui.checkbox(
+                    &mut self.renderlayer_statics_transparent,
+                    "Statics (overlay/transparent)",
+                );
+                ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
+                ui.add_enabled_ui(false, |ui| {
+                    ui.checkbox(&mut self.renderlayer_entities, "Entities");
                 });
-                width.end();
-                ui.same_line();
-                let mut maps = resources.get_mut::<MapDataList>().unwrap();
-                let mut current_map = maps.current_map;
-                let width = ui.push_item_width(272.0);
-                ui.combo("Map", &mut current_map, &maps.maps, |m| {
-                    format!("{} ({})", m.name, m.hash).into()
-                });
-                width.end();
-                maps.current_map = current_map;
             });
+        });
+
+        // TODO(cohae): Port this monstrosity
+        //         if ui.collapsing_header("Scope Overrides", TreeNodeFlags::empty()) {
+        //             let mut overrides = resources.get_mut::<ScopeOverrides>().unwrap();
+
+        //             if ui.collapsing_header("view", TreeNodeFlags::empty()) {
+        //                 ui.input_float4(
+        //                     "tptc.x",
+        //                     &mut overrides.view.target_pixel_to_camera.x_axis,
+        //                 )
+        //                 .build();
+        //                 ui.input_float4(
+        //                     "tptc.y",
+        //                     &mut overrides.view.target_pixel_to_camera.y_axis,
+        //                 )
+        //                 .build();
+        //                 ui.input_float4(
+        //                     "tptc.z",
+        //                     &mut overrides.view.target_pixel_to_camera.z_axis,
+        //                 )
+        //                 .build();
+        //                 ui.input_float4(
+        //                     "tptc.w",
+        //                     &mut overrides.view.target_pixel_to_camera.w_axis,
+        //                 )
+        //                 .build();
+
+        //                 // ui.input_float("misc_unk0", &mut overrides.view.misc_unk0)
+        //                 //     .build();
+        //                 // ui.input_float("misc_unk1", &mut overrides.view.misc_unk1)
+        //                 //     .build();
+        //                 // ui.input_float("misc_unk3", &mut overrides.view.misc_unk3)
+        //                 //     .build();
+        //             }
+
+        //             if ui.collapsing_header("frame", TreeNodeFlags::empty()) {
+        //                 ui.slider(
+        //                     "exposure_time",
+        //                     0.0,
+        //                     10.0,
+        //                     &mut overrides.frame.exposure_time,
+        //                 );
+        //                 ui.slider(
+        //                     "exposure_scale",
+        //                     0.0,
+        //                     1.0,
+        //                     &mut overrides.frame.exposure_scale,
+        //                 );
+        //                 ui.slider(
+        //                     "exposure_illum_relative_glow",
+        //                     0.0,
+        //                     1.0,
+        //                     &mut overrides.frame.exposure_illum_relative_glow,
+        //                 );
+        //                 ui.slider(
+        //                     "exposure_scale_for_shading",
+        //                     0.0,
+        //                     1.0,
+        //                     &mut overrides.frame.exposure_scale_for_shading,
+        //                 );
+        //                 ui.slider(
+        //                     "exposure_illum_relative",
+        //                     0.0,
+        //                     1.0,
+        //                     &mut overrides.frame.exposure_illum_relative,
+        //                 );
+
+        //                 ui.input_float4(
+        //                     "random_seed_scales",
+        //                     &mut overrides.frame.random_seed_scales,
+        //                 )
+        //                 .build();
+        //                 ui.input_float4("overrides", &mut overrides.frame.overrides)
+        //                     .build();
+        //                 ui.input_float4("frame.unk4", &mut overrides.frame.unk4)
+        //                     .build();
+        //                 ui.input_float4("frame.unk5", &mut overrides.frame.unk5)
+        //                     .build();
+        //                 ui.input_float4("frame.unk6", &mut overrides.frame.unk6)
+        //                     .build();
+        //                 ui.input_float4("frame.unk7", &mut overrides.frame.unk7)
+        //                     .build();
+        //             }
+
+        //             if ui.collapsing_header("unk2", TreeNodeFlags::empty()) {
+        //                 ui.input_float4("unk2.unk0", &mut overrides.unk2.unk0)
+        //                     .build();
+        //                 ui.input_float4("unk2.unk1", &mut overrides.unk2.unk1)
+        //                     .build();
+        //                 ui.input_float4("unk2.unk2", &mut overrides.unk2.unk2)
+        //                     .build();
+        //                 ui.input_float4("unk2.unk3", &mut overrides.unk2.unk3)
+        //                     .build();
+        //                 ui.input_float4("unk2.unk4", &mut overrides.unk2.unk4)
+        //                     .build();
+        //                 ui.input_float4("unk2.unk5", &mut overrides.unk2.unk5)
+        //                     .build();
+        //             }
+
+        //             if ui.collapsing_header("unk8", TreeNodeFlags::empty()) {
+        //                 ui.input_float4("unk8.unk0", &mut overrides.unk8.unk0)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk1", &mut overrides.unk8.unk1)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk2", &mut overrides.unk8.unk2)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk3", &mut overrides.unk8.unk3)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk4", &mut overrides.unk8.unk4)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk5", &mut overrides.unk8.unk5)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk6", &mut overrides.unk8.unk6)
+        //                     .build();
+        //                 ui.input_float4("unk8.unk7", &mut overrides.unk8.unk7)
+        //                     .build();
+        //             }
+        //         }
+        //     });
+
+        egui::Window::new("Selectors").show(ctx, |ui| {
+            egui::ComboBox::from_label("Render Pass")
+                .width(192.0)
+                .show_index(
+                    ui,
+                    &mut self.composition_mode,
+                    COMPOSITOR_MODES.len(),
+                    |i| COMPOSITOR_MODES[i].to_string(),
+                );
+
+            let mut maps = resources.get_mut::<MapDataList>().unwrap();
+            let mut current_map = maps.current_map;
+            egui::ComboBox::from_label("Map").width(192.0).show_index(
+                ui,
+                &mut current_map,
+                maps.maps.len(),
+                |i| &maps.maps[i].name,
+            );
+
+            maps.current_map = current_map;
+        });
     }
 }
 

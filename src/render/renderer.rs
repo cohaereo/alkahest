@@ -7,7 +7,6 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use winit::window::Window;
 
 use crate::dxgi::DxgiFormat;
-use crate::overlays::camera_settings::CurrentCubemap;
 use crate::overlays::render_settings::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk2;
@@ -491,7 +490,7 @@ impl Renderer {
         }
 
         if let Some(color_buffer) = drawcall.color_buffer {
-            if let Some((buffer, _, Some(srv))) = render_data.vertex_buffers.get(&color_buffer) {
+            if let Some((_buffer, _, Some(srv))) = render_data.vertex_buffers.get(&color_buffer) {
                 unsafe {
                     self.dcs
                         .context()
@@ -609,13 +608,14 @@ impl Renderer {
 
             self.matcap.bind(&self.dcs, 4, ShaderStages::PIXEL);
 
-            let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
-                self.render_data
-                    .data()
-                    .textures
-                    .get(&t.key())
-                    .map(|t| t.view.clone())
-            });
+            let cubemap_texture = None;
+            // let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
+            //     self.render_data
+            //         .data()
+            //         .textures
+            //         .get(&t.key())
+            //         .map(|t| t.view.clone())
+            // });
 
             self.dcs
                 .context()

@@ -10,6 +10,15 @@ use glam::{Quat, Vec3, Vec4, Vec4Swizzles};
 use std::io::SeekFrom;
 use strum::{EnumCount, EnumIs, EnumVariantNames};
 
+#[derive(Clone)]
+pub struct ResourcePoint {
+    pub translation: Vec4,
+    pub rotation: Quat,
+    pub entity: TagHash,
+    pub resource_type: u32,
+    pub resource: MapResource,
+}
+
 #[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
 #[repr(u8)]
 pub enum MapResource {
@@ -94,7 +103,7 @@ impl MapResource {
         match self {
             MapResource::Decal { scale, .. } => debug_shapes.cube_extents(
                 translation.xyz(),
-                Vec3::splat(*scale),
+                Vec3::splat(*scale / 2.0),
                 rotation,
                 darken_color(self.debug_color()),
                 false,

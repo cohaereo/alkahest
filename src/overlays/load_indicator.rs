@@ -1,4 +1,4 @@
-use imgui::Condition;
+use egui::{Color32, RichText};
 use winit::window::Window;
 
 use crate::{
@@ -9,13 +9,13 @@ use crate::{
 use super::gui::OverlayProvider;
 
 pub struct LoadIndicatorOverlay {
-    window_size: [f32; 2],
+    window_rect: egui::Rect,
 }
 
 impl Default for LoadIndicatorOverlay {
     fn default() -> Self {
         Self {
-            window_size: [0.0; 2],
+            window_rect: egui::Rect::NOTHING,
         }
     }
 }
@@ -36,36 +36,33 @@ const SPINNER_FRAMES: &[&str] = &[
 ];
 const SPINNER_INTERVAL: usize = 50;
 impl OverlayProvider for LoadIndicatorOverlay {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, _window: &Window, _resources: &mut Resources) {
+    fn draw(&mut self, ctx: &egui::Context, _window: &Window, _resources: &mut Resources) {
         let open = *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
             || *resource_mt::STATUS_BUFFERS.read() != LoadingThreadState::Idle;
         // || *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle;
 
         if open {
-            ui.window("Loading")
-                .no_inputs()
+            egui::Window::new("Loading")
+                .anchor(egui::Align2::RIGHT_TOP, [-12.0, 12.0])
                 .title_bar(false)
-                .resizable(false)
-                .save_settings(false)
-                .position(
-                    [ui.io().display_size[0] - self.window_size[0] - 12.0, 12.0],
-                    Condition::Always,
-                )
-                .build(|| {
-                    ui.set_window_font_scale(1.1);
-
+                .show(ctx, |ui| {
                     if let LoadingThreadState::Loading {
                         start_time,
                         remaining,
                     } = *resource_mt::STATUS_TEXTURES.read()
                     {
                         let time_millis = start_time.elapsed().as_millis() as usize;
-                        ui.text(format!(
-                            "{} Loading {} textures ({:.1}s)",
-                            SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
-                            remaining,
-                            start_time.elapsed().as_secs_f32()
-                        ));
+                        ui.label(
+                            RichText::new(format!(
+                                "{} Loading {} textures ({:.1}s)",
+                                SPINNER_FRAMES
+                                    [(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
+                                remaining,
+                                start_time.elapsed().as_secs_f32()
+                            ))
+                            .size(18.0)
+                            .color(Color32::WHITE),
+                        );
                     }
 
                     if let LoadingThreadState::Loading {
@@ -74,15 +71,20 @@ impl OverlayProvider for LoadIndicatorOverlay {
                     } = *resource_mt::STATUS_BUFFERS.read()
                     {
                         let time_millis = start_time.elapsed().as_millis() as usize;
-                        ui.text(format!(
-                            "{} Loading {} buffers ({:.1}s)",
-                            SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
-                            remaining,
-                            start_time.elapsed().as_secs_f32()
-                        ));
+                        ui.label(
+                            RichText::new(format!(
+                                "{} Loading {} buffers ({:.1}s)",
+                                SPINNER_FRAMES
+                                    [(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
+                                remaining,
+                                start_time.elapsed().as_secs_f32()
+                            ))
+                            .size(18.0)
+                            .color(Color32::WHITE),
+                        );
                     }
 
-                    self.window_size = ui.window_size();
+                    self.window_rect = ctx.used_rect();
                 });
         }
     }

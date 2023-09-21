@@ -1,77 +1,59 @@
 use std::cell::RefCell;
+use std::mem::transmute;
 use std::rc::Rc;
-use std::time::Duration;
+use std::sync::Arc;
 
-use crate::icons::{ICON_MAX, ICON_MIN};
+use crate::render::DeviceContextSwapchain;
 use crate::resources::Resources;
-use imgui::{Context, FontConfig, FontGlyphRanges, FontSource};
-use imgui_dx11_renderer::Renderer;
-use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use windows::Win32::Graphics::Direct3D11::ID3D11Device;
-use winit::event::Event;
+use egui_winit::EventResponse;
+use winit::event::WindowEvent;
 use winit::window::Window;
 
 //TODO: Pass GUI Manager to get other overlays
 pub trait OverlayProvider {
-    fn create_overlay(&mut self, ui: &mut imgui::Ui, window: &Window, resources: &mut Resources);
+    fn draw(&mut self, ctx: &egui::Context, window: &Window, resources: &mut Resources);
 }
-
 pub struct GuiManager {
-    pub imgui: Context,
-    pub platform: WinitPlatform,
-    renderer: Renderer,
+    pub egui: egui::Context,
+    pub integration: egui_winit::State,
+    pub renderer: egui_directx11::DirectX11Renderer,
     overlays: Vec<Rc<RefCell<dyn OverlayProvider>>>,
+    dcs: Arc<DeviceContextSwapchain>,
 }
 
 // TODO: Way to obtain overlays by type
 impl GuiManager {
-    const GLYPH_RANGES: &'static [u32] = &[
-        0x0020, 0x00ff, // Basic latin + supplemental
-        0x25a0, 0x25ff, // Geometric Shapes
-        0,
-    ];
+    pub fn create(window: &Window, dcs: Arc<DeviceContextSwapchain>) -> Self {
+        let egui = egui::Context::default();
+        // imgui.style_mut().window_rounding = 4.0;
+        let mut integration = egui_winit::State::new(window);
+        integration.set_pixels_per_point(window.scale_factor() as f32);
 
-    pub fn create(window: &Window, device: &ID3D11Device) -> Self {
-        let mut imgui = imgui::Context::create();
-        imgui.style_mut().window_rounding = 4.0;
-        let mut platform = WinitPlatform::init(&mut imgui);
-        platform.attach_window(imgui.io_mut(), window, HiDpiMode::Rounded);
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "materialdesignicons".into(),
+            egui::FontData::from_static(include_bytes!("../../materialdesignicons-webfont.ttf")),
+        );
 
-        // Combine icon font with default
-        imgui.fonts().add_font(&[
-            FontSource::TtfData {
-                data: include_bytes!("../../DroidSans.ttf"),
-                size_pixels: (16.0 * platform.hidpi_factor()) as f32,
-                config: Some(FontConfig {
-                    size_pixels: (16.0 * platform.hidpi_factor()) as f32,
-                    glyph_ranges: FontGlyphRanges::from_slice(Self::GLYPH_RANGES),
-                    ..FontConfig::default()
-                }),
-            },
-            FontSource::TtfData {
-                data: include_bytes!("../../materialdesignicons-webfont.ttf"),
-                size_pixels: (16.0 * platform.hidpi_factor()) as f32,
-                config: Some(FontConfig {
-                    size_pixels: (16.0 * platform.hidpi_factor()) as f32,
-                    glyph_ranges: FontGlyphRanges::from_slice(&[
-                        ICON_MIN as u32,
-                        ICON_MAX as u32,
-                        0,
-                    ]),
-                    oversample_h: 2,
-                    oversample_v: 2,
-                    ..FontConfig::default()
-                }),
-            },
-        ]);
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(1, "materialdesignicons".to_owned());
 
-        let renderer = unsafe { imgui_dx11_renderer::Renderer::new(&mut imgui, device).unwrap() };
+        egui.set_fonts(fonts);
+
+        let renderer = egui_directx11::DirectX11Renderer::init_from_swapchain(unsafe {
+            transmute(&dcs.swap_chain)
+        })
+        .expect("Failed to initialize egui renderer");
 
         GuiManager {
-            imgui,
-            platform,
+            egui,
+            integration,
             renderer,
             overlays: vec![],
+            dcs,
         }
     }
 
@@ -79,25 +61,24 @@ impl GuiManager {
         self.overlays.push(overlay);
     }
 
-    pub fn handle_event(&mut self, event: &Event<'_, ()>, window: &Window) {
-        self.platform
-            .handle_event(self.imgui.io_mut(), window, event)
+    pub fn handle_event(&mut self, event: &WindowEvent<'_>) -> EventResponse {
+        self.integration.on_event(&self.egui, event)
     }
 
-    pub fn draw_frame(&mut self, window: &Window, delta: Duration, resources: &mut Resources) {
-        self.imgui.io_mut().update_delta_time(delta);
-        let ui = self.imgui.new_frame();
+    pub fn draw_frame(&mut self, window: Arc<Window>, resources: &mut Resources) {
+        let input = self.integration.take_egui_input(&window);
 
-        for overlay in self.overlays.iter() {
-            overlay
-                .as_ref()
-                .borrow_mut()
-                .create_overlay(ui, window, resources);
-        }
-
-        self.platform.prepare_render(ui, window);
         self.renderer
-            .render(self.imgui.render())
-            .expect("GuiManager failed to render!");
+            .paint(
+                unsafe { transmute(&self.dcs.swap_chain) },
+                input,
+                &self.egui,
+                |ctx| {
+                    for overlay in self.overlays.iter() {
+                        overlay.as_ref().borrow_mut().draw(ctx, &window, resources);
+                    }
+                },
+            )
+            .unwrap();
     }
 }
