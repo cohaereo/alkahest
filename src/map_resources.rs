@@ -1,5 +1,6 @@
 use crate::icons::{
-    ICON_CHESS_PAWN, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER,
+    ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_SPHERE,
+    ICON_STICKER,
 };
 use crate::render::debug::DebugShapes;
 use crate::structure::{RelPointer, TablePointer};
@@ -31,7 +32,7 @@ pub enum MapResource {
         scale: f32,
     } = 1,
     Unknown(u32) = 2,
-    PointLight(TagHash) = 3,
+    Unk808067b5(TagHash) = 3,
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
 }
 
@@ -43,7 +44,7 @@ impl MapResource {
                 format!("Decal (mat {material}, scale {scale})")
             }
             MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
-            MapResource::PointLight { .. } => "Point light".to_string(),
+            MapResource::Unk808067b5 { .. } => "Unk808067b5 (light flare)".to_string(),
             MapResource::CubemapVolume(c, aabb) => {
                 format!(
                     "Cubemap Volume ({:.0}m³)\n'{}' ({:08X})",
@@ -79,7 +80,7 @@ impl MapResource {
             MapResource::Entity { .. } => [255, 255, 255],
             MapResource::Decal { .. } => [50, 255, 255],
             MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
-            MapResource::PointLight { .. } => [220, 220, 20],
+            MapResource::Unk808067b5 { .. } => [220, 220, 20],
             MapResource::CubemapVolume(..) => [50, 255, 50],
         }
     }
@@ -89,7 +90,7 @@ impl MapResource {
             MapResource::Entity { .. } => ICON_CHESS_PAWN,
             MapResource::Decal { .. } => ICON_STICKER,
             MapResource::Unknown { .. } => ICON_HELP,
-            MapResource::PointLight { .. } => ICON_LIGHTBULB_ON,
+            MapResource::Unk808067b5 { .. } => ICON_FLARE,
             MapResource::CubemapVolume(..) => ICON_SPHERE,
         }
     }
@@ -121,7 +122,7 @@ impl MapResource {
             0 => ICON_CHESS_PAWN,
             1 => ICON_STICKER,
             2 => ICON_HELP,
-            3 => ICON_LIGHTBULB_ON,
+            3 => ICON_FLARE,
             4 => ICON_SPHERE,
             _ => ICON_HELP_BOX_OUTLINE,
         }

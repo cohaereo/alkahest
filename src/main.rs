@@ -418,7 +418,6 @@ pub fn main() -> anyhow::Result<()> {
                                     ),
                                 });
                             }
-                            // Point light
                             0x808067b5 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
@@ -438,14 +437,14 @@ pub fn main() -> anyhow::Result<()> {
                                     ),
                                     entity: data.entity,
                                     resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::PointLight(tag),
+                                    resource: MapResource::Unk808067b5(tag),
                                 });
-                                point_lights.push(Vec4::new(
-                                    data.translation.x,
-                                    data.translation.y,
-                                    data.translation.z,
-                                    data.translation.w,
-                                ));
+                                // point_lights.push(Vec4::new(
+                                //     data.translation.x,
+                                //     data.translation.y,
+                                //     data.translation.z,
+                                //     data.translation.w,
+                                // ));
                             }
                             // Decal collection
                             0x80806955 => {
