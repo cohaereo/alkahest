@@ -8,6 +8,7 @@ use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, BinReaderExt};
 use destiny_pkg::{TagHash, TagHash64};
 
+use std::fmt::Debug;
 use std::io::SeekFrom;
 
 // D2Class_1E898080
@@ -41,7 +42,7 @@ pub struct Unk808091e0 {
 }
 
 // TODO: Custom reader once new tag parser comes around
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq)]
 pub enum ExtendedHash {
     Hash32(TagHash),
     Hash64(TagHash64),
@@ -69,6 +70,15 @@ impl ExtendedHash {
             ExtendedHash::Hash32(h) => h.is_valid(),
             // TODO(cohae): Double check this
             ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
+        }
+    }
+}
+
+impl Debug for ExtendedHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
+            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
         }
     }
 }
@@ -114,16 +124,16 @@ pub struct Unk808099d8 {
     // 80809c0f
     pub rotation: Vector4,    // 0x0
     pub translation: Vector4, // 0x10
-    pub entity: TagHash,      // 0x20
+    pub entity_old: TagHash,  // 0x20
     pub unk24: u32,
-    pub entity2: TagHash,
-    pub unk2c: u32,
-    pub unk30: [u32; 11], //
+    pub entity: ExtendedHash,
+    pub unk38: [u32; 9], //
     pub unk5c: f32,
     pub unk60: f32,
     pub unk64: TagHash,
     pub unk68: DestinyHash,
-    pub unk6c: [u32; 3],
+    pub unk6c: u32,
+    pub world_id: u64,
     pub data_resource: ResourcePointer,
     pub unk80: [u32; 4],
 }

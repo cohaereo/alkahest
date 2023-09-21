@@ -408,6 +408,7 @@ pub fn main() -> anyhow::Result<()> {
                                         data.rotation.w,
                                     ),
                                     entity: data.entity,
+                                    world_id: data.world_id,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::CubemapVolume(
                                         Box::new(cubemap_volume),
@@ -436,6 +437,7 @@ pub fn main() -> anyhow::Result<()> {
                                         data.rotation.w,
                                     ),
                                     entity: data.entity,
+                                    world_id: data.world_id,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::Unk808067b5(tag),
                                 });
@@ -475,6 +477,7 @@ pub fn main() -> anyhow::Result<()> {
                                                 data.rotation.w,
                                             ),
                                             entity: data.entity,
+                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Decal {
                                                 material: inst.material,
@@ -613,9 +616,11 @@ pub fn main() -> anyhow::Result<()> {
                                         data.rotation.w,
                                     ),
                                     entity: data.entity,
+                                    world_id: data.world_id,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::Unknown(
                                         data.data_resource.resource_type,
+                                        data.world_id,
                                     ),
                                 });
                             }
@@ -635,8 +640,9 @@ pub fn main() -> anyhow::Result<()> {
                                 data.rotation.w,
                             ),
                             entity: data.entity,
+                            world_id: data.world_id,
                             resource_type: u32::MAX,
-                            resource: MapResource::Entity(data.entity),
+                            resource: MapResource::Entity(data.entity, data.world_id),
                         });
                     }
                 }

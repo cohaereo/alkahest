@@ -1,7 +1,7 @@
 use crate::icons::{
-    ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_SPHERE,
-    ICON_STICKER,
+    ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_SPHERE, ICON_STICKER,
 };
+use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::{DestinyHash, Vector4, AABB};
@@ -15,8 +15,9 @@ use strum::{EnumCount, EnumIs, EnumVariantNames};
 pub struct ResourcePoint {
     pub translation: Vec4,
     pub rotation: Quat,
-    pub entity: TagHash,
+    pub entity: ExtendedHash,
     pub resource_type: u32,
+    pub world_id: u64,
     pub resource: MapResource,
 }
 
@@ -26,12 +27,12 @@ pub enum MapResource {
     // PlacementGroup(TagHash),
     // Terrain(Unk8080714b),
     /// Generic data entry with no resource
-    Entity(TagHash) = 0,
+    Entity(ExtendedHash, u64) = 0,
     Decal {
         material: TagHash,
         scale: f32,
     } = 1,
-    Unknown(u32) = 2,
+    Unknown(u32, u64) = 2,
     Unk808067b5(TagHash) = 3,
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
 }
@@ -39,11 +40,20 @@ pub enum MapResource {
 impl MapResource {
     pub fn debug_string(&self) -> String {
         match self {
-            MapResource::Entity(e) => format!("Entity {:08X}", e.0.to_be()),
+            MapResource::Entity(hash, world_id) => {
+                let hash32 = if let Some(h32) = hash.hash32() {
+                    format!(" ({h32})")
+                } else {
+                    String::new()
+                };
+                format!("Entity {hash:?}{hash32}\n(0x{world_id:016x})",)
+            }
             MapResource::Decal { material, scale } => {
                 format!("Decal (mat {material}, scale {scale})")
             }
-            MapResource::Unknown(u) => format!("Unknown {:08X}", u.to_be()),
+            MapResource::Unknown(u, world_id) => {
+                format!("Unknown {:08X} (0x{world_id:016x})", u.to_be())
+            }
             MapResource::Unk808067b5 { .. } => "Unk808067b5 (light flare)".to_string(),
             MapResource::CubemapVolume(c, aabb) => {
                 format!(
@@ -79,7 +89,7 @@ impl MapResource {
         match self {
             MapResource::Entity { .. } => [255, 255, 255],
             MapResource::Decal { .. } => [50, 255, 255],
-            MapResource::Unknown(u) => RANDOM_COLORS[*u as usize % 16],
+            MapResource::Unknown(u, _) => RANDOM_COLORS[*u as usize % 16],
             MapResource::Unk808067b5 { .. } => [220, 220, 20],
             MapResource::CubemapVolume(..) => [50, 255, 50],
         }
