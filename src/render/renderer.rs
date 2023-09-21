@@ -364,8 +364,11 @@ impl Renderer {
                 );
             }
 
-            for slot in (11..18).filter(|&v| v != 14) {
-                self.white.bind(&self.dcs, slot, ShaderStages::all());
+            for slot in (11..25).filter(|&v| v != 14) {
+                self.render_data
+                    .data()
+                    .rainbow_texture
+                    .bind(&self.dcs, slot, ShaderStages::all());
             }
 
             if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {

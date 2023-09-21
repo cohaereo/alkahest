@@ -252,19 +252,23 @@ impl Material {
             }
 
             for p in &self.vs_textures {
-                // TODO(cohae): Bind error texture on error
-                if let Some(t) = render_data.textures.get(&p.texture.key()) {
-                    dcs.context()
-                        .VSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
-                }
+                let tex = render_data
+                    .textures
+                    .get(&p.texture.key())
+                    .unwrap_or(&render_data.fallback_texture);
+
+                dcs.context()
+                    .VSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
             }
 
             for p in &self.ps_textures {
-                // TODO(cohae): Bind error texture on error
-                if let Some(t) = render_data.textures.get(&p.texture.key()) {
-                    dcs.context()
-                        .PSSetShaderResources(p.index, Some(&[Some(t.view.clone())]));
-                }
+                let tex = render_data
+                    .textures
+                    .get(&p.texture.key())
+                    .unwrap_or(&render_data.fallback_texture);
+
+                dcs.context()
+                    .PSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
             }
         }
 

@@ -21,7 +21,6 @@ use super::shader::{load_pshader, load_vshader};
 use super::vertex_layout::OutputElement;
 use super::{resource_mt, DeviceContextSwapchain};
 
-#[derive(Default)]
 pub struct RenderData {
     pub materials: IntMap<TagHash, Material>,
     pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
@@ -32,9 +31,57 @@ pub struct RenderData {
     pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32, Option<ID3D11ShaderResourceView>)>,
     pub index_buffers: IntMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
     pub input_layouts: IntMap<u64, ID3D11InputLayout>,
+
+    pub fallback_texture: Texture,
+    /// All the colors you need
+    pub rainbow_texture: Texture,
+    pub uv_checker_texture: Texture,
 }
 
 impl RenderData {
+    pub fn new(dcs: &DeviceContextSwapchain) -> anyhow::Result<Self> {
+        let fallback_texture = Texture::load_2d_raw(
+            dcs,
+            128,
+            128,
+            include_bytes!("../../assets/textures/fallback.data"),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("red/black checkerboard"),
+        )?;
+
+        let rainbow_texture = Texture::load_2d_raw(
+            dcs,
+            128,
+            128,
+            include_bytes!("../../assets/textures/rainbow.data"),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("raaaainbow"),
+        )?;
+
+        let uv_checker_texture = Texture::load_2d_raw(
+            dcs,
+            1024,
+            1024,
+            include_bytes!("../../assets/textures/uv_checker.data"),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("uv checker"),
+        )?;
+
+        Ok(RenderData {
+            materials: Default::default(),
+            vshaders: Default::default(),
+            pshaders: Default::default(),
+            textures: Default::default(),
+            samplers: Default::default(),
+            vertex_buffers: Default::default(),
+            index_buffers: Default::default(),
+            input_layouts: Default::default(),
+            fallback_texture,
+            rainbow_texture,
+            uv_checker_texture,
+        })
+    }
+
     // Get the shading technique for a material based on it's pixel shader output signature
     pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingTechnique> {
         let pixel_shader = self.materials.get(&material)?.pixel_shader;
@@ -56,7 +103,7 @@ pub struct RenderDataManager {
 
 impl RenderDataManager {
     pub fn new(dcs: Arc<DeviceContextSwapchain>) -> Self {
-        let render_data = Arc::new(RwLock::new(RenderData::default()));
+        let render_data = Arc::new(RwLock::new(RenderData::new(&dcs).unwrap()));
         let tx_textures = resource_mt::thread_textures(dcs.clone(), render_data.clone());
         let tx_buffers = resource_mt::thread_buffers(dcs.clone(), render_data.clone());
 
