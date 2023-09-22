@@ -32,7 +32,7 @@ pub enum MapResource {
         material: TagHash,
         scale: f32,
     } = 1,
-    Unknown(u32, u64) = 2,
+    Unknown(u32, u64, ExtendedHash) = 2,
     Unk808067b5(TagHash) = 3,
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
 }
@@ -51,8 +51,13 @@ impl MapResource {
             MapResource::Decal { material, scale } => {
                 format!("Decal (mat {material}, scale {scale})")
             }
-            MapResource::Unknown(u, world_id) => {
-                format!("Unknown {:08X} (0x{world_id:016x})", u.to_be())
+            MapResource::Unknown(u, world_id, entity) => {
+                let hash32 = if let Some(h32) = entity.hash32() {
+                    format!("\nEntity {h32}")
+                } else {
+                    String::new()
+                };
+                format!("Unknown {:08X} (0x{world_id:016x}){hash32}", u.to_be())
             }
             MapResource::Unk808067b5 { .. } => "Unk808067b5 (light flare)".to_string(),
             MapResource::CubemapVolume(c, aabb) => {
@@ -89,7 +94,7 @@ impl MapResource {
         match self {
             MapResource::Entity { .. } => [255, 255, 255],
             MapResource::Decal { .. } => [50, 255, 255],
-            MapResource::Unknown(u, _) => RANDOM_COLORS[*u as usize % 16],
+            MapResource::Unknown(u, _, _) => RANDOM_COLORS[*u as usize % 16],
             MapResource::Unk808067b5 { .. } => [220, 220, 20],
             MapResource::CubemapVolume(..) => [50, 255, 50],
         }

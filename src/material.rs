@@ -170,7 +170,7 @@ impl Material {
             match TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little) {
                 Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
                 Err(e) => {
-                    error!(
+                    debug!(
                         "Failed to parse VS TFX bytecode: {e} (data={})",
                         hex::encode(mat.vs_bytecode.data())
                     );
@@ -182,7 +182,7 @@ impl Material {
             match TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little) {
                 Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
                 Err(e) => {
-                    error!(
+                    debug!(
                         "Failed to parse PS TFX bytecode: {e} (data={})",
                         hex::encode(mat.ps_bytecode.data())
                     );

@@ -42,9 +42,7 @@ impl OverlayProvider for RenderSettingsOverlay {
                     "Statics (overlay/transparent)",
                 );
                 ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
-                ui.add_enabled_ui(false, |ui| {
-                    ui.checkbox(&mut self.renderlayer_entities, "Entities");
-                });
+                ui.checkbox(&mut self.renderlayer_entities, "Entities");
             });
         });
 

@@ -11,8 +11,8 @@ use std::io::SeekFrom;
 #[derive(BinRead, Debug)]
 pub struct Unk80809c0f {
     pub file_size: u64,
-    #[br(seek_before(SeekFrom::Start(0x10)))]
-    pub unk10: TablePointer<Unk80809c04>,
+    #[br(seek_before(SeekFrom::Start(0x8)))]
+    pub entity_resources: TablePointer<Unk80809c04>,
 }
 
 #[derive(BinRead, Debug)]
@@ -50,9 +50,11 @@ pub struct Unk80807378 {
     pub buffer2: TagHash,
     pub buffer3: TagHash,
     pub index_buffer: TagHash,
+    pub color_buffer: TagHash,
+    pub skinning_buffer: TagHash,
     pub unk1c: u32,
     pub parts: TablePointer<Unk8080737e>,
-    pub unk30: [u16; 48],
+    pub unk30: [u16; 37],
 }
 
 #[derive(BinRead, Debug, Clone)]
@@ -68,16 +70,19 @@ pub struct Unk8080737e {
     pub unk18: u8,
     pub unk19: u8,
     pub unk1a: u8,
+    pub unk1b: u8,
+    pub unk1c: u8,
     pub lod_category: ELodCategory,
-    pub unk1c: u32,
+    pub unk1e: u8,
+    pub unk1f: u8,
+    pub unk20: u32,
 }
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk808072c5 {
-    pub material_count: u16,
-    pub material_start: i16,
-    pub unk4: u16,
-    pub unk6: i16,
+    pub material_count: u32,
+    pub material_start: u32,
+    pub unk6: u32,
 }
 
 #[derive(BinRead, Debug, PartialEq, Copy, Clone)]

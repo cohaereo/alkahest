@@ -40,9 +40,11 @@ impl TfxBytecodeInterpreter {
                     self.stack.push(v);
                 }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
+                    anyhow::ensure!((*constant_index as usize) < constants.len());
                     self.stack.push(constants[*constant_index as usize]);
                 }
                 TfxBytecodeOp::UnkLoadConstant2 { constant_index } => {
+                    anyhow::ensure!((*constant_index as usize) < constants.len());
                     self.operand_stack.push(constants[*constant_index as usize]);
                 }
                 // TODO(cohae): Seems to be an arithmic op

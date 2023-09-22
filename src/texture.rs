@@ -81,7 +81,7 @@ impl Texture {
         let texture_header_ref = package_manager()
             .get_entry(
                 hash.hash32()
-                    .ok_or_else(|| anyhow::anyhow!("Could not match hash {hash:?}"))?,
+                    .ok_or_else(|| anyhow::anyhow!("Could not find hash {hash:?}"))?,
             )?
             .reference;
 

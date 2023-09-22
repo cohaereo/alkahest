@@ -18,7 +18,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Quat, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use strum::EnumCount;
@@ -40,12 +40,13 @@ use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
 
+use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
 use crate::map::{
     ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54,
 };
 use crate::map_resources::{MapResource, ResourcePoint, Unk80806b7f, Unk80806e68, Unk8080714b};
-use crate::material::Material;
+use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 
 use crate::overlays::fps_display::FpsDisplayOverlay;
@@ -59,12 +60,14 @@ use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
 use crate::render::renderer::{Renderer, ScopeOverrides};
 
+use crate::render::scopes::ScopeRigidModel;
 use crate::render::static_render::StaticModel;
 use crate::render::terrain::TerrainRenderer;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, InstancedRenderer};
+use crate::render::{ConstantBuffer, DeviceContextSwapchain, EntityRenderer, InstancedRenderer};
 use crate::resources::Resources;
 use crate::statics::{Unk808071a7, Unk8080966d};
 
+use crate::structure::{TablePointer, Tag};
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
 use crate::types::AABB;
 
@@ -621,6 +624,7 @@ pub fn main() -> anyhow::Result<()> {
                                     resource: MapResource::Unknown(
                                         data.data_resource.resource_type,
                                         data.world_id,
+                                        data.entity,
                                     ),
                                 });
                             }
@@ -679,122 +683,135 @@ pub fn main() -> anyhow::Result<()> {
         })
     }
 
-    // let to_load_entities: IntSet<TagHash> = maps
-    //     .iter()
-    //     .flat_map(|v| v.resource_points.iter().map(|(r, _)| r.entity))
-    //     .filter(|v| v.is_valid())
-    //     .collect();
-
-    // let mut entity_renderers: IntMap<TagHash, EntityRenderer> = Default::default();
-    // for te in &to_load_entities {
-    //     let _span = debug_span!("Load entity", hash = %te).entered();
-    //     let header: Unk80809c0f = package_manager().read_tag_struct(*te)?;
-    //     debug!("Loading entity {te}");
-    //     for e in &header.unk10 {
-    //         match e.unk0.unk10.resource_type {
-    //             0x808072b8 => {
-    //                 debug!(
-    //                     "\t- EntityModel {:08x}/{}",
-    //                     e.unk0.unk18.resource_type.to_be(),
-    //                     e.unk0.unk10.resource_type.to_be(),
-    //                 );
-    //                 let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
-    //                 cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x1dc))?;
-    //                 let model: Tag<Unk808073a5> = cur.read_le()?;
-    //                 cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x300))?;
-    //                 let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
-    //                 let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
-
-    //                 for m in &materials {
-    //                     material_map.insert(
-    //                         m.tag(),
-    //                         Material::load(&renderer, m.0.clone(), m.tag(), true),
-    //                     );
-    //                 }
-
-    //                 for m in &model.meshes {
-    //                     for p in &m.parts {
-    //                         if p.material.is_valid() {
-    //                             material_map.insert(
-    //                                 p.material,
-    //                                 Material::load(
-    //                                     &renderer,
-    //                                     package_manager().read_tag_struct(p.material)?,
-    //                                     p.material,
-    //                                     true,
-    //                                 ),
-    //                             );
-    //                         }
-    //                     }
-    //                 }
-
-    //                 if entity_renderers
-    //                     .insert(
-    //                         *te,
-    //                         EntityRenderer::load(
-    //                             model.0,
-    //                             entity_material_map.to_vec(),
-    //                             materials.iter().map(|m| m.tag()).collect_vec(),
-    //                             &renderer,
-    //                             &dcs,
-    //                         )?,
-    //                     )
-    //                     .is_some()
-    //                 {
-    //                     error!("More than 1 model was loaded for entity {te}");
-    //                 }
-
-    //                 // println!(" - EntityModel {model:?}");
-    //             }
-    //             u => debug!(
-    //                 "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-    //                 u.to_be(),
-    //                 e.unk0.unk10.resource_type.to_be(),
-    //                 e.unk0.tag()
-    //             ),
-    //         }
-    //     }
-
-    //     if !entity_renderers.contains_key(te) {
-    //         warn!("Entity {te} does not contain any geometry!");
-    //     }
-    // }
-
-    // info!(
-    //     "Found {} entity models ({} entities)",
-    //     entity_renderers.len(),
-    //     to_load_entities.len()
-    // );
-
     info!("{} lights", point_lights.len());
 
-    // // TODO(cohae): Maybe not the best idea?
-    // info!("Updating resource constant buffers");
-    // for m in &maps {
-    //     for (rp, cb) in &m.resource_points {
-    //         if let Some(ent) = entity_renderers.get(&rp.entity) {
-    //             let mm = Mat4::from_scale_rotation_translation(
-    //                 Vec3::splat(rp.translation.w),
-    //                 rp.rotation.inverse(),
-    //                 Vec3::ZERO,
-    //             );
-    //             let model_matrix = Mat4::from_cols(
-    //                 mm.x_axis.truncate().extend(rp.translation.x),
-    //                 mm.y_axis.truncate().extend(rp.translation.y),
-    //                 mm.z_axis.truncate().extend(rp.translation.z),
-    //                 mm.w_axis,
-    //             );
+    let to_load_entities: HashSet<ExtendedHash> = maps
+        .iter()
+        .flat_map(|v| v.resource_points.iter().map(|(r, _)| r.entity))
+        .filter(|v| v.is_valid())
+        .collect();
 
-    //             cb.write(&ScopeRigidModel {
-    //                 mesh_to_world: model_matrix.transpose(),
-    //                 position_scale: ent.mesh_scale(),
-    //                 position_offset: ent.mesh_offset(),
-    //                 texcoord0_scale_offset: ent.texcoord_transform(),
-    //                 dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-    //             })?;
-    //         }
-    //     }
-    // }
+    let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
+    for te in &to_load_entities {
+        if let Some(nh) = te.hash32() {
+            let _span = debug_span!("Load entity", hash = %nh).entered();
+            let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+                error!("Could not load entity {nh} ({te:?})");
+                continue;
+            };
+            debug!("Loading entity {nh}");
+            for e in &header.entity_resources {
+                match e.unk0.unk10.resource_type {
+                    0x80806d8a => {
+                        debug!(
+                            "\t- EntityModel {:08x}/{}",
+                            e.unk0.unk18.resource_type.to_be(),
+                            e.unk0.unk10.resource_type.to_be(),
+                        );
+                        let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
+                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
+                        let model: Tag<Unk808073a5> = cur.read_le()?;
+                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
+                        let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
+                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
+                        let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
+
+                        for m in &materials {
+                            material_map.insert(
+                                m.tag(),
+                                Material::load(&renderer, m.0.clone(), m.tag(), true),
+                            );
+                        }
+
+                        for m in &model.meshes {
+                            for p in &m.parts {
+                                if p.material.is_valid() {
+                                    material_map.insert(
+                                        p.material,
+                                        Material::load(
+                                            &renderer,
+                                            package_manager().read_tag_struct(p.material)?,
+                                            p.material,
+                                            true,
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+
+                        if entity_renderers
+                            .insert(
+                                te.key(),
+                                EntityRenderer::load(
+                                    model.0,
+                                    entity_material_map.to_vec(),
+                                    materials.iter().map(|m| m.tag()).collect_vec(),
+                                    &renderer,
+                                    &dcs,
+                                )?,
+                            )
+                            .is_some()
+                        {
+                            error!("More than 1 model was loaded for entity {nh}");
+                        }
+
+                        // println!(" - EntityModel {model:?}");
+                    }
+                    u => debug!(
+                        "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                        u.to_be(),
+                        e.unk0.unk10.resource_type.to_be(),
+                        e.unk0.tag()
+                    ),
+                }
+            }
+
+            if !entity_renderers.contains_key(&te.key()) {
+                warn!("Entity {nh} does not contain any geometry!");
+            }
+        }
+    }
+
+    info!(
+        "Found {} entity models ({} entities)",
+        entity_renderers.len(),
+        to_load_entities.len()
+    );
+
+    // TODO(cohae): Maybe not the best idea?
+    info!("Updating resource constant buffers");
+    for m in &maps {
+        for (rp, cb) in &m.resource_points {
+            if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
+                let mm = Mat4::from_scale_rotation_translation(
+                    Vec3::splat(rp.translation.w),
+                    rp.rotation.inverse(),
+                    Vec3::ZERO,
+                );
+                let model_matrix = Mat4::from_cols(
+                    mm.x_axis.truncate().extend(rp.translation.x),
+                    mm.y_axis.truncate().extend(rp.translation.y),
+                    mm.z_axis.truncate().extend(rp.translation.z),
+                    mm.w_axis,
+                );
+                let alt_matrix = Mat4::from_cols(
+                    mm.x_axis.truncate().extend(rp.translation.x),
+                    mm.y_axis.truncate().extend(rp.translation.y),
+                    mm.z_axis.truncate().extend(rp.translation.z),
+                    mm.w_axis,
+                );
+
+                cb.write(&ScopeRigidModel {
+                    mesh_to_world: model_matrix.transpose(),
+                    position_scale: ent.mesh_scale(),
+                    position_offset: ent.mesh_offset(),
+                    texcoord0_scale_offset: ent.texcoord_transform(),
+                    dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+                    unk8: [alt_matrix; 4096],
+                })?;
+            }
+        }
+    }
 
     let mut placement_groups: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
         IntMap::default();
@@ -1112,7 +1129,7 @@ pub fn main() -> anyhow::Result<()> {
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
-        renderlayer_entities: false,
+        renderlayer_entities: true,
 
         alpha_blending: true,
         render_lights: false,
@@ -1288,27 +1305,27 @@ pub fn main() -> anyhow::Result<()> {
                             }
                         }
 
-                        // if gb.renderlayer_entities {
-                        //     for (rp, cb) in &map.resource_points {
-                        //         if let Some(ent) = entity_renderers.get(&rp.entity) {
-                        //             if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
-                        //                 // resources.get::<ErrorRenderer>().unwrap().draw(
-                        //                 //     &mut renderer,
-                        //                 //     cb.buffer(),
-                        //                 //     proj_view,
-                        //                 //     view,
-                        //                 // );
-                        //             }
-                        //         } else if rp.resource.is_entity() {
-                        //             // resources.get::<ErrorRenderer>().unwrap().draw(
-                        //             //     &mut renderer,
-                        //             //     cb.buffer(),
-                        //             //     proj_view,
-                        //             //     view,
-                        //             // );
-                        //         }
-                        //     }
-                        // }
+                        if gb.renderlayer_entities {
+                            for (rp, cb) in &map.resource_points {
+                                if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
+                                    if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
+                                        // resources.get::<ErrorRenderer>().unwrap().draw(
+                                        //     &mut renderer,
+                                        //     cb.buffer(),
+                                        //     proj_view,
+                                        //     view,
+                                        // );
+                                    }
+                                } else if rp.resource.is_entity() {
+                                    // resources.get::<ErrorRenderer>().unwrap().draw(
+                                    //     &mut renderer,
+                                    //     cb.buffer(),
+                                    //     proj_view,
+                                    //     view,
+                                    // );
+                                }
+                            }
+                        }
                     }
 
                     renderer.submit_frame(

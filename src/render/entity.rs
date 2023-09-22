@@ -24,6 +24,7 @@ use super::DeviceContextSwapchain;
 pub struct EntityModelBuffer {
     vertex_buffer1: TagHash,
     vertex_buffer2: TagHash,
+    color_buffer: TagHash,
 
     index_buffer: TagHash,
     input_layout: u64,
@@ -131,6 +132,7 @@ impl EntityRenderer {
             renderer.render_data.load_buffer(mesh.index_buffer, false);
             renderer.render_data.load_buffer(mesh.vertex_buffer1, false);
             renderer.render_data.load_buffer(mesh.vertex_buffer2, false);
+            renderer.render_data.load_buffer(mesh.color_buffer, true);
 
             let input_layout = load_vertex_buffers(
                 renderer,
@@ -148,6 +150,7 @@ impl EntityRenderer {
                     vertex_buffer1: mesh.vertex_buffer1,
                     vertex_buffer2: mesh.vertex_buffer2,
                     index_buffer: mesh.index_buffer,
+                    color_buffer: mesh.color_buffer,
                     input_layout,
                 },
                 mesh.parts.to_vec(),
@@ -220,7 +223,7 @@ impl EntityRenderer {
                     DrawCall {
                         vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                         index_buffer: buffers.index_buffer,
-                        color_buffer: None,
+                        color_buffer: Some(buffers.color_buffer),
                         input_layout_hash: buffers.input_layout,
                         buffer_bindings: vec![ConstantBufferBinding::new(1, cb11.clone())],
                         variant_material,
