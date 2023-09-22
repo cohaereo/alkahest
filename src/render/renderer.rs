@@ -9,7 +9,7 @@ use winit::window::Window;
 use crate::dxgi::DxgiFormat;
 use crate::overlays::render_settings::CompositorOptions;
 use crate::render::drawcall::ShaderStages;
-use crate::render::scopes::ScopeUnk2;
+use crate::render::scopes::ScopeUnk3;
 use crate::render::shader;
 use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
@@ -42,7 +42,7 @@ pub struct Renderer {
 
     scope_view: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
-    scope_unk2: ConstantBuffer<ScopeUnk2>,
+    scope_unk3: ConstantBuffer<ScopeUnk3>,
     scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
 
@@ -223,7 +223,7 @@ impl Renderer {
             window_size: (window.inner_size().width, window.inner_size().height),
             scope_frame: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view: ConstantBuffer::create(dcs.clone(), None)?,
-            scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
             render_data: RenderDataManager::new(dcs.clone()),
@@ -288,7 +288,7 @@ impl Renderer {
             self.evaluate_tfx_expressions();
         }
 
-        self.scope_unk2.bind(2, ShaderStages::all());
+        self.scope_unk3.bind(3, ShaderStages::all());
         self.scope_unk8.bind(8, ShaderStages::all());
         self.scope_view.bind(12, ShaderStages::all());
         self.scope_frame.bind(13, ShaderStages::all());
@@ -357,18 +357,31 @@ impl Renderer {
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..self.draw_queue.len() {
+            for slot in (11..25).filter(|&v| v != 14) {
+                // self.render_data
+                //     .data()
+                //     .rainbow_texture
+                //     .bind(&self.dcs, slot, ShaderStages::all());
+                unsafe {
+                    self.dcs
+                        .context()
+                        .PSSetShaderResources(slot, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+                }
+            }
             unsafe {
                 self.dcs.context().PSSetShaderResources(
                     10,
                     Some(&[Some(self.gbuffer.depth.texture_copy_view.clone())]),
                 );
-            }
-
-            for slot in (11..25).filter(|&v| v != 14) {
-                self.render_data
-                    .data()
-                    .rainbow_texture
-                    .bind(&self.dcs, slot, ShaderStages::all());
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(16, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(17, Some(&[Some(self.gbuffer.rt1.view.clone())]));
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(18, Some(&[Some(self.gbuffer.rt2.view.clone())]));
             }
 
             if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {
@@ -786,7 +799,7 @@ impl Renderer {
             ..overrides.view
         })?;
 
-        self.scope_unk2.write(&overrides.unk2)?;
+        self.scope_unk3.write(&overrides.unk2)?;
 
         self.scope_unk8.write(&overrides.unk8)?;
 
@@ -837,6 +850,6 @@ impl Renderer {
 pub struct ScopeOverrides {
     pub view: ScopeView,
     pub frame: ScopeFrame,
-    pub unk2: ScopeUnk2,
+    pub unk2: ScopeUnk3,
     pub unk8: ScopeUnk8,
 }

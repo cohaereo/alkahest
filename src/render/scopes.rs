@@ -138,24 +138,44 @@ pub struct ScopeRigidModel {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ScopeUnk2 {
+pub struct ScopeUnk3 {
     pub unk0: Vec4,
     pub unk1: Vec4,
     pub unk2: Vec4,
     pub unk3: Vec4,
     pub unk4: Vec4,
     pub unk5: Vec4,
+    pub unk6: Vec4,
+    pub unk7: Vec4,
+    pub unk8: Vec4,
+    pub unk9: Vec4,
+    pub unka: Vec4,
+    pub unkb: Vec4,
+    pub unkc: Vec4,
+    pub unkd: Vec4,
+    pub unke: Vec4,
+    pub unkf: Vec4,
 }
 
-impl Default for ScopeUnk2 {
+impl Default for ScopeUnk3 {
     fn default() -> Self {
-        ScopeUnk2 {
+        ScopeUnk3 {
             unk0: Vec4::ONE,
             unk1: Vec4::ONE,
             unk2: Vec4::ONE,
             unk3: Vec4::ONE,
             unk4: Vec4::ONE,
             unk5: Vec4::ONE,
+            unk6: Vec4::ONE,
+            unk7: Vec4::ONE,
+            unk8: Vec4::ONE,
+            unk9: Vec4::ONE,
+            unka: Vec4::ONE,
+            unkb: Vec4::ONE,
+            unkc: Vec4::ONE,
+            unkd: Vec4::ONE,
+            unke: Vec4::ONE,
+            unkf: Vec4::ONE,
         }
     }
 }
