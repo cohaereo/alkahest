@@ -35,7 +35,7 @@ pub struct RenderData {
     pub fallback_texture: Texture,
     /// All the colors you need
     pub rainbow_texture: Texture,
-    pub uv_checker_texture: Texture,
+    pub debug_textures: Vec<Texture>,
 }
 
 impl RenderData {
@@ -58,14 +58,28 @@ impl RenderData {
             Some("raaaainbow"),
         )?;
 
-        let uv_checker_texture = Texture::load_2d_raw(
-            dcs,
-            1024,
-            1024,
-            include_bytes!("../../assets/textures/uv_checker.data"),
-            DxgiFormat::R8G8B8A8_UNORM,
-            Some("uv checker"),
-        )?;
+        const DEBUG_TEXTURE_DATA: [&[u8]; 8] = [
+            include_bytes!("../../assets/textures/debug0.data"),
+            include_bytes!("../../assets/textures/debug1.data"),
+            include_bytes!("../../assets/textures/debug2.data"),
+            include_bytes!("../../assets/textures/debug3.data"),
+            include_bytes!("../../assets/textures/debug4.data"),
+            include_bytes!("../../assets/textures/debug5.data"),
+            include_bytes!("../../assets/textures/debug6.data"),
+            include_bytes!("../../assets/textures/debug7.data"),
+        ];
+
+        let mut debug_textures = vec![];
+        for (i, d) in DEBUG_TEXTURE_DATA.iter().enumerate() {
+            debug_textures.push(Texture::load_2d_raw(
+                dcs,
+                128,
+                128,
+                d,
+                DxgiFormat::R8G8B8A8_UNORM,
+                Some(&format!("debug texture #{i}")),
+            )?);
+        }
 
         Ok(RenderData {
             materials: Default::default(),
@@ -78,7 +92,7 @@ impl RenderData {
             input_layouts: Default::default(),
             fallback_texture,
             rainbow_texture,
-            uv_checker_texture,
+            debug_textures,
         })
     }
 

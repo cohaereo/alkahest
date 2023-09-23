@@ -792,13 +792,13 @@ pub fn main() -> anyhow::Result<()> {
                     mm.x_axis.truncate().extend(rp.translation.x),
                     mm.y_axis.truncate().extend(rp.translation.y),
                     mm.z_axis.truncate().extend(rp.translation.z),
-                    mm.w_axis,
+                    rp.translation,
                 );
                 let alt_matrix = Mat4::from_cols(
-                    mm.x_axis.truncate().extend(rp.translation.x),
-                    mm.y_axis.truncate().extend(rp.translation.y),
-                    mm.z_axis.truncate().extend(rp.translation.z),
-                    mm.w_axis,
+                    Vec3::ONE.extend(rp.translation.x),
+                    Vec3::ONE.extend(rp.translation.y),
+                    Vec3::ONE.extend(rp.translation.z),
+                    Vec4::W,
                 );
 
                 cb.write(&ScopeRigidModel {
@@ -807,7 +807,7 @@ pub fn main() -> anyhow::Result<()> {
                     position_offset: ent.mesh_offset(),
                     texcoord0_scale_offset: ent.texcoord_transform(),
                     dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                    unk8: [alt_matrix; 4096],
+                    unk8: [alt_matrix; 8],
                 })?;
             }
         }
@@ -1129,7 +1129,7 @@ pub fn main() -> anyhow::Result<()> {
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
-        renderlayer_entities: true,
+        renderlayer_entities: false,
 
         alpha_blending: true,
         render_lights: false,
@@ -1307,6 +1307,16 @@ pub fn main() -> anyhow::Result<()> {
 
                         if gb.renderlayer_entities {
                             for (rp, cb) in &map.resource_points {
+                                // Veil roots
+                                // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x68e8e780))) {
+                                //     continue;
+                                // }
+
+                                // Metaverse cat
+                                // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x2BF6E780))) {
+                                //     continue;
+                                // }
+
                                 if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
                                     if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
                                         // resources.get::<ErrorRenderer>().unwrap().draw(

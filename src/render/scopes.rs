@@ -7,18 +7,18 @@ pub type Mat3x4 = [Vec4; 3];
 // This scope uses official struct/field names from TFX intermediaries (scope_view)
 #[repr(C)]
 pub struct ScopeView {
-    pub world_to_projective: Mat4,
+    pub world_to_projective: Mat4, // c0
 
     // pub camera_to_world: mat4
-    pub camera_right: Vec4,
-    pub camera_up: Vec4,
-    pub camera_backward: Vec4,
-    pub camera_position: Vec4,
+    pub camera_right: Vec4,    // c4
+    pub camera_up: Vec4,       // c5
+    pub camera_backward: Vec4, // c6
+    pub camera_position: Vec4, // c7
 
-    pub target_pixel_to_camera: Mat4,
+    pub target_pixel_to_camera: Mat4, // c8
 
     // pub target: Vec4,
-    pub target_resolution: (f32, f32),
+    pub target_resolution: (f32, f32), // c12
     pub inverse_target_resolution: (f32, f32),
 
     pub unk13: f32,
@@ -133,7 +133,7 @@ pub struct ScopeRigidModel {
     pub position_offset: Vec4,        // c5
     pub texcoord0_scale_offset: Vec4, // c6
     pub dynamic_sh_ao_values: Vec4,   // c7
-    pub unk8: [Mat4; 4096],           // c8
+    pub unk8: [Mat4; 8],              // c8
 }
 
 #[repr(C)]
@@ -149,12 +149,12 @@ pub struct ScopeUnk3 {
     pub unk7: Vec4,
     pub unk8: Vec4,
     pub unk9: Vec4,
-    pub unka: Vec4,
-    pub unkb: Vec4,
-    pub unkc: Vec4,
-    pub unkd: Vec4,
-    pub unke: Vec4,
-    pub unkf: Vec4,
+    pub unk10: Vec4,
+    pub unk11: Vec4,
+    pub unk12: Vec4,
+    pub unk13: Vec4,
+    pub unk14: Vec4,
+    pub unk15: Vec4,
 }
 
 impl Default for ScopeUnk3 {
@@ -170,12 +170,12 @@ impl Default for ScopeUnk3 {
             unk7: Vec4::ONE,
             unk8: Vec4::ONE,
             unk9: Vec4::ONE,
-            unka: Vec4::ONE,
-            unkb: Vec4::ONE,
-            unkc: Vec4::ONE,
-            unkd: Vec4::ONE,
-            unke: Vec4::ONE,
-            unkf: Vec4::ONE,
+            unk10: Vec4::ONE,
+            unk11: Vec4::ONE,
+            unk12: Vec4::ONE,
+            unk13: Vec4::ONE,
+            unk14: Vec4::ONE,
+            unk15: Vec4::ONE,
         }
     }
 }
@@ -191,6 +191,35 @@ pub struct ScopeUnk8 {
     pub unk5: Vec4,
     pub unk6: Vec4,
     pub unk7: Vec4,
+    pub unk8: Vec4,
+    pub unk9: Vec4,
+    pub unk10: Vec4,
+    pub unk11: Vec4,
+    pub unk12: Vec4,
+    pub unk13: Vec4,
+    pub unk14: Vec4,
+    pub unk15: Vec4,
+    pub unk16: Vec4,
+    pub unk17: Vec4,
+    pub unk18: Vec4,
+    pub unk19: Vec4,
+    pub unk20: Vec4,
+    pub unk21: Vec4,
+    pub unk22: Vec4,
+    pub unk23: Vec4,
+    pub unk24: Vec4,
+    pub unk25: Vec4,
+    pub unk26: Vec4,
+    pub unk27: Vec4,
+    pub unk28: Vec4,
+    pub unk29: Vec4,
+    pub unk30: Vec4,
+    pub unk31: Vec4,
+    pub unk32: Vec4,
+    pub unk33: Vec4,
+    pub unk34: Vec4,
+    pub unk35: Vec4,
+    pub unk36: Vec4,
 }
 
 impl Default for ScopeUnk8 {
@@ -204,6 +233,35 @@ impl Default for ScopeUnk8 {
             unk5: Vec4::ONE,
             unk6: Vec4::ONE,
             unk7: Vec4::ONE,
+            unk8: Vec4::ONE,
+            unk9: Vec4::ONE,
+            unk10: Vec4::ONE,
+            unk11: Vec4::ONE,
+            unk12: Vec4::ONE,
+            unk13: Vec4::ONE,
+            unk14: Vec4::ONE,
+            unk15: Vec4::ONE,
+            unk16: Vec4::ONE,
+            unk17: Vec4::ONE,
+            unk18: Vec4::ONE,
+            unk19: Vec4::ONE,
+            unk20: Vec4::ONE,
+            unk21: Vec4::ONE,
+            unk22: Vec4::ONE,
+            unk23: Vec4::ONE,
+            unk24: Vec4::ONE,
+            unk25: Vec4::ONE,
+            unk26: Vec4::ONE,
+            unk27: Vec4::ONE,
+            unk28: Vec4::ONE,
+            unk29: Vec4::ONE,
+            unk30: Vec4::ONE,
+            unk31: Vec4::ONE,
+            unk32: Vec4::ONE,
+            unk33: Vec4::ONE,
+            unk34: Vec4::ONE,
+            unk35: Vec4::ONE,
+            unk36: Vec4::ONE,
         }
     }
 }

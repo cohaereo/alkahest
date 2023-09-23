@@ -2,7 +2,7 @@ use glam::{Mat4, Vec4};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
-use crate::{map::MapDataList, resources::Resources};
+use crate::{map::MapDataList, render::renderer::ScopeOverrides, resources::Resources};
 
 use super::gui::OverlayProvider;
 
@@ -44,126 +44,82 @@ impl OverlayProvider for RenderSettingsOverlay {
                 ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
                 ui.checkbox(&mut self.renderlayer_entities, "Entities");
             });
+
+            ui.collapsing("Scope Overrides", |ui| {
+                let mut overrides = resources.get_mut::<ScopeOverrides>().unwrap();
+
+                macro_rules! input_float4 {
+                    ($ui:expr, $label:expr, $v:expr) => {
+                        $ui.horizontal(|ui| {
+                            ui.label($label);
+                            ui.add(egui::DragValue::new(&mut $v.x).speed(0.1).prefix("x: "));
+                            ui.add(egui::DragValue::new(&mut $v.y).speed(0.1).prefix("y: "));
+                            ui.add(egui::DragValue::new(&mut $v.z).speed(0.1).prefix("z: "));
+                            ui.add(egui::DragValue::new(&mut $v.w).speed(0.1).prefix("w: "));
+                        });
+                    };
+                }
+
+                ui.collapsing("unk3", |ui| {
+                    input_float4!(ui, "unk0", overrides.unk3.unk0);
+                    input_float4!(ui, "unk1", overrides.unk3.unk1);
+                    input_float4!(ui, "unk2", overrides.unk3.unk2);
+                    input_float4!(ui, "unk3", overrides.unk3.unk3);
+                    input_float4!(ui, "unk4", overrides.unk3.unk4);
+                    input_float4!(ui, "unk5", overrides.unk3.unk5);
+                    input_float4!(ui, "unk6", overrides.unk3.unk6);
+                    input_float4!(ui, "unk7", overrides.unk3.unk7);
+                    input_float4!(ui, "unk8", overrides.unk3.unk8);
+                    input_float4!(ui, "unk9", overrides.unk3.unk9);
+                    input_float4!(ui, "unk10", overrides.unk3.unk10);
+                    input_float4!(ui, "unk11", overrides.unk3.unk11);
+                    input_float4!(ui, "unk12", overrides.unk3.unk12);
+                    input_float4!(ui, "unk13", overrides.unk3.unk13);
+                    input_float4!(ui, "unk14", overrides.unk3.unk14);
+                    input_float4!(ui, "unk15", overrides.unk3.unk15);
+                });
+
+                ui.collapsing("unk8", |ui| {
+                    input_float4!(ui, "unk0", overrides.unk8.unk0);
+                    input_float4!(ui, "unk1", overrides.unk8.unk1);
+                    input_float4!(ui, "unk2", overrides.unk8.unk2);
+                    input_float4!(ui, "unk3", overrides.unk8.unk3);
+                    input_float4!(ui, "unk4", overrides.unk8.unk4);
+                    input_float4!(ui, "unk5", overrides.unk8.unk5);
+                    input_float4!(ui, "unk6", overrides.unk8.unk6);
+                    input_float4!(ui, "unk7", overrides.unk8.unk7);
+                    input_float4!(ui, "unk8", overrides.unk8.unk8);
+                    input_float4!(ui, "unk9", overrides.unk8.unk9);
+                    input_float4!(ui, "unk10", overrides.unk8.unk10);
+                    input_float4!(ui, "unk11", overrides.unk8.unk11);
+                    input_float4!(ui, "unk12", overrides.unk8.unk12);
+                    input_float4!(ui, "unk13", overrides.unk8.unk13);
+                    input_float4!(ui, "unk14", overrides.unk8.unk14);
+                    input_float4!(ui, "unk15", overrides.unk8.unk15);
+                    input_float4!(ui, "unk16", overrides.unk8.unk16);
+                    input_float4!(ui, "unk17", overrides.unk8.unk17);
+                    input_float4!(ui, "unk18", overrides.unk8.unk18);
+                    input_float4!(ui, "unk19", overrides.unk8.unk19);
+                    input_float4!(ui, "unk20", overrides.unk8.unk20);
+                    input_float4!(ui, "unk21", overrides.unk8.unk21);
+                    input_float4!(ui, "unk22", overrides.unk8.unk22);
+                    input_float4!(ui, "unk23", overrides.unk8.unk23);
+                    input_float4!(ui, "unk24", overrides.unk8.unk24);
+                    input_float4!(ui, "unk25", overrides.unk8.unk25);
+                    input_float4!(ui, "unk26", overrides.unk8.unk26);
+                    input_float4!(ui, "unk27", overrides.unk8.unk27);
+                    input_float4!(ui, "unk28", overrides.unk8.unk28);
+                    input_float4!(ui, "unk29", overrides.unk8.unk29);
+                    input_float4!(ui, "unk30", overrides.unk8.unk30);
+                    input_float4!(ui, "unk31", overrides.unk8.unk31);
+                    input_float4!(ui, "unk32", overrides.unk8.unk32);
+                    input_float4!(ui, "unk33", overrides.unk8.unk33);
+                    input_float4!(ui, "unk34", overrides.unk8.unk34);
+                    input_float4!(ui, "unk35", overrides.unk8.unk35);
+                    input_float4!(ui, "unk36", overrides.unk8.unk36);
+                })
+            });
         });
-
-        // TODO(cohae): Port this monstrosity
-        //         if ui.collapsing_header("Scope Overrides", TreeNodeFlags::empty()) {
-        //             let mut overrides = resources.get_mut::<ScopeOverrides>().unwrap();
-
-        //             if ui.collapsing_header("view", TreeNodeFlags::empty()) {
-        //                 ui.input_float4(
-        //                     "tptc.x",
-        //                     &mut overrides.view.target_pixel_to_camera.x_axis,
-        //                 )
-        //                 .build();
-        //                 ui.input_float4(
-        //                     "tptc.y",
-        //                     &mut overrides.view.target_pixel_to_camera.y_axis,
-        //                 )
-        //                 .build();
-        //                 ui.input_float4(
-        //                     "tptc.z",
-        //                     &mut overrides.view.target_pixel_to_camera.z_axis,
-        //                 )
-        //                 .build();
-        //                 ui.input_float4(
-        //                     "tptc.w",
-        //                     &mut overrides.view.target_pixel_to_camera.w_axis,
-        //                 )
-        //                 .build();
-
-        //                 // ui.input_float("misc_unk0", &mut overrides.view.misc_unk0)
-        //                 //     .build();
-        //                 // ui.input_float("misc_unk1", &mut overrides.view.misc_unk1)
-        //                 //     .build();
-        //                 // ui.input_float("misc_unk3", &mut overrides.view.misc_unk3)
-        //                 //     .build();
-        //             }
-
-        //             if ui.collapsing_header("frame", TreeNodeFlags::empty()) {
-        //                 ui.slider(
-        //                     "exposure_time",
-        //                     0.0,
-        //                     10.0,
-        //                     &mut overrides.frame.exposure_time,
-        //                 );
-        //                 ui.slider(
-        //                     "exposure_scale",
-        //                     0.0,
-        //                     1.0,
-        //                     &mut overrides.frame.exposure_scale,
-        //                 );
-        //                 ui.slider(
-        //                     "exposure_illum_relative_glow",
-        //                     0.0,
-        //                     1.0,
-        //                     &mut overrides.frame.exposure_illum_relative_glow,
-        //                 );
-        //                 ui.slider(
-        //                     "exposure_scale_for_shading",
-        //                     0.0,
-        //                     1.0,
-        //                     &mut overrides.frame.exposure_scale_for_shading,
-        //                 );
-        //                 ui.slider(
-        //                     "exposure_illum_relative",
-        //                     0.0,
-        //                     1.0,
-        //                     &mut overrides.frame.exposure_illum_relative,
-        //                 );
-
-        //                 ui.input_float4(
-        //                     "random_seed_scales",
-        //                     &mut overrides.frame.random_seed_scales,
-        //                 )
-        //                 .build();
-        //                 ui.input_float4("overrides", &mut overrides.frame.overrides)
-        //                     .build();
-        //                 ui.input_float4("frame.unk4", &mut overrides.frame.unk4)
-        //                     .build();
-        //                 ui.input_float4("frame.unk5", &mut overrides.frame.unk5)
-        //                     .build();
-        //                 ui.input_float4("frame.unk6", &mut overrides.frame.unk6)
-        //                     .build();
-        //                 ui.input_float4("frame.unk7", &mut overrides.frame.unk7)
-        //                     .build();
-        //             }
-
-        //             if ui.collapsing_header("unk2", TreeNodeFlags::empty()) {
-        //                 ui.input_float4("unk2.unk0", &mut overrides.unk2.unk0)
-        //                     .build();
-        //                 ui.input_float4("unk2.unk1", &mut overrides.unk2.unk1)
-        //                     .build();
-        //                 ui.input_float4("unk2.unk2", &mut overrides.unk2.unk2)
-        //                     .build();
-        //                 ui.input_float4("unk2.unk3", &mut overrides.unk2.unk3)
-        //                     .build();
-        //                 ui.input_float4("unk2.unk4", &mut overrides.unk2.unk4)
-        //                     .build();
-        //                 ui.input_float4("unk2.unk5", &mut overrides.unk2.unk5)
-        //                     .build();
-        //             }
-
-        //             if ui.collapsing_header("unk8", TreeNodeFlags::empty()) {
-        //                 ui.input_float4("unk8.unk0", &mut overrides.unk8.unk0)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk1", &mut overrides.unk8.unk1)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk2", &mut overrides.unk8.unk2)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk3", &mut overrides.unk8.unk3)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk4", &mut overrides.unk8.unk4)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk5", &mut overrides.unk8.unk5)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk6", &mut overrides.unk8.unk6)
-        //                     .build();
-        //                 ui.input_float4("unk8.unk7", &mut overrides.unk8.unk7)
-        //                     .build();
-        //             }
-        //         }
-        //     });
 
         egui::Window::new("Selectors").show(ctx, |ui| {
             egui::ComboBox::from_label("Render Pass")

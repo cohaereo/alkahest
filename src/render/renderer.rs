@@ -357,31 +357,21 @@ impl Renderer {
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..self.draw_queue.len() {
-            for slot in (11..25).filter(|&v| v != 14) {
-                // self.render_data
-                //     .data()
-                //     .rainbow_texture
-                //     .bind(&self.dcs, slot, ShaderStages::all());
-                unsafe {
-                    self.dcs
-                        .context()
-                        .PSSetShaderResources(slot, Some(&[Some(self.gbuffer.rt0.view.clone())]));
-                }
+            for (i, slot) in (16..24).filter(|&v| v != 14).enumerate() {
+                self.render_data.data().debug_textures[i].bind(
+                    &self.dcs,
+                    slot,
+                    ShaderStages::all(),
+                );
             }
             unsafe {
                 self.dcs.context().PSSetShaderResources(
-                    10,
+                    11,
                     Some(&[Some(self.gbuffer.depth.texture_copy_view.clone())]),
                 );
                 self.dcs
                     .context()
-                    .PSSetShaderResources(16, Some(&[Some(self.gbuffer.rt0.view.clone())]));
-                self.dcs
-                    .context()
-                    .PSSetShaderResources(17, Some(&[Some(self.gbuffer.rt1.view.clone())]));
-                self.dcs
-                    .context()
-                    .PSSetShaderResources(18, Some(&[Some(self.gbuffer.rt2.view.clone())]));
+                    .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
             }
 
             if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {
@@ -470,6 +460,12 @@ impl Renderer {
 
     fn draw(&mut self, sort: SortValue3d, drawcall: &DrawCall) {
         let render_data = self.render_data.data();
+
+        // Workaround for some weird textures that aren't bound by the material
+        self.white.bind(&self.dcs, 0, ShaderStages::all());
+        self.white.bind(&self.dcs, 1, ShaderStages::all());
+        self.white.bind(&self.dcs, 2, ShaderStages::all());
+
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             if mat.unk8 != 1 {
                 return;
@@ -520,6 +516,9 @@ impl Renderer {
                 self.dcs
                     .context()
                     .VSSetConstantBuffers(b.slot, Some(&[Some(b.buffer.clone())]));
+                self.dcs
+                    .context()
+                    .PSSetConstantBuffers(b.slot, Some(&[Some(b.buffer.clone())]));
             }
 
             if let Some(input_layout) = render_data.input_layouts.get(&drawcall.input_layout_hash) {
@@ -799,7 +798,7 @@ impl Renderer {
             ..overrides.view
         })?;
 
-        self.scope_unk3.write(&overrides.unk2)?;
+        self.scope_unk3.write(&overrides.unk3)?;
 
         self.scope_unk8.write(&overrides.unk8)?;
 
@@ -850,6 +849,6 @@ impl Renderer {
 pub struct ScopeOverrides {
     pub view: ScopeView,
     pub frame: ScopeFrame,
-    pub unk2: ScopeUnk3,
+    pub unk3: ScopeUnk3,
     pub unk8: ScopeUnk8,
 }
