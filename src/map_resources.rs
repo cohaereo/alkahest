@@ -1,10 +1,11 @@
 use crate::icons::{
-    ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_SPHERE, ICON_STICKER,
+    ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_SPHERE,
+    ICON_STICKER,
 };
 use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
 use crate::structure::{RelPointer, TablePointer};
-use crate::types::{DestinyHash, Vector4, AABB};
+use crate::types::{DestinyHash, Matrix4, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::{Quat, Vec3, Vec4, Vec4Swizzles};
@@ -35,6 +36,8 @@ pub enum MapResource {
     Unknown(u32, u64, ExtendedHash) = 2,
     Unk808067b5(TagHash) = 3,
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
+    Unk80806aa3(AABB) = 5,
+    Light = 6,
 }
 
 impl MapResource {
@@ -68,6 +71,8 @@ impl MapResource {
                     c.cubemap_texture.0.to_be()
                 )
             }
+            MapResource::Unk80806aa3(_) => "Unk80806aa3".to_string(),
+            MapResource::Light => "Light".to_string(),
         }
     }
 
@@ -97,6 +102,8 @@ impl MapResource {
             MapResource::Unknown(u, _, _) => RANDOM_COLORS[*u as usize % 16],
             MapResource::Unk808067b5 { .. } => [220, 220, 20],
             MapResource::CubemapVolume(..) => [50, 255, 50],
+            MapResource::Unk80806aa3 { .. } => RANDOM_COLORS[0x80806aa3 % 16],
+            MapResource::Light { .. } => [0xFF, 0xFF, 0x00],
         }
     }
 
@@ -104,9 +111,10 @@ impl MapResource {
         match self {
             MapResource::Entity { .. } => ICON_CHESS_PAWN,
             MapResource::Decal { .. } => ICON_STICKER,
-            MapResource::Unknown { .. } => ICON_HELP,
             MapResource::Unk808067b5 { .. } => ICON_FLARE,
             MapResource::CubemapVolume(..) => ICON_SPHERE,
+            MapResource::Light => ICON_LIGHTBULB_ON,
+            _ => ICON_HELP,
         }
     }
 
@@ -127,6 +135,9 @@ impl MapResource {
             MapResource::CubemapVolume(_, bounds) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
             }
+            MapResource::Unk80806aa3(bounds) => {
+                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
+            }
             _ => {}
         }
     }
@@ -139,6 +150,7 @@ impl MapResource {
             2 => ICON_HELP,
             3 => ICON_FLARE,
             4 => ICON_SPHERE,
+            6 => ICON_LIGHTBULB_ON,
             _ => ICON_HELP_BOX_OUTLINE,
         }
     }
@@ -281,4 +293,85 @@ pub struct Unk80809802 {
     pub soundbank: TagHash,
     pub streams: TablePointer<TagHash>,
     pub unk28: TagHash,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806aa7 {
+    pub file_size: u64,
+    pub unk8: TablePointer<Unk80806aa9>,
+    pub unk18: TablePointer<Unk808093b3>,
+    pub unk28: TablePointer<u32>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806aa9 {
+    pub unk0: Vector4,
+    pub unk10: Vector4,
+    pub unk20: Vector4,
+
+    pub bounds_center: Vector4,
+    /// Same as the bounding box from the Unk808093b3 array
+    pub bounds: AABB,
+
+    pub unk60: TagHash,
+    pub unk64: u32,
+    pub unk68: u32,
+    pub unk6c: u16,
+    pub unk6e: u16,
+
+    pub unk70: f32,
+    pub unk74: u32,
+    pub unk78: u32,
+    pub unk7c: u32,
+
+    pub unk80: u64,
+    pub unk88: TagHash,
+    pub unk8c: u32,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk808093b3 {
+    pub bb: AABB,
+    pub unk20: [u32; 4],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806c65 {
+    pub file_size: u64,
+    pub unk8: u64,
+    pub bounds: AABB,
+    pub unk30: TablePointer<Unk80806c70>,
+    pub unk40: TablePointer<Unk80809f4f>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806c70 {
+    pub unk0: Vector4,
+    pub unk10: Vector4,
+    pub unk20: Vector4,
+    pub unk30: Vector4,
+    pub unk40: [u32; 4],
+    pub unk50: Vector4,
+    pub unk60: Matrix4,
+    pub unka0: u32,
+    pub unka4: u32,
+    pub unka8: u32,
+    pub unkac: f32,
+    pub unkb0: f32,
+    pub unkb4: f32,
+    pub unkb8: f32,
+    pub unkbc: f32,
+
+    pub unkc0: TagHash,
+    pub unkc4: TagHash,
+    pub unkc8: TagHash,
+    pub unkcc: TagHash,
+    pub unkd0: TagHash,
+    pub unkd4: [u32; 7],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80809f4f {
+    pub rotation: Vector4,
+    pub translation: Vector4,
 }

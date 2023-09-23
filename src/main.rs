@@ -46,7 +46,9 @@ use crate::input::InputState;
 use crate::map::{
     ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54,
 };
-use crate::map_resources::{MapResource, ResourcePoint, Unk80806b7f, Unk80806e68, Unk8080714b};
+use crate::map_resources::{
+    MapResource, ResourcePoint, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk8080714b,
+};
 use crate::material::{Material, Unk808071e8};
 use crate::overlays::camera_settings::CameraPositionOverlay;
 
@@ -319,7 +321,7 @@ pub fn main() -> anyhow::Result<()> {
 
     // TODO(cohae): obviously dont do lights like this
     // First lights reserved for camera light and directional light
-    let point_lights = vec![Vec4::ZERO, Vec4::ZERO];
+    let mut point_lights = vec![Vec4::ZERO, Vec4::ZERO];
     for hash in map_hashes {
         let _span = debug_span!("Load map", %hash).entered();
         let think: Unk80807dae = package_manager().read_tag_struct(hash).unwrap();
@@ -626,6 +628,76 @@ pub fn main() -> anyhow::Result<()> {
                             //         resource: MapResource::AmbientSound(header),
                             //     });
                             // }
+                            0x80806aa3 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80806aa7 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for (unk8, unk18, _unk28) in itertools::multizip((
+                                    header.unk8.iter(),
+                                    header.unk18.iter(),
+                                    header.unk28.iter(),
+                                )) {
+                                    resource_points.push(ResourcePoint {
+                                        translation: Vec4::new(
+                                            unk8.bounds_center.x,
+                                            unk8.bounds_center.y,
+                                            unk8.bounds_center.z,
+                                            unk8.bounds_center.w,
+                                        ),
+                                        rotation: Quat::IDENTITY,
+                                        entity: data.entity,
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Unk80806aa3(unk18.bb),
+                                    });
+                                }
+                            }
+                            0x80806a63 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80806c65 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for (transform, unk) in header.unk40.iter().zip(&header.unk30) {
+                                    resource_points.push(ResourcePoint {
+                                        translation: Vec4::new(
+                                            transform.translation.x,
+                                            transform.translation.y,
+                                            transform.translation.z,
+                                            transform.translation.w,
+                                        ),
+                                        rotation: Quat::from_xyzw(
+                                            transform.rotation.x,
+                                            transform.rotation.y,
+                                            transform.rotation.z,
+                                            transform.rotation.w,
+                                        ),
+                                        entity: data.entity,
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Light,
+                                    });
+
+                                    point_lights.push(Vec4::new(
+                                        transform.translation.x,
+                                        transform.translation.y,
+                                        transform.translation.z,
+                                        transform.translation.w,
+                                    ));
+                                }
+                            }
                             u => {
                                 // println!("{data:x?}");
                                 if data.translation.x == 0.0

@@ -1,4 +1,4 @@
-use binrw::BinRead;
+use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
 use glam::{Vec2, Vec3, Vec3A};
 use std::fmt::{Debug, Formatter, Write};
@@ -78,6 +78,15 @@ pub struct Vector4 {
     pub y: f32,
     pub z: f32,
     pub w: f32,
+}
+
+#[repr(C)]
+#[derive(BinRead, Copy, Clone, Default, Pod, Zeroable, Debug)]
+pub struct Matrix4 {
+    pub row_x: Vector4,
+    pub row_y: Vector4,
+    pub row_z: Vector4,
+    pub row_w: Vector4,
 }
 
 impl Debug for Vector2 {
@@ -198,5 +207,23 @@ impl AABB {
 
     pub fn dimensions(&self) -> Vec3 {
         (self.max - self.min).into()
+    }
+}
+
+impl BinRead for AABB {
+    type Args<'a> = ();
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        endian: binrw::Endian,
+        _args: Self::Args<'_>,
+    ) -> binrw::BinResult<Self> {
+        let min: Vector4 = reader.read_type(endian)?;
+        let max: Vector4 = reader.read_type(endian)?;
+
+        Ok(Self {
+            min: Vec3A::new(min.x, min.y, min.z),
+            max: Vec3A::new(max.x, max.y, max.z),
+        })
     }
 }
