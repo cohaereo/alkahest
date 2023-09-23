@@ -210,11 +210,11 @@ pub struct MapData {
 
 pub struct MapDataList {
     pub current_map: usize, // TODO(cohae): Shouldn't be here
-    pub maps: Vec<MapData>,
+    pub maps: Vec<(TagHash, MapData)>,
 }
 
 impl MapDataList {
-    pub fn current_map(&self) -> Option<&MapData> {
+    pub fn current_map(&self) -> Option<&(TagHash, MapData)> {
         self.maps.get(self.current_map % self.maps.len())
     }
 }

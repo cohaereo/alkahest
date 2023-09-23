@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
+use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
 use glam::{Mat4, Quat, Vec3, Vec4};
@@ -97,11 +98,24 @@ mod types;
 mod unknown;
 mod util;
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None, disable_version_flag(true))]
+struct Args {
+    /// Package to use
+    package: String,
+
+    /// Map hash to load. Ignores package argument
+    #[arg(short, long)]
+    map: Option<String>,
+}
+
 pub fn main() -> anyhow::Result<()> {
     panic_handler::install_hook();
 
     #[cfg(debug_assertions)]
     std::env::set_var("RUST_BACKTRACE", "1");
+
+    let args = Args::parse();
 
     rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("rayon-worker-{i}"))
@@ -135,13 +149,12 @@ pub fn main() -> anyhow::Result<()> {
     .expect("Failed to set up the tracing subscriber");
 
     let (package, pm) = info_span!("Initializing package manager").in_scope(|| {
-        let pkg_path = std::env::args().nth(1).expect("No package file was given!");
         (
             PackageVersion::Destiny2Lightfall
-                .open(&pkg_path)
+                .open(&args.package)
                 .expect("Failed to open package"),
             PackageManager::new(
-                PathBuf::from_str(&pkg_path).unwrap().parent().unwrap(),
+                PathBuf::from_str(&args.package).unwrap().parent().unwrap(),
                 PackageVersion::Destiny2Lightfall,
                 true,
             )
@@ -274,16 +287,40 @@ pub fn main() -> anyhow::Result<()> {
         Default::default();
     let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
     let mut terrain_headers = vec![];
-    let mut maps: Vec<MapData> = vec![];
+    let mut maps: Vec<(TagHash, MapData)> = vec![];
 
     // for (tag, entry) in package_manager().get_all_by_reference(u32::from_be(0x1E898080)) {
     //     println!("{} - {tag}", package_manager().package_paths[&tag.pkg_id()]);
     // }
 
-    // First light reserved for camera light
-    let mut point_lights = vec![Vec4::ZERO, Vec4::ZERO];
-    for (index, _) in package.get_all_by_reference(u32::from_be(0x1E898080)) {
-        let hash = TagHash::new(package.pkg_id(), index as _);
+    let map_hashes = if let Some(map_hash) = args.map {
+        let hash = match u32::from_str_radix(&map_hash, 16) {
+            Ok(v) => TagHash(u32::from_be(v)),
+            Err(e) => anyhow::bail!("The given map '{map_hash}' is not a valid hash!"),
+        };
+
+        if package_manager()
+            .get_entry(hash)
+            .context("Could not find given map hash")?
+            .reference
+            != u32::from_be(0x1E898080)
+        {
+            anyhow::bail!("The given hash '{map_hash}' is not a map!")
+        }
+
+        vec![hash]
+    } else {
+        package
+            .get_all_by_reference(u32::from_be(0x1E898080))
+            .into_iter()
+            .map(|(index, _entry)| TagHash::new(package.pkg_id(), index as u16))
+            .collect_vec()
+    };
+
+    // TODO(cohae): obviously dont do lights like this
+    // First lights reserved for camera light and directional light
+    let point_lights = vec![Vec4::ZERO, Vec4::ZERO];
+    for hash in map_hashes {
         let _span = debug_span!("Load map", %hash).entered();
         let think: Unk80807dae = package_manager().read_tag_struct(hash).unwrap();
 
@@ -667,27 +704,30 @@ pub fn main() -> anyhow::Result<()> {
                 .count()
         );
 
-        maps.push(MapData {
-            hash: (package.pkg_id(), index as _).into(),
-            name: map_name,
-            placement_groups,
-            resource_points: resource_points
-                .into_iter()
-                .map(|rp| {
-                    let cb = ConstantBuffer::create(dcs.clone(), None).unwrap();
+        maps.push((
+            hash,
+            MapData {
+                hash,
+                name: map_name,
+                placement_groups,
+                resource_points: resource_points
+                    .into_iter()
+                    .map(|rp| {
+                        let cb = ConstantBuffer::create(dcs.clone(), None).unwrap();
 
-                    (rp, cb)
-                })
-                .collect(),
-            terrains,
-        })
+                        (rp, cb)
+                    })
+                    .collect(),
+                terrains,
+            },
+        ))
     }
 
     info!("{} lights", point_lights.len());
 
     let to_load_entities: HashSet<ExtendedHash> = maps
         .iter()
-        .flat_map(|v| v.resource_points.iter().map(|(r, _)| r.entity))
+        .flat_map(|(_, v)| v.resource_points.iter().map(|(r, _)| r.entity))
         .filter(|v| v.is_valid())
         .collect();
 
@@ -780,7 +820,7 @@ pub fn main() -> anyhow::Result<()> {
 
     // TODO(cohae): Maybe not the best idea?
     info!("Updating resource constant buffers");
-    for m in &maps {
+    for (_, m) in &maps {
         for (rp, cb) in &m.resource_points {
             if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
                 let mm = Mat4::from_scale_rotation_translation(
@@ -794,12 +834,12 @@ pub fn main() -> anyhow::Result<()> {
                     mm.z_axis.truncate().extend(rp.translation.z),
                     rp.translation,
                 );
-                // let alt_matrix = Mat4::from_cols(
-                //     Vec3::ONE.extend(rp.translation.x),
-                //     Vec3::ONE.extend(rp.translation.y),
-                //     Vec3::ONE.extend(rp.translation.z),
-                //     Vec4::W,
-                // );
+                let alt_matrix = Mat4::from_cols(
+                    Vec3::ONE.extend(rp.translation.x),
+                    Vec3::ONE.extend(rp.translation.y),
+                    Vec3::ONE.extend(rp.translation.z),
+                    Vec4::W,
+                );
 
                 cb.write(&ScopeRigidModel {
                     mesh_to_world: model_matrix.transpose(),
@@ -807,7 +847,7 @@ pub fn main() -> anyhow::Result<()> {
                     position_offset: ent.mesh_offset(),
                     texcoord0_scale_offset: ent.texcoord_transform(),
                     dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                    unk8: [Mat4::IDENTITY; 8],
+                    unk8: [alt_matrix; 8],
                 })?;
             }
         }
@@ -818,7 +858,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashSet<ExtendedHash> = Default::default();
-    for m in &maps {
+    for (_, m) in &maps {
         for placements in m.placement_groups.iter() {
             for v in &placements.statics {
                 to_load.insert(*v, ());
@@ -1278,7 +1318,7 @@ pub fn main() -> anyhow::Result<()> {
                     renderer.begin_frame();
 
                     let maps = resources.get::<MapDataList>().unwrap();
-                    let map = &maps.maps[maps.current_map % maps.maps.len()];
+                    let (map_hash, map) = &maps.maps[maps.current_map % maps.maps.len()];
 
                     {
                         let gb = gui_rendersettings.borrow();

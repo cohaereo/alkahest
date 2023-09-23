@@ -390,7 +390,10 @@ impl Renderer {
                     .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
             }
             self.white.bind(&self.dcs, 20, ShaderStages::all());
-            self.black.bind(&self.dcs, 21, ShaderStages::all());
+            self.render_data
+                .data()
+                .rainbow_texture
+                .bind(&self.dcs, 21, ShaderStages::all());
 
             let (s, d) = self.draw_queue[i].clone();
             if s.transparency() != transparency_mode {
