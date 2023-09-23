@@ -794,12 +794,12 @@ pub fn main() -> anyhow::Result<()> {
                     mm.z_axis.truncate().extend(rp.translation.z),
                     rp.translation,
                 );
-                let alt_matrix = Mat4::from_cols(
-                    Vec3::ONE.extend(rp.translation.x),
-                    Vec3::ONE.extend(rp.translation.y),
-                    Vec3::ONE.extend(rp.translation.z),
-                    Vec4::W,
-                );
+                // let alt_matrix = Mat4::from_cols(
+                //     Vec3::ONE.extend(rp.translation.x),
+                //     Vec3::ONE.extend(rp.translation.y),
+                //     Vec3::ONE.extend(rp.translation.z),
+                //     Vec4::W,
+                // );
 
                 cb.write(&ScopeRigidModel {
                     mesh_to_world: model_matrix.transpose(),
@@ -807,7 +807,7 @@ pub fn main() -> anyhow::Result<()> {
                     position_offset: ent.mesh_offset(),
                     texcoord0_scale_offset: ent.texcoord_transform(),
                     dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                    unk8: [alt_matrix; 8],
+                    unk8: [Mat4::IDENTITY; 8],
                 })?;
             }
         }

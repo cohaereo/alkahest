@@ -62,6 +62,8 @@ pub struct Renderer {
     matcap: Texture,
     // A 2x2 white texture
     white: Texture,
+    // A 2x2 black texture
+    black: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -180,6 +182,15 @@ impl Renderer {
             Some("2x2 white"),
         )?;
 
+        let black = Texture::load_2d_raw(
+            &dcs,
+            2,
+            2,
+            &[0x00u8; 2 * 2 * 4],
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2 white"),
+        )?;
+
         let vshader_composite_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/composite.hlsl"),
             "VShader",
@@ -238,6 +249,7 @@ impl Renderer {
             rasterizer_state_nocull,
             matcap,
             white,
+            black,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -357,6 +369,10 @@ impl Renderer {
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..self.draw_queue.len() {
+            if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {
+                continue;
+            }
+
             for (i, slot) in (16..24).filter(|&v| v != 14).enumerate() {
                 self.render_data.data().debug_textures[i].bind(
                     &self.dcs,
@@ -373,10 +389,8 @@ impl Renderer {
                     .context()
                     .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
             }
-
-            if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {
-                continue;
-            }
+            self.white.bind(&self.dcs, 20, ShaderStages::all());
+            self.black.bind(&self.dcs, 21, ShaderStages::all());
 
             let (s, d) = self.draw_queue[i].clone();
             if s.transparency() != transparency_mode {
@@ -461,10 +475,10 @@ impl Renderer {
     fn draw(&mut self, sort: SortValue3d, drawcall: &DrawCall) {
         let render_data = self.render_data.data();
 
-        // Workaround for some weird textures that aren't bound by the material
-        self.white.bind(&self.dcs, 0, ShaderStages::all());
-        self.white.bind(&self.dcs, 1, ShaderStages::all());
-        self.white.bind(&self.dcs, 2, ShaderStages::all());
+        // // Workaround for some weird textures that aren't bound by the material
+        // self.white.bind(&self.dcs, 0, ShaderStages::all());
+        // self.white.bind(&self.dcs, 1, ShaderStages::all());
+        // self.white.bind(&self.dcs, 2, ShaderStages::all());
 
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             if mat.unk8 != 1 {
@@ -786,8 +800,8 @@ impl Renderer {
             target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
             inverse_target_resolution: (
                 // TODO(cohae): Is this correct?
-                1. / (self.window_size.0 as f32),
-                1. / (self.window_size.1 as f32),
+                (1. / (self.window_size.0 as f32)) / 4.0,
+                (1. / (self.window_size.1 as f32)) / 4.0,
             ),
             // Z value accounts for missing depth value
             view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
