@@ -57,15 +57,15 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x42_u8)] Unk42 { unk1: u8, unk2: u8 },
     #[br(magic = 0x43_u8)] Unk43 { unk1: u8 },
     #[br(magic = 0x44_u8)] StoreToBuffer { element: u8 },
-    #[br(magic = 0x45_u8)] Unk45 { unk1: u8 },
-    #[br(magic = 0x46_u8)] Unk46 { unk1: u8 },
+    #[br(magic = 0x45_u8)] Unk45 { unk1: u8 }, // store matrix?
+    #[br(magic = 0x46_u8)] Unk46 { unk1: u8 },  
     #[br(magic = 0x47_u8)] Unk47 { unk1: u8 },
     #[br(magic = 0x48_u8)] Unk48 { unk1: u8 },
     #[br(magic = 0x49_u8)] Unk49 { unk1: u8 },
     #[br(magic = 0x4a_u8)] Unk4a { unk1: u8 },
     #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
     #[br(magic = 0x4d_u8)] Unk4d { unk1: u8 },
-    #[br(magic = 0x4e_u8)] Unk4e { unk1: u8 },
+    #[br(magic = 0x4e_u8)] Unk4e { unk1: u8, unk2: u8 },
     #[br(magic = 0x4f_u8)] Unk4f { unk1: u8 },
     #[br(magic = 0x52_u8)] Unk52 { unk1: u8, unk2: u8 },
 }
@@ -81,5 +81,125 @@ impl TfxBytecodeOp {
         }
 
         Ok(opcodes)
+    }
+
+    /// Formats the opcode to assembly-like output
+    pub fn disassemble(&self) -> String {
+        match self {
+            TfxBytecodeOp::Unk01 => "unk01".to_string(),
+            TfxBytecodeOp::Unk02 => "unk02".to_string(),
+            TfxBytecodeOp::Unk03 => "unk03".to_string(),
+            TfxBytecodeOp::Unk04 => "unk04".to_string(),
+            TfxBytecodeOp::Unk07 => "unk07".to_string(),
+            TfxBytecodeOp::Unk08 => "unk08".to_string(),
+            TfxBytecodeOp::Unk09 => "unk09".to_string(),
+            TfxBytecodeOp::Unk0c => "unk0c".to_string(),
+            TfxBytecodeOp::Unk0d => "unk0d".to_string(),
+            TfxBytecodeOp::Unk0e => "unk0e".to_string(),
+            TfxBytecodeOp::Unk0f => "unk0f".to_string(),
+            TfxBytecodeOp::Unk10 => "unk10".to_string(),
+            TfxBytecodeOp::Unk11 => "unk11".to_string(),
+            TfxBytecodeOp::Unk12 => "unk12".to_string(),
+            TfxBytecodeOp::Unk13 => "unk13".to_string(),
+            TfxBytecodeOp::Unk15 => "unk15".to_string(),
+            TfxBytecodeOp::Unk16 => "unk16".to_string(),
+            TfxBytecodeOp::Unk17 => "unk17".to_string(),
+            TfxBytecodeOp::Unk1a => "unk1a".to_string(),
+            TfxBytecodeOp::Unk1b => "unk1b".to_string(),
+            TfxBytecodeOp::Unk1c => "unk1c".to_string(),
+            TfxBytecodeOp::Unk1d => "unk1d".to_string(),
+            TfxBytecodeOp::Unk1f => "unk1f".to_string(),
+            TfxBytecodeOp::Unk20 => "unk20".to_string(),
+            TfxBytecodeOp::Unk21 => "unk21".to_string(),
+            TfxBytecodeOp::Unk23 => "unk23".to_string(),
+            TfxBytecodeOp::Unk25 => "unk25".to_string(),
+            TfxBytecodeOp::Unk26 => "unk26".to_string(),
+            TfxBytecodeOp::Unk27 => "unk27".to_string(),
+            TfxBytecodeOp::Unk28 => "unk28".to_string(),
+            TfxBytecodeOp::Unk29 => "unk29".to_string(),
+            TfxBytecodeOp::Unk2a => "unk2a".to_string(),
+            TfxBytecodeOp::Unk2e => "unk2e".to_string(),
+            TfxBytecodeOp::Unk0b { unk1, unk2 } => {
+                format!("unk0b unk1={unk1} unk2={unk2}")
+            }
+            TfxBytecodeOp::Unk22 { unk1 } => {
+                format!("unk22 unk1={unk1}")
+            }
+            TfxBytecodeOp::UnkLoadConstant2 { constant_index } => {
+                format!("unk_load_constant2 constants[{constant_index}]")
+            }
+            TfxBytecodeOp::Unk35 { unk1 } => {
+                format!("unk35 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk37 { unk1 } => {
+                format!("unk37 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk38 { unk1 } => {
+                format!("unk38 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk39 { unk1 } => {
+                format!("unk39 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk3a { unk1 } => {
+                format!("unk3a unk1={unk1}")
+            }
+            TfxBytecodeOp::UnkLoadConstant { constant_index } => {
+                format!("unk_load_constant constants[{constant_index}]")
+            }
+            TfxBytecodeOp::LoadExtern { extern_, element } => {
+                format!("load_extern {extern_:?}[{element}]")
+            }
+            TfxBytecodeOp::Unk3d { unk1, unk2 } => {
+                format!("unk3d unk1={unk1} unk2={unk2}")
+            }
+            TfxBytecodeOp::Unk3e { unk1 } => {
+                format!("unk3e unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk3f { unk1, unk2 } => {
+                format!("unk3f unk1={unk1} unk2={unk2}")
+            }
+            TfxBytecodeOp::Unk42 { unk1, unk2 } => {
+                format!("unk42 unk1={unk1} unk2={unk2}")
+            }
+            TfxBytecodeOp::Unk43 { unk1 } => {
+                format!("unk43 unk1={unk1}")
+            }
+            TfxBytecodeOp::StoreToBuffer { element } => {
+                format!("store_cb0 element={element}")
+            }
+            TfxBytecodeOp::Unk45 { unk1 } => {
+                format!("unk45 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk46 { unk1 } => {
+                format!("unk46 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk47 { unk1 } => {
+                format!("unk47 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk48 { unk1 } => {
+                format!("unk48 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk49 { unk1 } => {
+                format!("unk49 unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk4a { unk1 } => {
+                format!("unk4a unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk4c { unk1 } => {
+                format!("unk4c unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk4d { unk1 } => {
+                format!("unk4d unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk4e { unk1, unk2 } => {
+                format!("unk4e unk1={unk1} unk2={unk2}")
+            }
+            TfxBytecodeOp::Unk4f { unk1 } => {
+                format!("unk4f unk1={unk1}")
+            }
+            TfxBytecodeOp::Unk52 { unk1, unk2 } => {
+                format!("unk52 unk1={unk1} unk2={unk2}")
+            }
+        }
     }
 }

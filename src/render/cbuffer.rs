@@ -8,6 +8,8 @@ use windows::Win32::Graphics::Direct3D11::*;
 pub struct ConstantBuffer<T: Sized> {
     dcs: Arc<DeviceContextSwapchain>,
     buffer: ID3D11Buffer,
+    /// Size of the buffer, in bytes
+    size: usize,
     _marker: PhantomData<T>,
 }
 
@@ -35,6 +37,7 @@ impl<T> ConstantBuffer<T> {
             let b = Self {
                 dcs,
                 buffer,
+                size: std::mem::size_of::<T>(),
                 _marker: Default::default(),
             };
 
@@ -91,6 +94,7 @@ impl<T> ConstantBuffer<T> {
             Ok(Self {
                 dcs,
                 buffer,
+                size: std::mem::size_of::<T>() * initial_data.len(),
                 _marker: Default::default(),
             })
         }
@@ -171,6 +175,16 @@ impl<T> ConstantBuffer<T> {
                     .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
         }
+    }
+
+    /// The size of the buffer, in bytes
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    /// The size of the buffer in elements (size / sizeof(T))
+    pub fn elements(&self) -> usize {
+        self.size / std::mem::size_of::<T>()
     }
 }
 

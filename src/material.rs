@@ -293,6 +293,14 @@ impl Material {
                         "TFX bytecode evaluation failed for {} (VS), disabling: {e}",
                         self.tag
                     );
+                    self.tfx_bytecode_vs.as_ref().unwrap().dump(
+                        if self.mat.vs_bytecode_constants.is_empty() {
+                            &[]
+                        } else {
+                            bytemuck::cast_slice(&self.mat.vs_bytecode_constants)
+                        },
+                        cb0_vs,
+                    );
                     self.tfx_bytecode_vs = None;
                 }
             }
@@ -314,6 +322,14 @@ impl Material {
                     error!(
                         "TFX bytecode evaluation failed for {} (PS), disabling: {e}",
                         self.tag
+                    );
+                    self.tfx_bytecode_ps.as_ref().unwrap().dump(
+                        if self.mat.ps_bytecode_constants.is_empty() {
+                            &[]
+                        } else {
+                            bytemuck::cast_slice(&self.mat.ps_bytecode_constants)
+                        },
+                        cb0_ps,
                     );
                     self.tfx_bytecode_ps = None;
                 }

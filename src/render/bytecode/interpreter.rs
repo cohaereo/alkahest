@@ -33,7 +33,7 @@ impl TfxBytecodeInterpreter {
             return Ok(());
         };
 
-        for op in &self.opcodes {
+        for (ip, op) in self.opcodes.iter().enumerate() {
             match op {
                 TfxBytecodeOp::LoadExtern { extern_, element } => {
                     let v = self.get_extern(renderer, *extern_, *element)?;
@@ -47,7 +47,7 @@ impl TfxBytecodeInterpreter {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
                     self.operand_stack.push(constants[*constant_index as usize]);
                 }
-                // TODO(cohae): Seems to be an arithmic op
+                // TODO(cohae): Seems to be an arithmetic op
                 TfxBytecodeOp::Unk03 => {
                     if let (Some(v1), Some(v2)) = (self.stack.pop(), self.operand_stack.pop()) {
                         self.stack.push(v1 * v2);
@@ -58,7 +58,14 @@ impl TfxBytecodeInterpreter {
                         unsafe { buffer_map.ptr.offset(*element as isize).write(value) }
                     }
                 }
+                // #[cfg(feature = "tfx_experimental_opcodes")]
+                // TfxBytecodeOp::
+                #[cfg(not(feature = "tfx_strict_interpreter"))]
                 _ => {}
+                #[cfg(feature = "tfx_strict_interpreter")]
+                u => {
+                    anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {ip}")
+                }
             }
         }
 
@@ -86,6 +93,27 @@ impl TfxBytecodeInterpreter {
             u => {
                 anyhow::bail!("Unsupported extern {u:?}[{element}]")
             }
+        }
+    }
+
+    pub fn dump(&self, constants: &[Vec4], buffer: &ConstantBuffer<Vec4>) {
+        debug!("Dumping TFX interpreter");
+        debug!("- cb0 size: {} elements", buffer.elements());
+        if !constants.is_empty() {
+            debug!("- Constant table:");
+            for (i, v) in constants.iter().enumerate() {
+                debug!("\t{i} = {v:?}")
+            }
+        }
+
+        debug!("- Stack:");
+        for (i, v) in self.stack.iter().enumerate() {
+            debug!("\t{i} = {v:?}")
+        }
+
+        debug!("- Bytecode:");
+        for (i, op) in self.opcodes.iter().enumerate() {
+            debug!("\t{i}: {}", op.disassemble());
         }
     }
 }
