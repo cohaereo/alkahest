@@ -71,7 +71,7 @@ impl InstancedRenderer {
         })
     }
 
-    pub fn draw(&self, renderer: &mut Renderer, draw_transparent: bool) -> anyhow::Result<()> {
+    pub fn draw(&self, renderer: &Renderer, draw_transparent: bool) -> anyhow::Result<()> {
         self.renderer.draw(
             renderer,
             self.instance_buffer.buffer().clone(),

@@ -54,9 +54,7 @@ impl TerrainRenderer {
 
             let scope_terrain = Mat4::from_cols(offset, texcoord_transform, Vec4::ZERO, Vec4::ZERO);
 
-            // FIXME: Weird bug where initial data isn't written
-            let cb = ConstantBuffer::create(dcs.clone(), None)?;
-            cb.write(&scope_terrain)?;
+            let cb = ConstantBuffer::create(dcs.clone(), Some(&scope_terrain))?;
             group_cbuffers.push(cb);
         }
 
@@ -91,7 +89,7 @@ impl TerrainRenderer {
         })
     }
 
-    pub fn draw(&self, renderer: &mut Renderer) -> anyhow::Result<()> {
+    pub fn draw(&self, renderer: &Renderer) -> anyhow::Result<()> {
         for part in self.terrain.mesh_parts.iter()
         // .filter(|u| u.detail_level == 0)
         {

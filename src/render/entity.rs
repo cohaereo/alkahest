@@ -21,6 +21,7 @@ use super::drawcall::Transparency;
 use super::renderer::Renderer;
 use super::DeviceContextSwapchain;
 
+#[derive(Clone)]
 pub struct EntityModelBuffer {
     vertex_buffer1: TagHash,
     vertex_buffer2: TagHash,
@@ -30,6 +31,7 @@ pub struct EntityModelBuffer {
     input_layout: u64,
 }
 
+#[derive(Clone)]
 pub struct EntityRenderer {
     meshes: Vec<(EntityModelBuffer, Vec<Unk8080737e>)>,
 
@@ -189,7 +191,7 @@ impl EntityRenderer {
         }
     }
 
-    pub fn draw(&self, renderer: &mut Renderer, cb11: ID3D11Buffer) -> anyhow::Result<()> {
+    pub fn draw(&self, renderer: &Renderer, cb11: ID3D11Buffer) -> anyhow::Result<()> {
         for (buffers, parts) in self.meshes.iter() {
             for p in parts {
                 if !p.lod_category.is_highest_detail() {

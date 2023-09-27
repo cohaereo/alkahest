@@ -1,10 +1,10 @@
 use std::sync::Arc;
-use std::time::Duration;
 
+use crate::util::{LockTracker, RwLock};
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::dxgi::DxgiFormat;
@@ -13,7 +13,6 @@ use crate::material::Material;
 use crate::packages::package_manager;
 use crate::render::vertex_layout::InputElement;
 use crate::texture::Texture;
-use crate::util::LockTracker;
 
 use super::drawcall::ShadingTechnique;
 use super::renderer::Renderer;
@@ -128,56 +127,24 @@ impl RenderDataManager {
         }
     }
 
-    #[track_caller]
+    #[cfg(feature = "debug_lock")]
     pub fn data(&self) -> LockTracker<RwLockReadGuard<RenderData>> {
-        #[cfg(feature = "debug_lock")]
-        debug!(
-            "Thread {:?} acquiring RenderData (read) ({})",
-            std::thread::current().id(),
-            crate::util::caller_frame!(),
-        );
-
-        let l = LockTracker::wrap(
-            self.render_data
-                .try_read_for(Duration::from_secs(5))
-                .expect("Lock timeout"),
-        );
-
-        #[cfg(feature = "debug_lock")]
-        debug!(
-            "Thread {:?} acquired lock #{} (read) ({})",
-            std::thread::current().id(),
-            l.id(),
-            crate::util::caller_frame!(),
-        );
-
-        l
+        self.render_data.read()
     }
 
-    #[track_caller]
+    #[cfg(feature = "debug_lock")]
     pub fn data_mut(&self) -> LockTracker<RwLockWriteGuard<RenderData>> {
-        #[cfg(feature = "debug_lock")]
-        debug!(
-            "Thread {:?} acquiring RenderData (write) ({})",
-            std::thread::current().id(),
-            crate::util::caller_frame!(),
-        );
+        self.render_data.write()
+    }
 
-        let l = LockTracker::wrap(
-            self.render_data
-                .try_write_for(Duration::from_secs(5))
-                .expect("Lock timeout"),
-        );
+    #[cfg(not(feature = "debug_lock"))]
+    pub fn data(&self) -> RwLockReadGuard<RenderData> {
+        self.render_data.read()
+    }
 
-        #[cfg(feature = "debug_lock")]
-        debug!(
-            "Thread {:?} acquired lock #{} (write) ({})",
-            std::thread::current().id(),
-            l.id(),
-            crate::util::caller_frame!(),
-        );
-
-        l
+    #[cfg(not(feature = "debug_lock"))]
+    pub fn data_mut(&self) -> RwLockWriteGuard<RenderData> {
+        self.render_data.write()
     }
 
     /// Load a Texture2D, Texture2D or TextureCube from a hash

@@ -1,5 +1,5 @@
+use crate::util::RwLock;
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
 lazy_static! {

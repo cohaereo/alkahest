@@ -1,12 +1,14 @@
 use crate::map_resources::ResourcePoint;
 use crate::packages::package_manager;
 use crate::render::scopes::ScopeRigidModel;
-use crate::render::ConstantBuffer;
+use crate::render::{ConstantBuffer};
 use crate::statics::Unk8080966d;
 use crate::structure::{ResourcePointer, TablePointer, Tag};
 use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, BinReaderExt};
 use destiny_pkg::{TagHash, TagHash64};
+use glam::Vec4;
+
 
 use std::fmt::Debug;
 use std::io::SeekFrom;
@@ -206,6 +208,8 @@ pub struct MapData {
     pub placement_groups: Vec<Tag<Unk8080966d>>,
     pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
     pub terrains: Vec<TagHash>,
+    pub lights: Vec<Vec4>,
+    pub lights_cbuffer: ConstantBuffer<Vec4>,
 }
 
 pub struct MapDataList {
@@ -215,7 +219,11 @@ pub struct MapDataList {
 
 impl MapDataList {
     pub fn current_map(&self) -> Option<&(TagHash, MapData)> {
-        self.maps.get(self.current_map % self.maps.len())
+        if self.maps.is_empty() {
+            None
+        } else {
+            self.maps.get(self.current_map % self.maps.len())
+        }
     }
 }
 

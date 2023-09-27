@@ -4,7 +4,6 @@ use crate::resources::Resources;
 
 use egui::{Color32, RichText};
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -15,9 +14,10 @@ use tracing_subscriber::Layer;
 use winit::event::VirtualKeyCode;
 use winit::window::Window;
 
+// ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
 lazy_static! {
-    static ref MESSAGE_BUFFER: Arc<RwLock<AllocRingBuffer<CapturedEvent>>> =
-        Arc::new(RwLock::new(AllocRingBuffer::new(8192)));
+    static ref MESSAGE_BUFFER: Arc<parking_lot::RwLock<AllocRingBuffer<CapturedEvent>>> =
+        Arc::new(parking_lot::RwLock::new(AllocRingBuffer::new(8192)));
 }
 
 /// Tracing layer to capture events

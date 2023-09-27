@@ -53,12 +53,15 @@ num-derive = "0.4.0"
 color-eyre = "0.6.2"
 regex = "1.9.5"
 clap = { version = "4.4.4", features = ["derive"] }
+poll-promise = { version = "0.3.0", features = ["tokio"] }
+tokio = { version = "1.32.0", features = ["rt", "macros"] }
 
 [features]
 default = []
 tracy = []
 debug_lock = []
 # Ensures all TFX opcodes are interpreted
+# TODO(cohae): Should this be a runtime configuration setting?
 tfx_strict_interpreter = []
 
 [package.metadata.imgui-dx11-renderer]

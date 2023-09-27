@@ -27,11 +27,15 @@ impl<T> ConstantBuffer<T> {
                     ByteWidth: std::mem::size_of::<T>() as _,
                     ..Default::default()
                 },
-                initial_data.map(|d| &D3D11_SUBRESOURCE_DATA {
-                    pSysMem: d as *const T as _,
-                    SysMemPitch: std::mem::size_of::<T>() as _,
-                    ..Default::default()
-                } as *const D3D11_SUBRESOURCE_DATA),
+                initial_data.map(|d| {
+                    let sr = Box::new(D3D11_SUBRESOURCE_DATA {
+                        pSysMem: d as *const T as _,
+                        SysMemPitch: std::mem::size_of::<T>() as _,
+                        ..Default::default()
+                    });
+
+                    Box::into_raw(sr) as _
+                }),
             )?;
 
             let b = Self {
@@ -40,11 +44,6 @@ impl<T> ConstantBuffer<T> {
                 size: std::mem::size_of::<T>(),
                 _marker: Default::default(),
             };
-
-            // FIXME: initial data does not work
-            if let Some(d) = initial_data {
-                b.write(d)?
-            }
 
             Ok(b)
         }
@@ -94,7 +93,7 @@ impl<T> ConstantBuffer<T> {
             Ok(Self {
                 dcs,
                 buffer,
-                size: std::mem::size_of::<T>() * initial_data.len(),
+                size: std::mem::size_of_val(initial_data),
                 _marker: Default::default(),
             })
         }
@@ -184,7 +183,7 @@ impl<T> ConstantBuffer<T> {
 
     /// The size of the buffer in elements (size / sizeof(T))
     pub fn elements(&self) -> usize {
-        self.size / std::mem::size_of::<T>()
+        self.size() / std::mem::size_of::<T>()
     }
 }
 

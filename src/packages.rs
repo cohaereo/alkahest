@@ -1,6 +1,6 @@
+use crate::util::RwLock;
 use destiny_pkg::PackageManager;
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
 use std::sync::Arc;
 
 lazy_static! {

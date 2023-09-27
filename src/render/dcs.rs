@@ -1,4 +1,4 @@
-use parking_lot::RwLock;
+use crate::util::RwLock;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::mem::transmute;
 use std::thread::ThreadId;
@@ -98,7 +98,7 @@ impl DeviceContextSwapchain {
     /// The device context may only be accessed from the thread that the DCS was created on
     /// Panics if the current thread is not the main thread
     pub fn context(&self) -> &ID3D11DeviceContext {
-        assert_eq!(std::thread::current().id(), self.main_thread_id);
+        assert_eq!(std::thread::current().id(), self.main_thread_id, "Tried to access ID3D11DeviceContext from thread {:?}, but context was created on thread {:?}", std::thread::current().id(), self.main_thread_id);
 
         &self.context
     }

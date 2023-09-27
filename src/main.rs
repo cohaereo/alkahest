@@ -5,7 +5,6 @@ extern crate windows;
 extern crate tracing;
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
@@ -14,20 +13,20 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::util::{FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
-use glam::{Mat4, Quat, Vec3, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
+use poll_promise::Promise;
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{EnvFilter, Layer};
 use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
-use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -39,17 +38,10 @@ use winit::{
 
 use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
-use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
-
-use crate::entity::{Unk808072c5, Unk808073a5, Unk80809c0f};
 use crate::input::InputState;
-use crate::map::{
-    ExtendedHash, MapData, MapDataList, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54,
-};
-use crate::map_resources::{
-    MapResource, ResourcePoint, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk8080714b,
-};
-use crate::material::{Material, Unk808071e8};
+use crate::map::MapDataList;
+use crate::map_resources::MapResource;
+use crate::mapload_temporary::load_maps;
 use crate::overlays::camera_settings::CameraPositionOverlay;
 
 use crate::overlays::fps_display::FpsDisplayOverlay;
@@ -63,18 +55,11 @@ use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
 use crate::render::renderer::{Renderer, ScopeOverrides};
 
-use crate::render::scopes::ScopeRigidModel;
-use crate::render::static_render::StaticModel;
-use crate::render::terrain::TerrainRenderer;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, EntityRenderer, InstancedRenderer};
+use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, TerrainRenderer};
 use crate::resources::Resources;
-use crate::statics::{Unk808071a7, Unk8080966d};
 
-use crate::structure::{TablePointer, Tag};
+use crate::statics::Unk8080966d;
 use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
-use crate::types::AABB;
-
-use render::vertex_layout::InputElement;
 
 mod camera;
 mod config;
@@ -86,6 +71,7 @@ mod icons;
 mod input;
 mod map;
 mod map_resources;
+mod mapload_temporary;
 mod material;
 mod overlays;
 mod packages;
@@ -111,11 +97,12 @@ struct Args {
     map: Option<String>,
 }
 
-pub fn main() -> anyhow::Result<()> {
+#[tokio::main]
+pub async fn main() -> anyhow::Result<()> {
     panic_handler::install_hook();
 
-    #[cfg(debug_assertions)]
-    std::env::set_var("RUST_BACKTRACE", "1");
+    #[cfg(not(debug_assertions))]
+    std::env::set_var("RUST_BACKTRACE", "0");
 
     let args = Args::parse();
 
@@ -140,8 +127,9 @@ pub fn main() -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(tracy_layer)
-            .with(overlays::console::ConsoleLogLayer)
-            .with(tracing_subscriber::fmt::layer())
+            .with(overlays::console::ConsoleLogLayer.with_filter(FilterDebugLockTarget))
+            .with(tracing_subscriber::fmt::layer().with_filter(FilterDebugLockTarget))
+            // .with(FilterDebugLockTarget)
             .with(
                 EnvFilter::builder()
                     .with_default_directive(LevelFilter::INFO.into())
@@ -208,58 +196,7 @@ pub fn main() -> anyhow::Result<()> {
         }
     }
 
-    // for (t, _) in package_manager().get_all_by_reference(0x80806cb1) {
-    //     let unk: Unk80806cb1 = package_manager().read_tag_struct(t)?;
-
-    //     for m in &unk.unk20 {
-    //         if !m.unkc.is_valid() {
-    //             warn!("Pipeline '{}' doesn't have a material", m.name.to_string());
-    //             continue;
-    //         }
-    //         let material: Unk808071e8 = package_manager().read_tag_struct(m.unkc)?;
-
-    //         println!(
-    //             "Extracting '{}' (vs={}, ps={}, {} textures)",
-    //             *m.name,
-    //             material.vertex_shader.is_valid(),
-    //             material.pixel_shader.is_valid(),
-    //             // material.compute_shader.is_valid(),
-    //             material.vs_textures.len() + material.ps_textures.len() // + material.cs_textures.len()
-    //         );
-
-    //         let pipeline_dir = PathBuf::from_str("./pipelines/")
-    //             .unwrap()
-    //             .join(m.name.to_string());
-    //         std::fs::create_dir_all(&pipeline_dir)?;
-
-    //         if material.vertex_shader.is_valid() {
-    //             let header_entry = package_manager().get_entry(material.vertex_shader)?;
-    //             let data = package_manager().read_tag(TagHash(header_entry.reference))?;
-    //             File::create(&pipeline_dir.join("vertex.cso"))?.write_all(&data)?;
-    //         }
-
-    //         if material.pixel_shader.is_valid() {
-    //             let header_entry = package_manager().get_entry(material.pixel_shader)?;
-    //             let data = package_manager().read_tag(TagHash(header_entry.reference))?;
-    //             File::create(&pipeline_dir.join("pixel.cso"))?.write_all(&data)?;
-    //         }
-
-    //         // if material.compute_shader.is_valid() {
-    //         //     let header_entry = package_manager.get_entry_by_tag(material.compute_shader)?;
-    //         //     let data = package_manager.read_tag(TagHash(header_entry.reference))?;
-    //         //     File::create(&pipeline_dir.join("compute.cso"))?.write_all(&data)?;
-    //         // }
-
-    //         let mut out = File::create(pipeline_dir.join("material.txt"))?;
-    //         write!(&mut out, "{material:#x?}")?;
-
-    //         let mut out = File::create(pipeline_dir.join("material.bin"))?;
-    //         let data = package_manager().read_tag(m.unkc)?;
-    //         out.write_all(&data)?;
-    //     }
-
-    //     // println!("{unk:#?}");
-    // }
+    let stringmap = Arc::new(stringmap);
 
     info!("Loaded {} global strings", stringmap.len());
 
@@ -279,26 +216,12 @@ pub fn main() -> anyhow::Result<()> {
     let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
 
     // TODO(cohae): resources should be added to renderdata directly
-    let mut renderer = Renderer::create(&window, dcs.clone())?;
-
-    let mut static_map: IntMap<TagHash, Arc<StaticModel>> = Default::default();
-    let mut material_map: IntMap<TagHash, Material> = Default::default();
-    let mut vshader_map: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> =
-        Default::default();
-    let mut pshader_map: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
-        Default::default();
-    let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
-    let mut terrain_headers = vec![];
-    let mut maps: Vec<(TagHash, MapData)> = vec![];
-
-    // for (tag, entry) in package_manager().get_all_by_reference(u32::from_be(0x1E898080)) {
-    //     println!("{} - {tag}", package_manager().package_paths[&tag.pkg_id()]);
-    // }
+    let renderer = Arc::new(RwLock::new(Renderer::create(&window, dcs.clone())?));
 
     let map_hashes = if let Some(map_hash) = args.map {
         let hash = match u32::from_str_radix(&map_hash, 16) {
             Ok(v) => TagHash(u32::from_be(v)),
-            Err(e) => anyhow::bail!("The given map '{map_hash}' is not a valid hash!"),
+            Err(_e) => anyhow::bail!("The given map '{map_hash}' is not a valid hash!"),
         };
 
         if package_manager()
@@ -319,874 +242,16 @@ pub fn main() -> anyhow::Result<()> {
             .collect_vec()
     };
 
-    // TODO(cohae): obviously dont do lights like this
-    // First lights reserved for camera light and directional light
-    let mut point_lights = vec![Vec4::ZERO, Vec4::ZERO];
-    for hash in map_hashes {
-        let _span = debug_span!("Load map", %hash).entered();
-        let think: Unk80807dae = package_manager().read_tag_struct(hash).unwrap();
-
-        // if stringmap.get(&think.map_name.0) != Some(&"Quagmire".to_string()) {
-        //     continue;
-        // }
-
-        let mut placement_groups = vec![];
-        let mut resource_points = vec![];
-        let mut terrains = vec![];
-
-        let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
-        for res in &think.child_map.map_resources {
-            let thing2: Unk80808a54 = package_manager()
-                .read_tag_struct(res.hash32().unwrap())
-                .unwrap();
-
-            for table in &thing2.data_tables {
-                let table_data = package_manager().read_tag(table.tag()).unwrap();
-                let mut cur = Cursor::new(&table_data);
-
-                for data in &table.data_entries {
-                    if data.data_resource.is_valid {
-                        match data.data_resource.resource_type {
-                            // D2Class_C96C8080 (placement)
-                            0x80806cc9 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let preheader_tag: TagHash = cur.read_le().unwrap();
-                                let preheader: Unk80806ef4 =
-                                    package_manager().read_tag_struct(preheader_tag).unwrap();
-
-                                placement_groups.push(preheader.placement_group);
-                            }
-                            // 0x808071ad => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let header_tag: TagHash = cur.read_le().unwrap();
-                            //     let header: Unk80807164 =
-                            //         package_manager().read_tag_struct(header_tag).unwrap();
-
-                            //     resource_points.push(ResourcePoint {
-                            //         translation: Vec4::new(
-                            //             (header.unk70.x + header.unk80.x) / 2.,
-                            //             (header.unk70.y + header.unk80.y) / 2.,
-                            //             (header.unk70.z + header.unk80.z) / 2.,
-                            //             (header.unk70.w + header.unk80.w) / 2.,
-                            //         ),
-                            //         rotation: Quat::IDENTITY,
-                            //         entity: data.entity,
-                            //         resource_type: data.data_resource.resource_type,
-                            //         resource: MapResource::Unk808071ad(AABB {
-                            //             min: Vec3A::new(
-                            //                 header.unk70.x,
-                            //                 header.unk70.y,
-                            //                 header.unk70.z,
-                            //             ),
-                            //             max: Vec3A::new(
-                            //                 header.unk80.x,
-                            //                 header.unk80.y,
-                            //                 header.unk80.z,
-                            //             ),
-                            //         }),
-                            //     });
-                            // }
-                            // D2Class_7D6C8080 (terrain)
-                            0x80806c7d => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset))
-                                    .unwrap();
-
-                                let terrain_resource: Unk8080714b = cur.read_le().unwrap();
-                                let terrain: Unk8080714f = package_manager()
-                                    .read_tag_struct(terrain_resource.terrain)
-                                    .unwrap();
-
-                                for p in &terrain.mesh_parts {
-                                    if p.material.is_valid() {
-                                        material_map.insert(
-                                            p.material,
-                                            Material::load(
-                                                &renderer,
-                                                package_manager().read_tag_struct(p.material)?,
-                                                p.material,
-                                                true,
-                                            ),
-                                        );
-                                    }
-                                }
-
-                                terrain_headers.push((terrain_resource.terrain, terrain));
-                                terrains.push(terrain_resource.terrain);
-                            }
-                            // Cubemap volume
-                            0x80806695 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset))
-                                    .unwrap();
-
-                                let cubemap_volume: Unk80806b7f = cur.read_le().unwrap();
-                                let extents_center = Vec4::new(
-                                    data.translation.x,
-                                    data.translation.y,
-                                    data.translation.z,
-                                    data.translation.w,
-                                );
-                                let extents = Vec4::new(
-                                    cubemap_volume.cubemap_extents.x,
-                                    cubemap_volume.cubemap_extents.y,
-                                    cubemap_volume.cubemap_extents.z,
-                                    cubemap_volume.cubemap_extents.w,
-                                );
-
-                                let volume_min = extents_center - extents / 2.0;
-                                let volume_max = extents_center + extents / 2.0;
-
-                                renderer.render_data.load_texture(ExtendedHash::Hash32(
-                                    cubemap_volume.cubemap_texture,
-                                ));
-
-                                resource_points.push(ResourcePoint {
-                                    translation: extents_center,
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
-                                    entity: data.entity,
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::CubemapVolume(
-                                        Box::new(cubemap_volume),
-                                        AABB {
-                                            min: volume_min.truncate().into(),
-                                            max: volume_max.truncate().into(),
-                                        },
-                                    ),
-                                });
-                            }
-                            0x808067b5 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
-                                    entity: data.entity,
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::Unk808067b5(tag),
-                                });
-                                // point_lights.push(Vec4::new(
-                                //     data.translation.x,
-                                //     data.translation.y,
-                                //     data.translation.z,
-                                //     data.translation.w,
-                                // ));
-                            }
-                            // Decal collection
-                            0x80806955 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
-
-                                let header: Unk80806e68 =
-                                    package_manager().read_tag_struct(tag).unwrap();
-
-                                for inst in &header.instances {
-                                    for i in inst.start..(inst.start + inst.count) {
-                                        let transform = header.transforms[i as usize];
-                                        resource_points.push(ResourcePoint {
-                                            translation: Vec4::new(
-                                                transform.x,
-                                                transform.y,
-                                                transform.z,
-                                                transform.w,
-                                            ),
-                                            rotation: Quat::from_xyzw(
-                                                data.rotation.x,
-                                                data.rotation.y,
-                                                data.rotation.z,
-                                                data.rotation.w,
-                                            ),
-                                            entity: data.entity,
-                                            world_id: data.world_id,
-                                            resource_type: data.data_resource.resource_type,
-                                            resource: MapResource::Decal {
-                                                material: inst.material,
-                                                scale: transform.w,
-                                            },
-                                        })
-                                    }
-                                }
-                            }
-                            // // Unknown, every element has a mesh (material+index+vertex) and the required transforms
-                            // 0x80806df1 => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
-                            //         continue;
-                            //     }
-
-                            //     let header: Unk80806df3 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
-
-                            //     for p in &header.unk8 {
-                            //         resource_points.push(ResourcePoint {
-                            //             translation: Vec4::new(
-                            //                 p.translation.x,
-                            //                 p.translation.y,
-                            //                 p.translation.z,
-                            //                 p.translation.w,
-                            //             ),
-                            //             rotation: Quat::IDENTITY,
-                            //             entity: data.entity,
-                            //             resource_type: data.data_resource.resource_type,
-                            //             resource: MapResource::Unk80806df1,
-                            //         });
-                            //     }
-                            // }
-                            // // Unknown, structure seems like that of an octree
-                            // 0x80806f38 => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
-                            //         continue;
-                            //     }
-
-                            //     let header: Unk80807268 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
-
-                            //     for p in &header.unk50 {
-                            //         resource_points.push(ResourcePoint {
-                            //             translation: Vec4::new(
-                            //                 p.unk0.x, p.unk0.y, p.unk0.z, p.unk0.w,
-                            //             ),
-                            //             rotation: Quat::IDENTITY,
-                            //             entity: data.entity,
-                            //             resource_type: data.data_resource.resource_type,
-                            //             resource: MapResource::Unk80806f38,
-                            //         });
-                            //     }
-                            // }
-                            // 0x80809160 => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
-                            //         continue;
-                            //     }
-
-                            //     let header: Unk80809162 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
-
-                            //     for p in &header.unk8 {
-                            //         resource_points.push(ResourcePoint {
-                            //             translation: Vec4::new(
-                            //                 p.unk10.x, p.unk10.y, p.unk10.z, p.unk10.w,
-                            //             ),
-                            //             rotation: Quat::IDENTITY,
-                            //             entity: data.entity,
-                            //             resource_type: data.data_resource.resource_type,
-                            //             resource: MapResource::RespawnPoint,
-                            //         });
-                            //     }
-                            // }
-                            // // (ambient) sound source
-                            // 0x80806b5b => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
-                            //         continue;
-                            //     }
-
-                            //     let header: Unk80809802 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
-
-                            //     resource_points.push(ResourcePoint {
-                            //         translation: Vec4::new(
-                            //             data.translation.x,
-                            //             data.translation.y,
-                            //             data.translation.z,
-                            //             data.translation.w,
-                            //         ),
-                            //         rotation: Quat::IDENTITY,
-                            //         entity: data.entity,
-                            //         resource_type: data.data_resource.resource_type,
-                            //         resource: MapResource::AmbientSound(header),
-                            //     });
-                            // }
-                            0x80806aa3 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
-
-                                let header: Unk80806aa7 =
-                                    package_manager().read_tag_struct(tag).unwrap();
-
-                                for (unk8, unk18, _unk28) in itertools::multizip((
-                                    header.unk8.iter(),
-                                    header.unk18.iter(),
-                                    header.unk28.iter(),
-                                )) {
-                                    resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            unk8.bounds_center.x,
-                                            unk8.bounds_center.y,
-                                            unk8.bounds_center.z,
-                                            unk8.bounds_center.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
-                                        entity: data.entity,
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806aa3(unk18.bb),
-                                    });
-                                }
-                            }
-                            0x80806a63 => {
-                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                                    .unwrap();
-                                let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
-                                    continue;
-                                }
-
-                                let header: Unk80806c65 =
-                                    package_manager().read_tag_struct(tag).unwrap();
-
-                                for (transform, unk) in header.unk40.iter().zip(&header.unk30) {
-                                    resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            transform.translation.x,
-                                            transform.translation.y,
-                                            transform.translation.z,
-                                            transform.translation.w,
-                                        ),
-                                        rotation: Quat::from_xyzw(
-                                            transform.rotation.x,
-                                            transform.rotation.y,
-                                            transform.rotation.z,
-                                            transform.rotation.w,
-                                        ),
-                                        entity: data.entity,
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Light,
-                                    });
-
-                                    point_lights.push(Vec4::new(
-                                        transform.translation.x,
-                                        transform.translation.y,
-                                        transform.translation.z,
-                                        transform.translation.w,
-                                    ));
-                                }
-                            }
-                            u => {
-                                // println!("{data:x?}");
-                                if data.translation.x == 0.0
-                                    && data.translation.y == 0.0
-                                    && data.translation.z == 0.0
-                                    && !unknown_root_resources.contains_key(&u)
-                                {
-                                    warn!("World origin resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table.tag());
-                                    unknown_root_resources.insert(u, ());
-                                }
-
-                                debug!(
-                                    "Skipping unknown resource type {u:x} {:?} (table file {:?})",
-                                    data.translation,
-                                    table.tag()
-                                );
-                                resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
-                                    entity: data.entity,
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::Unknown(
-                                        data.data_resource.resource_type,
-                                        data.world_id,
-                                        data.entity,
-                                    ),
-                                });
-                            }
-                        };
-                    } else {
-                        resource_points.push(ResourcePoint {
-                            translation: Vec4::new(
-                                data.translation.x,
-                                data.translation.y,
-                                data.translation.z,
-                                data.translation.w,
-                            ),
-                            rotation: Quat::from_xyzw(
-                                data.rotation.x,
-                                data.rotation.y,
-                                data.rotation.z,
-                                data.rotation.w,
-                            ),
-                            entity: data.entity,
-                            world_id: data.world_id,
-                            resource_type: u32::MAX,
-                            resource: MapResource::Entity(data.entity, data.world_id),
-                        });
-                    }
-                }
-            }
-        }
-
-        let map_name = stringmap
-            .get(&think.map_name.0)
-            .cloned()
-            .unwrap_or(format!("[MissingString_{:08x}]", think.map_name.0));
-        info!(
-            "Map {:x?} '{map_name}' - {} placement groups, {} decals",
-            think.map_name,
-            placement_groups.len(),
-            resource_points
-                .iter()
-                .filter(|r| r.resource.is_decal())
-                .count()
-        );
-
-        maps.push((
-            hash,
-            MapData {
-                hash,
-                name: map_name,
-                placement_groups,
-                resource_points: resource_points
-                    .into_iter()
-                    .map(|rp| {
-                        let cb = ConstantBuffer::create(dcs.clone(), None).unwrap();
-
-                        (rp, cb)
-                    })
-                    .collect(),
-                terrains,
-            },
-        ))
-    }
-
-    info!("{} lights", point_lights.len());
-
-    let to_load_entities: HashSet<ExtendedHash> = maps
-        .iter()
-        .flat_map(|(_, v)| v.resource_points.iter().map(|(r, _)| r.entity))
-        .filter(|v| v.is_valid())
-        .collect();
-
+    let mut map_load_task = Some(Promise::spawn_async(load_maps(
+        dcs.clone(),
+        renderer.clone(),
+        map_hashes,
+        stringmap.clone(),
+    )));
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
-    for te in &to_load_entities {
-        if let Some(nh) = te.hash32() {
-            let _span = debug_span!("Load entity", hash = %nh).entered();
-            let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
-                error!("Could not load entity {nh} ({te:?})");
-                continue;
-            };
-            debug!("Loading entity {nh}");
-            for e in &header.entity_resources {
-                match e.unk0.unk10.resource_type {
-                    0x80806d8a => {
-                        debug!(
-                            "\t- EntityModel {:08x}/{}",
-                            e.unk0.unk18.resource_type.to_be(),
-                            e.unk0.unk10.resource_type.to_be(),
-                        );
-                        let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
-                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-                        let model: Tag<Unk808073a5> = cur.read_le()?;
-                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
-                        let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
-                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                        let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
-
-                        for m in &materials {
-                            material_map.insert(
-                                m.tag(),
-                                Material::load(&renderer, m.0.clone(), m.tag(), true),
-                            );
-                        }
-
-                        for m in &model.meshes {
-                            for p in &m.parts {
-                                if p.material.is_valid() {
-                                    material_map.insert(
-                                        p.material,
-                                        Material::load(
-                                            &renderer,
-                                            package_manager().read_tag_struct(p.material)?,
-                                            p.material,
-                                            true,
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-
-                        if entity_renderers
-                            .insert(
-                                te.key(),
-                                EntityRenderer::load(
-                                    model.0,
-                                    entity_material_map.to_vec(),
-                                    materials.iter().map(|m| m.tag()).collect_vec(),
-                                    &renderer,
-                                    &dcs,
-                                )?,
-                            )
-                            .is_some()
-                        {
-                            error!("More than 1 model was loaded for entity {nh}");
-                        }
-
-                        // println!(" - EntityModel {model:?}");
-                    }
-                    u => debug!(
-                        "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-                        u.to_be(),
-                        e.unk0.unk10.resource_type.to_be(),
-                        e.unk0.tag()
-                    ),
-                }
-            }
-
-            if !entity_renderers.contains_key(&te.key()) {
-                warn!("Entity {nh} does not contain any geometry!");
-            }
-        }
-    }
-
-    info!(
-        "Found {} entity models ({} entities)",
-        entity_renderers.len(),
-        to_load_entities.len()
-    );
-
-    // TODO(cohae): Maybe not the best idea?
-    info!("Updating resource constant buffers");
-    for (_, m) in &maps {
-        for (rp, cb) in &m.resource_points {
-            if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
-                let mm = Mat4::from_scale_rotation_translation(
-                    Vec3::splat(rp.translation.w),
-                    rp.rotation.inverse(),
-                    Vec3::ZERO,
-                );
-                let model_matrix = Mat4::from_cols(
-                    mm.x_axis.truncate().extend(rp.translation.x),
-                    mm.y_axis.truncate().extend(rp.translation.y),
-                    mm.z_axis.truncate().extend(rp.translation.z),
-                    rp.translation,
-                );
-                let alt_matrix = Mat4::from_cols(
-                    Vec3::ONE.extend(rp.translation.x),
-                    Vec3::ONE.extend(rp.translation.y),
-                    Vec3::ONE.extend(rp.translation.z),
-                    Vec4::W,
-                );
-
-                cb.write(&ScopeRigidModel {
-                    mesh_to_world: model_matrix.transpose(),
-                    position_scale: ent.mesh_scale(),
-                    position_offset: ent.mesh_offset(),
-                    texcoord0_scale_offset: ent.texcoord_transform(),
-                    dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                    unk8: [alt_matrix; 8],
-                })?;
-            }
-        }
-    }
-
-    let mut placement_groups: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
+    let mut placement_renderers: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
         IntMap::default();
-
-    let mut to_load: HashMap<TagHash, ()> = Default::default();
-    let mut to_load_samplers: HashSet<ExtendedHash> = Default::default();
-    for (_, m) in &maps {
-        for placements in m.placement_groups.iter() {
-            for v in &placements.statics {
-                to_load.insert(*v, ());
-            }
-            placement_groups.insert(placements.tag().0, (placements.0.clone(), vec![]));
-        }
-    }
-
-    if placement_groups.is_empty() {
-        panic!("No map placements found in package");
-    }
-
     let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
-    info!("Loading {} terrain renderers", terrain_headers.len());
-    info_span!("Loading terrain").in_scope(|| {
-        for (t, header) in terrain_headers.into_iter() {
-            for t in &header.mesh_groups {
-                renderer
-                    .render_data
-                    .load_texture(ExtendedHash::Hash32(t.dyemap));
-            }
-
-            match TerrainRenderer::load(header, dcs.clone(), &renderer) {
-                Ok(renderer) => {
-                    terrain_renderers.insert(t.0, renderer);
-                }
-                Err(e) => {
-                    error!("Failed to load terrain: {e}");
-                }
-            }
-        }
-    });
-
-    let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
-
-    info!("Loading statics");
-    info_span!("Loading statics").in_scope(|| {
-        for almostloadable in &to_load_statics {
-            let mheader: Unk808071a7 = package_manager().read_tag_struct(*almostloadable).unwrap();
-            for m in &mheader.materials {
-                if m.is_valid() {
-                    material_map.insert(
-                        *m,
-                        Material::load(
-                            &renderer,
-                            package_manager().read_tag_struct(*m).unwrap(),
-                            *m,
-                            true,
-                        ),
-                    );
-                }
-            }
-            for m in &mheader.unk20 {
-                let m = m.material;
-                if m.is_valid() {
-                    material_map.insert(
-                        m,
-                        Material::load(
-                            &renderer,
-                            package_manager().read_tag_struct(m).unwrap(),
-                            m,
-                            true,
-                        ),
-                    );
-                }
-            }
-
-            match StaticModel::load(mheader, &renderer, *almostloadable) {
-                Ok(model) => {
-                    static_map.insert(*almostloadable, Arc::new(model));
-                }
-                Err(e) => {
-                    error!(model = ?almostloadable, "Failed to load model: {e}");
-                }
-            }
-        }
-    });
-
-    info!("Loaded {} statics", static_map.len());
-
-    info_span!("Constructing instance renderers").in_scope(|| {
-        let mut total_instance_data = 0;
-        for (placements, renderers) in placement_groups.values_mut() {
-            for instance in &placements.instances {
-                if let Some(model_hash) =
-                    placements.statics.iter().nth(instance.static_index as _)
-                {
-                    let _span =
-                        debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
-                            .entered();
-
-                    if let Some(model) = static_map.get(model_hash) {
-                        let transforms = &placements.transforms[instance.instance_start
-                            as usize
-                            ..(instance.instance_start + instance.instance_count) as usize];
-
-                        renderers.push(InstancedRenderer::load(model.clone(), transforms, dcs.clone()).unwrap());
-                    } else {
-                        error!("Couldn't get static model {model_hash}");
-                    }
-
-                    total_instance_data += instance.instance_count as usize * 16 * 4;
-                } else {
-                    error!("Couldn't get instance static #{}", instance.static_index);
-                }
-            }
-        }
-        debug!("Total instance data: {}kb", total_instance_data / 1024);
-    });
-
-    info_span!("Loading shaders").in_scope(|| {
-        for (t, m) in material_map.iter() {
-            for sampler in m.vs_samplers.iter().chain(m.ps_samplers.iter()) {
-                to_load_samplers.insert(*sampler);
-            }
-
-            if let Ok(v) = package_manager().get_entry(m.vertex_shader) {
-                let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
-
-                vshader_map.entry(m.vertex_shader).or_insert_with(|| {
-                    let vs_data = package_manager().read_tag(v.reference).unwrap();
-
-                    let mut vs_cur = Cursor::new(&vs_data);
-                    let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
-                    let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
-
-                    let layout_converted = input_sig
-                        .elements
-                        .iter()
-                        .map(|e| {
-                            InputElement::from_dxbc(
-                                e,
-                                e.component_type == DxbcInputType::Float,
-                                false,
-                            )
-                        })
-                        .collect_vec();
-
-                    unsafe {
-                        let v = dcs
-                            .device
-                            .CreateVertexShader(&vs_data, None)
-                            .context("Failed to load vertex shader")
-                            .unwrap();
-
-                        let name = format!("VS {:?} (mat {})\0", m.vertex_shader, t);
-                        v.SetPrivateData(
-                            &WKPDID_D3DDebugObjectName,
-                            name.len() as u32 - 1,
-                            Some(name.as_ptr() as _),
-                        )
-                        .expect("Failed to set VS name");
-
-                        // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
-                        // let layout_string = layout_converted
-                        //     .iter()
-                        //     .enumerate()
-                        //     .map(|(i, e)| {
-                        //         format!(
-                        //             "\t{}{} v{i} : {}{}",
-                        //             e.component_type,
-                        //             e.component_count,
-                        //             e.semantic_type.to_pcstr().display(),
-                        //             e.semantic_index
-                        //         )
-                        //     })
-                        //     .join("\n");
-
-                        // error!(
-                        //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
-                        //     m.vertex_shader, layout_string
-                        // );
-
-                        (v, layout_converted, vs_data)
-                    }
-                });
-            }
-
-            // return Ok(());
-
-            if let Ok(v) = package_manager().get_entry(m.pixel_shader) {
-                let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
-
-                pshader_map.entry(m.pixel_shader).or_insert_with(|| {
-                    let ps_data = package_manager().read_tag(v.reference).unwrap();
-
-                    let mut ps_cur = Cursor::new(&ps_data);
-                    let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
-                    let output_sig = get_output_signature(&mut ps_cur, &dxbc_header).unwrap();
-
-                    let layout_converted = output_sig
-                        .elements
-                        .iter()
-                        .map(|e| {
-                            InputElement::from_dxbc(
-                                e,
-                                e.component_type == DxbcInputType::Float,
-                                false,
-                            )
-                        })
-                        .collect_vec();
-
-                    unsafe {
-                        let v = dcs
-                            .device
-                            .CreatePixelShader(&ps_data, None)
-                            .context("Failed to load pixel shader")
-                            .unwrap();
-
-                        let name = format!("PS {:?} (mat {})\0", m.pixel_shader, t);
-                        v.SetPrivateData(
-                            &WKPDID_D3DDebugObjectName,
-                            name.len() as u32 - 1,
-                            Some(name.as_ptr() as _),
-                        )
-                        .expect("Failed to set VS name");
-
-                        (v, layout_converted)
-                    }
-                });
-            }
-        }
-    });
-
-    info!(
-        "Loaded {} vertex shaders, {} pixel shaders",
-        vshader_map.len(),
-        pshader_map.len()
-    );
-
-    info!("Loaded {} materials", material_map.len());
-
-    for m in material_map.values() {
-        for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
-            renderer.render_data.load_texture(t.texture);
-        }
-    }
-
-    for s in to_load_samplers {
-        let sampler_header_ref = package_manager()
-            .get_entry(s.hash32().unwrap())
-            .unwrap()
-            .reference;
-        let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
-
-        let sampler = unsafe { dcs.device.CreateSamplerState(sampler_data.as_ptr() as _) };
-
-        if let Ok(sampler) = sampler {
-            sampler_map.insert(s.key(), sampler);
-        }
-    }
-
-    info!("Loaded {} samplers", sampler_map.len());
-
-    let cb_composite_lights =
-        ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -1210,7 +275,7 @@ pub fn main() -> anyhow::Result<()> {
     resources.insert(InputState::default());
     resources.insert(MapDataList {
         current_map: 0,
-        maps,
+        maps: vec![],
     });
     resources.insert(ErrorRenderer::load(dcs.clone()));
     resources.insert(ScopeOverrides::default());
@@ -1276,14 +341,6 @@ pub fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_loading);
     gui.add_overlay(gui_fps);
 
-    {
-        let mut data = renderer.render_data.data_mut();
-        data.materials = material_map;
-        data.vshaders = vshader_map;
-        data.pshaders = pshader_map;
-        data.samplers = sampler_map;
-    };
-
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
@@ -1327,6 +384,7 @@ pub fn main() -> anyhow::Result<()> {
                                 *dcs.swapchain_target.write() = Some(new_rtv);
 
                                 renderer
+                                    .write()
                                     .resize((new_dims.width, new_dims.height))
                                     .expect("Failed to resize GBuffers");
 
@@ -1358,7 +416,6 @@ pub fn main() -> anyhow::Result<()> {
                             *control_flow = ControlFlow::Exit
                         }
                     }
-
                     _ => (),
                 }
             }
@@ -1373,8 +430,20 @@ pub fn main() -> anyhow::Result<()> {
 
                 let window_dims = window.inner_size();
 
+                if map_load_task.as_ref().and_then(|v| v.ready()).is_some() {
+                    if let Some(Ok(map_res)) = map_load_task.take().map(|v| v.try_take()) {
+                        let map_res = map_res.expect("Failed to load map(s)");
+                        entity_renderers.extend(map_res.entity_renderers);
+                        terrain_renderers.extend(map_res.terrain_renderers);
+                        placement_renderers.extend(map_res.placement_renderers);
+                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                        maps.maps = map_res.maps;
+                        map_load_task = None;
+                    }
+                }
+
                 unsafe {
-                    renderer.clear_render_targets();
+                    renderer.read().clear_render_targets();
 
                     dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
@@ -1387,50 +456,63 @@ pub fn main() -> anyhow::Result<()> {
 
                     dcs.context().RSSetState(&rasterizer_state);
 
-                    renderer.begin_frame();
+                    renderer.read().begin_frame();
 
                     let maps = resources.get::<MapDataList>().unwrap();
-                    let (map_hash, map) = &maps.maps[maps.current_map % maps.maps.len()];
 
-                    {
-                        let gb = gui_rendersettings.borrow();
+                    let mut lights = None;
+                    if !maps.maps.is_empty() {
+                        let (_map_hash, map) = &maps.maps[maps.current_map % maps.maps.len()];
+                        lights = Some((map.lights_cbuffer.buffer().clone(), map.lights.len()));
 
-                        for ptag in &map.placement_groups {
-                            let (_placements, instance_renderers) =
-                                &placement_groups[&ptag.tag().0];
-                            for instance in instance_renderers.iter() {
-                                if gb.renderlayer_statics {
-                                    instance.draw(&mut renderer, false).unwrap();
-                                }
+                        {
+                            let gb = gui_rendersettings.borrow();
 
-                                if gui_rendersettings.borrow().renderlayer_statics_transparent {
-                                    instance.draw(&mut renderer, true).unwrap();
-                                }
-                            }
-                        }
+                            for ptag in &map.placement_groups {
+                                let (_placements, instance_renderers) =
+                                    &placement_renderers[&ptag.tag().0];
+                                for instance in instance_renderers.iter() {
+                                    if gb.renderlayer_statics {
+                                        instance.draw(&renderer.read(), false).unwrap();
+                                    }
 
-                        if gb.renderlayer_terrain {
-                            for th in &map.terrains {
-                                if let Some(t) = terrain_renderers.get(&th.0) {
-                                    t.draw(&mut renderer).unwrap();
+                                    if gui_rendersettings.borrow().renderlayer_statics_transparent {
+                                        instance.draw(&renderer.read(), true).unwrap();
+                                    }
                                 }
                             }
-                        }
 
-                        if gb.renderlayer_entities {
-                            for (rp, cb) in &map.resource_points {
-                                // Veil roots
-                                // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x68e8e780))) {
-                                //     continue;
-                                // }
+                            if gb.renderlayer_terrain {
+                                for th in &map.terrains {
+                                    if let Some(t) = terrain_renderers.get(&th.0) {
+                                        t.draw(&renderer.read()).unwrap();
+                                    }
+                                }
+                            }
 
-                                // Metaverse cat
-                                // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x2BF6E780))) {
-                                //     continue;
-                                // }
+                            if gb.renderlayer_entities {
+                                for (rp, cb) in &map.resource_points {
+                                    // Veil roots
+                                    // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x68e8e780))) {
+                                    //     continue;
+                                    // }
 
-                                if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
-                                    if ent.draw(&mut renderer, cb.buffer().clone()).is_err() {
+                                    // Metaverse cat
+                                    // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x2BF6E780))) {
+                                    //     continue;
+                                    // }
+
+                                    if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
+                                        if ent.draw(&renderer.read(), cb.buffer().clone()).is_err()
+                                        {
+                                            // resources.get::<ErrorRenderer>().unwrap().draw(
+                                            //     &mut renderer,
+                                            //     cb.buffer(),
+                                            //     proj_view,
+                                            //     view,
+                                            // );
+                                        }
+                                    } else if rp.resource.is_entity() {
                                         // resources.get::<ErrorRenderer>().unwrap().draw(
                                         //     &mut renderer,
                                         //     cb.buffer(),
@@ -1438,60 +520,69 @@ pub fn main() -> anyhow::Result<()> {
                                         //     view,
                                         // );
                                     }
-                                } else if rp.resource.is_entity() {
-                                    // resources.get::<ErrorRenderer>().unwrap().draw(
-                                    //     &mut renderer,
-                                    //     cb.buffer(),
-                                    //     proj_view,
-                                    //     view,
-                                    // );
                                 }
                             }
                         }
-                    }
 
-                    renderer.submit_frame(
+                        // let camera = resources.get::<FpsCamera>().unwrap();
+                        // if let Some(MapResource::CubemapVolume(c, _)) = map
+                        //     .resource_points
+                        //     .iter()
+                        //     .find(|(r, _)| {
+                        //         if let MapResource::CubemapVolume(_, aabb) = &r.resource {
+                        //             aabb.contains_point(camera.position)
+                        //         } else {
+                        //             false
+                        //         }
+                        //     })
+                        //     .map(|(r, _)| &r.resource)
+                        // {
+                        //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                        //         cr.0 = Some(c.cubemap_name.to_string());
+                        //     }
+                        //     renderer
+                        //         .render_data
+                        //         .data()
+                        //         .textures
+                        //         .get(&c.cubemap_texture)
+                        //         .map(|t| t.view.clone())
+                        // } else {
+                        //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                        //         cr.0 = None;
+                        //     }
+                        //     None
+                        // };
+
+                        // drop(camera);
+                    }
+                    drop(maps);
+
+                    renderer.read().submit_frame(
                         &resources,
                         gui_rendersettings.borrow().render_lights,
                         gui_rendersettings.borrow().alpha_blending,
                         gui_rendersettings.borrow().composition_mode,
                         gui_rendersettings.borrow().blend_override,
-                        (cb_composite_lights.buffer().clone(), point_lights.len()),
+                        lights,
                         gui_rendersettings.borrow().evaluate_bytecode,
                     );
 
-                    // let camera = resources.get::<FpsCamera>().unwrap();
-                    // if let Some(MapResource::CubemapVolume(c, _)) = map
-                    //     .resource_points
-                    //     .iter()
-                    //     .find(|(r, _)| {
-                    //         if let MapResource::CubemapVolume(_, aabb) = &r.resource {
-                    //             aabb.contains_point(camera.position)
-                    //         } else {
-                    //             false
-                    //         }
-                    //     })
-                    //     .map(|(r, _)| &r.resource)
-                    // {
-                    //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                    //         cr.0 = Some(c.cubemap_name.to_string());
-                    //     }
-                    //     renderer
-                    //         .render_data
-                    //         .data()
-                    //         .textures
-                    //         .get(&c.cubemap_texture)
-                    //         .map(|t| t.view.clone())
-                    // } else {
-                    //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                    //         cr.0 = None;
-                    //     }
-                    //     None
-                    // };
-
-                    // drop(camera);
-                    drop(maps);
-                    gui.draw_frame(window.clone(), &mut resources);
+                    gui.draw_frame(window.clone(), &mut resources, |ctx| {
+                        if let Some(task) = map_load_task.as_ref() {
+                            if task.ready().is_none() {
+                                egui::Window::new("Loading...")
+                                    .title_bar(false)
+                                    .resizable(false)
+                                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                                    .show(ctx, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.spinner();
+                                            ui.heading("Loading maps")
+                                        })
+                                    });
+                            }
+                        }
+                    });
 
                     dcs.context().OMSetDepthStencilState(None, 0);
 

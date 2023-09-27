@@ -31,7 +31,7 @@ pub struct Unk80809c36 {
     pub unk18: ResourcePointer,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk808073a5 {
     pub file_size: u64,
     pub unk0: u64,
@@ -43,7 +43,7 @@ pub struct Unk808073a5 {
     pub texcoord_offset: Vector2,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Debug, Clone)]
 pub struct Unk80807378 {
     pub vertex_buffer1: TagHash,
     pub vertex_buffer2: TagHash,

@@ -189,7 +189,7 @@ impl StaticModel {
 
     pub fn draw(
         &self,
-        renderer: &mut Renderer,
+        renderer: &Renderer,
         instance_buffer: ID3D11Buffer,
         instance_count: usize,
         draw_transparent: bool,
@@ -332,12 +332,7 @@ impl StaticOverlayModel {
         })
     }
 
-    pub fn draw(
-        &self,
-        renderer: &mut Renderer,
-        instance_buffer: ID3D11Buffer,
-        instance_count: usize,
-    ) {
+    pub fn draw(&self, renderer: &Renderer, instance_buffer: ID3D11Buffer, instance_count: usize) {
         let technique = renderer
             .render_data
             .data()

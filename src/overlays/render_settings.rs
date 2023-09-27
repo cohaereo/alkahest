@@ -132,16 +132,18 @@ impl OverlayProvider for RenderSettingsOverlay {
                 );
 
             let mut maps = resources.get_mut::<MapDataList>().unwrap();
-            let mut current_map = maps.current_map;
-            egui::ComboBox::from_label("Map").width(192.0).show_index(
-                ui,
-                &mut current_map,
-                maps.maps.len(),
-                |i| &maps.maps[i].1.name,
-            );
-            ui.label(format!("Map hash: {}", maps.maps[maps.current_map].0));
+            if !maps.maps.is_empty() {
+                let mut current_map = maps.current_map;
+                egui::ComboBox::from_label("Map").width(192.0).show_index(
+                    ui,
+                    &mut current_map,
+                    maps.maps.len(),
+                    |i| &maps.maps[i].1.name,
+                );
+                ui.label(format!("Map hash: {}", maps.maps[maps.current_map].0));
 
-            maps.current_map = current_map;
+                maps.current_map = current_map;
+            }
         });
     }
 }

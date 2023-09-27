@@ -65,7 +65,10 @@ impl GuiManager {
         self.integration.on_event(&self.egui, event)
     }
 
-    pub fn draw_frame(&mut self, window: Arc<Window>, resources: &mut Resources) {
+    pub fn draw_frame<MF>(&mut self, window: Arc<Window>, resources: &mut Resources, misc_draw: MF)
+    where
+        MF: FnOnce(&egui::Context),
+    {
         let input = self.integration.take_egui_input(&window);
 
         self.renderer
@@ -77,6 +80,8 @@ impl GuiManager {
                     for overlay in self.overlays.iter() {
                         overlay.as_ref().borrow_mut().draw(ctx, &window, resources);
                     }
+
+                    misc_draw(ctx);
                 },
             )
             .unwrap();

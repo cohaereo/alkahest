@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
+use crate::util::RwLock;
 use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -33,9 +34,9 @@ enum RendererState {
 }
 
 pub struct Renderer {
-    draw_queue: Vec<(SortValue3d, DrawCall)>,
+    draw_queue: RwLock<Vec<(SortValue3d, DrawCall)>>,
+    state: RwLock<RendererState>,
 
-    state: RendererState,
     pub gbuffer: GBuffer,
     window_size: (u32, u32),
     pub dcs: Arc<DeviceContextSwapchain>,
@@ -47,8 +48,8 @@ pub struct Renderer {
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
 
     pub start_time: Instant,
-    pub last_frame: Instant,
-    pub delta_time: f32,
+    pub last_frame: RwLock<Instant>,
+    pub delta_time: RwLock<f32>,
 
     pub render_data: RenderDataManager,
 
@@ -225,8 +226,8 @@ impl Renderer {
 
         Ok(Renderer {
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
-            draw_queue: Vec::with_capacity(8192),
-            state: RendererState::Awaiting,
+            draw_queue: RwLock::new(Vec::with_capacity(8192)),
+            state: RwLock::new(RendererState::Awaiting),
             gbuffer: GBuffer::create(
                 (window.inner_size().width, window.inner_size().height),
                 dcs.clone(),
@@ -240,8 +241,8 @@ impl Renderer {
             render_data: RenderDataManager::new(dcs.clone()),
             dcs,
             start_time: Instant::now(),
-            last_frame: Instant::now(),
-            delta_time: 0.016,
+            last_frame: RwLock::new(Instant::now()),
+            delta_time: RwLock::new(0.016),
             blend_state_none,
             blend_state_blend,
             blend_state_additive,
@@ -257,40 +258,41 @@ impl Renderer {
         })
     }
 
-    pub fn begin_frame(&mut self) {
-        if self.state == RendererState::Recording {
+    pub fn begin_frame(&self) {
+        if *self.state.read() == RendererState::Recording {
             panic!("Called begin(), but a frame is already being recorded! Did you call submit()?")
         }
 
-        self.delta_time = self.last_frame.elapsed().as_secs_f32();
-        self.last_frame = Instant::now();
+        *self.delta_time.write() = self.last_frame.read().elapsed().as_secs_f32();
+        *self.last_frame.write() = Instant::now();
 
-        self.draw_queue.clear();
-        self.state = RendererState::Recording;
+        self.draw_queue.write().clear();
+        *self.state.write() = RendererState::Recording;
     }
 
     // TODO(cohae): `begin` should probably return a CommandEncoder that we can record stuff in
-    pub fn push_drawcall(&mut self, ordering: SortValue3d, drawcall: DrawCall) {
-        self.draw_queue.push((ordering, drawcall))
+    pub fn push_drawcall(&self, ordering: SortValue3d, drawcall: DrawCall) {
+        self.draw_queue.write().push((ordering, drawcall))
     }
 
     /// Submits recorded drawcalls
     pub fn submit_frame(
-        &mut self,
+        &self,
         resources: &Resources,
         // TODO: These options need to be moved to a resource
         draw_lights: bool,
         alpha_blending: bool,
         compositor_mode: usize,
         blend_override: usize,
-        lights: (ID3D11Buffer, usize),
+        lights: Option<(ID3D11Buffer, usize)>,
         evaluate_bytecode: bool,
     ) {
-        if self.state != RendererState::Recording {
+        if *self.state.read() != RendererState::Recording {
             panic!("Called submit(), but the renderer is not recording! Did you call begin()?")
         }
 
         self.draw_queue
+            .write()
             .sort_unstable_by(|(o1, _), (o2, _)| o1.cmp(o2));
 
         self.update_buffers(resources)
@@ -325,12 +327,13 @@ impl Renderer {
         }
 
         //region Deferred
-        for i in 0..self.draw_queue.len() {
-            if self.draw_queue[i].0.technique() != ShadingTechnique::Deferred {
+        let draw_queue = self.draw_queue.read();
+        for i in 0..draw_queue.len() {
+            if draw_queue[i].0.technique() != ShadingTechnique::Deferred {
                 continue;
             }
 
-            let (s, d) = self.draw_queue[i].clone();
+            let (s, d) = draw_queue[i].clone();
             self.draw(s, &d);
         }
         //endregion
@@ -368,8 +371,8 @@ impl Renderer {
 
         //region Forward
         let mut transparency_mode = Transparency::None;
-        for i in 0..self.draw_queue.len() {
-            if self.draw_queue[i].0.technique() != ShadingTechnique::Forward {
+        for i in 0..draw_queue.len() {
+            if draw_queue[i].0.technique() != ShadingTechnique::Forward {
                 continue;
             }
 
@@ -395,7 +398,7 @@ impl Renderer {
                 .rainbow_texture
                 .bind(&self.dcs, 21, ShaderStages::all());
 
-            let (s, d) = self.draw_queue[i].clone();
+            let (s, d) = draw_queue[i].clone();
             if s.transparency() != transparency_mode {
                 if alpha_blending {
                     // Swap to read-only depth state once we start rendering translucent geometry
@@ -472,10 +475,10 @@ impl Renderer {
             self.debug_shape_renderer.draw_all(&mut shapes);
         }
 
-        self.state = RendererState::Awaiting;
+        *self.state.write() = RendererState::Awaiting;
     }
 
-    fn draw(&mut self, sort: SortValue3d, drawcall: &DrawCall) {
+    fn draw(&self, sort: SortValue3d, drawcall: &DrawCall) {
         let render_data = self.render_data.data();
 
         // // Workaround for some weird textures that aren't bound by the material
@@ -611,11 +614,11 @@ impl Renderer {
 
     /// Swaps to primary swapchain render target, binds gbuffers and runs the shading passes
     fn run_deferred_shading(
-        &mut self,
+        &self,
         resources: &Resources,
         draw_lights: bool,
         compositor_mode: usize,
-        lights: (ID3D11Buffer, usize),
+        lights: Option<(ID3D11Buffer, usize)>,
     ) {
         unsafe {
             self.dcs.context().OMSetBlendState(
@@ -673,7 +676,11 @@ impl Renderer {
                     camera_dir: camera.front.extend(1.0),
                     time: self.start_time.elapsed().as_secs_f32(),
                     mode: compositor_mode as u32,
-                    light_count: if draw_lights { lights.1 as u32 } else { 0 },
+                    light_count: if draw_lights {
+                        lights.as_ref().map(|v| v.1).unwrap_or_default() as u32
+                    } else {
+                        0
+                    },
                 };
                 self.scope_alk_composite.write(&compositor_options).unwrap();
                 self.scope_alk_composite.bind(0, ShaderStages::all());
@@ -684,9 +691,11 @@ impl Renderer {
             //     .context
             //     .VSSetConstantBuffers(0, Some(&[Some(cb_composite_options.buffer().clone())]));
 
-            self.dcs
-                .context()
-                .PSSetConstantBuffers(1, Some(&[Some(lights.0)]));
+            if let Some(lights) = &lights {
+                self.dcs
+                    .context()
+                    .PSSetConstantBuffers(1, Some(&[Some(lights.0.clone())]));
+            }
 
             self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
@@ -717,7 +726,7 @@ impl Renderer {
                 .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
         }
     }
-    fn run_final(&mut self) {
+    fn run_final(&self) {
         unsafe {
             self.scope_alk_composite.bind(0, ShaderStages::all());
             self.dcs.context().OMSetBlendState(
@@ -758,14 +767,14 @@ impl Renderer {
         }
     }
 
-    fn update_buffers(&mut self, resources: &Resources) -> anyhow::Result<()> {
+    fn update_buffers(&self, resources: &Resources) -> anyhow::Result<()> {
         let mut camera = resources.get_mut::<FpsCamera>().unwrap();
         let overrides = resources.get::<ScopeOverrides>().unwrap();
 
         self.scope_frame.write(&ScopeFrame {
             game_time: self.start_time.elapsed().as_secs_f32(),
             render_time: self.start_time.elapsed().as_secs_f32(),
-            delta_game_time: self.delta_time,
+            delta_game_time: *self.delta_time.read(),
             // exposure_time: 0.0,
 
             // exposure_scale: 1.0,
@@ -802,9 +811,8 @@ impl Renderer {
             // target_pixel_to_camera: Mat4::IDENTITY,
             target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
             inverse_target_resolution: (
-                // TODO(cohae): Is this correct?
-                (1. / (self.window_size.0 as f32)) / 4.0,
-                (1. / (self.window_size.1 as f32)) / 4.0,
+                1. / (self.window_size.0 as f32),
+                1. / (self.window_size.1 as f32),
             ),
             // Z value accounts for missing depth value
             view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
@@ -827,7 +835,7 @@ impl Renderer {
         self.gbuffer.resize(new_size)
     }
 
-    pub fn clear_render_targets(&mut self) {
+    pub fn clear_render_targets(&self) {
         unsafe {
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt0.render_target,

@@ -1,7 +1,7 @@
+use crate::util::RwLock;
 use anyhow::Context;
 use crossbeam::channel::{self as mpsc, Receiver};
 use destiny_pkg::TagHash;
-use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::Instant;
 use windows::Win32::Graphics::{

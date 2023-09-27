@@ -33,7 +33,7 @@ impl TfxBytecodeInterpreter {
             return Ok(());
         };
 
-        for (ip, op) in self.opcodes.iter().enumerate() {
+        for (_ip, op) in self.opcodes.iter().enumerate() {
             match op {
                 TfxBytecodeOp::LoadExtern { extern_, element } => {
                     let v = self.get_extern(renderer, *extern_, *element)?;
@@ -64,7 +64,7 @@ impl TfxBytecodeInterpreter {
                 _ => {}
                 #[cfg(feature = "tfx_strict_interpreter")]
                 u => {
-                    anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {ip}")
+                    anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {_ip}")
                 }
             }
         }
@@ -83,7 +83,7 @@ impl TfxBytecodeInterpreter {
                 0 => Ok(Vec4::new(
                     renderer.start_time.elapsed().as_secs_f32(),
                     renderer.start_time.elapsed().as_secs_f32(),
-                    renderer.delta_time,
+                    *renderer.delta_time.read(),
                     1.0,
                 )),
                 1 => Ok(Vec4::ONE),  // Exposure scales
