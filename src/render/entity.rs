@@ -15,6 +15,7 @@ use crate::render::vertex_buffers::load_vertex_buffers;
 
 use super::drawcall::ConstantBufferBinding;
 use super::drawcall::DrawCall;
+use super::drawcall::GeometryType;
 use super::drawcall::ShadingTechnique;
 use super::drawcall::SortValue3d;
 use super::drawcall::Transparency;
@@ -221,7 +222,8 @@ impl EntityRenderer {
                         } else {
                             Transparency::Additive
                         })
-                        .with_technique(shading_technique),
+                        .with_technique(shading_technique)
+                        .with_geometry_type(GeometryType::Entity),
                     DrawCall {
                         vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                         index_buffer: buffers.index_buffer,

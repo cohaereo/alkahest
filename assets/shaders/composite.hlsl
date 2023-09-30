@@ -321,6 +321,7 @@ float4 PShader(VSOutput input) : SV_Target {
                 );
 
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
+                // float matcap = dot(normal, float3(0.4, 0.4, 0.4)) + 0.5;
                 return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
             } else {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.uv);

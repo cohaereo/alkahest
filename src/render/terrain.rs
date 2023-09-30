@@ -8,7 +8,7 @@ use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
 use super::drawcall::{
-    ConstantBufferBinding, DrawCall, ShadingTechnique, SortValue3d, Transparency,
+    ConstantBufferBinding, DrawCall, GeometryType, ShadingTechnique, SortValue3d, Transparency,
 };
 use super::renderer::Renderer;
 use super::vertex_buffers::load_vertex_buffers;
@@ -110,7 +110,8 @@ impl TerrainRenderer {
                         .with_depth(u32::MIN)
                         .with_material(part.material.0)
                         .with_technique(ShadingTechnique::Deferred)
-                        .with_transparency(Transparency::None),
+                        .with_transparency(Transparency::None)
+                        .with_geometry_type(GeometryType::Terrain),
                     DrawCall {
                         vertex_buffers: vec![self.vertex_buffer1, self.vertex_buffer2],
                         index_buffer: self.index_buffer,

@@ -17,7 +17,8 @@ use crate::{camera::FpsCamera, resources::Resources};
 
 use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
-use super::drawcall::Transparency;
+use super::drawcall::{GeometryType, Transparency};
+use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
 use super::scopes::ScopeUnk8;
 use super::{
     drawcall::{DrawCall, ShadingTechnique, SortValue3d},
@@ -73,6 +74,8 @@ pub struct Renderer {
     final_ps: ID3D11PixelShader,
 
     debug_shape_renderer: DebugShapeRenderer,
+
+    shader_overrides: ShaderOverrides,
 }
 
 impl Renderer {
@@ -225,6 +228,7 @@ impl Renderer {
         let (pshader_final, _) = shader::load_pshader(&dcs, &pshader_final_blob)?;
 
         Ok(Renderer {
+            shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
             draw_queue: RwLock::new(Vec::with_capacity(8192)),
             state: RwLock::new(RendererState::Awaiting),
@@ -326,6 +330,8 @@ impl Renderer {
             );
         }
 
+        let shader_overrides = resources.get::<EnabledShaderOverrides>().unwrap();
+
         //region Deferred
         let draw_queue = self.draw_queue.read();
         for i in 0..draw_queue.len() {
@@ -334,7 +340,7 @@ impl Renderer {
             }
 
             let (s, d) = draw_queue[i].clone();
-            self.draw(s, &d);
+            self.draw(s, &d, &shader_overrides);
         }
         //endregion
 
@@ -445,7 +451,7 @@ impl Renderer {
                 transparency_mode = s.transparency();
             }
 
-            self.draw(s, &d);
+            self.draw(s, &d, &shader_overrides);
         }
         //endregion
 
@@ -478,7 +484,12 @@ impl Renderer {
         *self.state.write() = RendererState::Awaiting;
     }
 
-    fn draw(&self, sort: SortValue3d, drawcall: &DrawCall) {
+    fn draw(
+        &self,
+        sort: SortValue3d,
+        drawcall: &DrawCall,
+        shader_overrides: &EnabledShaderOverrides,
+    ) {
         let render_data = self.render_data.data();
 
         // // Workaround for some weird textures that aren't bound by the material
@@ -519,6 +530,23 @@ impl Renderer {
             } else {
                 // return;
             }
+        }
+
+        match sort.geometry_type() {
+            GeometryType::Static => {}
+            GeometryType::Terrain => {}
+            GeometryType::Entity => unsafe {
+                if shader_overrides.entity_vs {
+                    self.dcs
+                        .context()
+                        .VSSetShader(&self.shader_overrides.entity_vs, None);
+                }
+                if shader_overrides.entity_ps {
+                    self.dcs
+                        .context()
+                        .PSSetShader(&self.shader_overrides.entity_ps, None);
+                }
+            },
         }
 
         if let Some(color_buffer) = drawcall.color_buffer {
@@ -868,12 +896,4 @@ impl Renderer {
             m.evaluate_bytecode(self)
         }
     }
-}
-
-#[derive(Default)]
-pub struct ScopeOverrides {
-    pub view: ScopeView,
-    pub frame: ScopeFrame,
-    pub unk3: ScopeUnk3,
-    pub unk8: ScopeUnk8,
 }

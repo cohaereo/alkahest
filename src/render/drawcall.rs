@@ -35,6 +35,10 @@ impl SortValue3d {
         Self(self.0 | (v as u64 & 0xffffff) << 32)
     }
 
+    pub fn with_geometry_type(self, t: GeometryType) -> Self {
+        Self(self.0 | (t.into_bits()) << 56)
+    }
+
     pub fn with_technique(self, t: ShadingTechnique) -> Self {
         Self(self.0 | (t.into_bits()) << 63)
     }
@@ -53,10 +57,10 @@ impl SortValue3d {
     //     this as _
     // }
 
-    // pub const fn special(&self) -> SpecialDrawMode {
-    //     let this = (self.0 >> 56usize) & 0x1f;
-    //     SpecialDrawMode::from_bits(this)
-    // }
+    pub const fn geometry_type(&self) -> GeometryType {
+        let this = (self.0 >> 56usize) & 0x1f;
+        GeometryType::from_bits(this)
+    }
 
     pub const fn technique(&self) -> ShadingTechnique {
         let this = (self.0 >> 63usize) & 0x1;
@@ -71,24 +75,28 @@ impl SortValue3d {
 
 #[repr(u64)]
 #[derive(Debug, PartialEq, Eq)]
-pub enum SpecialDrawMode {
-    Normal = 0,
-    Decal = 1,
+pub enum GeometryType {
+    Static = 0,
+    Terrain = 1,
+    Entity = 2,
+    // Decal = 4,
 }
 
-// impl SpecialDrawMode {
-//     const fn into_bits(self) -> u64 {
-//         self as _
-//     }
+impl GeometryType {
+    const fn into_bits(self) -> u64 {
+        self as _
+    }
 
-//     const fn from_bits(value: u64) -> Self {
-//         match value {
-//             0 => Self::Normal,
-//             1 => Self::Decal,
-//             _ => Self::Normal,
-//         }
-//     }
-// }
+    const fn from_bits(value: u64) -> Self {
+        match value {
+            0 => Self::Static,
+            1 => Self::Terrain,
+            2 => Self::Entity,
+            // 4 => Self::Decal,
+            _ => Self::Static,
+        }
+    }
+}
 
 #[repr(u64)]
 #[derive(Debug, PartialEq, Eq)]

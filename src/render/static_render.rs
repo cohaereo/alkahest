@@ -13,7 +13,7 @@ use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use super::drawcall::{
-    ConstantBufferBinding, DrawCall, ShadingTechnique, SortValue3d, Transparency,
+    ConstantBufferBinding, DrawCall, GeometryType, ShadingTechnique, SortValue3d, Transparency,
 };
 use super::renderer::Renderer;
 
@@ -225,7 +225,8 @@ impl StaticModel {
                             .with_depth(u32::MIN)
                             .with_material(material.0)
                             .with_technique(ShadingTechnique::Deferred)
-                            .with_transparency(Transparency::Blend),
+                            .with_transparency(Transparency::Blend)
+                            .with_geometry_type(GeometryType::Static),
                         DrawCall {
                             vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
                             index_buffer: buffers.index_buffer,
@@ -345,7 +346,8 @@ impl StaticOverlayModel {
                 .with_depth(u32::MAX)
                 .with_material(self.model.material.0)
                 .with_technique(technique)
-                .with_transparency(Transparency::Additive),
+                .with_transparency(Transparency::Additive)
+                .with_geometry_type(GeometryType::Static),
             DrawCall {
                 vertex_buffers: vec![self.buffers.vertex_buffer1, self.buffers.vertex_buffer2],
                 index_buffer: self.buffers.index_buffer,

@@ -53,7 +53,8 @@ use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
-use crate::render::renderer::{Renderer, ScopeOverrides};
+use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
+use crate::render::renderer::Renderer;
 
 use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, TerrainRenderer};
 use crate::resources::Resources;
@@ -281,6 +282,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(ErrorRenderer::load(dcs.clone()));
     resources.insert(ScopeOverrides::default());
     resources.insert(DebugShapes::default());
+    resources.insert(EnabledShaderOverrides::default());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -307,7 +309,7 @@ pub async fn main() -> anyhow::Result<()> {
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
-        renderlayer_entities: false,
+        renderlayer_entities: true,
 
         alpha_blending: true,
         render_lights: false,

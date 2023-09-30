@@ -2,7 +2,11 @@ use glam::{Mat4, Vec4};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
 
-use crate::{map::MapDataList, render::renderer::ScopeOverrides, resources::Resources};
+use crate::{
+    map::MapDataList,
+    render::overrides::{EnabledShaderOverrides, ScopeOverrides},
+    resources::Resources,
+};
 
 use super::gui::{GuiResources, OverlayProvider};
 
@@ -50,6 +54,13 @@ impl OverlayProvider for RenderSettingsOverlay {
                 ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
                 ui.checkbox(&mut self.renderlayer_entities, "Entities");
             });
+
+            if let Some(mut enabled_overrides) = resources.get_mut::<EnabledShaderOverrides>() {
+                ui.collapsing("Shader Overrides", |ui| {
+                    ui.checkbox(&mut enabled_overrides.entity_vs, "Entity (VS)");
+                    ui.checkbox(&mut enabled_overrides.entity_ps, "Entity (PS)");
+                });
+            }
 
             ui.collapsing("Scope Overrides", |ui| {
                 let mut overrides = resources.get_mut::<ScopeOverrides>().unwrap();
