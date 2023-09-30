@@ -153,6 +153,7 @@ pub async fn load_maps(
                                         data.rotation.w,
                                     ),
                                     entity: data.entity,
+                                    has_havok_data: is_physics_entity(data.entity),
                                     world_id: data.world_id,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::CubemapVolume(
@@ -182,6 +183,7 @@ pub async fn load_maps(
                                         data.rotation.w,
                                     ),
                                     entity: data.entity,
+                                    has_havok_data: is_physics_entity(data.entity),
                                     world_id: data.world_id,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::Unk808067b5(tag),
@@ -216,6 +218,7 @@ pub async fn load_maps(
                                                 data.rotation.w,
                                             ),
                                             entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
                                             world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Decal {
@@ -350,6 +353,7 @@ pub async fn load_maps(
                                         ),
                                         rotation: Quat::IDENTITY,
                                         entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::Unk80806aa3(unk18.bb),
@@ -382,6 +386,7 @@ pub async fn load_maps(
                                             transform.rotation.w,
                                         ),
                                         entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::Light,
@@ -425,6 +430,7 @@ pub async fn load_maps(
                                         data.rotation.w,
                                     ),
                                     entity: data.entity,
+                                    has_havok_data: is_physics_entity(data.entity),
                                     world_id: data.world_id,
                                     resource_type: data.data_resource.resource_type,
                                     resource: MapResource::Unknown(
@@ -450,6 +456,7 @@ pub async fn load_maps(
                                 data.rotation.w,
                             ),
                             entity: data.entity,
+                            has_havok_data: is_physics_entity(data.entity),
                             world_id: data.world_id,
                             resource_type: u32::MAX,
                             resource: MapResource::Entity(data.entity, data.world_id),
@@ -572,12 +579,23 @@ pub async fn load_maps(
 
                         // println!(" - EntityModel {model:?}");
                     }
-                    u => debug!(
-                        "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-                        u.to_be(),
-                        e.unk0.unk10.resource_type.to_be(),
-                        e.unk0.tag()
-                    ),
+                    u => {
+                        if nh.0 == 0x80e792e1 {
+                            info!(
+                                "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                                u.to_be(),
+                                e.unk0.unk10.resource_type.to_be(),
+                                e.unk0.tag()
+                            )
+                        }
+
+                        debug!(
+                            "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                            u.to_be(),
+                            e.unk0.unk10.resource_type.to_be(),
+                            e.unk0.tag()
+                        )
+                    }
                 }
             }
 
@@ -920,6 +938,22 @@ pub async fn load_maps(
         placement_renderers,
         terrain_renderers,
     })
+}
+
+fn is_physics_entity(entity: ExtendedHash) -> bool {
+    if let Some(nh) = entity.hash32() {
+        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+            return false;
+        };
+
+        for e in &header.entity_resources {
+            if e.unk0.unk10.resource_type == 0x8080916a {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 pub struct LoadMapsData {

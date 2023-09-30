@@ -3,6 +3,8 @@ use std::ops::{Deref, DerefMut};
 use std::sync::atomic::AtomicUsize;
 use std::time::Instant;
 
+pub mod image;
+
 static LOCK_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[allow(unused)]

@@ -2,19 +2,29 @@ use crate::{
     camera::FpsCamera, map::MapDataList, render::debug::DebugShapes, resources::Resources,
 };
 
+use egui::Color32;
 use frustum_query::frustum::Frustum;
 use glam::{Mat4, Vec2};
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
 
-use super::{camera_settings::CameraPositionOverlay, gui::OverlayProvider};
+use super::{
+    camera_settings::CameraPositionOverlay,
+    gui::{GuiResources, OverlayProvider},
+};
 
 pub struct ResourceTypeOverlay {
     pub debug_overlay: Rc<RefCell<CameraPositionOverlay>>,
 }
 
 impl OverlayProvider for ResourceTypeOverlay {
-    fn draw(&mut self, ctx: &egui::Context, window: &Window, resources: &mut Resources) {
+    fn draw(
+        &mut self,
+        ctx: &egui::Context,
+        window: &Window,
+        resources: &mut Resources,
+        icons: &GuiResources,
+    ) {
         if self.debug_overlay.borrow().show_map_resources {
             let screen_size = window.inner_size();
             let window_dims = window.inner_size();
@@ -75,6 +85,19 @@ impl OverlayProvider for ResourceTypeOverlay {
                         egui::FontId::proportional(22.0),
                         color,
                     );
+
+                    if res.has_havok_data {
+                        painter.image(
+                            icons.icon_havok.id(),
+                            egui::Rect::from_center_size(
+                                egui::Pos2::from(screen_point.to_array())
+                                    - egui::pos2(12., 12.).to_vec2(),
+                                egui::vec2(16.0, 16.0),
+                            ),
+                            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                            Color32::WHITE,
+                        );
+                    }
 
                     if self.debug_overlay.borrow().show_map_resource_label {
                         painter.text(

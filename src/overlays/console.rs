@@ -14,6 +14,8 @@ use tracing_subscriber::Layer;
 use winit::event::VirtualKeyCode;
 use winit::window::Window;
 
+use super::gui::GuiResources;
+
 // ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
 lazy_static! {
     static ref MESSAGE_BUFFER: Arc<parking_lot::RwLock<AllocRingBuffer<CapturedEvent>>> =
@@ -84,7 +86,13 @@ impl Default for ConsoleOverlay {
 }
 
 impl OverlayProvider for ConsoleOverlay {
-    fn draw(&mut self, ctx: &egui::Context, _window: &Window, resources: &mut Resources) {
+    fn draw(
+        &mut self,
+        ctx: &egui::Context,
+        _window: &Window,
+        resources: &mut Resources,
+        _icons: &GuiResources,
+    ) {
         let input = resources.get::<InputState>().unwrap();
         if (input.is_key_pressed(VirtualKeyCode::Grave) || input.is_key_pressed(VirtualKeyCode::F1))
             && !self.open

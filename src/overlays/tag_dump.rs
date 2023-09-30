@@ -7,6 +7,8 @@ use std::io::Write;
 use tracing::error;
 use winit::window::Window;
 
+use super::gui::GuiResources;
+
 pub struct TagDumper {
     package_id: String,
     entry_index: String,
@@ -54,7 +56,13 @@ impl TagDumper {
 }
 
 impl OverlayProvider for TagDumper {
-    fn draw(&mut self, ctx: &egui::Context, _window: &Window, _resources: &mut Resources) {
+    fn draw(
+        &mut self,
+        ctx: &egui::Context,
+        _window: &Window,
+        _resources: &mut Resources,
+        _icons: &GuiResources,
+    ) {
         egui::Window::new("Tag Dumper").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.radio_value(&mut self.use_full_hash, true, "Full hash");

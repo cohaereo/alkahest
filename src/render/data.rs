@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::util::{LockTracker, RwLock};
+use crate::util::RwLock;
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
@@ -113,6 +113,9 @@ pub struct RenderDataManager {
     // tx_shaders: Sender<TagHash>,
     render_data: Arc<RwLock<RenderData>>,
 }
+
+#[cfg(feature = "debug_lock")]
+use crate::util::LockTracker;
 
 impl RenderDataManager {
     pub fn new(dcs: Arc<DeviceContextSwapchain>) -> Self {

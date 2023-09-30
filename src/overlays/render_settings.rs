@@ -4,7 +4,7 @@ use winit::window::Window;
 
 use crate::{map::MapDataList, render::renderer::ScopeOverrides, resources::Resources};
 
-use super::gui::OverlayProvider;
+use super::gui::{GuiResources, OverlayProvider};
 
 pub struct RenderSettingsOverlay {
     pub composition_mode: usize,
@@ -21,7 +21,13 @@ pub struct RenderSettingsOverlay {
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
-    fn draw(&mut self, ctx: &egui::Context, _window: &Window, resources: &mut Resources) {
+    fn draw(
+        &mut self,
+        ctx: &egui::Context,
+        _window: &Window,
+        resources: &mut Resources,
+        _icons: &GuiResources,
+    ) {
         egui::Window::new("Options").show(ctx, |ui| {
             ui.checkbox(&mut self.render_lights, "Render lights");
             ui.checkbox(&mut self.evaluate_bytecode, "Evaluate TFX bytecode (WIP)");

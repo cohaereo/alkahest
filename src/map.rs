@@ -1,14 +1,13 @@
 use crate::map_resources::ResourcePoint;
 use crate::packages::package_manager;
 use crate::render::scopes::ScopeRigidModel;
-use crate::render::{ConstantBuffer};
+use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ResourcePointer, TablePointer, Tag};
 use crate::types::{DestinyHash, Vector4};
 use binrw::{BinRead, BinReaderExt};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
-
 
 use std::fmt::Debug;
 use std::io::SeekFrom;
