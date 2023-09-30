@@ -430,6 +430,7 @@ impl Renderer {
                                 Some(&[1f32, 1., 1., 1.] as _),
                                 0xffffffff,
                             ),
+                            3 => continue,
                             _ => match s.transparency() {
                                 Transparency::Blend => self.dcs.context().OMSetBlendState(
                                     &self.blend_state_blend,

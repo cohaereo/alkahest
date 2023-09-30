@@ -1,3 +1,4 @@
+use const_format::concatcp;
 use glam::{Mat4, Vec4};
 use std::{fmt::Display, fmt::Formatter};
 use winit::window::Window;
@@ -40,8 +41,15 @@ impl OverlayProvider for RenderSettingsOverlay {
                 egui::ComboBox::from_label("Blend Override").show_index(
                     ui,
                     &mut self.blend_override,
-                    3,
-                    |i| ["Default", "Blend", "Additive"][i],
+                    4,
+                    |i| {
+                        [
+                            "Default",
+                            concatcp!(crate::icons::ICON_VECTOR_DIFFERENCE, " Blend"),
+                            concatcp!(crate::icons::ICON_PLUS, " Additive"),
+                            concatcp!(crate::icons::ICON_CLOSE, " Discard"),
+                        ][i]
+                    },
                 );
             }
 
