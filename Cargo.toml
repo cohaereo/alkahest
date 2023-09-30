@@ -22,6 +22,7 @@ windows = { version = "0.43.0", features = [
     "Win32_Graphics_Dxgi",
     "Win32_Graphics_Dxgi_Common",
     "Win32_Foundation",
+    "Win32_System_Console",
     "Win32_Graphics_Direct3D_Fxc",
 ] }
 raw-window-handle = "0.5.2"

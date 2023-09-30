@@ -99,6 +99,7 @@ struct Args {
 
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()> {
+    util::fix_windows_command_prompt();
     panic_handler::install_hook();
 
     #[cfg(not(debug_assertions))]

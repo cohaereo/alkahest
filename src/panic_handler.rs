@@ -76,13 +76,13 @@ fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<(
     Ok(())
 }
 
-pub fn strip_ansi_codes(input: &str) -> String {
-    // Create a regex pattern to match ANSI escape sequences
-    let ansi_escape_pattern = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
+// pub fn strip_ansi_codes(input: &str) -> String {
+//     // Create a regex pattern to match ANSI escape sequences
+//     let ansi_escape_pattern = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
 
-    // Use the regex pattern to replace ANSI escape sequences with an empty string
-    let result = ansi_escape_pattern.replace_all(input, "");
+//     // Use the regex pattern to replace ANSI escape sequences with an empty string
+//     let result = ansi_escape_pattern.replace_all(input, "");
 
-    // Convert the result back to a String
-    result.to_string()
-}
+//     // Convert the result back to a String
+//     result.to_string()
+// }
