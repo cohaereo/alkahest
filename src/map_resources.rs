@@ -1,6 +1,6 @@
 use crate::icons::{
-    ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_SPHERE,
-    ICON_STICKER,
+    ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
+    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER,
 };
 use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
@@ -39,6 +39,7 @@ pub enum MapResource {
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
     Unk80806aa3(AABB) = 5,
     Light = 6,
+    RespawnPoint = 7,
 }
 
 impl MapResource {
@@ -79,6 +80,7 @@ impl MapResource {
             }
             MapResource::Unk80806aa3(_) => "Unk80806aa3".to_string(),
             MapResource::Light => "Light".to_string(),
+            MapResource::RespawnPoint => "Unk80808cb5".to_string(),
         }
     }
 
@@ -110,6 +112,7 @@ impl MapResource {
             MapResource::CubemapVolume(..) => [50, 255, 50],
             MapResource::Unk80806aa3 { .. } => RANDOM_COLORS[0x80806aa3 % 16],
             MapResource::Light { .. } => [0xFF, 0xFF, 0x00],
+            MapResource::RespawnPoint => [220, 20, 20],
         }
     }
 
@@ -120,6 +123,7 @@ impl MapResource {
             MapResource::Unk808067b5 { .. } => ICON_FLARE,
             MapResource::CubemapVolume(..) => ICON_SPHERE,
             MapResource::Light => ICON_LIGHTBULB_ON,
+            MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
             _ => ICON_HELP,
         }
     }
@@ -157,6 +161,7 @@ impl MapResource {
             3 => ICON_FLARE,
             4 => ICON_SPHERE,
             6 => ICON_LIGHTBULB_ON,
+            7 => ICON_ACCOUNT_CONVERT,
             _ => ICON_HELP_BOX_OUTLINE,
         }
     }
@@ -380,4 +385,17 @@ pub struct Unk80806c70 {
 pub struct Unk80809f4f {
     pub rotation: Vector4,
     pub translation: Vector4,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808cb7 {
+    pub file_size: u64,
+    pub unk8: TablePointer<Unk80808cb9>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808cb9 {
+    pub unk0: [u32; 4],
+    pub translation: Vector4,
+    pub unk20: [u32; 4],
 }

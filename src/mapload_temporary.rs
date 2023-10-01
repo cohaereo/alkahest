@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::util::RwLock;
+use crate::{map_resources::Unk80808cb7, util::RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
@@ -398,6 +398,34 @@ pub async fn load_maps(
                                         transform.translation.z,
                                         transform.translation.w,
                                     ));
+                                }
+                            }
+                            0x80808cb5 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: TagHash = cur.read_le().unwrap();
+                                if !tag.is_valid() {
+                                    continue;
+                                }
+
+                                let header: Unk80808cb7 =
+                                    package_manager().read_tag_struct(tag).unwrap();
+
+                                for transform in header.unk8.iter() {
+                                    resource_points.push(ResourcePoint {
+                                        translation: Vec4::new(
+                                            transform.translation.x,
+                                            transform.translation.y,
+                                            transform.translation.z,
+                                            transform.translation.w,
+                                        ),
+                                        rotation: Quat::IDENTITY,
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::RespawnPoint,
+                                    });
                                 }
                             }
                             u => {

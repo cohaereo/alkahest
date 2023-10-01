@@ -101,7 +101,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                     if self.debug_overlay.borrow().show_map_resource_label {
                         painter.text(
-                            (screen_point + Vec2::new(12.0, 0.0)).to_array().into(),
+                            (screen_point + Vec2::new(14.0, 0.0)).to_array().into(),
                             egui::Align2::LEFT_CENTER,
                             res.resource.debug_string(),
                             egui::FontId::proportional(14.0),
