@@ -775,9 +775,13 @@ impl Renderer {
                 )]),
                 None,
             );
-            self.dcs
-                .context()
-                .PSSetShaderResources(0, Some(&[Some(self.gbuffer.staging.view.clone())]));
+            self.dcs.context().PSSetShaderResources(
+                0,
+                Some(&[
+                    Some(self.gbuffer.staging.view.clone()),
+                    Some(self.gbuffer.depth.texture_view.clone()),
+                ]),
+            );
 
             self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,

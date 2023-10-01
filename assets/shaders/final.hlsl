@@ -10,6 +10,18 @@ cbuffer CompositeOptions : register(b0) {
     uint lightCount;
 };
 
+cbuffer cb12 : register(b12)
+{
+  row_major float4x4 world_to_projective; // c0
+  row_major float4x4 camera_to_world; // c4
+  row_major float4x4 target_pixel_to_camera; // c8
+
+  float4 target; // c12
+
+  float4 unk13; // c13
+  float4 view_miscellaneous; // c14
+}
+
 struct VSOutput {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD;
@@ -40,6 +52,7 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
 }
 
 Texture2D RenderTargetStaging : register(t0);
+Texture2D RenderTargetDepth : register(t1);
 SamplerState SampleType : register(s0);
 
 float3 GammaCorrect(float3 c) {
@@ -52,6 +65,15 @@ float4 PShader(VSOutput input) : SV_Target {
 
     if(tex_i == 0 || tex_i == 1)
         return float4(GammaCorrect(albedo.xyz), 1.0);
+    else if(tex_i == 13) {
+        float4 u0 = 0;
+        u0.xy = target.xy * input.uv.xy;
+        u0.xy = (int2)u0.xy;
+
+        float r0 = RenderTargetDepth.Load(u0.xyz).x;
+        float v = r0.x * 64 * 2048;
+        return float4(frac(v.xxx), 1);
+    }
     else
         return float4(albedo.xyz, 1.0);
 }

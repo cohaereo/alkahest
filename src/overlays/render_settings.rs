@@ -195,6 +195,7 @@ pub enum CompositorMode {
     Iridescence = 10,
     Cubemap = 11,
     Matcap = 12,
+    Depth = 13,
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
@@ -211,6 +212,7 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::Iridescence,    // 10
     CompositorMode::Cubemap,        // 11
     CompositorMode::Matcap,         // 12
+    CompositorMode::Depth,          // 13
 ];
 
 impl Display for CompositorMode {
@@ -229,6 +231,7 @@ impl Display for CompositorMode {
             CompositorMode::Iridescence => "Iridescence",
             CompositorMode::Cubemap => "Cubemap",
             CompositorMode::Matcap => "Matcap",
+            CompositorMode::Depth => "Depth",
         };
 
         f.write_str(name)
