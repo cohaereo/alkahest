@@ -437,6 +437,7 @@ pub async fn load_maps(
                                         data.data_resource.resource_type,
                                         data.world_id,
                                         data.entity,
+                                        data.data_resource,
                                     ),
                                 });
                             }
