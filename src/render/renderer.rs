@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
+use crate::util::image::Png;
 use crate::util::RwLock;
 use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
@@ -167,12 +168,13 @@ impl Renderer {
             })?
         };
 
-        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matte.data");
+        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matcap.png");
+        let matcap_png = Png::from_bytes(MATCAP_DATA)?.into_rgba()?;
         let matcap = Texture::load_2d_raw(
             &dcs,
-            128,
-            128,
-            MATCAP_DATA,
+            matcap_png.dimensions[0] as u32,
+            matcap_png.dimensions[1] as u32,
+            &matcap_png.data,
             DxgiFormat::R8G8B8A8_UNORM,
             Some("Basic shading matcap"),
         )?;
