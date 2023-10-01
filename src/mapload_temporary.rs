@@ -438,6 +438,7 @@ pub async fn load_maps(
                                         data.world_id,
                                         data.entity,
                                         data.data_resource,
+                                        table.tag(),
                                     ),
                                 });
                             }

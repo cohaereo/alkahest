@@ -34,7 +34,7 @@ pub enum MapResource {
         material: TagHash,
         scale: f32,
     } = 1,
-    Unknown(u32, u64, ExtendedHash, ResourcePointer) = 2,
+    Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash) = 2,
     Unk808067b5(TagHash) = 3,
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
     Unk80806aa3(AABB) = 5,
@@ -55,16 +55,16 @@ impl MapResource {
             MapResource::Decal { material, scale } => {
                 format!("Decal (mat {material}, scale {scale})")
             }
-            MapResource::Unknown(u, world_id, entity, res_ptr) => {
+            MapResource::Unknown(u, world_id, entity, res_ptr, table_tag) => {
                 let hash32 = if let Some(h32) = entity.hash32() {
                     format!("\nEntity {h32}")
                 } else {
                     String::new()
                 };
                 format!(
-                    "Unknown {:08X} (0x{world_id:016x})\nResource table {:8X} @ 0x{:x}{hash32}",
+                    "Unknown {:08X} (0x{world_id:016x})\nResource table {} @ 0x{:x}{hash32}",
                     u.to_be(),
-                    res_ptr.resource_type.to_be(),
+                    table_tag,
                     res_ptr.offset,
                 )
             }
@@ -105,7 +105,7 @@ impl MapResource {
         match self {
             MapResource::Entity { .. } => [255, 255, 255],
             MapResource::Decal { .. } => [50, 255, 255],
-            MapResource::Unknown(u, _, _, _) => RANDOM_COLORS[*u as usize % 16],
+            MapResource::Unknown(u, _, _, _, _) => RANDOM_COLORS[*u as usize % 16],
             MapResource::Unk808067b5 { .. } => [220, 220, 20],
             MapResource::CubemapVolume(..) => [50, 255, 50],
             MapResource::Unk80806aa3 { .. } => RANDOM_COLORS[0x80806aa3 % 16],
