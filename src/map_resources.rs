@@ -40,6 +40,8 @@ pub enum MapResource {
     Unk80806aa3(AABB) = 5,
     Light = 6,
     RespawnPoint = 7,
+    Unk808085c0 = 8,
+    Unk80806a40 = 9,
 }
 
 impl MapResource {
@@ -81,6 +83,8 @@ impl MapResource {
             MapResource::Unk80806aa3(_) => "Unk80806aa3".to_string(),
             MapResource::Light => "Light".to_string(),
             MapResource::RespawnPoint => "Unk80808cb5".to_string(),
+            MapResource::Unk808085c0 => "Unk808085c0".to_string(),
+            MapResource::Unk80806a40 => "Unk80806d19".to_string(),
         }
     }
 
@@ -113,6 +117,8 @@ impl MapResource {
             MapResource::Unk80806aa3 { .. } => RANDOM_COLORS[0x80806aa3 % 16],
             MapResource::Light { .. } => [0xFF, 0xFF, 0x00],
             MapResource::RespawnPoint => [220, 20, 20],
+            MapResource::Unk808085c0 { .. } => RANDOM_COLORS[0x808085c0 % 16],
+            MapResource::Unk80806a40 { .. } => RANDOM_COLORS[0x80806a40 % 16],
         }
     }
 
@@ -399,3 +405,48 @@ pub struct Unk80808cb9 {
     pub translation: Vector4,
     pub unk20: [u32; 4],
 }
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk808085c2 {
+    pub file_size: u64,
+    pub unk8: TablePointer<Unk808085c4>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk808085c4 {
+    pub unk0: [u32; 4],
+    pub unk10: [u32; 4],
+    pub translation: Vector4,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806d19 {
+    pub file_size: u64,
+    pub unk8: TagHash,
+    pub unkc: u32, // Padding
+    pub unk10: TablePointer<()>,
+    pub unk20: TagHash,
+    pub unk24: u32, // Padding
+    pub unk28: TablePointer<()>,
+    pub unk38: TagHash,
+    pub unk3c: u32, // Padding
+    pub unk40: TablePointer<()>,
+    pub unk50: TablePointer<Unk80806d4f>,
+    pub unk60: TablePointer<()>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806d4f {
+    pub translation: Vector4,
+    pub unk10: [u32; 4],
+    pub unk20: [u32; 4],
+}
+
+// #[derive(BinRead, Debug, Clone)]
+// pub struct Unk808066a2 {
+//     pub file_size: u64,
+//     pub unk8: TablePointer<()>,
+//     pub unk18: TablePointer<()>,
+//     /// Havok file
+//     pub unk28: TagHash,
+// }

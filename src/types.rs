@@ -186,14 +186,14 @@ pub struct AABB {
 }
 
 impl AABB {
-    pub fn contains_point(&self, point: Vec3) -> bool {
-        self.min.x <= point.x
-            && self.min.y <= point.y
-            && self.min.z <= point.z
-            && point.x <= self.max.x
-            && point.y <= self.max.y
-            && point.z <= self.max.z
-    }
+    // pub fn contains_point(&self, point: Vec3) -> bool {
+    //     self.min.x <= point.x
+    //         && self.min.y <= point.y
+    //         && self.min.z <= point.z
+    //         && point.x <= self.max.x
+    //         && point.y <= self.max.y
+    //         && point.z <= self.max.z
+    // }
 
     /// In units cubed
     pub fn volume(&self) -> f32 {
