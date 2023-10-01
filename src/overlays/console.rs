@@ -1,17 +1,20 @@
-use crate::input::InputState;
+use crate::camera::FpsCamera;
 use crate::overlays::gui::OverlayProvider;
 use crate::resources::Resources;
 
-use egui::{Color32, RichText};
+use binrw::BinReaderExt;
+use egui::{Color32, RichText, TextStyle};
+use glam::Vec3;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::fmt::Debug;
+use std::io::Cursor;
 use std::sync::Arc;
 use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::Layer;
-use winit::event::VirtualKeyCode;
 use winit::window::Window;
 
 use super::gui::GuiResources;
@@ -70,7 +73,6 @@ where
 pub struct ConsoleOverlay {
     pub command_buffer: String,
     pub autoscroll: bool,
-    pub focus_input: bool,
     pub open: bool,
 }
 
@@ -79,7 +81,6 @@ impl Default for ConsoleOverlay {
         Self {
             command_buffer: "".to_string(),
             autoscroll: true,
-            focus_input: false,
             open: false,
         }
     }
@@ -93,52 +94,26 @@ impl OverlayProvider for ConsoleOverlay {
         resources: &mut Resources,
         _icons: &GuiResources,
     ) {
-        let input = resources.get::<InputState>().unwrap();
-        if (input.is_key_pressed(VirtualKeyCode::Grave) || input.is_key_pressed(VirtualKeyCode::F1))
-            && !self.open
-        {
+        let request_focus = if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
             self.open = true;
-            self.focus_input = true;
-        }
+            true
+        } else {
+            false
+        };
 
-        if self.open {
-            let response = egui::Window::new("Console")
-                .open(&mut self.open)
-                .show(ctx, |ui| {
+        let response = egui::Window::new("Console")
+            .open(&mut self.open)
+            .collapsible(false)
+            .show(ctx, |ui| {
+                {
                     let c = MESSAGE_BUFFER.read();
-                    // ui.child_window("Console log")
-                    //     // .flags(WindowFlags::NO_TITLE_BAR)
-                    //     .size([ui.window_size()[0] - 16.0, ui.window_size()[1] - 58.0])
-                    //     .build(|| {
-                    //         is_focused |= ui.is_window_focused();
-                    //         for e in c.iter() {
-                    //             let level_color = match e.level {
-                    //                 Level::TRACE => [0.8, 0.4, 0.8, 1.0],
-                    //                 Level::DEBUG => [0.35, 0.35, 1.0, 1.0],
-                    //                 Level::INFO => [0.25, 1.0, 0.25, 1.0],
-                    //                 Level::WARN => [1.0, 1.0, 0.15, 1.0],
-                    //                 Level::ERROR => [1.0, 0.15, 0.15, 1.0],
-                    //             };
-                    //             ui.text_colored(level_color, format!("{:5} ", e.level));
-                    //             ui.same_line();
-                    //             ui.text_colored(
-                    //                 [0.6, 0.6, 0.6, 1.0],
-                    //                 format!("{}: ", e.target),
-                    //             );
-                    //             ui.same_line();
-                    //             ui.text(&e.message);
-                    //         }
-
-                    //         if self.autoscroll {
-                    //             ui.set_scroll_here_y();
-                    //         }
-                    //     });
-
-                    egui::ScrollArea::new([false, true]).show_rows(
-                        ui,
-                        14.0,
-                        c.len(),
-                        |ui, row_range| {
+                    let text_style = TextStyle::Monospace;
+                    let row_height = ui.text_style_height(&text_style);
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false; 2])
+                        .max_height(_window.inner_size().height as f32 * 0.60)
+                        .stick_to_bottom(true)
+                        .show_rows(ui, row_height, c.len(), |ui, row_range| {
                             for row in row_range {
                                 let event = &c[row as isize];
                                 let level_color = match event.level {
@@ -168,14 +143,10 @@ impl OverlayProvider for ConsoleOverlay {
                                     ui.label(RichText::new(&event.message).monospace());
                                 });
                             }
-                        },
-                    );
+                        });
+                }
 
-                    if self.focus_input {
-                        ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
-                        self.focus_input = false;
-                    }
-
+                ui.horizontal(|ui| {
                     if egui::TextEdit::singleline(&mut self.command_buffer)
                         .id(egui::Id::new("console_input_line"))
                         .show(ui)
@@ -183,26 +154,74 @@ impl OverlayProvider for ConsoleOverlay {
                         .lost_focus()
                         && ui.input(|i| i.key_pressed(egui::Key::Enter))
                     {
+                        let cmd = self.command_buffer.split(' ').collect_vec();
+                        if !cmd.is_empty() {
+                            let command = cmd[0];
+                            let args = &cmd[1..];
+
+                            execute_command(command, args, resources);
+                        }
+
                         self.command_buffer.clear();
-                        self.focus_input = true;
+                        ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
                     }
                 });
+            });
 
-            if let Some(response) = response {
-                if (input.is_key_pressed(VirtualKeyCode::Grave)
-                    || input.is_key_pressed(VirtualKeyCode::F1))
-                    && !response.response.has_focus()
-                {
-                    self.focus_input = true;
-                }
+        if request_focus {
+            ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
+        }
 
-                if response.response.has_focus() && (input.is_key_pressed(VirtualKeyCode::Escape))
-                // || input.is_key_pressed(VirtualKeyCode::Grave)
-                // || input.is_key_pressed(VirtualKeyCode::F1))
-                {
-                    self.open = false;
-                }
+        if let Some(response) = response {
+            if response.response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.open = false;
             }
         }
+    }
+}
+
+fn execute_command(command: &str, args: &[&str], resources: &Resources) {
+    match command.to_lowercase().as_str() {
+        "goto" => {
+            let new_pos = if args.len() == 1 && (args[0].len() == 24 || args[0].len() == 32) {
+                let Ok(raw_data) = hex::decode(args[0]) else {
+                    error!("Invalid hex position data");
+                    return;
+                };
+
+                let mut c = Cursor::new(raw_data);
+                Vec3::new(
+                    c.read_le().unwrap(),
+                    c.read_le().unwrap(),
+                    c.read_le().unwrap(),
+                )
+            } else {
+                if args.len() != 3 {
+                    error!("Too few/many arguments, expected 3, got {}", args.len());
+                    return;
+                }
+
+                let parsed_pos: anyhow::Result<Vec3> = (|| {
+                    let x = str::parse(args[0])?;
+                    let y = str::parse(args[1])?;
+                    let z = str::parse(args[2])?;
+
+                    Ok(Vec3::new(x, y, z))
+                })();
+
+                match parsed_pos {
+                    Ok(new_pos) => new_pos,
+                    Err(e) => {
+                        error!("Invalid coordinates: {e}");
+                        return;
+                    }
+                }
+            };
+
+            let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+            camera.position = new_pos;
+            info!("Teleported to {} {} {}", new_pos.x, new_pos.y, new_pos.z);
+        }
+        _ => error!("Unknown command '{command}'"),
     }
 }

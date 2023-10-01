@@ -31,18 +31,19 @@ impl TextureAllocator {
         &mut self,
         dev: &ID3D11Device,
         ctx: &ID3D11DeviceContext,
-        delta: TexturesDelta,
+        delta: &TexturesDelta,
     ) -> Result<(), RenderError> {
-        for (tid, delta) in delta.set {
+        for (tid, delta) in &delta.set {
             if delta.is_whole() {
-                self.allocate_new(dev, tid, delta.image)?;
+                self.allocate_new(dev, *tid, &delta.image)?;
             } else {
-                let _did_update = self.update_partial(ctx, tid, delta.image, delta.pos.unwrap())?;
+                let _did_update =
+                    self.update_partial(ctx, *tid, &delta.image, delta.pos.unwrap())?;
             }
         }
 
-        for tid in delta.free {
-            self.free(tid);
+        for tid in &delta.free {
+            self.free(*tid);
         }
 
         Ok(())
@@ -58,7 +59,7 @@ impl TextureAllocator {
         &mut self,
         dev: &ID3D11Device,
         tid: TextureId,
-        image: ImageData,
+        image: &ImageData,
     ) -> Result<(), RenderError> {
         let tex = Self::allocate_texture(dev, image)?;
         self.allocated.insert(tid, tex);
@@ -73,7 +74,7 @@ impl TextureAllocator {
         &mut self,
         ctx: &ID3D11DeviceContext,
         tid: TextureId,
-        image: ImageData,
+        image: &ImageData,
         [nx, ny]: [usize; 2],
     ) -> Result<bool, RenderError> {
         if let Some(old) = self.allocated.get_mut(&tid) {
@@ -125,7 +126,7 @@ impl TextureAllocator {
 
     fn allocate_texture(
         dev: &ID3D11Device,
-        image: ImageData,
+        image: &ImageData,
     ) -> Result<ManagedTexture, RenderError> {
         let desc = D3D11_TEXTURE2D_DESC {
             Width: image.width() as _,
@@ -146,7 +147,7 @@ impl TextureAllocator {
         // rust is cringe sometimes
         let width = image.width();
         let pixels = match image {
-            ImageData::Color(c) => c.pixels,
+            ImageData::Color(c) => c.pixels.clone(),
             ImageData::Font(f) => f
                 .pixels
                 .iter()

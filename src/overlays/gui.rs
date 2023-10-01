@@ -80,7 +80,8 @@ impl GuiManager {
     {
         let input = self.integration.take_egui_input(&window);
 
-        self.renderer
+        let output = self
+            .renderer
             .paint(
                 unsafe { transmute(&self.dcs.swap_chain) },
                 input,
@@ -99,6 +100,9 @@ impl GuiManager {
                 },
             )
             .unwrap();
+
+        self.integration
+            .handle_platform_output(&window, &self.egui, output.platform_output)
     }
 }
 

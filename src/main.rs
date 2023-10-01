@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::overlays::console::ConsoleOverlay;
 use crate::util::{FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -335,11 +336,11 @@ pub async fn main() -> anyhow::Result<()> {
     let gui_loading = Rc::new(RefCell::new(LoadIndicatorOverlay::default()));
 
     let mut gui = GuiManager::create(&window, dcs.clone());
-    // let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
+    let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
     gui.add_overlay(gui_debug);
     gui.add_overlay(gui_rendersettings.clone());
     gui.add_overlay(gui_resources);
-    // gui.add_overlay(gui_console);
+    gui.add_overlay(gui_console);
     gui.add_overlay(gui_dump);
     gui.add_overlay(gui_loading);
     gui.add_overlay(gui_fps);

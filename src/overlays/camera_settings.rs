@@ -1,7 +1,7 @@
 use strum::{EnumCount, VariantNames};
 use winit::window::Window;
 
-use crate::icons::ICON_BUG;
+use crate::icons::{ICON_BUG, ICON_CLIPBOARD};
 use crate::map::ExtendedHash;
 use crate::map_resources::MapResource;
 use crate::resources::Resources;
@@ -29,6 +29,22 @@ impl OverlayProvider for CameraPositionOverlay {
             ui.label(format!("X: {}", camera.position.x));
             ui.label(format!("Y: {}", camera.position.y));
             ui.label(format!("Z: {}", camera.position.z));
+            if ui
+                .button(const_format::formatcp!(
+                    "{} Copy goto command",
+                    ICON_CLIPBOARD
+                ))
+                .clicked()
+            {
+                ui.output_mut(|o| {
+                    o.copied_text = format!(
+                        "goto {} {} {}",
+                        camera.position.x, camera.position.y, camera.position.z
+                    )
+                });
+            }
+
+            ui.add_space(4.0);
             ui.label(format!(
                 "Cubemap: {}",
                 match resources.get::<CurrentCubemap>().and_then(|c| c.0.clone()) {

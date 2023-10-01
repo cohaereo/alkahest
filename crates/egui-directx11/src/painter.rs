@@ -131,7 +131,7 @@ impl DirectX11Renderer {
         input: egui::RawInput,
         context: &Context,
         paint: PaintFn,
-    ) -> Result<(), RenderError>
+    ) -> Result<egui::FullOutput, RenderError>
     where
         PaintFn: FnOnce(&Context),
     {
@@ -143,16 +143,16 @@ impl DirectX11Renderer {
 
             if !output.textures_delta.is_empty() {
                 self.tex_alloc
-                    .process_deltas(dev, ctx, output.textures_delta)?;
+                    .process_deltas(dev, ctx, &output.textures_delta)?;
             }
 
             if output.shapes.is_empty() {
                 self.backup.restore(ctx);
-                return Ok(());
+                return Ok(output);
             }
 
             let primitives = context
-                .tessellate(output.shapes)
+                .tessellate(output.shapes.clone())
                 .into_iter()
                 .filter_map(|prim| {
                     if let Primitive::Mesh(mesh) = prim.primitive {
@@ -204,9 +204,9 @@ impl DirectX11Renderer {
             }
 
             self.backup.restore(ctx);
-        }
 
-        Ok(())
+            Ok(output)
+        }
     }
 
     /// Call when resizing buffers.
