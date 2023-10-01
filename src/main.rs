@@ -714,20 +714,16 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    if entity_renderers
-                        .insert(
-                            *te,
-                            EntityRenderer::load(
-                                model.0,
-                                entity_material_map.to_vec(),
-                                materials.iter().map(|m| m.tag()).collect_vec(),
-                                &renderer,
-                                &dcs,
-                            )?,
-                        )
-                        .is_some()
-                    {
-                        error!("More than 1 model was loaded for entity {te}");
+                    if let Ok(er) = EntityRenderer::load(
+                        model.0,
+                        entity_material_map.to_vec(),
+                        materials.iter().map(|m| m.tag()).collect_vec(),
+                        &renderer,
+                        &dcs,
+                    ) {
+                        if entity_renderers.insert(*te, er).is_some() {
+                            error!("More than 1 model was loaded for entity {te}");
+                        }
                     }
 
                     // println!(" - EntityModel {model:?}");
