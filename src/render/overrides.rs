@@ -13,7 +13,8 @@ pub struct EnabledShaderOverrides {
 
 pub struct ShaderOverrides {
     pub entity_vs: ID3D11VertexShader,
-    pub entity_ps: ID3D11PixelShader,
+    pub entity_ps_deferred: ID3D11PixelShader,
+    pub entity_ps_forward: ID3D11PixelShader,
 }
 
 impl ShaderOverrides {
@@ -28,17 +29,27 @@ impl ShaderOverrides {
         let (entity_vs, _) = shader::load_vshader(dcs, &vshader_blob)?;
 
         let pshader_blob = shader::compile_hlsl(
-            include_str!("../../assets/shaders/overrides/entity.psh"),
+            include_str!("../../assets/shaders/overrides/entity_deferred.psh"),
             "main",
             "ps_5_0",
         )
         .unwrap();
 
-        let (entity_ps, _) = shader::load_pshader(dcs, &pshader_blob)?;
+        let (entity_ps_deferred, _) = shader::load_pshader(dcs, &pshader_blob)?;
+
+        let pshader_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/overrides/entity_forward.psh"),
+            "main",
+            "ps_5_0",
+        )
+        .unwrap();
+
+        let (entity_ps_forward, _) = shader::load_pshader(dcs, &pshader_blob)?;
 
         Ok(Self {
             entity_vs,
-            entity_ps,
+            entity_ps_deferred,
+            entity_ps_forward,
         })
     }
 }

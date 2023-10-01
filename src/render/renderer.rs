@@ -543,9 +543,14 @@ impl Renderer {
                         .VSSetShader(&self.shader_overrides.entity_vs, None);
                 }
                 if shader_overrides.entity_ps {
-                    self.dcs
-                        .context()
-                        .PSSetShader(&self.shader_overrides.entity_ps, None);
+                    self.dcs.context().PSSetShader(
+                        if sort.technique() == ShadingTechnique::Deferred {
+                            &self.shader_overrides.entity_ps_deferred
+                        } else {
+                            &self.shader_overrides.entity_ps_forward
+                        },
+                        None,
+                    );
                 }
             },
         }
