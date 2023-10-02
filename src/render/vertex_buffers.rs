@@ -13,13 +13,13 @@ pub fn load_vertex_buffers(
     material: TagHash,
     buffers: &[TagHash],
 ) -> anyhow::Result<u64> {
-    if !material.is_valid() {
+    if !material.is_some() {
         anyhow::bail!("Invalid material {material}");
     }
 
     let mut buffer_strides = vec![];
     for b in buffers {
-        if b.is_valid() {
+        if b.is_some() {
             let vertex_header: VertexBufferHeader = package_manager().read_tag_struct(*b).unwrap();
             buffer_strides.push(vertex_header.stride as usize);
         } else {

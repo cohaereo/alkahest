@@ -587,7 +587,7 @@ impl Renderer {
             }
 
             for (buffer_index, vb) in drawcall.vertex_buffers.iter().enumerate() {
-                if !vb.is_valid() {
+                if !vb.is_some() {
                     continue;
                 }
 

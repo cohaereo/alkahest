@@ -88,7 +88,7 @@ impl Material {
     // TODO(cohae): load_shaders is a hack, i fucking hate locks
     pub fn load(renderer: &Renderer, mat: Unk808071e8, tag: TagHash, load_shaders: bool) -> Self {
         let _span = debug_span!("Load material", hash = %tag).entered();
-        let cb0_vs = if mat.unke4.is_valid() {
+        let cb0_vs = if mat.unke4.is_some() {
             let buffer_header_ref = package_manager().get_entry(mat.unke4).unwrap().reference;
 
             let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
@@ -126,7 +126,7 @@ impl Material {
             Some(buf)
         };
 
-        let cb0_ps = if mat.unk334.is_valid() {
+        let cb0_ps = if mat.unk334.is_some() {
             let buffer_header_ref = package_manager().get_entry(mat.unk334).unwrap().reference;
 
             let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();

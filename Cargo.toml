@@ -6,9 +6,9 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 
 [dependencies]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
-destiny-pkg = { version = "0.4.4", git = "https://github.com/v4nguard/destiny-pkg" }
+destiny-pkg = { version = "0.5.0", git = "https://github.com/v4nguard/destiny-pkg" }
 winit = { version = "0.28" }
-binrw = "0.11"
+binrw = "0.12"
 itertools = "0.11.0"
 ddsfile = "0.5.1"
 hex = "0.4.3"

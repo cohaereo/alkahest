@@ -96,7 +96,7 @@ impl EntityRenderer {
 
             // let mut vertex2_stride = None;
             // let mut vertex2_data = None;
-            // if mesh.vertex_buffer2.is_valid() {
+            // if mesh.vertex_buffer2.is_some() {
             //     let vertex2_header: VertexBufferHeader =
             //         pm.read_tag_struct(mesh.vertex_buffer2).unwrap();
             //     let t = pm.get_entry(mesh.vertex_buffer2).unwrap().reference;
@@ -141,7 +141,7 @@ impl EntityRenderer {
                 renderer,
                 mesh.parts
                     .iter()
-                    .find(|v| v.material.is_valid())
+                    .find(|v| v.material.is_some())
                     .map(|v| v.material)
                     .or_else(|| materials.first().cloned())
                     .unwrap(),

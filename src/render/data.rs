@@ -165,7 +165,7 @@ impl RenderDataManager {
     }
 
     // pub fn load_sampler(&self, dcs: &DeviceContextSwapchain, hash: TagHash) {
-    //     if !hash.is_valid() {
+    //     if !hash.is_some() {
     //         return;
     //     }
 
@@ -186,7 +186,7 @@ impl RenderDataManager {
         dcs: &DeviceContextSwapchain,
         hash: TagHash,
     ) -> Option<(ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> {
-        if !hash.is_valid() {
+        if !hash.is_some() {
             return None;
         }
 
@@ -200,7 +200,7 @@ impl RenderDataManager {
     }
 
     pub fn load_pshader(&self, dcs: &DeviceContextSwapchain, hash: TagHash) {
-        if !hash.is_valid() {
+        if !hash.is_some() {
             return;
         }
 
@@ -212,7 +212,7 @@ impl RenderDataManager {
     }
 
     pub fn load_material(&self, renderer: &Renderer, material: TagHash) {
-        if !material.is_valid() {
+        if !material.is_some() {
             return;
         }
 

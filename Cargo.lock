@@ -289,9 +289,9 @@ dependencies = [
 
 [[package]]
 name = "binrw"
-version = "0.11.2"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab81d22cbd2d745852348b2138f3db2103afa8ce043117a374581926a523e267"
+checksum = "9e8318fda24dc135cdd838f57a2b5ccb6e8f04ff6b6c65528c4bd9b5fcdc5cf6"
 dependencies = [
  "array-init",
  "binrw_derive",
@@ -300,9 +300,9 @@ dependencies = [
 
 [[package]]
 name = "binrw_derive"
-version = "0.11.2"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6b019a3efebe7f453612083202887b6f1ace59e20d010672e336eea4ed5be97"
+checksum = "db0832bed83248115532dfb25af54fae1c83d67a2e4e3e2f591c13062e372e7e"
 dependencies = [
  "either",
  "owo-colors",
@@ -741,8 +741,8 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.4.4"
-source = "git+https://github.com/v4nguard/destiny-pkg#d73d7fa207d53a03b06b9cea1b33df8e448d84fa"
+version = "0.5.0"
+source = "git+https://github.com/v4nguard/destiny-pkg#1b80475d638923e3a11d5392635627923ea5f30d"
 dependencies = [
  "aes",
  "aes-gcm",

@@ -163,9 +163,13 @@ impl OverlayProvider for RenderSettingsOverlay {
                     ui,
                     &mut current_map,
                     maps.maps.len(),
-                    |i| &maps.maps[i].1.name,
+                    |i| &maps.maps[i].2.name,
                 );
                 ui.label(format!("Map hash: {}", maps.maps[maps.current_map].0));
+                ui.label(format!(
+                    "Map hash64: {}",
+                    maps.maps[maps.current_map].1.unwrap_or_default()
+                ));
 
                 maps.current_map = current_map;
             }

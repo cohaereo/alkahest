@@ -67,7 +67,7 @@ impl StaticModel {
 
             // let mut vertex2_stride = None;
             // let mut vertex2_data = None;
-            // if vertex2_buffer_hash.is_valid() {
+            // if vertex2_buffer_hash.is_some() {
             //     let vertex2_header: VertexBufferHeader =
             //         pm.read_tag_struct(*vertex2_buffer_hash).unwrap();
             //     let t = pm.get_entry(*vertex2_buffer_hash).unwrap().reference;
@@ -141,7 +141,7 @@ impl StaticModel {
             }
 
             // Fall back to any working material in the material array
-            if !buffer_layout_material.is_valid() {
+            if !buffer_layout_material.is_some() {
                 for material in &model.materials {
                     if let Some(mat) = renderer.render_data.data().materials.get(material) {
                         if mat.unk8 == 1 {
@@ -272,7 +272,7 @@ impl StaticOverlayModel {
 
         // let mut vertex2_stride = None;
         // let mut vertex2_data = None;
-        // if model.vertex_buffer2.is_valid() {
+        // if model.vertex_buffer2.is_some() {
         //     let vertex2_header: VertexBufferHeader =
         //         pm.read_tag_struct(model.vertex_buffer2).unwrap();
         //     let t = pm.get_entry(model.vertex_buffer2).unwrap().reference;

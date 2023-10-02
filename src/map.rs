@@ -66,9 +66,9 @@ impl ExtendedHash {
         }
     }
 
-    pub fn is_valid(&self) -> bool {
+    pub fn is_some(&self) -> bool {
         match self {
-            ExtendedHash::Hash32(h) => h.is_valid(),
+            ExtendedHash::Hash32(h) => h.is_some(),
             // TODO(cohae): Double check this
             ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
         }
@@ -213,11 +213,11 @@ pub struct MapData {
 
 pub struct MapDataList {
     pub current_map: usize, // TODO(cohae): Shouldn't be here
-    pub maps: Vec<(TagHash, MapData)>,
+    pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
 }
 
 impl MapDataList {
-    pub fn current_map(&self) -> Option<&(TagHash, MapData)> {
+    pub fn current_map(&self) -> Option<&(TagHash, Option<TagHash64>, MapData)> {
         if self.maps.is_empty() {
             None
         } else {

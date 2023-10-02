@@ -70,7 +70,7 @@ fn spawn_thread_textures(
         .name(name.to_string())
         .spawn(move || {
             while let Ok(hash) = rx.recv() {
-                if hash.is_valid() && !data.read().textures.contains_key(&hash.key()) {
+                if hash.is_some() && !data.read().textures.contains_key(&hash.key()) {
                     match Texture::load(&dcs, hash) {
                         Ok(t) => {
                             data.write().textures.insert(hash.key(), t);
@@ -109,7 +109,7 @@ fn spawn_thread_buffers(
         .name(name.to_string())
         .spawn(move || {
             while let Ok((hash, create_srv)) = rx.recv() {
-                if hash.is_valid() {
+                if hash.is_some() {
                     if let Ok(entry) = package_manager().get_entry(hash) {
                         match (entry.file_type, entry.file_subtype) {
                             // Vertex buffer

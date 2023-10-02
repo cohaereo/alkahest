@@ -43,7 +43,7 @@ impl OverlayProvider for ResourceTypeOverlay {
             let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());
 
             let maps = resources.get::<MapDataList>().unwrap();
-            if let Some((_, m)) = maps.current_map() {
+            if let Some((_, _, m)) = maps.current_map() {
                 for (res, _) in m.resource_points.iter() {
                     if !self.debug_overlay.borrow().map_resource_filter
                         [res.resource.index() as usize]

@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec4};
 use itertools::Itertools;
 use nohash_hasher::IntMap;
@@ -53,7 +53,7 @@ pub async fn load_maps(
         Default::default();
     let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
 
-    let mut maps: Vec<(TagHash, MapData)> = vec![];
+    let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
     let mut terrain_headers = vec![];
     for hash in map_hashes {
         let renderer = renderer.read();
@@ -105,7 +105,7 @@ pub async fn load_maps(
                                     .unwrap();
 
                                 for p in &terrain.mesh_parts {
-                                    if p.material.is_valid() {
+                                    if p.material.is_some() {
                                         material_map.insert(
                                             p.material,
                                             Material::load(
@@ -197,7 +197,7 @@ pub async fn load_maps(
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
+                                if !tag.is_some() {
                                     continue;
                                 }
 
@@ -237,7 +237,7 @@ pub async fn load_maps(
                             //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                             //         .unwrap();
                             //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
+                            //     if !tag.is_some() {
                             //         continue;
                             //     }
 
@@ -264,7 +264,7 @@ pub async fn load_maps(
                             //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                             //         .unwrap();
                             //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
+                            //     if !tag.is_some() {
                             //         continue;
                             //     }
 
@@ -287,7 +287,7 @@ pub async fn load_maps(
                             //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                             //         .unwrap();
                             //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
+                            //     if !tag.is_some() {
                             //         continue;
                             //     }
 
@@ -311,7 +311,7 @@ pub async fn load_maps(
                             //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                             //         .unwrap();
                             //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_valid() {
+                            //     if !tag.is_some() {
                             //         continue;
                             //     }
 
@@ -335,7 +335,7 @@ pub async fn load_maps(
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
+                                if !tag.is_some() {
                                     continue;
                                 }
 
@@ -367,7 +367,7 @@ pub async fn load_maps(
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
+                                if !tag.is_some() {
                                     continue;
                                 }
 
@@ -407,7 +407,7 @@ pub async fn load_maps(
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
+                                if !tag.is_some() {
                                     continue;
                                 }
 
@@ -435,7 +435,7 @@ pub async fn load_maps(
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
+                                if !tag.is_some() {
                                     continue;
                                 }
 
@@ -466,7 +466,7 @@ pub async fn load_maps(
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_valid() {
+                                if !tag.is_some() {
                                     continue;
                                 }
 
@@ -562,6 +562,11 @@ pub async fn load_maps(
             .get(&think.map_name.0)
             .cloned()
             .unwrap_or(format!("[MissingString_{:08x}]", think.map_name.0));
+        let hash64 = package_manager()
+            .hash64_table
+            .iter()
+            .find(|v| v.1.hash32 == hash)
+            .map(|v| TagHash64(*v.0));
         info!(
             "Map {:x?} '{map_name}' - {} placement groups, {} decals",
             think.map_name,
@@ -577,6 +582,7 @@ pub async fn load_maps(
 
         maps.push((
             hash,
+            hash64,
             MapData {
                 hash,
                 name: map_name,
@@ -598,8 +604,8 @@ pub async fn load_maps(
 
     let to_load_entities: HashSet<ExtendedHash> = maps
         .iter()
-        .flat_map(|(_, v)| v.resource_points.iter().map(|(r, _)| r.entity))
-        .filter(|v| v.is_valid())
+        .flat_map(|(_, _, v)| v.resource_points.iter().map(|(r, _)| r.entity))
+        .filter(|v| v.is_some())
         .collect();
 
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
@@ -637,7 +643,7 @@ pub async fn load_maps(
 
                         for m in &model.meshes {
                             for p in &m.parts {
-                                if p.material.is_valid() {
+                                if p.material.is_some() {
                                     material_map.insert(
                                         p.material,
                                         Material::load(
@@ -705,7 +711,7 @@ pub async fn load_maps(
 
     // TODO(cohae): Maybe not the best idea?
     info!("Updating resource constant buffers");
-    for (_, m) in &mut maps {
+    for (_, _, m) in &mut maps {
         for (rp, cb) in &mut m.resource_points {
             if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
                 let mm = Mat4::from_scale_rotation_translation(
@@ -747,7 +753,7 @@ pub async fn load_maps(
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashSet<ExtendedHash> = Default::default();
-    for (_, m) in &maps {
+    for (_, _, m) in &maps {
         for placements in m.placement_groups.iter() {
             for v in &placements.statics {
                 to_load.insert(*v, ());
@@ -791,7 +797,7 @@ pub async fn load_maps(
             let mheader: Unk808071a7 = debug_span!("load tag Unk808071a7")
                 .in_scope(|| package_manager().read_tag_struct(*almostloadable).unwrap());
             for m in &mheader.materials {
-                if m.is_valid()
+                if m.is_some()
                     && !material_map.contains_key(m)
                     && !renderer.render_data.data().materials.contains_key(m)
                 {
@@ -808,7 +814,7 @@ pub async fn load_maps(
             }
             for m in &mheader.unk20 {
                 let m = m.material;
-                if m.is_valid()
+                if m.is_some()
                     && !material_map.contains_key(&m)
                     && !renderer.render_data.data().materials.contains_key(&m)
                 {
@@ -1049,7 +1055,7 @@ fn is_physics_entity(entity: ExtendedHash) -> bool {
 }
 
 pub struct LoadMapsData {
-    pub maps: Vec<(TagHash, MapData)>,
+    pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
     pub entity_renderers: IntMap<u64, EntityRenderer>,
     pub placement_renderers: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)>,
     pub terrain_renderers: IntMap<u32, TerrainRenderer>,

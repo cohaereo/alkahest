@@ -466,7 +466,7 @@ pub async fn main() -> anyhow::Result<()> {
 
                     let mut lights = None;
                     if !maps.maps.is_empty() {
-                        let (_map_hash, map) = &maps.maps[maps.current_map % maps.maps.len()];
+                        let (_, _, map) = &maps.maps[maps.current_map % maps.maps.len()];
                         lights = Some((map.lights_cbuffer.buffer().clone(), map.lights.len()));
 
                         {
