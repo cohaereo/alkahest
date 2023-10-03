@@ -10,7 +10,6 @@ use anyhow::Context;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
-use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
     D3D11_SRV_DIMENSION_TEXTURECUBE,
@@ -384,9 +383,9 @@ impl Texture {
         name: Option<&str>,
     ) -> anyhow::Result<Texture> {
         let converted_rgba = if png.color_type == png::ColorType::Rgba {
-            Some(png.to_rgba()?)
-        } else {
             None
+        } else {
+            Some(png.to_rgba()?)
         };
 
         Self::load_2d_raw(
