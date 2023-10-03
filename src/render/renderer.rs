@@ -9,7 +9,7 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use winit::window::Window;
 
 use crate::dxgi::DxgiFormat;
-use crate::overlays::render_settings::CompositorOptions;
+use crate::overlays::render_settings::{CompositorOptions, RenderSettings};
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk3;
 use crate::render::shader;
@@ -65,8 +65,6 @@ pub struct Renderer {
     matcap: Texture,
     // A 2x2 white texture
     white: Texture,
-    // A 2x2 black texture
-    black: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -186,15 +184,6 @@ impl Renderer {
             Some("2x2 white"),
         )?;
 
-        let black = Texture::load_2d_raw(
-            &dcs,
-            2,
-            2,
-            &[0x00u8; 2 * 2 * 4],
-            DxgiFormat::R8G8B8A8_UNORM,
-            Some("2x2 white"),
-        )?;
-
         let vshader_composite_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/composite.hlsl"),
             "VShader",
@@ -263,7 +252,6 @@ impl Renderer {
             rasterizer_state_nocull,
             matcap,
             white,
-            black,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -290,17 +278,7 @@ impl Renderer {
     }
 
     /// Submits recorded drawcalls
-    pub fn submit_frame(
-        &self,
-        resources: &Resources,
-        // TODO: These options need to be moved to a resource
-        draw_lights: bool,
-        alpha_blending: bool,
-        compositor_mode: usize,
-        blend_override: usize,
-        lights: Option<(ID3D11Buffer, usize)>,
-        evaluate_bytecode: bool,
-    ) {
+    pub fn submit_frame(&self, resources: &Resources, lights: Option<(ID3D11Buffer, usize)>) {
         if *self.state.read() != RendererState::Recording {
             panic!("Called submit(), but the renderer is not recording! Did you call begin()?")
         }
@@ -312,7 +290,8 @@ impl Renderer {
         self.update_buffers(resources)
             .expect("Renderer::update_buffers");
 
-        if evaluate_bytecode {
+        let render_settings = resources.get::<RenderSettings>().unwrap();
+        if render_settings.evaluate_bytecode {
             self.evaluate_tfx_expressions();
         }
 
@@ -350,13 +329,18 @@ impl Renderer {
             }
 
             let (s, d) = draw_queue[i].clone();
-            self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass);
+            self.draw(s, &d, &shader_overrides, DrawMode::Normal);
         }
         //endregion
 
         self.gbuffer.depth.copy_depth(self.dcs.context());
 
-        self.run_deferred_shading(resources, draw_lights, compositor_mode, lights);
+        self.run_deferred_shading(
+            resources,
+            render_settings.draw_lights,
+            render_settings.compositor_mode,
+            lights,
+        );
 
         unsafe {
             self.dcs
@@ -416,7 +400,7 @@ impl Renderer {
 
             let (s, d) = draw_queue[i].clone();
             if s.transparency() != transparency_mode {
-                if alpha_blending {
+                if render_settings.alpha_blending {
                     // Swap to read-only depth state once we start rendering translucent geometry
                     if s.transparency() != Transparency::None
                         && s.transparency() != Transparency::Cutout
@@ -429,7 +413,7 @@ impl Renderer {
                     }
 
                     unsafe {
-                        match blend_override {
+                        match render_settings.blend_override {
                             1 => self.dcs.context().OMSetBlendState(
                                 &self.blend_state_blend,
                                 Some(&[1f32, 1., 1., 1.] as _),
@@ -462,7 +446,7 @@ impl Renderer {
                 transparency_mode = s.transparency();
             }
 
-            self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass);
+            self.draw(s, &d, &shader_overrides, DrawMode::Normal);
         }
         //endregion
 

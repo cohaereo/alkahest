@@ -123,22 +123,22 @@ impl RenderDataManager {
     }
 
     #[cfg(feature = "debug_lock")]
-    pub fn data(&self) -> LockTracker<RwLockReadGuard<RenderData>> {
+    pub fn data(&self) -> LockTracker<RwLockReadGuard<'_, RenderData>> {
         self.render_data.read()
     }
 
     #[cfg(feature = "debug_lock")]
-    pub fn data_mut(&self) -> LockTracker<RwLockWriteGuard<RenderData>> {
+    pub fn data_mut(&self) -> LockTracker<RwLockWriteGuard<'_, RenderData>> {
         self.render_data.write()
     }
 
     #[cfg(not(feature = "debug_lock"))]
-    pub fn data(&self) -> RwLockReadGuard<RenderData> {
+    pub fn data(&self) -> RwLockReadGuard<'_, RenderData> {
         self.render_data.read()
     }
 
     #[cfg(not(feature = "debug_lock"))]
-    pub fn data_mut(&self) -> RwLockWriteGuard<RenderData> {
+    pub fn data_mut(&self) -> RwLockWriteGuard<'_, RenderData> {
         self.render_data.write()
     }
 

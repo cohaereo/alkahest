@@ -12,17 +12,10 @@ use crate::{
 use super::gui::{GuiResources, OverlayProvider};
 
 pub struct RenderSettingsOverlay {
-    pub composition_mode: usize,
-
     pub renderlayer_statics: bool,
     pub renderlayer_statics_transparent: bool,
     pub renderlayer_terrain: bool,
     pub renderlayer_entities: bool,
-
-    pub render_lights: bool,
-    pub alpha_blending: bool,
-    pub blend_override: usize,
-    pub evaluate_bytecode: bool,
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
@@ -33,14 +26,18 @@ impl OverlayProvider for RenderSettingsOverlay {
         resources: &mut Resources,
         _icons: &GuiResources,
     ) {
+        let mut render_settings = resources.get_mut::<RenderSettings>().unwrap();
         egui::Window::new("Options").show(ctx, |ui| {
-            ui.checkbox(&mut self.render_lights, "Render lights");
-            ui.checkbox(&mut self.evaluate_bytecode, "Evaluate TFX bytecode (WIP)");
-            ui.checkbox(&mut self.alpha_blending, "Enable color blending");
-            if self.alpha_blending {
+            ui.checkbox(&mut render_settings.draw_lights, "Render lights");
+            ui.checkbox(
+                &mut render_settings.evaluate_bytecode,
+                "Evaluate TFX bytecode (WIP)",
+            );
+            ui.checkbox(&mut render_settings.alpha_blending, "Enable color blending");
+            if render_settings.alpha_blending {
                 egui::ComboBox::from_label("Blend Override").show_index(
                     ui,
-                    &mut self.blend_override,
+                    &mut render_settings.blend_override,
                     4,
                     |i| {
                         [
@@ -151,7 +148,7 @@ impl OverlayProvider for RenderSettingsOverlay {
                 .width(192.0)
                 .show_index(
                     ui,
-                    &mut self.composition_mode,
+                    &mut render_settings.compositor_mode,
                     COMPOSITOR_MODES.len(),
                     |i| COMPOSITOR_MODES[i].to_string(),
                 );
@@ -253,4 +250,24 @@ pub struct CompositorOptions {
     pub time: f32,
     pub mode: u32,
     pub light_count: u32,
+}
+
+pub struct RenderSettings {
+    pub draw_lights: bool,
+    pub alpha_blending: bool,
+    pub compositor_mode: usize,
+    pub blend_override: usize,
+    pub evaluate_bytecode: bool,
+}
+
+impl Default for RenderSettings {
+    fn default() -> Self {
+        Self {
+            compositor_mode: CompositorMode::Combined as usize,
+            alpha_blending: true,
+            draw_lights: false,
+            blend_override: 0,
+            evaluate_bytecode: false,
+        }
+    }
 }

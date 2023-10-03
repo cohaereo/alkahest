@@ -23,14 +23,14 @@ impl Resources {
         self.resources.insert(type_id, RefCell::new(Box::new(v)));
     }
 
-    pub fn get<T: Any>(&self) -> Option<Ref<T>> {
+    pub fn get<T: Any>(&self) -> Option<Ref<'_, T>> {
         let type_id: u64 = raw_typeid!(T);
         self.resources
             .get(&type_id)
             .map(|resource| Ref::map(resource.borrow(), |r| r.downcast_ref::<T>().unwrap()))
     }
 
-    pub fn get_mut<T: Any>(&self) -> Option<RefMut<T>> {
+    pub fn get_mut<T: Any>(&self) -> Option<RefMut<'_, T>> {
         let type_id: u64 = raw_typeid!(T);
         self.resources
             .get(&type_id)

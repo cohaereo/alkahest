@@ -51,7 +51,7 @@ use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gui::GuiManager;
 use crate::overlays::load_indicator::LoadIndicatorOverlay;
-use crate::overlays::render_settings::{CompositorMode, RenderSettingsOverlay};
+use crate::overlays::render_settings::{RenderSettings, RenderSettingsOverlay};
 use crate::overlays::resource_nametags::ResourceTypeOverlay;
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
@@ -287,6 +287,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(ScopeOverrides::default());
     resources.insert(DebugShapes::default());
     resources.insert(EnabledShaderOverrides::default());
+    resources.insert(RenderSettings::default());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -309,16 +310,10 @@ pub async fn main() -> anyhow::Result<()> {
 
     let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay::default()));
     let gui_rendersettings = Rc::new(RefCell::new(RenderSettingsOverlay {
-        composition_mode: CompositorMode::Combined as usize,
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
         renderlayer_entities: true,
-
-        alpha_blending: true,
-        render_lights: false,
-        blend_override: 0,
-        evaluate_bytecode: false,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
@@ -564,15 +559,7 @@ pub async fn main() -> anyhow::Result<()> {
                     }
                     drop(maps);
 
-                    renderer.read().submit_frame(
-                        &resources,
-                        gui_rendersettings.borrow().render_lights,
-                        gui_rendersettings.borrow().alpha_blending,
-                        gui_rendersettings.borrow().composition_mode,
-                        gui_rendersettings.borrow().blend_override,
-                        lights,
-                        gui_rendersettings.borrow().evaluate_bytecode,
-                    );
+                    renderer.read().submit_frame(&resources, lights);
 
                     gui.draw_frame(window.clone(), &mut resources, |ctx| {
                         if let Some(task) = map_load_task.as_ref() {

@@ -25,10 +25,10 @@ pub enum DebugShape {
         rotation: Quat,
         sides: bool,
     },
-    Line {
-        start: Vec3,
-        end: Vec3,
-    },
+    // Line {
+    //     start: Vec3,
+    //     end: Vec3,
+    // },
 }
 
 #[derive(Default)]
@@ -320,8 +320,7 @@ impl DebugShapeRenderer {
                             self.dcs.context().DrawIndexed(self.cube_index_count, 0, 0);
                         }
                     }
-                }
-                DebugShape::Line { .. } => todo!(),
+                } // DebugShape::Line { .. } => todo!(),
             }
         }
     }
