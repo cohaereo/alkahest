@@ -5,7 +5,7 @@ use std::{io::Cursor, sync::Arc};
 use glam::Mat4;
 use windows::Win32::Graphics::{Direct3D11::*, Dxgi::Common::*};
 
-use crate::{dxgi::DxgiFormat, render::shader, texture::Texture};
+use crate::{render::shader, texture::Texture, util::image::Png};
 
 use super::{ConstantBuffer, DeviceContextSwapchain};
 
@@ -24,13 +24,10 @@ pub struct ErrorRenderer {
 
 impl ErrorRenderer {
     pub fn load(dcs: Arc<DeviceContextSwapchain>) -> Self {
-        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/error.data");
-        let matcap = Texture::load_2d_raw(
+        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/error.png");
+        let matcap = Texture::load_png(
             &dcs,
-            128,
-            128,
-            MATCAP_DATA,
-            DxgiFormat::R8G8B8A8_UNORM,
+            &Png::from_bytes(MATCAP_DATA).expect("Failed to load error texture PNG"),
             Some("Error matcap"),
         )
         .expect("Failed to load error texture");

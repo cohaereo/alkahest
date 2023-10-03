@@ -5,10 +5,12 @@ use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
 use crate::structure::{CafeMarker, TablePointer};
 use crate::types::IVector2;
+use crate::util::image::Png;
 use anyhow::Context;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
+use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
     D3D11_SRV_DIMENSION_TEXTURECUBE,
@@ -374,6 +376,31 @@ impl Texture {
                 format,
             })
         }
+    }
+
+    pub fn load_png(
+        dcs: &DeviceContextSwapchain,
+        png: &Png,
+        name: Option<&str>,
+    ) -> anyhow::Result<Texture> {
+        let converted_rgba = if png.color_type == png::ColorType::Rgba {
+            Some(png.to_rgba()?)
+        } else {
+            None
+        };
+
+        Self::load_2d_raw(
+            dcs,
+            png.dimensions[0] as u32,
+            png.dimensions[1] as u32,
+            if let Some(p) = &converted_rgba {
+                &p.data
+            } else {
+                &png.data
+            },
+            DxgiFormat::R8G8B8A8_UNORM,
+            name,
+        )
     }
 
     pub fn bind(&self, dcs: &DeviceContextSwapchain, slot: u32, stages: ShaderStages) {

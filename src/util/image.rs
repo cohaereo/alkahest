@@ -36,6 +36,16 @@ impl Png {
         })
     }
 
+    pub fn to_rgba(&self) -> Result<Self> {
+        let new_png = Png {
+            data: self.data.to_vec().into(),
+            dimensions: self.dimensions,
+            color_type: self.color_type,
+        };
+
+        new_png.into_rgba()
+    }
+
     pub fn into_rgba(self) -> Result<Self> {
         match self.color_type {
             ColorType::Rgb => {

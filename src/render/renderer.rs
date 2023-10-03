@@ -169,13 +169,9 @@ impl Renderer {
         };
 
         const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matcap.png");
-        let matcap_png = Png::from_bytes(MATCAP_DATA)?.into_rgba()?;
-        let matcap = Texture::load_2d_raw(
+        let matcap = Texture::load_png(
             &dcs,
-            matcap_png.dimensions[0] as u32,
-            matcap_png.dimensions[1] as u32,
-            &matcap_png.data,
-            DxgiFormat::R8G8B8A8_UNORM,
+            &Png::from_bytes(MATCAP_DATA)?,
             Some("Basic shading matcap"),
         )?;
 

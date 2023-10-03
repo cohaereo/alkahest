@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::util::image::Png;
 use crate::util::RwLock;
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
@@ -39,43 +40,34 @@ pub struct RenderData {
 
 impl RenderData {
     pub fn new(dcs: &DeviceContextSwapchain) -> anyhow::Result<Self> {
-        let fallback_texture = Texture::load_2d_raw(
+        let fallback_texture = Texture::load_png(
             dcs,
-            128,
-            128,
-            include_bytes!("../../assets/textures/fallback.data"),
-            DxgiFormat::R8G8B8A8_UNORM,
+            &Png::from_bytes(include_bytes!("../../assets/textures/fallback.png"))?,
             Some("red/black checkerboard"),
         )?;
 
-        let rainbow_texture = Texture::load_2d_raw(
+        let rainbow_texture = Texture::load_png(
             dcs,
-            128,
-            128,
-            include_bytes!("../../assets/textures/rainbow.data"),
-            DxgiFormat::R8G8B8A8_UNORM,
+            &Png::from_bytes(include_bytes!("../../assets/textures/rainbow.png"))?,
             Some("raaaainbow"),
         )?;
 
         const DEBUG_TEXTURE_DATA: [&[u8]; 8] = [
-            include_bytes!("../../assets/textures/debug0.data"),
-            include_bytes!("../../assets/textures/debug1.data"),
-            include_bytes!("../../assets/textures/debug2.data"),
-            include_bytes!("../../assets/textures/debug3.data"),
-            include_bytes!("../../assets/textures/debug4.data"),
-            include_bytes!("../../assets/textures/debug5.data"),
-            include_bytes!("../../assets/textures/debug6.data"),
-            include_bytes!("../../assets/textures/debug7.data"),
+            include_bytes!("../../assets/textures/debug0.png"),
+            include_bytes!("../../assets/textures/debug1.png"),
+            include_bytes!("../../assets/textures/debug2.png"),
+            include_bytes!("../../assets/textures/debug3.png"),
+            include_bytes!("../../assets/textures/debug4.png"),
+            include_bytes!("../../assets/textures/debug5.png"),
+            include_bytes!("../../assets/textures/debug6.png"),
+            include_bytes!("../../assets/textures/debug7.png"),
         ];
 
         let mut debug_textures = vec![];
         for (i, d) in DEBUG_TEXTURE_DATA.iter().enumerate() {
-            debug_textures.push(Texture::load_2d_raw(
+            debug_textures.push(Texture::load_png(
                 dcs,
-                128,
-                128,
-                d,
-                DxgiFormat::R8G8B8A8_UNORM,
+                &Png::from_bytes(d)?,
                 Some(&format!("debug texture #{i}")),
             )?);
         }
