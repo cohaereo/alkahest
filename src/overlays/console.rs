@@ -183,40 +183,50 @@ impl OverlayProvider for ConsoleOverlay {
 fn execute_command(command: &str, args: &[&str], resources: &Resources) {
     match command.to_lowercase().as_str() {
         "goto" => {
-            let new_pos = if args.len() == 1 && (args[0].len() == 24 || args[0].len() == 32) {
-                let Ok(raw_data) = hex::decode(args[0]) else {
-                    error!("Invalid hex position data");
-                    return;
-                };
+            if args.len() != 3 {
+                error!("Too few/many arguments, expected 3, got {}", args.len());
+                return;
+            }
 
-                let mut c = Cursor::new(raw_data);
-                Vec3::new(
-                    c.read_le().unwrap(),
-                    c.read_le().unwrap(),
-                    c.read_le().unwrap(),
-                )
-            } else {
-                if args.len() != 3 {
-                    error!("Too few/many arguments, expected 3, got {}", args.len());
-                    return;
+            let parsed_pos: anyhow::Result<Vec3> = (|| {
+                let x = str::parse(args[0])?;
+                let y = str::parse(args[1])?;
+                let z = str::parse(args[2])?;
+
+                Ok(Vec3::new(x, y, z))
+            })();
+
+            match parsed_pos {
+                Ok(new_pos) => {
+                    let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                    camera.position = new_pos;
+                    info!("Teleported to {} {} {}", new_pos.x, new_pos.y, new_pos.z);
                 }
-
-                let parsed_pos: anyhow::Result<Vec3> = (|| {
-                    let x = str::parse(args[0])?;
-                    let y = str::parse(args[1])?;
-                    let z = str::parse(args[2])?;
-
-                    Ok(Vec3::new(x, y, z))
-                })();
-
-                match parsed_pos {
-                    Ok(new_pos) => new_pos,
-                    Err(e) => {
-                        error!("Invalid coordinates: {e}");
-                        return;
-                    }
+                Err(e) => {
+                    error!("Invalid coordinates: {e}");
                 }
+            }
+        }
+        "goto.raw" => {
+            if args.len() != 1 || (args[0].len() != 24 && args[0].len() != 32) {
+                error!(
+                    "Missing/too short argument, expected 24/32 hex bytes, got {} args",
+                    args.len()
+                );
+                return;
+            }
+
+            let Ok(raw_data) = hex::decode(args[0]) else {
+                error!("Invalid hex position data");
+                return;
             };
+
+            let mut c = Cursor::new(raw_data);
+            let new_pos = Vec3::new(
+                c.read_le().unwrap(),
+                c.read_le().unwrap(),
+                c.read_le().unwrap(),
+            );
 
             let mut camera = resources.get_mut::<FpsCamera>().unwrap();
             camera.position = new_pos;
