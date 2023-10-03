@@ -74,6 +74,8 @@ pub struct Renderer {
     final_vs: ID3D11VertexShader,
     final_ps: ID3D11PixelShader,
 
+    null_ps: ID3D11PixelShader,
+
     debug_shape_renderer: DebugShapeRenderer,
 
     shader_overrides: ShaderOverrides,
@@ -225,6 +227,15 @@ impl Renderer {
         let (vshader_final, _) = shader::load_vshader(&dcs, &vshader_final_blob)?;
         let (pshader_final, _) = shader::load_pshader(&dcs, &pshader_final_blob)?;
 
+        let pshader_null_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/null.hlsl"),
+            "main",
+            "ps_5_0",
+        )
+        .unwrap();
+
+        let (pshader_null, _) = shader::load_pshader(&dcs, &pshader_null_blob)?;
+
         Ok(Renderer {
             shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
@@ -257,6 +268,7 @@ impl Renderer {
             composite_ps: pshader_composite,
             final_vs: vshader_final,
             final_ps: pshader_final,
+            null_ps: pshader_null,
         })
     }
 
@@ -338,7 +350,7 @@ impl Renderer {
             }
 
             let (s, d) = draw_queue[i].clone();
-            self.draw(s, &d, &shader_overrides);
+            self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass);
         }
         //endregion
 
@@ -450,7 +462,7 @@ impl Renderer {
                 transparency_mode = s.transparency();
             }
 
-            self.draw(s, &d, &shader_overrides);
+            self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass);
         }
         //endregion
 
@@ -488,19 +500,26 @@ impl Renderer {
         sort: SortValue3d,
         drawcall: &DrawCall,
         shader_overrides: &EnabledShaderOverrides,
+        mode: DrawMode,
     ) {
-        let render_data = self.render_data.data();
+        if mode == DrawMode::DepthPrepass && !sort.transparency().should_write_depth() {
+            return;
+        }
 
         // // Workaround for some weird textures that aren't bound by the material
         // self.white.bind(&self.dcs, 0, ShaderStages::all());
         // self.white.bind(&self.dcs, 1, ShaderStages::all());
         // self.white.bind(&self.dcs, 2, ShaderStages::all());
 
-        if let Some(mat) = render_data.materials.get(&sort.material().into()) {
-            if mat.unk8 != 1 {
-                return;
-            }
+        let bind_stages = match mode {
+            DrawMode::Normal => ShaderStages::VERTEX | ShaderStages::PIXEL,
+            // Don't bother binding anything for the pixel stage
+            DrawMode::DepthPrepass => ShaderStages::VERTEX,
+        };
 
+        let render_data = self.render_data.data();
+
+        if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             unsafe {
                 if mat.unk22 != 0 {
                     self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
@@ -510,7 +529,7 @@ impl Renderer {
             }
 
             // TODO(cohae): How can we handle these errors?
-            if mat.bind(&self.dcs, &render_data).is_err() {
+            if mat.bind(&self.dcs, &render_data, bind_stages).is_err() {
                 // return;
             }
         } else {
@@ -519,11 +538,7 @@ impl Renderer {
 
         if let Some(variant_material) = drawcall.variant_material {
             if let Some(mat) = render_data.materials.get(&variant_material) {
-                if mat.unk8 != 1 {
-                    return;
-                }
-
-                if mat.bind(&self.dcs, &render_data).is_err() {
+                if mat.bind(&self.dcs, &render_data, bind_stages).is_err() {
                     // return;
                 }
             } else {
@@ -553,6 +568,12 @@ impl Renderer {
             },
         }
 
+        if mode == DrawMode::DepthPrepass {
+            unsafe {
+                self.dcs.context().PSSetShader(&self.null_ps, None);
+            }
+        }
+
         if let Some(color_buffer) = drawcall.color_buffer {
             if let Some((_buffer, _, Some(srv))) = render_data.vertex_buffers.get(&color_buffer) {
                 unsafe {
@@ -568,9 +589,12 @@ impl Renderer {
                 self.dcs
                     .context()
                     .VSSetConstantBuffers(b.slot, Some(&[Some(b.buffer.clone())]));
-                self.dcs
-                    .context()
-                    .PSSetConstantBuffers(b.slot, Some(&[Some(b.buffer.clone())]));
+
+                if bind_stages.contains(ShaderStages::PIXEL) {
+                    self.dcs
+                        .context()
+                        .PSSetConstantBuffers(b.slot, Some(&[Some(b.buffer.clone())]));
+                }
             }
 
             if let Some(input_layout) = render_data.input_layouts.get(&drawcall.input_layout_hash) {
@@ -904,4 +928,11 @@ impl Renderer {
             m.evaluate_bytecode(self)
         }
     }
+}
+
+#[derive(Default, PartialEq)]
+pub enum DrawMode {
+    #[default]
+    Normal = 0,
+    DepthPrepass = 1,
 }

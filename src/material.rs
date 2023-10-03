@@ -5,6 +5,7 @@ use crate::map::ExtendedHash;
 use crate::packages::package_manager;
 use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
+use crate::render::drawcall::ShaderStages;
 use crate::render::renderer::Renderer;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
 use crate::structure::{RelPointer, TablePointer};
@@ -208,67 +209,71 @@ impl Material {
         &self,
         dcs: &DeviceContextSwapchain,
         render_data: &RenderData,
+        stages: ShaderStages,
     ) -> anyhow::Result<()> {
         unsafe {
-            for (si, s) in self.vs_samplers.iter().enumerate() {
-                dcs.context().VSSetSamplers(
-                    1 + si as u32,
-                    Some(&[render_data.samplers.get(&s.key()).cloned()]),
-                );
-            }
-            for (si, s) in self.ps_samplers.iter().enumerate() {
-                dcs.context().PSSetSamplers(
-                    1 + si as u32,
-                    Some(&[render_data.samplers.get(&s.key()).cloned()]),
-                );
-            }
+            if stages.contains(ShaderStages::VERTEX) {
+                for (si, s) in self.vs_samplers.iter().enumerate() {
+                    dcs.context().VSSetSamplers(
+                        1 + si as u32,
+                        Some(&[render_data.samplers.get(&s.key()).cloned()]),
+                    );
+                }
 
-            if let Some(ref cbuffer) = self.cb0_ps {
-                dcs.context()
-                    .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
-            } else {
-                dcs.context().PSSetConstantBuffers(0, Some(&[None]));
-            }
+                if let Some(ref cbuffer) = self.cb0_vs {
+                    dcs.context()
+                        .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
+                } else {
+                    dcs.context().VSSetConstantBuffers(0, Some(&[None]));
+                }
 
-            if let Some(ref cbuffer) = self.cb0_vs {
-                dcs.context()
-                    .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
-            } else {
-                dcs.context().VSSetConstantBuffers(0, Some(&[None]));
-            }
+                if let Some((vs, _, _)) = render_data.vshaders.get(&self.vertex_shader) {
+                    dcs.context().VSSetShader(vs, None);
+                } else {
+                    // TODO: should still be handled, but not here
+                    // anyhow::bail!("No vertex shader/input layout bound");
+                }
 
-            if let Some((vs, _, _)) = render_data.vshaders.get(&self.vertex_shader) {
-                dcs.context().VSSetShader(vs, None);
-            } else {
-                // TODO: should still be handled, but not here
-                // anyhow::bail!("No vertex shader/input layout bound");
-            }
+                for p in &self.vs_textures {
+                    let tex = render_data
+                        .textures
+                        .get(&p.texture.key())
+                        .unwrap_or(&render_data.fallback_texture);
 
-            if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader) {
-                dcs.context().PSSetShader(ps, None);
-            } else {
-                // TODO: should still be handled, but not here
-                // anyhow::bail!("No pixel shader bound");
+                    dcs.context()
+                        .VSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
+                }
             }
 
-            for p in &self.vs_textures {
-                let tex = render_data
-                    .textures
-                    .get(&p.texture.key())
-                    .unwrap_or(&render_data.fallback_texture);
+            if stages.contains(ShaderStages::PIXEL) {
+                for (si, s) in self.ps_samplers.iter().enumerate() {
+                    dcs.context().PSSetSamplers(
+                        1 + si as u32,
+                        Some(&[render_data.samplers.get(&s.key()).cloned()]),
+                    );
+                }
 
-                dcs.context()
-                    .VSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
-            }
+                if let Some(ref cbuffer) = self.cb0_ps {
+                    dcs.context()
+                        .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
+                } else {
+                    dcs.context().PSSetConstantBuffers(0, Some(&[None]));
+                }
+                if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader) {
+                    dcs.context().PSSetShader(ps, None);
+                } else {
+                    // TODO: should still be handled, but not here
+                    // anyhow::bail!("No pixel shader bound");
+                }
+                for p in &self.ps_textures {
+                    let tex = render_data
+                        .textures
+                        .get(&p.texture.key())
+                        .unwrap_or(&render_data.fallback_texture);
 
-            for p in &self.ps_textures {
-                let tex = render_data
-                    .textures
-                    .get(&p.texture.key())
-                    .unwrap_or(&render_data.fallback_texture);
-
-                dcs.context()
-                    .PSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
+                    dcs.context()
+                        .PSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
+                }
             }
         }
 

@@ -121,6 +121,10 @@ impl Transparency {
             _ => Self::None,
         }
     }
+
+    pub fn should_write_depth(&self) -> bool {
+        matches!(self, Self::None | Self::Cutout)
+    }
 }
 
 #[repr(u64)]
@@ -145,6 +149,7 @@ impl ShadingTechnique {
 }
 
 bitflags! {
+    #[derive(Copy, Clone)]
     pub struct ShaderStages: u8 {
         const VERTEX = (1 << 0);
         const PIXEL = (1 << 1);

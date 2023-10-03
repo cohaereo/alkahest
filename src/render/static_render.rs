@@ -225,7 +225,7 @@ impl StaticModel {
                             .with_depth(u32::MIN)
                             .with_material(material.0)
                             .with_technique(ShadingTechnique::Deferred)
-                            .with_transparency(Transparency::Blend)
+                            .with_transparency(Transparency::None)
                             .with_geometry_type(GeometryType::Static),
                         DrawCall {
                             vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],
