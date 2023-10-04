@@ -8,7 +8,7 @@ use crate::resources::Resources;
 use super::gui::{GuiResources, OverlayProvider};
 
 pub struct FpsDisplayOverlay {
-    pub deltas: ConstGenericRingBuffer<f32, 120>,
+    pub deltas: ConstGenericRingBuffer<f32, 25>,
     last_frame: Instant,
 }
 
