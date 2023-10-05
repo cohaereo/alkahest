@@ -55,6 +55,7 @@ pub fn compile_hlsl(source: &str, entrypoint: &str, target: &str) -> Result<Vec<
     }
 
     if result.is_err() {
+        error!("Failed to compile shader: {error_string}");
         return Err(error_string);
     }
 

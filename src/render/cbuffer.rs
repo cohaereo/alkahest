@@ -117,23 +117,23 @@ impl<T> ConstantBuffer<T> {
         Ok(())
     }
 
-    // pub fn write_array(&self, data: &[T]) -> anyhow::Result<()> {
-    //     unsafe {
-    //         let memory = self
-    //             .dcs
-    //             .context
-    //             .Map(&self.buffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
-    //             .context("Failed to map ConstantBuffer for writing (array)")?;
+    pub fn write_array(&self, data: &[T]) -> anyhow::Result<()> {
+        unsafe {
+            let memory = self
+                .dcs
+                .context()
+                .Map(&self.buffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
+                .context("Failed to map ConstantBuffer for writing (array)")?;
 
-    //         memory
-    //             .pData
-    //             .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
+            memory
+                .pData
+                .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
 
-    //         self.dcs.context().Unmap(&self.buffer, 0);
-    //     }
+            self.dcs.context().Unmap(&self.buffer, 0);
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     pub fn map(&self, mode: D3D11_MAP) -> anyhow::Result<BufferMapGuard<T>> {
         let ptr = unsafe {
@@ -172,6 +172,12 @@ impl<T> ConstantBuffer<T> {
                 self.dcs
                     .context()
                     .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
+            }
+
+            if stages.contains(ShaderStages::GEOMETRY) {
+                self.dcs
+                    .context()
+                    .GSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
         }
     }

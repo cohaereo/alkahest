@@ -5,10 +5,19 @@ use super::{
     shader, DeviceContextSwapchain,
 };
 
-#[derive(Default)]
 pub struct EnabledShaderOverrides {
     pub entity_vs: bool,
     pub entity_ps: bool,
+}
+
+impl Default for EnabledShaderOverrides {
+    fn default() -> Self {
+        Self {
+            // TODO(cohae): remove when we fix entity VS
+            entity_vs: true,
+            entity_ps: false,
+        }
+    }
 }
 
 pub struct ShaderOverrides {
