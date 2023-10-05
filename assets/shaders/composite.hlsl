@@ -217,6 +217,10 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
     float fragmentDistance = distance(worldPos, cameraPos.xyz);
     uint cascade = CascadeLevel(fragmentDistance);
 
+    if(fragmentDistance > CAMERA_CASCADE_LEVEL_3) {
+        return 1;
+    }
+
     float4 projectedPos = mul(cascadeMatrices[cascade], float4(worldPos, 1.0));
 
     float2 texCoords;
