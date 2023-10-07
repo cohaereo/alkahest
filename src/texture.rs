@@ -377,6 +377,71 @@ impl Texture {
         }
     }
 
+    pub fn load_3d_raw(
+        dcs: &DeviceContextSwapchain,
+        width: u32,
+        height: u32,
+        depth: u32,
+        data: &[u8],
+        format: DxgiFormat,
+        name: Option<&str>,
+    ) -> anyhow::Result<Texture> {
+        unsafe {
+            let tex = dcs
+                .device
+                .CreateTexture3D(
+                    &D3D11_TEXTURE3D_DESC {
+                        Width: width,
+                        Height: height,
+                        Depth: depth,
+                        MipLevels: 1,
+                        Format: format.into(),
+                        Usage: D3D11_USAGE_DEFAULT,
+                        BindFlags: D3D11_BIND_SHADER_RESOURCE,
+                        CPUAccessFlags: Default::default(),
+                        MiscFlags: Default::default(),
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: data.as_ptr() as _,
+                        SysMemPitch: format.calculate_pitch(width as usize, height as usize).0 as _,
+                        SysMemSlicePitch: format.calculate_pitch(width as usize, height as usize).1
+                            as _,
+                    }),
+                )
+                .context("Failed to create 3D texture")?;
+
+            if let Some(name) = name {
+                let name = format!("{name}\0");
+                tex.SetPrivateData(
+                    &WKPDID_D3DDebugObjectName,
+                    name.len() as u32 - 1,
+                    Some(name.as_ptr() as _),
+                )
+                .context("Failed to set texture name")?;
+            }
+
+            let view = dcs.device.CreateShaderResourceView(
+                &tex,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: format.into(),
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Texture3D: D3D11_TEX3D_SRV {
+                            MostDetailedMip: 0,
+                            MipLevels: 1,
+                        },
+                    },
+                }),
+            )?;
+
+            Ok(Texture {
+                handle: TextureHandle::Texture3D(tex),
+                view,
+                format,
+            })
+        }
+    }
+
     pub fn load_png(
         dcs: &DeviceContextSwapchain,
         png: &Png,

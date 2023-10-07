@@ -65,6 +65,7 @@ pub struct Renderer {
     matcap: Texture,
     // A 2x2 white texture
     white: Texture,
+    blend_texture: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -177,11 +178,21 @@ impl Renderer {
 
         let white = Texture::load_2d_raw(
             &dcs,
-            2,
-            2,
-            &[0xffu8; 2 * 2 * 4],
+            1,
+            1,
+            &[0xffu8; 4],
             DxgiFormat::R8G8B8A8_UNORM,
-            Some("2x2 white"),
+            Some("1x1 white"),
+        )?;
+
+        let blend_texture = Texture::load_3d_raw(
+            &dcs,
+            2,
+            2,
+            2,
+            &[0x10, 0x10, 0x10, 0xff].repeat(2 * 2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("1x1x1 blend factor"),
         )?;
 
         let vshader_composite_blob = shader::compile_hlsl(
@@ -252,6 +263,7 @@ impl Renderer {
             rasterizer_state_nocull,
             matcap,
             white,
+            blend_texture,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -383,6 +395,7 @@ impl Renderer {
                     ShaderStages::all(),
                 );
             }
+
             unsafe {
                 self.dcs.context().PSSetShaderResources(
                     11,
@@ -393,10 +406,11 @@ impl Renderer {
                     .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
             }
             self.white.bind(&self.dcs, 20, ShaderStages::all());
-            self.render_data
-                .data()
-                .rainbow_texture
-                .bind(&self.dcs, 21, ShaderStages::all());
+            // self.render_data
+            //     .data()
+            //     .rainbow_texture
+            //     .bind(&self.dcs, 21, ShaderStages::all());
+            self.blend_texture.bind(&self.dcs, 21, ShaderStages::all());
 
             let (s, d) = draw_queue[i].clone();
             if s.transparency() != transparency_mode {
@@ -855,8 +869,8 @@ impl Renderer {
             // target_pixel_to_camera: Mat4::IDENTITY,
             target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
             inverse_target_resolution: (
-                1. / (self.window_size.0 as f32),
-                1. / (self.window_size.1 as f32),
+                (1. / (self.window_size.0 as f32)),
+                (1. / (self.window_size.1 as f32)),
             ),
             // Z value accounts for missing depth value
             view_miscellaneous: Vec4::new(0.0, 0.0, 0.0001, 0.0),
