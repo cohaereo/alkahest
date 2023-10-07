@@ -879,11 +879,11 @@ impl Renderer {
         self.gbuffer.resize(new_size)
     }
 
-    pub fn clear_render_targets(&self) {
+    pub fn clear_render_targets(&self, rt0_clear: Vec4) {
         unsafe {
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt0.render_target,
-                [0.5, 0.5, 0.5, 1.0].as_ptr() as _,
+                rt0_clear.to_array().as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt1.render_target,

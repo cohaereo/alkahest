@@ -1,6 +1,6 @@
 use const_format::concatcp;
 use glam::{Mat4, Vec4};
-use std::{fmt::Display, fmt::Formatter};
+use std::{fmt::Display, fmt::Formatter, mem::transmute};
 use winit::window::Window;
 
 use crate::{
@@ -50,6 +50,16 @@ impl OverlayProvider for RenderSettingsOverlay {
                     },
                 );
             }
+
+            let mut c = render_settings.clear_color.to_array();
+            ui.horizontal(|ui| {
+                ui.color_edit_button_rgb(unsafe { transmute(&mut c) });
+                ui.label("Clear color");
+            });
+            c[3] = 1.0;
+            render_settings.clear_color = Vec4::from_array(c);
+
+            ui.separator();
 
             ui.collapsing("Render Layers", |ui| {
                 ui.checkbox(&mut self.renderlayer_statics, "Statics");
@@ -260,6 +270,7 @@ pub struct RenderSettings {
     pub compositor_mode: usize,
     pub blend_override: usize,
     pub evaluate_bytecode: bool,
+    pub clear_color: Vec4,
 }
 
 impl Default for RenderSettings {
@@ -270,6 +281,7 @@ impl Default for RenderSettings {
             draw_lights: false,
             blend_override: 0,
             evaluate_bytecode: false,
+            clear_color: Vec4::ZERO,
         }
     }
 }

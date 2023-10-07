@@ -446,7 +446,9 @@ pub async fn main() -> anyhow::Result<()> {
                 }
 
                 unsafe {
-                    renderer.read().clear_render_targets();
+                    renderer.read().clear_render_targets(
+                        resources.get::<RenderSettings>().unwrap().clear_color,
+                    );
 
                     dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
