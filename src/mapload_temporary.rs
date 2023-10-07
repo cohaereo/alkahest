@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    map_resources::{Unk80806d19, Unk808085c2, Unk80808cb7},
+    map_resources::{Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
     types::Transform,
     util::RwLock,
 };
@@ -94,7 +94,7 @@ pub async fn load_maps(
                             data.translation.z,
                         ),
                         rotation: data.rotation.into(),
-                        ..Default::default()
+                        scale: Vec3::splat(data.translation.w),
                     };
 
                     if data.data_resource.is_valid {
@@ -304,36 +304,35 @@ pub async fn load_maps(
                             //         });
                             //     }
                             // }
-                            // // (ambient) sound source
-                            // 0x80806b5b => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_some() {
-                            //         continue;
-                            //     }
+                            // (ambient) sound source
+                            0x8080666f => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: ExtendedHash = cur.read_le().unwrap();
+                                if !tag.is_some() || tag.hash32().is_none() {
+                                    // TODO: should be handled a bit more gracefully, shouldnt drop the whole node
+                                    // TODO: do the same for other resources ^
+                                    continue;
+                                }
 
-                            //     let header: Unk80809802 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
+                                let header = package_manager()
+                                    .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
+                                    .ok();
 
-                            //     resource_points.push(ResourcePoint {
-                            //         translation: Vec4::new(
-                            //             data.translation.x,
-                            //             data.translation.y,
-                            //             data.translation.z,
-                            //             data.translation.w,
-                            //         ),
-                            //         rotation: Quat::IDENTITY,
-                            //         entity: data.entity,
-                            //         resource_type: data.data_resource.resource_type,
-                            //         resource: MapResource::AmbientSound(header),
-                            //     });
-                            // }
+                                resource_points.push(ResourcePoint {
+                                    transform,
+                                    entity: data.entity,
+                                    has_havok_data: is_physics_entity(data.entity),
+                                    world_id: data.world_id,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::AmbientSound(header),
+                                });
+                            }
                             0x80806aa3 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_some() {
+                                if tag.is_none() {
                                     continue;
                                 }
 

@@ -1,6 +1,6 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER,
+    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER, ICON_VOLUME_HIGH,
 };
 use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
@@ -9,6 +9,7 @@ use crate::types::{DestinyHash, Matrix4, Transform, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
+use itertools::Itertools;
 use std::io::SeekFrom;
 use strum::{EnumCount, EnumIs, EnumVariantNames};
 
@@ -50,6 +51,7 @@ pub enum MapResource {
     RespawnPoint = 7,
     Unk808085c0 = 8,
     Unk80806a40 = 9,
+    AmbientSound(Option<Unk80809802>) = 10,
 }
 
 impl MapResource {
@@ -93,6 +95,17 @@ impl MapResource {
             MapResource::RespawnPoint => "Unk80808cb5".to_string(),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
+            MapResource::AmbientSound(s) => {
+                if let Some(s) = s {
+                    format!(
+                        "Ambient Sound\n(streams [{}])",
+                        // s.soundbank,
+                        s.streams.iter().map(|t| t.to_string()).join(", ")
+                    )
+                } else {
+                    "Ambient Sound (no header?)".to_string()
+                }
+            }
         }
     }
 
@@ -127,6 +140,7 @@ impl MapResource {
             MapResource::RespawnPoint => [220, 20, 20],
             MapResource::Unk808085c0 { .. } => RANDOM_COLORS[0x808085c0 % 16],
             MapResource::Unk80806a40 { .. } => RANDOM_COLORS[0x80806a40 % 16],
+            MapResource::AmbientSound { .. } => RANDOM_COLORS[0x8080666f % 16],
         }
     }
 
@@ -138,6 +152,7 @@ impl MapResource {
             MapResource::CubemapVolume(..) => ICON_SPHERE,
             MapResource::Light => ICON_LIGHTBULB_ON,
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
+            MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
             _ => ICON_HELP,
         }
     }
@@ -176,6 +191,7 @@ impl MapResource {
             4 => ICON_SPHERE,
             6 => ICON_LIGHTBULB_ON,
             7 => ICON_ACCOUNT_CONVERT,
+            10 => ICON_VOLUME_HIGH,
             _ => ICON_HELP_BOX_OUTLINE,
         }
     }
@@ -314,10 +330,11 @@ pub struct Unk80809802 {
     pub file_size: u64,
     pub unk8: TagHash,
     pub unkc: TagHash,
-    pub unk10: TagHash,
-    pub soundbank: TagHash,
+    pub unk10: u32,
+    pub unk14: TagHash,
+    pub unk18: TagHash,
+    pub unk1c: u32,
     pub streams: TablePointer<TagHash>,
-    pub unk28: TagHash,
 }
 
 #[derive(BinRead, Debug, Clone)]
