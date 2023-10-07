@@ -33,6 +33,14 @@ pub struct GuiManager {
 impl GuiManager {
     pub fn create(window: &Window, dcs: Arc<DeviceContextSwapchain>) -> Self {
         let egui = egui::Context::default();
+
+        if let Ok(Ok(data)) =
+            std::fs::read_to_string("egui.ron").map(|s| ron::from_str::<egui::Memory>(&s))
+        {
+            info!("Loaded egui state from egui.ron");
+            egui.memory_mut(|memory| *memory = data);
+        }
+
         // imgui.style_mut().window_rounding = 4.0;
         let mut integration = egui_winit::State::new(window);
         integration.set_pixels_per_point(window.scale_factor() as f32);
@@ -103,6 +111,21 @@ impl GuiManager {
 
         self.integration
             .handle_platform_output(&window, &self.egui, output.platform_output)
+    }
+}
+
+impl Drop for GuiManager {
+    fn drop(&mut self) {
+        match self.egui.memory(ron::to_string) {
+            Ok(memory) => {
+                if let Err(e) = std::fs::write("egui.ron", memory) {
+                    error!("Failed to write egui state: {e}");
+                }
+            }
+            Err(e) => {
+                error!("Failed to serialize egui state: {e}");
+            }
+        };
     }
 }
 
