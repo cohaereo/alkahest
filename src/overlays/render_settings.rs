@@ -16,6 +16,7 @@ pub struct RenderSettingsOverlay {
     pub renderlayer_statics_transparent: bool,
     pub renderlayer_terrain: bool,
     pub renderlayer_entities: bool,
+    pub renderlayer_background: bool,
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
@@ -58,6 +59,7 @@ impl OverlayProvider for RenderSettingsOverlay {
                 );
                 ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
                 ui.checkbox(&mut self.renderlayer_entities, "Entities");
+                ui.checkbox(&mut self.renderlayer_background, "Background Entities");
             });
 
             if let Some(mut enabled_overrides) = resources.get_mut::<EnabledShaderOverrides>() {

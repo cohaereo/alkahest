@@ -1,6 +1,6 @@
 use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
-use glam::{Vec2, Vec3, Vec3A};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec3A, Vec4};
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]
@@ -78,6 +78,18 @@ pub struct Vector4 {
     pub y: f32,
     pub z: f32,
     pub w: f32,
+}
+
+impl From<Vector4> for Vec4 {
+    fn from(val: Vector4) -> Self {
+        Vec4::new(val.x, val.y, val.z, val.w)
+    }
+}
+
+impl From<Vector4> for Quat {
+    fn from(val: Vector4) -> Self {
+        Quat::from_xyzw(val.x, val.y, val.z, val.w)
+    }
 }
 
 #[repr(C)]
@@ -225,5 +237,38 @@ impl BinRead for AABB {
             min: Vec3A::new(min.x, min.y, min.z),
             max: Vec3A::new(max.x, max.y, max.z),
         })
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Transform {
+    pub translation: Vec3,
+    pub rotation: Quat,
+    pub scale: Vec3,
+}
+
+impl Transform {
+    pub fn from_mat4(mat: Mat4) -> Transform {
+        let (scale, rotation, translation) = mat.to_scale_rotation_translation();
+
+        Transform {
+            translation,
+            rotation,
+            scale,
+        }
+    }
+
+    pub fn to_mat4(self) -> Mat4 {
+        Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
+    }
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            translation: Vec3::ZERO,
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+        }
     }
 }

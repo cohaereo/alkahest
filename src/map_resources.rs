@@ -4,23 +4,31 @@ use crate::icons::{
 };
 use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
-use crate::structure::{RelPointer, ResourcePointer, TablePointer};
-use crate::types::{DestinyHash, Matrix4, Vector4, AABB};
+use crate::structure::{RelPointer, ResourcePointer, TablePointer, Tag};
+use crate::types::{DestinyHash, Matrix4, Transform, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
-use glam::{Quat, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Quat, Vec3};
 use std::io::SeekFrom;
 use strum::{EnumCount, EnumIs, EnumVariantNames};
 
 #[derive(Clone)]
 pub struct ResourcePoint {
-    pub translation: Vec4,
-    pub rotation: Quat,
+    pub transform: Transform,
     pub entity: ExtendedHash,
     pub has_havok_data: bool,
     pub resource_type: u32,
     pub world_id: u64,
     pub resource: MapResource,
+}
+
+impl ResourcePoint {
+    pub fn entity_key(&self) -> u64 {
+        match self.resource {
+            MapResource::Unk80806aa3(_, t, _) => t.0 as u64,
+            _ => self.entity.key(),
+        }
+    }
 }
 
 #[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
@@ -37,7 +45,7 @@ pub enum MapResource {
     Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash) = 2,
     Unk808067b5(TagHash) = 3,
     CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
-    Unk80806aa3(AABB) = 5,
+    Unk80806aa3(AABB, TagHash, Mat4) = 5,
     Light = 6,
     RespawnPoint = 7,
     Unk808085c0 = 8,
@@ -80,7 +88,7 @@ impl MapResource {
                     c.cubemap_texture.0.to_be()
                 )
             }
-            MapResource::Unk80806aa3(_) => "Unk80806aa3".to_string(),
+            MapResource::Unk80806aa3(_, _, _) => "Unk80806aa3".to_string(),
             MapResource::Light => "Light".to_string(),
             MapResource::RespawnPoint => "Unk80808cb5".to_string(),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
@@ -136,13 +144,13 @@ impl MapResource {
 
     pub fn draw_debug_shape(
         &self,
-        translation: Vec4,
+        translation: Vec3,
         rotation: Quat,
         debug_shapes: &mut DebugShapes,
     ) {
         match self {
             MapResource::Decal { scale, .. } => debug_shapes.cube_extents(
-                translation.xyz(),
+                translation,
                 Vec3::splat(*scale / 2.0),
                 rotation,
                 darken_color(self.debug_color()),
@@ -151,7 +159,7 @@ impl MapResource {
             MapResource::CubemapVolume(_, bounds) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
             }
-            MapResource::Unk80806aa3(bounds) => {
+            MapResource::Unk80806aa3(bounds, _, _) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
             _ => {}
@@ -322,28 +330,32 @@ pub struct Unk80806aa7 {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80806aa9 {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: Vector4,
+    /// Transformation matrix
+    pub transform: [Vector4; 4],
 
-    pub bounds_center: Vector4,
     /// Same as the bounding box from the Unk808093b3 array
     pub bounds: AABB,
 
-    pub unk60: TagHash,
-    pub unk64: u32,
+    pub unk60: Tag<Unk80806aae>,
+    pub unk64: f32,
     pub unk68: u32,
-    pub unk6c: u16,
+    pub unk6c: i16,
     pub unk6e: u16,
 
     pub unk70: f32,
     pub unk74: u32,
-    pub unk78: u32,
+    pub unk78: TagHash,
     pub unk7c: u32,
 
     pub unk80: u64,
-    pub unk88: TagHash,
+    pub unk88: u32,
     pub unk8c: u32,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806aae {
+    pub file_size: u64,
+    pub entity_model: TagHash,
 }
 
 #[derive(BinRead, Debug, Clone)]

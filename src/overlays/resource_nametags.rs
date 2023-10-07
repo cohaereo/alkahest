@@ -51,25 +51,28 @@ impl OverlayProvider for ResourceTypeOverlay {
                         continue;
                     }
 
-                    let distance = res.translation.truncate().distance(camera.position);
+                    let distance = res.transform.translation.distance(camera.position);
                     if distance > self.debug_overlay.borrow().map_resource_distance {
                         continue;
                     }
 
                     // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
                     let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
-                    res.resource
-                        .draw_debug_shape(res.translation, res.rotation, &mut debug_shapes);
+                    res.resource.draw_debug_shape(
+                        res.transform.translation,
+                        res.transform.rotation,
+                        &mut debug_shapes,
+                    );
 
                     if !camera_frustum.point_intersecting(
-                        &res.translation.x,
-                        &res.translation.y,
-                        &res.translation.z,
+                        &res.transform.translation.x,
+                        &res.transform.translation.y,
+                        &res.transform.translation.z,
                     ) {
                         continue;
                     }
 
-                    let projected_point = proj_view.project_point3(res.translation.truncate());
+                    let projected_point = proj_view.project_point3(res.transform.translation);
 
                     let screen_point = Vec2::new(
                         ((projected_point.x + 1.0) * 0.5) * screen_size.width as f32,
