@@ -1,3 +1,4 @@
+use anyhow::Context;
 use destiny_pkg::TagHash;
 
 use glam::Vec4;
@@ -144,7 +145,7 @@ impl EntityRenderer {
                     .find(|v| v.material.is_some())
                     .map(|v| v.material)
                     .or_else(|| materials.first().cloned())
-                    .unwrap(),
+                    .context("Can't find a material to create an input layout!")?,
                 &[mesh.vertex_buffer1, mesh.vertex_buffer2],
             )?;
 

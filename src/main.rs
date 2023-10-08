@@ -314,6 +314,7 @@ pub async fn main() -> anyhow::Result<()> {
         renderlayer_statics_transparent: true,
         renderlayer_terrain: true,
         renderlayer_entities: true,
+        renderlayer_background: true,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
@@ -445,7 +446,9 @@ pub async fn main() -> anyhow::Result<()> {
                 }
 
                 unsafe {
-                    renderer.read().clear_render_targets();
+                    renderer.read().clear_render_targets(
+                        resources.get::<RenderSettings>().unwrap().clear_color,
+                    );
 
                     dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                         TopLeftX: 0.0,
@@ -492,29 +495,33 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
-                            if gb.renderlayer_entities {
-                                for (rp, cb) in &map.resource_points {
-                                    // Veil roots
-                                    // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x68e8e780))) {
-                                    //     continue;
-                                    // }
-
-                                    // Metaverse cat
-                                    // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x2BF6E780))) {
-                                    //     continue;
-                                    // }
-
-                                    if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
-                                        if ent.draw(&renderer.read(), cb.buffer().clone()).is_err()
-                                        {
-                                            // resources.get::<ErrorRenderer>().unwrap().draw(
-                                            //     &mut renderer,
-                                            //     cb.buffer(),
-                                            //     proj_view,
-                                            //     view,
-                                            // );
+                            for (rp, cb) in &map.resource_points {
+                                match rp.resource {
+                                    MapResource::Unk80806aa3 { .. } => {
+                                        if !gb.renderlayer_background {
+                                            continue;
                                         }
-                                    } else if rp.resource.is_entity() {
+                                    }
+                                    _ => {
+                                        if !gb.renderlayer_entities {
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                // if gb.renderlayer_entities {
+                                //     // Veil roots
+                                //     // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x68e8e780))) {
+                                //     //     continue;
+                                //     // }
+
+                                //     // Metaverse cat
+                                //     // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x2BF6E780))) {
+                                //     //     continue;
+                                //     // }
+
+                                if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
+                                    if ent.draw(&renderer.read(), cb.buffer().clone()).is_err() {
                                         // resources.get::<ErrorRenderer>().unwrap().draw(
                                         //     &mut renderer,
                                         //     cb.buffer(),
@@ -522,6 +529,13 @@ pub async fn main() -> anyhow::Result<()> {
                                         //     view,
                                         // );
                                     }
+                                } else if rp.resource.is_entity() {
+                                    // resources.get::<ErrorRenderer>().unwrap().draw(
+                                    //     &mut renderer,
+                                    //     cb.buffer(),
+                                    //     proj_view,
+                                    //     view,
+                                    // );
                                 }
                             }
                         }

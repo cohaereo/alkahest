@@ -7,15 +7,16 @@ use std::{
 };
 
 use crate::{
-    map_resources::{Unk80806d19, Unk808085c2, Unk80808cb7},
+    map_resources::{Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
+    types::Transform,
     util::RwLock,
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
-use glam::{Mat4, Quat, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::Itertools;
-use nohash_hasher::IntMap;
+use nohash_hasher::{IntMap, IntSet};
 use windows::Win32::Graphics::{
     Direct3D::WKPDID_D3DDebugObjectName,
     Direct3D11::{ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader},
@@ -55,10 +56,14 @@ pub async fn load_maps(
 
     let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
     let mut terrain_headers = vec![];
+    let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
     for hash in map_hashes {
         let renderer = renderer.read();
         let _span = debug_span!("Load map", %hash).entered();
-        let think: Unk80807dae = package_manager().read_tag_struct(hash).unwrap();
+        let Ok(think) = package_manager().read_tag_struct::<Unk80807dae>(hash) else {
+            error!("Failed to load map {hash}");
+            continue;
+        };
 
         // if stringmap.get(&think.map_name.0) != Some(&"Quagmire".to_string()) {
         //     continue;
@@ -82,6 +87,16 @@ pub async fn load_maps(
                 let mut cur = Cursor::new(&table_data);
 
                 for data in &table.data_entries {
+                    let transform = Transform {
+                        translation: Vec3::new(
+                            data.translation.x,
+                            data.translation.y,
+                            data.translation.z,
+                        ),
+                        rotation: data.rotation.into(),
+                        scale: Vec3::splat(data.translation.w),
+                    };
+
                     if data.data_resource.is_valid {
                         match data.data_resource.resource_type {
                             // D2Class_C96C8080 (placement)
@@ -148,13 +163,11 @@ pub async fn load_maps(
                                 ));
 
                                 resource_points.push(ResourcePoint {
-                                    translation: extents_center,
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
+                                    transform: Transform {
+                                        translation: extents_center.xyz(),
+                                        rotation: transform.rotation,
+                                        ..Default::default()
+                                    },
                                     entity: data.entity,
                                     has_havok_data: is_physics_entity(data.entity),
                                     world_id: data.world_id,
@@ -173,18 +186,7 @@ pub async fn load_maps(
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
                                 resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
+                                    transform,
                                     entity: data.entity,
                                     has_havok_data: is_physics_entity(data.entity),
                                     world_id: data.world_id,
@@ -208,18 +210,14 @@ pub async fn load_maps(
                                     for i in inst.start..(inst.start + inst.count) {
                                         let transform = header.transforms[i as usize];
                                         resource_points.push(ResourcePoint {
-                                            translation: Vec4::new(
-                                                transform.x,
-                                                transform.y,
-                                                transform.z,
-                                                transform.w,
-                                            ),
-                                            rotation: Quat::from_xyzw(
-                                                data.rotation.x,
-                                                data.rotation.y,
-                                                data.rotation.z,
-                                                data.rotation.w,
-                                            ),
+                                            transform: Transform {
+                                                translation: Vec3::new(
+                                                    transform.x,
+                                                    transform.y,
+                                                    transform.z,
+                                                ),
+                                                ..Default::default()
+                                            },
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
                                             world_id: data.world_id,
@@ -306,36 +304,35 @@ pub async fn load_maps(
                             //         });
                             //     }
                             // }
-                            // // (ambient) sound source
-                            // 0x80806b5b => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_some() {
-                            //         continue;
-                            //     }
+                            // (ambient) sound source
+                            0x8080666f => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let tag: ExtendedHash = cur.read_le().unwrap();
+                                if !tag.is_some() || tag.hash32().is_none() {
+                                    // TODO: should be handled a bit more gracefully, shouldnt drop the whole node
+                                    // TODO: do the same for other resources ^
+                                    continue;
+                                }
 
-                            //     let header: Unk80809802 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
+                                let header = package_manager()
+                                    .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
+                                    .ok();
 
-                            //     resource_points.push(ResourcePoint {
-                            //         translation: Vec4::new(
-                            //             data.translation.x,
-                            //             data.translation.y,
-                            //             data.translation.z,
-                            //             data.translation.w,
-                            //         ),
-                            //         rotation: Quat::IDENTITY,
-                            //         entity: data.entity,
-                            //         resource_type: data.data_resource.resource_type,
-                            //         resource: MapResource::AmbientSound(header),
-                            //     });
-                            // }
+                                resource_points.push(ResourcePoint {
+                                    transform,
+                                    entity: data.entity,
+                                    has_havok_data: is_physics_entity(data.entity),
+                                    world_id: data.world_id,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::AmbientSound(header),
+                                });
+                            }
                             0x80806aa3 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                if !tag.is_some() {
+                                if tag.is_none() {
                                     continue;
                                 }
 
@@ -347,19 +344,26 @@ pub async fn load_maps(
                                     header.unk18.iter(),
                                     header.unk28.iter(),
                                 )) {
+                                    to_load_entitymodels.insert(unk8.unk60.entity_model);
+
+                                    let mat = Mat4 {
+                                        x_axis: unk8.transform[0].into(),
+                                        y_axis: unk8.transform[1].into(),
+                                        z_axis: unk8.transform[2].into(),
+                                        w_axis: unk8.transform[3].into(),
+                                    };
+
                                     resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            unk8.bounds_center.x,
-                                            unk8.bounds_center.y,
-                                            unk8.bounds_center.z,
-                                            unk8.bounds_center.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
+                                        transform: Transform::from_mat4(mat),
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806aa3(unk18.bb),
+                                        resource: MapResource::Unk80806aa3(
+                                            unk18.bb,
+                                            unk8.unk60.entity_model,
+                                            mat,
+                                        ),
                                     });
                                 }
                             }
@@ -376,18 +380,20 @@ pub async fn load_maps(
 
                                 for (transform, _unk) in header.unk40.iter().zip(&header.unk30) {
                                     resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            transform.translation.x,
-                                            transform.translation.y,
-                                            transform.translation.z,
-                                            transform.translation.w,
-                                        ),
-                                        rotation: Quat::from_xyzw(
-                                            transform.rotation.x,
-                                            transform.rotation.y,
-                                            transform.rotation.z,
-                                            transform.rotation.w,
-                                        ),
+                                        transform: Transform {
+                                            translation: Vec3::new(
+                                                transform.translation.x,
+                                                transform.translation.y,
+                                                transform.translation.z,
+                                            ),
+                                            rotation: Quat::from_xyzw(
+                                                transform.rotation.x,
+                                                transform.rotation.y,
+                                                transform.rotation.z,
+                                                transform.rotation.w,
+                                            ),
+                                            ..Default::default()
+                                        },
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
@@ -416,13 +422,14 @@ pub async fn load_maps(
 
                                 for transform in header.unk8.iter() {
                                     resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            transform.translation.x,
-                                            transform.translation.y,
-                                            transform.translation.z,
-                                            transform.translation.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
+                                        transform: Transform {
+                                            translation: Vec3::new(
+                                                transform.translation.x,
+                                                transform.translation.y,
+                                                transform.translation.z,
+                                            ),
+                                            ..Default::default()
+                                        },
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
@@ -444,13 +451,14 @@ pub async fn load_maps(
 
                                 for transform in header.unk8.iter() {
                                     resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            transform.translation.x,
-                                            transform.translation.y,
-                                            transform.translation.z,
-                                            transform.translation.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
+                                        transform: Transform {
+                                            translation: Vec3::new(
+                                                transform.translation.x,
+                                                transform.translation.y,
+                                                transform.translation.z,
+                                            ),
+                                            ..Default::default()
+                                        },
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
@@ -475,13 +483,14 @@ pub async fn load_maps(
 
                                 for transform in header.unk50.iter() {
                                     resource_points.push(ResourcePoint {
-                                        translation: Vec4::new(
-                                            transform.translation.x,
-                                            transform.translation.y,
-                                            transform.translation.z,
-                                            transform.translation.w,
-                                        ),
-                                        rotation: Quat::IDENTITY,
+                                        transform: Transform {
+                                            translation: Vec3::new(
+                                                transform.translation.x,
+                                                transform.translation.y,
+                                                transform.translation.z,
+                                            ),
+                                            ..Default::default()
+                                        },
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
                                         world_id: data.world_id,
@@ -507,18 +516,7 @@ pub async fn load_maps(
                                     table.tag()
                                 );
                                 resource_points.push(ResourcePoint {
-                                    translation: Vec4::new(
-                                        data.translation.x,
-                                        data.translation.y,
-                                        data.translation.z,
-                                        data.translation.w,
-                                    ),
-                                    rotation: Quat::from_xyzw(
-                                        data.rotation.x,
-                                        data.rotation.y,
-                                        data.rotation.z,
-                                        data.rotation.w,
-                                    ),
+                                    transform,
                                     entity: data.entity,
                                     has_havok_data: is_physics_entity(data.entity),
                                     world_id: data.world_id,
@@ -535,18 +533,7 @@ pub async fn load_maps(
                         };
                     } else {
                         resource_points.push(ResourcePoint {
-                            translation: Vec4::new(
-                                data.translation.x,
-                                data.translation.y,
-                                data.translation.z,
-                                data.translation.w,
-                            ),
-                            rotation: Quat::from_xyzw(
-                                data.rotation.x,
-                                data.rotation.y,
-                                data.rotation.z,
-                                data.rotation.w,
-                            ),
+                            transform,
                             entity: data.entity,
                             has_havok_data: is_physics_entity(data.entity),
                             world_id: data.world_id,
@@ -678,15 +665,6 @@ pub async fn load_maps(
                         // println!(" - EntityModel {model:?}");
                     }
                     u => {
-                        if nh.0 == 0x80e792e1 {
-                            info!(
-                                "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-                                u.to_be(),
-                                e.unk0.unk10.resource_type.to_be(),
-                                e.unk0.tag()
-                            )
-                        }
-
                         debug!(
                             "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
                             u.to_be(),
@@ -703,6 +681,35 @@ pub async fn load_maps(
         }
     }
 
+    info!("Loading {} background entities", to_load_entitymodels.len());
+
+    for t in to_load_entitymodels {
+        let renderer = renderer.read();
+        let model: Unk808073a5 = package_manager().read_tag_struct(t)?;
+
+        for m in &model.meshes {
+            for p in &m.parts {
+                if p.material.is_some() {
+                    material_map.insert(
+                        p.material,
+                        Material::load(
+                            &renderer,
+                            package_manager().read_tag_struct(p.material)?,
+                            p.material,
+                            true,
+                        ),
+                    );
+                }
+            }
+        }
+
+        if let Ok(er) = debug_span!("load EntityRenderer")
+            .in_scope(|| EntityRenderer::load(model, vec![], vec![], &renderer, &dcs))
+        {
+            entity_renderers.insert(t.0 as u64, er);
+        }
+    }
+
     info!(
         "Found {} entity models ({} entities)",
         entity_renderers.len(),
@@ -713,29 +720,27 @@ pub async fn load_maps(
     info!("Updating resource constant buffers");
     for (_, _, m) in &mut maps {
         for (rp, cb) in &mut m.resource_points {
-            if let Some(ent) = entity_renderers.get(&rp.entity.key()) {
-                let mm = Mat4::from_scale_rotation_translation(
-                    Vec3::splat(rp.translation.w),
-                    rp.rotation.inverse(),
-                    Vec3::ZERO,
-                );
+            if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
+                let mm = rp.transform.to_mat4();
+
                 let model_matrix = Mat4::from_cols(
-                    mm.x_axis.truncate().extend(rp.translation.x),
-                    mm.y_axis.truncate().extend(rp.translation.y),
-                    mm.z_axis.truncate().extend(rp.translation.z),
-                    rp.translation,
+                    mm.x_axis.truncate().extend(mm.w_axis.x),
+                    mm.y_axis.truncate().extend(mm.w_axis.y),
+                    mm.z_axis.truncate().extend(mm.w_axis.z),
+                    mm.w_axis,
                 );
+
                 let alt_matrix = Mat4::from_cols(
-                    Vec3::ONE.extend(rp.translation.x),
-                    Vec3::ONE.extend(rp.translation.y),
-                    Vec3::ONE.extend(rp.translation.z),
+                    Vec3::ONE.extend(mm.w_axis.x),
+                    Vec3::ONE.extend(mm.w_axis.y),
+                    Vec3::ONE.extend(mm.w_axis.z),
                     Vec4::W,
                 );
 
                 *cb = ConstantBuffer::create(
                     dcs.clone(),
                     Some(&ScopeRigidModel {
-                        mesh_to_world: model_matrix.transpose(),
+                        mesh_to_world: model_matrix,
                         position_scale: ent.mesh_scale(),
                         position_offset: ent.mesh_offset(),
                         texcoord0_scale_offset: ent.texcoord_transform(),
