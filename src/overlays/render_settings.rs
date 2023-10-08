@@ -1,6 +1,6 @@
 use const_format::concatcp;
-use glam::{Mat4, Vec4};
-use std::{fmt::Display, fmt::Formatter, mem::transmute};
+use glam::{Mat4, Vec3, Vec4};
+use std::{fmt::Display, fmt::Formatter, mem::transmute, time::Instant};
 use winit::window::Window;
 
 use crate::{
@@ -22,6 +22,9 @@ pub struct RenderSettingsOverlay {
     pub renderlayer_background: bool,
 
     pub shadow_res_index: usize,
+    pub animate_light: bool,
+    pub light_dir_degrees: Vec3,
+    pub last_frame: Instant,
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
@@ -32,6 +35,9 @@ impl OverlayProvider for RenderSettingsOverlay {
         resources: &mut Resources,
         _icons: &GuiResources,
     ) {
+        let delta_time = self.last_frame.elapsed().as_secs_f32();
+        self.last_frame = Instant::now();
+
         let mut render_settings = resources.get_mut::<RenderSettings>().unwrap();
         egui::Window::new("Options").show(ctx, |ui| {
             ui.checkbox(&mut render_settings.draw_lights, "Render lights");
@@ -84,6 +90,35 @@ impl OverlayProvider for RenderSettingsOverlay {
                     csb.resize(SHADOW_RESOLUTIONS[self.shadow_res_index]);
                 }
             }
+
+            ui.horizontal(|ui| {
+                ui.strong("Directional Light");
+                ui.checkbox(&mut self.animate_light, "Animate");
+            });
+
+            if self.animate_light {
+                self.light_dir_degrees.z += delta_time * 15.0;
+                self.light_dir_degrees.z %= 360.0;
+            }
+
+            ui.add(
+                egui::Slider::new(&mut self.light_dir_degrees.x, 0.0..=2.0)
+                    .text("Angle")
+                    .fixed_decimals(1),
+            );
+            ui.add_enabled_ui(!self.animate_light, |ui| {
+                ui.add(
+                    egui::Slider::new(&mut self.light_dir_degrees.z, 0.0..=360.0)
+                        .text("Rotation")
+                        .fixed_decimals(1),
+                );
+            });
+
+            render_settings.light_dir = Vec3::new(
+                self.light_dir_degrees.z.to_radians().sin(),
+                self.light_dir_degrees.z.to_radians().cos(),
+                self.light_dir_degrees.x,
+            );
 
             ui.separator();
 
@@ -288,6 +323,7 @@ pub struct CompositorOptions {
     pub time: f32,
     pub mode: u32,
     pub light_count: u32,
+    pub light_dir: Vec4,
 }
 
 pub struct RenderSettings {
@@ -297,6 +333,7 @@ pub struct RenderSettings {
     pub blend_override: usize,
     pub evaluate_bytecode: bool,
     pub clear_color: Vec4,
+    pub light_dir: Vec3,
 }
 
 impl Default for RenderSettings {
@@ -308,6 +345,7 @@ impl Default for RenderSettings {
             blend_override: 0,
             evaluate_bytecode: false,
             clear_color: Vec4::ZERO,
+            light_dir: Vec3::NEG_Z,
         }
     }
 }

@@ -23,6 +23,7 @@ use binrw::BinReaderExt;
 use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
+use glam::Vec3;
 use itertools::Itertools;
 use nohash_hasher::IntMap;
 use poll_promise::Promise;
@@ -317,6 +318,9 @@ pub async fn main() -> anyhow::Result<()> {
         renderlayer_entities: true,
         renderlayer_background: true,
         shadow_res_index: 1,
+        animate_light: false,
+        light_dir_degrees: Vec3::new(1.0, 0.0, 50.0),
+        last_frame: Instant::now(),
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,

@@ -4,7 +4,7 @@ use std::{sync::Arc, time::Instant};
 use crate::input::InputState;
 use crate::util::image::Png;
 use crate::util::RwLock;
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -772,6 +772,7 @@ impl Renderer {
 
             {
                 let camera = resources.get::<FpsCamera>().unwrap();
+                let render_settings = resources.get::<RenderSettings>().unwrap();
 
                 let view = camera.calculate_matrix();
                 let proj_view = camera.projection_matrix * view;
@@ -790,6 +791,7 @@ impl Renderer {
                     } else {
                         0
                     },
+                    light_dir: render_settings.light_dir.extend(1.0),
                 };
                 self.scope_alk_composite.write(&compositor_options).unwrap();
                 self.scope_alk_composite.bind(0, ShaderStages::all());
@@ -884,12 +886,7 @@ impl Renderer {
     fn update_directional_cascades(&self, resources: &Resources) {
         let camera = resources.get::<FpsCamera>().unwrap();
 
-        // TODO(cohae): actual light object
-        let light_dir = Vec3::new(
-            (self.start_time.elapsed().as_secs_f32() * 0.25).sin(),
-            (self.start_time.elapsed().as_secs_f32() * 0.25).cos(),
-            0.40,
-        );
+        let light_dir = resources.get::<RenderSettings>().unwrap().light_dir;
 
         let mut cascade_matrices = [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT];
 

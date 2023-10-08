@@ -19,6 +19,7 @@ cbuffer CompositeOptions : register(b0) {
     float time;
     uint tex_i;
     uint lightCount;
+    float4 globalLightDir;
 };
 
 cbuffer Lights : register(b1) {
@@ -262,11 +263,6 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     // reflectance equation
     float3 directLighting = float3(0.0, 0.0, 0.0);
     const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
-    float3 DIR_LIGHT_DIR = float3(
-        sin(time*0.25),
-        cos(time*0.25),
-        0.40f
-    );
 
     [loop] for (uint i = 0; i < lightCount; ++i)
     {
@@ -290,13 +286,12 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         float3 radiance     = LIGHT_COL.xyz * attenuation;
 
         if(i == 1) {
-            float3 lightDir = DIR_LIGHT_DIR; // -normalize(lights[i].xyz);
             radiance = float3(1.0, 1.0, 1.0) * 5.0;
                 
-            shadow = CalculateShadow(worldPos, normal, lightDir);
+            shadow = CalculateShadow(worldPos, normal, globalLightDir.xyz);
                 
             // Cook-Torrance BRDF calculations
-            L = lightDir;
+            L = globalLightDir.xyz;
             H = normalize(V + L);
         }
 
