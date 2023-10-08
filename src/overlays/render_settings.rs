@@ -65,12 +65,18 @@ impl OverlayProvider for RenderSettingsOverlay {
             render_settings.clear_color = Vec4::from_array(c);
 
             {
-                const SHADOW_RESOLUTIONS: &[usize] = &[256, 512, 1024, 2048, 4096, 8192, 16384];
+                const SHADOW_RESOLUTIONS: &[usize] = &[2048, 4096, 8192, 16384];
                 let response = egui::ComboBox::from_label("Shadow Resolution").show_index(
                     ui,
                     &mut self.shadow_res_index,
                     SHADOW_RESOLUTIONS.len(),
-                    |i| SHADOW_RESOLUTIONS[i].to_string(),
+                    |i| {
+                        if SHADOW_RESOLUTIONS[i] > 8192 {
+                            format!("{} (may crash)", SHADOW_RESOLUTIONS[i].to_string())
+                        } else {
+                            SHADOW_RESOLUTIONS[i].to_string()
+                        }
+                    },
                 );
 
                 if response.changed() {

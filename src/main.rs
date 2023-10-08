@@ -316,7 +316,7 @@ pub async fn main() -> anyhow::Result<()> {
         renderlayer_terrain: true,
         renderlayer_entities: true,
         renderlayer_background: true,
-        shadow_res_index: 4,
+        shadow_res_index: 1,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,

@@ -55,7 +55,7 @@ pub struct Renderer {
     scope_unk3: ConstantBuffer<ScopeUnk3>,
     scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
-    scope_alk_cascade_transforms: ConstantBuffer<Mat4>,
+    scope_alk_cascade_transforms: ConstantBuffer<[Mat4; Self::CAMERA_CASCADE_LEVEL_COUNT]>,
 
     pub start_time: Instant,
     pub last_frame: RwLock<Instant>,
@@ -87,7 +87,7 @@ pub struct Renderer {
 
     shader_overrides: ShaderOverrides,
 
-    light_cascade_transforms: RwLock<Vec<Mat4>>,
+    light_cascade_transforms: RwLock<[Mat4; Self::CAMERA_CASCADE_LEVEL_COUNT]>,
     shadow_rs: ID3D11RasterizerState,
 }
 
@@ -262,7 +262,9 @@ impl Renderer {
         let (pshader_null, _) = shader::load_pshader(&dcs, &pshader_null_blob)?;
 
         Ok(Renderer {
-            light_cascade_transforms: RwLock::new(vec![]),
+            light_cascade_transforms: RwLock::new(
+                [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT],
+            ),
             shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
             draw_queue: RwLock::new(Vec::with_capacity(8192)),
@@ -279,10 +281,7 @@ impl Renderer {
             scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
-            scope_alk_cascade_transforms: ConstantBuffer::create_array_init(
-                dcs.clone(),
-                &[Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT],
-            )?,
+            scope_alk_cascade_transforms: ConstantBuffer::create(dcs.clone(), None)?,
             render_data: RenderDataManager::new(dcs.clone()),
             dcs,
             start_time: Instant::now(),
@@ -873,12 +872,12 @@ impl Renderer {
     }
 
     const CAMERA_CASCADE_CLIP_NEAR: f32 = 0.1;
-    const CAMERA_CASCADE_CLIP_FAR: f32 = 2000.0;
+    const CAMERA_CASCADE_CLIP_FAR: f32 = 4000.0;
     const CAMERA_CASCADE_LEVELS: &'static [f32] = &[
         Self::CAMERA_CASCADE_CLIP_FAR / 50.0,
         Self::CAMERA_CASCADE_CLIP_FAR / 25.0,
         Self::CAMERA_CASCADE_CLIP_FAR / 10.0,
-        Self::CAMERA_CASCADE_CLIP_FAR / 2.0,
+        Self::CAMERA_CASCADE_CLIP_FAR / 1.0,
     ];
     const CAMERA_CASCADE_LEVEL_COUNT: usize = Self::CAMERA_CASCADE_LEVELS.len();
 
@@ -892,7 +891,7 @@ impl Renderer {
             0.40,
         );
 
-        let mut cascade_matrices = vec![];
+        let mut cascade_matrices = [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT];
 
         let view = camera.calculate_matrix();
 
@@ -942,7 +941,7 @@ impl Renderer {
                 })
             }
 
-            cascade_matrices.push(light_matrix);
+            cascade_matrices[i] = light_matrix;
         }
 
         const DEBUG_COLORS: &[[u8; 3]] = &[
@@ -964,7 +963,7 @@ impl Renderer {
             }
         });
         self.scope_alk_cascade_transforms
-            .write_array(&cascade_matrices)
+            .write(&cascade_matrices)
             .unwrap();
         *self.light_cascade_transforms.write() = cascade_matrices;
     }

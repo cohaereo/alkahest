@@ -1,20 +1,12 @@
-#define CAMERA_CASCADE_CLIP_NEAR 0.0001
-#define CAMERA_CASCADE_CLIP_FAR 2000.0
-
-#define CAMERA_CASCADE_LEVEL_0 CAMERA_CASCADE_CLIP_NEAR
-#define CAMERA_CASCADE_LEVEL_1 (CAMERA_CASCADE_CLIP_FAR / 50.0)
-#define CAMERA_CASCADE_LEVEL_2 (CAMERA_CASCADE_CLIP_FAR / 25.0)
-#define CAMERA_CASCADE_LEVEL_3 (CAMERA_CASCADE_CLIP_FAR / 10.0)
-#define CAMERA_CASCADE_LEVEL_4 (CAMERA_CASCADE_CLIP_FAR / 2.0)
+#define CAMERA_CASCADE_CLIP_NEAR 0.1
+#define CAMERA_CASCADE_CLIP_FAR 4000.0
 #define CAMERA_CASCADE_LEVEL_COUNT 4
 
-static float cascadePlaneDistances[4] = {
-    // CAMERA_CASCADE_LEVEL_0,
-    CAMERA_CASCADE_LEVEL_1,
-    CAMERA_CASCADE_LEVEL_2,
-    CAMERA_CASCADE_LEVEL_3,
-    CAMERA_CASCADE_LEVEL_4,
-    // CAMERA_CASCADE_CLIP_FAR
+static float cascadePlaneDistances[CAMERA_CASCADE_LEVEL_COUNT] = {
+    CAMERA_CASCADE_CLIP_FAR / 50.0,
+    CAMERA_CASCADE_CLIP_FAR / 25.0,
+    CAMERA_CASCADE_CLIP_FAR / 10.0,
+    CAMERA_CASCADE_CLIP_FAR / 1.0,
 };
 
 cbuffer CompositeOptions : register(b0) {
@@ -34,7 +26,7 @@ cbuffer Lights : register(b1) {
 };
 
 cbuffer Cascades : register(b3) {
-    column_major float4x4 cascadeMatrices[CAMERA_CASCADE_LEVEL_COUNT];
+    float4x4 cascadeMatrices[CAMERA_CASCADE_LEVEL_COUNT];
 }
 
 struct VSOutput {
@@ -185,43 +177,36 @@ float3 DecodeNormal(float3 n) {
 
 
 uint CascadeLevel(float depth) {
-    return 0;
+    // return 0;
 
     // TODO(cohae): Fix CSM
-    // int layer = -1;
-    // for (int i = 0; i < CAMERA_CASCADE_LEVEL_COUNT; ++i)
-    // {
-    //     if (depth < cascadePlaneDistances[i])
-    //     {
-    //         layer = i;
-    //         break;
-    //     }
-    // }
-    // if (layer == -1)
-    // {
-    //     layer = CAMERA_CASCADE_LEVEL_COUNT-1;
-    // }
+    int layer = -1;
+    for (int i = 0; i < CAMERA_CASCADE_LEVEL_COUNT; ++i)
+    {
+        if (depth < cascadePlaneDistances[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    if (layer == -1)
+    {
+        layer = CAMERA_CASCADE_LEVEL_COUNT-1;
+    }
 
-    // return layer;
+    return layer;
 }
-
-static float4 CascadeDebugColors[5] = {
-    float4(1, 0, 0, 1), // red
-    float4(0, 1, 0, 1), // green
-    float4(0, 0, 1, 1), // blue
-    float4(1, 1, 0, 1), // yellow
-    float4(0, 1, 1, 1), // cyan
-};
 
 float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
     float fragmentDistance = distance(worldPos, cameraPos.xyz);
     uint cascade = CascadeLevel(fragmentDistance);
 
-    if(fragmentDistance > CAMERA_CASCADE_LEVEL_3) {
+    if(fragmentDistance > cascadePlaneDistances[CAMERA_CASCADE_LEVEL_COUNT-1]) {
         return 1;
     }
 
     float4 projectedPos = mul(cascadeMatrices[cascade], float4(worldPos, 1.0));
+    projectedPos /= projectedPos.w;
 
     float2 texCoords;
     texCoords.x = projectedPos.x * 0.5 + 0.5;
@@ -233,25 +218,22 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
         return 1;
     }
 
-    float3 sampleCoords = float3(texCoords.xy, cascade);
-    float shadow = CascadeShadowMaps.Sample(SampleType, sampleCoords).r;
-    return shadow < (currentDepth - 0.0001) ? 0.1 : 1.0;
-
-    // // PCF
-    // float shadow = 0.0;
-    // float2 texelSize = QueryShadowMapTexelSize();
-    // for(int x = -1; x <= 1; ++x)
-    // {
-    //     for(int y = -1; y <= 1; ++y)
-    //     {
-    //         float3 sampleCoords = float3(texCoords.xy + float2(x, y) * texelSize, cascade);
-    //         float pcfDepth = CascadeShadowMaps.Sample(SampleType, sampleCoords).r;
-    //         shadow += pcfDepth < (currentDepth - 0.00001) ? 0.1 : 1.0;        
-    //     }    
-    // }
-    // shadow /= 9.0;
+    // PCF
+    // TODO(cohae): Still not as smooth as it should be
+    float shadow = 0.0;
+    float2 texelSize = QueryShadowMapTexelSize();
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float3 sampleCoords = float3(texCoords.xy + float2(x, y) * texelSize, cascade);
+            float pcfDepth = CascadeShadowMaps.Sample(SampleType, sampleCoords).r;
+            shadow += pcfDepth < (currentDepth - 0.0001) ? 0.1 : 1.0;        
+        }    
+    }
+    shadow /= 9.0;
             
-    // return shadow;
+    return shadow;
 }
 
 float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 uv) {

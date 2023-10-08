@@ -2,7 +2,9 @@ use crate::dxgi::DxgiFormat;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
 use std::sync::Arc;
-use windows::Win32::Graphics::Direct3D::D3D11_SRV_DIMENSION_TEXTURE2D;
+use windows::Win32::Graphics::Direct3D::{
+    D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
+};
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
 
@@ -393,7 +395,7 @@ impl ShadowDepthMap {
                 &texture,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
                     Format: DXGI_FORMAT_R32_FLOAT,
-                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+                    ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture2DArray: D3D11_TEX2D_ARRAY_SRV {
                             MostDetailedMip: 0,
