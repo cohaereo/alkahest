@@ -1,14 +1,11 @@
-use std::cell::RefCell;
 use std::{sync::Arc, time::Instant};
 
-use crate::input::InputState;
 use crate::util::image::Png;
 use crate::util::RwLock;
 use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
-use winit::event::VirtualKeyCode;
 use winit::window::Window;
 
 use crate::dxgi::DxgiFormat;
@@ -892,12 +889,6 @@ impl Renderer {
 
         let view = camera.calculate_matrix();
 
-        thread_local! {
-            static MATRIX_FREEZE: RefCell<([Mat4; 4], [Mat4; 4])> = RefCell::new((Default::default(), Default::default()));
-        }
-
-        let mut shapes = resources.get_mut::<DebugShapes>().unwrap();
-        let input = resources.get::<InputState>().unwrap();
         for i in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
             let (z_start, z_end) = if i == 0 {
                 (
@@ -924,41 +915,8 @@ impl Renderer {
                 self.window_size.0 as f32 / self.window_size.1 as f32,
             );
 
-            let proj = Mat4::perspective_rh(
-                90f32.to_radians(),
-                self.window_size.0 as f32 / self.window_size.1 as f32,
-                z_start,
-                z_end,
-            );
-
-            if input.is_key_down(VirtualKeyCode::T) {
-                MATRIX_FREEZE.with_borrow_mut(|(camera, light)| {
-                    camera[i] = (proj * view).inverse();
-                    light[i] = light_matrix.inverse();
-                })
-            }
-
             cascade_matrices[i] = light_matrix;
         }
-
-        const DEBUG_COLORS: &[[u8; 3]] = &[
-            [255, 0, 0],
-            [0, 255, 0],
-            [0, 0, 255],
-            [255, 255, 0],
-            [0, 255, 255],
-            [255, 0, 255],
-        ];
-
-        MATRIX_FREEZE.with_borrow(|(camera, light)| {
-            for i in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
-                let corners = FpsCamera::calculate_frustum_corners(light[i]);
-                shapes.frustum_corners(&corners, DEBUG_COLORS[i]);
-
-                let camera_corners = FpsCamera::calculate_frustum_corners(camera[i]);
-                shapes.frustum_corners(&camera_corners, DEBUG_COLORS[i]);
-            }
-        });
         self.scope_alk_cascade_transforms
             .write(&cascade_matrices)
             .unwrap();
