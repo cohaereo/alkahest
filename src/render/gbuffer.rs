@@ -307,6 +307,7 @@ pub struct ShadowDepthMap {
     pub state: ID3D11DepthStencilState,
     pub views: Vec<ID3D11DepthStencilView>,
     pub texture_view: ID3D11ShaderResourceView,
+    pub layers: usize,
 }
 
 impl ShadowDepthMap {
@@ -410,6 +411,12 @@ impl ShadowDepthMap {
             state,
             views,
             texture_view,
+            layers,
         })
+    }
+
+    pub fn resize(&mut self, new_size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<()> {
+        *self = Self::create(new_size, self.layers, device)?;
+        Ok(())
     }
 }

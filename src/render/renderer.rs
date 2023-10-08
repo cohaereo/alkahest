@@ -2,7 +2,6 @@ use std::{sync::Arc, time::Instant};
 
 use crate::util::image::Png;
 use crate::util::RwLock;
-use anyhow::Context;
 use glam::{Mat4, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -86,7 +85,6 @@ pub struct Renderer {
     shader_overrides: ShaderOverrides,
 
     light_cascade_transforms: RwLock<Vec<Mat4>>,
-    cascade_depth_buffers: ShadowDepthMap,
     shadow_rs: ID3D11RasterizerState,
 }
 
@@ -262,12 +260,6 @@ impl Renderer {
 
         Ok(Renderer {
             light_cascade_transforms: RwLock::new(vec![]),
-            cascade_depth_buffers: ShadowDepthMap::create(
-                (Self::SHADOWMAP_RESOLUTION, Self::SHADOWMAP_RESOLUTION),
-                Self::CAMERA_CASCADE_LEVEL_COUNT,
-                &dcs.device,
-            )
-            .context("Failed to create CSM depth map")?,
             shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
             draw_queue: RwLock::new(Vec::with_capacity(8192)),
@@ -751,7 +743,14 @@ impl Renderer {
             );
             self.dcs.context().PSSetShaderResources(
                 6,
-                Some(&[Some(self.cascade_depth_buffers.texture_view.clone())]),
+                Some(&[Some(
+                    resources
+                        .get::<ShadowMapsResource>()
+                        .unwrap()
+                        .cascade_depth_buffers
+                        .texture_view
+                        .clone(),
+                )]),
             );
 
             self.matcap.bind(&self.dcs, 4, ShaderStages::PIXEL);
@@ -880,7 +879,6 @@ impl Renderer {
         // Self::CAMERA_CASCADE_CLIP_FAR / 2.0,
     ];
     const CAMERA_CASCADE_LEVEL_COUNT: usize = Self::CAMERA_CASCADE_LEVELS.len();
-    const SHADOWMAP_RESOLUTION: u32 = 16384;
 
     fn update_directional_cascades(&self, resources: &Resources) {
         let camera = resources.get::<FpsCamera>().unwrap();
@@ -952,11 +950,12 @@ impl Renderer {
         let draw_queue = self.draw_queue.read();
 
         unsafe {
+            let csb = resources.get::<ShadowMapsResource>().unwrap();
             self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
-                Width: Self::SHADOWMAP_RESOLUTION as f32,
-                Height: Self::SHADOWMAP_RESOLUTION as f32,
+                Width: csb.resolution as f32,
+                Height: csb.resolution as f32,
                 MinDepth: 0.0,
                 MaxDepth: 1.0,
             }]));
@@ -965,11 +964,12 @@ impl Renderer {
         let scope_view_base = self.scope_view_backup.read();
         for cascade_level in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
             unsafe {
+                let csb = resources.get::<ShadowMapsResource>().unwrap();
                 self.dcs
                     .context()
-                    .OMSetDepthStencilState(&self.cascade_depth_buffers.state, 0);
+                    .OMSetDepthStencilState(&csb.cascade_depth_buffers.state, 0);
 
-                let view = &self.cascade_depth_buffers.views[cascade_level];
+                let view = &csb.cascade_depth_buffers.views[cascade_level];
                 self.dcs.context().ClearDepthStencilView(
                     view,
                     (D3D11_CLEAR_DEPTH.0 | D3D11_CLEAR_STENCIL.0) as _,
@@ -1112,4 +1112,43 @@ pub enum DrawMode {
     #[default]
     Normal = 0,
     DepthPrepass = 1,
+}
+
+pub struct ShadowMapsResource {
+    pub cascade_depth_buffers: ShadowDepthMap,
+    pub resolution: usize,
+    dcs: Arc<DeviceContextSwapchain>,
+}
+
+impl ShadowMapsResource {
+    pub const DEFAULT_RESOLUTION: usize = 4096;
+
+    pub fn create(dcs: Arc<DeviceContextSwapchain>) -> Self {
+        Self {
+            cascade_depth_buffers: ShadowDepthMap::create(
+                (Self::DEFAULT_RESOLUTION as _, Self::DEFAULT_RESOLUTION as _),
+                Renderer::CAMERA_CASCADE_LEVEL_COUNT,
+                &dcs.device,
+            )
+            .expect("Failed to create CSM depth map"),
+            resolution: Self::DEFAULT_RESOLUTION,
+            dcs,
+        }
+    }
+
+    pub fn resize(&mut self, new_resolution: usize) {
+        if new_resolution == self.resolution {
+            return;
+        }
+
+        self.cascade_depth_buffers
+            .resize(
+                (new_resolution as u32, new_resolution as u32),
+                &self.dcs.device,
+            )
+            .expect("Failed to resize shadow map depth buffer");
+        self.resolution = new_resolution;
+
+        info!("Resized shadow maps to {new_resolution}");
+    }
 }

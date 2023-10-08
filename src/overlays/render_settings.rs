@@ -5,7 +5,10 @@ use winit::window::Window;
 
 use crate::{
     map::MapDataList,
-    render::overrides::{EnabledShaderOverrides, ScopeOverrides},
+    render::{
+        overrides::{EnabledShaderOverrides, ScopeOverrides},
+        renderer::ShadowMapsResource,
+    },
     resources::Resources,
 };
 
@@ -17,6 +20,8 @@ pub struct RenderSettingsOverlay {
     pub renderlayer_terrain: bool,
     pub renderlayer_entities: bool,
     pub renderlayer_background: bool,
+
+    pub shadow_res_index: usize,
 }
 
 impl OverlayProvider for RenderSettingsOverlay {
@@ -58,6 +63,21 @@ impl OverlayProvider for RenderSettingsOverlay {
             });
             c[3] = 1.0;
             render_settings.clear_color = Vec4::from_array(c);
+
+            {
+                const SHADOW_RESOLUTIONS: &[usize] = &[256, 512, 1024, 2048, 4096, 8192, 16384];
+                let response = egui::ComboBox::from_label("Shadow Resolution").show_index(
+                    ui,
+                    &mut self.shadow_res_index,
+                    SHADOW_RESOLUTIONS.len(),
+                    |i| SHADOW_RESOLUTIONS[i].to_string(),
+                );
+
+                if response.changed() {
+                    let mut csb = resources.get_mut::<ShadowMapsResource>().unwrap();
+                    csb.resize(SHADOW_RESOLUTIONS[self.shadow_res_index]);
+                }
+            }
 
             ui.separator();
 

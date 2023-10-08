@@ -58,7 +58,7 @@ use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
 use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
-use crate::render::renderer::Renderer;
+use crate::render::renderer::{Renderer, ShadowMapsResource};
 
 use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, TerrainRenderer};
 use crate::resources::Resources;
@@ -288,6 +288,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(DebugShapes::default());
     resources.insert(EnabledShaderOverrides::default());
     resources.insert(RenderSettings::default());
+    resources.insert(ShadowMapsResource::create(dcs.clone()));
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -315,6 +316,7 @@ pub async fn main() -> anyhow::Result<()> {
         renderlayer_terrain: true,
         renderlayer_entities: true,
         renderlayer_background: true,
+        shadow_res_index: 4,
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
