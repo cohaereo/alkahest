@@ -281,29 +281,6 @@ pub async fn load_maps(
                             //         });
                             //     }
                             // }
-                            // 0x80809160 => {
-                            //     cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                            //         .unwrap();
-                            //     let tag: TagHash = cur.read_le().unwrap();
-                            //     if !tag.is_some() {
-                            //         continue;
-                            //     }
-
-                            //     let header: Unk80809162 =
-                            //         package_manager().read_tag_struct(tag).unwrap();
-
-                            //     for p in &header.unk8 {
-                            //         resource_points.push(ResourcePoint {
-                            //             translation: Vec4::new(
-                            //                 p.unk10.x, p.unk10.y, p.unk10.z, p.unk10.w,
-                            //             ),
-                            //             rotation: Quat::IDENTITY,
-                            //             entity: data.entity,
-                            //             resource_type: data.data_resource.resource_type,
-                            //             resource: MapResource::RespawnPoint,
-                            //         });
-                            //     }
-                            // }
                             // (ambient) sound source
                             0x8080666f => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
@@ -419,6 +396,7 @@ pub async fn load_maps(
 
                                 let header: Unk80808cb7 =
                                     package_manager().read_tag_struct(tag).unwrap();
+                                println!("{header:#x?}");
 
                                 for transform in header.unk8.iter() {
                                     resource_points.push(ResourcePoint {
@@ -427,6 +405,12 @@ pub async fn load_maps(
                                                 transform.translation.x,
                                                 transform.translation.y,
                                                 transform.translation.z,
+                                            ),
+                                            rotation: Quat::from_xyzw(
+                                                transform.rotation.x,
+                                                transform.rotation.y,
+                                                transform.rotation.z,
+                                                transform.rotation.w,
                                             ),
                                             ..Default::default()
                                         },
@@ -532,6 +516,16 @@ pub async fn load_maps(
                                 //     resource_type: data.data_resource.resource_type,
                                 //     resource: MapResource::Unk80806cc3(header.bounds),
                                 // });
+                            }
+                            0x80806c5e => {
+                                resource_points.push(ResourcePoint {
+                                    transform,
+                                    entity: data.entity,
+                                    has_havok_data: is_physics_entity(data.entity),
+                                    world_id: data.world_id,
+                                    resource_type: data.data_resource.resource_type,
+                                    resource: MapResource::SpotLight,
+                                });
                             }
                             u => {
                                 // println!("{data:x?}");

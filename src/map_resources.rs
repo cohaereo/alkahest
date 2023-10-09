@@ -1,6 +1,6 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_STICKER, ICON_VOLUME_HIGH,
+    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_VOLUME_HIGH,
 };
 use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
@@ -53,6 +53,7 @@ pub enum MapResource {
     Unk80806a40 = 9,
     AmbientSound(Option<Unk80809802>) = 10,
     Unk80806cc3(AABB) = 11,
+    SpotLight = 12,
 }
 
 impl MapResource {
@@ -93,7 +94,7 @@ impl MapResource {
             }
             MapResource::Unk80806aa3(_, _, _) => "Unk80806aa3".to_string(),
             MapResource::Light => "Light".to_string(),
-            MapResource::RespawnPoint => "Unk80808cb5".to_string(),
+            MapResource::RespawnPoint => "Respawn Point".to_string(),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
             MapResource::AmbientSound(s) => {
@@ -108,6 +109,7 @@ impl MapResource {
                 }
             }
             MapResource::Unk80806cc3(_) => "Unk80806cc3".to_string(),
+            MapResource::SpotLight => "Spotlight".to_string(),
         }
     }
 
@@ -144,6 +146,7 @@ impl MapResource {
             MapResource::Unk80806a40 { .. } => RANDOM_COLORS[0x80806a40 % 16],
             MapResource::AmbientSound { .. } => RANDOM_COLORS[0x8080666f % 16],
             MapResource::Unk80806cc3(_) => RANDOM_COLORS[0x80806cc3 % 16],
+            MapResource::SpotLight => [0xFF, 0xFF, 0x00],
         }
     }
 
@@ -156,6 +159,7 @@ impl MapResource {
             MapResource::Light => ICON_LIGHTBULB_ON,
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
             MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
+            MapResource::SpotLight => ICON_SPOTLIGHT_BEAM,
             _ => ICON_HELP,
         }
     }
@@ -183,6 +187,12 @@ impl MapResource {
             MapResource::Unk80806cc3(bounds) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
+            MapResource::SpotLight => {
+                debug_shapes.line_orientation(translation, rotation, 2.5, self.debug_color())
+            }
+            MapResource::RespawnPoint => {
+                debug_shapes.line_orientation(translation, rotation, 1.0, self.debug_color())
+            }
             _ => {}
         }
     }
@@ -198,6 +208,7 @@ impl MapResource {
             6 => ICON_LIGHTBULB_ON,
             7 => ICON_ACCOUNT_CONVERT,
             10 => ICON_VOLUME_HIGH,
+            12 => ICON_SPOTLIGHT_BEAM,
             _ => ICON_HELP_BOX_OUTLINE,
         }
     }
@@ -436,7 +447,7 @@ pub struct Unk80808cb7 {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80808cb9 {
-    pub unk0: [u32; 4],
+    pub rotation: Vector4,
     pub translation: Vector4,
     pub unk20: [u32; 4],
 }

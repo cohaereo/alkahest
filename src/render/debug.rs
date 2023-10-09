@@ -78,45 +78,39 @@ impl DebugShapes {
             .push((DebugShape::Line { start, end }, color.into()))
     }
 
-    /// See `FpsCamera::calculate_frustum_corners` for index layout
-    /// Silently returns if corners.len() != 8
-    pub fn frustum_corners<C: Into<Color> + Copy>(&mut self, corners: &[Vec3], color: C) {
-        if corners.len() != 8 {
-            return;
-        }
-
-        for (p1, p2) in [
-            (0_usize, 4_usize), // bottom left
-            (1, 5),             // bottom right
-            (2, 6),             // top left
-            (3, 7),             // top right
-            (4, 5),             // far bottom
-            (6, 7),             // far top
-            (4, 6),             // far left
-            (5, 7),             // far right
-            (0, 1),             // near bottom
-            (2, 3),             // near top
-            (0, 2),             // near left
-            (1, 3),             // near right
-        ] {
-            self.line(corners[p1], corners[p2], color);
-        }
+    pub fn line_orientation<C: Into<Color>>(
+        &mut self,
+        point: Vec3,
+        orientation: Quat,
+        length: f32,
+        color: C,
+    ) {
+        self.line(point, point + orientation * Vec3::X * length, color.into())
     }
 
-    // pub fn line_orientation<C: Into<Color>>(
-    //     &mut self,
-    //     point: Vec3,
-    //     orientation: Quat,
-    //     length: f32,
-    //     color: C,
-    // ) {
-    //     self.shapes.push((
-    //         DebugShape::Line {
-    //             start: point,
-    //             end: point + (orientation * Vec3::Y) * length,
-    //         },
-    //         color.into(),
-    //     ))
+    // /// See `FpsCamera::calculate_frustum_corners` for index layout
+    // /// Silently returns if corners.len() != 8
+    // pub fn frustum_corners<C: Into<Color> + Copy>(&mut self, corners: &[Vec3], color: C) {
+    //     if corners.len() != 8 {
+    //         return;
+    //     }
+
+    //     for (p1, p2) in [
+    //         (0_usize, 4_usize), // bottom left
+    //         (1, 5),             // bottom right
+    //         (2, 6),             // top left
+    //         (3, 7),             // top right
+    //         (4, 5),             // far bottom
+    //         (6, 7),             // far top
+    //         (4, 6),             // far left
+    //         (5, 7),             // far right
+    //         (0, 1),             // near bottom
+    //         (2, 3),             // near top
+    //         (0, 2),             // near left
+    //         (1, 3),             // near right
+    //     ] {
+    //         self.line(corners[p1], corners[p2], color);
+    //     }
     // }
 
     /// Returns the drawlist. The internal list is cleared after this call
