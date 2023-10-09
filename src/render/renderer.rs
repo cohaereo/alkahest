@@ -564,7 +564,7 @@ impl Renderer {
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             unsafe {
                 if mode != DrawMode::DepthPrepass {
-                    if mat.unk22 != 0 {
+                    if mat.unkc != 0 {
                         self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
                     } else {
                         self.dcs.context().RSSetState(&self.rasterizer_state);
