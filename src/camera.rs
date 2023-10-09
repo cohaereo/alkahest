@@ -170,7 +170,7 @@ impl FpsCamera {
         }
 
         // Tune this according to the scene
-        const Z_MULT: f32 = 2.0;
+        const Z_MULT: f32 = 7.5;
         let min_z = if min_z < 0.0 {
             min_z * Z_MULT
         } else {
