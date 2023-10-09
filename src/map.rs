@@ -225,18 +225,3 @@ impl MapDataList {
         }
     }
 }
-
-#[derive(BinRead, Debug)]
-pub struct Unk80807164 {
-    pub file_size: u64,
-    pub unk8: TablePointer<TagHash>,
-    pub unk18: TablePointer<u32>,
-    pub unk28: TablePointer<u32>,
-    pub unk38: TablePointer<u32>,
-    pub unk48: TagHash,
-    pub unk4c: TagHash,
-    pub unk50: TablePointer<u32>,
-    pub unk60: [u32; 4],
-    pub unk70: Vector4,
-    pub unk80: Vector4,
-}

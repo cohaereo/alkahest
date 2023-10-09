@@ -19,8 +19,9 @@ use crate::{camera::FpsCamera, resources::Resources};
 use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::{GeometryType, Transparency};
+use super::gbuffer::ShadowDepthMap;
 use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
-use super::scopes::ScopeUnk8;
+use super::scopes::{ScopeUnk2, ScopeUnk8};
 use super::{
     drawcall::{DrawCall, ShadingTechnique, SortValue3d},
     scopes::{ScopeFrame, ScopeView},
@@ -43,11 +44,16 @@ pub struct Renderer {
     window_size: (u32, u32),
     pub dcs: Arc<DeviceContextSwapchain>,
 
+    scope_view_backup: RwLock<ScopeView>,
     scope_view: ConstantBuffer<ScopeView>,
+
+    scope_view_csm: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
+    scope_unk2: ConstantBuffer<ScopeUnk2>,
     scope_unk3: ConstantBuffer<ScopeUnk3>,
     scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
+    scope_alk_cascade_transforms: ConstantBuffer<[Mat4; Self::CAMERA_CASCADE_LEVEL_COUNT]>,
 
     pub start_time: Instant,
     pub last_frame: RwLock<Instant>,
@@ -78,6 +84,9 @@ pub struct Renderer {
     debug_shape_renderer: DebugShapeRenderer,
 
     shader_overrides: ShaderOverrides,
+
+    light_cascade_transforms: RwLock<[Mat4; Self::CAMERA_CASCADE_LEVEL_COUNT]>,
+    shadow_rs: ID3D11RasterizerState,
 }
 
 impl Renderer {
@@ -169,6 +178,21 @@ impl Renderer {
             })?
         };
 
+        let shadow_rs = unsafe {
+            dcs.device.CreateRasterizerState(&D3D11_RASTERIZER_DESC {
+                FillMode: D3D11_FILL_SOLID,
+                CullMode: D3D11_CULL_BACK,
+                FrontCounterClockwise: true.into(),
+                DepthBias: 0,
+                DepthBiasClamp: 0.0,
+                SlopeScaledDepthBias: 0.0,
+                DepthClipEnable: false.into(),
+                ScissorEnable: Default::default(),
+                MultisampleEnable: Default::default(),
+                AntialiasedLineEnable: Default::default(),
+            })?
+        };
+
         const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matcap.png");
         let matcap = Texture::load_png(
             &dcs,
@@ -233,10 +257,12 @@ impl Renderer {
             "ps_5_0",
         )
         .unwrap();
-
         let (pshader_null, _) = shader::load_pshader(&dcs, &pshader_null_blob)?;
 
         Ok(Renderer {
+            light_cascade_transforms: RwLock::new(
+                [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT],
+            ),
             shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
             draw_queue: RwLock::new(Vec::with_capacity(8192)),
@@ -247,10 +273,14 @@ impl Renderer {
             )?,
             window_size: (window.inner_size().width, window.inner_size().height),
             scope_frame: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_view_backup: RwLock::new(ScopeView::default()),
             scope_view: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_view_csm: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_alk_cascade_transforms: ConstantBuffer::create(dcs.clone(), None)?,
             render_data: RenderDataManager::new(dcs.clone()),
             dcs,
             start_time: Instant::now(),
@@ -261,6 +291,7 @@ impl Renderer {
             blend_state_additive,
             rasterizer_state,
             rasterizer_state_nocull,
+            shadow_rs,
             matcap,
             white,
             blend_texture,
@@ -307,12 +338,19 @@ impl Renderer {
             self.evaluate_tfx_expressions();
         }
 
+        self.scope_unk2.bind(2, ShaderStages::all());
         self.scope_unk3.bind(3, ShaderStages::all());
         self.scope_unk8.bind(8, ShaderStages::all());
-        self.scope_view.bind(12, ShaderStages::all());
         self.scope_frame.bind(13, ShaderStages::all());
 
+        if render_settings.draw_lights {
+            self.render_cascade_depthmaps(resources);
+        }
+
+        self.scope_view.bind(12, ShaderStages::all());
+
         unsafe {
+            self.dcs.context().RSSetState(&self.shadow_rs);
             self.dcs.context().OMSetRenderTargets(
                 Some(&[
                     Some(self.gbuffer.rt0.render_target.clone()),
@@ -329,6 +367,15 @@ impl Renderer {
                 Some(&[1f32, 1., 1., 1.] as _),
                 0xffffffff,
             );
+
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: self.window_size.0 as f32,
+                Height: self.window_size.1 as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
         }
 
         let shader_overrides = resources.get::<EnabledShaderOverrides>().unwrap();
@@ -519,10 +566,12 @@ impl Renderer {
 
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             unsafe {
-                if mat.unk22 != 0 {
-                    self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
-                } else {
-                    self.dcs.context().RSSetState(&self.rasterizer_state);
+                if mode != DrawMode::DepthPrepass {
+                    if mat.unkc != 0 {
+                        self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
+                    } else {
+                        self.dcs.context().RSSetState(&self.rasterizer_state);
+                    }
                 }
             }
 
@@ -694,6 +743,17 @@ impl Renderer {
                     Some(self.gbuffer.depth.texture_view.clone()),
                 ]),
             );
+            self.dcs.context().PSSetShaderResources(
+                6,
+                Some(&[Some(
+                    resources
+                        .get::<ShadowMapsResource>()
+                        .unwrap()
+                        .cascade_depth_buffers
+                        .texture_view
+                        .clone(),
+                )]),
+            );
 
             self.matcap.bind(&self.dcs, 4, ShaderStages::PIXEL);
 
@@ -711,20 +771,16 @@ impl Renderer {
                 .PSSetShaderResources(5, Some(&[cubemap_texture]));
 
             {
-                let mut camera = resources.get_mut::<FpsCamera>().unwrap();
-                let projection = Mat4::perspective_infinite_reverse_rh(
-                    90f32.to_radians(),
-                    self.window_size.0 as f32 / self.window_size.1 as f32,
-                    0.0001,
-                );
+                let camera = resources.get::<FpsCamera>().unwrap();
+                let render_settings = resources.get::<RenderSettings>().unwrap();
 
                 let view = camera.calculate_matrix();
-                let proj_view = projection * view;
+                let proj_view = camera.projection_matrix * view;
                 let view = Mat4::from_translation(camera.position);
                 let compositor_options = CompositorOptions {
                     proj_view_matrix_inv: proj_view.inverse(),
                     proj_view_matrix: proj_view,
-                    proj_matrix: projection,
+                    proj_matrix: camera.projection_matrix,
                     view_matrix: view,
                     camera_pos: camera.position.extend(1.0),
                     camera_dir: camera.front.extend(1.0),
@@ -735,15 +791,13 @@ impl Renderer {
                     } else {
                         0
                     },
+                    light_dir: render_settings.light_dir.extend(1.0),
                 };
                 self.scope_alk_composite.write(&compositor_options).unwrap();
                 self.scope_alk_composite.bind(0, ShaderStages::all());
             }
-            // cb_composite_options.write(&compositor_options).unwrap();
-
-            // self.dcs
-            //     .context
-            //     .VSSetConstantBuffers(0, Some(&[Some(cb_composite_options.buffer().clone())]));
+            self.scope_alk_cascade_transforms
+                .bind(3, ShaderStages::PIXEL);
 
             if let Some(lights) = &lights {
                 self.dcs
@@ -760,14 +814,6 @@ impl Renderer {
                 MaxDepth: 1.0,
             }]));
 
-            // self.dcs
-            //     .context
-            //     .PSSetShaderResources(5, Some(&[cubemap_texture]));
-
-            // self.dcs
-            //     .context
-            //     .PSSetSamplers(0, Some(&[Some(le_sampler.clone())]));
-
             self.dcs.context().VSSetShader(&self.composite_vs, None);
             self.dcs.context().PSSetShader(&self.composite_ps, None);
             self.dcs
@@ -780,6 +826,7 @@ impl Renderer {
                 .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
         }
     }
+
     fn run_final(&self) {
         unsafe {
             self.scope_alk_composite.bind(0, ShaderStages::all());
@@ -803,6 +850,7 @@ impl Renderer {
                 ]),
             );
 
+            self.dcs.context().RSSetScissorRects(None);
             self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
@@ -822,6 +870,118 @@ impl Renderer {
             self.dcs
                 .context()
                 .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
+        }
+    }
+
+    const CAMERA_CASCADE_CLIP_NEAR: f32 = 0.1;
+    const CAMERA_CASCADE_CLIP_FAR: f32 = 4000.0;
+    const CAMERA_CASCADE_LEVELS: &'static [f32] = &[
+        Self::CAMERA_CASCADE_CLIP_FAR / 50.0,
+        Self::CAMERA_CASCADE_CLIP_FAR / 25.0,
+        Self::CAMERA_CASCADE_CLIP_FAR / 10.0,
+        Self::CAMERA_CASCADE_CLIP_FAR / 1.0,
+    ];
+    const CAMERA_CASCADE_LEVEL_COUNT: usize = Self::CAMERA_CASCADE_LEVELS.len();
+
+    fn update_directional_cascades(&self, resources: &Resources) {
+        let camera = resources.get::<FpsCamera>().unwrap();
+
+        let light_dir = resources.get::<RenderSettings>().unwrap().light_dir;
+
+        let mut cascade_matrices = [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT];
+
+        let view = camera.calculate_matrix();
+
+        for i in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
+            let (z_start, z_end) = if i == 0 {
+                (
+                    Self::CAMERA_CASCADE_CLIP_NEAR,
+                    Self::CAMERA_CASCADE_LEVELS[i],
+                )
+            } else if i < Self::CAMERA_CASCADE_LEVEL_COUNT {
+                (
+                    Self::CAMERA_CASCADE_LEVELS[i - 1],
+                    Self::CAMERA_CASCADE_LEVELS[i],
+                )
+            } else {
+                (
+                    Self::CAMERA_CASCADE_LEVELS[i - 1],
+                    Self::CAMERA_CASCADE_CLIP_FAR,
+                )
+            };
+
+            let light_matrix = camera.build_cascade(
+                light_dir,
+                view,
+                z_start,
+                z_end,
+                self.window_size.0 as f32 / self.window_size.1 as f32,
+            );
+
+            cascade_matrices[i] = light_matrix;
+        }
+        self.scope_alk_cascade_transforms
+            .write(&cascade_matrices)
+            .unwrap();
+        *self.light_cascade_transforms.write() = cascade_matrices;
+    }
+
+    fn render_cascade_depthmaps(&self, resources: &Resources) {
+        self.update_directional_cascades(resources);
+
+        let shader_overrides = resources.get::<EnabledShaderOverrides>().unwrap();
+        let draw_queue = self.draw_queue.read();
+
+        unsafe {
+            let csb = resources.get::<ShadowMapsResource>().unwrap();
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: csb.resolution as f32,
+                Height: csb.resolution as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
+        }
+
+        let scope_view_base = self.scope_view_backup.read();
+        for cascade_level in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
+            unsafe {
+                let csb = resources.get::<ShadowMapsResource>().unwrap();
+                self.dcs
+                    .context()
+                    .OMSetDepthStencilState(&csb.cascade_depth_buffers.state, 0);
+
+                let view = &csb.cascade_depth_buffers.views[cascade_level];
+                self.dcs.context().ClearDepthStencilView(
+                    view,
+                    (D3D11_CLEAR_DEPTH.0 | D3D11_CLEAR_STENCIL.0) as _,
+                    1.0,
+                    0,
+                );
+
+                self.dcs.context().OMSetRenderTargets(None, view);
+            }
+
+            let mat = self.light_cascade_transforms.read()[cascade_level];
+            self.scope_view_csm
+                .write(&ScopeView {
+                    world_to_projective: mat,
+                    camera_position: Vec4::W,
+                    view_miscellaneous: mat.w_axis,
+                    ..*scope_view_base
+                })
+                .expect("Failed to write cascade scope_view");
+            self.scope_view_csm.bind(12, ShaderStages::all());
+
+            for i in 0..draw_queue.len() {
+                if !draw_queue[i].0.transparency().should_write_depth() {
+                    continue;
+                }
+
+                let (s, d) = draw_queue[i].clone();
+                self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass);
+            }
         }
     }
 
@@ -849,16 +1009,16 @@ impl Renderer {
             ..overrides.frame
         })?;
 
-        let projection = Mat4::perspective_infinite_reverse_rh(
+        camera.projection_matrix = Mat4::perspective_infinite_reverse_rh(
             90f32.to_radians(),
             self.window_size.0 as f32 / self.window_size.1 as f32,
             0.0001,
         );
 
-        let view = camera.calculate_matrix();
-        let world_to_projective = projection * view;
+        let view: Mat4 = camera.calculate_matrix();
+        let world_to_projective = camera.projection_matrix * view;
 
-        self.scope_view.write(&ScopeView {
+        let scope_view_data = ScopeView {
             world_to_projective,
 
             camera_right: camera.right.extend(1.0),
@@ -879,10 +1039,12 @@ impl Renderer {
             // misc_unk2: 0.0001,
             // misc_unk3: 0.0,
             ..overrides.view
-        })?;
+        };
+        self.scope_view.write(&scope_view_data)?;
+        *self.scope_view_backup.write() = scope_view_data;
 
+        self.scope_unk2.write(&overrides.unk2)?;
         self.scope_unk3.write(&overrides.unk3)?;
-
         self.scope_unk8.write(&overrides.unk8)?;
 
         Ok(())
@@ -933,4 +1095,43 @@ pub enum DrawMode {
     #[default]
     Normal = 0,
     DepthPrepass = 1,
+}
+
+pub struct ShadowMapsResource {
+    pub cascade_depth_buffers: ShadowDepthMap,
+    pub resolution: usize,
+    dcs: Arc<DeviceContextSwapchain>,
+}
+
+impl ShadowMapsResource {
+    pub const DEFAULT_RESOLUTION: usize = 4096;
+
+    pub fn create(dcs: Arc<DeviceContextSwapchain>) -> Self {
+        Self {
+            cascade_depth_buffers: ShadowDepthMap::create(
+                (Self::DEFAULT_RESOLUTION as _, Self::DEFAULT_RESOLUTION as _),
+                Renderer::CAMERA_CASCADE_LEVEL_COUNT,
+                &dcs.device,
+            )
+            .expect("Failed to create CSM depth map"),
+            resolution: Self::DEFAULT_RESOLUTION,
+            dcs,
+        }
+    }
+
+    pub fn resize(&mut self, new_resolution: usize) {
+        if new_resolution == self.resolution {
+            return;
+        }
+
+        self.cascade_depth_buffers
+            .resize(
+                (new_resolution as u32, new_resolution as u32),
+                &self.dcs.device,
+            )
+            .expect("Failed to resize shadow map depth buffer");
+        self.resolution = new_resolution;
+
+        info!("Resized shadow maps to {new_resolution}");
+    }
 }

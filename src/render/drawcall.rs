@@ -154,6 +154,7 @@ bitflags! {
         const VERTEX = (1 << 0);
         const PIXEL = (1 << 1);
         const COMPUTE = (1 << 2);
+        const GEOMETRY = (1 << 3);
     }
 }
 
