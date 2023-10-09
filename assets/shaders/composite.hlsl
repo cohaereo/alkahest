@@ -9,6 +9,25 @@ static float cascadePlaneDistances[CAMERA_CASCADE_LEVEL_COUNT] = {
     CAMERA_CASCADE_CLIP_FAR / 1.0,
 };
 
+static const float2 poissonDisk[ 16 ] = {
+    float2( -0.94201624,  -0.39906216 ),
+    float2(  0.94558609,  -0.76890725 ),
+    float2( -0.094184101, -0.92938870 ),
+    float2(  0.34495938,   0.29387760 ),
+    float2( -0.91588581,   0.45771432 ),
+    float2( -0.81544232,  -0.87912464 ),
+    float2( -0.38277543,   0.27676845 ),
+    float2(  0.97484398,   0.75648379 ),
+    float2(  0.44323325,  -0.97511554 ),
+    float2(  0.53742981,  -0.47373420 ),
+    float2( -0.26496911,  -0.41893023 ),
+    float2(  0.79197514,   0.19090188 ),
+    float2( -0.24188840,   0.99706507 ),
+    float2( -0.81409955,   0.91437590 ),
+    float2(  0.19984126,   0.78641367 ),
+    float2(  0.14383161,  -0.14100790 )
+};
+
 cbuffer CompositeOptions : register(b0) {
     row_major float4x4 projViewMatrixInv;
     row_major float4x4 projViewMatrix;
@@ -178,9 +197,6 @@ float3 DecodeNormal(float3 n) {
 
 
 uint CascadeLevel(float depth) {
-    // return 0;
-
-    // TODO(cohae): Fix CSM
     int layer = -1;
     for (int i = 0; i < CAMERA_CASCADE_LEVEL_COUNT; ++i)
     {
@@ -196,6 +212,12 @@ uint CascadeLevel(float depth) {
     }
 
     return layer;
+}
+
+float random( float4 p )
+{
+    float dot_product = dot( p, float4( 12.9898, 78.233, 45.164, 94.673 ) );
+    return frac( sin( dot_product ) * 43758.5453 );
 }
 
 float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
@@ -227,7 +249,8 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
     {
         for(int y = -1; y <= 1; ++y)
         {
-            float3 sampleCoords = float3(texCoords.xy + float2(x, y) * texelSize, cascade);
+            float2 jitter = poissonDisk[(y+1) * 3 + (x+1)];
+            float3 sampleCoords = float3(texCoords.xy + (float2(x, y) + jitter) * texelSize , cascade);
             float pcfDepth = CascadeShadowMaps.Sample(SampleType, sampleCoords).r;
             shadow += pcfDepth < (currentDepth - 0.0001) ? 0.1 : 1.0;        
         }    
