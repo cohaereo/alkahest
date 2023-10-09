@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    map_resources::{Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
+    map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
     types::Transform,
     util::RwLock,
 };
@@ -498,6 +498,40 @@ pub async fn load_maps(
                                         resource: MapResource::Unk80806a40,
                                     });
                                 }
+                            }
+                            // Foliage
+                            0x80806cc3 => {
+                                cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
+                                    .unwrap();
+                                let header_tag: TagHash = cur.read_le().unwrap();
+                                let header: Unk80806c98 =
+                                    package_manager().read_tag_struct(header_tag).unwrap();
+
+                                for b in &header.unk4c.bounds {
+                                    resource_points.push(ResourcePoint {
+                                        transform: Transform {
+                                            translation: b.bb.center(),
+                                            ..Default::default()
+                                        },
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Unk80806cc3(b.bb),
+                                    });
+                                }
+
+                                // resource_points.push(ResourcePoint {
+                                //     transform: Transform {
+                                //         translation: header.bounds.center(),
+                                //         ..Default::default()
+                                //     },
+                                //     entity: data.entity,
+                                //     has_havok_data: is_physics_entity(data.entity),
+                                //     world_id: data.world_id,
+                                //     resource_type: data.data_resource.resource_type,
+                                //     resource: MapResource::Unk80806cc3(header.bounds),
+                                // });
                             }
                             u => {
                                 // println!("{data:x?}");

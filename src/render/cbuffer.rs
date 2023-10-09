@@ -121,7 +121,7 @@ impl<T> ConstantBuffer<T> {
     //     unsafe {
     //         let memory = self
     //             .dcs
-    //             .context
+    //             .context()
     //             .Map(&self.buffer, 0, D3D11_MAP_WRITE_DISCARD, 0)
     //             .context("Failed to map ConstantBuffer for writing (array)")?;
 
@@ -172,6 +172,12 @@ impl<T> ConstantBuffer<T> {
                 self.dcs
                     .context()
                     .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
+            }
+
+            if stages.contains(ShaderStages::GEOMETRY) {
+                self.dcs
+                    .context()
+                    .GSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
             }
         }
     }

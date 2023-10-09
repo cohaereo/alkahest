@@ -37,7 +37,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                 0.0001,
             );
 
-            let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+            let camera = resources.get::<FpsCamera>().unwrap();
             let view = camera.calculate_matrix();
             let proj_view = projection.mul_mat4(&view);
             let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());

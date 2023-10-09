@@ -6,6 +6,7 @@ use anyhow::Context;
 use genmesh::generators::IndexedPolygon;
 use genmesh::generators::SharedVertex;
 use genmesh::Triangulate;
+use glam::Vec4;
 use glam::{Mat4, Quat, Vec3};
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
@@ -25,10 +26,10 @@ pub enum DebugShape {
         rotation: Quat,
         sides: bool,
     },
-    // Line {
-    //     start: Vec3,
-    //     end: Vec3,
-    // },
+    Line {
+        start: Vec3,
+        end: Vec3,
+    },
 }
 
 #[derive(Default)]
@@ -72,10 +73,35 @@ impl DebugShapes {
         ))
     }
 
-    // pub fn line_2point<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
-    //     self.shapes
-    //         .push((DebugShape::Line { start, end }, color.into()))
-    // }
+    pub fn line<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
+        self.shapes
+            .push((DebugShape::Line { start, end }, color.into()))
+    }
+
+    /// See `FpsCamera::calculate_frustum_corners` for index layout
+    /// Silently returns if corners.len() != 8
+    pub fn frustum_corners<C: Into<Color> + Copy>(&mut self, corners: &[Vec3], color: C) {
+        if corners.len() != 8 {
+            return;
+        }
+
+        for (p1, p2) in [
+            (0_usize, 4_usize), // bottom left
+            (1, 5),             // bottom right
+            (2, 6),             // top left
+            (3, 7),             // top right
+            (4, 5),             // far bottom
+            (6, 7),             // far top
+            (4, 6),             // far left
+            (5, 7),             // far right
+            (0, 1),             // near bottom
+            (2, 3),             // near top
+            (0, 2),             // near left
+            (1, 3),             // near right
+        ] {
+            self.line(corners[p1], corners[p2], color);
+        }
+    }
 
     // pub fn line_orientation<C: Into<Color>>(
     //     &mut self,
@@ -106,8 +132,11 @@ impl DebugShapes {
 pub struct DebugShapeRenderer {
     dcs: Arc<DeviceContextSwapchain>,
     scope: ConstantBuffer<ScopeAlkDebugShape>,
+    scope_line: ConstantBuffer<ScopeAlkDebugShapeLine>,
     vshader: ID3D11VertexShader,
+    vshader_line: ID3D11VertexShader,
     pshader: ID3D11PixelShader,
+    pshader_line: ID3D11PixelShader,
 
     input_layout: ID3D11InputLayout,
     vb_cube: ID3D11Buffer,
@@ -126,6 +155,13 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (vshader, _) = shader::load_vshader(&dcs, &data)?;
+        let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/debug_line.hlsl"),
+            "VShader",
+            "vs_5_0",
+        )
+        .unwrap();
+        let (vshader_line, _) = shader::load_vshader(&dcs, &data)?;
 
         let input_layout = unsafe {
             dcs.device.CreateInputLayout(
@@ -150,6 +186,14 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (pshader, _) = shader::load_pshader(&dcs, &data)?;
+
+        let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/debug_line.hlsl"),
+            "PShader",
+            "ps_5_0",
+        )
+        .unwrap();
+        let (pshader_line, _) = shader::load_pshader(&dcs, &data)?;
 
         let mesh = genmesh::generators::Cube::new();
         let vertices: Vec<[f32; 4]> = mesh
@@ -225,9 +269,12 @@ impl DebugShapeRenderer {
 
         Ok(Self {
             scope: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_line: ConstantBuffer::create(dcs.clone(), None)?,
             dcs,
             vshader,
+            vshader_line,
             pshader,
+            pshader_line,
             input_layout,
             vb_cube,
             ib_cube,
@@ -245,7 +292,6 @@ impl DebugShapeRenderer {
                     rotation,
                     sides,
                 } => {
-                    // TODO(cohae): Sides
                     self.scope
                         .write(&ScopeAlkDebugShape {
                             model: Mat4::from_scale_rotation_translation(
@@ -320,7 +366,28 @@ impl DebugShapeRenderer {
                             self.dcs.context().DrawIndexed(self.cube_index_count, 0, 0);
                         }
                     }
-                } // DebugShape::Line { .. } => todo!(),
+                }
+                DebugShape::Line { start, end } => {
+                    self.scope_line
+                        .write(&ScopeAlkDebugShapeLine {
+                            start: start.extend(1.0),
+                            end: end.extend(1.0),
+                            color,
+                        })
+                        .unwrap();
+
+                    self.scope_line.bind(1, ShaderStages::all());
+                    unsafe {
+                        self.dcs.context().VSSetShader(&self.vshader_line, None);
+                        self.dcs.context().PSSetShader(&self.pshader_line, None);
+
+                        self.dcs
+                            .context()
+                            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+                        self.dcs.context().Draw(2, 0);
+                    }
+                }
             }
         }
     }
@@ -328,5 +395,11 @@ impl DebugShapeRenderer {
 
 pub struct ScopeAlkDebugShape {
     pub model: Mat4,
+    pub color: Color,
+}
+
+pub struct ScopeAlkDebugShapeLine {
+    pub start: Vec4,
+    pub end: Vec4,
     pub color: Color,
 }

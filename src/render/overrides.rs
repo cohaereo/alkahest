@@ -1,14 +1,23 @@
 use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
 
 use super::{
-    scopes::{ScopeFrame, ScopeUnk3, ScopeUnk8, ScopeView},
+    scopes::{ScopeFrame, ScopeUnk2, ScopeUnk3, ScopeUnk8, ScopeView},
     shader, DeviceContextSwapchain,
 };
 
-#[derive(Default)]
 pub struct EnabledShaderOverrides {
     pub entity_vs: bool,
     pub entity_ps: bool,
+}
+
+impl Default for EnabledShaderOverrides {
+    fn default() -> Self {
+        Self {
+            // TODO(cohae): remove when we fix entity VS
+            entity_vs: true,
+            entity_ps: false,
+        }
+    }
 }
 
 pub struct ShaderOverrides {
@@ -58,6 +67,7 @@ impl ShaderOverrides {
 pub struct ScopeOverrides {
     pub view: ScopeView,
     pub frame: ScopeFrame,
+    pub unk2: ScopeUnk2,
     pub unk3: ScopeUnk3,
     pub unk8: ScopeUnk8,
 }

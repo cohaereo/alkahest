@@ -52,6 +52,7 @@ pub enum MapResource {
     Unk808085c0 = 8,
     Unk80806a40 = 9,
     AmbientSound(Option<Unk80809802>) = 10,
+    Unk80806cc3(AABB) = 11,
 }
 
 impl MapResource {
@@ -106,6 +107,7 @@ impl MapResource {
                     "Ambient Sound (no header?)".to_string()
                 }
             }
+            MapResource::Unk80806cc3(_) => "Unk80806cc3".to_string(),
         }
     }
 
@@ -141,6 +143,7 @@ impl MapResource {
             MapResource::Unk808085c0 { .. } => RANDOM_COLORS[0x808085c0 % 16],
             MapResource::Unk80806a40 { .. } => RANDOM_COLORS[0x80806a40 % 16],
             MapResource::AmbientSound { .. } => RANDOM_COLORS[0x8080666f % 16],
+            MapResource::Unk80806cc3(_) => RANDOM_COLORS[0x80806cc3 % 16],
         }
     }
 
@@ -175,6 +178,9 @@ impl MapResource {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
             }
             MapResource::Unk80806aa3(bounds, _, _) => {
+                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
+            }
+            MapResource::Unk80806cc3(bounds) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
             _ => {}
@@ -479,3 +485,31 @@ pub struct Unk80806d4f {
 //     /// Havok file
 //     pub unk28: TagHash,
 // }
+
+#[derive(BinRead, Debug)]
+pub struct Unk80806c98 {
+    pub file_size: u64,
+    pub unk8: TablePointer<TagHash>,
+    pub unk18: TablePointer<u32>,
+    pub unk28: TablePointer<u32>,
+    pub unk38: TablePointer<u32>,
+    pub unk48: TagHash,
+    pub unk4c: Tag<SOcclusionBounds>,
+    pub unk50: TablePointer<u32>,
+    pub unk60: [u32; 4],
+    pub bounds: AABB,
+}
+
+/// B1938080
+#[derive(BinRead, Debug, Clone)]
+pub struct SOcclusionBounds {
+    pub file_size: u64,
+    pub bounds: TablePointer<SMeshInstanceOcclusionBounds>,
+}
+
+// B3938080
+#[derive(BinRead, Debug, Clone)]
+pub struct SMeshInstanceOcclusionBounds {
+    pub bb: AABB,
+    pub unk20: [u32; 4],
+}
