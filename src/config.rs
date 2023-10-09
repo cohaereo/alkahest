@@ -1,4 +1,4 @@
-use crate::util::RwLock;
+use crate::util::{exe_relative_path, RwLock};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ lazy_static! {
 
 pub fn persist() {
     if let Err(e) = std::fs::write(
-        "config.yml",
+        exe_relative_path("config.yml"),
         serde_yaml::to_string(&*CONFIGURATION.read()).expect("Fatal: failed to write config"),
     ) {
         warn!("Failed to write config: {e}");

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crate::render::DeviceContextSwapchain;
 use crate::resources::Resources;
+use crate::util::exe_relative_path;
 use crate::util::image::Png;
 use egui_winit::EventResponse;
 use winit::event::WindowEvent;
@@ -34,8 +35,8 @@ impl GuiManager {
     pub fn create(window: &Window, dcs: Arc<DeviceContextSwapchain>) -> Self {
         let egui = egui::Context::default();
 
-        if let Ok(Ok(data)) =
-            std::fs::read_to_string("egui.ron").map(|s| ron::from_str::<egui::Memory>(&s))
+        if let Ok(Ok(data)) = std::fs::read_to_string(exe_relative_path("egui.ron"))
+            .map(|s| ron::from_str::<egui::Memory>(&s))
         {
             info!("Loaded egui state from egui.ron");
             egui.memory_mut(|memory| *memory = data);
@@ -118,7 +119,7 @@ impl Drop for GuiManager {
     fn drop(&mut self) {
         match self.egui.memory(ron::to_string) {
             Ok(memory) => {
-                if let Err(e) = std::fs::write("egui.ron", memory) {
+                if let Err(e) = std::fs::write(exe_relative_path("egui.ron"), memory) {
                     error!("Failed to write egui state: {e}");
                 }
             }

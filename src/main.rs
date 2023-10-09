@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::overlays::console::ConsoleOverlay;
-use crate::util::{FilterDebugLockTarget, RwLock};
+use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -118,7 +118,7 @@ pub async fn main() -> anyhow::Result<()> {
         .build_global()
         .unwrap();
 
-    if let Ok(c) = std::fs::read_to_string("config.yml") {
+    if let Ok(c) = std::fs::read_to_string(exe_relative_path("config.yml")) {
         *CONFIGURATION.write() = serde_yaml::from_str(&c)?;
     } else {
         info!("No config found, creating a new one");
