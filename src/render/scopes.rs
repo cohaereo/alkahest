@@ -138,6 +138,18 @@ pub struct ScopeRigidModel {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
+pub struct ScopeUnk2 {
+    pub unk0: Vec4,
+}
+
+impl Default for ScopeUnk2 {
+    fn default() -> Self {
+        ScopeUnk2 { unk0: Vec4::ONE }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ScopeUnk3 {
     pub unk0: Vec4,
     pub unk1: Vec4,

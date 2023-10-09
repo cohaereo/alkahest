@@ -21,7 +21,7 @@ use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::{GeometryType, Transparency};
 use super::gbuffer::ShadowDepthMap;
 use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
-use super::scopes::ScopeUnk8;
+use super::scopes::{ScopeUnk2, ScopeUnk8};
 use super::{
     drawcall::{DrawCall, ShadingTechnique, SortValue3d},
     scopes::{ScopeFrame, ScopeView},
@@ -49,6 +49,7 @@ pub struct Renderer {
 
     scope_view_csm: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
+    scope_unk2: ConstantBuffer<ScopeUnk2>,
     scope_unk3: ConstantBuffer<ScopeUnk3>,
     scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
@@ -275,6 +276,7 @@ impl Renderer {
             scope_view_backup: RwLock::new(ScopeView::default()),
             scope_view: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view_csm: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
@@ -336,6 +338,7 @@ impl Renderer {
             self.evaluate_tfx_expressions();
         }
 
+        self.scope_unk2.bind(2, ShaderStages::all());
         self.scope_unk3.bind(3, ShaderStages::all());
         self.scope_unk8.bind(8, ShaderStages::all());
         self.scope_frame.bind(13, ShaderStages::all());
@@ -1040,8 +1043,8 @@ impl Renderer {
         self.scope_view.write(&scope_view_data)?;
         *self.scope_view_backup.write() = scope_view_data;
 
+        self.scope_unk2.write(&overrides.unk2)?;
         self.scope_unk3.write(&overrides.unk3)?;
-
         self.scope_unk8.write(&overrides.unk8)?;
 
         Ok(())
