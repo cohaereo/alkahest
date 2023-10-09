@@ -1063,11 +1063,11 @@ impl Renderer {
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt1.render_target,
-                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+                [0.0, 0.0, 1.0, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt2.render_target,
-                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+                [1.0, 0.5, 1.0, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearDepthStencilView(
                 &self.gbuffer.depth.view,
