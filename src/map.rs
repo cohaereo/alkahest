@@ -1,6 +1,5 @@
-use crate::map_resources::ResourcePoint;
+use crate::ecs::Scene;
 use crate::packages::package_manager;
-use crate::render::scopes::ScopeRigidModel;
 use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ResourcePointer, TablePointer, Tag};
@@ -205,10 +204,12 @@ pub struct MapData {
     pub hash: TagHash,
     pub name: String,
     pub placement_groups: Vec<Tag<Unk8080966d>>,
-    pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
+    // pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
     pub terrains: Vec<TagHash>,
     pub lights: Vec<Vec4>,
     pub lights_cbuffer: ConstantBuffer<Vec4>,
+
+    pub scene: Scene,
 }
 
 pub struct MapDataList {

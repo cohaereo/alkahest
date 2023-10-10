@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
+    ecs::{components::ResourcePoint, transform::Transform, Scene},
     map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
-    types::Transform,
     util::RwLock,
 };
 use anyhow::Context;
@@ -26,9 +26,7 @@ use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     entity::{Unk808072c5, Unk808073a5, Unk80809c0f},
     map::{ExtendedHash, MapData, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54},
-    map_resources::{
-        MapResource, ResourcePoint, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk8080714b,
-    },
+    map_resources::{MapResource, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk8080714b},
     material::{Material, Unk808071e8},
     packages::package_manager,
     render::{
@@ -73,8 +71,9 @@ pub async fn load_maps(
         // First lights reserved for camera light and directional light
         let mut point_lights = vec![Vec4::ZERO, Vec4::ZERO];
         let mut placement_groups = vec![];
-        let mut resource_points = vec![];
+        // let mut resource_points = vec![];
         let mut terrains = vec![];
+        let mut scene = Scene::new();
 
         let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
         for res in &think.child_map.map_resources {
@@ -162,37 +161,44 @@ pub async fn load_maps(
                                     cubemap_volume.cubemap_texture,
                                 ));
 
-                                resource_points.push(ResourcePoint {
-                                    transform: Transform {
+                                scene.spawn((
+                                    Transform {
                                         translation: extents_center.xyz(),
                                         rotation: transform.rotation,
                                         ..Default::default()
                                     },
-                                    entity: data.entity,
-                                    has_havok_data: is_physics_entity(data.entity),
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::CubemapVolume(
-                                        Box::new(cubemap_volume),
-                                        AABB {
-                                            min: volume_min.truncate().into(),
-                                            max: volume_max.truncate().into(),
-                                        },
-                                    ),
-                                });
+                                    ResourcePoint {
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::CubemapVolume(
+                                            Box::new(cubemap_volume),
+                                            AABB {
+                                                min: volume_min.truncate().into(),
+                                                max: volume_max.truncate().into(),
+                                            },
+                                        ),
+                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                    },
+                                ));
                             }
                             0x808067b5 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
                                     .unwrap();
                                 let tag: TagHash = cur.read_le().unwrap();
-                                resource_points.push(ResourcePoint {
+
+                                scene.spawn((
                                     transform,
-                                    entity: data.entity,
-                                    has_havok_data: is_physics_entity(data.entity),
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::Unk808067b5(tag),
-                                });
+                                    ResourcePoint {
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Unk808067b5(tag),
+                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                    },
+                                ));
                             }
                             // Decal collection
                             0x80806955 => {
@@ -209,8 +215,8 @@ pub async fn load_maps(
                                 for inst in &header.instances {
                                     for i in inst.start..(inst.start + inst.count) {
                                         let transform = header.transforms[i as usize];
-                                        resource_points.push(ResourcePoint {
-                                            transform: Transform {
+                                        scene.spawn((
+                                            Transform {
                                                 translation: Vec3::new(
                                                     transform.x,
                                                     transform.y,
@@ -218,15 +224,21 @@ pub async fn load_maps(
                                                 ),
                                                 ..Default::default()
                                             },
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
-                                            resource_type: data.data_resource.resource_type,
-                                            resource: MapResource::Decal {
-                                                material: inst.material,
-                                                scale: transform.w,
+                                            ResourcePoint {
+                                                entity: data.entity,
+                                                has_havok_data: is_physics_entity(data.entity),
+                                                world_id: data.world_id,
+                                                resource_type: data.data_resource.resource_type,
+                                                resource: MapResource::Decal {
+                                                    material: inst.material,
+                                                    scale: transform.w,
+                                                },
+                                                entity_cbuffer: ConstantBuffer::create(
+                                                    dcs.clone(),
+                                                    None,
+                                                )?,
                                             },
-                                        })
+                                        ));
                                     }
                                 }
                             }
@@ -296,14 +308,17 @@ pub async fn load_maps(
                                     .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
                                     .ok();
 
-                                resource_points.push(ResourcePoint {
+                                scene.spawn((
                                     transform,
-                                    entity: data.entity,
-                                    has_havok_data: is_physics_entity(data.entity),
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::AmbientSound(header),
-                                });
+                                    ResourcePoint {
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::AmbientSound(header),
+                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                    },
+                                ));
                             }
                             0x80806aa3 => {
                                 cur.seek(SeekFrom::Start(data.data_resource.offset + 16))
@@ -330,18 +345,24 @@ pub async fn load_maps(
                                         w_axis: unk8.transform[3].into(),
                                     };
 
-                                    resource_points.push(ResourcePoint {
-                                        transform: Transform::from_mat4(mat),
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806aa3(
-                                            unk18.bb,
-                                            unk8.unk60.entity_model,
-                                            mat,
-                                        ),
-                                    });
+                                    scene.spawn((
+                                        Transform::from_mat4(mat),
+                                        ResourcePoint {
+                                            entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
+                                            world_id: data.world_id,
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::Unk80806aa3(
+                                                unk18.bb,
+                                                unk8.unk60.entity_model,
+                                                mat,
+                                            ),
+                                            entity_cbuffer: ConstantBuffer::create(
+                                                dcs.clone(),
+                                                None,
+                                            )?,
+                                        },
+                                    ));
                                 }
                             }
                             0x80806a63 => {
@@ -356,8 +377,8 @@ pub async fn load_maps(
                                     package_manager().read_tag_struct(tag).unwrap();
 
                                 for (transform, _unk) in header.unk40.iter().zip(&header.unk30) {
-                                    resource_points.push(ResourcePoint {
-                                        transform: Transform {
+                                    scene.spawn((
+                                        Transform {
                                             translation: Vec3::new(
                                                 transform.translation.x,
                                                 transform.translation.y,
@@ -371,12 +392,18 @@ pub async fn load_maps(
                                             ),
                                             ..Default::default()
                                         },
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Light,
-                                    });
+                                        ResourcePoint {
+                                            entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
+                                            world_id: data.world_id,
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::Light,
+                                            entity_cbuffer: ConstantBuffer::create(
+                                                dcs.clone(),
+                                                None,
+                                            )?,
+                                        },
+                                    ));
 
                                     point_lights.push(Vec4::new(
                                         transform.translation.x,
@@ -396,11 +423,10 @@ pub async fn load_maps(
 
                                 let header: Unk80808cb7 =
                                     package_manager().read_tag_struct(tag).unwrap();
-                                println!("{header:#x?}");
 
                                 for transform in header.unk8.iter() {
-                                    resource_points.push(ResourcePoint {
-                                        transform: Transform {
+                                    scene.spawn((
+                                        Transform {
                                             translation: Vec3::new(
                                                 transform.translation.x,
                                                 transform.translation.y,
@@ -414,12 +440,18 @@ pub async fn load_maps(
                                             ),
                                             ..Default::default()
                                         },
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::RespawnPoint,
-                                    });
+                                        ResourcePoint {
+                                            entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
+                                            world_id: data.world_id,
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::RespawnPoint,
+                                            entity_cbuffer: ConstantBuffer::create(
+                                                dcs.clone(),
+                                                None,
+                                            )?,
+                                        },
+                                    ));
                                 }
                             }
                             0x808085c0 => {
@@ -434,8 +466,8 @@ pub async fn load_maps(
                                     package_manager().read_tag_struct(tag).unwrap();
 
                                 for transform in header.unk8.iter() {
-                                    resource_points.push(ResourcePoint {
-                                        transform: Transform {
+                                    scene.spawn((
+                                        Transform {
                                             translation: Vec3::new(
                                                 transform.translation.x,
                                                 transform.translation.y,
@@ -443,12 +475,18 @@ pub async fn load_maps(
                                             ),
                                             ..Default::default()
                                         },
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk808085c0,
-                                    });
+                                        ResourcePoint {
+                                            entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
+                                            world_id: data.world_id,
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::Unk808085c0,
+                                            entity_cbuffer: ConstantBuffer::create(
+                                                dcs.clone(),
+                                                None,
+                                            )?,
+                                        },
+                                    ));
                                 }
                             }
                             0x8080684d => {
@@ -466,8 +504,8 @@ pub async fn load_maps(
                                     package_manager().read_tag_struct(tag).unwrap();
 
                                 for transform in header.unk50.iter() {
-                                    resource_points.push(ResourcePoint {
-                                        transform: Transform {
+                                    scene.spawn((
+                                        Transform {
                                             translation: Vec3::new(
                                                 transform.translation.x,
                                                 transform.translation.y,
@@ -475,12 +513,18 @@ pub async fn load_maps(
                                             ),
                                             ..Default::default()
                                         },
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806a40,
-                                    });
+                                        ResourcePoint {
+                                            entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
+                                            world_id: data.world_id,
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::Unk80806a40,
+                                            entity_cbuffer: ConstantBuffer::create(
+                                                dcs.clone(),
+                                                None,
+                                            )?,
+                                        },
+                                    ));
                                 }
                             }
                             // Foliage
@@ -492,17 +536,23 @@ pub async fn load_maps(
                                     package_manager().read_tag_struct(header_tag).unwrap();
 
                                 for b in &header.unk4c.bounds {
-                                    resource_points.push(ResourcePoint {
-                                        transform: Transform {
+                                    scene.spawn((
+                                        Transform {
                                             translation: b.bb.center(),
                                             ..Default::default()
                                         },
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unk80806cc3(b.bb),
-                                    });
+                                        ResourcePoint {
+                                            entity: data.entity,
+                                            has_havok_data: is_physics_entity(data.entity),
+                                            world_id: data.world_id,
+                                            resource_type: data.data_resource.resource_type,
+                                            resource: MapResource::Unk80806cc3(b.bb),
+                                            entity_cbuffer: ConstantBuffer::create(
+                                                dcs.clone(),
+                                                None,
+                                            )?,
+                                        },
+                                    ));
                                 }
 
                                 // resource_points.push(ResourcePoint {
@@ -518,14 +568,17 @@ pub async fn load_maps(
                                 // });
                             }
                             0x80806c5e => {
-                                resource_points.push(ResourcePoint {
+                                scene.spawn((
                                     transform,
-                                    entity: data.entity,
-                                    has_havok_data: is_physics_entity(data.entity),
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::SpotLight,
-                                });
+                                    ResourcePoint {
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::SpotLight,
+                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                    },
+                                ));
                             }
                             u => {
                                 // println!("{data:x?}");
@@ -543,31 +596,37 @@ pub async fn load_maps(
                                     data.translation,
                                     table.tag()
                                 );
-                                resource_points.push(ResourcePoint {
+                                scene.spawn((
                                     transform,
-                                    entity: data.entity,
-                                    has_havok_data: is_physics_entity(data.entity),
-                                    world_id: data.world_id,
-                                    resource_type: data.data_resource.resource_type,
-                                    resource: MapResource::Unknown(
-                                        data.data_resource.resource_type,
-                                        data.world_id,
-                                        data.entity,
-                                        data.data_resource,
-                                        table.tag(),
-                                    ),
-                                });
+                                    ResourcePoint {
+                                        entity: data.entity,
+                                        has_havok_data: is_physics_entity(data.entity),
+                                        world_id: data.world_id,
+                                        resource_type: data.data_resource.resource_type,
+                                        resource: MapResource::Unknown(
+                                            data.data_resource.resource_type,
+                                            data.world_id,
+                                            data.entity,
+                                            data.data_resource,
+                                            table.tag(),
+                                        ),
+                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                    },
+                                ));
                             }
                         };
                     } else {
-                        resource_points.push(ResourcePoint {
+                        scene.spawn((
                             transform,
-                            entity: data.entity,
-                            has_havok_data: is_physics_entity(data.entity),
-                            world_id: data.world_id,
-                            resource_type: u32::MAX,
-                            resource: MapResource::Entity(data.entity, data.world_id),
-                        });
+                            ResourcePoint {
+                                entity: data.entity,
+                                has_havok_data: is_physics_entity(data.entity),
+                                world_id: data.world_id,
+                                resource_type: data.data_resource.resource_type,
+                                resource: MapResource::Entity(data.entity, data.world_id),
+                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                            },
+                        ));
                     }
                 }
             }
@@ -586,9 +645,10 @@ pub async fn load_maps(
             "Map {:x?} '{map_name}' - {} placement groups, {} decals",
             think.map_name,
             placement_groups.len(),
-            resource_points
+            scene
+                .query::<&ResourcePoint>()
                 .iter()
-                .filter(|r| r.resource.is_decal())
+                .filter(|(_, r)| r.resource.is_decal())
                 .count()
         );
 
@@ -602,24 +662,23 @@ pub async fn load_maps(
                 hash,
                 name: map_name,
                 placement_groups,
-                resource_points: resource_points
-                    .into_iter()
-                    .map(|rp| {
-                        let cb = ConstantBuffer::create(dcs.clone(), None).unwrap();
-
-                        (rp, cb)
-                    })
-                    .collect(),
                 terrains,
                 lights: point_lights,
                 lights_cbuffer: cb_composite_lights,
+                scene,
             },
         ))
     }
 
     let to_load_entities: HashSet<ExtendedHash> = maps
-        .iter()
-        .flat_map(|(_, _, v)| v.resource_points.iter().map(|(r, _)| r.entity))
+        .iter_mut()
+        .flat_map(|(_, _, v)| {
+            v.scene
+                .query::<&ResourcePoint>()
+                .iter()
+                .map(|(_, r)| r.entity)
+                .collect_vec()
+        })
         .filter(|v| v.is_some())
         .collect();
 
@@ -747,9 +806,9 @@ pub async fn load_maps(
     // TODO(cohae): Maybe not the best idea?
     info!("Updating resource constant buffers");
     for (_, _, m) in &mut maps {
-        for (rp, cb) in &mut m.resource_points {
+        for (_, (transform, rp)) in m.scene.query_mut::<(&Transform, &mut ResourcePoint)>() {
             if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
-                let mm = rp.transform.to_mat4();
+                let mm = transform.to_mat4();
 
                 let model_matrix = Mat4::from_cols(
                     mm.x_axis.truncate().extend(mm.w_axis.x),
@@ -765,7 +824,7 @@ pub async fn load_maps(
                     Vec4::W,
                 );
 
-                *cb = ConstantBuffer::create(
+                rp.entity_cbuffer = ConstantBuffer::create(
                     dcs.clone(),
                     Some(&ScopeRigidModel {
                         mesh_to_world: model_matrix,

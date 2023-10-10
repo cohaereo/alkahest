@@ -16,6 +16,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::ecs::components::ResourcePoint;
 use crate::overlays::console::ConsoleOverlay;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
@@ -72,6 +73,7 @@ mod config;
 mod dds;
 mod dxbc;
 mod dxgi;
+mod ecs;
 mod entity;
 mod icons;
 mod input;
@@ -472,8 +474,7 @@ pub async fn main() -> anyhow::Result<()> {
                     let maps = resources.get::<MapDataList>().unwrap();
 
                     let mut lights = None;
-                    if !maps.maps.is_empty() {
-                        let (_, _, map) = &maps.maps[maps.current_map % maps.maps.len()];
+                    if let Some((_, _, map)) = maps.current_map() {
                         lights = Some((map.lights_cbuffer.buffer().clone(), map.lights.len()));
 
                         {
@@ -501,7 +502,7 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
-                            for (rp, cb) in &map.resource_points {
+                            for (_, rp) in map.scene.query::<&ResourcePoint>().iter() {
                                 match rp.resource {
                                     MapResource::Unk80806aa3 { .. } => {
                                         if !gb.renderlayer_background {
@@ -527,7 +528,10 @@ pub async fn main() -> anyhow::Result<()> {
                                 //     // }
 
                                 if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
-                                    if ent.draw(&renderer.read(), cb.buffer().clone()).is_err() {
+                                    if ent
+                                        .draw(&renderer.read(), rp.entity_cbuffer.buffer().clone())
+                                        .is_err()
+                                    {
                                         // resources.get::<ErrorRenderer>().unwrap().draw(
                                         //     &mut renderer,
                                         //     cb.buffer(),

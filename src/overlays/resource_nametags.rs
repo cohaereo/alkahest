@@ -1,5 +1,9 @@
 use crate::{
-    camera::FpsCamera, map::MapDataList, render::debug::DebugShapes, resources::Resources,
+    camera::FpsCamera,
+    ecs::{components::ResourcePoint, transform::Transform},
+    map::MapDataList,
+    render::debug::DebugShapes,
+    resources::Resources,
 };
 
 use egui::Color32;
@@ -44,14 +48,15 @@ impl OverlayProvider for ResourceTypeOverlay {
 
             let maps = resources.get::<MapDataList>().unwrap();
             if let Some((_, _, m)) = maps.current_map() {
-                for (res, _) in m.resource_points.iter() {
+                for (_, (transform, res)) in m.scene.query::<(&Transform, &ResourcePoint)>().iter()
+                {
                     if !self.debug_overlay.borrow().map_resource_filter
                         [res.resource.index() as usize]
                     {
                         continue;
                     }
 
-                    let distance = res.transform.translation.distance(camera.position);
+                    let distance = transform.translation.distance(camera.position);
                     if distance > self.debug_overlay.borrow().map_resource_distance {
                         continue;
                     }
@@ -59,20 +64,20 @@ impl OverlayProvider for ResourceTypeOverlay {
                     // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
                     let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
                     res.resource.draw_debug_shape(
-                        res.transform.translation,
-                        res.transform.rotation,
+                        transform.translation,
+                        transform.rotation,
                         &mut debug_shapes,
                     );
 
                     if !camera_frustum.point_intersecting(
-                        &res.transform.translation.x,
-                        &res.transform.translation.y,
-                        &res.transform.translation.z,
+                        &transform.translation.x,
+                        &transform.translation.y,
+                        &transform.translation.z,
                     ) {
                         continue;
                     }
 
-                    let projected_point = proj_view.project_point3(res.transform.translation);
+                    let projected_point = proj_view.project_point3(transform.translation);
 
                     let screen_point = Vec2::new(
                         ((projected_point.x + 1.0) * 0.5) * screen_size.width as f32,

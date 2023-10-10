@@ -5,32 +5,13 @@ use crate::icons::{
 use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
 use crate::structure::{RelPointer, ResourcePointer, TablePointer, Tag};
-use crate::types::{DestinyHash, Matrix4, Transform, Vector4, AABB};
+use crate::types::{DestinyHash, Matrix4, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
 use itertools::Itertools;
 use std::io::SeekFrom;
 use strum::{EnumCount, EnumIs, EnumVariantNames};
-
-#[derive(Clone)]
-pub struct ResourcePoint {
-    pub transform: Transform,
-    pub entity: ExtendedHash,
-    pub has_havok_data: bool,
-    pub resource_type: u32,
-    pub world_id: u64,
-    pub resource: MapResource,
-}
-
-impl ResourcePoint {
-    pub fn entity_key(&self) -> u64 {
-        match self.resource {
-            MapResource::Unk80806aa3(_, t, _) => t.0 as u64,
-            _ => self.entity.key(),
-        }
-    }
-}
 
 #[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
 #[repr(u8)]
