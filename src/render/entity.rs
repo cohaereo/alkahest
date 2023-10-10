@@ -37,7 +37,7 @@ pub struct EntityModelBuffer {
 pub struct EntityRenderer {
     meshes: Vec<(EntityModelBuffer, Vec<Unk8080737e>)>,
 
-    _material_map: Vec<Unk808072c5>,
+    material_map: Vec<Unk808072c5>,
     materials: Vec<TagHash>,
 
     model: Unk808073a5,
@@ -83,56 +83,6 @@ impl EntityRenderer {
         let mut meshes = vec![];
 
         for mesh in &model.meshes {
-            let _pm = package_manager();
-            // let vertex_header: VertexBufferHeader =
-            //     pm.read_tag_struct(mesh.vertex_buffer1).unwrap();
-
-            // if vertex_header.stride == 24 || vertex_header.stride == 48 {
-            //     panic!("Support for 32-bit floats in vertex buffers are disabled");
-            // }
-
-            // let t = pm.get_entry(mesh.vertex_buffer1).unwrap().reference;
-
-            // let vertex_data = pm.read_tag(t).unwrap();
-
-            // let mut vertex2_stride = None;
-            // let mut vertex2_data = None;
-            // if mesh.vertex_buffer2.is_some() {
-            //     let vertex2_header: VertexBufferHeader =
-            //         pm.read_tag_struct(mesh.vertex_buffer2).unwrap();
-            //     let t = pm.get_entry(mesh.vertex_buffer2).unwrap().reference;
-
-            //     vertex2_stride = Some(vertex2_header.stride as u32);
-            //     vertex2_data = Some(pm.read_tag(t).unwrap());
-            // }
-
-            // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-            //     vertex_data
-            //         .chunks_exact(vertex_header.stride as _)
-            //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-            //         .flat_map(|(v1, v2)| [v1, v2].concat())
-            //         .collect()
-            // } else {
-            //     vertex_data
-            // };
-
-            // let combined_vertex_buffer = unsafe {
-            //     dcs.device
-            //         .CreateBuffer(
-            //             &D3D11_BUFFER_DESC {
-            //                 ByteWidth: combined_vertex_data.len() as _,
-            //                 Usage: D3D11_USAGE_IMMUTABLE,
-            //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
-            //                 ..Default::default()
-            //             },
-            //             Some(&D3D11_SUBRESOURCE_DATA {
-            //                 pSysMem: combined_vertex_data.as_ptr() as _,
-            //                 ..Default::default()
-            //             }),
-            //         )
-            //         .context("Failed to create combined vertex buffer")?
-            // };
-
             renderer.render_data.load_buffer(mesh.index_buffer, false);
             renderer.render_data.load_buffer(mesh.vertex_buffer1, false);
             renderer.render_data.load_buffer(mesh.vertex_buffer2, false);
@@ -163,33 +113,18 @@ impl EntityRenderer {
 
         Ok(Self {
             meshes,
-            _material_map: material_map,
+            material_map,
             materials,
             model,
         })
     }
 
-    fn get_variant_material(&self, index: u16) -> Option<TagHash> {
-        // let map = self.material_map.iter().find(|&v| {
-        //     (v.material_start as isize..v.material_start as isize + v.material_count as isize)
-        //         .contains(&(index as isize))
-        // })?;
-
-        // None
-        // self.materials.first().cloned()
-        // self.material_map
-        //     .get(index as usize)
-        //     .map(|m| self.materials.get((m.material_start) as usize))
-        //     .flatten()
-        //     .cloned()
-
+    fn get_variant_material(&self, index: u16, variant: usize) -> Option<TagHash> {
         if index == u16::MAX {
             None
         } else {
-            // self.materials
-            //     .get(fastrand::usize(0..self.materials.len()))
-            //     .cloned()
-            self.materials.first().cloned()
+            let variant_range = &self.material_map[index as usize];
+            Some(self.materials[variant_range.material_start as usize + variant])
         }
     }
 
@@ -200,7 +135,7 @@ impl EntityRenderer {
                     continue;
                 }
 
-                let variant_material = self.get_variant_material(p.variant_shader_index);
+                let variant_material = self.get_variant_material(p.variant_shader_index, 0);
 
                 let primitive_type = match p.primitive_type {
                     EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
