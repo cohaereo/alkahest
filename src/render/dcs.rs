@@ -66,7 +66,7 @@ impl DeviceContextSwapchain {
                 None,
                 D3D_DRIVER_TYPE_HARDWARE,
                 HINSTANCE::default(),
-                D3D11_CREATE_DEVICE_SINGLETHREADED, // | D3D11_CREATE_DEVICE_DEBUG,
+                Default::default(), // | D3D11_CREATE_DEVICE_DEBUG,
                 Some(&[D3D_FEATURE_LEVEL_11_1]),
                 D3D11_SDK_VERSION,
                 Some(&swap_chain_description),
