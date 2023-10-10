@@ -144,7 +144,9 @@ pub struct ScopeUnk2 {
 
 impl Default for ScopeUnk2 {
     fn default() -> Self {
-        ScopeUnk2 { unk0: Vec4::ONE }
+        ScopeUnk2 {
+            unk0: Vec4::new(0.0, 1.0, 1.0, 1.0),
+        }
     }
 }
 

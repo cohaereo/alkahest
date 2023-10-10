@@ -12,7 +12,6 @@ pub struct ResourcePoint {
     pub entity: ExtendedHash,
     pub has_havok_data: bool,
     pub resource_type: u32,
-    pub world_id: u64,
     pub resource: MapResource,
 
     // TODO(cohae): Temporary

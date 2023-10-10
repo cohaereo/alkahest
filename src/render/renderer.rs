@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Instant};
 
-use crate::util::image::Png;
 use crate::util::RwLock;
 use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
@@ -8,12 +7,10 @@ use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use winit::window::Window;
 
-use crate::dxgi::DxgiFormat;
 use crate::overlays::render_settings::{CompositorOptions, RenderSettings};
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk3;
 use crate::render::shader;
-use crate::texture::Texture;
 use crate::{camera::FpsCamera, resources::Resources};
 
 use super::data::RenderDataManager;
@@ -67,11 +64,6 @@ pub struct Renderer {
 
     rasterizer_state: ID3D11RasterizerState,
     rasterizer_state_nocull: ID3D11RasterizerState,
-
-    matcap: Texture,
-    // A 2x2 white texture
-    white: Texture,
-    blend_texture: Texture,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -193,32 +185,6 @@ impl Renderer {
             })?
         };
 
-        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matcap.png");
-        let matcap = Texture::load_png(
-            &dcs,
-            &Png::from_bytes(MATCAP_DATA)?,
-            Some("Basic shading matcap"),
-        )?;
-
-        let white = Texture::load_2d_raw(
-            &dcs,
-            1,
-            1,
-            &[0xffu8; 4],
-            DxgiFormat::R8G8B8A8_UNORM,
-            Some("1x1 white"),
-        )?;
-
-        let blend_texture = Texture::load_3d_raw(
-            &dcs,
-            2,
-            2,
-            2,
-            &[0x10, 0x10, 0x10, 0xff].repeat(2 * 2 * 2),
-            DxgiFormat::R8G8B8A8_UNORM,
-            Some("1x1x1 blend factor"),
-        )?;
-
         let vshader_composite_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/composite.hlsl"),
             "VShader",
@@ -292,9 +258,6 @@ impl Renderer {
             rasterizer_state,
             rasterizer_state_nocull,
             shadow_rs,
-            matcap,
-            white,
-            blend_texture,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
             final_vs: vshader_final,
@@ -435,6 +398,11 @@ impl Renderer {
                 continue;
             }
 
+            self.render_data
+                .data()
+                .blend_texture15
+                .bind(&self.dcs, 15, ShaderStages::all());
+
             for (i, slot) in (16..24).filter(|&v| v != 14).enumerate() {
                 self.render_data.data().debug_textures[i].bind(
                     &self.dcs,
@@ -445,19 +413,31 @@ impl Renderer {
 
             unsafe {
                 self.dcs.context().PSSetShaderResources(
-                    11,
+                    10,
                     Some(&[Some(self.gbuffer.depth.texture_copy_view.clone())]),
                 );
                 self.dcs
                     .context()
+                    .PSSetShaderResources(11, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+                self.dcs
+                    .context()
                     .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(23, Some(&[Some(self.gbuffer.rt0.view.clone())]));
             }
-            self.white.bind(&self.dcs, 20, ShaderStages::all());
+            self.render_data
+                .data()
+                .white
+                .bind(&self.dcs, 20, ShaderStages::all());
             // self.render_data
             //     .data()
             //     .rainbow_texture
             //     .bind(&self.dcs, 21, ShaderStages::all());
-            self.blend_texture.bind(&self.dcs, 21, ShaderStages::all());
+            self.render_data
+                .data()
+                .blend_texture
+                .bind(&self.dcs, 21, ShaderStages::all());
 
             let (s, d) = draw_queue[i].clone();
             if s.transparency() != transparency_mode {
@@ -755,7 +735,10 @@ impl Renderer {
                 )]),
             );
 
-            self.matcap.bind(&self.dcs, 4, ShaderStages::PIXEL);
+            self.render_data
+                .data()
+                .matcap
+                .bind(&self.dcs, 4, ShaderStages::PIXEL);
 
             let cubemap_texture = None;
             // let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
@@ -892,6 +875,8 @@ impl Renderer {
 
         let view = camera.calculate_matrix();
 
+        // clippy: Annoying lint, code is harder to read with the lint's suggested method
+        #[allow(clippy::needless_range_loop)]
         for i in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
             let (z_start, z_end) = if i == 0 {
                 (

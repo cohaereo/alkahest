@@ -47,6 +47,10 @@ impl TfxBytecodeInterpreter {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
                     self.operand_stack.push(constants[*constant_index as usize]);
                 }
+                // TODO(cohae): Very wrong, but does seem to push something onto the stack
+                TfxBytecodeOp::Unk22 { .. } => {
+                    self.stack.push(Vec4::ONE);
+                }
                 // TODO(cohae): Seems to be an arithmetic op
                 TfxBytecodeOp::Unk03 => {
                     if let (Some(v1), Some(v2)) = (self.stack.pop(), self.operand_stack.pop()) {

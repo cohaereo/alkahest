@@ -36,6 +36,12 @@ pub struct RenderData {
     /// All the colors you need
     pub rainbow_texture: Texture,
     pub debug_textures: Vec<Texture>,
+
+    pub matcap: Texture,
+    // A 2x2 white texture
+    pub white: Texture,
+    pub blend_texture: Texture,
+    pub blend_texture15: Texture,
 }
 
 impl RenderData {
@@ -72,6 +78,41 @@ impl RenderData {
             )?);
         }
 
+        const MATCAP_DATA: &[u8] = include_bytes!("../../assets/textures/matcap.png");
+        let matcap = Texture::load_png(
+            dcs,
+            &Png::from_bytes(MATCAP_DATA)?,
+            Some("Basic shading matcap"),
+        )?;
+
+        let white = Texture::load_2d_raw(
+            dcs,
+            1,
+            1,
+            &[0xffu8; 4],
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("1x1 white"),
+        )?;
+
+        let blend_texture = Texture::load_3d_raw(
+            dcs,
+            2,
+            2,
+            2,
+            &[0x10, 0x10, 0x10, 0xff].repeat(2 * 2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2x2 blend factor"),
+        )?;
+
+        let blend_texture15 = Texture::load_2d_raw(
+            dcs,
+            2,
+            2,
+            &[0x50, 0x50, 0x50, 0x50].repeat(2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2 blend factor15"),
+        )?;
+
         Ok(RenderData {
             materials: Default::default(),
             vshaders: Default::default(),
@@ -84,6 +125,10 @@ impl RenderData {
             fallback_texture,
             rainbow_texture,
             debug_textures,
+            matcap,
+            white,
+            blend_texture,
+            blend_texture15,
         })
     }
 

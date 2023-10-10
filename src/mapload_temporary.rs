@@ -7,7 +7,11 @@ use std::{
 };
 
 use crate::{
-    ecs::{components::ResourcePoint, transform::Transform, Scene},
+    ecs::{
+        components::{EntityWorldId, ResourcePoint},
+        transform::Transform,
+        Scene,
+    },
     map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
     util::RwLock,
 };
@@ -170,7 +174,6 @@ pub async fn load_maps(
                                     ResourcePoint {
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::CubemapVolume(
                                             Box::new(cubemap_volume),
@@ -181,6 +184,7 @@ pub async fn load_maps(
                                         ),
                                         entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                     },
+                                    EntityWorldId(data.world_id),
                                 ));
                             }
                             0x808067b5 => {
@@ -193,11 +197,11 @@ pub async fn load_maps(
                                     ResourcePoint {
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::Unk808067b5(tag),
                                         entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                     },
+                                    EntityWorldId(data.world_id),
                                 ));
                             }
                             // Decal collection
@@ -227,7 +231,6 @@ pub async fn load_maps(
                                             ResourcePoint {
                                                 entity: data.entity,
                                                 has_havok_data: is_physics_entity(data.entity),
-                                                world_id: data.world_id,
                                                 resource_type: data.data_resource.resource_type,
                                                 resource: MapResource::Decal {
                                                     material: inst.material,
@@ -238,6 +241,7 @@ pub async fn load_maps(
                                                     None,
                                                 )?,
                                             },
+                                            EntityWorldId(data.world_id),
                                         ));
                                     }
                                 }
@@ -313,11 +317,11 @@ pub async fn load_maps(
                                     ResourcePoint {
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::AmbientSound(header),
                                         entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                     },
+                                    EntityWorldId(data.world_id),
                                 ));
                             }
                             0x80806aa3 => {
@@ -350,7 +354,6 @@ pub async fn load_maps(
                                         ResourcePoint {
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk80806aa3(
                                                 unk18.bb,
@@ -362,6 +365,7 @@ pub async fn load_maps(
                                                 None,
                                             )?,
                                         },
+                                        EntityWorldId(data.world_id),
                                     ));
                                 }
                             }
@@ -395,7 +399,6 @@ pub async fn load_maps(
                                         ResourcePoint {
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Light,
                                             entity_cbuffer: ConstantBuffer::create(
@@ -403,6 +406,7 @@ pub async fn load_maps(
                                                 None,
                                             )?,
                                         },
+                                        EntityWorldId(data.world_id),
                                     ));
 
                                     point_lights.push(Vec4::new(
@@ -443,7 +447,6 @@ pub async fn load_maps(
                                         ResourcePoint {
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::RespawnPoint,
                                             entity_cbuffer: ConstantBuffer::create(
@@ -451,6 +454,7 @@ pub async fn load_maps(
                                                 None,
                                             )?,
                                         },
+                                        EntityWorldId(data.world_id),
                                     ));
                                 }
                             }
@@ -478,7 +482,6 @@ pub async fn load_maps(
                                         ResourcePoint {
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk808085c0,
                                             entity_cbuffer: ConstantBuffer::create(
@@ -486,6 +489,7 @@ pub async fn load_maps(
                                                 None,
                                             )?,
                                         },
+                                        EntityWorldId(data.world_id),
                                     ));
                                 }
                             }
@@ -516,7 +520,6 @@ pub async fn load_maps(
                                         ResourcePoint {
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk80806a40,
                                             entity_cbuffer: ConstantBuffer::create(
@@ -524,6 +527,7 @@ pub async fn load_maps(
                                                 None,
                                             )?,
                                         },
+                                        EntityWorldId(data.world_id),
                                     ));
                                 }
                             }
@@ -544,7 +548,6 @@ pub async fn load_maps(
                                         ResourcePoint {
                                             entity: data.entity,
                                             has_havok_data: is_physics_entity(data.entity),
-                                            world_id: data.world_id,
                                             resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk80806cc3(b.bb),
                                             entity_cbuffer: ConstantBuffer::create(
@@ -552,6 +555,7 @@ pub async fn load_maps(
                                                 None,
                                             )?,
                                         },
+                                        EntityWorldId(data.world_id),
                                     ));
                                 }
 
@@ -573,11 +577,11 @@ pub async fn load_maps(
                                     ResourcePoint {
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::SpotLight,
                                         entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                     },
+                                    EntityWorldId(data.world_id),
                                 ));
                             }
                             u => {
@@ -601,7 +605,6 @@ pub async fn load_maps(
                                     ResourcePoint {
                                         entity: data.entity,
                                         has_havok_data: is_physics_entity(data.entity),
-                                        world_id: data.world_id,
                                         resource_type: data.data_resource.resource_type,
                                         resource: MapResource::Unknown(
                                             data.data_resource.resource_type,
@@ -612,6 +615,7 @@ pub async fn load_maps(
                                         ),
                                         entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                     },
+                                    EntityWorldId(data.world_id),
                                 ));
                             }
                         };
@@ -621,11 +625,11 @@ pub async fn load_maps(
                             ResourcePoint {
                                 entity: data.entity,
                                 has_havok_data: is_physics_entity(data.entity),
-                                world_id: data.world_id,
                                 resource_type: data.data_resource.resource_type,
                                 resource: MapResource::Entity(data.entity, data.world_id),
                                 entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                             },
+                            EntityWorldId(data.world_id),
                         ));
                     }
                 }
