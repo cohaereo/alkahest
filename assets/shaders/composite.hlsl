@@ -252,7 +252,7 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
             float2 jitter = poissonDisk[(y+1) * 3 + (x+1)];
             float3 sampleCoords = float3(texCoords.xy + (float2(x, y) + jitter) * texelSize , cascade);
             float pcfDepth = CascadeShadowMaps.Sample(SampleType, sampleCoords).r;
-            shadow += pcfDepth < (currentDepth - 0.0001) ? 0.1 : 1.0;        
+            shadow += pcfDepth < (currentDepth - 0.0001) ? 0.0 : 1.0;        
         }    
     }
     shadow /= 9.0;
