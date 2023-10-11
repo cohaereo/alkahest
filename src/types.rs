@@ -4,32 +4,32 @@ use glam::{Quat, Vec2, Vec3, Vec3A, Vec4};
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]
-pub struct DestinyHash(pub u32);
+pub struct ResourceHash(pub u32);
 
-impl From<DestinyHash> for u32 {
-    fn from(value: DestinyHash) -> Self {
+impl From<ResourceHash> for u32 {
+    fn from(value: ResourceHash) -> Self {
         value.0
     }
 }
 
-impl From<u32> for DestinyHash {
+impl From<u32> for ResourceHash {
     fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl DestinyHash {
+impl ResourceHash {
     pub fn is_none(&self) -> bool {
         self.0 == 0x811c9dc5
     }
 }
 
-impl Debug for DestinyHash {
+impl Debug for ResourceHash {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.is_none() {
-            f.write_fmt(format_args!("DestinyHash(NONE)"))
+            f.write_fmt(format_args!("ResourceHash(NONE)"))
         } else {
-            f.write_str("DestinyHash(")?;
+            f.write_str("ResourceHash(")?;
 
             self.0.fmt(f)?;
 

@@ -1,5 +1,5 @@
 use binrw::{BinRead, BinReaderExt, BinResult, Endian};
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 
 use std::fmt::{Debug, Formatter, Write};
 use std::io::{Read, Seek, SeekFrom};
@@ -296,6 +296,117 @@ impl<T: BinRead> Deref for Tag<T> {
 }
 
 impl<T: BinRead + Debug> Debug for Tag<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+// TODO: Custom reader once new tag parser comes around
+#[derive(Clone, Copy, Hash, Eq, PartialEq)]
+pub enum ExtendedHash {
+    Hash32(TagHash),
+    Hash64(TagHash64),
+}
+
+impl ExtendedHash {
+    /// Key that is safe to use for caching/lookup tables
+    pub fn key(&self) -> u64 {
+        match self {
+            ExtendedHash::Hash32(v) => v.0 as u64,
+            ExtendedHash::Hash64(v) => v.0,
+        }
+    }
+
+    /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
+    pub fn hash32(&self) -> Option<TagHash> {
+        match self {
+            ExtendedHash::Hash32(v) => Some(*v),
+            ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
+        }
+    }
+
+    pub fn is_some(&self) -> bool {
+        match self {
+            ExtendedHash::Hash32(h) => h.is_some(),
+            // TODO(cohae): Double check this
+            ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
+        }
+    }
+}
+
+impl Debug for ExtendedHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
+            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
+        }
+    }
+}
+
+impl BinRead for ExtendedHash {
+    type Args<'a> = ();
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        endian: binrw::Endian,
+        _args: Self::Args<'_>,
+    ) -> binrw::BinResult<Self> {
+        let hash32: TagHash = reader.read_type(endian)?;
+        let is_hash32: u32 = reader.read_type(endian)?;
+        let hash64: TagHash64 = reader.read_type(endian)?;
+
+        if is_hash32 != 0 {
+            Ok(ExtendedHash::Hash32(hash32))
+        } else {
+            Ok(ExtendedHash::Hash64(hash64))
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ExtendedTag<T: BinRead>(pub T, ExtendedHash);
+
+// impl<T: BinRead> ExtendedTag<T> {
+//     pub fn tag(&self) -> ExtendedHash {
+//         self.1
+//     }
+// }
+
+impl<'a, T: BinRead> BinRead for ExtendedTag<T>
+where
+    T::Args<'a>: Default + Clone,
+{
+    type Args<'b> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let taghash: ExtendedHash = reader.read_type(endian)?;
+        Ok(ExtendedTag(
+            package_manager()
+                .read_tag_struct(taghash.hash32().ok_or_else(|| binrw::Error::Custom {
+                    pos: reader.stream_position().unwrap(),
+                    err: Box::new(anyhow::Error::msg("Could not translate hash64")),
+                })?)
+                .map_err(|e| binrw::Error::Custom {
+                    pos: reader.stream_position().unwrap(),
+                    err: Box::new(e),
+                })?,
+            taghash,
+        ))
+    }
+}
+
+impl<T: BinRead> Deref for ExtendedTag<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: BinRead + Debug> Debug for ExtendedTag<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }

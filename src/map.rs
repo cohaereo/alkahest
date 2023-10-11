@@ -1,26 +1,25 @@
 use crate::ecs::Scene;
-use crate::packages::package_manager;
+
 use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
-use crate::structure::{ResourcePointer, TablePointer, Tag};
-use crate::types::{DestinyHash, Vector4};
-use binrw::{BinRead, BinReaderExt};
+use crate::structure::{ExtendedHash, ExtendedTag, ResourcePointer, TablePointer, Tag};
+use crate::types::{ResourceHash, Vector4};
+use binrw::BinRead;
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
 
 use std::fmt::Debug;
 use std::io::SeekFrom;
 
-// D2Class_1E898080
 #[derive(BinRead, Debug)]
-pub struct Unk80807dae {
+pub struct SBubbleParent {
     pub file_size: u64,
     // 808091e0
-    pub child_map: Tag<Unk808091e0>,
+    pub child_map: Tag<SBubbleDefinition>,
     pub unkc: u32,
 
     pub unk10: u64,
-    pub map_name: DestinyHash,
+    pub map_name: ResourceHash,
 
     #[br(seek_before(SeekFrom::Start(0x40)))]
     pub unk40: TablePointer<Unk80809644>,
@@ -36,76 +35,14 @@ pub struct Unk80809644 {
 
 // D2Class_01878080
 #[derive(BinRead, Debug)]
-pub struct Unk808091e0 {
+pub struct SBubbleDefinition {
     pub file_size: u64,
-    pub map_resources: TablePointer<ExtendedHash>,
-}
-
-// TODO: Custom reader once new tag parser comes around
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
-pub enum ExtendedHash {
-    Hash32(TagHash),
-    Hash64(TagHash64),
-}
-
-impl ExtendedHash {
-    /// Key that is safe to use for caching/lookup tables
-    pub fn key(&self) -> u64 {
-        match self {
-            ExtendedHash::Hash32(v) => v.0 as u64,
-            ExtendedHash::Hash64(v) => v.0,
-        }
-    }
-
-    /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
-    pub fn hash32(&self) -> Option<TagHash> {
-        match self {
-            ExtendedHash::Hash32(v) => Some(*v),
-            ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
-        }
-    }
-
-    pub fn is_some(&self) -> bool {
-        match self {
-            ExtendedHash::Hash32(h) => h.is_some(),
-            // TODO(cohae): Double check this
-            ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
-        }
-    }
-}
-
-impl Debug for ExtendedHash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
-            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
-        }
-    }
-}
-
-impl BinRead for ExtendedHash {
-    type Args<'a> = ();
-
-    fn read_options<R: std::io::Read + std::io::Seek>(
-        reader: &mut R,
-        endian: binrw::Endian,
-        _args: Self::Args<'_>,
-    ) -> binrw::BinResult<Self> {
-        let hash32: TagHash = reader.read_type(endian)?;
-        let is_hash32: u32 = reader.read_type(endian)?;
-        let hash64: TagHash64 = reader.read_type(endian)?;
-
-        if is_hash32 != 0 {
-            Ok(ExtendedHash::Hash32(hash32))
-        } else {
-            Ok(ExtendedHash::Hash64(hash64))
-        }
-    }
+    pub map_resources: TablePointer<ExtendedTag<SMapContainer>>,
 }
 
 // D2Class_07878080
 #[derive(BinRead, Debug)]
-pub struct Unk80808a54 {
+pub struct SMapContainer {
     pub file_size: u64,
     #[br(seek_before(SeekFrom::Start(0x28)))]
     pub data_tables: TablePointer<Tag<Unk808099d6>>,
@@ -119,9 +56,8 @@ pub struct Unk808099d6 {
 }
 
 // D2Class_85988080
-#[derive(BinRead, Debug)]
+#[derive(BinRead, Clone, Debug)]
 pub struct Unk808099d8 {
-    // 80809c0f
     pub rotation: Vector4,    // 0x0
     pub translation: Vector4, // 0x10
     pub entity_old: TagHash,  // 0x20
@@ -131,7 +67,7 @@ pub struct Unk808099d8 {
     pub unk5c: f32,
     pub unk60: f32,
     pub unk64: TagHash,
-    pub unk68: DestinyHash,
+    pub unk68: ResourceHash,
     pub unk6c: u32,
     pub world_id: u64,
     pub data_resource: ResourcePointer,

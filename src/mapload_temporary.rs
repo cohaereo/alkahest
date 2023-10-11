@@ -26,10 +26,11 @@ use windows::Win32::Graphics::{
     Direct3D11::{ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader},
 };
 
+use crate::structure::ExtendedHash;
 use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     entity::{Unk808072c5, Unk808073a5, Unk80809c0f},
-    map::{ExtendedHash, MapData, Unk80806ef4, Unk8080714f, Unk80807dae, Unk80808a54},
+    map::{MapData, SBubbleParent, Unk80806ef4, Unk8080714f},
     map_resources::{MapResource, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk8080714b},
     material::{Material, Unk808071e8},
     packages::package_manager,
@@ -62,7 +63,7 @@ pub async fn load_maps(
     for hash in map_hashes {
         let renderer = renderer.read();
         let _span = debug_span!("Load map", %hash).entered();
-        let Ok(think) = package_manager().read_tag_struct::<Unk80807dae>(hash) else {
+        let Ok(think) = package_manager().read_tag_struct::<SBubbleParent>(hash) else {
             error!("Failed to load map {hash}");
             continue;
         };
@@ -80,12 +81,8 @@ pub async fn load_maps(
         let mut scene = Scene::new();
 
         let mut unknown_root_resources: IntMap<u32, ()> = IntMap::default();
-        for res in &think.child_map.map_resources {
-            let thing2: Unk80808a54 = package_manager()
-                .read_tag_struct(res.hash32().unwrap())
-                .unwrap();
-
-            for table in &thing2.data_tables {
+        for map_container in &think.child_map.map_resources {
+            for table in &map_container.data_tables {
                 let table_data = package_manager().read_tag(table.tag()).unwrap();
                 let mut cur = Cursor::new(&table_data);
 
@@ -98,6 +95,21 @@ pub async fn load_maps(
                         ),
                         rotation: data.rotation.into(),
                         scale: Vec3::splat(data.translation.w),
+                    };
+
+                    let base_rp = ResourcePoint {
+                        entity: data.entity,
+                        has_havok_data: is_physics_entity(data.entity),
+                        is_activity: false,
+                        resource_type: data.data_resource.resource_type,
+                        resource: MapResource::Unknown(
+                            data.data_resource.resource_type,
+                            data.world_id,
+                            data.entity,
+                            data.data_resource,
+                            table.tag(),
+                        ),
+                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                     };
 
                     if data.data_resource.is_valid {
@@ -172,9 +184,6 @@ pub async fn load_maps(
                                         ..Default::default()
                                     },
                                     ResourcePoint {
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        resource_type: data.data_resource.resource_type,
                                         resource: MapResource::CubemapVolume(
                                             Box::new(cubemap_volume),
                                             AABB {
@@ -182,7 +191,7 @@ pub async fn load_maps(
                                                 max: volume_max.truncate().into(),
                                             },
                                         ),
-                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                        ..base_rp
                                     },
                                     EntityWorldId(data.world_id),
                                 ));
@@ -195,11 +204,8 @@ pub async fn load_maps(
                                 scene.spawn((
                                     transform,
                                     ResourcePoint {
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        resource_type: data.data_resource.resource_type,
                                         resource: MapResource::Unk808067b5(tag),
-                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                        ..base_rp
                                     },
                                     EntityWorldId(data.world_id),
                                 ));
@@ -229,9 +235,6 @@ pub async fn load_maps(
                                                 ..Default::default()
                                             },
                                             ResourcePoint {
-                                                entity: data.entity,
-                                                has_havok_data: is_physics_entity(data.entity),
-                                                resource_type: data.data_resource.resource_type,
                                                 resource: MapResource::Decal {
                                                     material: inst.material,
                                                     scale: transform.w,
@@ -240,6 +243,7 @@ pub async fn load_maps(
                                                     dcs.clone(),
                                                     None,
                                                 )?,
+                                                ..base_rp
                                             },
                                             EntityWorldId(data.world_id),
                                         ));
@@ -315,11 +319,8 @@ pub async fn load_maps(
                                 scene.spawn((
                                     transform,
                                     ResourcePoint {
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        resource_type: data.data_resource.resource_type,
                                         resource: MapResource::AmbientSound(header),
-                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                        ..base_rp
                                     },
                                     EntityWorldId(data.world_id),
                                 ));
@@ -352,9 +353,6 @@ pub async fn load_maps(
                                     scene.spawn((
                                         Transform::from_mat4(mat),
                                         ResourcePoint {
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk80806aa3(
                                                 unk18.bb,
                                                 unk8.unk60.entity_model,
@@ -364,6 +362,7 @@ pub async fn load_maps(
                                                 dcs.clone(),
                                                 None,
                                             )?,
+                                            ..base_rp
                                         },
                                         EntityWorldId(data.world_id),
                                     ));
@@ -397,14 +396,12 @@ pub async fn load_maps(
                                             ..Default::default()
                                         },
                                         ResourcePoint {
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Light,
                                             entity_cbuffer: ConstantBuffer::create(
                                                 dcs.clone(),
                                                 None,
                                             )?,
+                                            ..base_rp
                                         },
                                         EntityWorldId(data.world_id),
                                     ));
@@ -445,14 +442,12 @@ pub async fn load_maps(
                                             ..Default::default()
                                         },
                                         ResourcePoint {
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            resource_type: data.data_resource.resource_type,
                                             resource: MapResource::RespawnPoint,
                                             entity_cbuffer: ConstantBuffer::create(
                                                 dcs.clone(),
                                                 None,
                                             )?,
+                                            ..base_rp
                                         },
                                         EntityWorldId(data.world_id),
                                     ));
@@ -480,14 +475,12 @@ pub async fn load_maps(
                                             ..Default::default()
                                         },
                                         ResourcePoint {
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk808085c0,
                                             entity_cbuffer: ConstantBuffer::create(
                                                 dcs.clone(),
                                                 None,
                                             )?,
+                                            ..base_rp
                                         },
                                         EntityWorldId(data.world_id),
                                     ));
@@ -518,14 +511,12 @@ pub async fn load_maps(
                                             ..Default::default()
                                         },
                                         ResourcePoint {
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk80806a40,
                                             entity_cbuffer: ConstantBuffer::create(
                                                 dcs.clone(),
                                                 None,
                                             )?,
+                                            ..base_rp
                                         },
                                         EntityWorldId(data.world_id),
                                     ));
@@ -546,14 +537,12 @@ pub async fn load_maps(
                                             ..Default::default()
                                         },
                                         ResourcePoint {
-                                            entity: data.entity,
-                                            has_havok_data: is_physics_entity(data.entity),
-                                            resource_type: data.data_resource.resource_type,
                                             resource: MapResource::Unk80806cc3(b.bb),
                                             entity_cbuffer: ConstantBuffer::create(
                                                 dcs.clone(),
                                                 None,
                                             )?,
+                                            ..base_rp
                                         },
                                         EntityWorldId(data.world_id),
                                     ));
@@ -575,11 +564,8 @@ pub async fn load_maps(
                                 scene.spawn((
                                     transform,
                                     ResourcePoint {
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        resource_type: data.data_resource.resource_type,
                                         resource: MapResource::SpotLight,
-                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                        ..base_rp
                                     },
                                     EntityWorldId(data.world_id),
                                 ));
@@ -596,38 +582,19 @@ pub async fn load_maps(
                                 }
 
                                 debug!(
-                                    "Skipping unknown resource type {u:x} {:?} (table file {:?})",
+                                    "Skipping unknown  resource type {u:x} {:?} (table file {:?})",
                                     data.translation,
                                     table.tag()
                                 );
-                                scene.spawn((
-                                    transform,
-                                    ResourcePoint {
-                                        entity: data.entity,
-                                        has_havok_data: is_physics_entity(data.entity),
-                                        resource_type: data.data_resource.resource_type,
-                                        resource: MapResource::Unknown(
-                                            data.data_resource.resource_type,
-                                            data.world_id,
-                                            data.entity,
-                                            data.data_resource,
-                                            table.tag(),
-                                        ),
-                                        entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
-                                    },
-                                    EntityWorldId(data.world_id),
-                                ));
+                                scene.spawn((transform, base_rp, EntityWorldId(data.world_id)));
                             }
                         };
                     } else {
                         scene.spawn((
                             transform,
                             ResourcePoint {
-                                entity: data.entity,
-                                has_havok_data: is_physics_entity(data.entity),
-                                resource_type: data.data_resource.resource_type,
                                 resource: MapResource::Entity(data.entity, data.world_id),
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                ..base_rp
                             },
                             EntityWorldId(data.world_id),
                         ));

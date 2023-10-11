@@ -16,6 +16,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::activity::SActivity;
 use crate::ecs::components::ResourcePoint;
 use crate::overlays::console::ConsoleOverlay;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
@@ -66,8 +67,9 @@ use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, T
 use crate::resources::Resources;
 
 use crate::statics::Unk8080966d;
-use crate::text::{decode_text, StringData, StringPart, StringSetHeader};
+use crate::text::{decode_text, StringContainer, StringData, StringPart};
 
+mod activity;
 mod camera;
 mod config;
 mod dds;
@@ -103,6 +105,9 @@ struct Args {
     /// Map hash to load. Ignores package argument
     #[arg(short, long)]
     map: Option<String>,
+
+    #[arg(short, long)]
+    activity: Option<String>,
 }
 
 #[tokio::main]
@@ -175,7 +180,7 @@ pub async fn main() -> anyhow::Result<()> {
             .into_iter()
             .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
         {
-            let textset_header: StringSetHeader = package_manager().read_tag_struct(t)?;
+            let textset_header: StringContainer = package_manager().read_tag_struct(t)?;
 
             let data = package_manager()
                 .read_tag(textset_header.language_english)
@@ -206,6 +211,23 @@ pub async fn main() -> anyhow::Result<()> {
     }
 
     let stringmap = Arc::new(stringmap);
+
+    // for (t, _) in package_manager().get_all_by_reference(0x80808e8b) {
+    //     let activity_entry: Unk80808e8b = package_manager().read_tag_struct(t)?;
+    //     println!("{t} {activity_entry:#?}");
+    //     break;
+    // }
+
+    // let mut activity_map: IntMap<u32, TagHash> = IntMap::default();
+    if let Some(activity_hash) = args.activity {
+        let activity: SActivity = package_manager().read_tag_struct(TagHash(u32::from_be(
+            u32::from_str_radix(&activity_hash, 16)?,
+        )))?;
+        println!("{activity_hash} {activity:#?}");
+    }
+    // activity_map.insert(activity., v)
+
+    // return Ok(());
 
     info!("Loaded {} global strings", stringmap.len());
 

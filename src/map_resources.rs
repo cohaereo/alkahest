@@ -2,10 +2,10 @@ use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
     ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_VOLUME_HIGH,
 };
-use crate::map::ExtendedHash;
 use crate::render::debug::DebugShapes;
+use crate::structure::ExtendedHash;
 use crate::structure::{RelPointer, ResourcePointer, TablePointer, Tag};
-use crate::types::{DestinyHash, Matrix4, Vector4, AABB};
+use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
@@ -213,7 +213,7 @@ pub struct Unk8080714b {
     #[br(seek_before(SeekFrom::Current(0x10)))]
     pub unk10: u16,
     pub unk12: u16,
-    pub unk14: DestinyHash,
+    pub unk14: ResourceHash,
     pub terrain: TagHash,
     pub terrain_bounds: TagHash,
 }

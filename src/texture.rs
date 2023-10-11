@@ -1,8 +1,8 @@
 use crate::dxgi::DxgiFormat;
-use crate::map::ExtendedHash;
 use crate::packages::package_manager;
 use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
+use crate::structure::ExtendedHash;
 use crate::structure::{CafeMarker, TablePointer};
 use crate::types::IVector2;
 use crate::util::image::Png;

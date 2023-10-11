@@ -1,7 +1,7 @@
 use crate::{
-    map::ExtendedHash,
     map_resources::MapResource,
     render::{scopes::ScopeRigidModel, ConstantBuffer},
+    structure::ExtendedHash,
 };
 
 #[derive(Copy, Clone)]
@@ -10,9 +10,12 @@ pub struct EntityWorldId(pub u64);
 
 pub struct ResourcePoint {
     pub entity: ExtendedHash,
-    pub has_havok_data: bool,
     pub resource_type: u32,
     pub resource: MapResource,
+
+    pub has_havok_data: bool,
+    /// Does this node belong to an activity?
+    pub is_activity: bool,
 
     // TODO(cohae): Temporary
     pub entity_cbuffer: ConstantBuffer<ScopeRigidModel>,

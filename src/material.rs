@@ -1,13 +1,13 @@
 use std::io::SeekFrom;
 use std::ops::Deref;
 
-use crate::map::ExtendedHash;
 use crate::packages::package_manager;
 use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::drawcall::ShaderStages;
 use crate::render::renderer::Renderer;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
+use crate::structure::ExtendedHash;
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
 use binrw::{BinRead, NullString};

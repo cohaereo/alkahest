@@ -107,6 +107,26 @@ impl OverlayProvider for ResourceTypeOverlay {
                         );
                     }
 
+                    if res.is_activity {
+                        painter.rect(
+                            egui::Rect::from_min_size(
+                                screen_point.to_array().into(),
+                                [11.0, 11.0].into(),
+                            ),
+                            egui::Rounding::none(),
+                            Color32::from_black_alpha(152),
+                            egui::Stroke::default(),
+                        );
+
+                        painter.text(
+                            egui::Pos2::from(screen_point.to_array()) + egui::vec2(5.5, 5.5),
+                            egui::Align2::CENTER_CENTER,
+                            "A",
+                            egui::FontId::monospace(12.0),
+                            Color32::GREEN,
+                        );
+                    }
+
                     if self.debug_overlay.borrow().show_map_resource_label {
                         painter.text(
                             (screen_point + Vec2::new(14.0, 0.0)).to_array().into(),

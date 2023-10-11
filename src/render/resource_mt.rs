@@ -18,8 +18,8 @@ use windows::Win32::Graphics::{
 use crate::{
     dxgi::DxgiFormat,
     entity::{IndexBufferHeader, VertexBufferHeader},
-    map::ExtendedHash,
     packages::package_manager,
+    structure::ExtendedHash,
     texture::Texture,
 };
 

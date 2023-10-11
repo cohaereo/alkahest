@@ -1,12 +1,12 @@
 use crate::structure::{RelPointer, TablePointer};
-use crate::types::DestinyHash;
+use crate::types::ResourceHash;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 
 #[derive(BinRead, Debug)]
-pub struct StringSetHeader {
+pub struct StringContainer {
     pub file_size: u64,
-    pub string_hashes: TablePointer<DestinyHash>,
+    pub string_hashes: TablePointer<ResourceHash>,
     pub language_english: TagHash,
     // pub language_unk1: TagHash,
     // pub language_german: TagHash,
