@@ -28,7 +28,9 @@ pub struct Unk808071e8 {
     pub unk20: u16,
     pub unk22: u16,
     pub unk24: u32,
-    pub unk28: [u32; 8],
+    pub unk28: u32,
+    pub unk2c: u32,
+    pub unk30: [u32; 6],
 
     #[br(seek_before(SeekFrom::Start(0x70)))]
     pub vertex_shader: TagHash,

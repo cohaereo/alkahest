@@ -27,7 +27,7 @@ use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
 use glam::Vec3;
 use itertools::Itertools;
-use nohash_hasher::IntMap;
+use nohash_hasher::{IntMap, IntSet};
 use poll_promise::Promise;
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
@@ -212,23 +212,6 @@ pub async fn main() -> anyhow::Result<()> {
 
     let stringmap = Arc::new(stringmap);
 
-    // for (t, _) in package_manager().get_all_by_reference(0x80808e8b) {
-    //     let activity_entry: Unk80808e8b = package_manager().read_tag_struct(t)?;
-    //     println!("{t} {activity_entry:#?}");
-    //     break;
-    // }
-
-    // let mut activity_map: IntMap<u32, TagHash> = IntMap::default();
-    if let Some(activity_hash) = args.activity {
-        let activity: SActivity = package_manager().read_tag_struct(TagHash(u32::from_be(
-            u32::from_str_radix(&activity_hash, 16)?,
-        )))?;
-        println!("{activity_hash} {activity:#?}");
-    }
-    // activity_map.insert(activity., v)
-
-    // return Ok(());
-
     info!("Loaded {} global strings", stringmap.len());
 
     let event_loop = EventLoop::new();
@@ -249,8 +232,8 @@ pub async fn main() -> anyhow::Result<()> {
     // TODO(cohae): resources should be added to renderdata directly
     let renderer = Arc::new(RwLock::new(Renderer::create(&window, dcs.clone())?));
 
-    let map_hashes = if let Some(map_hash) = args.map {
-        let hash = match u32::from_str_radix(&map_hash, 16) {
+    let mut map_hashes = if let Some(map_hash) = &args.map {
+        let hash = match u32::from_str_radix(map_hash, 16) {
             Ok(v) => TagHash(u32::from_be(v)),
             Err(_e) => anyhow::bail!("The given map '{map_hash}' is not a valid hash!"),
         };
@@ -273,11 +256,35 @@ pub async fn main() -> anyhow::Result<()> {
             .collect_vec()
     };
 
+    let activity_hash = args.activity.map(|a| {
+        TagHash(u32::from_be(
+            u32::from_str_radix(&a, 16)
+                .context("Invalid activity hash format")
+                .unwrap(),
+        ))
+    });
+
+    if args.map.is_none() {
+        if let Some(activity_hash) = &activity_hash {
+            let activity: SActivity = package_manager().read_tag_struct(*activity_hash)?;
+            let mut maps: IntSet<TagHash> = Default::default();
+
+            for u in &activity.unk50 {
+                for m in &u.map_references {
+                    maps.insert(m.hash32().unwrap());
+                }
+            }
+
+            map_hashes = maps.into_iter().collect_vec();
+        }
+    }
+
     let mut map_load_task = Some(Promise::spawn_async(load_maps(
         dcs.clone(),
         renderer.clone(),
         map_hashes,
         stringmap.clone(),
+        activity_hash,
     )));
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
     let mut placement_renderers: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =

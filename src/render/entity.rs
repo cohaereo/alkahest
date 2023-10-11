@@ -9,8 +9,8 @@ use windows::Win32::Graphics::Direct3D11::*;
 use crate::entity::EPrimitiveType;
 use crate::entity::Unk808072c5;
 use crate::entity::Unk8080737e;
-use crate::entity::Unk808073a5;
 
+use crate::entity::Unk808073a5;
 use crate::render::vertex_buffers::load_vertex_buffers;
 
 use super::drawcall::ConstantBufferBinding;

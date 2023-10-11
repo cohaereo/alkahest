@@ -29,3 +29,6 @@ impl ResourcePoint {
         }
     }
 }
+
+/// Just a marker for now
+pub struct PointLight;

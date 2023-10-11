@@ -45,12 +45,12 @@ pub struct SBubbleDefinition {
 pub struct SMapContainer {
     pub file_size: u64,
     #[br(seek_before(SeekFrom::Start(0x28)))]
-    pub data_tables: TablePointer<Tag<Unk808099d6>>,
+    pub data_tables: TablePointer<Tag<SMapDataTable>>,
 }
 
 // D2Class_83988080
 #[derive(BinRead, Debug)]
-pub struct Unk808099d6 {
+pub struct SMapDataTable {
     pub file_size: u64,
     pub data_entries: TablePointer<Unk808099d8>,
 }

@@ -1,6 +1,6 @@
-use crate::structure::{ExtendedHash, RelPointer, ResourcePointer, TablePointer};
+use crate::structure::{ExtendedHash, RelPointer, ResourcePointer, TablePointer, Tag};
 
-use crate::types::ResourceHash;
+use crate::types::{ResourceHash, Vector4};
 use binrw::{BinRead, NullString};
 use destiny_pkg::{TagHash, TagHash64};
 use std::io::SeekFrom;
@@ -91,5 +91,62 @@ pub struct Unk80808948 {
     pub bubble_name: ResourceHash,
     pub activity_phase_name: ResourceHash,
     pub activity_phase_name2: ResourceHash,
-    pub unk_entity_reference: TagHash,
+    pub unk_entity_reference: Tag<Unk80808e89>,
+}
+
+#[derive(Debug, BinRead, Clone)]
+pub struct Unk80808e89 {
+    pub file_size: u64,
+    pub unk8: u64,
+    pub unk10: ResourcePointer,
+    pub unk18: Tag<Unk80808ebe>,
+    pub unk1c: u32,
+    pub unk20: [u32; 4],
+}
+
+#[derive(Debug, BinRead, Clone)]
+pub struct Unk80808ebe {
+    pub file_size: u64,
+    pub entity_resources: TablePointer<Tag<Unk80808943>>,
+}
+
+#[derive(Debug, BinRead, Clone)]
+pub struct Unk80808943 {
+    pub file_size: u64,
+    #[br(seek_before = SeekFrom::Start(0x20))]
+    pub entity_resource: TagHash,
+}
+
+#[derive(Debug, BinRead)]
+pub struct SEntityResource {
+    pub file_size: u64,
+    pub unk8: ResourcePointer,
+    pub unk10: ResourcePointer,
+    pub unk18: ResourcePointer,
+
+    #[br(seek_before = SeekFrom::Start(0x40))]
+    pub resource_table1: TablePointer<()>,
+
+    #[br(seek_before = SeekFrom::Start(0x60))]
+    pub resource_table2: TablePointer<()>,
+
+    #[br(seek_before = SeekFrom::Start(0x80))]
+    pub unk80: TagHash,
+    pub unk84: TagHash,
+}
+
+#[derive(Debug, BinRead)]
+pub struct Unk808092d8 {
+    pub unk0: [u32; 33],
+    pub unk84: TagHash,
+    pub unk88: u32,
+    pub unk8c: u32,
+    pub rotation: Vector4,
+    pub translation: Vector4,
+}
+
+#[derive(Debug, BinRead)]
+pub struct Unk80808cef {
+    pub unk0: [u32; 22],
+    pub unk58: TagHash,
 }
