@@ -17,8 +17,10 @@ use glam::Vec4;
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk808071e8 {
     pub file_size: u64,
+    /// 0 = ???
     /// 1 = normal
     /// 2 = depth prepass?
+    /// 6 = ????????
     pub unk8: u32,
     pub unkc: u32,
     pub unk10: u32,

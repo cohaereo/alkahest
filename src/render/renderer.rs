@@ -545,6 +545,10 @@ impl Renderer {
         let render_data = self.render_data.data();
 
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
+            if mat.unk8 != 1 {
+                return;
+            }
+
             unsafe {
                 if mode != DrawMode::DepthPrepass {
                     if mat.unkc != 0 {
@@ -565,6 +569,10 @@ impl Renderer {
 
         if let Some(variant_material) = drawcall.variant_material {
             if let Some(mat) = render_data.materials.get(&variant_material) {
+                if mat.unk8 != 1 {
+                    return;
+                }
+
                 if mat.bind(&self.dcs, &render_data, bind_stages).is_err() {
                     // return;
                 }

@@ -66,15 +66,17 @@ pub struct Unk8080737e {
     pub index_start: u32,
     pub index_count: u32,
     pub unk10: u32,
-    pub unk14: u32,
+    pub external_identifier: u16,
+    pub unk16: u16,
+    // Non-zero = foliage?
     pub unk18: u8,
     pub unk19: u8,
     pub unk1a: u8,
     pub unk1b: u8,
-    pub unk1c: u8,
+    pub gear_dye_change_color_index: u8,
     pub lod_category: ELodCategory,
     pub unk1e: u8,
-    pub unk1f: u8,
+    pub lod_run: u8,
     pub unk20: u32,
 }
 

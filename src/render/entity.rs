@@ -123,7 +123,10 @@ impl EntityRenderer {
             None
         } else {
             let variant_range = &self.material_map[index as usize];
-            Some(self.materials[variant_range.material_start as usize + variant])
+            Some(
+                self.materials[variant_range.material_start as usize
+                    + (variant % variant_range.material_count as usize)],
+            )
         }
     }
 
