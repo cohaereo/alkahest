@@ -12,6 +12,7 @@ use super::gui::{GuiResources, OverlayProvider};
 pub struct CameraPositionOverlay {
     pub show_map_resources: bool,
     pub show_map_resource_label: bool,
+    pub map_resource_label_background: bool,
     pub map_resource_filter: [bool; MapResource::COUNT],
     pub map_resource_distance: f32,
 }
@@ -66,6 +67,10 @@ impl OverlayProvider for CameraPositionOverlay {
                     }
                 });
                 ui.checkbox(&mut self.show_map_resource_label, "Show map resource label");
+                ui.checkbox(
+                    &mut self.map_resource_label_background,
+                    "Map resource label background",
+                );
                 ui.spacing();
 
                 ui.add(

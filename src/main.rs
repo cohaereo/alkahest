@@ -356,6 +356,7 @@ pub async fn main() -> anyhow::Result<()> {
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: false,
         show_map_resource_label: true,
+        map_resource_label_background: false,
         map_resource_filter: {
             let mut f = [false; MapResource::COUNT];
             f[0] = true;

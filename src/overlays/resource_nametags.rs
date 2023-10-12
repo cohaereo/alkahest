@@ -2,11 +2,12 @@ use crate::{
     camera::FpsCamera,
     ecs::{components::ResourcePoint, transform::Transform},
     map::MapDataList,
+    map_resources::MapResource,
     render::debug::DebugShapes,
     resources::Resources,
 };
 
-use egui::Color32;
+use egui::{Color32, Rect};
 use frustum_query::frustum::Frustum;
 use glam::{Mat4, Vec2};
 use std::{cell::RefCell, rc::Rc};
@@ -48,6 +49,14 @@ impl OverlayProvider for ResourceTypeOverlay {
 
             let maps = resources.get::<MapDataList>().unwrap();
             if let Some((_, _, m)) = maps.current_map() {
+                struct StrippedResourcePoint {
+                    resource: MapResource,
+                    has_havok_data: bool,
+                    is_activity: bool,
+                }
+
+                let mut rp_list = vec![];
+
                 for (_, (transform, res)) in m.scene.query::<(&Transform, &ResourcePoint)>().iter()
                 {
                     if !self.debug_overlay.borrow().map_resource_filter
@@ -77,6 +86,23 @@ impl OverlayProvider for ResourceTypeOverlay {
                         continue;
                     }
 
+                    rp_list.push((
+                        distance,
+                        *transform,
+                        StrippedResourcePoint {
+                            resource: res.resource.clone(),
+                            has_havok_data: res.has_havok_data,
+                            is_activity: res.is_activity,
+                        },
+                    ))
+                }
+
+                if self.debug_overlay.borrow().map_resource_label_background {
+                    rp_list.sort_by(|a, b| a.0.total_cmp(&b.0));
+                    rp_list.reverse();
+                }
+
+                for (_, transform, res) in rp_list {
                     let projected_point = proj_view.project_point3(transform.translation);
 
                     let screen_point = Vec2::new(
@@ -86,6 +112,39 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                     let c = res.resource.debug_color();
                     let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
+                    if self.debug_overlay.borrow().show_map_resource_label {
+                        let debug_string = res.resource.debug_string();
+                        let debug_string_font = egui::FontId::proportional(14.0);
+                        let debug_string_pos: egui::Pos2 =
+                            (screen_point + Vec2::new(14.0, 0.0)).to_array().into();
+                        if self.debug_overlay.borrow().map_resource_label_background {
+                            let debug_string_galley = painter.layout_no_wrap(
+                                debug_string.clone(),
+                                debug_string_font.clone(),
+                                Color32::WHITE,
+                            );
+                            let mut debug_string_rect = egui::Align2::LEFT_CENTER.anchor_rect(
+                                Rect::from_min_size(debug_string_pos, debug_string_galley.size()),
+                            );
+                            debug_string_rect.extend_with_x(debug_string_pos.x - 11.0 - 14.0);
+
+                            painter.rect(
+                                debug_string_rect,
+                                egui::Rounding::none(),
+                                Color32::from_black_alpha(128),
+                                egui::Stroke::default(),
+                            );
+                        }
+
+                        painter.text(
+                            debug_string_pos,
+                            egui::Align2::LEFT_CENTER,
+                            debug_string,
+                            debug_string_font,
+                            color,
+                        );
+                    }
+
                     painter.text(
                         screen_point.to_array().into(),
                         egui::Align2::CENTER_CENTER,
@@ -124,16 +183,6 @@ impl OverlayProvider for ResourceTypeOverlay {
                             "A",
                             egui::FontId::monospace(12.0),
                             Color32::GREEN,
-                        );
-                    }
-
-                    if self.debug_overlay.borrow().show_map_resource_label {
-                        painter.text(
-                            (screen_point + Vec2::new(14.0, 0.0)).to_array().into(),
-                            egui::Align2::LEFT_CENTER,
-                            res.resource.debug_string(),
-                            egui::FontId::proportional(14.0),
-                            color,
                         );
                     }
                 }

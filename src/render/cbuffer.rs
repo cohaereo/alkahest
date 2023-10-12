@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::*;
 
+#[derive(Clone)]
 pub struct ConstantBuffer<T: Sized> {
     dcs: Arc<DeviceContextSwapchain>,
     buffer: ID3D11Buffer,
