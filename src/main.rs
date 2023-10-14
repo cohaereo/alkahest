@@ -585,32 +585,32 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
 
+                        // Find the smallest cubemap volume that the camera is in and set it as the current cubemap
                         let camera = resources.get::<FpsCamera>().unwrap();
-                        let mut located_cubemap = false;
-                        for (_, (transform, volume)) in
+                        let mut smallest_volume = f32::MAX;
+                        let mut smallest_volume_entity = hecs::Entity::DANGLING;
+                        for (e, (transform, volume)) in
                             map.scene.query::<(&Transform, &CubemapVolume)>().iter()
                         {
-                            if volume
-                                .1
-                                .contains_point_oriented(camera.position, transform.rotation)
+                            if volume.1.volume() < smallest_volume
+                                && volume
+                                    .1
+                                    .contains_point_oriented(camera.position, transform.rotation)
                             {
-                                if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                                    cr.0 = Some(volume.2.clone());
-                                    cr.1 = Some(ExtendedHash::Hash32(volume.0));
-                                }
-
-                                located_cubemap = true;
-                                break;
+                                smallest_volume = volume.1.volume();
+                                smallest_volume_entity = e;
                             }
                         }
 
-                        if !located_cubemap {
+                        if let Ok(cubemap) = map.scene.get::<&CubemapVolume>(smallest_volume_entity)
+                        {
                             if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                                cr.0 = None;
+                                cr.0 = Some(cubemap.2.clone());
+                                cr.1 = Some(ExtendedHash::Hash32(cubemap.0));
                             }
+                        } else if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                            cr.0 = None;
                         }
-
-                        // drop(camera);
                     }
                     drop(maps);
 

@@ -803,8 +803,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         cubemap_volume.cubemap_extents.w,
                     );
 
-                    let volume_min = extents_center - extents / 2.0;
-                    let volume_max = extents_center + extents / 2.0;
+                    let volume_min = extents_center - extents;
+                    let volume_max = extents_center + extents;
 
                     renderer
                         .render_data
