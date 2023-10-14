@@ -8,9 +8,10 @@ cbuffer CompositeOptions : register(b0) {
     float time;
     uint tex_i;
     uint lightCount;
+    float4 globalLightDir;
 };
 
-cbuffer DebugShapeOptions : register(b1) {
+cbuffer DebugShapeOptions : register(b10) {
     float4 lineStart;
     float4 lineEnd;
     float4 color;

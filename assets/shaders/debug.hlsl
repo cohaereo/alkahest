@@ -8,9 +8,10 @@ cbuffer CompositeOptions : register(b0) {
     float time;
     uint tex_i;
     uint lightCount;
+    float4 globalLightDir;
 };
 
-cbuffer DebugShapeOptions : register(b1) {
+cbuffer DebugShapeOptions : register(b10) {
     row_major float4x4 modelMatrix;
     float4 color;
 }

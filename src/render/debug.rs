@@ -142,20 +142,20 @@ pub struct DebugShapeRenderer {
 
 impl DebugShapeRenderer {
     pub fn new(dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
-        let data = shader::compile_hlsl(
+        let data_vscube = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug.hlsl"),
             "VShader",
             "vs_5_0",
         )
         .unwrap();
-        let (vshader, _) = shader::load_vshader(&dcs, &data)?;
-        let data = shader::compile_hlsl(
+        let (vshader, _) = shader::load_vshader(&dcs, &data_vscube)?;
+        let data_vsline = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug_line.hlsl"),
             "VShader",
             "vs_5_0",
         )
         .unwrap();
-        let (vshader_line, _) = shader::load_vshader(&dcs, &data)?;
+        let (vshader_line, _) = shader::load_vshader(&dcs, &data_vsline)?;
 
         let input_layout = unsafe {
             dcs.device.CreateInputLayout(
@@ -168,7 +168,7 @@ impl DebugShapeRenderer {
                     InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
                     InstanceDataStepRate: 0,
                 }],
-                &data,
+                &data_vscube,
             )
         }
         .unwrap();
@@ -289,7 +289,7 @@ impl DebugShapeRenderer {
                     self.scope
                         .write(&ScopeAlkDebugShape {
                             model: Mat4::from_scale_rotation_translation(
-                                cube.dimensions(),
+                                cube.extents(),
                                 rotation,
                                 cube.center(),
                             ),
@@ -297,7 +297,7 @@ impl DebugShapeRenderer {
                         })
                         .unwrap();
 
-                    self.scope.bind(1, ShaderStages::all());
+                    self.scope.bind(10, ShaderStages::all());
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
                         self.dcs.context().VSSetShader(&self.vshader, None);
@@ -330,7 +330,7 @@ impl DebugShapeRenderer {
                         self.scope
                             .write(&ScopeAlkDebugShape {
                                 model: Mat4::from_scale_rotation_translation(
-                                    cube.dimensions(),
+                                    cube.extents(),
                                     rotation,
                                     cube.center(),
                                 ),
@@ -370,7 +370,7 @@ impl DebugShapeRenderer {
                         })
                         .unwrap();
 
-                    self.scope_line.bind(1, ShaderStages::all());
+                    self.scope_line.bind(10, ShaderStages::all());
                     unsafe {
                         self.dcs.context().VSSetShader(&self.vshader_line, None);
                         self.dcs.context().PSSetShader(&self.pshader_line, None);
