@@ -41,6 +41,13 @@ impl OverlayProvider for RenderSettingsOverlay {
         let mut render_settings = resources.get_mut::<RenderSettings>().unwrap();
         egui::Window::new("Options").show(ctx, |ui| {
             ui.checkbox(&mut render_settings.draw_lights, "Render lights");
+            ui.indent("render settings specular option indent", |ui| {
+                ui.add_enabled(
+                    render_settings.draw_lights,
+                    egui::Checkbox::new(&mut render_settings.use_specular_map, "Use Specular Maps"),
+                );
+            });
+
             ui.checkbox(
                 &mut render_settings.evaluate_bytecode,
                 "Evaluate TFX bytecode (WIP)",
@@ -328,6 +335,7 @@ pub struct CompositorOptions {
     pub mode: u32,
     pub light_count: u32,
     pub light_dir: Vec4,
+    pub specular_scale: f32,
 }
 
 pub struct RenderSettings {
@@ -338,6 +346,7 @@ pub struct RenderSettings {
     pub evaluate_bytecode: bool,
     pub clear_color: Vec4,
     pub light_dir: Vec3,
+    pub use_specular_map: bool,
 }
 
 impl Default for RenderSettings {
@@ -350,6 +359,7 @@ impl Default for RenderSettings {
             evaluate_bytecode: false,
             clear_color: Vec4::ZERO,
             light_dir: Vec3::NEG_Z,
+            use_specular_map: true,
         }
     }
 }

@@ -39,6 +39,7 @@ cbuffer CompositeOptions : register(b0) {
     uint tex_i;
     uint lightCount;
     float4 globalLightDir;
+    float specularScale;
 };
 
 cbuffer Lights : register(b1) {
@@ -175,13 +176,6 @@ float3 PositionGrid(float3 pos, float size) {
     if(n.z > OFFSET) rgb.b = 1.0;
 
     return rgb;
-}
-
-uint QuerySpecularTextureLevels()
-{
-	uint width, height, levels;
-	SpecularMap.GetDimensions(0, width, height, levels);
-	return levels;
 }
 
 float2 QueryShadowMapTexelSize() {
@@ -342,11 +336,11 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
     float3 diffuseIBL = kD * (float3(0.03, 0.03, 0.03) * albedo);
 
-    uint specularTextureLevels = QuerySpecularTextureLevels();
-    float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb;
+    const uint specularTextureLevels = 8;
+    float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, specularTextureLevels).rgb * specularScale;
 
     // Total specular IBL contribution.
-    float3 specularIBL = specularIrradiance;
+    float3 specularIBL = saturate(smoothness) * (specularIrradiance * F);
 
 	// float3 irradiance = irradianceMap.Sample(textureSampler, N).rgb;
 	// float3 diffuse = albedo;

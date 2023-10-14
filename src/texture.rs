@@ -34,6 +34,12 @@ pub struct TextureHeader {
     pub depth: u16,
     pub array_size: u16,
 
+    pub unk2a: u16,
+    pub unk2c: u8,
+    pub mip_count: u8,
+    pub unk2e: [u8; 10],
+    pub unk38: u32,
+
     #[br(seek_before = SeekFrom::Start(0x3c))]
     #[br(map(|v: u32| (v != u32::MAX).then_some(TagHash(v))))]
     pub large_buffer: Option<TagHash>,
@@ -98,7 +104,6 @@ impl Texture {
                 .to_vec()
         };
 
-        let mut mips = 1;
         if texture.large_buffer.is_some() {
             let ab = package_manager()
                 .read_tag(texture_header_ref)
@@ -107,26 +112,26 @@ impl Texture {
 
             texture_data.extend(ab);
 
-            let mut dim = texture.width.min(texture.width) as usize;
-            mips = 0;
-            while dim > 1 {
-                dim >>= 1;
-                mips += 1;
-            }
+            // let mut dim = texture.width.min(texture.height) as usize;
+            // mips = 0;
+            // while dim > 1 {
+            //     dim >>= 1;
+            //     mips += 1;
+            // }
 
-            let mut required_mip_bytes = 0;
-            for i in 0..mips {
-                let width = texture.width >> i;
-                let height = texture.height >> i;
-                let size = texture
-                    .format
-                    .calculate_pitch(width as usize, height as usize);
-                if (required_mip_bytes + size.1) > texture_data.len() {
-                    mips = i + 1;
-                    break;
-                }
-                required_mip_bytes += size.1;
-            }
+            // let mut required_mip_bytes = 0;
+            // for i in 0..mips {
+            //     let width = texture.width >> i;
+            //     let height = texture.height >> i;
+            //     let size = texture
+            //         .format
+            //         .calculate_pitch(width as usize, height as usize);
+            //     if (required_mip_bytes + size.1) > texture_data.len() {
+            //         mips = i + 1;
+            //         break;
+            //     }
+            //     required_mip_bytes += size.1;
+            // }
         }
 
         let (tex, view) = unsafe {
@@ -195,6 +200,25 @@ impl Texture {
                     })
                 }
 
+                // TODO(cohae): Cubemap mips
+                // let mut offset = 0;
+                // for _ in 0..texture.array_size as usize {
+                //     for i in 0..texture.mip_count {
+                //         let width: u16 = texture.width >> i;
+                //         let height = texture.height >> i;
+                //         let (pitch, slice_pitch) = texture
+                //             .format
+                //             .calculate_pitch(width as usize, height as usize);
+
+                //         initial_data.push(D3D11_SUBRESOURCE_DATA {
+                //             pSysMem: texture_data.as_ptr().add(offset) as _,
+                //             SysMemPitch: pitch as u32,
+                //             SysMemSlicePitch: 0,
+                //         });
+                //         offset += slice_pitch;
+                //     }
+                // }
+
                 let _span_load = debug_span!("Load texturecube").entered();
                 let tex = dcs
                     .device
@@ -245,10 +269,17 @@ impl Texture {
 
                 (TextureHandle::TextureCube(tex), view)
             } else {
+                // TODO(cohae): mips break sometimes when using the full value from the header when there's no large buffer, why?
+                let mipcount_fixed = if texture.large_buffer.is_some() {
+                    texture.mip_count
+                } else {
+                    1
+                };
+
                 let mut initial_data = vec![];
                 let mut offset = 0;
-                for i in 0..mips {
-                    let width = texture.width >> i;
+                for i in 0..mipcount_fixed {
+                    let width: u16 = texture.width >> i;
                     let height = texture.height >> i;
                     let (pitch, slice_pitch) = texture
                         .format
@@ -269,7 +300,7 @@ impl Texture {
                         &D3D11_TEXTURE2D_DESC {
                             Width: texture.width as _,
                             Height: texture.height as _,
-                            MipLevels: mips as u32,
+                            MipLevels: mipcount_fixed as u32,
                             ArraySize: 1 as _,
                             Format: texture.format.into(),
                             SampleDesc: DXGI_SAMPLE_DESC {
@@ -301,7 +332,7 @@ impl Texture {
                         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                             Texture2D: D3D11_TEX2D_SRV {
                                 MostDetailedMip: 0,
-                                MipLevels: mips as _,
+                                MipLevels: mipcount_fixed as _,
                             },
                         },
                     }),

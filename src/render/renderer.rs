@@ -783,6 +783,11 @@ impl Renderer {
                         0
                     },
                     light_dir: render_settings.light_dir.extend(1.0),
+                    specular_scale: if render_settings.use_specular_map {
+                        1.0
+                    } else {
+                        0.0
+                    },
                 };
                 self.scope_alk_composite.write(&compositor_options).unwrap();
                 self.scope_alk_composite.bind(0, ShaderStages::all());
