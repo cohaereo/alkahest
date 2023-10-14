@@ -159,6 +159,14 @@ impl Texture {
                     )
                     .context("Failed to create 3D texture")?;
 
+                let name = format!("Texture3D {0:?}\0", hash);
+                tex.SetPrivateData(
+                    &WKPDID_D3DDebugObjectName,
+                    name.len() as u32 - 1,
+                    Some(name.as_ptr() as _),
+                )
+                .context("Failed to set texture name")?;
+
                 let view = dcs.device.CreateShaderResourceView(
                     &tex,
                     Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
@@ -210,7 +218,7 @@ impl Texture {
                     )
                     .context("Failed to create texture cube")?;
 
-                let name = format!("Tex {0:?}\0", hash);
+                let name = format!("TextureCube {0:?}\0", hash);
                 tex.SetPrivateData(
                     &WKPDID_D3DDebugObjectName,
                     name.len() as u32 - 1,
@@ -277,7 +285,7 @@ impl Texture {
                     )
                     .context("Failed to create 2D texture")?;
 
-                let name = format!("Tex {0:?}\0", hash);
+                let name = format!("Texture2D {0:?}\0", hash);
                 tex.SetPrivateData(
                     &WKPDID_D3DDebugObjectName,
                     name.len() as u32 - 1,

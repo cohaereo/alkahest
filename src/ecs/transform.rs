@@ -5,6 +5,10 @@ pub struct Transform {
     pub translation: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
+    // TODO(cohae): matrix caching
+    // pub world_to_local: Mat4,
+    // /// The inverse of `world_to_local`
+    // pub local_to_world: Mat4,
 }
 
 impl Transform {

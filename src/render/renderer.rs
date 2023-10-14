@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
+use crate::overlays::camera_settings::CurrentCubemap;
 use crate::util::RwLock;
 use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
@@ -748,14 +749,13 @@ impl Renderer {
                 .matcap
                 .bind(&self.dcs, 4, ShaderStages::PIXEL);
 
-            let cubemap_texture = None;
-            // let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
-            //     self.render_data
-            //         .data()
-            //         .textures
-            //         .get(&t.key())
-            //         .map(|t| t.view.clone())
-            // });
+            let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
+                self.render_data
+                    .data()
+                    .textures
+                    .get(&t.key())
+                    .map(|t| t.view.clone())
+            });
 
             self.dcs
                 .context()

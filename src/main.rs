@@ -19,15 +19,19 @@ use std::time::{Duration, Instant};
 use crate::activity::SActivity;
 use crate::ecs::components::ResourcePoint;
 use crate::overlays::console::ConsoleOverlay;
+use crate::structure::ExtendedHash;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{PackageManager, TagHash};
+use ecs::components::CubemapVolume;
+use ecs::transform::Transform;
 use glam::Vec3;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
+use overlays::camera_settings::CurrentCubemap;
 use poll_promise::Promise;
 use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
@@ -321,6 +325,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(EnabledShaderOverrides::default());
     resources.insert(RenderSettings::default());
     resources.insert(ShadowMapsResource::create(dcs.clone()));
+    resources.insert(CurrentCubemap(None, None));
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -580,34 +585,30 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
 
-                        // let camera = resources.get::<FpsCamera>().unwrap();
-                        // if let Some(MapResource::CubemapVolume(c, _)) = map
-                        //     .resource_points
-                        //     .iter()
-                        //     .find(|(r, _)| {
-                        //         if let MapResource::CubemapVolume(_, aabb) = &r.resource {
-                        //             aabb.contains_point(camera.position)
-                        //         } else {
-                        //             false
-                        //         }
-                        //     })
-                        //     .map(|(r, _)| &r.resource)
-                        // {
-                        //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                        //         cr.0 = Some(c.cubemap_name.to_string());
-                        //     }
-                        //     renderer
-                        //         .render_data
-                        //         .data()
-                        //         .textures
-                        //         .get(&c.cubemap_texture)
-                        //         .map(|t| t.view.clone())
-                        // } else {
-                        //     if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                        //         cr.0 = None;
-                        //     }
-                        //     None
-                        // };
+                        let camera = resources.get::<FpsCamera>().unwrap();
+                        let mut located_cubemap = false;
+                        for (_, (transform, volume)) in
+                            map.scene.query::<(&Transform, &CubemapVolume)>().iter()
+                        {
+                            if volume
+                                .1
+                                .contains_point_oriented(camera.position, transform.rotation)
+                            {
+                                if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                                    cr.0 = Some(volume.2.clone());
+                                    cr.1 = Some(ExtendedHash::Hash32(volume.0));
+                                }
+
+                                located_cubemap = true;
+                                break;
+                            }
+                        }
+
+                        if !located_cubemap {
+                            if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                                cr.0 = None;
+                            }
+                        }
 
                         // drop(camera);
                     }

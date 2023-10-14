@@ -9,7 +9,7 @@ use std::{
 use crate::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     ecs::{
-        components::{EntityWorldId, PointLight, ResourcePoint},
+        components::{CubemapVolume, EntityWorldId, PointLight, ResourcePoint},
         transform::Transform,
         Scene,
     },
@@ -810,20 +810,23 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .render_data
                         .load_texture(ExtendedHash::Hash32(cubemap_volume.cubemap_texture));
 
+                    let aabb = AABB {
+                        min: volume_min.truncate().into(),
+                        max: volume_max.truncate().into(),
+                    };
                     scene.spawn((
                         Transform {
                             translation: extents_center.xyz(),
                             rotation: transform.rotation,
                             ..Default::default()
                         },
+                        CubemapVolume(
+                            cubemap_volume.cubemap_texture,
+                            aabb,
+                            cubemap_volume.cubemap_name.to_string(),
+                        ),
                         ResourcePoint {
-                            resource: MapResource::CubemapVolume(
-                                Box::new(cubemap_volume),
-                                AABB {
-                                    min: volume_min.truncate().into(),
-                                    max: volume_max.truncate().into(),
-                                },
-                            ),
+                            resource: MapResource::CubemapVolume(Box::new(cubemap_volume), aabb),
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),

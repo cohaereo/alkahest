@@ -1,6 +1,6 @@
 use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
-use glam::{Quat, Vec2, Vec3, Vec3A, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec3A, Vec4};
 use std::fmt::{Debug, Formatter, Write};
 
 #[derive(BinRead, Copy, Clone, PartialEq)]
@@ -207,6 +207,17 @@ impl AABB {
     //         && point.z <= self.max.z
     // }
 
+    pub fn contains_point_oriented(&self, point: Vec3, orientation: Quat) -> bool {
+        let mut matrix =
+            Mat4::from_scale_rotation_translation(self.extents(), orientation, self.center());
+
+        matrix = matrix.inverse();
+
+        let point_transformed = matrix.project_point3(point);
+
+        point_transformed.cmpge(Vec3::NEG_ONE).all() && point_transformed.cmple(Vec3::ONE).all()
+    }
+
     /// In units cubed
     pub fn volume(&self) -> f32 {
         let dimensions = self.max - self.min;
@@ -219,6 +230,10 @@ impl AABB {
 
     pub fn dimensions(&self) -> Vec3 {
         (self.max - self.min).into()
+    }
+
+    pub fn extents(&self) -> Vec3 {
+        self.dimensions() / 2.0
     }
 }
 

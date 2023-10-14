@@ -1,7 +1,10 @@
+use destiny_pkg::TagHash;
+
 use crate::{
     map_resources::MapResource,
     render::{scopes::ScopeRigidModel, ConstantBuffer},
     structure::ExtendedHash,
+    types::AABB,
 };
 
 #[derive(Copy, Clone)]
@@ -32,3 +35,5 @@ impl ResourcePoint {
 
 /// Just a marker for now
 pub struct PointLight;
+
+pub struct CubemapVolume(pub TagHash, pub AABB, pub String);
