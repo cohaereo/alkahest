@@ -414,6 +414,19 @@ float4 PShader(VSOutput input) : SV_Target {
             float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
             return matcap;
         }
+        case 14: { // Specular
+            float3 normal = DecodeNormal(rt1.xyz);    
+            float smoothness = 4 * (length(normal) - 0.75);
+            float3 worldPos = WorldPosFromDepth(depth, input.uv);
+
+            float3 N = normalize(normal);
+            float3 V = normalize(cameraPos.xyz - worldPos);
+
+            float cosLo = max(0.0, dot(N, V));
+                
+            float3 Lr = 2.0 * cosLo * N - V;
+            return float4(smoothness * SpecularMap.Sample(SampleType, Lr).rgb, 1.0);
+        }
         default: { // Combined
             float4 emission = float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 0.0);
             if(lightCount == 0) {
@@ -425,7 +438,6 @@ float4 PShader(VSOutput input) : SV_Target {
                 );
 
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
-                // float matcap = dot(normal, float3(0.4, 0.4, 0.4)) + 0.5;
                 return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
             } else {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.uv);
