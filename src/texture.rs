@@ -175,11 +175,6 @@ impl Texture {
                     texture.mip_count as usize * texture.array_size as usize
                 ];
 
-                std::fs::write(
-                    format!("tex/{}.bin", hash.hash32().unwrap()),
-                    &*texture_data,
-                )?;
-
                 let mut offset = 0;
                 let mip_count = texture.mip_count as usize;
                 for i in 0..mip_count {
