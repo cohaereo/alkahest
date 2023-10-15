@@ -97,6 +97,8 @@ pub async fn load_maps(
         let mut placement_groups = vec![];
         let mut scene = Scene::new();
 
+        let mut unknown_root_resources: IntMap<u32, usize> = Default::default();
+
         for map_container in &think.child_map.map_resources {
             for table in &map_container.data_tables {
                 let table_data = package_manager().read_tag(table.tag()).unwrap();
@@ -113,6 +115,7 @@ pub async fn load_maps(
                     &mut placement_groups,
                     &mut material_map,
                     &mut to_load_entitymodels,
+                    &mut unknown_root_resources,
                 )?;
             }
         }
@@ -168,11 +171,16 @@ pub async fn load_maps(
                                 &mut placement_groups,
                                 &mut material_map,
                                 &mut to_load_entitymodels,
+                                &mut unknown_root_resources,
                             )?;
                         }
                     }
                 }
             }
+        }
+
+        for (rtype, count) in unknown_root_resources.into_iter() {
+            warn!("World origin resource {} is not parsed! Resource points might be missing ({} instances)", TagHash(rtype), count);
         }
 
         let map_name = stringmap
@@ -717,6 +725,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     placement_groups: &mut Vec<Tag<Unk8080966d>>,
     material_map: &mut IntMap<TagHash, Material>,
     to_load_entitymodels: &mut IntSet<TagHash>,
+    unknown_root_resources: &mut IntMap<u32, usize>,
 ) -> anyhow::Result<()> {
     let renderer = renderer.read();
     let dcs = renderer.dcs.clone();
@@ -1178,16 +1187,31 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         EntityWorldId(data.world_id),
                     ));
                 }
+                0x80809178 => {
+                    scene.spawn((
+                        transform,
+                        ResourcePoint {
+                            resource: MapResource::NamedArea,
+                            ..base_rp
+                        },
+                        EntityWorldId(data.world_id),
+                    ));
+                }
                 u => {
-                    // // println!("{data:x?}");
-                    // if data.translation.x == 0.0
-                    //     && data.translation.y == 0.0
-                    //     && data.translation.z == 0.0
-                    //     && !unknown_root_resources.contains_key(&u)
-                    // {
-                    //     warn!("World origin resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table.tag());
-                    //     unknown_root_resources.insert(u, ());
-                    // }
+                    if data.translation.x == 0.0
+                        && data.translation.y == 0.0
+                        && data.translation.z == 0.0
+                    {
+                        match unknown_root_resources.entry(u) {
+                            std::collections::hash_map::Entry::Occupied(mut o) => {
+                                *o.get_mut() += 1;
+                            }
+                            std::collections::hash_map::Entry::Vacant(v) => {
+                                v.insert(1);
+                            }
+                        }
+                        debug!("World origin resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table_hash);
+                    }
 
                     debug!(
                         "Skipping unknown  resource type {u:x} {:?} (table file {:?})",

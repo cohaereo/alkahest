@@ -1,6 +1,6 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_VOLUME_HIGH,
+    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH,
 };
 use crate::render::debug::DebugShapes;
 use crate::structure::ExtendedHash;
@@ -35,6 +35,7 @@ pub enum MapResource {
     AmbientSound(Option<Unk80809802>) = 10,
     Unk80806cc3(AABB) = 11,
     SpotLight = 12,
+    NamedArea = 13,
 }
 
 impl MapResource {
@@ -91,6 +92,7 @@ impl MapResource {
             }
             MapResource::Unk80806cc3(_) => "Unk80806cc3".to_string(),
             MapResource::SpotLight => "Spotlight".to_string(),
+            MapResource::NamedArea => "NamedArea (TODO: havok)".to_string(),
         }
     }
 
@@ -128,6 +130,7 @@ impl MapResource {
             MapResource::AmbientSound { .. } => RANDOM_COLORS[0x8080666f % 16],
             MapResource::Unk80806cc3(_) => RANDOM_COLORS[0x80806cc3 % 16],
             MapResource::SpotLight => [0xFF, 0xFF, 0x00],
+            MapResource::NamedArea => RANDOM_COLORS[0x80809178 % 16],
         }
     }
 
@@ -141,6 +144,7 @@ impl MapResource {
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
             MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
             MapResource::SpotLight => ICON_SPOTLIGHT_BEAM,
+            MapResource::NamedArea => ICON_TAG,
             _ => ICON_HELP,
         }
     }
