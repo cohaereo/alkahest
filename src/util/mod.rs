@@ -33,3 +33,9 @@ pub fn exe_directory() -> PathBuf {
 pub fn exe_relative_path(path: &str) -> PathBuf {
     exe_directory().join(path)
 }
+
+#[allow(non_snake_case)]
+#[inline]
+pub fn D3D11CalcSubresource(MipSlice: usize, ArraySlice: usize, MipLevels: usize) -> usize {
+    MipSlice + ArraySlice * MipLevels
+}

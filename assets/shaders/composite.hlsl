@@ -337,7 +337,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     float3 diffuseIBL = kD * (float3(0.03, 0.03, 0.03) * albedo);
 
     const uint specularTextureLevels = 8;
-    float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, specularTextureLevels).rgb * specularScale;
+    float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb * specularScale;
 
     // Total specular IBL contribution.
     float3 specularIBL = saturate(smoothness) * (specularIrradiance * F);
@@ -417,6 +417,7 @@ float4 PShader(VSOutput input) : SV_Target {
         case 14: { // Specular
             float3 normal = DecodeNormal(rt1.xyz);    
             float smoothness = 4 * (length(normal) - 0.75);
+            float roughness = 1.0 - saturate(smoothness);
             float3 worldPos = WorldPosFromDepth(depth, input.uv);
 
             float3 N = normalize(normal);
@@ -425,7 +426,8 @@ float4 PShader(VSOutput input) : SV_Target {
             float cosLo = max(0.0, dot(N, V));
                 
             float3 Lr = 2.0 * cosLo * N - V;
-            return float4(smoothness * SpecularMap.Sample(SampleType, Lr).rgb, 1.0);
+            const uint specularTextureLevels = 8;
+            return float4(smoothness * SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb, 1.0);
         }
         default: { // Combined
             float4 emission = float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 0.0);

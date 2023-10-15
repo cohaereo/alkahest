@@ -6,6 +6,7 @@ use crate::structure::ExtendedHash;
 use crate::structure::{CafeMarker, TablePointer};
 use crate::types::IVector2;
 use crate::util::image::Png;
+use crate::util::D3D11CalcSubresource;
 use anyhow::Context;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
@@ -107,31 +108,10 @@ impl Texture {
         if texture.large_buffer.is_some() {
             let ab = package_manager()
                 .read_tag(texture_header_ref)
-                .context("Failed to read texture data")?
+                .context("Failed to read large texture buffer")?
                 .to_vec();
 
             texture_data.extend(ab);
-
-            // let mut dim = texture.width.min(texture.height) as usize;
-            // mips = 0;
-            // while dim > 1 {
-            //     dim >>= 1;
-            //     mips += 1;
-            // }
-
-            // let mut required_mip_bytes = 0;
-            // for i in 0..mips {
-            //     let width = texture.width >> i;
-            //     let height = texture.height >> i;
-            //     let size = texture
-            //         .format
-            //         .calculate_pitch(width as usize, height as usize);
-            //     if (required_mip_bytes + size.1) > texture_data.len() {
-            //         mips = i + 1;
-            //         break;
-            //     }
-            //     required_mip_bytes += size.1;
-            // }
         }
 
         let (tex, view) = unsafe {
@@ -188,36 +168,37 @@ impl Texture {
 
                 (TextureHandle::Texture3D(tex), view)
             } else if texture.array_size > 1 {
-                let mut initial_data = vec![];
-                let (pitch, slice_pitch) = texture
-                    .format
-                    .calculate_pitch(texture.width as _, texture.height as _);
-                for i in 0..texture.array_size as usize {
-                    initial_data.push(D3D11_SUBRESOURCE_DATA {
-                        pSysMem: texture_data.as_ptr().add(i * slice_pitch) as _,
-                        SysMemPitch: pitch as _,
-                        SysMemSlicePitch: 0,
-                    })
+                let texture_data = Box::new(texture_data);
+
+                let mut initial_data = vec![
+                    Default::default();
+                    texture.mip_count as usize * texture.array_size as usize
+                ];
+
+                std::fs::write(
+                    format!("tex/{}.bin", hash.hash32().unwrap()),
+                    &*texture_data,
+                )?;
+
+                let mut offset = 0;
+                let mip_count = texture.mip_count as usize;
+                for i in 0..mip_count {
+                    for e in 0..texture.array_size as usize {
+                        let width = texture.width >> i;
+                        let height = texture.height >> i;
+                        let (pitch, slice_pitch) = texture
+                            .format
+                            .calculate_pitch(width as usize, height as usize);
+
+                        initial_data[D3D11CalcSubresource(i, e, mip_count)] =
+                            D3D11_SUBRESOURCE_DATA {
+                                pSysMem: texture_data.as_ptr().add(offset) as _,
+                                SysMemPitch: pitch as u32,
+                                SysMemSlicePitch: 0,
+                            };
+                        offset += slice_pitch;
+                    }
                 }
-
-                // TODO(cohae): Cubemap mips
-                // let mut offset = 0;
-                // for _ in 0..texture.array_size as usize {
-                //     for i in 0..texture.mip_count {
-                //         let width: u16 = texture.width >> i;
-                //         let height = texture.height >> i;
-                //         let (pitch, slice_pitch) = texture
-                //             .format
-                //             .calculate_pitch(width as usize, height as usize);
-
-                //         initial_data.push(D3D11_SUBRESOURCE_DATA {
-                //             pSysMem: texture_data.as_ptr().add(offset) as _,
-                //             SysMemPitch: pitch as u32,
-                //             SysMemSlicePitch: 0,
-                //         });
-                //         offset += slice_pitch;
-                //     }
-                // }
 
                 let _span_load = debug_span!("Load texturecube").entered();
                 let tex = dcs
@@ -226,7 +207,7 @@ impl Texture {
                         &D3D11_TEXTURE2D_DESC {
                             Width: texture.width as _,
                             Height: texture.height as _,
-                            MipLevels: 1,
+                            MipLevels: mip_count as _,
                             ArraySize: texture.array_size as _,
                             Format: texture.format.into(),
                             SampleDesc: DXGI_SAMPLE_DESC {
@@ -260,7 +241,7 @@ impl Texture {
                             Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                                 TextureCube: D3D11_TEXCUBE_SRV {
                                     MostDetailedMip: 0,
-                                    MipLevels: 1,
+                                    MipLevels: mip_count as _,
                                 },
                             },
                         }),
