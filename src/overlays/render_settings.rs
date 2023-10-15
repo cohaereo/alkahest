@@ -48,6 +48,8 @@ impl OverlayProvider for RenderSettingsOverlay {
                 );
             });
 
+            ui.checkbox(&mut render_settings.fxaa, "Anti-aliasing");
+
             ui.checkbox(
                 &mut render_settings.evaluate_bytecode,
                 "Evaluate TFX bytecode (WIP)",
@@ -339,6 +341,7 @@ pub struct CompositorOptions {
     pub light_count: u32,
     pub light_dir: Vec4,
     pub specular_scale: f32,
+    pub fxaa_enabled: u32,
 }
 
 pub struct RenderSettings {
@@ -350,6 +353,7 @@ pub struct RenderSettings {
     pub clear_color: Vec4,
     pub light_dir: Vec3,
     pub use_specular_map: bool,
+    pub fxaa: bool,
 }
 
 impl Default for RenderSettings {
@@ -363,6 +367,7 @@ impl Default for RenderSettings {
             clear_color: Vec4::ZERO,
             light_dir: Vec3::NEG_Z,
             use_specular_map: true,
+            fxaa: true,
         }
     }
 }

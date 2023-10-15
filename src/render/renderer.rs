@@ -788,6 +788,7 @@ impl Renderer {
                     } else {
                         0.0
                     },
+                    fxaa_enabled: if render_settings.fxaa { 1 } else { 0 },
                 };
                 self.scope_alk_composite.write(&compositor_options).unwrap();
                 self.scope_alk_composite.bind(0, ShaderStages::all());

@@ -174,6 +174,8 @@ pub async fn load_maps(
                                 &mut unknown_root_resources,
                             )?;
                         }
+                    } else {
+                        warn!("null entity resource tag in {}", resource.tag());
                     }
                 }
             }
