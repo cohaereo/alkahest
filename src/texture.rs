@@ -90,7 +90,8 @@ impl Texture {
             .get_entry(
                 hash.hash32()
                     .ok_or_else(|| anyhow::anyhow!("Could not find hash {hash:?}"))?,
-            )?
+            )
+            .context("Texture header entry not found")?
             .reference;
 
         let texture: TextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;

@@ -110,7 +110,7 @@ fn spawn_thread_buffers(
         .spawn(move || {
             while let Ok((hash, create_srv)) = rx.recv() {
                 if hash.is_some() {
-                    if let Ok(entry) = package_manager().get_entry(hash) {
+                    if let Some(entry) = package_manager().get_entry(hash) {
                         match (entry.file_type, entry.file_subtype) {
                             // Vertex buffer
                             (32, 4) => {

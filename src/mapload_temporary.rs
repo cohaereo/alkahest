@@ -533,7 +533,7 @@ pub async fn load_maps(
                 to_load_samplers.insert(*sampler);
             }
 
-            if let Ok(v) = package_manager().get_entry(m.vertex_shader) {
+            if let Some(v) = package_manager().get_entry(m.vertex_shader) {
                 let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
 
                 vshader_map.entry(m.vertex_shader).or_insert_with(|| {
@@ -597,7 +597,7 @@ pub async fn load_maps(
 
             // return Ok(());
 
-            if let Ok(v) = package_manager().get_entry(m.pixel_shader) {
+            if let Some(v) = package_manager().get_entry(m.pixel_shader) {
                 let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
 
                 pshader_map.entry(m.pixel_shader).or_insert_with(|| {

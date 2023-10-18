@@ -763,8 +763,8 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.5.0"
-source = "git+https://github.com/v4nguard/destiny-pkg#1b80475d638923e3a11d5392635627923ea5f30d"
+version = "0.6.0"
+source = "git+https://github.com/v4nguard/destiny-pkg#29e7bbb65cc0c9882737fff4636dc8f480e029d5"
 dependencies = [
  "aes",
  "aes-gcm",

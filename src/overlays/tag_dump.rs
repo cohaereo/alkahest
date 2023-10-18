@@ -32,7 +32,7 @@ impl TagDumper {
 
     fn dump_entry(&self, tag: TagHash) -> Result<UEntryHeader, String> {
         let entry_header = package_manager().get_entry(tag);
-        if let Ok(entry) = entry_header {
+        if let Some(entry) = entry_header {
             std::fs::create_dir("tags").ok();
 
             let file_path = format!(

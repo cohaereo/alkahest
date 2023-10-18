@@ -164,7 +164,6 @@ pub async fn main() -> anyhow::Result<()> {
             PackageManager::new(
                 PathBuf::from_str(&args.package).unwrap().parent().unwrap(),
                 PackageVersion::Destiny2Lightfall,
-                true,
             )
             .unwrap(),
         )
