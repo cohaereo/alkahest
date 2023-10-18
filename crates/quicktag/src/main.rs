@@ -1,4 +1,3 @@
-mod cache;
 mod gui;
 mod packages;
 mod references;
