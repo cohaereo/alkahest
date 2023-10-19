@@ -160,37 +160,26 @@ impl View for TagView {
                     ui.label(egui::RichText::new("Tag references in this file").strong());
                     ui.group(|ui| {
                         for tag in &self.scan.file_hashes {
-                            let tagtype = TagType::from_type_subtype(
-                                tag.entry.file_type,
-                                tag.entry.file_subtype,
-                            );
-                            let ref_label = REFERENCE_MAP
-                                .read()
-                                .get(&tag.entry.reference)
-                                .map(|s| format!(" ({s})"))
-                                .unwrap_or_default();
-                            let color = if ref_label.is_empty() {
-                                tagtype.display_color()
+                            let tag_label = if let Some(entry) = &tag.entry {
+                                let tagtype =
+                                    TagType::from_type_subtype(entry.file_type, entry.file_subtype);
+
+                                let fancy_tag = format_tag_entry(tag.hash.hash32(), Some(entry));
+
+                                egui::RichText::new(format!("{fancy_tag} @ 0x{:X}", tag.offset))
+                                    .color(tagtype.display_color())
                             } else {
-                                Color32::WHITE
+                                egui::RichText::new(format!(
+                                    "{} (pkg entry not found) @ 0x{:X}",
+                                    tag.hash, tag.offset
+                                ))
+                                .color(Color32::LIGHT_RED)
                             };
 
                             // TODO(cohae): Highlight/jump to tag in hex viewer
                             let response = ui.add_enabled(
                                 tag.hash.hash32() != self.tag,
-                                egui::SelectableLabel::new(
-                                    false,
-                                    egui::RichText::new(format!(
-                                        "{} {}{ref_label} ({}+{}, ref {}) @ 0x{:X}",
-                                        tag.hash,
-                                        tagtype,
-                                        tag.entry.file_type,
-                                        tag.entry.file_subtype,
-                                        TagHash(tag.entry.reference),
-                                        tag.offset
-                                    ))
-                                    .color(color),
-                                ),
+                                egui::SelectableLabel::new(false, tag_label),
                             );
 
                             if response
@@ -348,22 +337,20 @@ impl ExtendedScanResult {
         file_hashes_combined.extend(s.file_hashes.into_iter().map(|s| ScannedHashWithEntry {
             offset: s.offset,
             hash: ExtendedTagHash::Hash32(s.hash),
-            entry: package_manager().get_entry(s.hash).unwrap(),
+            entry: package_manager().get_entry(s.hash),
         }));
 
         file_hashes_combined.extend(s.file_hashes64.into_iter().map(|s| {
             ScannedHashWithEntry {
                 offset: s.offset,
                 hash: ExtendedTagHash::Hash64(s.hash),
-                entry: package_manager()
-                    .get_entry(
-                        package_manager()
-                            .hash64_table
-                            .get(&s.hash.0)
-                            .unwrap()
-                            .hash32,
-                    )
-                    .unwrap(),
+                entry: package_manager().get_entry(
+                    package_manager()
+                        .hash64_table
+                        .get(&s.hash.0)
+                        .unwrap()
+                        .hash32,
+                ),
             }
         }));
 
@@ -385,7 +372,7 @@ impl ExtendedScanResult {
 struct ScannedHashWithEntry<T: Sized> {
     pub offset: u64,
     pub hash: T,
-    pub entry: UEntryHeader,
+    pub entry: Option<UEntryHeader>,
 }
 
 /// Traverses down every tag to make a hierarchy of tags
@@ -425,22 +412,9 @@ fn traverse_tag(
 
     seen_tags.insert(tag);
 
-    let entry = pm.get_entry(tag).unwrap();
-    let ref_label = REFERENCE_MAP
-        .read()
-        .get(&entry.reference)
-        .map(|s| format!(" ({s})"))
-        .unwrap_or_default();
-    writeln!(
-        out,
-        "{} {}{ref_label} ({}+{}, ref {}) @ 0x{offset:X}",
-        tag,
-        TagType::from_type_subtype(entry.file_type, entry.file_subtype),
-        entry.file_type,
-        entry.file_subtype,
-        TagHash(entry.reference),
-    )
-    .ok();
+    let entry = pm.get_entry(tag);
+    let fancy_tag = format_tag_entry(tag, entry.as_ref());
+    writeln!(out, "{fancy_tag} @ 0x{offset:X}",).ok();
 
     if depth >= depth_limit {
         let mut line_header = String::new();
@@ -500,22 +474,13 @@ fn traverse_tag(
         }
 
         if seen_tags.contains(t) {
-            let stentry = pm.get_entry(*t).unwrap();
-            let ref_label = REFERENCE_MAP
-                .read()
-                .get(&stentry.reference)
-                .map(|s| format!(" ({s})"))
-                .unwrap_or_default();
-            let fancy_tag = format!(
-                "{} {}{ref_label} ({}+{}, ref {})",
-                *t,
-                TagType::from_type_subtype(stentry.file_type, stentry.file_subtype),
-                stentry.file_type,
-                stentry.file_subtype,
-                TagHash(stentry.reference),
-            );
+            let entry = pm.get_entry(*t);
+            let fancy_tag = format_tag_entry(*t, entry.as_ref());
 
-            if stentry.file_type != 8 && stentry.file_subtype != 16 {
+            if entry
+                .map(|e| e.file_type != 8 && e.file_subtype != 16)
+                .unwrap_or_default()
+            {
                 writeln!(out, "{line_header}{branch}──{fancy_tag} @ 0x{offset:X}").ok();
             } else if *t == parent_tag {
                 writeln!(
@@ -591,4 +556,25 @@ fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
     .ok();
 
     strings
+}
+
+fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
+    if let Some(entry) = entry {
+        let ref_label = REFERENCE_MAP
+            .read()
+            .get(&entry.reference)
+            .map(|s| format!(" ({s})"))
+            .unwrap_or_default();
+
+        format!(
+            "{} {}{ref_label} ({}+{}, ref {})",
+            tag,
+            TagType::from_type_subtype(entry.file_type, entry.file_subtype),
+            entry.file_type,
+            entry.file_subtype,
+            TagHash(entry.reference),
+        )
+    } else {
+        format!("{} (pkg entry not found)", tag)
+    }
 }
