@@ -35,7 +35,7 @@ pub enum MapResource {
     AmbientSound(Option<Unk80809802>) = 10,
     Unk80806cc3(AABB) = 11,
     SpotLight = 12,
-    NamedArea = 13,
+    NamedArea(Unk80809178, String) = 13,
 }
 
 impl MapResource {
@@ -92,7 +92,7 @@ impl MapResource {
             }
             MapResource::Unk80806cc3(_) => "Unk80806cc3".to_string(),
             MapResource::SpotLight => "Spotlight".to_string(),
-            MapResource::NamedArea => "NamedArea (TODO: havok)".to_string(),
+            MapResource::NamedArea(_, s) => format!("NamedArea ('{s}')\n(TODO: havok)"),
         }
     }
 
@@ -130,7 +130,7 @@ impl MapResource {
             MapResource::AmbientSound { .. } => RANDOM_COLORS[0x8080666f % 16],
             MapResource::Unk80806cc3(_) => RANDOM_COLORS[0x80806cc3 % 16],
             MapResource::SpotLight => [0xFF, 0xFF, 0x00],
-            MapResource::NamedArea => RANDOM_COLORS[0x80809178 % 16],
+            MapResource::NamedArea { .. } => RANDOM_COLORS[0x80809178 % 16],
         }
     }
 
@@ -144,7 +144,7 @@ impl MapResource {
             MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
             MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
             MapResource::SpotLight => ICON_SPOTLIGHT_BEAM,
-            MapResource::NamedArea => ICON_TAG,
+            MapResource::NamedArea { .. } => ICON_TAG,
             _ => ICON_HELP,
         }
     }
@@ -508,4 +508,19 @@ pub struct SOcclusionBounds {
 pub struct SMeshInstanceOcclusionBounds {
     pub bb: AABB,
     pub unk20: [u32; 4],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80809178 {
+    // Points to havok pre-tag
+    pub unk0: RelPointer<()>,
+
+    pub unk8: u32,
+    pub unkc: u32,
+    pub area_name: ResourceHash,
+    pub unk14: ResourceHash,
+    pub unk18: ResourceHash,
+
+    // Absolute offset to havok pre-tag??
+    pub unk1c: u64,
 }

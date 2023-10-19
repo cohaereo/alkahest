@@ -51,6 +51,7 @@ lazy_static::lazy_static! {
         (0x80800005, "SStringCharacter"),
         (0x808099F5, "SStringPartDefinition"),
         (0x8080695B, "UnkLights"),
+        (0x80809B06, "SEntityResource")
     ]);
 
     pub static ref REFERENCE_MAP: RwLock<IntMap<u32, &'static str>> = RwLock::new(REFERENCE_MAP_BASE.clone());

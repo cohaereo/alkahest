@@ -1,6 +1,9 @@
 use crate::{
     camera::FpsCamera,
-    ecs::{components::ResourcePoint, transform::Transform},
+    ecs::{
+        components::{ResourceOriginType, ResourcePoint},
+        transform::Transform,
+    },
     map::MapDataList,
     map_resources::MapResource,
     render::debug::DebugShapes,
@@ -52,7 +55,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                 struct StrippedResourcePoint {
                     resource: MapResource,
                     has_havok_data: bool,
-                    is_activity: bool,
+                    origin: ResourceOriginType,
                 }
 
                 let mut rp_list = vec![];
@@ -92,7 +95,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                         StrippedResourcePoint {
                             resource: res.resource.clone(),
                             has_havok_data: res.has_havok_data,
-                            is_activity: res.is_activity,
+                            origin: res.origin,
                         },
                     ))
                 }
@@ -166,7 +169,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                         );
                     }
 
-                    if res.is_activity {
+                    if res.origin != ResourceOriginType::Map {
                         painter.rect(
                             egui::Rect::from_min_size(
                                 screen_point.to_array().into(),
@@ -180,9 +183,17 @@ impl OverlayProvider for ResourceTypeOverlay {
                         painter.text(
                             egui::Pos2::from(screen_point.to_array()) + egui::vec2(5.5, 5.5),
                             egui::Align2::CENTER_CENTER,
-                            "A",
+                            match res.origin {
+                                ResourceOriginType::Map => "M",
+                                ResourceOriginType::Activity => "A",
+                                ResourceOriginType::Activity2 => "A2",
+                            },
                             egui::FontId::monospace(12.0),
-                            Color32::GREEN,
+                            match res.origin {
+                                ResourceOriginType::Map => Color32::LIGHT_RED,
+                                ResourceOriginType::Activity => Color32::GREEN,
+                                ResourceOriginType::Activity2 => Color32::RED,
+                            },
                         );
                     }
                 }

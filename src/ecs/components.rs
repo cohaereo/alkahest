@@ -11,6 +11,14 @@ use crate::{
 /// Tiger entity world ID
 pub struct EntityWorldId(pub u64);
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum ResourceOriginType {
+    Map,
+
+    Activity,
+    Activity2,
+}
+
 pub struct ResourcePoint {
     pub entity: ExtendedHash,
     pub resource_type: u32,
@@ -18,7 +26,7 @@ pub struct ResourcePoint {
 
     pub has_havok_data: bool,
     /// Does this node belong to an activity?
-    pub is_activity: bool,
+    pub origin: ResourceOriginType,
 
     // TODO(cohae): Temporary
     pub entity_cbuffer: ConstantBuffer<ScopeRigidModel>,

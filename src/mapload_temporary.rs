@@ -9,12 +9,12 @@ use std::{
 use crate::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     ecs::{
-        components::{CubemapVolume, EntityWorldId, PointLight, ResourcePoint},
+        components::{CubemapVolume, EntityWorldId, PointLight, ResourceOriginType, ResourcePoint},
         transform::Transform,
         Scene,
     },
     map::SMapDataTable,
-    map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809802},
+    map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809178, Unk80809802},
     util::RwLock,
 };
 use anyhow::Context;
@@ -70,7 +70,13 @@ pub async fn load_maps(
         let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
         for u1 in &activity.unk50 {
             for map in &u1.map_references {
-                let map32 = map.hash32().unwrap();
+                let map32 = match map.hash32() {
+                    Some(m) => m,
+                    None => {
+                        error!("Couldn't translate map hash64 {map:?}");
+                        continue;
+                    }
+                };
 
                 for u2 in &u1.unk18 {
                     match activity_entref_tables.entry(map32) {
@@ -110,7 +116,8 @@ pub async fn load_maps(
                     &mut cur,
                     &mut scene,
                     renderer_ch.clone(),
-                    false,
+                    ResourceOriginType::Map,
+                    stringmap.clone(),
                     &mut terrains,
                     &mut placement_groups,
                     &mut material_map,
@@ -126,23 +133,23 @@ pub async fn load_maps(
                 for resource in &e.unk18.entity_resources {
                     if resource.entity_resource.is_some() {
                         let data = package_manager().read_tag(resource.entity_resource)?;
-                        let mut cur = Cursor::new(data);
+                        let mut cur = Cursor::new(&data);
                         let res: SEntityResource = cur.read_le()?;
 
-                        let mut data_tables = vec![];
+                        let mut data_tables = IntSet::default();
                         match res.unk18.resource_type {
                             0x808092d8 => {
                                 cur.seek(SeekFrom::Start(res.unk18.offset))?;
                                 let tag: Unk808092d8 = cur.read_le()?;
                                 if tag.unk84.is_some() {
-                                    data_tables.push(tag.unk84);
+                                    data_tables.insert(tag.unk84);
                                 }
                             }
                             0x80808cef => {
                                 cur.seek(SeekFrom::Start(res.unk18.offset))?;
                                 let tag: Unk80808cef = cur.read_le()?;
                                 if tag.unk58.is_some() {
-                                    data_tables.push(tag.unk58);
+                                    data_tables.insert(tag.unk58);
                                 }
                             }
                             u => {
@@ -156,9 +163,33 @@ pub async fn load_maps(
                             }
                         }
 
+                        let mut data_tables2 = IntSet::default();
+                        // TODO(cohae): This is a very dirty hack to find every other data table in the entityresource. We need to fully flesh out the EntityResource format first.
+                        // TODO(cohae): PS: gets assigned as Activity2 to keep them separate from known tables
+                        for b in data.chunks_exact(4) {
+                            let v: [u8; 4] = b.try_into().unwrap();
+                            let hash = TagHash(u32::from_le_bytes(v));
+
+                            if hash.is_pkg_file()
+                                && package_manager()
+                                    .get_entry(hash)
+                                    .map(|v| v.reference == 0x80809883)
+                                    .unwrap_or_default()
+                                && !data_tables.contains(&hash)
+                            {
+                                data_tables2.insert(hash);
+                            }
+                        }
+
+                        if !data_tables2.is_empty() {
+                            let tstr = data_tables2.iter().map(|v| v.to_string()).join(", ");
+                            warn!("TODO: Found {} map data tables ({}) EntityResource by brute force ({} found normally)", data_tables2.len(), tstr, data_tables.len());
+                        }
+
                         for table_tag in data_tables {
-                            let table: SMapDataTable =
-                                package_manager().read_tag_struct(table_tag)?;
+                            let data = package_manager().read_tag(table_tag)?;
+                            let mut cur = Cursor::new(&data);
+                            let table: SMapDataTable = cur.read_le()?;
 
                             load_datatable_into_scene(
                                 &table,
@@ -166,7 +197,29 @@ pub async fn load_maps(
                                 &mut cur,
                                 &mut scene,
                                 renderer_ch.clone(),
-                                true,
+                                ResourceOriginType::Activity,
+                                stringmap.clone(),
+                                &mut terrains,
+                                &mut placement_groups,
+                                &mut material_map,
+                                &mut to_load_entitymodels,
+                                &mut unknown_root_resources,
+                            )?;
+                        }
+
+                        for table_tag in data_tables2 {
+                            let data = package_manager().read_tag(table_tag)?;
+                            let mut cur = Cursor::new(&data);
+                            let table: SMapDataTable = cur.read_le()?;
+
+                            load_datatable_into_scene(
+                                &table,
+                                table_tag,
+                                &mut cur,
+                                &mut scene,
+                                renderer_ch.clone(),
+                                ResourceOriginType::Activity2,
+                                stringmap.clone(),
                                 &mut terrains,
                                 &mut placement_groups,
                                 &mut material_map,
@@ -291,22 +344,21 @@ pub async fn load_maps(
                             }
                         }
 
-                        if entity_renderers
-                            .insert(
-                                te.key(),
-                                debug_span!("load EntityRenderer").in_scope(|| {
-                                    EntityRenderer::load(
-                                        model.0,
-                                        entity_material_map.to_vec(),
-                                        materials.iter().map(|m| m.tag()).collect_vec(),
-                                        &renderer,
-                                        &dcs,
-                                    )
-                                })?,
+                        match debug_span!("load EntityRenderer").in_scope(|| {
+                            EntityRenderer::load(
+                                model.0,
+                                entity_material_map.to_vec(),
+                                materials.iter().map(|m| m.tag()).collect_vec(),
+                                &renderer,
+                                &dcs,
                             )
-                            .is_some()
-                        {
-                            error!("More than 1 model was loaded for entity {nh}");
+                        }) {
+                            Ok(er) => {
+                                entity_renderers.insert(te.key(), er);
+                            }
+                            Err(e) => {
+                                error!("Failed to load entity {te:?}: {e}");
+                            }
                         }
 
                         // println!(" - EntityModel {model:?}");
@@ -350,10 +402,15 @@ pub async fn load_maps(
             }
         }
 
-        if let Ok(er) = debug_span!("load EntityRenderer")
+        match debug_span!("load EntityRenderer")
             .in_scope(|| EntityRenderer::load(model, vec![], vec![], &renderer, &dcs))
         {
-            entity_renderers.insert(t.0 as u64, er);
+            Ok(er) => {
+                entity_renderers.insert(t.0 as u64, er);
+            }
+            Err(e) => {
+                error!("Failed to load entity {t}: {e}");
+            }
         }
     }
 
@@ -721,7 +778,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
     table_data: &mut R,
     scene: &mut Scene,
     renderer: Arc<RwLock<Renderer>>,
-    is_activity: bool,
+    resource_origin: ResourceOriginType,
+    stringmap: Arc<IntMap<u32, String>>,
 
     terrain_headers: &mut Vec<(TagHash, Unk8080714f)>,
     placement_groups: &mut Vec<Tag<Unk8080966d>>,
@@ -742,7 +800,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
         let base_rp = ResourcePoint {
             entity: data.entity,
             has_havok_data: is_physics_entity(data.entity),
-            is_activity,
+            origin: resource_origin,
             resource_type: data.data_resource.resource_type,
             resource: MapResource::Unknown(
                 data.data_resource.resource_type,
@@ -1190,10 +1248,21 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ));
                 }
                 0x80809178 => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk80809178 = table_data.read_le()?;
+                    let name = stringmap
+                        .get(&d.area_name.0)
+                        .cloned()
+                        .unwrap_or_else(|| format!("[MissingString_{:08x}]", d.area_name.0));
+
                     scene.spawn((
                         transform,
                         ResourcePoint {
-                            resource: MapResource::NamedArea,
+                            resource: MapResource::NamedArea(d, name),
+                            has_havok_data: true,
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
@@ -1216,7 +1285,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     }
 
                     debug!(
-                        "Skipping unknown  resource type {u:x} {:?} (table file {:?})",
+                        "Skipping unknown resource type {u:x} {:?} (table file {:?})",
                         data.translation, table_hash
                     );
                     scene.spawn((transform, base_rp, EntityWorldId(data.world_id)));

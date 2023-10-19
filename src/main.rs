@@ -274,7 +274,14 @@ pub async fn main() -> anyhow::Result<()> {
 
             for u in &activity.unk50 {
                 for m in &u.map_references {
-                    maps.insert(m.hash32().unwrap());
+                    match m.hash32() {
+                        Some(m) => {
+                            maps.insert(m);
+                        }
+                        None => {
+                            error!("Couldn't translate map reference hash64 {m:?}");
+                        }
+                    }
                 }
             }
 
