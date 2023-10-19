@@ -1,9 +1,11 @@
 use std::{
     fmt::Display,
+    io::{Cursor, Read, Seek, SeekFrom},
     sync::Arc,
     time::{Duration, Instant},
 };
 
+use binrw::BinReaderExt;
 use destiny_pkg::{package::UEntryHeader, TagHash, TagHash64};
 use eframe::{
     egui::{self, RichText},
@@ -32,6 +34,7 @@ pub struct TagView {
     cache: Arc<TagCache>,
     string_cache: Arc<StringCache>,
     string_hashes: Vec<(u64, u32)>,
+    raw_strings: Vec<(u64, String)>,
 
     tag: TagHash,
     // tag_data: Vec<u8>,
@@ -51,15 +54,25 @@ impl TagView {
         tag: TagHash,
     ) -> Option<TagView> {
         let tag_data = package_manager().read_tag(tag).unwrap();
+        let mut raw_string_offsets = vec![];
         let mut string_hashes = vec![];
         for (i, b) in tag_data.chunks_exact(4).enumerate() {
             let v: [u8; 4] = b.try_into().unwrap();
             let hash = u32::from_le_bytes(v);
 
+            if hash == 0x80800065 {
+                raw_string_offsets.push(i as u64 * 4);
+            }
+
             if string_cache.contains_key(&hash) {
                 string_hashes.push((i as u64 * 4, hash));
             }
         }
+
+        let raw_strings = raw_string_offsets
+            .into_iter()
+            .flat_map(|o| read_raw_string_blob(&tag_data, o))
+            .collect_vec();
 
         Some(Self {
             string_hashes,
@@ -73,6 +86,7 @@ impl TagView {
             tag_traversal: None,
             // traversal_show_strings: false,
             string_cache,
+            raw_strings,
             start_time: Instant::now(),
         })
     }
@@ -186,47 +200,6 @@ impl View for TagView {
                                 open_new_tag = Some(tag.hash.hash32());
                             }
                         }
-
-                        // for tag in &self.scan.file_hashes64 {
-                        //     let tagtype = TagType::from_type_subtype(
-                        //         tag.entry.file_type,
-                        //         tag.entry.file_subtype,
-                        //     );
-                        //     let ref_label = REFERENCE_MAP
-                        //         .read()
-                        //         .get(&tag.entry.reference)
-                        //         .map(|s| format!(" ({s})"))
-                        //         .unwrap_or_default();
-                        //     let color = if ref_label.is_empty() {
-                        //         tagtype.display_color()
-                        //     } else {
-                        //         Color32::WHITE
-                        //     };
-
-                        //     // TODO(cohae): Highlight/jump to tag in hex viewer
-                        //     if ui
-                        //         .selectable_label(
-                        //             false,
-                        //             egui::RichText::new(format!(
-                        //                 "{} {}{ref_label} ({}+{}, ref {}) @ 0x{:X}",
-                        //                 tag.hash,
-                        //                 tagtype,
-                        //                 tag.entry.file_type,
-                        //                 tag.entry.file_subtype,
-                        //                 TagHash(tag.entry.reference),
-                        //                 tag.offset
-                        //             ))
-                        //             .color(color),
-                        //         )
-                        //         .context_menu(|ui| tag_context64(ui, tag.hash))
-                        //         .clicked()
-                        //     {
-                        //         open_new_tag = package_manager()
-                        //             .hash64_table
-                        //             .get(&tag.hash.0)
-                        //             .map(|e| e.hash32);
-                        //     }
-                        // }
                     });
                 });
             });
@@ -311,6 +284,20 @@ impl View for TagView {
                                 .clicked();
                             }
                         }
+                    }
+                });
+
+                ui.label(egui::RichText::new("Raw strings (65008080)").strong());
+                ui.group(|ui| {
+                    for (offset, string) in &self.raw_strings {
+                        ui.selectable_label(false, format!("'{}' @ 0x{:X}", string, offset))
+                            .context_menu(|ui| {
+                                if ui.selectable_label(false, "Copy text").clicked() {
+                                    ui.output_mut(|o| o.copied_text = string.clone());
+                                    ui.close_menu();
+                                }
+                            })
+                            .clicked();
                     }
                 });
             });
@@ -566,4 +553,42 @@ fn traverse_tag(
     }
 
     writeln!(out, "{line_header}").ok();
+}
+
+fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
+    let mut strings = vec![];
+
+    let mut c = Cursor::new(data);
+    (|| {
+        c.seek(SeekFrom::Start(offset + 4))?;
+        let buffer_size: u64 = c.read_le()?;
+        let buffer_base_offset = offset + 4 + 8;
+        let mut buffer = vec![0u8; buffer_size as usize];
+        c.read_exact(&mut buffer)?;
+
+        let mut s = String::new();
+        let mut string_start = 0_u64;
+        for (i, b) in buffer.into_iter().enumerate() {
+            match b as char {
+                '\0' => {
+                    if !s.is_empty() {
+                        strings.push((buffer_base_offset + string_start, s.clone()));
+                        s.clear();
+                    }
+
+                    string_start = i as u64 + 1;
+                }
+                c => s.push(c),
+            }
+        }
+
+        if !s.is_empty() {
+            strings.push((buffer_base_offset + string_start, s));
+        }
+
+        <anyhow::Result<()>>::Ok(())
+    })()
+    .ok();
+
+    strings
 }
