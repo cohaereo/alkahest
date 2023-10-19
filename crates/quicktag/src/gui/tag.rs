@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -23,7 +24,7 @@ use crate::{
 };
 
 use super::{
-    common::{open_tag_in_default_application, tag_context, tag_context64},
+    common::{open_tag_in_default_application, tag_context},
     View,
 };
 
@@ -162,7 +163,7 @@ impl View for TagView {
 
                             // TODO(cohae): Highlight/jump to tag in hex viewer
                             let response = ui.add_enabled(
-                                tag.hash != self.tag,
+                                tag.hash.hash32() != self.tag,
                                 egui::SelectableLabel::new(
                                     false,
                                     egui::RichText::new(format!(
@@ -179,53 +180,53 @@ impl View for TagView {
                             );
 
                             if response
-                                .context_menu(|ui| tag_context(ui, tag.hash))
+                                .context_menu(|ui| tag_context(ui, tag.hash.hash32()))
                                 .clicked()
                             {
-                                open_new_tag = Some(tag.hash);
+                                open_new_tag = Some(tag.hash.hash32());
                             }
                         }
 
-                        for tag in &self.scan.file_hashes64 {
-                            let tagtype = TagType::from_type_subtype(
-                                tag.entry.file_type,
-                                tag.entry.file_subtype,
-                            );
-                            let ref_label = REFERENCE_MAP
-                                .read()
-                                .get(&tag.entry.reference)
-                                .map(|s| format!(" ({s})"))
-                                .unwrap_or_default();
-                            let color = if ref_label.is_empty() {
-                                tagtype.display_color()
-                            } else {
-                                Color32::WHITE
-                            };
+                        // for tag in &self.scan.file_hashes64 {
+                        //     let tagtype = TagType::from_type_subtype(
+                        //         tag.entry.file_type,
+                        //         tag.entry.file_subtype,
+                        //     );
+                        //     let ref_label = REFERENCE_MAP
+                        //         .read()
+                        //         .get(&tag.entry.reference)
+                        //         .map(|s| format!(" ({s})"))
+                        //         .unwrap_or_default();
+                        //     let color = if ref_label.is_empty() {
+                        //         tagtype.display_color()
+                        //     } else {
+                        //         Color32::WHITE
+                        //     };
 
-                            // TODO(cohae): Highlight/jump to tag in hex viewer
-                            if ui
-                                .selectable_label(
-                                    false,
-                                    egui::RichText::new(format!(
-                                        "{} {}{ref_label} ({}+{}, ref {}) @ 0x{:X}",
-                                        tag.hash,
-                                        tagtype,
-                                        tag.entry.file_type,
-                                        tag.entry.file_subtype,
-                                        TagHash(tag.entry.reference),
-                                        tag.offset
-                                    ))
-                                    .color(color),
-                                )
-                                .context_menu(|ui| tag_context64(ui, tag.hash))
-                                .clicked()
-                            {
-                                open_new_tag = package_manager()
-                                    .hash64_table
-                                    .get(&tag.hash.0)
-                                    .map(|e| e.hash32);
-                            }
-                        }
+                        //     // TODO(cohae): Highlight/jump to tag in hex viewer
+                        //     if ui
+                        //         .selectable_label(
+                        //             false,
+                        //             egui::RichText::new(format!(
+                        //                 "{} {}{ref_label} ({}+{}, ref {}) @ 0x{:X}",
+                        //                 tag.hash,
+                        //                 tagtype,
+                        //                 tag.entry.file_type,
+                        //                 tag.entry.file_subtype,
+                        //                 TagHash(tag.entry.reference),
+                        //                 tag.offset
+                        //             ))
+                        //             .color(color),
+                        //         )
+                        //         .context_menu(|ui| tag_context64(ui, tag.hash))
+                        //         .clicked()
+                        //     {
+                        //         open_new_tag = package_manager()
+                        //             .hash64_table
+                        //             .get(&tag.hash.0)
+                        //             .map(|e| e.hash32);
+                        //     }
+                        // }
                     });
                 });
             });
@@ -322,9 +323,31 @@ impl View for TagView {
     }
 }
 
+enum ExtendedTagHash {
+    Hash32(TagHash),
+    Hash64(TagHash64),
+}
+
+impl ExtendedTagHash {
+    pub fn hash32(&self) -> TagHash {
+        match self {
+            ExtendedTagHash::Hash32(h) => *h,
+            ExtendedTagHash::Hash64(h) => package_manager().hash64_table.get(&h.0).unwrap().hash32,
+        }
+    }
+}
+
+impl Display for ExtendedTagHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExtendedTagHash::Hash32(h) => h.fmt(f),
+            ExtendedTagHash::Hash64(h) => h.fmt(f),
+        }
+    }
+}
+
 struct ExtendedScanResult {
-    pub file_hashes: Vec<ScannedHashWithEntry<TagHash>>,
-    pub file_hashes64: Vec<ScannedHashWithEntry<TagHash64>>,
+    pub file_hashes: Vec<ScannedHashWithEntry<ExtendedTagHash>>,
     pub string_hashes: Vec<ScannedHash<u32>>,
 
     /// References from other files
@@ -333,17 +356,34 @@ struct ExtendedScanResult {
 
 impl ExtendedScanResult {
     pub fn from_scanresult(s: ScanResult) -> ExtendedScanResult {
+        let mut file_hashes_combined = vec![];
+
+        file_hashes_combined.extend(s.file_hashes.into_iter().map(|s| ScannedHashWithEntry {
+            offset: s.offset,
+            hash: ExtendedTagHash::Hash32(s.hash),
+            entry: package_manager().get_entry(s.hash).unwrap(),
+        }));
+
+        file_hashes_combined.extend(s.file_hashes64.into_iter().map(|s| {
+            ScannedHashWithEntry {
+                offset: s.offset,
+                hash: ExtendedTagHash::Hash64(s.hash),
+                entry: package_manager()
+                    .get_entry(
+                        package_manager()
+                            .hash64_table
+                            .get(&s.hash.0)
+                            .unwrap()
+                            .hash32,
+                    )
+                    .unwrap(),
+            }
+        }));
+
+        file_hashes_combined.sort_unstable_by_key(|v| v.offset);
+
         ExtendedScanResult {
-            file_hashes: s
-                .file_hashes
-                .into_iter()
-                .filter_map(ScannedHashWithEntry::from_scannedhash)
-                .collect(),
-            file_hashes64: s
-                .file_hashes64
-                .into_iter()
-                .filter_map(ScannedHashWithEntry::from_scannedhash64)
-                .collect(),
+            file_hashes: file_hashes_combined,
             string_hashes: s.string_hashes,
             references: s
                 .references
@@ -359,29 +399,6 @@ struct ScannedHashWithEntry<T: Sized> {
     pub offset: u64,
     pub hash: T,
     pub entry: UEntryHeader,
-}
-
-impl ScannedHashWithEntry<TagHash> {
-    pub fn from_scannedhash(s: ScannedHash<TagHash>) -> Option<ScannedHashWithEntry<TagHash>> {
-        Some(ScannedHashWithEntry {
-            offset: s.offset,
-            hash: s.hash,
-            entry: package_manager().get_entry(s.hash)?,
-        })
-    }
-}
-
-impl ScannedHashWithEntry<TagHash64> {
-    pub fn from_scannedhash64(
-        s: ScannedHash<TagHash64>,
-    ) -> Option<ScannedHashWithEntry<TagHash64>> {
-        Some(ScannedHashWithEntry {
-            offset: s.offset,
-            hash: s.hash,
-            entry: package_manager()
-                .get_entry(package_manager().hash64_table.get(&s.hash.0)?.hash32)?,
-        })
-    }
 }
 
 /// Traverses down every tag to make a hierarchy of tags
@@ -469,12 +486,7 @@ fn traverse_tag(
     let all_hashes = scan
         .file_hashes
         .iter()
-        .map(|v| (v.hash, v.offset))
-        .chain(
-            scan.file_hashes64
-                .iter()
-                .map(|v| (pm.hash64_table.get(&v.hash.0).unwrap().hash32, v.offset)),
-        )
+        .map(|v| (v.hash.hash32(), v.offset))
         .collect_vec();
 
     if all_hashes.is_empty() {
