@@ -20,7 +20,7 @@ use std::fmt::Write;
 use crate::{
     packages::package_manager,
     references::REFERENCE_MAP,
-    scanner::{ScanResult, ScannedHash, TagCache},
+    scanner::{ScanResult, TagCache},
     tagtypes::TagType,
     text::StringCache,
 };
@@ -43,7 +43,7 @@ pub struct TagView {
     scan: ExtendedScanResult,
     tag_traversal: Option<Promise<String>>,
     traversal_depth_limit: usize,
-    // traversal_show_strings: bool,
+    traversal_show_strings: bool,
     start_time: Instant,
 }
 
@@ -84,7 +84,7 @@ impl TagView {
             cache,
             traversal_depth_limit: 16,
             tag_traversal: None,
-            // traversal_show_strings: false,
+            traversal_show_strings: false,
             string_cache,
             raw_strings,
             start_time: Instant::now(),
@@ -208,8 +208,9 @@ impl View for TagView {
                     let tag = self.tag;
                     let cache = self.cache.clone();
                     let depth_limit = self.traversal_depth_limit;
+                    let show_strings = self.traversal_show_strings;
                     self.tag_traversal = Some(Promise::spawn_thread("traverse tags", move || {
-                        traverse_tags(tag, depth_limit, cache)
+                        traverse_tags(tag, depth_limit, cache, show_strings)
                     }));
                 }
 
@@ -224,7 +225,10 @@ impl View for TagView {
                 ui.add(egui::DragValue::new(&mut self.traversal_depth_limit).clamp_range(4..=256));
                 ui.label("Max depth");
 
-                // ui.checkbox(&mut self.traversal_show_strings, "Find strings (slow)");
+                ui.checkbox(
+                    &mut self.traversal_show_strings,
+                    "Find strings (currently only shows raw strings)",
+                );
             });
 
             if let Some(traversal) = self.tag_traversal.as_ref() {
@@ -324,7 +328,6 @@ impl Display for ExtendedTagHash {
 
 struct ExtendedScanResult {
     pub file_hashes: Vec<ScannedHashWithEntry<ExtendedTagHash>>,
-    pub string_hashes: Vec<ScannedHash<u32>>,
 
     /// References from other files
     pub references: Vec<(TagHash, UEntryHeader)>,
@@ -358,7 +361,6 @@ impl ExtendedScanResult {
 
         ExtendedScanResult {
             file_hashes: file_hashes_combined,
-            string_hashes: s.string_hashes,
             references: s
                 .references
                 .into_iter()
@@ -376,7 +378,12 @@ struct ScannedHashWithEntry<T: Sized> {
 }
 
 /// Traverses down every tag to make a hierarchy of tags
-fn traverse_tags(starting_tag: TagHash, depth_limit: usize, cache: Arc<TagCache>) -> String {
+fn traverse_tags(
+    starting_tag: TagHash,
+    depth_limit: usize,
+    cache: Arc<TagCache>,
+    show_strings: bool,
+) -> String {
     let mut result = String::new();
     let mut seen_tags = Default::default();
     let mut pipe_stack = vec![];
@@ -390,6 +397,7 @@ fn traverse_tags(starting_tag: TagHash, depth_limit: usize, cache: Arc<TagCache>
         &mut pipe_stack,
         depth_limit,
         cache,
+        show_strings,
     );
 
     result
@@ -405,6 +413,7 @@ fn traverse_tag(
     pipe_stack: &mut Vec<char>,
     depth_limit: usize,
     cache: Arc<TagCache>,
+    show_strings: bool,
 ) {
     let depth = pipe_stack.len();
 
@@ -457,6 +466,28 @@ fn traverse_tag(
     let mut line_header = String::new();
     for s in pipe_stack.iter() {
         write!(line_header, "{s}   ").ok();
+    }
+
+    if show_strings {
+        let tag_data = package_manager().read_tag(tag).unwrap();
+        let mut raw_strings = vec![];
+        for (i, b) in tag_data.chunks_exact(4).enumerate() {
+            let v: [u8; 4] = b.try_into().unwrap();
+            let hash = u32::from_le_bytes(v);
+
+            if hash == 0x80800065 {
+                raw_strings.extend(read_raw_string_blob(&tag_data, i as u64 * 4));
+            }
+        }
+
+        if !raw_strings.is_empty() {
+            writeln!(
+                out,
+                "{line_header}├──Strings: [{}]",
+                raw_strings.into_iter().map(|(_, string)| string).join(", ")
+            )
+            .ok();
+        }
     }
 
     for (i, (t, offset)) in all_hashes.iter().enumerate() {
@@ -512,6 +543,7 @@ fn traverse_tag(
                 pipe_stack,
                 depth_limit,
                 cache.clone(),
+                show_strings,
             );
         }
         pipe_stack.pop();
