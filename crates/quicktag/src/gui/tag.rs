@@ -134,21 +134,10 @@ impl View for TagView {
                     ui.label(egui::RichText::new("Files referencing this tag").strong());
                     ui.group(|ui| {
                         for (tag, entry) in &self.scan.references {
+                            let fancy_tag = format_tag_entry(*tag, Some(entry));
                             let response = ui.add_enabled(
                                 *tag != self.tag,
-                                egui::SelectableLabel::new(
-                                    false,
-                                    format!(
-                                        "{tag} {} ({}+{}, ref {})",
-                                        TagType::from_type_subtype(
-                                            entry.file_type,
-                                            entry.file_subtype
-                                        ),
-                                        entry.file_type,
-                                        entry.file_subtype,
-                                        TagHash(entry.reference)
-                                    ),
-                                ),
+                                egui::SelectableLabel::new(false, fancy_tag),
                             );
 
                             if response.context_menu(|ui| tag_context(ui, *tag)).clicked() {
