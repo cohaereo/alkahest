@@ -1,5 +1,8 @@
 #define CAMERA_CASCADE_CLIP_NEAR 0.1
 #define CAMERA_CASCADE_CLIP_FAR 4000.0
+#define CAMERA_CASCADE_FALLOFF_START 3500.0
+#define CAMERA_CASCADE_FALLOFF_LENGTH (CAMERA_CASCADE_CLIP_FAR-CAMERA_CASCADE_FALLOFF_START)
+
 #define CAMERA_CASCADE_LEVEL_COUNT 4
 
 static float cascadePlaneDistances[CAMERA_CASCADE_LEVEL_COUNT] = {
@@ -251,7 +254,12 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
     }
     shadow /= 9.0;
             
-    return shadow;
+    if(fragmentDistance < CAMERA_CASCADE_FALLOFF_START)
+        return shadow;
+    else {
+        float falloffMul = (fragmentDistance - CAMERA_CASCADE_FALLOFF_START) / CAMERA_CASCADE_FALLOFF_LENGTH;
+        return lerp(shadow, 1.0, falloffMul);
+    }
 }
 
 float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 uv) {
