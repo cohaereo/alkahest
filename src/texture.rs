@@ -247,7 +247,7 @@ impl Texture {
                 (TextureHandle::TextureCube(tex), view)
             } else {
                 // TODO(cohae): mips break sometimes when using the full value from the header when there's no large buffer, why?
-                let mipcount_fixed = if texture.large_buffer.is_some() {
+                let mut mipcount_fixed = if texture.large_buffer.is_some() {
                     texture.mip_count
                 } else {
                     1
@@ -262,12 +262,24 @@ impl Texture {
                         .format
                         .calculate_pitch(width as usize, height as usize);
 
+                    if pitch == 0 {
+                        mipcount_fixed = i;
+                        break;
+                    }
+
                     initial_data.push(D3D11_SUBRESOURCE_DATA {
                         pSysMem: texture_data.as_ptr().add(offset) as _,
                         SysMemPitch: pitch as u32,
                         SysMemSlicePitch: 0,
                     });
                     offset += slice_pitch;
+                }
+
+                if mipcount_fixed < 1 {
+                    error!(
+                        "Invalid mipcount for texture {hash:?} (width={}, height={}, mips={})",
+                        texture.width, texture.height, texture.mip_count
+                    );
                 }
 
                 let _span_load = debug_span!("Load texture2d").entered();
