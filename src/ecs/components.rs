@@ -45,3 +45,5 @@ impl ResourcePoint {
 pub struct PointLight;
 
 pub struct CubemapVolume(pub TagHash, pub AABB, pub String);
+
+pub struct ActivityGroup(pub u32);

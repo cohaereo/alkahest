@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
-use crate::ecs::components::ResourcePoint;
+use crate::ecs::components::{ActivityGroup, ResourcePoint};
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
@@ -58,7 +58,9 @@ use crate::overlays::camera_settings::CameraPositionOverlay;
 use crate::overlays::fps_display::FpsDisplayOverlay;
 use crate::overlays::gui::GuiManager;
 use crate::overlays::load_indicator::LoadIndicatorOverlay;
-use crate::overlays::render_settings::{RenderSettings, RenderSettingsOverlay};
+use crate::overlays::render_settings::{
+    ActivityGroupFilter, RenderSettings, RenderSettingsOverlay,
+};
 use crate::overlays::resource_nametags::ResourceTypeOverlay;
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
@@ -332,6 +334,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(RenderSettings::default());
     resources.insert(ShadowMapsResource::create(dcs.clone()));
     resources.insert(CurrentCubemap(None, None));
+    resources.insert(ActivityGroupFilter::default());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -543,7 +546,19 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
-                            for (_, rp) in map.scene.query::<&ResourcePoint>().iter() {
+                            for (_, (rp, group)) in map
+                                .scene
+                                .query::<(&ResourcePoint, Option<&ActivityGroup>)>()
+                                .iter()
+                            {
+                                if let (Some(group), Some(group_filters)) =
+                                    (group, resources.get::<ActivityGroupFilter>())
+                                {
+                                    if !group_filters.filters.get(&group.0).unwrap_or(&true) {
+                                        continue;
+                                    }
+                                }
+
                                 match rp.resource {
                                     MapResource::Unk80806aa3 { .. } => {
                                         if !gb.renderlayer_background {

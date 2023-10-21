@@ -1,9 +1,12 @@
 use const_format::concatcp;
 use glam::{Mat4, Vec3, Vec4};
+use itertools::Itertools;
+use nohash_hasher::{IntMap, IntSet};
 use std::{fmt::Display, fmt::Formatter, mem::transmute, time::Instant};
 use winit::window::Window;
 
 use crate::{
+    ecs::components::ActivityGroup,
     map::MapDataList,
     render::{
         overrides::{EnabledShaderOverrides, ScopeOverrides},
@@ -255,6 +258,37 @@ impl OverlayProvider for RenderSettingsOverlay {
                 ));
 
                 maps.current_map = current_map;
+
+                let groups_in_current_scene: IntSet<u32> = maps
+                    .current_map()
+                    .unwrap()
+                    .2
+                    .scene
+                    .query::<&ActivityGroup>()
+                    .iter()
+                    .map(|(_, ag)| ag.0)
+                    .collect();
+
+                if !groups_in_current_scene.is_empty() {
+                    ui.collapsing("Activity Groups", |ui| {
+                        let mut groups = resources.get_mut::<ActivityGroupFilter>().unwrap();
+                        // Remove old groups
+                        for g in groups.filters.keys().cloned().collect_vec() {
+                            if !groups_in_current_scene.contains(&g) {
+                                groups.filters.remove(&g);
+                            }
+                        }
+
+                        // Add new groups
+                        for g in &groups_in_current_scene {
+                            groups.filters.entry(*g).or_insert(true);
+                        }
+
+                        for (id, enabled) in groups.filters.iter_mut() {
+                            ui.checkbox(enabled, format!("{id:08X}"));
+                        }
+                    });
+                }
             }
         });
     }
@@ -370,4 +404,9 @@ impl Default for RenderSettings {
             fxaa: true,
         }
     }
+}
+
+#[derive(Default)]
+pub struct ActivityGroupFilter {
+    pub filters: IntMap<u32, bool>,
 }

@@ -9,12 +9,16 @@ use std::{
 use crate::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     ecs::{
-        components::{CubemapVolume, EntityWorldId, PointLight, ResourceOriginType, ResourcePoint},
+        components::{
+            ActivityGroup, CubemapVolume, EntityWorldId, PointLight, ResourceOriginType,
+            ResourcePoint,
+        },
         transform::Transform,
         Scene,
     },
     map::SMapDataTable,
     map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809178, Unk80809802},
+    types::ResourceHash,
     util::RwLock,
 };
 use anyhow::Context;
@@ -65,7 +69,8 @@ pub async fn load_maps(
     let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
     let renderer_ch = renderer.clone();
 
-    let mut activity_entref_tables: IntMap<TagHash, Vec<Tag<Unk80808e89>>> = Default::default();
+    let mut activity_entref_tables: IntMap<TagHash, Vec<(Tag<Unk80808e89>, ResourceHash)>> =
+        Default::default();
     if let Some(activity_hash) = activity_hash {
         let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
         for u1 in &activity.unk50 {
@@ -79,14 +84,10 @@ pub async fn load_maps(
                 };
 
                 for u2 in &u1.unk18 {
-                    match activity_entref_tables.entry(map32) {
-                        std::collections::hash_map::Entry::Occupied(mut o) => {
-                            o.get_mut().push(u2.unk_entity_reference.clone());
-                        }
-                        std::collections::hash_map::Entry::Vacant(v) => {
-                            v.insert(vec![u2.unk_entity_reference.clone()]);
-                        }
-                    };
+                    activity_entref_tables
+                        .entry(map32)
+                        .or_default()
+                        .push((u2.unk_entity_reference.clone(), u2.activity_phase_name2));
                 }
             }
         }
@@ -117,6 +118,7 @@ pub async fn load_maps(
                     &mut scene,
                     renderer_ch.clone(),
                     ResourceOriginType::Map,
+                    0,
                     stringmap.clone(),
                     &mut terrains,
                     &mut placement_groups,
@@ -129,7 +131,7 @@ pub async fn load_maps(
 
         if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
             let mut unknown_res_types: IntSet<u32> = Default::default();
-            for e in activity_entrefs {
+            for (e, phase_name2) in activity_entrefs {
                 for resource in &e.unk18.entity_resources {
                     if resource.entity_resource.is_some() {
                         let data = package_manager().read_tag(resource.entity_resource)?;
@@ -198,6 +200,7 @@ pub async fn load_maps(
                                 &mut scene,
                                 renderer_ch.clone(),
                                 ResourceOriginType::Activity,
+                                phase_name2.0,
                                 stringmap.clone(),
                                 &mut terrains,
                                 &mut placement_groups,
@@ -219,6 +222,7 @@ pub async fn load_maps(
                                 &mut scene,
                                 renderer_ch.clone(),
                                 ResourceOriginType::Activity2,
+                                phase_name2.0,
                                 stringmap.clone(),
                                 &mut terrains,
                                 &mut placement_groups,
@@ -770,7 +774,7 @@ pub struct LoadMapsData {
     pub terrain_renderers: IntMap<u32, TerrainRenderer>,
 }
 
-// clippy: asset system will fix this lint on it's own
+// clippy: asset system will fix this lint on it's own (i hope)
 #[allow(clippy::too_many_arguments)]
 fn load_datatable_into_scene<R: Read + Seek>(
     table: &SMapDataTable,
@@ -779,6 +783,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     scene: &mut Scene,
     renderer: Arc<RwLock<Renderer>>,
     resource_origin: ResourceOriginType,
+    group_id: u32,
     stringmap: Arc<IntMap<u32, String>>,
 
     terrain_headers: &mut Vec<(TagHash, Unk8080714f)>,
@@ -790,6 +795,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     let renderer = renderer.read();
     let dcs = renderer.dcs.clone();
 
+    let mut ents = vec![];
     for data in &table.data_entries {
         let transform = Transform {
             translation: Vec3::new(data.translation.x, data.translation.y, data.translation.z),
@@ -883,7 +889,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         min: volume_min.truncate().into(),
                         max: volume_max.truncate().into(),
                     };
-                    scene.spawn((
+                    ents.push(scene.spawn((
                         Transform {
                             translation: extents_center.xyz(),
                             rotation: transform.rotation,
@@ -899,7 +905,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
-                    ));
+                    )));
                 }
                 0x808067b5 => {
                     table_data
@@ -907,14 +913,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .unwrap();
                     let tag: TagHash = table_data.read_le().unwrap();
 
-                    scene.spawn((
+                    ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
                             resource: MapResource::Unk808067b5(tag),
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
-                    ));
+                    )));
                 }
                 // Decal collection
                 0x80806955 => {
@@ -931,7 +937,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     for inst in &header.instances {
                         for i in inst.start..(inst.start + inst.count) {
                             let transform = header.transforms[i as usize];
-                            scene.spawn((
+                            ents.push(scene.spawn((
                                 Transform {
                                     translation: Vec3::new(transform.x, transform.y, transform.z),
                                     ..Default::default()
@@ -945,7 +951,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     ..base_rp
                                 },
                                 EntityWorldId(data.world_id),
-                            ));
+                            )));
                         }
                     }
                 }
@@ -1016,14 +1022,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
                         .ok();
 
-                    scene.spawn((
+                    ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
                             resource: MapResource::AmbientSound(header),
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
-                    ));
+                    )));
                 }
                 0x80806aa3 => {
                     table_data
@@ -1050,7 +1056,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             w_axis: unk8.transform[3].into(),
                         };
 
-                        scene.spawn((
+                        ents.push(scene.spawn((
                             Transform::from_mat4(mat),
                             ResourcePoint {
                                 resource: MapResource::Unk80806aa3(
@@ -1062,7 +1068,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
-                        ));
+                        )));
                     }
                 }
                 0x80806a63 => {
@@ -1077,7 +1083,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let header: Unk80806c65 = package_manager().read_tag_struct(tag).unwrap();
 
                     for (transform, _unk) in header.unk40.iter().zip(&header.unk30) {
-                        scene.spawn((
+                        ents.push(scene.spawn((
                             Transform {
                                 translation: Vec3::new(
                                     transform.translation.x,
@@ -1099,7 +1105,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             EntityWorldId(data.world_id),
                             PointLight,
-                        ));
+                        )));
                     }
                 }
                 0x80808cb5 => {
@@ -1114,7 +1120,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let header: Unk80808cb7 = package_manager().read_tag_struct(tag).unwrap();
 
                     for transform in header.unk8.iter() {
-                        scene.spawn((
+                        ents.push(scene.spawn((
                             Transform {
                                 translation: Vec3::new(
                                     transform.translation.x,
@@ -1135,7 +1141,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
-                        ));
+                        )));
                     }
                 }
                 0x808085c0 => {
@@ -1150,7 +1156,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let header: Unk808085c2 = package_manager().read_tag_struct(tag).unwrap();
 
                     for transform in header.unk8.iter() {
-                        scene.spawn((
+                        ents.push(scene.spawn((
                             Transform {
                                 translation: Vec3::new(
                                     transform.translation.x,
@@ -1165,7 +1171,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
-                        ));
+                        )));
                     }
                 }
                 0x8080684d => {
@@ -1183,7 +1189,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let header: Unk80806d19 = package_manager().read_tag_struct(tag).unwrap();
 
                     for transform in header.unk50.iter() {
-                        scene.spawn((
+                        ents.push(scene.spawn((
                             Transform {
                                 translation: Vec3::new(
                                     transform.translation.x,
@@ -1198,7 +1204,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
-                        ));
+                        )));
                     }
                 }
                 // Foliage
@@ -1211,7 +1217,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         package_manager().read_tag_struct(header_tag).unwrap();
 
                     for b in &header.unk4c.bounds {
-                        scene.spawn((
+                        ents.push(scene.spawn((
                             Transform {
                                 translation: b.bb.center(),
                                 ..Default::default()
@@ -1222,7 +1228,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
-                        ));
+                        )));
                     }
 
                     // resource_points.push(ResourcePoint {
@@ -1238,14 +1244,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     // });
                 }
                 0x80806c5e => {
-                    scene.spawn((
+                    ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
                             resource: MapResource::SpotLight,
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
-                    ));
+                    )));
                 }
                 0x80809178 => {
                     table_data
@@ -1258,7 +1264,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .cloned()
                         .unwrap_or_else(|| format!("[MissingString_{:08x}]", d.area_name.0));
 
-                    scene.spawn((
+                    ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
                             resource: MapResource::NamedArea(d, name),
@@ -1266,7 +1272,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
-                    ));
+                    )));
                 }
                 u => {
                     if data.translation.x == 0.0
@@ -1288,18 +1294,24 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         "Skipping unknown resource type {u:x} {:?} (table file {:?})",
                         data.translation, table_hash
                     );
-                    scene.spawn((transform, base_rp, EntityWorldId(data.world_id)));
+                    ents.push(scene.spawn((transform, base_rp, EntityWorldId(data.world_id))));
                 }
             };
         } else {
-            scene.spawn((
+            ents.push(scene.spawn((
                 transform,
                 ResourcePoint {
                     resource: MapResource::Entity(data.entity, data.world_id),
                     ..base_rp
                 },
                 EntityWorldId(data.world_id),
-            ));
+            )));
+        }
+    }
+
+    if group_id != 0 {
+        for e in ents {
+            scene.insert_one(e, ActivityGroup(group_id)).ok();
         }
     }
 
