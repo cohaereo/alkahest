@@ -41,20 +41,32 @@ macro_rules! config {
 }
 
 #[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Config {
-    #[serde(default)]
     pub window: WindowConfig,
-    #[serde(default)]
     pub resources: ResourceConfig,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct ResourceConfig {
     pub show_resources: bool,
+    pub resource_distance_limit: bool,
     pub filters: HashMap<String, bool>,
 }
 
+impl Default for ResourceConfig {
+    fn default() -> Self {
+        Self {
+            resource_distance_limit: true,
+            show_resources: false,
+            filters: Default::default(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct WindowConfig {
     pub width: u32,
     pub height: u32,

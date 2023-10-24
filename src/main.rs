@@ -384,7 +384,9 @@ pub async fn main() -> anyhow::Result<()> {
             f
         },
         map_resource_distance: 2000.0,
-        map_resource_distance_limit_enabled: true,
+        map_resource_distance_limit_enabled: config::with(|cfg| {
+            cfg.resources.resource_distance_limit
+        }),
     }));
 
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {
@@ -696,12 +698,14 @@ pub async fn main() -> anyhow::Result<()> {
                         maximised: window.is_maximized(),
                     };
 
+                    let gdb = gui_debug.borrow();
                     let mut resource_filters: HashMap<String, bool> = Default::default();
-                    for (i, enabled) in gui_debug.borrow().map_resource_filter.iter().enumerate() {
+                    for (i, enabled) in gdb.map_resource_filter.iter().enumerate() {
                         resource_filters.insert(MapResource::index_to_id(i).to_string(), *enabled);
                     }
 
-                    c.resources.show_resources = gui_debug.borrow().show_map_resources;
+                    c.resources.show_resources = gdb.show_map_resources;
+                    c.resources.resource_distance_limit = gdb.map_resource_distance_limit_enabled;
                     c.resources.filters = resource_filters;
                 });
                 config::persist();
