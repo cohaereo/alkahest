@@ -17,7 +17,7 @@ use crate::{
         Scene,
     },
     map::SMapDataTable,
-    map_resources::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809178, Unk80809802},
+    map::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809178, Unk80809802},
     types::ResourceHash,
     util::RwLock,
 };
@@ -36,8 +36,11 @@ use crate::structure::ExtendedHash;
 use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     entity::{Unk808072c5, Unk808073a5, Unk80809c0f},
-    map::{MapData, SBubbleParent, Unk80806ef4, Unk8080714f},
-    map_resources::{MapResource, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk8080714b},
+    map::{
+        MapData, SBubbleParent, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk80806ef4,
+        Unk8080714b, Unk8080714f,
+    },
+    map_resources::MapResource,
     material::{Material, Unk808071e8},
     packages::package_manager,
     render::{

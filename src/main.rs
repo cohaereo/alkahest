@@ -8,6 +8,7 @@ extern crate windows;
 extern crate tracing;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
@@ -33,7 +34,6 @@ use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
 use poll_promise::Promise;
-use strum::EnumCount;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, Layer};
@@ -132,7 +132,8 @@ pub async fn main() -> anyhow::Result<()> {
         .unwrap();
 
     if let Ok(c) = std::fs::read_to_string(exe_relative_path("config.yml")) {
-        *CONFIGURATION.write() = serde_yaml::from_str(&c)?;
+        let config = serde_yaml::from_str(&c).context("Failed to parse config")?;
+        config::with_mut(|c| *c = config);
     } else {
         info!("No config found, creating a new one");
         config::persist();
@@ -368,12 +369,18 @@ pub async fn main() -> anyhow::Result<()> {
         last_frame: Instant::now(),
     }));
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
-        show_map_resources: false,
+        show_map_resources: config::with(|cfg| cfg.resources.show_resources),
         show_map_resource_label: true,
         map_resource_label_background: false,
         map_resource_filter: {
-            let mut f = [false; MapResource::COUNT];
-            f[0] = true;
+            let mut f = vec![false; MapResource::max_index() + 1];
+
+            config::with(|cfg| {
+                for (k, v) in cfg.resources.filters.iter() {
+                    f[MapResource::id_to_index(k)] = *v;
+                }
+            });
+
             f
         },
         map_resource_distance: 2000.0,
@@ -389,7 +396,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     let mut gui = GuiManager::create(&window, dcs.clone());
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
-    gui.add_overlay(gui_debug);
+    gui.add_overlay(gui_debug.clone());
     gui.add_overlay(gui_rendersettings.clone());
     gui.add_overlay(gui_resources);
     gui.add_overlay(gui_console);
@@ -688,6 +695,14 @@ pub async fn main() -> anyhow::Result<()> {
                         pos_y: pos.y,
                         maximised: window.is_maximized(),
                     };
+
+                    let mut resource_filters: HashMap<String, bool> = Default::default();
+                    for (i, enabled) in gui_debug.borrow().map_resource_filter.iter().enumerate() {
+                        resource_filters.insert(MapResource::index_to_id(i).to_string(), *enabled);
+                    }
+
+                    c.resources.show_resources = gui_debug.borrow().show_map_resources;
+                    c.resources.filters = resource_filters;
                 });
                 config::persist();
             }

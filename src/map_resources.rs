@@ -2,40 +2,40 @@ use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
     ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH,
 };
+use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
 use crate::render::debug::DebugShapes;
 use crate::structure::ExtendedHash;
-use crate::structure::{RelPointer, ResourcePointer, TablePointer, Tag};
-use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
-use binrw::{BinRead, NullString};
+use crate::structure::ResourcePointer;
+use crate::types::AABB;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
 use itertools::Itertools;
-use std::io::SeekFrom;
+
 use strum::{EnumCount, EnumIs, EnumVariantNames};
 
 #[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
 #[repr(u8)]
+#[strum(serialize_all = "snake_case")]
 pub enum MapResource {
-    // PlacementGroup(TagHash),
-    // Terrain(Unk8080714b),
     /// Generic data entry with no resource
-    Entity(ExtendedHash, u64) = 0,
+    Entity(ExtendedHash, u64),
     Decal {
         material: TagHash,
         scale: f32,
-    } = 1,
-    Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash) = 2,
-    Unk808067b5(TagHash) = 3,
-    CubemapVolume(Box<Unk80806b7f>, AABB) = 4,
-    Unk80806aa3(AABB, TagHash, Mat4) = 5,
-    Light = 6,
-    RespawnPoint = 7,
-    Unk808085c0 = 8,
-    Unk80806a40 = 9,
-    AmbientSound(Option<Unk80809802>) = 10,
-    Unk80806cc3(AABB) = 11,
-    SpotLight = 12,
-    NamedArea(Unk80809178, String) = 13,
+    },
+    CubemapVolume(Box<Unk80806b7f>, AABB),
+    RespawnPoint,
+    AmbientSound(Option<Unk80809802>),
+    Light,
+    SpotLight,
+    NamedArea(Unk80809178, String),
+
+    Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash),
+    Unk808067b5(TagHash),
+    Unk80806aa3(AABB, TagHash, Mat4),
+    Unk808085c0,
+    Unk80806a40,
+    Unk80806cc3(AABB),
 }
 
 impl MapResource {
@@ -96,59 +96,6 @@ impl MapResource {
         }
     }
 
-    pub fn debug_color(&self) -> [u8; 3] {
-        const RANDOM_COLORS: [[u8; 3]; 16] = [
-            [0xFF, 0x00, 0x00],
-            [0x00, 0xFF, 0x00],
-            [0x00, 0x00, 0xFF],
-            [0xFF, 0xFF, 0x00],
-            [0xFF, 0x00, 0xFF],
-            [0x00, 0xFF, 0xFF],
-            [0x00, 0x00, 0x00],
-            [0x80, 0x00, 0x00],
-            [0x00, 0x80, 0x00],
-            [0x00, 0x00, 0x80],
-            [0x80, 0x80, 0x00],
-            [0x80, 0x00, 0x80],
-            [0x00, 0x80, 0x80],
-            [0x80, 0xFF, 0x80],
-            [0xC0, 0x00, 0x00],
-            [0x00, 0xC0, 0x00],
-        ];
-
-        match self {
-            MapResource::Entity { .. } => [255, 255, 255],
-            MapResource::Decal { .. } => [50, 255, 255],
-            MapResource::Unknown(u, _, _, _, _) => RANDOM_COLORS[*u as usize % 16],
-            MapResource::Unk808067b5 { .. } => [220, 220, 20],
-            MapResource::CubemapVolume(..) => [50, 255, 50],
-            MapResource::Unk80806aa3 { .. } => RANDOM_COLORS[0x80806aa3 % 16],
-            MapResource::Light { .. } => [0xFF, 0xFF, 0x00],
-            MapResource::RespawnPoint => [220, 20, 20],
-            MapResource::Unk808085c0 { .. } => RANDOM_COLORS[0x808085c0 % 16],
-            MapResource::Unk80806a40 { .. } => RANDOM_COLORS[0x80806a40 % 16],
-            MapResource::AmbientSound { .. } => RANDOM_COLORS[0x8080666f % 16],
-            MapResource::Unk80806cc3(_) => RANDOM_COLORS[0x80806cc3 % 16],
-            MapResource::SpotLight => [0xFF, 0xFF, 0x00],
-            MapResource::NamedArea { .. } => RANDOM_COLORS[0x80809178 % 16],
-        }
-    }
-
-    pub fn debug_icon(&self) -> char {
-        match self {
-            MapResource::Entity { .. } => ICON_CHESS_PAWN,
-            MapResource::Decal { .. } => ICON_STICKER,
-            MapResource::Unk808067b5 { .. } => ICON_FLARE,
-            MapResource::CubemapVolume(..) => ICON_SPHERE,
-            MapResource::Light => ICON_LIGHTBULB_ON,
-            MapResource::RespawnPoint => ICON_ACCOUNT_CONVERT,
-            MapResource::AmbientSound { .. } => ICON_VOLUME_HIGH,
-            MapResource::SpotLight => ICON_SPOTLIGHT_BEAM,
-            MapResource::NamedArea { .. } => ICON_TAG,
-            _ => ICON_HELP,
-        }
-    }
-
     pub fn draw_debug_shape(
         &self,
         translation: Vec3,
@@ -182,24 +129,34 @@ impl MapResource {
         }
     }
 
-    // TODO(cohae): Make this easier to work with
-    pub fn get_icon_by_index(i: u8) -> char {
-        match i {
-            0 => ICON_CHESS_PAWN,
-            1 => ICON_STICKER,
-            2 => ICON_HELP,
-            3 => ICON_FLARE,
-            4 => ICON_SPHERE,
-            6 => ICON_LIGHTBULB_ON,
-            7 => ICON_ACCOUNT_CONVERT,
-            10 => ICON_VOLUME_HIGH,
-            12 => ICON_SPOTLIGHT_BEAM,
-            _ => ICON_HELP_BOX_OUTLINE,
+    pub fn debug_color(&self) -> [u8; 3] {
+        const RANDOM_COLORS: [[u8; 3]; 16] = [
+            [0xFF, 0x00, 0x00],
+            [0x00, 0xFF, 0x00],
+            [0x00, 0x00, 0xFF],
+            [0xFF, 0xFF, 0x00],
+            [0xFF, 0x00, 0xFF],
+            [0x00, 0xFF, 0xFF],
+            [0x00, 0x00, 0x00],
+            [0x80, 0x00, 0x00],
+            [0x00, 0x80, 0x00],
+            [0x00, 0x00, 0x80],
+            [0x80, 0x80, 0x00],
+            [0x80, 0x00, 0x80],
+            [0x00, 0x80, 0x80],
+            [0x80, 0xFF, 0x80],
+            [0xC0, 0x00, 0x00],
+            [0x00, 0xC0, 0x00],
+        ];
+
+        match self {
+            MapResource::Unknown(u, _, _, _, _) => RANDOM_COLORS[*u as usize % 16],
+            _ => Self::debug_color_from_index(self.index()),
         }
     }
 
-    pub fn index(&self) -> u8 {
-        unsafe { (self as *const MapResource as *const u8).read() }
+    pub fn debug_icon(&self) -> char {
+        Self::debug_icon_from_index(self.index())
     }
 }
 
@@ -211,316 +168,79 @@ fn darken_color(v: [u8; 3]) -> [u8; 3] {
     ]
 }
 
-/// Terrain resource
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk8080714b {
-    #[br(seek_before(SeekFrom::Current(0x10)))]
-    pub unk10: u16,
-    pub unk12: u16,
-    pub unk14: ResourceHash,
-    pub terrain: TagHash,
-    pub terrain_bounds: TagHash,
+macro_rules! mapresource_info {
+    ($($id:literal, $name:ident, $color:expr, $icon:expr)*) => {
+        impl MapResource {
+            pub fn debug_color_from_index(index: usize) -> [u8; 3] {
+                match index {
+                    $(
+                        $id => $color,
+                    )*
+                    _ => [0xFF, 0xFF, 0xFF],
+                }
+            }
+
+            pub fn debug_icon_from_index(index: usize) -> char {
+                match index {
+                    $(
+                        $id => $icon,
+                    )*
+                    _ => ICON_HELP_BOX_OUTLINE,
+                }
+            }
+
+            pub fn index_to_id(index: usize) -> &'static str {
+                match index {
+                    $(
+                        $id => stringify!($name),
+                    )*
+                    _ => "InvalidResource",
+                }
+            }
+
+            pub fn id_to_index(id: &str) -> usize {
+                match id {
+                    $(
+                        stringify!($name) => $id,
+                    )*
+                    _ => 0xff,
+                }
+            }
+
+            pub fn index(&self) -> usize {
+                match self {
+                    $(
+                        Self::$name { .. } => $id,
+                    )*
+                }
+            }
+
+            // Ugly, but gets optimized away to whatever is the highest value thanks to const functions
+            pub fn max_index() -> usize {
+                let mut max = 0;
+                $(
+                    max = max.max($id);
+                )*
+
+                max
+            }
+        }
+    };
 }
 
-/// Cubemap volume resource
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806b7f {
-    #[br(seek_before(SeekFrom::Current(0x20)))]
-    pub cubemap_extents: Vector4,
-    /// Represents the visual center of the cubemap
-    pub cubemap_center: Vector4,
-    pub unk40: f32,
-    pub unk44: [u32; 3],
-    pub unk50: Vector4,
-    pub unk60: Vector4,
-
-    pub unk70: [u32; 20],
-
-    // Transform matrices?
-    pub unkc0: [Vector4; 4],
-    pub unk100: [Vector4; 4],
-
-    pub unk140: [u32; 28],
-
-    pub cubemap_name: RelPointer<NullString>,
-    pub cubemap_texture: TagHash,
-    pub unk1bc: u32,
-    pub unk1c0: TagHash,
-    pub unk1c4: [u32; 7],
-}
-
-/// Decal collection resource
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806e68 {
-    pub file_size: u64,
-    pub instances: TablePointer<Unk80806e6c>,
-    pub transforms: TablePointer<Vector4>, // 80806e6d
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806e6c {
-    pub material: TagHash,
-    pub start: u16,
-    pub count: u16,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806df3 {
-    pub file_size: u64,
-    pub unk8: TablePointer<Unk80806dec>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806dec {
-    pub material: TagHash,
-    pub index_buffer: TagHash,
-    pub vertex_buffer: TagHash,
-    pub unkc: u32,
-    pub unk10: [u32; 4],
-
-    pub translation: Vector4,
-
-    pub unk30: Vector4,
-    pub unk40: Vector4,
-    pub unk50: Vector4,
-}
-
-// Unknown resource (some kind of octree?)
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80807268 {
-    pub file_size: u64,
-    /// Vertex buffer
-    pub unk8: TagHash,
-    pub unkc: u32,
-    pub unk10: TablePointer<Unk8080726a>,
-    pub unk20: [u32; 6],
-    /// Vertex buffer
-    pub unk38: TagHash,
-    pub unk3c: u32,
-    pub unk40: TablePointer<Unk8080726a>,
-    pub unk50: TablePointer<Unk8080726d>,
-    pub unk60: TablePointer<u16>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk8080726a {
-    pub unk0: [u32; 4],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk8080726d {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: Vector4,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80809162 {
-    pub file_size: u64,
-    pub unk8: TablePointer<Unk80809164>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80809164 {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: [u32; 4],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80809802 {
-    pub file_size: u64,
-    pub unk8: TagHash,
-    pub unkc: TagHash,
-    pub unk10: u32,
-    pub unk14: TagHash,
-    pub unk18: TagHash,
-    pub unk1c: u32,
-    pub streams: TablePointer<TagHash>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806aa7 {
-    pub file_size: u64,
-    pub unk8: TablePointer<Unk80806aa9>,
-    pub unk18: TablePointer<Unk808093b3>,
-    pub unk28: TablePointer<u32>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806aa9 {
-    /// Transformation matrix
-    pub transform: [Vector4; 4],
-
-    /// Same as the bounding box from the Unk808093b3 array
-    pub bounds: AABB,
-
-    pub unk60: Tag<Unk80806aae>,
-    pub unk64: f32,
-    pub unk68: u32,
-    pub unk6c: i16,
-    pub unk6e: u16,
-
-    pub unk70: f32,
-    pub unk74: u32,
-    pub unk78: TagHash,
-    pub unk7c: u32,
-
-    pub unk80: u64,
-    pub unk88: u32,
-    pub unk8c: u32,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806aae {
-    pub file_size: u64,
-    pub entity_model: TagHash,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk808093b3 {
-    pub bb: AABB,
-    pub unk20: [u32; 4],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806c65 {
-    pub file_size: u64,
-    pub unk8: u64,
-    pub bounds: AABB,
-    pub unk30: TablePointer<Unk80806c70>,
-    pub unk40: TablePointer<Unk80809f4f>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806c70 {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
-    pub unk40: [u32; 4],
-    pub unk50: Vector4,
-    pub unk60: Matrix4,
-    pub unka0: u32,
-    pub unka4: u32,
-    pub unka8: u32,
-    pub unkac: f32,
-    pub unkb0: f32,
-    pub unkb4: f32,
-    pub unkb8: f32,
-    pub unkbc: f32,
-
-    pub unkc0: TagHash,
-    pub unkc4: TagHash,
-    pub unkc8: TagHash,
-    pub unkcc: TagHash,
-    pub unkd0: TagHash,
-    pub unkd4: [u32; 7],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80809f4f {
-    pub rotation: Vector4,
-    pub translation: Vector4,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80808cb7 {
-    pub file_size: u64,
-    pub unk8: TablePointer<Unk80808cb9>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80808cb9 {
-    pub rotation: Vector4,
-    pub translation: Vector4,
-    pub unk20: [u32; 4],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk808085c2 {
-    pub file_size: u64,
-    pub unk8: TablePointer<Unk808085c4>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk808085c4 {
-    pub unk0: [u32; 4],
-    pub unk10: [u32; 4],
-    pub translation: Vector4,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806d19 {
-    pub file_size: u64,
-    pub unk8: TagHash,
-    pub unkc: u32, // Padding
-    pub unk10: TablePointer<()>,
-    pub unk20: TagHash,
-    pub unk24: u32, // Padding
-    pub unk28: TablePointer<()>,
-    pub unk38: TagHash,
-    pub unk3c: u32, // Padding
-    pub unk40: TablePointer<()>,
-    pub unk50: TablePointer<Unk80806d4f>,
-    pub unk60: TablePointer<()>,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806d4f {
-    pub translation: Vector4,
-    pub unk10: [u32; 4],
-    pub unk20: [u32; 4],
-}
-
-// #[derive(BinRead, Debug, Clone)]
-// pub struct Unk808066a2 {
-//     pub file_size: u64,
-//     pub unk8: TablePointer<()>,
-//     pub unk18: TablePointer<()>,
-//     /// Havok file
-//     pub unk28: TagHash,
-// }
-
-#[derive(BinRead, Debug)]
-pub struct Unk80806c98 {
-    pub file_size: u64,
-    pub unk8: TablePointer<TagHash>,
-    pub unk18: TablePointer<u32>,
-    pub unk28: TablePointer<u32>,
-    pub unk38: TablePointer<u32>,
-    pub unk48: TagHash,
-    pub unk4c: Tag<SOcclusionBounds>,
-    pub unk50: TablePointer<u32>,
-    pub unk60: [u32; 4],
-    pub bounds: AABB,
-}
-
-/// B1938080
-#[derive(BinRead, Debug, Clone)]
-pub struct SOcclusionBounds {
-    pub file_size: u64,
-    pub bounds: TablePointer<SMeshInstanceOcclusionBounds>,
-}
-
-// B3938080
-#[derive(BinRead, Debug, Clone)]
-pub struct SMeshInstanceOcclusionBounds {
-    pub bb: AABB,
-    pub unk20: [u32; 4],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80809178 {
-    // Points to havok pre-tag
-    pub unk0: RelPointer<()>,
-
-    pub unk8: u32,
-    pub unkc: u32,
-    pub area_name: ResourceHash,
-    pub unk14: ResourceHash,
-    pub unk18: ResourceHash,
-
-    // Absolute offset to havok pre-tag??
-    pub unk1c: u64,
-}
+mapresource_info!(
+    0, Entity, [255, 255, 255], ICON_CHESS_PAWN
+    1, Decal, [50, 255, 255], ICON_STICKER
+    2, CubemapVolume, [50, 255, 50], ICON_SPHERE
+    3, RespawnPoint, [220, 20, 20], ICON_ACCOUNT_CONVERT
+    4, AmbientSound, [0, 192, 0], ICON_VOLUME_HIGH
+    5, SpotLight, [255, 255, 0], ICON_SPOTLIGHT_BEAM
+    6, Light, [255, 255, 0], ICON_LIGHTBULB_ON
+    7, NamedArea, [0, 127, 0], ICON_TAG
+    8, Unknown, [255, 255, 255], ICON_HELP
+    9, Unk808067b5, [220, 220, 20], ICON_FLARE
+    10, Unk80806aa3, [96, 96, 255], ICON_HELP
+    11, Unk808085c0, [255, 96, 96], ICON_HELP
+    12, Unk80806a40, [255, 44, 44], ICON_HELP
+    13, Unk80806cc3, [96, 96, 255], ICON_HELP
+);

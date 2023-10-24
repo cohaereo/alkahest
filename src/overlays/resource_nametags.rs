@@ -61,9 +61,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                 for (_, (transform, res)) in m.scene.query::<(&Transform, &ResourcePoint)>().iter()
                 {
-                    if !self.debug_overlay.borrow().map_resource_filter
-                        [res.resource.index() as usize]
-                    {
+                    if !self.debug_overlay.borrow().map_resource_filter[res.resource.index()] {
                         continue;
                     }
 

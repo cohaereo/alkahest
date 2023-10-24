@@ -1,4 +1,5 @@
-use strum::{EnumCount, VariantNames};
+use egui::{Color32, RichText};
+
 use winit::window::Window;
 
 use crate::icons::{ICON_BUG, ICON_CLIPBOARD};
@@ -13,7 +14,7 @@ pub struct CameraPositionOverlay {
     pub show_map_resources: bool,
     pub show_map_resource_label: bool,
     pub map_resource_label_background: bool,
-    pub map_resource_filter: [bool; MapResource::COUNT],
+    pub map_resource_filter: Vec<bool>,
     pub map_resource_distance: f32,
     pub map_resource_distance_limit_enabled: bool,
 }
@@ -60,10 +61,14 @@ impl OverlayProvider for CameraPositionOverlay {
             ui.checkbox(&mut self.show_map_resources, "Show map resources");
             if self.show_map_resources {
                 ui.indent("mapres_indent", |ui| {
-                    for (i, n) in MapResource::VARIANTS.iter().enumerate() {
+                    for i in 0..(MapResource::max_index() + 1) {
+                        let name = MapResource::index_to_id(i);
+                        let icon = MapResource::debug_icon_from_index(i);
+                        let c = MapResource::debug_color_from_index(i);
                         ui.checkbox(
                             &mut self.map_resource_filter[i],
-                            format!("{} {}", MapResource::get_icon_by_index(i as u8), n),
+                            RichText::new(format!("{icon} {name}"))
+                                .color(Color32::from_rgb(c[0], c[1], c[2])),
                         );
                     }
                 });

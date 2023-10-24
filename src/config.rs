@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::util::{exe_relative_path, RwLock};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -11,7 +13,9 @@ pub fn persist() {
         exe_relative_path("config.yml"),
         serde_yaml::to_string(&*CONFIGURATION.read()).expect("Fatal: failed to write config"),
     ) {
-        warn!("Failed to write config: {e}");
+        error!("Failed to write config: {e}");
+    } else {
+        info!("Config written successfully!");
     }
 }
 
@@ -38,7 +42,16 @@ macro_rules! config {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Config {
+    #[serde(default)]
     pub window: WindowConfig,
+    #[serde(default)]
+    pub resources: ResourceConfig,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct ResourceConfig {
+    pub show_resources: bool,
+    pub filters: HashMap<String, bool>,
 }
 
 #[derive(Serialize, Deserialize)]
