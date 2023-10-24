@@ -941,6 +941,9 @@ impl Renderer {
                 MinDepth: 0.0,
                 MaxDepth: 1.0,
             }]));
+
+            // We don't want to cull backfaces for shadow map rendering, otherwise light will be able to leak through unclosed geometry
+            self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
         }
 
         let scope_view_base = self.scope_view_backup.read();
