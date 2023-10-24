@@ -405,7 +405,6 @@ pub async fn main() -> anyhow::Result<()> {
         match &event {
             Event::WindowEvent { event, .. } => {
                 let gui_event_captured = gui.handle_event(event).consumed;
-
                 if !gui_event_captured {
                     resources
                         .get_mut::<InputState>()

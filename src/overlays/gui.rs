@@ -42,9 +42,9 @@ impl GuiManager {
             egui.memory_mut(|memory| *memory = data);
         }
 
-        // imgui.style_mut().window_rounding = 4.0;
         let mut integration = egui_winit::State::new(window);
         integration.set_pixels_per_point(window.scale_factor() as f32);
+        integration.set_max_texture_side(8192);
 
         let mut fonts = egui::FontDefinitions::default();
         fonts.font_data.insert(
@@ -95,6 +95,7 @@ impl GuiManager {
                 unsafe { transmute(&self.dcs.swap_chain) },
                 input,
                 &self.egui,
+                window.scale_factor() as f32,
                 |ctx| {
                     for overlay in self.overlays.iter() {
                         overlay.as_ref().borrow_mut().draw(

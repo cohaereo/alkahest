@@ -29,19 +29,18 @@ impl OverlayProvider for ResourceTypeOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
-        window: &Window,
+        _window: &Window,
         resources: &mut Resources,
         icons: &GuiResources,
     ) {
         if self.debug_overlay.borrow().show_map_resources {
-            let screen_size = window.inner_size();
-            let window_dims = window.inner_size();
+            let screen_size = ctx.screen_rect().size();
 
             let painter = ctx.layer_painter(egui::LayerId::background());
 
             let projection = Mat4::perspective_infinite_reverse_rh(
                 90f32.to_radians(),
-                window_dims.width as f32 / window_dims.height as f32,
+                screen_size.x / screen_size.y,
                 0.0001,
             );
 
@@ -109,8 +108,8 @@ impl OverlayProvider for ResourceTypeOverlay {
                     let projected_point = proj_view.project_point3(transform.translation);
 
                     let screen_point = Vec2::new(
-                        ((projected_point.x + 1.0) * 0.5) * screen_size.width as f32,
-                        ((1.0 - projected_point.y) * 0.5) * screen_size.height as f32,
+                        ((projected_point.x + 1.0) * 0.5) * screen_size.x,
+                        ((1.0 - projected_point.y) * 0.5) * screen_size.y,
                     );
 
                     let c = res.resource.debug_color();

@@ -15,7 +15,12 @@ pub struct GpuMesh {
 }
 
 impl GpuMesh {
-    pub fn from_mesh((w, h): (f32, f32), mesh: Mesh, scissors: Rect) -> Option<Self> {
+    pub fn from_mesh(
+        (w, h): (f32, f32),
+        mesh: Mesh,
+        scissors: Rect,
+        pixels_per_point: f32,
+    ) -> Option<Self> {
         if mesh.indices.is_empty() || mesh.indices.len() % 3 != 0 {
             None
         } else {
@@ -24,18 +29,27 @@ impl GpuMesh {
                 .into_iter()
                 .map(|v| GpuVertex {
                     pos: Pos2::new(
-                        (v.pos.x - w / 2.) / (w / 2.),
-                        (v.pos.y - h / 2.) / -(h / 2.),
+                        ((v.pos.x * pixels_per_point) - w / 2.) / (w / 2.),
+                        ((v.pos.y * pixels_per_point) - h / 2.) / -(h / 2.),
                     ),
                     uv: v.uv,
                     color: v.color.into(),
                 })
                 .collect();
 
+            // Transform clip rect to physical pixels:
+            let clip_min_x = (pixels_per_point * scissors.min.x).round();
+            let clip_min_y = (pixels_per_point * scissors.min.y).round();
+            let clip_max_x = (pixels_per_point * scissors.max.x).round();
+            let clip_max_y = (pixels_per_point * scissors.max.y).round();
+
             Some(Self {
                 texture_id: mesh.texture_id,
                 indices: mesh.indices,
-                clip: scissors,
+                clip: Rect {
+                    min: Pos2::new(clip_min_x, clip_min_y),
+                    max: Pos2::new(clip_max_x, clip_max_y),
+                },
                 vertices,
             })
         }
