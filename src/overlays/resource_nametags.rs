@@ -68,8 +68,13 @@ impl OverlayProvider for ResourceTypeOverlay {
                     }
 
                     let distance = transform.translation.distance(camera.position);
-                    if distance > self.debug_overlay.borrow().map_resource_distance {
-                        continue;
+                    {
+                        let debug_overlay = self.debug_overlay.borrow();
+                        if debug_overlay.map_resource_distance_limit_enabled
+                            && distance > self.debug_overlay.borrow().map_resource_distance
+                        {
+                            continue;
+                        }
                     }
 
                     // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen

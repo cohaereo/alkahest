@@ -377,6 +377,7 @@ pub async fn main() -> anyhow::Result<()> {
             f
         },
         map_resource_distance: 2000.0,
+        map_resource_distance_limit_enabled: true,
     }));
 
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {

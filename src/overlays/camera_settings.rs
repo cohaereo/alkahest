@@ -15,6 +15,7 @@ pub struct CameraPositionOverlay {
     pub map_resource_label_background: bool,
     pub map_resource_filter: [bool; MapResource::COUNT],
     pub map_resource_distance: f32,
+    pub map_resource_distance_limit_enabled: bool,
 }
 
 impl OverlayProvider for CameraPositionOverlay {
@@ -73,7 +74,12 @@ impl OverlayProvider for CameraPositionOverlay {
                 );
                 ui.spacing();
 
-                ui.add(
+                ui.checkbox(
+                    &mut self.map_resource_distance_limit_enabled,
+                    "Limit resource display distance",
+                );
+                ui.add_enabled(
+                    self.map_resource_distance_limit_enabled,
                     egui::Slider::new(&mut self.map_resource_distance, 25.0..=4000.0)
                         .text("Max Resource Distance"),
                 );
