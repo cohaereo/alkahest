@@ -141,6 +141,7 @@ dependencies = [
  "serde_yaml",
  "strum",
  "thiserror",
+ "tinyvec",
  "tokio",
  "tracing",
  "tracing-subscriber",

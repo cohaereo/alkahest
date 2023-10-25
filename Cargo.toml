@@ -63,6 +63,7 @@ ron = "0.8.1"
 
 # bevy_ecs = "0.11.3"
 hecs = "0.10.3"
+tinyvec = "1.6.0"
 
 [features]
 default = []
@@ -71,6 +72,7 @@ debug_lock = []
 # Ensures all TFX opcodes are interpreted
 # TODO(cohae): Should this be a runtime configuration setting?
 tfx_strict_interpreter = []
+tfx_stack_pop_fallback = []
 
 [package.metadata.imgui-dx11-renderer]
 targets = ["x86_64-pc-windows-gnu"]
