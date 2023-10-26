@@ -11,7 +11,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x01_u8)] Add,
     #[br(magic = 0x02_u8)] Subtract,
     #[br(magic = 0x03_u8)] Multiply,
-    #[br(magic = 0x04_u8)] Unk04,
+    #[br(magic = 0x04_u8)] IsZero,
     #[br(magic = 0x05_u8)] Multiply2, // TODO(cohae): Same as multiply? Might just be an alias used for division
     #[br(magic = 0x06_u8)] Add2,
     #[br(magic = 0x07_u8)] Unk07,
@@ -25,11 +25,13 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x10_u8)] Unk10,
     #[br(magic = 0x11_u8)] Unk11,
     #[br(magic = 0x12_u8)] MultiplyAdd,
-    #[br(magic = 0x13_u8)] Unk13,
+    #[br(magic = 0x13_u8)] Clamp,
     #[br(magic = 0x14_u8)] Unk14,
     #[br(magic = 0x15_u8)] Unk15,
     #[br(magic = 0x16_u8)] Unk16,
     #[br(magic = 0x17_u8)] Unk17,
+    #[br(magic = 0x18_u8)] Unk18,
+    #[br(magic = 0x19_u8)] Unk19,
     #[br(magic = 0x1a_u8)] Unk1a,
     #[br(magic = 0x1b_u8)] Unk1b,
     #[br(magic = 0x1c_u8)] Unk1c,
@@ -57,11 +59,11 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
     #[br(magic = 0x3c_u8)] PushExternInputFloat { extern_: TfxExtern, element: u8 }, // push_extern_input_float
     #[br(magic = 0x3d_u8)] Unk3d { extern_: TfxExtern, unk2: u8 },
-    #[br(magic = 0x3e_u8)] Unk3e { unk1: u8, unk2: u8 },
+    #[br(magic = 0x3e_u8)] Unk3e { extern_: TfxExtern, unk2: u8 },
     #[br(magic = 0x3f_u8)] Unk3f { extern_: TfxExtern, unk2: u8 },
-    #[br(magic = 0x40_u8)] Unk40 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x41_u8)] Unk41 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x42_u8)] Unk42 { unk1: u8 },
+    #[br(magic = 0x40_u8)] Unk40 { extern_: TfxExtern, unk2: u8 },
+    #[br(magic = 0x41_u8)] Unk41 { extern_: TfxExtern, unk2: u8 },
+    #[br(magic = 0x42_u8)] Unk42,
     #[br(magic = 0x43_u8)] Unk43 { unk1: u8 },
     #[br(magic = 0x44_u8)] PopOutput { element: u8 }, // pop_output? 0x43 in bytecode from talk
     /// Pushes a variable from the specified temp variable to stack
@@ -75,17 +77,17 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x4b_u8)] Unk4b { unk1: u8 },
     #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
     #[br(magic = 0x4d_u8)] Unk4d { unk1: u8 }, // push_object_channel_vector? (push_object_channel_*??)
-    #[br(magic = 0x4e_u8)] Unk4e { unk1: u8 },
+    #[br(magic = 0x4e_u8)] Unk4e { unk1: u8, unk2: u8, unk3: u8, unk4: u8 },
     #[br(magic = 0x4f_u8)] Unk4f { unk1: u8 },
-    #[br(magic = 0x50_u8)] Unk50,
+    #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
     #[br(magic = 0x51_u8)] Unk51,
-    #[br(magic = 0x52_u8)] Unk52,
-    #[br(magic = 0x53_u8)] Unk53,
-    #[br(magic = 0x54_u8)] Unk54,
-
-    // Reversed without references
-    #[br(magic = 0x58_u8)] Unk58 { unk1: u8 },
-    #[br(magic = 0xff_u8)] Unkff,
+    #[br(magic = 0x52_u8)] Unk52 { unk1: u8, unk2: u8 },
+    #[br(magic = 0x53_u8)] Unk53 { unk1: u8, unk2: u8 },
+    #[br(magic = 0x54_u8)] Unk54 { unk1: u8, unk2: u8 },
+    #[br(magic = 0x55_u8)] Unk55,
+    #[br(magic = 0x56_u8)] Unk56,
+    #[br(magic = 0x57_u8)] Unk57,
+    #[br(magic = 0x58_u8)] Unk58,
 }
 
 impl TfxBytecodeOp {
@@ -107,7 +109,7 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Add => "add".to_string(),
             TfxBytecodeOp::Subtract => "subtract".to_string(),
             TfxBytecodeOp::Multiply => "multiply".to_string(),
-            TfxBytecodeOp::Unk04 => "unk04".to_string(),
+            TfxBytecodeOp::IsZero => "is_zero".to_string(),
             TfxBytecodeOp::Multiply2 => "multiply2".to_string(),
             TfxBytecodeOp::Add2 => "add2".to_string(),
             TfxBytecodeOp::Unk07 => "unk07".to_string(),
@@ -121,11 +123,13 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk10 => "unk10".to_string(),
             TfxBytecodeOp::Unk11 => "unk11".to_string(),
             TfxBytecodeOp::MultiplyAdd => "multiply_add".to_string(),
-            TfxBytecodeOp::Unk13 => "unk13".to_string(),
+            TfxBytecodeOp::Clamp => "clamp".to_string(),
             TfxBytecodeOp::Unk14 => "unk14".to_string(),
             TfxBytecodeOp::Unk15 => "unk15".to_string(),
             TfxBytecodeOp::Unk16 => "unk16".to_string(),
             TfxBytecodeOp::Unk17 => "unk17".to_string(),
+            TfxBytecodeOp::Unk18 => "unk18".to_string(),
+            TfxBytecodeOp::Unk19 => "unk19".to_string(),
             TfxBytecodeOp::Unk1a => "unk1a".to_string(),
             TfxBytecodeOp::Unk1b => "unk1b".to_string(),
             TfxBytecodeOp::Unk1c => "unk1c".to_string(),
@@ -133,8 +137,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Cosine => "cosine".to_string(),
             TfxBytecodeOp::Unk20 => "unk20".to_string(),
             TfxBytecodeOp::PermuteAllX => "permute(.xxxx) (permute_all_x)".to_string(),
-            TfxBytecodeOp::Permute { fields: unk1 } => {
-                format!("permute({}) unk1={unk1:08b}", decode_permute_param(*unk1))
+            TfxBytecodeOp::Permute { fields } => {
+                format!("permute({})", decode_permute_param(*fields))
             }
             TfxBytecodeOp::Saturate => "saturate".to_string(),
             TfxBytecodeOp::Unk24 => "unk24".to_string(),
@@ -173,21 +177,19 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk3d { extern_, unk2 } => {
                 format!("unk3d extern={extern_:?} unk2={unk2}")
             }
-            TfxBytecodeOp::Unk3e { unk1, unk2 } => {
-                format!("unk3e unk1={unk1} unk2={unk2}")
+            TfxBytecodeOp::Unk3e { extern_, unk2 } => {
+                format!("unk3e extern={extern_:?} unk2={unk2}")
             }
             TfxBytecodeOp::Unk3f { extern_, unk2 } => {
                 format!("unk3f extern={extern_:?} unk2={unk2}")
             }
-            TfxBytecodeOp::Unk40 { unk1, unk2 } => {
-                format!("unk40 unk1={unk1} unk2={unk2}")
+            TfxBytecodeOp::Unk40 { extern_, unk2 } => {
+                format!("unk40 extern={extern_:?} unk2={unk2}")
             }
-            TfxBytecodeOp::Unk41 { unk1, unk2 } => {
-                format!("unk41 unk1={unk1} unk2={unk2}")
+            TfxBytecodeOp::Unk41 { extern_, unk2 } => {
+                format!("unk41 extern={extern_:?} unk2={unk2}")
             }
-            TfxBytecodeOp::Unk42 { unk1 } => {
-                format!("unk42 unk1={unk1}")
-            }
+            TfxBytecodeOp::Unk42 => "unk42".to_string(),
             TfxBytecodeOp::Unk43 { unk1 } => {
                 format!("unk43 unk1={unk1}")
             }
@@ -221,22 +223,26 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk4d { unk1 } => {
                 format!("unk4d unk1={unk1}")
             }
-            TfxBytecodeOp::Unk4e { unk1 } => {
-                format!("unk4e unk1={unk1}")
+            TfxBytecodeOp::Unk4e {
+                unk1,
+                unk2,
+                unk3,
+                unk4,
+            } => {
+                format!("unk4e unk1={unk1} unk2={unk2} unk3={unk3} unk4={unk4}")
             }
             TfxBytecodeOp::Unk4f { unk1 } => {
                 format!("unk4f unk1={unk1}")
             }
-            TfxBytecodeOp::Unk50 => "unk50".to_string(),
+            TfxBytecodeOp::Unk50 { unk1 } => format!("unk50 unk1={unk1}"),
             TfxBytecodeOp::Unk51 => "unk51".to_string(),
-            TfxBytecodeOp::Unk52 => "unk52".to_string(),
-            TfxBytecodeOp::Unk53 => "unk53".to_string(),
-            TfxBytecodeOp::Unk54 => "unk54".to_string(),
-
-            TfxBytecodeOp::Unk58 { unk1 } => {
-                format!("unk58 unk1={unk1}")
-            }
-            TfxBytecodeOp::Unkff => "unkff".to_string(),
+            TfxBytecodeOp::Unk52 { unk1, unk2 } => format!("unk52 unk1={unk1} unk2={unk2}"),
+            TfxBytecodeOp::Unk53 { unk1, unk2 } => format!("unk53 unk1={unk1} unk2={unk2}"),
+            TfxBytecodeOp::Unk54 { unk1, unk2 } => format!("unk54 unk1={unk1} unk2={unk2}"),
+            TfxBytecodeOp::Unk55 => "unk55".to_string(),
+            TfxBytecodeOp::Unk56 => "unk56".to_string(),
+            TfxBytecodeOp::Unk57 => "unk57".to_string(),
+            TfxBytecodeOp::Unk58 => "unk58".to_string(),
         }
     }
 }

@@ -29,27 +29,13 @@ impl TfxBytecodeInterpreter {
             return Ok(());
         };
 
-        macro_rules! stack_verify {
-            // $pops: the amount of stack elements this operation needs to read
-            ($pops:literal) => {
-                anyhow::ensure!(stack.len() >= $pops);
-            };
-        }
+        // macro_rules! stack_verify {
+        //     // $pops: the amount of stack elements this operation needs to read
+        //     ($pops:literal) => {
+        //         anyhow::ensure!(stack.len() >= $pops);
+        //     };
+        // }
 
-        #[cfg(feature = "tfx_stack_pop_fallback")]
-        macro_rules! stack_pop {
-            ($pops:literal) => {{
-                if stack.len() >= $pops {
-                    let v: [Vec4; $pops] =
-                        stack[stack.len() - $pops..stack.len()].try_into().unwrap();
-                    v
-                } else {
-                    [Vec4::ONE; $pops]
-                }
-            }};
-        }
-
-        #[cfg(not(feature = "tfx_stack_pop_fallback"))]
         macro_rules! stack_pop {
             ($pops:literal) => {{
                 anyhow::ensure!(!stack.is_empty() && stack.len() >= $pops);
@@ -65,43 +51,92 @@ impl TfxBytecodeInterpreter {
             }};
         }
 
+        macro_rules! stack_top {
+            () => {{
+                anyhow::ensure!(!stack.is_empty());
+                stack.last_mut().unwrap()
+            }};
+        }
+
         for (_ip, op) in self.opcodes.iter().enumerate() {
-            let stack_top = stack.len() - 1;
             match op {
+                TfxBytecodeOp::Add | TfxBytecodeOp::Add2 => {
+                    let [t1, t2] = stack_pop!(2);
+                    stack_push!(t1 + t2);
+                }
+                TfxBytecodeOp::Subtract => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(t1 - t0);
+                }
+                TfxBytecodeOp::Multiply | TfxBytecodeOp::Multiply2 => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(t1 * t0);
+                }
+                TfxBytecodeOp::IsZero => {
+                    // Cleaned up SIMD: _mm_and_ps(_mm_cmpeq_ps(a, _mm_setzero_ps()), _mm_set1_ps(1.0));
+                    // Decompiled and simplified: value == 0.0 ? 1.0 : 0.0 (for each element in the vector)
+                    let v = stack_top!();
+                    let c = v.cmpeq(Vec4::ZERO);
+                    *v = Vec4::new(
+                        c.test(0) as u32 as f32,
+                        c.test(1) as u32 as f32,
+                        c.test(2) as u32 as f32,
+                        c.test(3) as u32 as f32,
+                    );
+                }
+                TfxBytecodeOp::MultiplyAdd => {
+                    let [t2, t1, t0] = stack_pop!(3);
+                    stack_push!(t0 + (t1 * t2));
+                }
+                TfxBytecodeOp::Clamp => {
+                    let [value, min, max] = stack_pop!(3);
+                    stack_push!(value.clamp(min, max));
+                }
+                TfxBytecodeOp::Negate => {
+                    let v = stack_top!();
+                    *v = -*v;
+                }
+                TfxBytecodeOp::Cosine => {
+                    let v = stack_top!();
+                    *v = Vec4::new(v.x.cos(), v.y.cos(), v.z.cos(), v.w.cos());
+                }
+                // TODO(cohae): Check the SIMD output again, seems like frac but not really
+                TfxBytecodeOp::Unk1a => {
+                    let v = stack_top!();
+                    *v = v.fract();
+                }
+
                 // TODO(cohae): uses offset thingy, not elements
                 TfxBytecodeOp::PushExternInputFloat { extern_, element } => {
                     let v = self.get_extern(renderer, *extern_, *element)?;
                     stack_push!(v);
                 }
+                TfxBytecodeOp::Merge1_3 => {
+                    let [t1, t0] = stack_pop!(2);
+                    // TODO(cohae): Is the parameter order correct?
+                    stack_push!(Vec4::new(t1.x, t0.x, t0.y, t0.z));
+                }
                 TfxBytecodeOp::Unk3d { .. }
                 | TfxBytecodeOp::Unk3f { .. }
+                | TfxBytecodeOp::Unk4c { .. }
                 | TfxBytecodeOp::Unk4d { .. }
                 | TfxBytecodeOp::Unk4e { .. }
                 | TfxBytecodeOp::Unk4f { .. } => {
-                    // Stubbed.
-                    stack_push!(Vec4::ZERO);
+                    stack_push!(Vec4::ONE);
+                    // stack_push!(Vec4::ZERO);
                 }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
-                    stack_push!(constants[*constant_index as usize]);
+                    *stack_top!() = constants[*constant_index as usize];
                 }
                 TfxBytecodeOp::PushConstVec4 { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
-                    stack_push!(constants[*constant_index as usize]);
-                }
-                TfxBytecodeOp::Negate => {
-                    stack_verify!(1);
-                    stack[stack_top] = -stack[stack_top];
-                }
-                TfxBytecodeOp::Cosine => {
-                    stack_verify!(1);
-                    let v = stack[stack_top];
-                    stack[stack_top] = Vec4::new(v.x.cos(), v.y.cos(), v.z.cos(), v.w.cos());
+                    stack_push!(constants[*constant_index as usize])
                 }
                 // // TODO(cohae): Very wrong, but does seem to push something onto the stack
                 TfxBytecodeOp::PermuteAllX => {
-                    stack_verify!(1);
-                    stack[stack_top] = stack[stack_top].xxxx();
+                    let v = stack_top!();
+                    *v = v.xxxx();
                 }
                 TfxBytecodeOp::Permute { fields } => {
                     // TODO(cohae): reimplement using SIMD
@@ -110,44 +145,27 @@ impl TfxBytecodeInterpreter {
                     let s2 = (fields >> 2) & 0b11;
                     let s3 = fields & 0b11;
 
-                    let [v] = stack_pop!(1);
-                    let v = v.to_array();
+                    let v = stack_top!();
+                    let v2 = v.to_array();
 
-                    stack_push!(Vec4::new(
-                        v[s0 as usize],
-                        v[s1 as usize],
-                        v[s2 as usize],
-                        v[s3 as usize],
-                    ))
+                    *v = Vec4::new(
+                        v2[s0 as usize],
+                        v2[s1 as usize],
+                        v2[s2 as usize],
+                        v2[s3 as usize],
+                    );
                 }
                 TfxBytecodeOp::Saturate => {
-                    stack_verify!(1);
-                    stack[stack_top] = stack[stack_top].clamp(Vec4::ZERO, Vec4::ONE);
-                }
-                TfxBytecodeOp::Add | TfxBytecodeOp::Add2 => {
-                    let [a, b] = stack_pop!(2);
-                    stack_push!(a + b)
-                }
-                TfxBytecodeOp::Subtract => {
-                    let [a, b] = stack_pop!(2);
-                    stack_push!(a - b)
+                    let v = stack_top!();
+                    *v = v.clamp(Vec4::ZERO, Vec4::ONE);
                 }
                 TfxBytecodeOp::Min => {
-                    let [a, b] = stack_pop!(2);
-                    stack_push!(a.min(b))
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(t1.min(t0))
                 }
                 TfxBytecodeOp::Max => {
-                    let [a, b] = stack_pop!(2);
-                    stack_push!(a.max(b))
-                }
-                TfxBytecodeOp::Multiply | TfxBytecodeOp::Multiply2 => {
-                    let [a, b] = stack_pop!(2);
-                    stack_push!(a * b)
-                }
-                TfxBytecodeOp::MultiplyAdd => {
-                    // TODO(cohae): is the order of multiply and add correct?
-                    let [source, multiply, add] = stack_pop!(3);
-                    stack_push!(source * multiply + add)
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(t1.max(t0))
                 }
                 TfxBytecodeOp::PopOutput { element } => unsafe {
                     buffer_map
@@ -155,17 +173,17 @@ impl TfxBytecodeInterpreter {
                         .offset(*element as isize)
                         .write(stack_pop!(1)[0])
                 },
-                TfxBytecodeOp::PushTemp { slot } => {
-                    let slotu = *slot as usize;
-                    anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
-                    stack_push!(temp[slotu]);
-                }
-                TfxBytecodeOp::PopTemp { slot } => {
-                    let slotu = *slot as usize;
-                    anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
-                    let [v] = stack_pop!(1);
-                    temp[slotu] = v;
-                }
+                // TfxBytecodeOp::PushTemp { slot } => {
+                //     let slotu = *slot as usize;
+                //     anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
+                //     stack_push!(temp[slotu]);
+                // }
+                // TfxBytecodeOp::PopTemp { slot } => {
+                //     let slotu = *slot as usize;
+                //     anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
+                //     let [v] = stack_pop!(1);
+                //     temp[slotu] = v;
+                // }
                 // #[cfg(feature = "tfx_experimental_opcodes")]
                 // TfxBytecodeOp::
                 #[cfg(not(feature = "tfx_strict_interpreter"))]
