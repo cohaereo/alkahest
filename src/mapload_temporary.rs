@@ -1,4 +1,4 @@
-// ! Temporary file to mitigate performance issues in some IDEs while we figure out loading routines
+// ! Temporary file to mitigate performance issues in some IDEs while I figure out loading routines
 
 use std::{
     collections::{HashMap, HashSet},
@@ -18,8 +18,8 @@ use crate::{
     },
     map::SMapDataTable,
     map::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809178, Unk80809802},
+    render::renderer::RendererShared,
     types::ResourceHash,
-    util::RwLock,
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -44,7 +44,7 @@ use crate::{
     material::{Material, Unk808071e8},
     packages::package_manager,
     render::{
-        renderer::Renderer, scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
+        scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
         DeviceContextSwapchain, EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
     statics::{Unk808071a7, Unk8080966d},
@@ -54,7 +54,7 @@ use crate::{
 
 pub async fn load_maps(
     dcs: Arc<DeviceContextSwapchain>,
-    renderer: Arc<RwLock<Renderer>>,
+    renderer: RendererShared,
     map_hashes: Vec<TagHash>,
     stringmap: Arc<IntMap<u32, String>>,
     activity_hash: Option<TagHash>,
@@ -784,7 +784,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     table_hash: TagHash,
     table_data: &mut R,
     scene: &mut Scene,
-    renderer: Arc<RwLock<Renderer>>,
+    renderer: RendererShared,
     resource_origin: ResourceOriginType,
     group_id: u32,
     stringmap: Arc<IntMap<u32, String>>,

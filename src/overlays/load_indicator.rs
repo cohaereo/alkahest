@@ -6,7 +6,7 @@ use crate::{
     resources::Resources,
 };
 
-use super::gui::{GuiResources, OverlayProvider};
+use super::gui::Overlay;
 
 pub struct LoadIndicatorOverlay {
     window_rect: egui::Rect,
@@ -35,14 +35,14 @@ const SPINNER_FRAMES: &[&str] = &[
     "\u{F1456}", // ICON_CLOCK_TIME_TWELVE_OUTLINE
 ];
 const SPINNER_INTERVAL: usize = 50;
-impl OverlayProvider for LoadIndicatorOverlay {
+impl Overlay for LoadIndicatorOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         _resources: &mut Resources,
-        _icons: &GuiResources,
-    ) {
+        _gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         let open = *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
             || *resource_mt::STATUS_BUFFERS.read() != LoadingThreadState::Idle;
         // || *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle;
@@ -93,5 +93,7 @@ impl OverlayProvider for LoadIndicatorOverlay {
                     self.window_rect = ctx.used_rect();
                 });
         }
+
+        true
     }
 }

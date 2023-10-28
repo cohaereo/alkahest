@@ -56,7 +56,7 @@ use crate::mapload_temporary::load_maps;
 use crate::overlays::camera_settings::CameraPositionOverlay;
 
 use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gui::GuiManager;
+use crate::overlays::gui::{GuiManager, ViewerWindows};
 use crate::overlays::load_indicator::LoadIndicatorOverlay;
 use crate::overlays::render_settings::{
     ActivityGroupFilter, RenderSettings, RenderSettingsOverlay,
@@ -67,7 +67,7 @@ use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
 use crate::render::error::ErrorRenderer;
 use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
-use crate::render::renderer::{Renderer, ShadowMapsResource};
+use crate::render::renderer::{Renderer, RendererShared, ShadowMapsResource};
 
 use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, TerrainRenderer};
 use crate::resources::Resources;
@@ -236,7 +236,7 @@ pub async fn main() -> anyhow::Result<()> {
     let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
 
     // TODO(cohae): resources should be added to renderdata directly
-    let renderer = Arc::new(RwLock::new(Renderer::create(&window, dcs.clone())?));
+    let renderer: RendererShared = Arc::new(RwLock::new(Renderer::create(&window, dcs.clone())?));
 
     let mut map_hashes = if let Some(map_hash) = &args.map {
         let hash = match u32::from_str_radix(map_hash, 16) {
@@ -336,6 +336,8 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(ShadowMapsResource::create(dcs.clone()));
     resources.insert(CurrentCubemap(None, None));
     resources.insert(ActivityGroupFilter::default());
+    resources.insert(ViewerWindows::default());
+    resources.insert(renderer.read().dcs.clone());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {

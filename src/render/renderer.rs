@@ -34,6 +34,7 @@ enum RendererState {
     Recording,
 }
 
+pub type RendererShared = Arc<RwLock<Renderer>>;
 pub struct Renderer {
     draw_queue: RwLock<Vec<(SortValue3d, DrawCall)>>,
     state: RwLock<RendererState>,

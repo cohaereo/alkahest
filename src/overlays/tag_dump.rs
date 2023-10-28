@@ -1,4 +1,4 @@
-use crate::overlays::gui::OverlayProvider;
+use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::resources::Resources;
 use destiny_pkg::package::UEntryHeader;
@@ -7,8 +7,6 @@ use std::fs::File;
 use std::io::Write;
 use tracing::error;
 use winit::window::Window;
-
-use super::gui::GuiResources;
 
 pub struct TagDumper {
     package_id: String,
@@ -55,14 +53,14 @@ impl TagDumper {
     }
 }
 
-impl OverlayProvider for TagDumper {
+impl Overlay for TagDumper {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         _resources: &mut Resources,
-        _icons: &GuiResources,
-    ) {
+        _gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         egui::Window::new("Tag Dumper").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.radio_value(&mut self.use_full_hash, true, "Full hash");
@@ -122,5 +120,7 @@ impl OverlayProvider for TagDumper {
                 };
             }
         });
+
+        true
     }
 }

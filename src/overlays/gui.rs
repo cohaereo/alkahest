@@ -7,30 +7,30 @@ use crate::render::DeviceContextSwapchain;
 use crate::resources::Resources;
 use crate::util::exe_relative_path;
 use crate::util::image::Png;
+use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
 use winit::event::WindowEvent;
 use winit::window::Window;
 
-//TODO: Pass GUI Manager to get other overlays
-pub trait OverlayProvider {
+pub trait Overlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         window: &Window,
         resources: &mut Resources,
-        icons: &GuiResources,
-    );
+        gui: GuiContext<'_>,
+    ) -> bool;
 }
+
 pub struct GuiManager {
     pub egui: egui::Context,
     pub integration: egui_winit::State,
     pub renderer: egui_directx11::DirectX11Renderer,
-    overlays: Vec<Rc<RefCell<dyn OverlayProvider>>>,
+    overlays: Vec<Rc<RefCell<dyn Overlay>>>,
     dcs: Arc<DeviceContextSwapchain>,
     resources: GuiResources,
 }
 
-// TODO: Way to obtain overlays by type
 impl GuiManager {
     pub fn create(window: &Window, dcs: Arc<DeviceContextSwapchain>) -> Self {
         let egui = egui::Context::default();
@@ -75,7 +75,7 @@ impl GuiManager {
         }
     }
 
-    pub fn add_overlay(&mut self, overlay: Rc<RefCell<dyn OverlayProvider>>) {
+    pub fn add_overlay(&mut self, overlay: Rc<RefCell<dyn Overlay>>) {
         self.overlays.push(overlay);
     }
 
@@ -96,14 +96,42 @@ impl GuiManager {
                 input,
                 &self.egui,
                 window.scale_factor() as f32,
-                |ctx| {
+                |integration, ctx| {
                     for overlay in self.overlays.iter() {
                         overlay.as_ref().borrow_mut().draw(
                             ctx,
                             &window,
                             resources,
-                            &self.resources,
+                            GuiContext {
+                                icons: &self.resources,
+                                integration,
+                            },
                         );
+                    }
+
+                    // Take all viewers out of the resource and put them back in later so that we can pass resources into it
+                    // This is a cheap operation because Box<> is a pointer
+                    let mut views = if let Some(mut viewers) = resources.get_mut::<ViewerWindows>()
+                    {
+                        std::mem::take(&mut viewers.0)
+                    } else {
+                        vec![]
+                    };
+
+                    views.retain_mut(|v| {
+                        v.draw(
+                            ctx,
+                            &window,
+                            resources,
+                            GuiContext {
+                                icons: &self.resources,
+                                integration,
+                            },
+                        )
+                    });
+
+                    if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
+                        viewers.0 = views;
                     }
 
                     misc_draw(ctx);
@@ -131,6 +159,11 @@ impl Drop for GuiManager {
     }
 }
 
+pub struct GuiContext<'a> {
+    pub icons: &'a GuiResources,
+    pub integration: &'a mut DirectX11Renderer,
+}
+
 pub struct GuiResources {
     pub icon_havok: egui::TextureHandle,
 }
@@ -153,3 +186,6 @@ impl GuiResources {
         Self { icon_havok }
     }
 }
+
+#[derive(Default)]
+pub struct ViewerWindows(pub Vec<Box<dyn Overlay>>);

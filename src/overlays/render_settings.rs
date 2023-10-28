@@ -15,7 +15,7 @@ use crate::{
     resources::Resources,
 };
 
-use super::gui::{GuiResources, OverlayProvider};
+use super::gui::Overlay;
 
 pub struct RenderSettingsOverlay {
     pub renderlayer_statics: bool,
@@ -30,14 +30,14 @@ pub struct RenderSettingsOverlay {
     pub last_frame: Instant,
 }
 
-impl OverlayProvider for RenderSettingsOverlay {
+impl Overlay for RenderSettingsOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        _icons: &GuiResources,
-    ) {
+        _gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         let delta_time = self.last_frame.elapsed().as_secs_f32();
         self.last_frame = Instant::now();
 
@@ -291,6 +291,8 @@ impl OverlayProvider for RenderSettingsOverlay {
                 }
             }
         });
+
+        true
     }
 }
 

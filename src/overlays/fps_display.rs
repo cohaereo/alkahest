@@ -5,7 +5,7 @@ use winit::window::Window;
 
 use crate::resources::Resources;
 
-use super::gui::{GuiResources, OverlayProvider};
+use super::gui::Overlay;
 
 pub struct FpsDisplayOverlay {
     pub deltas: ConstGenericRingBuffer<f32, 25>,
@@ -21,14 +21,14 @@ impl Default for FpsDisplayOverlay {
     }
 }
 
-impl OverlayProvider for FpsDisplayOverlay {
+impl Overlay for FpsDisplayOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         _resources: &mut Resources,
-        _icons: &GuiResources,
-    ) {
+        _gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;
 
         let painter = ctx.layer_painter(egui::LayerId::debug());
@@ -44,5 +44,7 @@ impl OverlayProvider for FpsDisplayOverlay {
         let delta = self.last_frame.elapsed().as_secs_f32();
         self.deltas.push(delta);
         self.last_frame = now;
+
+        true
     }
 }

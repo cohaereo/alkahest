@@ -1,5 +1,5 @@
-use egui::{Color32, ImageData, TextureId, TexturesDelta};
-use std::{collections::HashMap, mem::size_of, slice::from_raw_parts_mut};
+use egui::{epaint::ahash::HashMap, Color32, ImageData, TextureId, TexturesDelta};
+use std::{mem::size_of, slice::from_raw_parts_mut};
 use windows::Win32::Graphics::{
     Direct3D::D3D11_SRV_DIMENSION_TEXTURE2D,
     Direct3D11::{
@@ -24,6 +24,9 @@ struct ManagedTexture {
 #[derive(Default)]
 pub struct TextureAllocator {
     allocated: HashMap<TextureId, ManagedTexture>,
+    /// User-loaded DX11 textures
+    allocated_unmanaged: HashMap<TextureId, ID3D11ShaderResourceView>,
+    unmanaged_index: u64,
 }
 
 impl TextureAllocator {
@@ -50,7 +53,17 @@ impl TextureAllocator {
     }
 
     pub fn get_by_id(&self, tid: TextureId) -> Option<ID3D11ShaderResourceView> {
-        self.allocated.get(&tid).map(|t| t.resource.clone())
+        self.allocated
+            .get(&tid)
+            .map(|t| t.resource.clone())
+            .or_else(|| self.allocated_unmanaged.get(&tid).cloned())
+    }
+
+    pub fn allocate_dx(&mut self, srv: ID3D11ShaderResourceView) -> TextureId {
+        self.unmanaged_index += 1;
+        let tid = TextureId::User((1 << 60) + self.unmanaged_index);
+        self.allocated_unmanaged.insert(tid, srv);
+        tid
     }
 }
 
@@ -67,7 +80,11 @@ impl TextureAllocator {
     }
 
     fn free(&mut self, tid: TextureId) -> bool {
-        self.allocated.remove(&tid).is_some()
+        self.allocated
+            .remove(&tid)
+            .map(|_| ())
+            .or_else(|| self.allocated_unmanaged.remove(&tid).map(|_| ()))
+            .is_some()
     }
 
     fn update_partial(

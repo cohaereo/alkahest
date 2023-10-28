@@ -8,7 +8,7 @@ use crate::resources::Resources;
 use crate::structure::ExtendedHash;
 use crate::FpsCamera;
 
-use super::gui::{GuiResources, OverlayProvider};
+use super::gui::Overlay;
 
 pub struct CameraPositionOverlay {
     pub show_map_resources: bool,
@@ -19,14 +19,14 @@ pub struct CameraPositionOverlay {
     pub map_resource_distance_limit_enabled: bool,
 }
 
-impl OverlayProvider for CameraPositionOverlay {
+impl Overlay for CameraPositionOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        _icons: &GuiResources,
-    ) {
+        _gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         egui::Window::new(format!("{} Debug", ICON_BUG)).show(ctx, |ui| {
             let mut camera = resources.get_mut::<FpsCamera>().unwrap();
             ui.label(format!("X: {}", camera.position.x));
@@ -90,6 +90,8 @@ impl OverlayProvider for CameraPositionOverlay {
                 );
             }
         });
+
+        true
     }
 }
 

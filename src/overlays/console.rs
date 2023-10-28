@@ -1,8 +1,12 @@
 use crate::camera::FpsCamera;
-use crate::overlays::gui::OverlayProvider;
+use crate::overlays::gui::Overlay;
+use crate::render::dcs::DcsShared;
+
 use crate::resources::Resources;
+use crate::structure::ExtendedHash;
 
 use binrw::BinReaderExt;
+use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
 use glam::Vec3;
 use itertools::Itertools;
@@ -17,7 +21,8 @@ use tracing_subscriber::layer::Context;
 use tracing_subscriber::Layer;
 use winit::window::Window;
 
-use super::gui::GuiResources;
+use super::gui::ViewerWindows;
+use super::texture_viewer::TextureViewer;
 
 // ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
 lazy_static! {
@@ -86,14 +91,14 @@ impl Default for ConsoleOverlay {
     }
 }
 
-impl OverlayProvider for ConsoleOverlay {
+impl Overlay for ConsoleOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        _icons: &GuiResources,
-    ) {
+        _gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         let request_focus = if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
             self.open = true;
             true
@@ -177,6 +182,8 @@ impl OverlayProvider for ConsoleOverlay {
                 self.open = false;
             }
         }
+
+        true
     }
 }
 
@@ -232,6 +239,44 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             camera.position = new_pos;
             info!("Teleported to {} {} {}", new_pos.x, new_pos.y, new_pos.z);
         }
+        "open.tex" | "open.texture" => {
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32/64-bit tag");
+                return;
+            }
+
+            let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
+                if args[0].len() > 8 {
+                    let h = u64::from_be(u64::from_str_radix(args[0], 16)?);
+                    Ok(ExtendedHash::Hash64(TagHash64(h)))
+                } else {
+                    let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
+                    Ok(ExtendedHash::Hash32(TagHash(h)))
+                }
+            })();
+
+            let tag = match tag_parsed {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
+                let dcs = resources.get::<DcsShared>().unwrap();
+                match TextureViewer::new(tag, &dcs) {
+                    Ok(o) => {
+                        info!("Successfully loaded texture {tag}");
+                        viewers.0.push(Box::new(o));
+                    }
+                    Err(e) => {
+                        error!("Failed to load texture {tag}: {e}");
+                    }
+                }
+            }
+        }
+        "open.mat" | "open.material" => {}
         _ => error!("Unknown command '{command}'"),
     }
 }

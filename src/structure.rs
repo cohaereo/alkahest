@@ -1,7 +1,7 @@
 use binrw::{BinRead, BinReaderExt, BinResult, Endian};
 use destiny_pkg::{TagHash, TagHash64};
 
-use std::fmt::{Debug, Formatter, Write};
+use std::fmt::{Debug, Display, Formatter, Write};
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::Deref;
 use std::slice::Iter;
@@ -301,7 +301,7 @@ impl<T: BinRead + Debug> Debug for Tag<T> {
     }
 }
 
-// TODO: Custom reader once new tag parser comes around
+// TODO(cohae): Custom reader once new tag parser comes around
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]
 pub enum ExtendedHash {
     Hash32(TagHash),
@@ -339,6 +339,15 @@ impl Debug for ExtendedHash {
         match self {
             ExtendedHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
             ExtendedHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
+        }
+    }
+}
+
+impl Display for ExtendedHash {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("{:08X}", h.0.to_be())),
+            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("{:016X})", h.0.to_be())),
         }
     }
 }

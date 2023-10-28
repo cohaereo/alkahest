@@ -134,13 +134,13 @@ impl DirectX11Renderer {
         paint: PaintFn,
     ) -> Result<egui::FullOutput, RenderError>
     where
-        PaintFn: FnOnce(&Context),
+        PaintFn: FnOnce(&mut Self, &Context),
     {
         unsafe {
             let (dev, ctx) = &get_device_and_context(swap_chain)?;
             self.backup.save(ctx);
             let screen = self.get_screen_size();
-            let output = context.run(input, paint);
+            let output = context.run(input, |ctx| paint(self, ctx));
 
             if !output.textures_delta.is_empty() {
                 self.tex_alloc
@@ -227,6 +227,14 @@ impl DirectX11Renderer {
             device.CreateRenderTargetView(&backbuffer, None, Some(&mut self.render_view))?;
             Ok(result)
         }
+    }
+
+    pub fn textures(&self) -> &TextureAllocator {
+        &self.tex_alloc
+    }
+
+    pub fn textures_mut(&mut self) -> &mut TextureAllocator {
+        &mut self.tex_alloc
     }
 }
 

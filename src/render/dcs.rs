@@ -1,6 +1,7 @@
 use crate::util::RwLock;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::mem::transmute;
+use std::sync::Arc;
 use std::thread::ThreadId;
 use windows::Win32::Foundation::{BOOL, HINSTANCE};
 use windows::Win32::Graphics::Direct3D::*;
@@ -9,6 +10,7 @@ use windows::Win32::Graphics::Dxgi::Common::*;
 use windows::Win32::Graphics::Dxgi::*;
 use winit::window::Window;
 
+pub type DcsShared = Arc<DeviceContextSwapchain>;
 pub struct DeviceContextSwapchain {
     main_thread_id: ThreadId,
 

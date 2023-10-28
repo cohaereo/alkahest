@@ -16,23 +16,20 @@ use glam::{Mat4, Vec2};
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
 
-use super::{
-    camera_settings::CameraPositionOverlay,
-    gui::{GuiResources, OverlayProvider},
-};
+use super::{camera_settings::CameraPositionOverlay, gui::Overlay};
 
 pub struct ResourceTypeOverlay {
     pub debug_overlay: Rc<RefCell<CameraPositionOverlay>>,
 }
 
-impl OverlayProvider for ResourceTypeOverlay {
+impl Overlay for ResourceTypeOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        icons: &GuiResources,
-    ) {
+        gui: super::gui::GuiContext<'_>,
+    ) -> bool {
         if self.debug_overlay.borrow().show_map_resources {
             let screen_size = ctx.screen_rect().size();
 
@@ -160,7 +157,7 @@ impl OverlayProvider for ResourceTypeOverlay {
 
                     if res.has_havok_data {
                         painter.image(
-                            icons.icon_havok.id(),
+                            gui.icons.icon_havok.id(),
                             egui::Rect::from_center_size(
                                 egui::Pos2::from(screen_point.to_array())
                                     - egui::pos2(12., 12.).to_vec2(),
@@ -201,5 +198,7 @@ impl OverlayProvider for ResourceTypeOverlay {
                 }
             }
         }
+
+        true
     }
 }
