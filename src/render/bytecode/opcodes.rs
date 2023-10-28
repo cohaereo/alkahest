@@ -17,6 +17,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x07_u8)] Unk07,
     #[br(magic = 0x08_u8)] Min,
     #[br(magic = 0x09_u8)] Max,
+    #[br(magic = 0x0a_u8)] Unk0a,
     #[br(magic = 0x0b_u8)] Unk0b,
     #[br(magic = 0x0c_u8)] Merge1_3, // merge_1_3?
     #[br(magic = 0x0d_u8)] Unk0d,
@@ -44,11 +45,13 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x24_u8)] Unk24,
     #[br(magic = 0x25_u8)] Unk25,
     #[br(magic = 0x26_u8)] Unk26,
-    #[br(magic = 0x27_u8)] Unk27,
-    #[br(magic = 0x28_u8)] Unk28,
-    #[br(magic = 0x29_u8)] Unk29,
-    #[br(magic = 0x2a_u8)] Unk2a,
+    #[br(magic = 0x27_u8)] Unk27, // triangle???
+    #[br(magic = 0x28_u8)] Unk28, // jitter?
+    #[br(magic = 0x29_u8)] Unk29, // wander?
+    #[br(magic = 0x2a_u8)] Unk2a, // rand?
+    #[br(magic = 0x2b_u8)] Unk2b, // rand_smooth?
     #[br(magic = 0x2c_u8)] Unk2c,
+    #[br(magic = 0x2d_u8)] Unk2d,
     #[br(magic = 0x2e_u8)] Unk2e,
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
     #[br(magic = 0x35_u8)] Unk35 { unk1: u8 },
@@ -66,10 +69,8 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x42_u8)] Unk42,
     #[br(magic = 0x43_u8)] Unk43 { unk1: u8 },
     #[br(magic = 0x44_u8)] PopOutput { element: u8 }, // pop_output? 0x43 in bytecode from talk
-    /// Pushes a variable from the specified temp variable to stack
-    #[br(magic = 0x45_u8)] PushTemp { slot: u8 }, // push_temp?
-    /// Pops a variable from stack and stores it in the specified temp variable
-    #[br(magic = 0x46_u8)] PopTemp { slot: u8 }, // pop_temp?
+    #[br(magic = 0x45_u8)] Unk45 { slot: u8 }, // push_temp?
+    #[br(magic = 0x46_u8)] Unk46 { slot: u8 }, // pop_temp?
     #[br(magic = 0x47_u8)] Unk47 { unk1: u8 },
     #[br(magic = 0x48_u8)] Unk48 { unk1: u8 },
     #[br(magic = 0x49_u8)] Unk49 { unk1: u8 }, // Has conditional execution (unk1=1/2/3/4/5/6)
@@ -115,6 +116,7 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk07 => "unk07".to_string(),
             TfxBytecodeOp::Min => "min".to_string(),
             TfxBytecodeOp::Max => "max".to_string(),
+            TfxBytecodeOp::Unk0a => "unk0a".to_string(),
             TfxBytecodeOp::Unk0b => "unk0b".to_string(),
             TfxBytecodeOp::Merge1_3 => "merge_1_3".to_string(),
             TfxBytecodeOp::Unk0d => "unk0d".to_string(),
@@ -148,7 +150,9 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk28 => "unk28".to_string(),
             TfxBytecodeOp::Unk29 => "unk29".to_string(),
             TfxBytecodeOp::Unk2a => "unk2a".to_string(),
+            TfxBytecodeOp::Unk2b => "unk2b".to_string(),
             TfxBytecodeOp::Unk2c => "unk2c".to_string(),
+            TfxBytecodeOp::Unk2d => "unk2d".to_string(),
             TfxBytecodeOp::Unk2e => "unk2e".to_string(),
             TfxBytecodeOp::PushConstVec4 { constant_index } => {
                 format!("push_const_vec4({constant_index})")
@@ -196,10 +200,10 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PopOutput { element } => {
                 format!("pop_output({element})")
             }
-            TfxBytecodeOp::PushTemp { slot } => {
+            TfxBytecodeOp::Unk45 { slot } => {
                 format!("push_temp({slot})")
             }
-            TfxBytecodeOp::PopTemp { slot } => {
+            TfxBytecodeOp::Unk46 { slot } => {
                 format!("pop_temp({slot})")
             }
             TfxBytecodeOp::Unk47 { unk1 } => {

@@ -22,7 +22,7 @@ impl TfxBytecodeInterpreter {
         constants: &[Vec4],
     ) -> anyhow::Result<()> {
         let mut stack: ArrayVec<[Vec4; 128]> = Default::default();
-        let mut temp = [Vec4::ZERO; 16];
+        // let mut temp = [Vec4::ZERO; 16];
 
         let Ok(buffer_map) = buffer.map(D3D11_MAP_WRITE_NO_OVERWRITE) else {
             error!("Failed to map cb0 for TFX interpreter");
@@ -100,10 +100,55 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     *v = Vec4::new(v.x.cos(), v.y.cos(), v.z.cos(), v.w.cos());
                 }
+                TfxBytecodeOp::Unk0b => {
+                    let [t1, t0] = stack_pop!(2);
+                    let v = unsafe {
+                        use std::arch::x86_64::*;
+                        let v26 = _mm_mul_ps(t1.into(), t0.into());
+                        // TODO(cohae): Figure out swizzles after i regain my sanity
+                        let v27 = _mm_add_ps(_mm_shuffle_ps(v26, v26, 0b01001110), v26);
+                        _mm_add_ps(_mm_shuffle_ps(v27, v27, 0b10010011), v27)
+                    };
+                    stack_push!(Vec4::from(v));
+                }
+                TfxBytecodeOp::Merge1_3 => {
+                    let [t1, t0] = stack_pop!(2);
+                    // TODO(cohae): Is the parameter order correct?
+                    stack_push!(Vec4::new(t1.x, t0.x, t0.y, t0.z));
+                }
+                TfxBytecodeOp::Unk0d => {
+                    let vals = stack_pop!(2);
+                    stack_push!(fast_impls::byteop_0d(vals));
+                }
+                TfxBytecodeOp::Unk0f => {
+                    let [t1, t0] = stack_pop!(2);
+
+                    let v = unsafe {
+                        use std::arch::x86_64::*;
+                        let a = t1.into();
+                        let b = t0.into();
+                        _mm_add_ps(
+                            _mm_mul_ps(
+                                _mm_add_ps(
+                                    _mm_mul_ps(_mm_shuffle_ps(b, b, 0), a),
+                                    _mm_shuffle_ps(b, b, 85),
+                                ),
+                                _mm_mul_ps(a, a),
+                            ),
+                            _mm_add_ps(
+                                _mm_mul_ps(_mm_shuffle_ps(b, b, 170), a),
+                                _mm_shuffle_ps(b, b, 255),
+                            ),
+                        )
+                    };
+
+                    stack_push!(v.into());
+                }
                 // TODO(cohae): Check the SIMD output again, seems like frac but not really
                 TfxBytecodeOp::Unk1a => {
                     let v = stack_top!();
-                    *v = v.fract();
+                    *v = fast_impls::byteop_1a([*v]);
+                    // *v = v.fract();
                 }
 
                 // TODO(cohae): uses offset thingy, not elements
@@ -111,13 +156,38 @@ impl TfxBytecodeInterpreter {
                     let v = self.get_extern(renderer, *extern_, *element)?;
                     stack_push!(v);
                 }
-                TfxBytecodeOp::Merge1_3 => {
-                    let [t1, t0] = stack_pop!(2);
-                    // TODO(cohae): Is the parameter order correct?
-                    stack_push!(Vec4::new(t1.x, t0.x, t0.y, t0.z));
+
+                TfxBytecodeOp::Unk27 => {
+                    let v = stack_top!();
+                    *v = tfx_converted::bytecode_op_triangle(*v);
                 }
-                TfxBytecodeOp::Unk3d { .. }
-                | TfxBytecodeOp::Unk3f { .. }
+                TfxBytecodeOp::Unk28 => {
+                    let v = stack_top!();
+                    *v = tfx_converted::bytecode_op_jitter(*v);
+                }
+                TfxBytecodeOp::Unk29 => {
+                    let v = stack_top!();
+                    *v = tfx_converted::bytecode_op_wander(*v);
+                }
+                TfxBytecodeOp::Unk2a => {
+                    let v = stack_top!();
+                    *v = tfx_converted::bytecode_op_rand(*v);
+                }
+                TfxBytecodeOp::Unk2b => {
+                    let v = stack_top!();
+                    *v = tfx_converted::bytecode_op_rand_smooth(*v);
+                }
+
+                TfxBytecodeOp::Unk3d { .. } => {
+                    stack_push!(Vec4::ONE);
+                }
+                TfxBytecodeOp::Unk3e { .. } => {
+                    stack_push!(Vec4::X);
+                    stack_push!(Vec4::Y);
+                    stack_push!(Vec4::Z);
+                    stack_push!(Vec4::W);
+                }
+                TfxBytecodeOp::Unk3f { .. }
                 | TfxBytecodeOp::Unk4c { .. }
                 | TfxBytecodeOp::Unk4d { .. }
                 | TfxBytecodeOp::Unk4e { .. }
@@ -139,7 +209,6 @@ impl TfxBytecodeInterpreter {
                     *v = v.xxxx();
                 }
                 TfxBytecodeOp::Permute { fields } => {
-                    // TODO(cohae): reimplement using SIMD
                     let s0 = (fields >> 6) & 0b11;
                     let s1 = (fields >> 4) & 0b11;
                     let s2 = (fields >> 2) & 0b11;
@@ -173,19 +242,6 @@ impl TfxBytecodeInterpreter {
                         .offset(*element as isize)
                         .write(stack_pop!(1)[0])
                 },
-                // TfxBytecodeOp::PushTemp { slot } => {
-                //     let slotu = *slot as usize;
-                //     anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
-                //     stack_push!(temp[slotu]);
-                // }
-                // TfxBytecodeOp::PopTemp { slot } => {
-                //     let slotu = *slot as usize;
-                //     anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
-                //     let [v] = stack_pop!(1);
-                //     temp[slotu] = v;
-                // }
-                // #[cfg(feature = "tfx_experimental_opcodes")]
-                // TfxBytecodeOp::
                 #[cfg(not(feature = "tfx_strict_interpreter"))]
                 _ => {}
                 #[cfg(feature = "tfx_strict_interpreter")]
@@ -241,5 +297,168 @@ impl TfxBytecodeInterpreter {
         for (i, op) in self.opcodes.iter().enumerate() {
             debug!("\t{i}: {}", op.disassemble());
         }
+    }
+}
+
+mod fast_impls {
+    use glam::Vec4;
+    use std::arch::x86_64::*;
+
+    pub fn byteop_0d([t1, t0]: [Vec4; 2]) -> Vec4 {
+        unsafe {
+            let a = t1.into();
+            let b = t0.into();
+
+            let v28 = _mm_set1_ps(f32::NAN);
+            let v29 = _mm_andnot_ps(v28, _mm_set1_ps(1.0));
+            let v30 = _mm_and_ps(a, _mm_set_ps(f32::NAN, f32::NAN, 0.0, 0.0));
+            let v31 = _mm_and_ps(
+                _mm_shuffle_ps(b, b, 64),
+                _mm_set_ps(0.0, 0.0, f32::NAN, f32::NAN),
+            );
+
+            _mm_add_ps(
+                _mm_or_ps(_mm_and_ps(v31, v28), v29),
+                _mm_or_ps(_mm_and_ps(v30, v28), v29),
+            )
+            .into()
+        }
+    }
+
+    pub fn byteop_1a([t0]: [Vec4; 1]) -> Vec4 {
+        unsafe {
+            let v49 = _mm_cmpgt_epi32(
+                _mm_castps_si128(_mm_set1_ps(8388608.0)),
+                _mm_castps_si128(_mm_and_ps(_mm_set1_ps(f32::NAN), t0.into())),
+            );
+            let v50 = _mm_cvtepi32_ps(_mm_cvttps_epi32(t0.into()));
+
+            _mm_sub_ps(
+                t0.into(),
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_sub_ps(
+                            v50,
+                            _mm_and_ps(_mm_cmplt_ps(t0.into(), v50), _mm_set1_ps(1.0)),
+                        ),
+                        _mm_castsi128_ps(v49),
+                    ),
+                    _mm_castsi128_ps(_mm_andnot_si128(v49, _mm_castps_si128(t0.into()))),
+                ),
+            )
+            .into()
+        }
+    }
+}
+
+// Methods adapted from HLSL TFX sources
+mod tfx_converted {
+    use glam::{Vec4, Vec4Swizzles};
+
+    fn lerp(start: f32, end: f32, t: f32) -> f32 {
+        start + (end - start) * t
+    }
+
+    fn _trig_helper_vector_pseudo_sin_rotations_clamped(a: Vec4) -> Vec4 {
+        a * (a.abs() * -16.0 + 8.0)
+    }
+
+    fn _trig_helper_vector_pseudo_sin_rotations(a: Vec4) -> Vec4 {
+        let w = a - a.round(); // wrap to [-0.5, 0.5] range
+        _trig_helper_vector_pseudo_sin_rotations_clamped(w)
+    }
+
+    pub fn bytecode_op_triangle(x: Vec4) -> Vec4 {
+        let wrapped = x - x.round(); // wrap to [-0.5, 0.5] range
+        let abs_wrap = wrapped.abs(); // abs turns into triangle wave between [0, 0.5]
+
+        abs_wrap * 2.0 // scale to [0, 1] range
+    }
+
+    pub fn bytecode_op_jitter(x: Vec4) -> Vec4 {
+        let rotations =
+            x.xxxx() * Vec4::new(4.67, 2.99, 1.08, 1.35) + Vec4::new(0.52, 0.37, 0.16, 0.79);
+
+        // optimized scaled-sum-of-sines
+        let a = rotations - rotations.round(); // wrap to [-0.5, 0.5] range
+        let ma = a.abs() * -16.0 + 8.0;
+        let sa = a * 0.25;
+        let v = sa.dot(ma) + 0.5;
+
+        // hermite smooth interpolation (3*v^2 - 2*v^3)
+        let v2 = v * v;
+        let jitter_result = (-2.0 * v + 3.0) * v2;
+
+        Vec4::splat(jitter_result)
+    }
+
+    pub fn bytecode_op_wander(x: Vec4) -> Vec4 {
+        let rot0 = x.xxxx() * Vec4::new(4.08, 1.02, 3.0 / 5.37, 3.0 / 9.67)
+            + Vec4::new(0.92, 0.33, 0.26, 0.54);
+        let rot1 = x.xxxx() * Vec4::new(1.83, 3.09, 0.39, 0.87) + Vec4::new(0.12, 0.37, 0.16, 0.79);
+        let sines0 = _trig_helper_vector_pseudo_sin_rotations(rot0);
+        let sines1 =
+            _trig_helper_vector_pseudo_sin_rotations(rot1) * Vec4::new(0.02, 0.02, 0.28, 0.28);
+        let wander_result = 0.5 + sines0.dot(sines1);
+
+        Vec4::splat(wander_result)
+    }
+
+    pub fn bytecode_op_rand(x: Vec4) -> Vec4 {
+        // these magic numbers are 1/(prime/1000000)
+        let v0 = x.x.floor();
+        let mut val0 = Vec4::splat(v0).dot(Vec4::new(
+            1.0 / 1.043501,
+            1.0 / 0.794471,
+            1.0 / 0.113777,
+            1.0 / 0.015101,
+        ));
+        val0 = val0.fract();
+
+        //			val0=	bbs(val0);		// Blum-Blum-Shub randomimzer
+        val0 = val0 * val0 * 251.0;
+        val0 = val0.fract();
+
+        Vec4::splat(val0)
+    }
+
+    pub fn bytecode_op_rand_smooth(x: Vec4) -> Vec4 {
+        let v = x.x;
+        let v0 = v.round();
+        let v1 = v0 + 1.0;
+        let f = v - v0;
+        let f2 = f * f;
+
+        // hermite smooth interpolation (3*f^2 - 2*f^3)
+        let smooth_f = (-2.0 * f + 3.0) * f2;
+
+        // these magic numbers are 1/(prime/1000000)
+        let mut val0 = Vec4::splat(v0).dot(Vec4::new(
+            1.0 / 1.043501,
+            1.0 / 0.794471,
+            1.0 / 0.113777,
+            1.0 / 0.015101,
+        ));
+        let mut val1 = Vec4::splat(v1).dot(Vec4::new(
+            1.0 / 1.043501,
+            1.0 / 0.794471,
+            1.0 / 0.113777,
+            1.0 / 0.015101,
+        ));
+
+        val0 = val0.fract();
+        val1 = val1.fract();
+
+        //			val0=	bbs(val0);		// Blum-Blum-Shub randomimzer
+        val0 = val0 * val0 * 251.0;
+        val0 = val0.fract();
+
+        //			val10=	bbs(val1);		// Blum-Blum-Shub randomimzer
+        val1 = val1 * val1 * 251.0;
+        val1 = val1.fract();
+
+        let rand_smooth_result = lerp(val0, val1, smooth_f);
+
+        Vec4::splat(rand_smooth_result)
     }
 }
