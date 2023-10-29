@@ -2,7 +2,9 @@ use std::{sync::Arc, time::Instant};
 
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::util::RwLock;
+use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
+use nohash_hasher::IntSet;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -1082,13 +1084,23 @@ impl Renderer {
     }
 
     fn evaluate_tfx_expressions(&self) {
+        let materials_to_update: IntSet<TagHash> = self
+            .draw_queue
+            .read()
+            .iter()
+            .map(|(s, _)| TagHash(s.material()))
+            .collect();
         let _span = info_span!(
             "Evaluating TFX bytecode",
-            shader_count = self.render_data.data().materials.len()
+            shader_count = materials_to_update.len()
         )
         .entered();
-        for m in self.render_data.data_mut().materials.values_mut() {
-            m.evaluate_bytecode(self)
+
+        let mut r = self.render_data.data_mut();
+        for hash in materials_to_update {
+            if let Some(m) = r.materials.get_mut(&hash) {
+                m.evaluate_bytecode(self)
+            }
         }
     }
 }
