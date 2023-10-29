@@ -41,7 +41,7 @@ use crate::{
         Unk8080714b, Unk8080714f,
     },
     map_resources::MapResource,
-    material::{Material, Unk808071e8},
+    material::{Material, SMaterial},
     packages::package_manager,
     render::{
         scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
@@ -326,7 +326,7 @@ pub async fn load_maps(
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
                         let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                        let materials: TablePointer<Tag<Unk808071e8>> = cur.read_le()?;
+                        let materials: TablePointer<Tag<SMaterial>> = cur.read_le()?;
 
                         for m in &materials {
                             material_map.insert(

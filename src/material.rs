@@ -15,7 +15,7 @@ use destiny_pkg::TagHash;
 use glam::Vec4;
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk808071e8 {
+pub struct SMaterial {
     pub file_size: u64,
     /// 0 = ???
     /// 1 = normal
@@ -37,7 +37,7 @@ pub struct Unk808071e8 {
     #[br(seek_before(SeekFrom::Start(0x70)))]
     pub vertex_shader: TagHash,
     pub unk5c: u32,
-    pub vs_textures: TablePointer<Unk80807211>,
+    pub vs_textures: TablePointer<SMaterialTextureAssignment>,
     pub unk70: u64,
     pub vs_bytecode: TablePointer<u8>,
     pub vs_bytecode_constants: TablePointer<Vector4>,
@@ -52,7 +52,7 @@ pub struct Unk808071e8 {
     #[br(seek_before(SeekFrom::Start(0x2b0)))]
     pub pixel_shader: TagHash,
     pub unk2b4: u32,
-    pub ps_textures: TablePointer<Unk80807211>,
+    pub ps_textures: TablePointer<SMaterialTextureAssignment>,
     pub unk2c8: u64,
     pub ps_bytecode: TablePointer<u8>,
     pub ps_bytecode_constants: TablePointer<Vector4>,
@@ -65,7 +65,7 @@ pub struct Unk808071e8 {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk80807211 {
+pub struct SMaterialTextureAssignment {
     /// Material slot to assign to
     pub index: u32,
     _pad: u32,
@@ -80,7 +80,7 @@ pub struct Unk80807211 {
 // }
 
 pub struct Material {
-    pub mat: Unk808071e8,
+    pub mat: SMaterial,
     tag: TagHash,
 
     pub cb0_vs: Option<ConstantBuffer<Vec4>>,
@@ -91,7 +91,7 @@ pub struct Material {
 
 impl Material {
     // TODO(cohae): load_shaders is a hack, i fucking hate locks
-    pub fn load(renderer: &Renderer, mat: Unk808071e8, tag: TagHash, load_shaders: bool) -> Self {
+    pub fn load(renderer: &Renderer, mat: SMaterial, tag: TagHash, load_shaders: bool) -> Self {
         let _span = debug_span!("Load material", hash = %tag).entered();
         let cb0_vs = if mat.unke4.is_some() {
             let buffer_header_ref = package_manager().get_entry(mat.unke4).unwrap().reference;
@@ -360,7 +360,7 @@ impl Material {
 }
 
 impl Deref for Material {
-    type Target = Unk808071e8;
+    type Target = SMaterial;
 
     fn deref(&self) -> &Self::Target {
         &self.mat
