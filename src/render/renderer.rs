@@ -549,7 +549,7 @@ impl Renderer {
         let render_data = self.render_data.data();
 
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
-            if mat.unk8 != 1 {
+            if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
                 return;
             }
 
@@ -573,7 +573,7 @@ impl Renderer {
 
         if let Some(variant_material) = drawcall.variant_material {
             if let Some(mat) = render_data.materials.get(&variant_material) {
-                if mat.unk8 != 1 {
+                if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
                     return;
                 }
 
