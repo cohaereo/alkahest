@@ -139,11 +139,6 @@ impl EntityRenderer {
 
                 let variant_material = self.get_variant_material(p.variant_shader_index, 0);
 
-                let primitive_type = match p.primitive_type {
-                    EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                    EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-                };
-
                 let shading_technique = renderer
                     .render_data
                     .data()
@@ -173,7 +168,7 @@ impl EntityRenderer {
                         index_count: p.index_count,
                         instance_start: None,
                         instance_count: None,
-                        primitive_type,
+                        primitive_type: p.primitive_type.to_dx(),
                     },
                 );
             }

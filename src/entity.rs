@@ -4,6 +4,10 @@ use crate::types::{Vector2, Vector4};
 use binrw::BinRead;
 
 use destiny_pkg::TagHash;
+use windows::Win32::Graphics::Direct3D::{
+    D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+    D3D_PRIMITIVE_TOPOLOGY,
+};
 
 use std::cmp::Ordering;
 use std::io::SeekFrom;
@@ -34,7 +38,7 @@ pub struct Unk80809c36 {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk808073a5 {
     pub file_size: u64,
-    pub unk0: u64,
+    pub unk8: u64,
     pub meshes: TablePointer<Unk80807378>,
     #[br(seek_before(SeekFrom::Start(0x50)))]
     pub model_scale: Vector4,
@@ -68,11 +72,7 @@ pub struct Unk8080737e {
     pub unk10: u32,
     pub external_identifier: u16,
     pub unk16: u16,
-    // Non-zero = foliage?
-    pub unk18: u8,
-    pub unk19: u8,
-    pub unk1a: u8,
-    pub unk1b: u8,
+    pub flags: u32,
     pub gear_dye_change_color_index: u8,
     pub lod_category: ELodCategory,
     pub unk1e: u8,
@@ -92,6 +92,15 @@ pub struct Unk808072c5 {
 pub enum EPrimitiveType {
     Triangles = 3,
     TriangleStrip = 5,
+}
+
+impl EPrimitiveType {
+    pub fn to_dx(self) -> D3D_PRIMITIVE_TOPOLOGY {
+        match self {
+            EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+            EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+        }
+    }
 }
 
 #[allow(non_camel_case_types, clippy::derive_ord_xor_partial_ord)]

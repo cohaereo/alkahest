@@ -212,11 +212,6 @@ impl StaticModel {
                 }
 
                 if let Some(buffers) = self.buffers.get(p.buffer_index as usize) {
-                    let primitive_type = match p.primitive_type {
-                        EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                        EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-                    };
-
                     let material = self.model.materials[iu];
 
                     renderer.push_drawcall(
@@ -241,7 +236,7 @@ impl StaticModel {
                             index_count: p.index_count,
                             instance_start: None,
                             instance_count: Some(instance_count as _),
-                            primitive_type,
+                            primitive_type: p.primitive_type.to_dx(),
                         },
                     );
                 }
@@ -260,53 +255,6 @@ pub struct StaticOverlayModel {
 impl StaticOverlayModel {
     pub fn load(model: Unk80807193, renderer: &Renderer) -> anyhow::Result<StaticOverlayModel> {
         let _pm = package_manager();
-        // let vertex_header: VertexBufferHeader = pm.read_tag_struct(model.vertex_buffer).unwrap();
-
-        // if vertex_header.stride == 24 || vertex_header.stride == 48 {
-        //     anyhow::bail!("Support for 32-bit floats in vertex buffers are disabled");
-        // }
-
-        // let t = pm.get_entry(model.vertex_buffer).unwrap().reference;
-
-        // let vertex_data = pm.read_tag(t).unwrap();
-
-        // let mut vertex2_stride = None;
-        // let mut vertex2_data = None;
-        // if model.vertex_buffer2.is_some() {
-        //     let vertex2_header: VertexBufferHeader =
-        //         pm.read_tag_struct(model.vertex_buffer2).unwrap();
-        //     let t = pm.get_entry(model.vertex_buffer2).unwrap().reference;
-
-        //     vertex2_stride = Some(vertex2_header.stride as u32);
-        //     vertex2_data = Some(pm.read_tag(t).unwrap());
-        // }
-
-        // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-        //     vertex_data
-        //         .chunks_exact(vertex_header.stride as _)
-        //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-        //         .flat_map(|(v1, v2)| [v1, v2].concat())
-        //         .collect()
-        // } else {
-        //     vertex_data
-        // };
-
-        // let combined_vertex_buffer = unsafe {
-        //     device
-        //         .CreateBuffer(
-        //             &D3D11_BUFFER_DESC {
-        //                 ByteWidth: combined_vertex_data.len() as _,
-        //                 Usage: D3D11_USAGE_IMMUTABLE,
-        //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
-        //                 ..Default::default()
-        //             },
-        //             Some(&D3D11_SUBRESOURCE_DATA {
-        //                 pSysMem: combined_vertex_data.as_ptr() as _,
-        //                 ..Default::default()
-        //             }),
-        //         )
-        //         .context("Failed to create combined vertex buffer")?
-        // };
 
         renderer.render_data.load_buffer(model.index_buffer, false);
         renderer.render_data.load_buffer(model.vertex_buffer, false);
@@ -334,6 +282,9 @@ impl StaticOverlayModel {
     }
 
     pub fn draw(&self, renderer: &Renderer, instance_buffer: ID3D11Buffer, instance_count: usize) {
+        if !self.model.lod.is_highest_detail() {
+            return;
+        }
         let technique = renderer
             .render_data
             .data()
@@ -359,7 +310,7 @@ impl StaticOverlayModel {
                 index_count: self.model.index_count,
                 instance_start: None,
                 instance_count: Some(instance_count as _),
-                primitive_type: D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                primitive_type: self.model.primitive_type.to_dx(),
             },
         );
     }

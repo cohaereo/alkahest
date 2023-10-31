@@ -22,19 +22,12 @@ impl TfxBytecodeInterpreter {
         constants: &[Vec4],
     ) -> anyhow::Result<()> {
         let mut stack: ArrayVec<[Vec4; 128]> = Default::default();
-        // let mut temp = [Vec4::ZERO; 16];
+        let mut temp = [Vec4::ZERO; 16];
 
         let Ok(buffer_map) = buffer.map(D3D11_MAP_WRITE_NO_OVERWRITE) else {
             error!("Failed to map cb0 for TFX interpreter");
             return Ok(());
         };
-
-        // macro_rules! stack_verify {
-        //     // $pops: the amount of stack elements this operation needs to read
-        //     ($pops:literal) => {
-        //         anyhow::ensure!(stack.len() >= $pops);
-        //     };
-        // }
 
         macro_rules! stack_pop {
             ($pops:literal) => {{
@@ -152,8 +145,8 @@ impl TfxBytecodeInterpreter {
                 }
 
                 // TODO(cohae): uses offset thingy, not elements
-                TfxBytecodeOp::PushExternInputFloat { extern_, element } => {
-                    let v = self.get_extern(renderer, *extern_, *element)?;
+                TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
+                    let v = self.get_extern(renderer, *extern_, *offset)?;
                     stack_push!(v);
                 }
 
@@ -242,6 +235,17 @@ impl TfxBytecodeInterpreter {
                         .offset(*element as isize)
                         .write(stack_pop!(1)[0])
                 },
+                TfxBytecodeOp::PushTemp { slot } => {
+                    let slotu = *slot as usize;
+                    anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
+                    stack_push!(temp[slotu]);
+                }
+                TfxBytecodeOp::PopTemp { slot } => {
+                    let slotu = *slot as usize;
+                    anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
+                    let [v] = stack_pop!(1);
+                    temp[slotu] = v;
+                }
                 #[cfg(not(feature = "tfx_strict_interpreter"))]
                 _ => {}
                 #[cfg(feature = "tfx_strict_interpreter")]

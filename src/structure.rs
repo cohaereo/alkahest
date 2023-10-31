@@ -347,7 +347,7 @@ impl Display for ExtendedHash {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ExtendedHash::Hash32(h) => f.write_fmt(format_args!("{:08X}", h.0.to_be())),
-            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("{:016X})", h.0.to_be())),
+            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("{:016X}", h.0.to_be())),
         }
     }
 }
