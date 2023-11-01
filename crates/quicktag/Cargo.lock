@@ -622,8 +622,8 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.6.0"
-source = "git+https://github.com/v4nguard/destiny-pkg#29e7bbb65cc0c9882737fff4636dc8f480e029d5"
+version = "0.6.2"
+source = "git+https://github.com/v4nguard/destiny-pkg#b1d1634181eecfdcb417db273343f87e30dc97c5"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -632,6 +632,7 @@ dependencies = [
  "clap",
  "clap-num",
  "ddsfile",
+ "itertools",
  "json",
  "lazy_static",
  "libloading 0.8.1",
@@ -639,6 +640,7 @@ dependencies = [
  "parking_lot",
  "rayon",
  "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -1707,6 +1709,7 @@ dependencies = [
  "base64",
  "bincode",
  "binrw",
+ "clap",
  "destiny-pkg",
  "eframe",
  "env_logger",
@@ -1904,9 +1907,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.107"
+version = "1.0.108"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b420ce6e3d8bd882e9b243c6eed35dbc9a6110c9769e74b584e0d68d1f20c65"
+checksum = "3d1c7e3eac408d115102c4c24ad393e0821bb3a5df4d506a80f85f7a742a526b"
 dependencies = [
  "itoa",
  "ryu",
@@ -2077,6 +2080,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ce8c33a8d48bd45d624a6e523445fd21ec13d3653cd51f681abf67418f54eb8"
 dependencies = [
  "cfg-if",
+ "log",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",

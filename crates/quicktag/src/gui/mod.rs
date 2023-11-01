@@ -3,7 +3,7 @@ mod tag;
 
 use std::sync::Arc;
 
-use destiny_pkg::TagHash;
+use destiny_pkg::{PackageVersion, TagHash};
 use eframe::{
     egui::{self},
     emath::Align2,
@@ -30,9 +30,11 @@ pub struct QuickTagApp {
 
 impl QuickTagApp {
     /// Called once before the first frame.
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(_cc: &eframe::CreationContext<'_>, version: PackageVersion) -> Self {
         QuickTagApp {
-            cache_load: Some(Promise::spawn_thread("load_cache", load_tag_cache)),
+            cache_load: Some(Promise::spawn_thread("load_cache", move || {
+                load_tag_cache(version)
+            })),
             cache: Default::default(),
             strings: Arc::new(create_stringmap().unwrap()),
             tag_view: None,

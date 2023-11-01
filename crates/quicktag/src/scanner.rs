@@ -1,4 +1,10 @@
-use std::{fmt::Display, fs::File, io::Write, sync::Arc};
+use std::{
+    fmt::Display,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use destiny_pkg::{PackageManager, PackageVersion, TagHash, TagHash64};
 use eframe::epaint::mutex::RwLock;
@@ -174,8 +180,10 @@ pub fn scanner_progress() -> ScanStatus {
     *SCANNER_PROGRESS.read()
 }
 
-pub fn load_tag_cache() -> TagCache {
-    if let Ok(cache_file) = File::open("cache.bin") {
+pub fn load_tag_cache(version: PackageVersion) -> TagCache {
+    let cache_file_path = exe_relative_path(format!("tags_{}.cache", version.id()));
+
+    if let Ok(cache_file) = File::open(&cache_file_path) {
         info!("Existing cache file found, loading");
         *SCANNER_PROGRESS.write() = ScanStatus::LoadingCache;
 
@@ -226,7 +234,7 @@ pub fn load_tag_cache() -> TagCache {
                 current_package
             };
             info!("Opening pkg {path} ({}/{package_count})", current_package);
-            let pkg = PackageVersion::Destiny2Lightfall.open(path).unwrap();
+            let pkg = version.open(path).unwrap();
 
             let mut all_tags = pkg
                 .get_all_by_type(8, None)
@@ -264,7 +272,7 @@ pub fn load_tag_cache() -> TagCache {
     info!("Serializing tag cache...");
     let cache_bincode = bincode::serialize(&cache).unwrap();
     info!("Compressing tag cache...");
-    let mut writer = zstd::Encoder::new(File::create("cache.bin").unwrap(), 5).unwrap();
+    let mut writer = zstd::Encoder::new(File::create(cache_file_path).unwrap(), 5).unwrap();
     writer.write_all(&cache_bincode).unwrap();
     writer.finish().unwrap();
     *SCANNER_PROGRESS.write() = ScanStatus::None;
@@ -320,4 +328,16 @@ fn transform_tag_cache(cache: IntMap<u32, ScanResult>) -> TagCache {
     }
 
     new_cache
+}
+
+fn exe_directory() -> PathBuf {
+    std::env::current_exe()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf()
+}
+
+fn exe_relative_path<P: AsRef<Path>>(path: P) -> PathBuf {
+    exe_directory().join(path.as_ref())
 }

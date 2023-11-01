@@ -5,24 +5,34 @@ mod scanner;
 mod tagtypes;
 mod text;
 
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::sync::Arc;
 
+use clap::Parser;
 use destiny_pkg::{PackageManager, PackageVersion};
 use eframe::IconData;
+use env_logger::Env;
 use log::info;
 use packages::PACKAGE_MANAGER;
 
-use crate::gui::QuickTagApp;
+use crate::{gui::QuickTagApp, packages::package_manager};
+
+#[derive(clap::Parser, Debug)]
+#[command(author, version, about, long_about = None, disable_version_flag(true))]
+struct Args {
+    /// Path to packages directory
+    packages_path: String,
+
+    /// Game version for the specified packages directory
+    #[arg(short, value_enum)]
+    version: PackageVersion,
+}
 
 fn main() -> eframe::Result<()> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    let args = Args::parse();
 
     info!("Initializing package manager");
-    let pm = PackageManager::new(
-        PathBuf::from_str(&std::env::args().nth(1).unwrap()).unwrap(),
-        PackageVersion::Destiny2Lightfall,
-    )
-    .unwrap();
+    let pm = PackageManager::new(args.packages_path, args.version).unwrap();
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
@@ -39,6 +49,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "QuickTag",
         native_options,
-        Box::new(|cc| Box::new(QuickTagApp::new(cc))),
+        Box::new(|cc| Box::new(QuickTagApp::new(cc, package_manager().version))),
     )
 }
