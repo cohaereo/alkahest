@@ -212,7 +212,7 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
         .collect_vec();
 
     let package_count = all_pkgs.len();
-    let cache: IntMap<u32, ScanResult> = all_pkgs
+    let cache: IntMap<TagHash, ScanResult> = all_pkgs
         .par_iter()
         .map_with(scanner_context, |context, path| {
             let current_package = {
@@ -258,7 +258,7 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
 
                 let hash = TagHash::new(pkg.pkg_id(), t as u16);
                 let scan_result = scan_file(context, &data);
-                results.insert(hash.0, scan_result);
+                results.insert(hash, scan_result);
             }
 
             results
@@ -281,34 +281,34 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
 }
 
 /// Transforms the tag cache to include reference lookup tables
-fn transform_tag_cache(cache: IntMap<u32, ScanResult>) -> TagCache {
+fn transform_tag_cache(cache: IntMap<TagHash, ScanResult>) -> TagCache {
     info!("Transforming tag cache...");
 
     let mut new_cache: TagCache = Default::default();
 
     *SCANNER_PROGRESS.write() = ScanStatus::TransformGathering;
     info!("\t- Gathering references");
-    let mut direct_reference_cache: IntMap<u32, Vec<TagHash>> = Default::default();
+    let mut direct_reference_cache: IntMap<TagHash, Vec<TagHash>> = Default::default();
     for (k2, v2) in &cache {
         for t32 in &v2.file_hashes {
-            match direct_reference_cache.entry(t32.hash.0) {
+            match direct_reference_cache.entry(t32.hash) {
                 std::collections::hash_map::Entry::Occupied(mut o) => {
-                    o.get_mut().push(TagHash(*k2));
+                    o.get_mut().push(*k2);
                 }
                 std::collections::hash_map::Entry::Vacant(v) => {
-                    v.insert(vec![TagHash(*k2)]);
+                    v.insert(vec![*k2]);
                 }
             }
         }
 
         for t64 in &v2.file_hashes64 {
             if let Some(t32) = package_manager().hash64_table.get(&t64.hash.0) {
-                match direct_reference_cache.entry(t32.hash32.0) {
+                match direct_reference_cache.entry(t32.hash32) {
                     std::collections::hash_map::Entry::Occupied(mut o) => {
-                        o.get_mut().push(TagHash(*k2));
+                        o.get_mut().push(*k2);
                     }
                     std::collections::hash_map::Entry::Vacant(v) => {
-                        v.insert(vec![TagHash(*k2)]);
+                        v.insert(vec![*k2]);
                     }
                 }
             }
@@ -324,7 +324,20 @@ fn transform_tag_cache(cache: IntMap<u32, ScanResult>) -> TagCache {
             scan.references = refs.clone();
         }
 
-        new_cache.insert(TagHash(*k), scan);
+        new_cache.insert(*k, scan);
+    }
+
+    info!("\t- Adding remaining non-structure tags");
+    for (k, v) in direct_reference_cache {
+        if !v.is_empty() && !new_cache.contains_key(&k) {
+            new_cache.insert(
+                k,
+                ScanResult {
+                    references: v,
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     new_cache

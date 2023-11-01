@@ -1,4 +1,4 @@
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use eframe::egui;
 use log::warn;
 
@@ -19,12 +19,6 @@ pub fn tag_context(ui: &mut egui::Ui, tag: TagHash) {
     {
         warn!("Alkahest IPC not implemented yet");
         ui.close_menu();
-    }
-}
-
-pub fn tag_context64(ui: &mut egui::Ui, tag: TagHash64) {
-    if let Some(tag) = package_manager().hash64_table.get(&tag.0) {
-        tag_context(ui, tag.hash32)
     }
 }
 

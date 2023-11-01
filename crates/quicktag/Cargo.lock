@@ -677,7 +677,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.7.4",
+ "libloading 0.8.1",
 ]
 
 [[package]]
@@ -751,6 +751,15 @@ dependencies = [
  "nohash-hasher",
  "ron",
  "serde",
+]
+
+[[package]]
+name = "egui-notify"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc3b10f21c7bb2afaecb8d98677cdb233a8b1f336b9b95abd610a33aeced04fc"
+dependencies = [
+ "egui",
 ]
 
 [[package]]
@@ -1703,7 +1712,7 @@ dependencies = [
 
 [[package]]
 name = "quicktag"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1712,6 +1721,7 @@ dependencies = [
  "clap",
  "destiny-pkg",
  "eframe",
+ "egui-notify",
  "env_logger",
  "itertools",
  "lazy_static",

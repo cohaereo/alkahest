@@ -39,6 +39,7 @@ pub struct TagView {
     tag: TagHash,
     // tag_data: Vec<u8>,
     tag_entry: UEntryHeader,
+    tag_type: TagType,
 
     scan: ExtendedScanResult,
     tag_traversal: Option<Promise<String>>,
@@ -74,11 +75,13 @@ impl TagView {
             .flat_map(|o| read_raw_string_blob(&tag_data, o))
             .collect_vec();
 
+        let tag_entry = package_manager().get_entry(tag)?;
         Some(Self {
             string_hashes,
             tag,
             // tag_data,
-            tag_entry: package_manager().get_entry(tag).unwrap(),
+            tag_type: TagType::from_type_subtype(tag_entry.file_type, tag_entry.file_subtype),
+            tag_entry,
 
             scan: ExtendedScanResult::from_scanresult(cache.get(&tag).cloned()?),
             cache,
@@ -111,7 +114,7 @@ impl View for TagView {
             .map(|s| format!(" ({s})"))
             .unwrap_or_default();
         ui.heading(format!(
-            "Tag {} {}{ref_label} ({}+{}, ref {})",
+            "{} {} {ref_label} ({}+{}, ref {})",
             self.tag,
             TagType::from_type_subtype(self.tag_entry.file_type, self.tag_entry.file_subtype),
             self.tag_entry.file_type,
@@ -120,9 +123,19 @@ impl View for TagView {
         ))
         .context_menu(|ui| tag_context(ui, self.tag));
 
-        if ui.button("Open tag data in external application").clicked() {
-            open_tag_in_default_application(self.tag);
-        }
+        ui.horizontal(|ui| {
+            if ui.button("Open tag data in external application").clicked() {
+                open_tag_in_default_application(self.tag);
+            }
+
+            if TagHash(self.tag_entry.reference).is_pkg_file()
+                && ui
+                    .button("Open referenced in external application")
+                    .clicked()
+            {
+                open_tag_in_default_application(self.tag_entry.reference.into());
+            }
+        });
 
         ui.separator();
         egui::SidePanel::left("tv_left_panel")
@@ -133,49 +146,60 @@ impl View for TagView {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     ui.label(egui::RichText::new("Files referencing this tag").strong());
                     ui.group(|ui| {
-                        for (tag, entry) in &self.scan.references {
-                            let fancy_tag = format_tag_entry(*tag, Some(entry));
-                            let response = ui.add_enabled(
-                                *tag != self.tag,
-                                egui::SelectableLabel::new(false, fancy_tag),
-                            );
+                        if self.scan.references.is_empty() {
+                            ui.label(RichText::new("No incoming references found").italics());
+                        } else {
+                            for (tag, entry) in &self.scan.references {
+                                let fancy_tag = format_tag_entry(*tag, Some(entry));
+                                let response = ui.add_enabled(
+                                    *tag != self.tag,
+                                    egui::SelectableLabel::new(false, fancy_tag),
+                                );
 
-                            if response.context_menu(|ui| tag_context(ui, *tag)).clicked() {
-                                open_new_tag = Some(*tag);
+                                if response.context_menu(|ui| tag_context(ui, *tag)).clicked() {
+                                    open_new_tag = Some(*tag);
+                                }
                             }
                         }
                     });
 
                     ui.label(egui::RichText::new("Tag references in this file").strong());
                     ui.group(|ui| {
-                        for tag in &self.scan.file_hashes {
-                            let tag_label = if let Some(entry) = &tag.entry {
-                                let tagtype =
-                                    TagType::from_type_subtype(entry.file_type, entry.file_subtype);
+                        if self.scan.file_hashes.is_empty() {
+                            ui.label(RichText::new("No outgoing references found").italics());
+                        } else {
+                            for tag in &self.scan.file_hashes {
+                                let tag_label = if let Some(entry) = &tag.entry {
+                                    let tagtype = TagType::from_type_subtype(
+                                        entry.file_type,
+                                        entry.file_subtype,
+                                    );
 
-                                let fancy_tag = format_tag_entry(tag.hash.hash32(), Some(entry));
+                                    let fancy_tag =
+                                        format_tag_entry(tag.hash.hash32(), Some(entry));
 
-                                egui::RichText::new(format!("{fancy_tag} @ 0x{:X}", tag.offset))
-                                    .color(tagtype.display_color())
-                            } else {
-                                egui::RichText::new(format!(
-                                    "{} (pkg entry not found) @ 0x{:X}",
-                                    tag.hash, tag.offset
-                                ))
-                                .color(Color32::LIGHT_RED)
-                            };
+                                    egui::RichText::new(format!("{fancy_tag} @ 0x{:X}", tag.offset))
+                                        .color(tagtype.display_color())
+                                } else {
+                                    egui::RichText::new(format!(
+                                        "{} (pkg entry not found) @ 0x{:X}",
+                                        tag.hash, tag.offset
+                                    ))
+                                    .color(Color32::LIGHT_RED)
+                                };
 
-                            // TODO(cohae): Highlight/jump to tag in hex viewer
-                            let response = ui.add_enabled(
-                                tag.hash.hash32() != self.tag,
-                                egui::SelectableLabel::new(false, tag_label),
-                            );
+                                // TODO(cohae): Highlight/jump to tag in hex viewer
+                                let response = ui.add_enabled(
+                                    tag.hash.hash32() != self.tag,
+                                    egui::SelectableLabel::new(false, tag_label),
+                                );
 
-                            if response
-                                .context_menu(|ui| tag_context(ui, tag.hash.hash32()))
-                                .clicked()
-                            {
-                                open_new_tag = Some(tag.hash.hash32());
+                                if response
+                                    .context_menu(|ui| tag_context(ui, tag.hash.hash32()))
+                                    .clicked()
+                                {
+                                    open_new_tag = Some(tag.hash.hash32());
+                                }
                             }
                         }
                     });
@@ -183,106 +207,130 @@ impl View for TagView {
             });
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.horizontal(|ui| {
-                if ui
-                    .add_enabled(
-                        self.tag_traversal
-                            .as_ref()
-                            .map(|v| v.poll().is_ready())
-                            .unwrap_or(true),
-                        egui::Button::new("Traverse children"),
-                    )
-                    .clicked()
-                {
-                    let tag = self.tag;
-                    let cache = self.cache.clone();
-                    let depth_limit = self.traversal_depth_limit;
-                    let show_strings = self.traversal_show_strings;
-                    self.tag_traversal = Some(Promise::spawn_thread("traverse tags", move || {
-                        traverse_tags(tag, depth_limit, cache, show_strings)
-                    }));
-                }
-
-                if ui.button("Copy traversal").clicked() {
-                    if let Some(traversal) = self.tag_traversal.as_ref() {
-                        if let Some(result) = traversal.ready() {
-                            ui.output_mut(|o| o.copied_text = result.clone());
-                        }
+            if matches!(self.tag_type, TagType::Tag | TagType::TagGlobal) {
+                ui.horizontal(|ui| {
+                    if ui
+                        .add_enabled(
+                            self.tag_traversal
+                                .as_ref()
+                                .map(|v| v.poll().is_ready())
+                                .unwrap_or(true),
+                            egui::Button::new("Traverse children"),
+                        )
+                        .clicked()
+                    {
+                        let tag = self.tag;
+                        let cache = self.cache.clone();
+                        let depth_limit = self.traversal_depth_limit;
+                        let show_strings = self.traversal_show_strings;
+                        self.tag_traversal =
+                            Some(Promise::spawn_thread("traverse tags", move || {
+                                traverse_tags(tag, depth_limit, cache, show_strings)
+                            }));
                     }
-                }
 
-                ui.add(egui::DragValue::new(&mut self.traversal_depth_limit).clamp_range(4..=256));
-                ui.label("Max depth");
-
-                ui.checkbox(
-                    &mut self.traversal_show_strings,
-                    "Find strings (currently only shows raw strings)",
-                );
-            });
-
-            if let Some(traversal) = self.tag_traversal.as_ref() {
-                if let Some(result) = traversal.ready() {
-                    egui::ScrollArea::both()
-                        .auto_shrink([false; 2])
-                        .show(ui, |ui| {
-                            ui.style_mut().wrap = Some(false);
-                            ui.label(RichText::new(result).monospace());
-                        });
-                } else {
-                    ui.spinner();
-                    ui.label("Traversing tags");
-                }
-            }
-        });
-
-        egui::SidePanel::right("tv_right_panel")
-            .resizable(true)
-            .min_width(320.0)
-            .show_inside(ui, |ui| {
-                ui.style_mut().wrap = Some(false);
-                ui.label(egui::RichText::new("String Hashes").strong());
-                ui.group(|ui| {
-                    for (offset, hash) in &self.string_hashes {
-                        if let Some(strings) = self.string_cache.get(hash) {
-                            if strings.len() > 1 {
-                                ui.selectable_label(
-                                    false,
-                                    format!(
-                                        "'{}' ({} collisions) {:08x} @ 0x{:X}",
-                                        strings[(self.start_time.elapsed().as_secs() as usize)
-                                            % strings.len()],
-                                        strings.len(),
-                                        hash,
-                                        offset
-                                    ),
-                                )
-                                .on_hover_text(strings.join("\n"))
-                                .clicked();
-                            } else {
-                                ui.selectable_label(
-                                    false,
-                                    format!("'{}' {:08x} @ 0x{:X}", strings[0], hash, offset),
-                                )
-                                .clicked();
+                    if ui.button("Copy traversal").clicked() {
+                        if let Some(traversal) = self.tag_traversal.as_ref() {
+                            if let Some(result) = traversal.ready() {
+                                ui.output_mut(|o| o.copied_text = result.clone());
                             }
                         }
                     }
+
+                    ui.add(
+                        egui::DragValue::new(&mut self.traversal_depth_limit).clamp_range(4..=256),
+                    );
+                    ui.label("Max depth");
+
+                    ui.checkbox(
+                        &mut self.traversal_show_strings,
+                        "Find strings (currently only shows raw strings)",
+                    );
                 });
 
-                ui.label(egui::RichText::new("Raw strings (65008080)").strong());
-                ui.group(|ui| {
-                    for (offset, string) in &self.raw_strings {
-                        ui.selectable_label(false, format!("'{}' @ 0x{:X}", string, offset))
-                            .context_menu(|ui| {
-                                if ui.selectable_label(false, "Copy text").clicked() {
-                                    ui.output_mut(|o| o.copied_text = string.clone());
-                                    ui.close_menu();
-                                }
-                            })
-                            .clicked();
+                if let Some(traversal) = self.tag_traversal.as_ref() {
+                    if let Some(result) = traversal.ready() {
+                        egui::ScrollArea::both()
+                            .auto_shrink([false; 2])
+                            .show(ui, |ui| {
+                                ui.style_mut().wrap = Some(false);
+                                ui.label(RichText::new(result).monospace());
+                            });
+                    } else {
+                        ui.spinner();
+                        ui.label("Traversing tags");
                     }
+                }
+            } else {
+                ui.label(RichText::new("Traversal not available for non-8080 tags").italics());
+            }
+        });
+
+        if !self.string_hashes.is_empty() || !self.raw_strings.is_empty() {
+            egui::SidePanel::right("tv_right_panel")
+                .resizable(true)
+                .min_width(320.0)
+                .show_inside(ui, |ui| {
+                    ui.style_mut().wrap = Some(false);
+                    ui.label(egui::RichText::new("String Hashes").strong());
+                    ui.group(|ui| {
+                        if self.string_hashes.is_empty() {
+                            ui.label(RichText::new("No strings found").italics());
+                        } else {
+                            for (offset, hash) in &self.string_hashes {
+                                if let Some(strings) = self.string_cache.get(hash) {
+                                    if strings.len() > 1 {
+                                        ui.selectable_label(
+                                            false,
+                                            format!(
+                                                "'{}' ({} collisions) {:08x} @ 0x{:X}",
+                                                strings[(self.start_time.elapsed().as_secs()
+                                                    as usize)
+                                                    % strings.len()],
+                                                strings.len(),
+                                                hash,
+                                                offset
+                                            ),
+                                        )
+                                        .on_hover_text(strings.join("\n"))
+                                        .clicked();
+                                    } else {
+                                        ui.selectable_label(
+                                            false,
+                                            format!(
+                                                "'{}' {:08x} @ 0x{:X}",
+                                                strings[0], hash, offset
+                                            ),
+                                        )
+                                        .clicked();
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    ui.label(egui::RichText::new("Raw strings (65008080)").strong());
+                    ui.group(|ui| {
+                        if self.raw_strings.is_empty() {
+                            ui.label(RichText::new("No raw strings found").italics());
+                        } else {
+                            for (offset, string) in &self.raw_strings {
+                                ui.selectable_label(
+                                    false,
+                                    format!("'{}' @ 0x{:X}", string, offset),
+                                )
+                                .context_menu(|ui| {
+                                    if ui.selectable_label(false, "Copy text").clicked() {
+                                        ui.output_mut(|o| o.copied_text = string.clone());
+                                        ui.close_menu();
+                                    }
+                                })
+                                .clicked();
+                            }
+                        }
+                    });
                 });
-            });
+        }
 
         ctx.request_repaint_after(Duration::from_secs(1));
 

@@ -9,6 +9,7 @@ use eframe::{
     emath::Align2,
     epaint::{Color32, Rounding, Vec2},
 };
+use egui_notify::Toasts;
 use poll_promise::Promise;
 
 use crate::{
@@ -26,6 +27,8 @@ pub struct QuickTagApp {
     tag_view: Option<TagView>,
 
     tag_input: String,
+
+    toasts: Toasts,
 }
 
 impl QuickTagApp {
@@ -39,6 +42,7 @@ impl QuickTagApp {
             strings: Arc::new(create_stringmap().unwrap()),
             tag_view: None,
             tag_input: String::new(),
+            toasts: Toasts::default(),
         }
     }
 }
@@ -97,13 +101,12 @@ impl eframe::App for QuickTagApp {
                 ui.text_edit_singleline(&mut self.tag_input);
                 if ui.button("Open").clicked() {
                     let hash = u32::from_str_radix(&self.tag_input, 16).unwrap_or_default();
-                    let new_view = TagView::create(
-                        self.cache.clone(),
-                        self.strings.clone(),
-                        TagHash(u32::from_be(hash)),
-                    );
+                    let tag = TagHash(u32::from_be(hash));
+                    let new_view = TagView::create(self.cache.clone(), self.strings.clone(), tag);
                     if new_view.is_some() {
                         self.tag_view = new_view;
+                    } else {
+                        self.toasts.error(format!("Could not find tag {tag}"));
                     }
                 }
             });
@@ -112,6 +115,8 @@ impl eframe::App for QuickTagApp {
                 tagview.view(ctx, ui);
             }
         });
+
+        self.toasts.show(ctx);
     }
 }
 
