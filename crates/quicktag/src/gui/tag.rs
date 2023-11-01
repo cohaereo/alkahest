@@ -54,7 +54,7 @@ impl TagView {
         string_cache: Arc<StringCache>,
         tag: TagHash,
     ) -> Option<TagView> {
-        let tag_data = package_manager().read_tag(tag).unwrap();
+        let tag_data = package_manager().read_tag(tag).ok()?;
         let mut raw_string_offsets = vec![];
         let mut string_hashes = vec![];
         for (i, b) in tag_data.chunks_exact(4).enumerate() {

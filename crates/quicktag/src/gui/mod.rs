@@ -3,7 +3,7 @@ mod tag;
 
 use std::sync::Arc;
 
-use destiny_pkg::{PackageVersion, TagHash};
+use destiny_pkg::{PackageVersion, TagHash, TagHash64};
 use eframe::{
     egui::{self},
     emath::Align2,
@@ -13,6 +13,7 @@ use egui_notify::Toasts;
 use poll_promise::Promise;
 
 use crate::{
+    packages::package_manager,
     scanner::{load_tag_cache, scanner_progress, ScanStatus, TagCache},
     text::{create_stringmap, StringCache},
 };
@@ -98,15 +99,26 @@ impl eframe::App for QuickTagApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Tag:");
-                ui.text_edit_singleline(&mut self.tag_input);
-                if ui.button("Open").clicked() {
-                    let hash = u32::from_str_radix(&self.tag_input, 16).unwrap_or_default();
-                    let tag = TagHash(u32::from_be(hash));
+                let submitted = ui.text_edit_singleline(&mut self.tag_input).lost_focus()
+                    && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                if ui.button("Open").clicked() || submitted {
+                    let tag = if self.tag_input.len() >= 16 {
+                        let hash = u64::from_str_radix(&self.tag_input, 16).unwrap_or_default();
+                        if let Some(t) = package_manager().hash64_table.get(&u64::from_be(hash)) {
+                            t.hash32
+                        } else {
+                            TagHash::NONE
+                        }
+                    } else {
+                        let hash = u32::from_str_radix(&self.tag_input, 16).unwrap_or_default();
+                        TagHash(u32::from_be(hash))
+                    };
                     let new_view = TagView::create(self.cache.clone(), self.strings.clone(), tag);
                     if new_view.is_some() {
                         self.tag_view = new_view;
                     } else {
-                        self.toasts.error(format!("Could not find tag {tag}"));
+                        self.toasts
+                            .error(format!("Could not find tag '{}' ({tag})", self.tag_input));
                     }
                 }
             });
