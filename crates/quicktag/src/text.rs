@@ -6,8 +6,9 @@ use std::ops::Deref;
 use std::slice::Iter;
 
 use binrw::{BinRead, BinReaderExt, BinResult, Endian};
-use destiny_pkg::TagHash;
+use destiny_pkg::{PackageVersion, TagHash};
 use eframe::epaint::ahash::HashSet;
+use log::warn;
 use nohash_hasher::IntMap;
 
 use crate::packages::package_manager;
@@ -211,10 +212,12 @@ pub struct StringContainer {
 }
 
 #[derive(BinRead, Debug)]
+#[br(import(prebl: bool))]
 pub struct StringData {
     pub file_size: u64,
     pub string_parts: TablePointer<StringPart>,
-    // pub _unk1: (u64, u64),
+    #[br(if(prebl))]
+    pub _unk1: (u64, u64),
     pub _unk2: TablePointer<()>,
     pub string_data: TablePointer<u8>,
     pub string_combinations: TablePointer<StringCombination>,
@@ -277,9 +280,24 @@ pub fn decode_text(data: &[u8], cipher: u16) -> String {
 }
 
 pub fn create_stringmap() -> anyhow::Result<StringCache> {
+    if !matches!(
+        package_manager().version,
+        PackageVersion::Destiny2Shadowkeep
+            | PackageVersion::Destiny2BeyondLight
+            | PackageVersion::Destiny2WitchQueen
+            | PackageVersion::Destiny2Lightfall
+    ) {
+        warn!(
+            "{:?} does not support string loading",
+            package_manager().version
+        );
+        return Ok(StringCache::default());
+    };
+
+    let prebl = package_manager().version == PackageVersion::Destiny2Shadowkeep;
     let mut tmp_map: IntMap<u32, HashSet<String>> = Default::default();
     for (t, _) in package_manager()
-        .get_all_by_reference(u32::from_be(0xEF998080))
+        .get_all_by_reference(u32::from_be(if prebl { 0x889a8080 } else { 0xEF998080 }))
         .into_iter()
     {
         let Ok(textset_header) = package_manager().read_tag_struct::<StringContainer>(t) else {
@@ -290,7 +308,7 @@ pub fn create_stringmap() -> anyhow::Result<StringCache> {
             continue;
         };
         let mut cur = Cursor::new(&data);
-        let text_data: StringData = cur.read_le()?;
+        let text_data: StringData = cur.read_le_args((prebl,))?;
 
         for (combination, hash) in text_data
             .string_combinations

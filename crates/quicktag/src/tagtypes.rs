@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
+use destiny_pkg::PackageVersion;
 use eframe::epaint::Color32;
+
+use crate::packages::package_manager;
 
 pub enum TagType {
     Texture2D { is_header: bool },
@@ -27,39 +30,6 @@ pub enum TagType {
 }
 
 impl TagType {
-    pub fn from_type_subtype(t: u8, st: u8) -> TagType {
-        let is_header = matches!(t, 32..=34);
-
-        match (t, st) {
-            (8, 0) => TagType::Tag,
-            (16, 0) => TagType::TagGlobal,
-            (24, 0) => TagType::UmbraTome,
-            (26, 6) => TagType::WwiseBank,
-            (26, 7) => TagType::WwiseStream,
-            (27, 0) => TagType::Havok,
-            (32 | 40, _) => match st {
-                1 => TagType::Texture2D { is_header },
-                2 => TagType::TextureCube { is_header },
-                3 => TagType::Texture3D { is_header },
-                4 => TagType::VertexBuffer { is_header },
-                6 => TagType::IndexBuffer { is_header },
-                7 => TagType::ConstantBuffer { is_header },
-                fsubtype => TagType::Unknown { ftype: t, fsubtype },
-            },
-            (33 | 41, _) => match st {
-                0 => TagType::PixelShader { is_header },
-                1 => TagType::VertexShader { is_header },
-                6 => TagType::ComputeShader { is_header },
-                fsubtype => TagType::Unknown { ftype: t, fsubtype },
-            },
-            (34 | 42, _) => match st {
-                1 => TagType::TextureSampler { is_header },
-                fsubtype => TagType::Unknown { ftype: t, fsubtype },
-            },
-            (ftype, fsubtype) => TagType::Unknown { ftype, fsubtype },
-        }
-    }
-
     pub fn display_color(&self) -> Color32 {
         match self {
             TagType::Texture2D { .. }
@@ -138,6 +108,85 @@ impl Display for TagType {
             TagType::Unknown { ftype, fsubtype } => {
                 f.write_fmt(format_args!("Unk{ftype}+{fsubtype}"))
             }
+        }
+    }
+}
+
+impl TagType {
+    pub fn from_type_subtype(t: u8, st: u8) -> TagType {
+        match package_manager().version {
+            PackageVersion::Destiny2Shadowkeep => Self::from_type_subtype_sk(t, st),
+            PackageVersion::Destiny2BeyondLight
+            | PackageVersion::Destiny2WitchQueen
+            | PackageVersion::Destiny2Lightfall => Self::from_type_subtype_lf(t, st),
+            _ => TagType::Unknown {
+                ftype: t,
+                fsubtype: st,
+            },
+        }
+    }
+
+    pub fn from_type_subtype_sk(t: u8, st: u8) -> TagType {
+        let is_header = matches!(t, 32..=34);
+
+        match (t, st) {
+            (8, 0) => TagType::Tag,
+            (16, 0) => TagType::TagGlobal,
+            (26, 5) => TagType::WwiseBank,
+            (26, 6) => TagType::WwiseStream,
+            (32 | 40, _) => match st {
+                1 => TagType::Texture2D { is_header },
+                2 => TagType::TextureCube { is_header },
+                3 => TagType::Texture3D { is_header },
+                4 => TagType::VertexBuffer { is_header },
+                6 => TagType::IndexBuffer { is_header },
+                7 => TagType::ConstantBuffer { is_header },
+                fsubtype => TagType::Unknown { ftype: t, fsubtype },
+            },
+            (33 | 41, _) => match st {
+                0 => TagType::PixelShader { is_header },
+                1 => TagType::VertexShader { is_header },
+                6 => TagType::ComputeShader { is_header },
+                fsubtype => TagType::Unknown { ftype: t, fsubtype },
+            },
+            (34 | 42, _) => match st {
+                1 => TagType::TextureSampler { is_header },
+                fsubtype => TagType::Unknown { ftype: t, fsubtype },
+            },
+            (ftype, fsubtype) => TagType::Unknown { ftype, fsubtype },
+        }
+    }
+
+    pub fn from_type_subtype_lf(t: u8, st: u8) -> TagType {
+        let is_header = matches!(t, 32..=34);
+
+        match (t, st) {
+            (8, 0) => TagType::Tag,
+            (16, 0) => TagType::TagGlobal,
+            (24, 0) => TagType::UmbraTome,
+            (26, 6) => TagType::WwiseBank,
+            (26, 7) => TagType::WwiseStream,
+            (27, 0) => TagType::Havok,
+            (32 | 40, _) => match st {
+                1 => TagType::Texture2D { is_header },
+                2 => TagType::TextureCube { is_header },
+                3 => TagType::Texture3D { is_header },
+                4 => TagType::VertexBuffer { is_header },
+                6 => TagType::IndexBuffer { is_header },
+                7 => TagType::ConstantBuffer { is_header },
+                fsubtype => TagType::Unknown { ftype: t, fsubtype },
+            },
+            (33 | 41, _) => match st {
+                0 => TagType::PixelShader { is_header },
+                1 => TagType::VertexShader { is_header },
+                6 => TagType::ComputeShader { is_header },
+                fsubtype => TagType::Unknown { ftype: t, fsubtype },
+            },
+            (34 | 42, _) => match st {
+                1 => TagType::TextureSampler { is_header },
+                fsubtype => TagType::Unknown { ftype: t, fsubtype },
+            },
+            (ftype, fsubtype) => TagType::Unknown { ftype, fsubtype },
         }
     }
 }
