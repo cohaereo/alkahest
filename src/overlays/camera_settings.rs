@@ -13,6 +13,11 @@ use super::gui::Overlay;
 pub struct CameraPositionOverlay {
     pub show_map_resources: bool,
     pub show_map_resource_label: bool,
+
+    pub map_resource_only_show_named: bool,
+    pub map_resource_show_map: bool,
+    pub map_resource_show_activity: bool,
+
     pub map_resource_label_background: bool,
     pub map_resource_filter: Vec<bool>,
     pub map_resource_distance: f32,
@@ -87,6 +92,18 @@ impl Overlay for CameraPositionOverlay {
                     self.map_resource_distance_limit_enabled,
                     egui::Slider::new(&mut self.map_resource_distance, 25.0..=4000.0)
                         .text("Max Resource Distance"),
+                );
+
+                ui.checkbox(&mut self.map_resource_show_map, "Show map resources");
+
+                ui.checkbox(
+                    &mut self.map_resource_show_activity,
+                    "Show activity resources",
+                );
+
+                ui.checkbox(
+                    &mut self.map_resource_only_show_named,
+                    "Only show named entities",
                 );
             }
         });

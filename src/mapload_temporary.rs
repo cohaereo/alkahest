@@ -10,16 +10,21 @@ use crate::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     ecs::{
         components::{
-            ActivityGroup, CubemapVolume, EntityWorldId, PointLight, ResourceOriginType,
+            ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
             ResourcePoint,
         },
         transform::Transform,
         Scene,
     },
+    entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
-    map::{Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809178, Unk80809802},
+    map::{
+        Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b,
+        Unk80809802,
+    },
     render::renderer::RendererShared,
-    types::ResourceHash,
+    types::{FnvHash, ResourceHash},
+    util::fnv1,
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -109,6 +114,17 @@ pub async fn load_maps(
 
         let mut unknown_root_resources: IntMap<u32, usize> = Default::default();
 
+        let mut entity_worldid_name_map: IntMap<u64, String> = Default::default();
+        if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
+            for (e, _) in activity_entrefs {
+                for resource in &e.unk18.entity_resources {
+                    if let Some(strings) = get_entity_labels(resource.entity_resource) {
+                        entity_worldid_name_map.extend(strings);
+                    }
+                }
+            }
+        }
+
         for map_container in &think.child_map.map_resources {
             for table in &map_container.data_tables {
                 let table_data = package_manager().read_tag(table.tag()).unwrap();
@@ -123,6 +139,7 @@ pub async fn load_maps(
                     ResourceOriginType::Map,
                     0,
                     stringmap.clone(),
+                    &entity_worldid_name_map,
                     &mut terrains,
                     &mut placement_groups,
                     &mut material_map,
@@ -205,6 +222,7 @@ pub async fn load_maps(
                                 ResourceOriginType::Activity,
                                 phase_name2.0,
                                 stringmap.clone(),
+                                &entity_worldid_name_map,
                                 &mut terrains,
                                 &mut placement_groups,
                                 &mut material_map,
@@ -227,6 +245,7 @@ pub async fn load_maps(
                                 ResourceOriginType::Activity2,
                                 phase_name2.0,
                                 stringmap.clone(),
+                                &entity_worldid_name_map,
                                 &mut terrains,
                                 &mut placement_groups,
                                 &mut material_map,
@@ -754,22 +773,6 @@ pub async fn load_maps(
     })
 }
 
-fn is_physics_entity(entity: ExtendedHash) -> bool {
-    if let Some(nh) = entity.hash32() {
-        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
-            return false;
-        };
-
-        for e in &header.entity_resources {
-            if e.unk0.unk10.resource_type == 0x8080916a {
-                return true;
-            }
-        }
-    }
-
-    false
-}
-
 pub struct LoadMapsData {
     pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
     pub entity_renderers: IntMap<u64, EntityRenderer>,
@@ -788,6 +791,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     resource_origin: ResourceOriginType,
     group_id: u32,
     stringmap: Arc<IntMap<u32, String>>,
+    entity_worldid_name_map: &IntMap<u64, String>,
 
     terrain_headers: &mut Vec<(TagHash, Unk8080714f)>,
     placement_groups: &mut Vec<Tag<Unk8080966d>>,
@@ -1277,6 +1281,40 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         EntityWorldId(data.world_id),
                     )));
                 }
+                0x8080917b => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk8080917b = table_data.read_le()?;
+
+                    ents.push(scene.spawn((
+                        transform,
+                        ResourcePoint {
+                            resource: MapResource::Unk8080917b(d.unk0.havok_file),
+                            has_havok_data: true,
+                            ..base_rp
+                        },
+                        EntityWorldId(data.world_id),
+                    )));
+                }
+                0x80809121 => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk80809121 = table_data.read_le()?;
+
+                    ents.push(scene.spawn((
+                        transform,
+                        ResourcePoint {
+                            resource: MapResource::Unk80809121(d.havok_file),
+                            has_havok_data: true,
+                            ..base_rp
+                        },
+                        EntityWorldId(data.world_id),
+                    )));
+                }
                 u => {
                     if data.translation.x == 0.0
                         && data.translation.y == 0.0
@@ -1313,10 +1351,72 @@ fn load_datatable_into_scene<R: Read + Seek>(
     }
 
     if group_id != 0 {
-        for e in ents {
-            scene.insert_one(e, ActivityGroup(group_id)).ok();
+        for e in &ents {
+            scene.insert_one(*e, ActivityGroup(group_id)).ok();
+        }
+    }
+
+    for e in &ents {
+        let Some(world_id) = scene.get::<&EntityWorldId>(*e).map(|w| w.0).ok() else {
+            continue;
+        };
+
+        if let Some(name) = entity_worldid_name_map.get(&world_id) {
+            scene.insert_one(*e, Label(name.clone())).ok();
         }
     }
 
     Ok(())
+}
+
+fn is_physics_entity(entity: ExtendedHash) -> bool {
+    if let Some(nh) = entity.hash32() {
+        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+            return false;
+        };
+
+        for e in &header.entity_resources {
+            if e.unk0.unk10.resource_type == 0x8080916a {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
+    let data = package_manager().read_tag(entity).ok()?;
+    let mut cur = Cursor::new(data);
+
+    let e = cur.read_le::<SEntityResource>().ok()?;
+    let mut world_id_list = vec![];
+    if e.unk80.is_none() {
+        return None;
+    }
+
+    if matches!(e.unk18.resource_type, 0x80808cf8 | 0x808098fa) {
+        cur.seek(SeekFrom::Start(e.unk18.offset + 0x50)).ok()?;
+        let list: TablePointer<Unk80809905> = cur.read_le().ok()?;
+        world_id_list = list.take_data();
+    }
+
+    // TODO(cohae): There's volumes and stuff without a world ID that still have a name
+    world_id_list.retain(|w| w.world_id != u64::MAX);
+
+    let mut name_hash_map: IntMap<FnvHash, String> = IntMap::default();
+
+    let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
+    for v in tablethingy.unk0.into_iter() {
+        if let Some(name_ptr) = &v.unk0_name_pointer {
+            name_hash_map.insert(fnv1(&name_ptr.name), name_ptr.name.to_string());
+        }
+    }
+
+    Some(
+        world_id_list
+            .into_iter()
+            .filter_map(|w| Some((w.world_id, name_hash_map.get(&w.name_hash)?.clone())))
+            .collect(),
+    )
 }

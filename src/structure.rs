@@ -81,6 +81,10 @@ impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> _TablePointer<O, C, T
     pub fn data(&self) -> &[T] {
         &self.data
     }
+
+    pub fn take_data(self) -> Vec<T> {
+        self.data
+    }
 }
 
 impl<O: Into<i64> + Copy, C: Into<u64> + Copy, T: BinRead> Deref for _TablePointer<O, C, T> {
@@ -251,6 +255,69 @@ impl Debug for ResourcePointer {
         f.write_fmt(format_args!(
             "ResourcePointer(type=0x{:08x})",
             self.resource_type
+        ))
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ResourcePointerWithClass {
+    pub offset: u64,
+    pub is_valid: bool,
+
+    pub resource_type: u32,
+    /// Usually just the current tag
+    pub parent_tag: TagHash,
+    pub class_type: u32,
+}
+
+impl BinRead for ResourcePointerWithClass {
+    type Args<'b> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let offset_base = reader.stream_position()?;
+        let offset: i64 = reader.read_type(endian)?;
+        if offset == 0 || offset == i64::MAX {
+            return Ok(ResourcePointerWithClass {
+                offset: 0,
+                is_valid: false,
+                resource_type: u32::MAX,
+                parent_tag: TagHash::NONE,
+                class_type: u32::MAX,
+            });
+        }
+
+        let offset_save = reader.stream_position()?;
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset - 4))?;
+        let resource_type: u32 = reader.read_type(endian)?;
+        let parent_tag: TagHash = reader.read_type(endian)?;
+        let class_type: u32 = reader.read_type(endian)?;
+
+        let true_offset = reader.stream_position()?;
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(ResourcePointerWithClass {
+            offset: true_offset,
+            is_valid: true,
+            resource_type,
+            parent_tag,
+            class_type,
+        })
+    }
+}
+
+impl Debug for ResourcePointerWithClass {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "ResourcePointer(type=0x{:08X}, parent={}, class={:08X})",
+            self.resource_type,
+            self.parent_tag,
+            self.class_type.to_be()
         ))
     }
 }

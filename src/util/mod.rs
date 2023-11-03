@@ -5,6 +5,8 @@ use std::path::PathBuf;
 
 pub use lock::{FilterDebugLockTarget, LockTracker, RwLock};
 
+use crate::types::FnvHash;
+
 /// Enables ANSI color codes on older/weird command prompt versions
 pub fn fix_windows_command_prompt() {
     use windows::Win32::System::Console::{
@@ -38,4 +40,12 @@ pub fn exe_relative_path(path: &str) -> PathBuf {
 #[inline]
 pub fn D3D11CalcSubresource(MipSlice: usize, ArraySlice: usize, MipLevels: usize) -> usize {
     MipSlice + ArraySlice * MipLevels
+}
+
+pub const FNV1_BASE: u32 = 0x811c9dc5;
+pub const FNV1_PRIME: u32 = 0x01000193;
+pub fn fnv1(data: &[u8]) -> FnvHash {
+    data.iter().fold(FNV1_BASE, |acc, b| {
+        acc.wrapping_mul(FNV1_PRIME) ^ (*b as u32)
+    })
 }

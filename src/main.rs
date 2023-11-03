@@ -389,6 +389,9 @@ pub async fn main() -> anyhow::Result<()> {
         map_resource_distance_limit_enabled: config::with(|cfg| {
             cfg.resources.resource_distance_limit
         }),
+        map_resource_only_show_named: false,
+        map_resource_show_activity: true,
+        map_resource_show_map: true,
     }));
 
     let gui_resources = Rc::new(RefCell::new(ResourceTypeOverlay {

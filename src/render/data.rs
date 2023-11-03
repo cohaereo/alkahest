@@ -99,7 +99,7 @@ impl RenderData {
             2,
             2,
             2,
-            &[0x10, 0x10, 0x10, 0xff].repeat(2 * 2 * 2),
+            &[0x50, 0x50, 0x50, 0xff].repeat(2 * 2 * 2),
             DxgiFormat::R8G8B8A8_UNORM,
             Some("2x2x2 blend factor"),
         )?;
@@ -108,7 +108,7 @@ impl RenderData {
             dcs,
             2,
             2,
-            &[0x30, 0x30, 0x30, 0x30].repeat(2 * 2),
+            &[0x50, 0x50, 0x50, 0x50].repeat(2 * 2),
             DxgiFormat::R8G8B8A8_UNORM,
             Some("2x2 blend factor15"),
         )?;

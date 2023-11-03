@@ -47,3 +47,5 @@ pub struct PointLight;
 pub struct CubemapVolume(pub TagHash, pub AABB, pub String);
 
 pub struct ActivityGroup(pub u32);
+
+pub struct Label(pub String);

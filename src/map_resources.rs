@@ -36,6 +36,8 @@ pub enum MapResource {
     Unk808085c0,
     Unk80806a40,
     Unk80806cc3(AABB),
+    Unk8080917b(TagHash),
+    Unk80809121(TagHash),
 }
 
 impl MapResource {
@@ -79,6 +81,8 @@ impl MapResource {
             MapResource::RespawnPoint => "Respawn Point".to_string(),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
+            MapResource::Unk8080917b(h) => format!("Unk8080917b (havok {h})"),
+            MapResource::Unk80809121(h) => format!("Unk80809121 (havok {h})"),
             MapResource::AmbientSound(s) => {
                 if let Some(s) = s {
                     format!(
@@ -243,4 +247,6 @@ mapresource_info!(
     11, Unk808085c0, [255, 96, 96], ICON_HELP
     12, Unk80806a40, [255, 44, 44], ICON_HELP
     13, Unk80806cc3, [96, 96, 255], ICON_HELP
+    14, Unk8080917b, [96, 96, 255], ICON_HELP
+    15, Unk80809121, [96, 96, 255], ICON_HELP
 );

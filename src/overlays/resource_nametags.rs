@@ -1,7 +1,7 @@
 use crate::{
     camera::FpsCamera,
     ecs::{
-        components::{ResourceOriginType, ResourcePoint},
+        components::{Label, ResourceOriginType, ResourcePoint},
         transform::Transform,
     },
     map::MapDataList,
@@ -52,13 +52,35 @@ impl Overlay for ResourceTypeOverlay {
                     resource: MapResource,
                     has_havok_data: bool,
                     origin: ResourceOriginType,
+                    label: Option<String>,
                 }
 
                 let mut rp_list = vec![];
 
-                for (_, (transform, res)) in m.scene.query::<(&Transform, &ResourcePoint)>().iter()
+                for (_, (transform, res, label)) in m
+                    .scene
+                    .query::<(&Transform, &ResourcePoint, Option<&Label>)>()
+                    .iter()
                 {
                     if !self.debug_overlay.borrow().map_resource_filter[res.resource.index()] {
+                        continue;
+                    }
+
+                    if res.origin == ResourceOriginType::Map
+                        && !self.debug_overlay.borrow().map_resource_show_map
+                    {
+                        continue;
+                    }
+
+                    if matches!(
+                        res.origin,
+                        ResourceOriginType::Activity | ResourceOriginType::Activity2
+                    ) && !self.debug_overlay.borrow().map_resource_show_activity
+                    {
+                        continue;
+                    }
+
+                    if self.debug_overlay.borrow().map_resource_only_show_named && label.is_none() {
                         continue;
                     }
 
@@ -95,6 +117,7 @@ impl Overlay for ResourceTypeOverlay {
                             resource: res.resource.clone(),
                             has_havok_data: res.has_havok_data,
                             origin: res.origin,
+                            label: label.map(|v| v.0.clone()),
                         },
                     ))
                 }
@@ -116,6 +139,12 @@ impl Overlay for ResourceTypeOverlay {
                     let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
                     if self.debug_overlay.borrow().show_map_resource_label {
                         let debug_string = res.resource.debug_string();
+                        let debug_string = if let Some(l) = res.label {
+                            format!("{l}\n{debug_string}")
+                        } else {
+                            debug_string
+                        };
+
                         let debug_string_font = egui::FontId::proportional(14.0);
                         let debug_string_pos: egui::Pos2 =
                             (screen_point + Vec2::new(14.0, 0.0)).to_array().into();

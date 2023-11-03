@@ -1,4 +1,6 @@
-use crate::structure::{ExtendedHash, RelPointer, ResourcePointer, TablePointer, Tag};
+use crate::structure::{
+    ExtendedHash, RelPointer, ResourcePointer, ResourcePointerWithClass, TablePointer, Tag,
+};
 
 use crate::types::{ResourceHash, Vector4};
 use binrw::{BinRead, NullString};
@@ -121,8 +123,8 @@ pub struct Unk80808943 {
 pub struct SEntityResource {
     pub file_size: u64,
     pub unk8: ResourcePointer,
-    pub unk10: ResourcePointer,
-    pub unk18: ResourcePointer,
+    pub unk10: ResourcePointerWithClass,
+    pub unk18: ResourcePointerWithClass,
 
     #[br(seek_before = SeekFrom::Start(0x40))]
     pub resource_table1: TablePointer<()>,

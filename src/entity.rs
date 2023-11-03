@@ -1,7 +1,7 @@
-use crate::structure::{DeadBeefMarker, ResourcePointer, TablePointer, Tag};
-use crate::types::{Vector2, Vector4};
+use crate::structure::{DeadBeefMarker, RelPointer, ResourcePointer, TablePointer, Tag};
+use crate::types::{FnvHash, ResourceHash, Vector2, Vector4};
 
-use binrw::BinRead;
+use binrw::{BinRead, BinReaderExt, NullString};
 
 use destiny_pkg::TagHash;
 use windows::Win32::Graphics::Direct3D::{
@@ -21,18 +21,22 @@ pub struct Unk80809c0f {
 
 #[derive(BinRead, Debug)]
 pub struct Unk80809c04 {
-    pub unk0: Tag<Unk80809c36>,
+    pub unk0: Tag<Unk80809b06>,
     pub unk4: u32,
     pub unk8: u32,
 }
 
 /// Entity resource
 #[derive(BinRead, Debug)]
-pub struct Unk80809c36 {
+pub struct Unk80809b06 {
     pub file_size: u64,
     pub unk8: ResourcePointer,
     pub unk10: ResourcePointer,
     pub unk18: ResourcePointer,
+
+    #[br(seek_before(SeekFrom::Start(0x80)))]
+    pub unk80: TagHash,
+    pub unk84: TagHash,
 }
 
 #[derive(BinRead, Debug, Clone)]
@@ -180,4 +184,61 @@ pub struct IndexBufferHeader {
     pub data_size: u64,
     pub deadbeef: DeadBeefMarker,
     pub zero1: u32,
+}
+
+#[derive(BinRead, Debug)]
+pub struct Unk80809905 {
+    pub name_hash: FnvHash,
+    _pad: u32,
+    pub world_id: u64,
+}
+
+#[derive(BinRead, Debug)]
+pub struct Unk8080906b {
+    pub file_size: u64,
+    pub unk0: TablePointer<Unk80809d02>,
+}
+
+#[derive(Debug)]
+pub struct Unk80809d02 {
+    pub unk0_name_pointer: Option<RelPointer<Unk8080894d>>,
+    pub unk8: Option<RelPointer<()>>,
+}
+
+// TODO: Optional relpointers
+impl BinRead for Unk80809d02 {
+    type Args<'a> = ();
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        endian: binrw::Endian,
+        _args: Self::Args<'_>,
+    ) -> binrw::BinResult<Self> {
+        let check: [u64; 2] = reader.read_type(endian)?;
+        reader.seek(SeekFrom::Current(-16))?;
+
+        let unk0_name_pointer = if check[0] != 0 {
+            reader.read_type(endian)?
+        } else {
+            reader.seek(SeekFrom::Current(8))?;
+            None
+        };
+
+        let unk8 = if check[1] != 0 {
+            reader.read_type(endian)?
+        } else {
+            reader.seek(SeekFrom::Current(8))?;
+            None
+        };
+
+        Ok(Self {
+            unk0_name_pointer,
+            unk8,
+        })
+    }
+}
+
+#[derive(BinRead, Debug)]
+pub struct Unk8080894d {
+    pub name: RelPointer<NullString>,
 }

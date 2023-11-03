@@ -3,6 +3,8 @@ use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Quat, Vec2, Vec3, Vec3A, Vec4};
 use std::fmt::{Debug, Formatter, Write};
 
+pub type FnvHash = u32;
+
 #[derive(BinRead, Copy, Clone, PartialEq)]
 pub struct ResourceHash(pub u32);
 

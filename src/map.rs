@@ -7,6 +7,7 @@ use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
+use serde::{Deserialize, Serialize};
 
 use std::fmt::Debug;
 use std::io::SeekFrom;
@@ -465,7 +466,7 @@ pub struct SMeshInstanceOcclusionBounds {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80809178 {
     // Points to havok pre-tag
-    pub unk0: RelPointer<()>,
+    pub unk0: RelPointer<Unk80809121>,
 
     pub unk8: u32,
     pub unkc: u32,
@@ -475,4 +476,18 @@ pub struct Unk80809178 {
 
     // Absolute offset to havok pre-tag??
     pub unk1c: u64,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk8080917b {
+    // Points to havok pre-tag
+    pub unk0: RelPointer<Unk80809121>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80809121 {
+    pub unk0: [u32; 4],
+    pub havok_file: TagHash,
+    pub unk14: u32,
+    pub unk18: u32,
 }
