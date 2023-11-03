@@ -36,6 +36,7 @@ impl ResourcePoint {
     pub fn entity_key(&self) -> u64 {
         match self.resource {
             MapResource::Unk80806aa3(_, t, _) => t.0 as u64,
+            MapResource::Unk808068d4(t) => t.0 as u64,
             _ => self.entity.key(),
         }
     }

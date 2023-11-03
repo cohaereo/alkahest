@@ -491,3 +491,12 @@ pub struct Unk80809121 {
     pub unk14: u32,
     pub unk18: u32,
 }
+
+#[derive(BinRead, Clone)]
+pub struct Unk808068d4 {
+    pub unk0: u32,
+    pub unk4: u32,
+    pub unk8: u32,
+    pub unkc: u32,
+    pub entity_model: TagHash,
+}

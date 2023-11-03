@@ -1,6 +1,7 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH,
+    ICON_LIGHTBULB_ON, ICON_LIGHTBULB_ON_50, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER,
+    ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
 use crate::render::debug::DebugShapes;
@@ -27,7 +28,7 @@ pub enum MapResource {
     RespawnPoint,
     AmbientSound(Option<Unk80809802>),
     Light,
-    SpotLight,
+    ShadowingLight,
     NamedArea(Unk80809178, String),
 
     Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash),
@@ -38,6 +39,7 @@ pub enum MapResource {
     Unk80806cc3(AABB),
     Unk8080917b(TagHash),
     Unk80809121(TagHash),
+    Unk808068d4(TagHash),
 }
 
 impl MapResource {
@@ -68,12 +70,10 @@ impl MapResource {
                 )
             }
             MapResource::Unk808067b5 { .. } => "Unk808067b5 (light flare)".to_string(),
-            MapResource::CubemapVolume(c, aabb) => {
+            MapResource::CubemapVolume(c, _aabb) => {
                 format!(
-                    "Cubemap Volume ({:.0}m³)\n'{}' ({:08X})",
-                    aabb.volume(),
-                    *c.cubemap_name,
-                    c.cubemap_texture.0.to_be()
+                    "Cubemap Volume\n'{}' (cube={}, volume={})",
+                    *c.cubemap_name, c.cubemap_texture, c.unk1c0
                 )
             }
             MapResource::Unk80806aa3(_, _, _) => "Unk80806aa3".to_string(),
@@ -95,8 +95,9 @@ impl MapResource {
                 }
             }
             MapResource::Unk80806cc3(_) => "Unk80806cc3".to_string(),
-            MapResource::SpotLight => "Spotlight".to_string(),
+            MapResource::ShadowingLight => "Spotlight".to_string(),
             MapResource::NamedArea(_, s) => format!("NamedArea ('{s}')\n(TODO: havok)"),
+            MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
         }
     }
 
@@ -123,7 +124,7 @@ impl MapResource {
             MapResource::Unk80806cc3(bounds) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
-            MapResource::SpotLight => {
+            MapResource::ShadowingLight => {
                 debug_shapes.line_orientation(translation, rotation, 2.5, self.debug_color())
             }
             MapResource::RespawnPoint => {
@@ -238,7 +239,7 @@ mapresource_info!(
     2, CubemapVolume, [50, 255, 50], ICON_SPHERE
     3, RespawnPoint, [220, 20, 20], ICON_ACCOUNT_CONVERT
     4, AmbientSound, [0, 192, 0], ICON_VOLUME_HIGH
-    5, SpotLight, [255, 255, 0], ICON_SPOTLIGHT_BEAM
+    5, ShadowingLight, [255, 255, 0], ICON_LIGHTBULB_ON_50
     6, Light, [255, 255, 0], ICON_LIGHTBULB_ON
     7, NamedArea, [0, 127, 0], ICON_TAG
     8, Unknown, [255, 255, 255], ICON_HELP
@@ -249,4 +250,5 @@ mapresource_info!(
     13, Unk80806cc3, [96, 96, 255], ICON_HELP
     14, Unk8080917b, [96, 96, 255], ICON_HELP
     15, Unk80809121, [96, 96, 255], ICON_HELP
+    16, Unk808068d4, [22, 230, 190], ICON_WAVES
 );

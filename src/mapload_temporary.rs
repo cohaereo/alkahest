@@ -19,8 +19,8 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b,
-        Unk80809802,
+        Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121, Unk80809178,
+        Unk8080917b, Unk80809802,
     },
     render::renderer::RendererShared,
     types::{FnvHash, ResourceHash},
@@ -1254,7 +1254,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
-                            resource: MapResource::SpotLight,
+                            resource: MapResource::ShadowingLight,
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
@@ -1309,6 +1309,24 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         transform,
                         ResourcePoint {
                             resource: MapResource::Unk80809121(d.havok_file),
+                            has_havok_data: true,
+                            ..base_rp
+                        },
+                        EntityWorldId(data.world_id),
+                    )));
+                }
+                0x808068d4 => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk808068d4 = table_data.read_le()?;
+                    to_load_entitymodels.insert(d.entity_model);
+
+                    ents.push(scene.spawn((
+                        transform,
+                        ResourcePoint {
+                            resource: MapResource::Unk808068d4(d.entity_model),
                             has_havok_data: true,
                             ..base_rp
                         },

@@ -379,7 +379,10 @@ pub async fn main() -> anyhow::Result<()> {
 
             config::with(|cfg| {
                 for (k, v) in cfg.resources.filters.iter() {
-                    f[MapResource::id_to_index(k)] = *v;
+                    let index = MapResource::id_to_index(k);
+                    if index != 0xff {
+                        f[index] = *v;
+                    }
                 }
             });
 

@@ -428,12 +428,27 @@ impl Renderer {
                     .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
                 self.dcs
                     .context()
+                    .PSSetShaderResources(20, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+                self.dcs
+                    .context()
                     .PSSetShaderResources(23, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+
+                let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
+                    self.render_data
+                        .data()
+                        .textures
+                        .get(&t.key())
+                        .map(|t| t.view.clone())
+                });
+
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(24, Some(&[cubemap_texture]));
             }
-            self.render_data
-                .data()
-                .white
-                .bind(&self.dcs, 20, ShaderStages::all());
+            // self.render_data
+            //     .data()
+            //     .white
+            //     .bind(&self.dcs, 20, ShaderStages::all());
             // self.render_data
             //     .data()
             //     .rainbow_texture
