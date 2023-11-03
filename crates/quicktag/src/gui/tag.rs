@@ -1,6 +1,7 @@
 use std::{
     fmt::Display,
     io::{Cursor, Read, Seek, SeekFrom},
+    path::Path,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -122,6 +123,18 @@ impl View for TagView {
             TagHash(self.tag_entry.reference)
         ))
         .context_menu(|ui| tag_context(ui, self.tag));
+        ui.label(
+            RichText::new(format!(
+                "Package {}",
+                package_manager()
+                    .package_paths
+                    .get(&self.tag.pkg_id())
+                    .map(|p| Path::new(p).file_name().unwrap_or_default())
+                    .unwrap_or_default()
+                    .to_string_lossy()
+            ))
+            .weak(),
+        );
 
         ui.horizontal(|ui| {
             if ui.button("Open tag data in external application").clicked() {
@@ -207,6 +220,10 @@ impl View for TagView {
             });
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
+            if !self.scan.successful {
+                ui.heading(RichText::new("⚠ Tag data failed to read").color(Color32::YELLOW));
+            }
+
             if matches!(self.tag_type, TagType::Tag | TagType::TagGlobal) {
                 ui.horizontal(|ui| {
                     if ui
@@ -364,6 +381,7 @@ impl Display for ExtendedTagHash {
 }
 
 struct ExtendedScanResult {
+    pub successful: bool,
     pub file_hashes: Vec<ScannedHashWithEntry<ExtendedTagHash>>,
 
     /// References from other files
@@ -397,6 +415,7 @@ impl ExtendedScanResult {
         file_hashes_combined.sort_unstable_by_key(|v| v.offset);
 
         ExtendedScanResult {
+            successful: s.successful,
             file_hashes: file_hashes_combined,
             references: s
                 .references

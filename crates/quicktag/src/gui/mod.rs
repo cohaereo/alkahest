@@ -3,7 +3,7 @@ mod tag;
 
 use std::sync::Arc;
 
-use destiny_pkg::{PackageVersion, TagHash, TagHash64};
+use destiny_pkg::{PackageVersion, TagHash};
 use eframe::{
     egui::{self},
     emath::Align2,
@@ -116,9 +116,10 @@ impl eframe::App for QuickTagApp {
                     let new_view = TagView::create(self.cache.clone(), self.strings.clone(), tag);
                     if new_view.is_some() {
                         self.tag_view = new_view;
+                    } else if package_manager().get_entry(tag).is_some() {
+                        self.toasts.warning(format!("Could not find tag '{}' ({tag}) in cache\nThis usually means it has no references", self.tag_input));
                     } else {
-                        self.toasts
-                            .error(format!("Could not find tag '{}' ({tag})", self.tag_input));
+                        self.toasts.error(format!("Could not find tag '{}' ({tag})", self.tag_input));
                     }
                 }
             });

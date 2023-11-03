@@ -10,6 +10,8 @@ pub enum TagType {
     TextureCube { is_header: bool },
     Texture3D { is_header: bool },
     TextureSampler { is_header: bool },
+    TextureLargeBuffer,
+
     VertexBuffer { is_header: bool },
     IndexBuffer { is_header: bool },
     ConstantBuffer { is_header: bool },
@@ -22,6 +24,7 @@ pub enum TagType {
 
     Havok,
     UmbraTome,
+    CriwareUsm,
 
     Tag,
     TagGlobal,
@@ -35,7 +38,8 @@ impl TagType {
             TagType::Texture2D { .. }
             | TagType::TextureCube { .. }
             | TagType::Texture3D { .. }
-            | TagType::TextureSampler { .. } => Color32::GREEN,
+            | TagType::TextureSampler { .. }
+            | TagType::TextureLargeBuffer { .. } => Color32::GREEN,
 
             TagType::VertexBuffer { .. }
             | TagType::IndexBuffer { .. }
@@ -46,8 +50,7 @@ impl TagType {
             | TagType::ComputeShader { .. } => Color32::from_rgb(249, 168, 71),
 
             TagType::WwiseBank | TagType::WwiseStream => Color32::from_rgb(191, 106, 247),
-            TagType::Havok => Color32::YELLOW,
-            TagType::UmbraTome => Color32::YELLOW,
+            TagType::Havok | TagType::UmbraTome | TagType::CriwareUsm => Color32::YELLOW,
 
             TagType::Tag | TagType::TagGlobal => Color32::GRAY,
 
@@ -71,6 +74,7 @@ impl Display for TagType {
                 "Texture3D{}",
                 if *is_header { "" } else { " (Data)" }
             )),
+            TagType::TextureLargeBuffer => f.write_str("TextureLargeBuffer"),
             TagType::TextureSampler { is_header } => f.write_fmt(format_args!(
                 "TextureSampler{}",
                 if *is_header { "" } else { " (Data)" }
@@ -105,6 +109,7 @@ impl Display for TagType {
             TagType::WwiseStream => f.write_str("WwiseStream"),
             TagType::Havok => f.write_str("Havok"),
             TagType::UmbraTome => f.write_str("UmbraTome"),
+            TagType::CriwareUsm => f.write_str("CriwareUsm"),
             TagType::Unknown { ftype, fsubtype } => {
                 f.write_fmt(format_args!("Unk{ftype}+{fsubtype}"))
             }
@@ -167,6 +172,7 @@ impl TagType {
             (26, 6) => TagType::WwiseBank,
             (26, 7) => TagType::WwiseStream,
             (27, 0) => TagType::Havok,
+            (27, 1) => TagType::CriwareUsm,
             (32 | 40, _) => match st {
                 1 => TagType::Texture2D { is_header },
                 2 => TagType::TextureCube { is_header },
@@ -186,6 +192,7 @@ impl TagType {
                 1 => TagType::TextureSampler { is_header },
                 fsubtype => TagType::Unknown { ftype: t, fsubtype },
             },
+            (48, 1) => TagType::TextureLargeBuffer,
             (ftype, fsubtype) => TagType::Unknown { ftype, fsubtype },
         }
     }

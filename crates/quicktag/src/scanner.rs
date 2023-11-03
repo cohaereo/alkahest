@@ -13,7 +13,7 @@ use log::{error, info, warn};
 use nohash_hasher::{IntMap, IntSet};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::packages::package_manager;
+use crate::{packages::package_manager, references::REFERENCE_MAP, tagtypes::TagType};
 
 pub type TagCache = IntMap<TagHash, ScanResult>;
 
@@ -24,8 +24,11 @@ pub struct ScannerContext {
     pub known_string_hashes: IntSet<u32>,
 }
 
-#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, Debug)]
 pub struct ScanResult {
+    /// Were we able to read the tag data?
+    pub successful: bool,
+
     pub file_hashes: Vec<ScannedHash<TagHash>>,
     pub file_hashes64: Vec<ScannedHash<TagHash64>>,
     pub string_hashes: Vec<ScannedHash<u32>>,
@@ -34,7 +37,19 @@ pub struct ScanResult {
     pub references: Vec<TagHash>,
 }
 
-#[derive(Clone, serde::Deserialize, serde::Serialize)]
+impl Default for ScanResult {
+    fn default() -> Self {
+        ScanResult {
+            successful: true,
+            file_hashes: Default::default(),
+            file_hashes64: Default::default(),
+            string_hashes: Default::default(),
+            references: Default::default(),
+        }
+    }
+}
+
+#[derive(Clone, serde::Deserialize, serde::Serialize, Debug)]
 pub struct ScannedHash<T: Sized> {
     pub offset: u64,
     pub hash: T,
@@ -183,6 +198,33 @@ pub fn scanner_progress() -> ScanStatus {
 pub fn load_tag_cache(version: PackageVersion) -> TagCache {
     let cache_file_path = exe_relative_path(format!("tags_{}.cache", version.id()));
 
+    for (pkg, entries) in package_manager()
+        .package_entry_index
+        .iter()
+        .filter(|(i, _)| matches!(i, 0x3ac | 0x3da | 0x3db))
+    {
+        for (i, e) in entries.iter().enumerate() {
+            let reference = if let Some(r) = REFERENCE_MAP.read().get(&e.reference) {
+                r.to_string()
+            } else {
+                format!("{}", TagHash(e.reference))
+            };
+
+            let tagtype = TagType::from_type_subtype(e.file_type, e.file_subtype);
+            let tag = TagHash::new(*pkg, i as _);
+            println!(
+                "{} {i}: {tag} - type={tagtype} reference={reference} size=0x{:x} ({}/{})",
+                Path::new(package_manager().package_paths.get(pkg).unwrap())
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy(),
+                e.file_size,
+                e.file_type,
+                e.file_subtype
+            );
+        }
+    }
+
     if let Ok(cache_file) = File::open(&cache_file_path) {
         info!("Existing cache file found, loading");
         *SCANNER_PROGRESS.write() = ScanStatus::LoadingCache;
@@ -248,15 +290,22 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
 
             let mut results = IntMap::default();
             for (t, _) in all_tags {
+                let hash = TagHash::new(pkg.pkg_id(), t as u16);
                 let data = match pkg.read_entry(t) {
                     Ok(d) => d,
                     Err(e) => {
                         error!("Failed to read entry {path}:{t}: {e}");
+                        results.insert(
+                            hash,
+                            ScanResult {
+                                successful: false,
+                                ..Default::default()
+                            },
+                        );
                         continue;
                     }
                 };
 
-                let hash = TagHash::new(pkg.pkg_id(), t as u16);
                 let scan_result = scan_file(context, &data);
                 results.insert(hash, scan_result);
             }
@@ -276,6 +325,16 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
     writer.write_all(&cache_bincode).unwrap();
     writer.finish().unwrap();
     *SCANNER_PROGRESS.write() = ScanStatus::None;
+
+    // for (t, r) in &cache {
+    //     if matches!(t.pkg_id(), 0x3ac | 0x3da | 0x3db) {
+    //         println!(
+    //             "{} {t} {}",
+    //             package_manager().package_paths.get(&t.pkg_id()).unwrap(),
+    //             r.references.iter().map(TagHash::to_string).join(", ")
+    //         );
+    //     }
+    // }
 
     cache
 }
