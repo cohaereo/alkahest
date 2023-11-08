@@ -7,4 +7,5 @@ pub mod material_viewer;
 pub mod render_settings;
 pub mod resource_nametags;
 pub mod tag_dump;
+pub mod material_inspector;
 pub mod texture_viewer;

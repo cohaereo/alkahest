@@ -257,11 +257,11 @@ impl RenderDataManager {
             .materials
             .entry(material)
             .or_insert_with(|| {
-                Technique::load(
-                    renderer,
+                Technique::load_bindable(
                     package_manager().read_tag_struct(material).unwrap(),
                     material,
-                    false,
+                    &renderer,
+                    false
                 )
             });
     }

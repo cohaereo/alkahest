@@ -1,7 +1,9 @@
 /target
 /.vscode
 /.idea
+/tags
 imgui.ini
 *.tag
 package_cache.json
 config.yml
+oo2core_*

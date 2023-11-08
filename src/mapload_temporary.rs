@@ -350,7 +350,7 @@ pub async fn load_maps(
                         for m in &materials {
                             material_map.insert(
                                 m.tag(),
-                                Technique::load(&renderer, m.0.clone(), m.tag(), true),
+                                Technique::load_bindable(m.0.clone(), m.tag(), &renderer, true),
                             );
                         }
 
@@ -359,11 +359,11 @@ pub async fn load_maps(
                                 if p.material.is_some() {
                                     material_map.insert(
                                         p.material,
-                                        Technique::load(
-                                            &renderer,
+                                        Technique::load_bindable(
                                             package_manager().read_tag_struct(p.material)?,
                                             p.material,
-                                            true,
+                                            &renderer,
+                                            true
                                         ),
                                     );
                                 }
@@ -416,11 +416,11 @@ pub async fn load_maps(
                 if p.material.is_some() {
                     material_map.insert(
                         p.material,
-                        Technique::load(
-                            &renderer,
+                        Technique::load_bindable(
                             package_manager().read_tag_struct(p.material)?,
                             p.material,
-                            true,
+                            &renderer,
+                            true
                         ),
                     );
                 }
@@ -537,11 +537,11 @@ pub async fn load_maps(
                 {
                     material_map.insert(
                         *m,
-                        Technique::load(
-                            &renderer,
+                        Technique::load_bindable(
                             package_manager().read_tag_struct(*m).unwrap(),
                             *m,
-                            true,
+                            &renderer,
+                            true
                         ),
                     );
                 }
@@ -554,11 +554,11 @@ pub async fn load_maps(
                 {
                     material_map.insert(
                         m,
-                        Technique::load(
-                            &renderer,
+                        Technique::load_bindable(
                             package_manager().read_tag_struct(m).unwrap(),
                             m,
-                            true,
+                            &renderer,
+                            true
                         ),
                     );
                 }
@@ -852,11 +852,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         if p.material.is_some() {
                             material_map.insert(
                                 p.material,
-                                Technique::load(
-                                    &renderer,
+                                Technique::load_bindable(
                                     package_manager().read_tag_struct(p.material)?,
                                     p.material,
-                                    true,
+                                    &renderer,
+                                    true
                                 ),
                             );
                         }

@@ -1,18 +1,15 @@
 use std::io::SeekFrom;
 use std::ops::Deref;
 
-use crate::packages::package_manager;
-use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
-use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::drawcall::ShaderStages;
 use crate::render::renderer::Renderer;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
-use crate::structure::ExtendedHash;
-use crate::structure::{RelPointer, TablePointer};
+use crate::render::{DeviceContextSwapchain, RenderData};
+use crate::structure::{ExtendedHash, RelPointer, TablePointer};
 use crate::types::Vector4;
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
-use glam::Vec4;
+use egui::epaint::ahash::{HashMap, HashMapExt};
+use crate::material_shader::{MaterialShader, ShaderType};
 
 #[derive(BinRead, Debug, Clone)]
 pub struct STechnique {
@@ -80,129 +77,50 @@ pub struct SMaterialTextureAssignment {
 // }
 
 pub struct Technique {
-    pub mat: STechnique,
-    tag: TagHash,
+    pub technique: STechnique,
+    pub shaders: HashMap<ShaderType, MaterialShader>,
+    pub textures: HashMap<ShaderType, TablePointer<SMaterialTextureAssignment>>,
 
-    pub cb0_vs: Option<ConstantBuffer<Vec4>>,
-    tfx_bytecode_vs: Option<TfxBytecodeInterpreter>,
-    pub cb0_ps: Option<ConstantBuffer<Vec4>>,
-    tfx_bytecode_ps: Option<TfxBytecodeInterpreter>,
+    hash: TagHash
 }
 
 impl Technique {
+
     // TODO(cohae): load_shaders is a hack, i fucking hate locks
-    pub fn load(renderer: &Renderer, mat: STechnique, tag: TagHash, load_shaders: bool) -> Self {
-        let _span = debug_span!("Load material", hash = %tag).entered();
-        let cb0_vs = if mat.unke4.is_some() {
-            let buffer_header_ref = package_manager().get_entry(mat.unke4).unwrap().reference;
+    pub fn load(material: STechnique, hash: TagHash) -> Self {
+        let _span = debug_span!("Load material", hash = %hash).entered();
 
-            let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
-            let data = bytemuck::cast_slice(&data_raw);
+        let mut shaders = HashMap::new();
+        shaders.insert(ShaderType::Vertex, MaterialShader::create(ShaderType::Vertex, &material));
+        shaders.insert(ShaderType::Pixel, MaterialShader::create(ShaderType::Pixel, &material));
 
-            trace!(
-                "Read {} elements cbuffer from {buffer_header_ref:?}",
-                data.len()
-            );
-            let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
-
-            Some(buf)
-        } else if mat.unka8.len() > 1
-            && mat
-                .unka8
-                .iter()
-                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-        {
-            trace!("Loading float4 cbuffer with {} elements", mat.unk2f8.len());
-            let buf = ConstantBuffer::create_array_init(
-                renderer.dcs.clone(),
-                bytemuck::cast_slice(&mat.unka8),
-            )
-            .unwrap();
-
-            Some(buf)
-        } else {
-            trace!("Loading default float4 cbuffer");
-            let buf = ConstantBuffer::create_array_init(
-                renderer.dcs.clone(),
-                &[Vec4::new(1.0, 1.0, 1.0, 1.0)],
-            )
-            .unwrap();
-
-            Some(buf)
-        };
-
-        let cb0_ps = if mat.unk334.is_some() {
-            let buffer_header_ref = package_manager().get_entry(mat.unk334).unwrap().reference;
-
-            let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
-
-            let data = bytemuck::cast_slice(&data_raw);
-            trace!(
-                "Read {} elements cbuffer from {buffer_header_ref:?}",
-                data.len()
-            );
-            let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
-
-            Some(buf)
-        } else if !mat.unk2f8.is_empty()
-            && mat
-                .unk2f8
-                .iter()
-                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-        {
-            trace!("Loading float4 cbuffer with {} elements", mat.unk2f8.len());
-            let buf = ConstantBuffer::create_array_init(
-                renderer.dcs.clone(),
-                bytemuck::cast_slice(&mat.unk2f8),
-            )
-            .unwrap();
-
-            Some(buf)
-        } else {
-            None
-        };
-
-        if load_shaders {
-            renderer
-                .render_data
-                .load_vshader(&renderer.dcs, mat.vertex_shader);
-            renderer
-                .render_data
-                .load_pshader(&renderer.dcs, mat.pixel_shader);
-        }
-
-        let tfx_bytecode_vs =
-            match TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little) {
-                Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
-                Err(e) => {
-                    debug!(
-                        "Failed to parse VS TFX bytecode: {e} (data={})",
-                        hex::encode(mat.vs_bytecode.data())
-                    );
-                    None
-                }
-            };
-
-        let tfx_bytecode_ps =
-            match TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little) {
-                Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
-                Err(e) => {
-                    debug!(
-                        "Failed to parse PS TFX bytecode: {e} (data={})",
-                        hex::encode(mat.ps_bytecode.data())
-                    );
-                    None
-                }
-            };
+        let mut textures = HashMap::new();
+        textures.insert(ShaderType::Vertex, material.vs_textures.clone());
+        textures.insert(ShaderType::Pixel, material.ps_textures.clone());
 
         Self {
-            mat,
-            tag,
-            cb0_vs,
-            tfx_bytecode_vs,
-            cb0_ps,
-            tfx_bytecode_ps,
+            technique: material,
+            shaders,
+            textures,
+            hash
         }
+    }
+
+    pub fn load_bindable(material: STechnique, hash: TagHash, renderer: &Renderer, load_shaders: bool) -> Self {
+        let mut mat = Technique::load(material, hash);
+
+        for (shader_type, shader) in mat.shaders.iter_mut() {
+            shader.setup_material_scope_buffer(renderer);
+            if load_shaders {
+                if shader_type == &ShaderType::Vertex {
+                    renderer.render_data.load_vshader(&renderer.dcs, shader.shader);
+                } else if shader_type == &ShaderType::Pixel {
+                    renderer.render_data.load_pshader(&renderer.dcs, shader.shader);
+                }
+            }
+        }
+
+        return mat;
     }
 
     // pub fn tag(&self) -> TagHash {
@@ -211,136 +129,35 @@ impl Technique {
 
     pub fn bind(
         &self,
-        dcs: &DeviceContextSwapchain,
+        renderer: &Renderer,
         render_data: &RenderData,
-        stages: ShaderStages,
+        stages: ShaderStages
     ) -> anyhow::Result<()> {
-        unsafe {
-            if stages.contains(ShaderStages::VERTEX) {
-                for (si, s) in self.vs_samplers.iter().enumerate() {
-                    dcs.context().VSSetSamplers(
-                        1 + si as u32,
-                        Some(&[render_data.samplers.get(&s.key()).cloned()]),
-                    );
-                }
-
-                if let Some(ref cbuffer) = self.cb0_vs {
-                    dcs.context()
-                        .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
-                } else {
-                    dcs.context().VSSetConstantBuffers(0, Some(&[None]));
-                }
-
-                if let Some((vs, _, _)) = render_data.vshaders.get(&self.vertex_shader) {
-                    dcs.context().VSSetShader(vs, None);
-                } else {
-                    // TODO: should still be handled, but not here
-                    // anyhow::bail!("No vertex shader/input layout bound");
-                }
-
-                for p in &self.vs_textures {
-                    let tex = render_data
-                        .textures
-                        .get(&p.texture.key())
-                        .unwrap_or(&render_data.fallback_texture);
-
-                    dcs.context()
-                        .VSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
-                }
-            }
-
-            if stages.contains(ShaderStages::PIXEL) {
-                for (si, s) in self.ps_samplers.iter().enumerate() {
-                    dcs.context().PSSetSamplers(
-                        1 + si as u32,
-                        Some(&[render_data.samplers.get(&s.key()).cloned()]),
-                    );
-                }
-
-                if let Some(ref cbuffer) = self.cb0_ps {
-                    dcs.context()
-                        .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
-                } else {
-                    dcs.context().PSSetConstantBuffers(0, Some(&[None]));
-                }
-                if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader) {
-                    dcs.context().PSSetShader(ps, None);
-                } else {
-                    // TODO: should still be handled, but not here
-                    // anyhow::bail!("No pixel shader bound");
-                }
-                for p in &self.ps_textures {
-                    let tex = render_data
-                        .textures
-                        .get(&p.texture.key())
-                        .unwrap_or(&render_data.fallback_texture);
-
-                    dcs.context()
-                        .PSSetShaderResources(p.index, Some(&[Some(tex.view.clone())]));
-                }
-            }
+        for (shader_type, shader) in self.shaders.iter() {
+            shader.bind(renderer, render_data, self.textures.get(&shader_type).unwrap());
         }
 
         Ok(())
     }
 
-    pub fn evaluate_bytecode(&mut self, renderer: &Renderer) {
-        if let Some(ref cb0_vs) = self.cb0_vs {
-            if self.tfx_bytecode_vs.is_some() {
-                let _span = info_span!("Evaluating TFX bytecode (VS)").entered();
-                let res = self.tfx_bytecode_vs.as_mut().unwrap().evaluate(
-                    renderer,
-                    cb0_vs,
-                    if self.mat.vs_bytecode_constants.is_empty() {
-                        &[]
-                    } else {
-                        bytemuck::cast_slice(&self.mat.vs_bytecode_constants)
-                    },
-                );
-                if let Err(e) = res {
-                    error!(
-                        "TFX bytecode evaluation failed for {} (VS), disabling: {e}",
-                        self.tag
-                    );
-                    self.tfx_bytecode_vs.as_ref().unwrap().dump(
-                        if self.mat.vs_bytecode_constants.is_empty() {
-                            &[]
-                        } else {
-                            bytemuck::cast_slice(&self.mat.vs_bytecode_constants)
-                        },
-                        cb0_vs,
-                    );
-                    self.tfx_bytecode_vs = None;
-                }
-            }
-        }
+    pub fn evaluate_bytecode(&mut self, renderer: &Renderer, shader_type: ShaderType) {
+        let shader = match self.shaders.get_mut(&shader_type) {
+            Some(s) => s,
+            None => { return; }
+        };
 
-        if let Some(ref cb0_ps) = self.cb0_ps {
-            if self.tfx_bytecode_ps.is_some() {
-                let _span = info_span!("Evaluating TFX bytecode (PS)").entered();
-                let res = self.tfx_bytecode_ps.as_mut().unwrap().evaluate(
+        if let Some(ref material_scope ) = &shader.material_scope_buffer {
+            if let Some(ref mut tfx) = shader.tfx {
+                let t = shader_type.to_string();
+                let _span = info_span!("Evaluating TFX bytecode of material {} for the {}", t).entered();
+                let res = tfx.0.evaluate(
                     renderer,
-                    cb0_ps,
-                    if self.mat.ps_bytecode_constants.is_empty() {
-                        &[]
-                    } else {
-                        bytemuck::cast_slice(&self.mat.ps_bytecode_constants)
-                    },
+                    material_scope,
+                    tfx.1.as_slice()
                 );
                 if let Err(e) = res {
-                    error!(
-                        "TFX bytecode evaluation failed for {} (PS), disabling: {e}",
-                        self.tag
-                    );
-                    self.tfx_bytecode_ps.as_ref().unwrap().dump(
-                        if self.mat.ps_bytecode_constants.is_empty() {
-                            &[]
-                        } else {
-                            bytemuck::cast_slice(&self.mat.ps_bytecode_constants)
-                        },
-                        cb0_ps,
-                    );
-                    self.tfx_bytecode_ps = None;
+                    error!( "TFX bytecode evaluation failed for {}, disabling: {e}", shader_type.to_string());
+                    //TODO: Dump TFX Interpreter Stats.
                 }
             }
         }
@@ -363,7 +180,7 @@ impl Deref for Technique {
     type Target = STechnique;
 
     fn deref(&self) -> &Self::Target {
-        &self.mat
+        &self.technique
     }
 }
 #[derive(BinRead, Debug)]

@@ -166,6 +166,7 @@ pub struct GuiContext<'a> {
 
 pub struct GuiResources {
     pub icon_havok: egui::TextureHandle,
+    pub texture_big_balla: egui::TextureHandle
 }
 
 impl GuiResources {
@@ -180,10 +181,22 @@ impl GuiResources {
             egui::TextureOptions {
                 magnification: egui::TextureFilter::Linear,
                 minification: egui::TextureFilter::Linear,
-            },
+            }
+        );
+        let img = Png::from_bytes(include_bytes!("../../assets/textures/ui_fallback.png")).unwrap();
+        let texture_big_balla = ctx.load_texture(
+            "Big Balla",
+            egui::ImageData::Color(egui::ColorImage::from_rgba_premultiplied(
+                img.dimensions,
+                &img.data,
+            )),
+            egui::TextureOptions {
+                magnification: egui::TextureFilter::Linear,
+                minification: egui::TextureFilter::Linear,
+            }
         );
 
-        Self { icon_havok }
+        Self { icon_havok, texture_big_balla }
     }
 }
 

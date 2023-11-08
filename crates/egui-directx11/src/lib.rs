@@ -2,7 +2,7 @@ mod backup;
 mod mesh;
 mod painter;
 mod shader;
-mod texture;
+pub mod texture;
 
 pub use painter::*;
 

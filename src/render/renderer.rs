@@ -15,6 +15,7 @@ use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk3;
 use crate::render::shader;
 use crate::{camera::FpsCamera, resources::Resources};
+use crate::material_shader::ShaderType;
 
 use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
@@ -620,7 +621,7 @@ impl Renderer {
             }
 
             // TODO(cohae): How can we handle these errors?
-            if mat.bind(&self.dcs, &render_data, bind_stages).is_err() {
+            if mat.bind(&self, &render_data, bind_stages).is_err() {
                 // return;
             }
         } else {
@@ -633,7 +634,7 @@ impl Renderer {
                     return;
                 }
 
-                if mat.bind(&self.dcs, &render_data, bind_stages).is_err() {
+                if mat.bind(&self, &render_data, bind_stages).is_err() {
                     // return;
                 }
             } else {
@@ -1162,7 +1163,8 @@ impl Renderer {
         let mut r = self.render_data.data_mut();
         for hash in materials_to_update {
             if let Some(m) = r.materials.get_mut(&hash) {
-                m.evaluate_bytecode(self)
+                m.evaluate_bytecode(self, ShaderType::Vertex);
+                m.evaluate_bytecode(self, ShaderType::Pixel);
             }
         }
     }

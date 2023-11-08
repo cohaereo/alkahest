@@ -79,8 +79,7 @@ pub enum TextureHandle {
 
 pub struct Texture {
     pub view: ID3D11ShaderResourceView,
-    pub handle: TextureHandle,
-    pub format: DxgiFormat,
+    pub handle: TextureHandle
 }
 
 impl Texture {
@@ -333,8 +332,7 @@ impl Texture {
 
         Ok(Texture {
             handle: tex,
-            view,
-            format: texture.format,
+            view
         })
     }
 
@@ -399,8 +397,7 @@ impl Texture {
 
             Ok(Texture {
                 handle: TextureHandle::Texture2D(tex),
-                view,
-                format,
+                view
             })
         }
     }
@@ -464,8 +461,7 @@ impl Texture {
 
             Ok(Texture {
                 handle: TextureHandle::Texture3D(tex),
-                view,
-                format,
+                view
             })
         }
     }
