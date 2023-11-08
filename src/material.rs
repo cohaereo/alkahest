@@ -131,7 +131,7 @@ impl Technique {
         &self,
         renderer: &Renderer,
         render_data: &RenderData,
-        stages: ShaderStages
+        _stages: ShaderStages
     ) -> anyhow::Result<()> {
         for (shader_type, shader) in self.shaders.iter() {
             shader.bind(renderer, render_data, self.textures.get(&shader_type).unwrap());

@@ -1,4 +1,3 @@
-use crate::entity::EPrimitiveType;
 use crate::render::vertex_buffers::load_vertex_buffers;
 use crate::statics::{Unk80807193, Unk80807194, Unk808071a7};
 
@@ -9,7 +8,6 @@ use itertools::Itertools;
 
 use crate::packages::package_manager;
 
-use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use super::drawcall::{

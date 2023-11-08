@@ -1,5 +1,5 @@
 use crate::structure::{DeadBeefMarker, RelPointer, ResourcePointer, TablePointer, Tag};
-use crate::types::{FnvHash, ResourceHash, Vector2, Vector4};
+use crate::types::{FnvHash, Vector2, Vector4};
 
 use binrw::{BinRead, BinReaderExt, NullString};
 

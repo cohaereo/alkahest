@@ -3,10 +3,8 @@ use destiny_pkg::TagHash;
 
 use glam::Vec4;
 
-use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
-use crate::entity::EPrimitiveType;
 use crate::entity::Unk808072c5;
 use crate::entity::Unk8080737e;
 
@@ -20,7 +18,6 @@ use super::drawcall::ShadingTechnique;
 use super::drawcall::SortValue3d;
 use super::drawcall::Transparency;
 use super::renderer::Renderer;
-use super::DeviceContextSwapchain;
 
 #[derive(Clone)]
 pub struct EntityModelBuffer {

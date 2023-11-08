@@ -383,10 +383,10 @@ fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<Ent
             if p.material.is_some() {
                 renderer.render_data.data_mut().materials.insert(
                     p.material,
-                    Technique::load(
-                        renderer,
+                    Technique::load_bindable(
                         package_manager().read_tag_struct(p.material)?,
                         p.material,
+                        renderer,
                         true,
                     ),
                 );

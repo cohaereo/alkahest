@@ -128,7 +128,7 @@ impl MaterialInspector {
 }
 
 impl Overlay for MaterialInspector {
-    fn draw(&mut self, ctx: &Context, window: &Window, resources: &mut Resources, gui: GuiContext<'_>) -> bool {
+    fn draw(&mut self, ctx: &Context, _window: &Window, _resources: &mut Resources, gui: GuiContext<'_>) -> bool {
         egui::Window::new("Material Inspector").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let pressed_enter = ui.text_edit_singleline(&mut self.hash_string).lost_focus()

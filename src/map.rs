@@ -7,7 +7,6 @@ use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
-use serde::{Deserialize, Serialize};
 
 use std::fmt::Debug;
 use std::io::SeekFrom;
