@@ -198,33 +198,6 @@ pub fn scanner_progress() -> ScanStatus {
 pub fn load_tag_cache(version: PackageVersion) -> TagCache {
     let cache_file_path = exe_relative_path(format!("tags_{}.cache", version.id()));
 
-    for (pkg, entries) in package_manager()
-        .package_entry_index
-        .iter()
-        .filter(|(i, _)| matches!(i, 0x3ac | 0x3da | 0x3db))
-    {
-        for (i, e) in entries.iter().enumerate() {
-            let reference = if let Some(r) = REFERENCE_MAP.read().get(&e.reference) {
-                r.to_string()
-            } else {
-                format!("{}", TagHash(e.reference))
-            };
-
-            let tagtype = TagType::from_type_subtype(e.file_type, e.file_subtype);
-            let tag = TagHash::new(*pkg, i as _);
-            println!(
-                "{} {i}: {tag} - type={tagtype} reference={reference} size=0x{:x} ({}/{})",
-                Path::new(package_manager().package_paths.get(pkg).unwrap())
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy(),
-                e.file_size,
-                e.file_type,
-                e.file_subtype
-            );
-        }
-    }
-
     if let Ok(cache_file) = File::open(&cache_file_path) {
         info!("Existing cache file found, loading");
         *SCANNER_PROGRESS.write() = ScanStatus::LoadingCache;

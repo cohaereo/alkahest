@@ -9,7 +9,7 @@ use std::{
 use binrw::BinReaderExt;
 use destiny_pkg::{package::UEntryHeader, TagHash, TagHash64};
 use eframe::{
-    egui::{self, RichText},
+    egui::{self, CollapsingHeader, RichText},
     epaint::Color32,
 };
 use itertools::Itertools;
@@ -157,8 +157,11 @@ impl View for TagView {
             .show_inside(ui, |ui| {
                 ui.style_mut().wrap = Some(false);
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.label(egui::RichText::new("Files referencing this tag").strong());
-                    ui.group(|ui| {
+                    CollapsingHeader::new(
+                        egui::RichText::new("Files referencing this tag").strong(),
+                    )
+                    .default_open(true)
+                    .show(ui, |ui| {
                         if self.scan.references.is_empty() {
                             ui.label(RichText::new("No incoming references found").italics());
                         } else {
@@ -176,8 +179,11 @@ impl View for TagView {
                         }
                     });
 
-                    ui.label(egui::RichText::new("Tag references in this file").strong());
-                    ui.group(|ui| {
+                    CollapsingHeader::new(
+                        egui::RichText::new("Tag references in this file").strong(),
+                    )
+                    .default_open(true)
+                    .show(ui, |ui| {
                         if self.scan.file_hashes.is_empty() {
                             ui.label(RichText::new("No outgoing references found").italics());
                         } else {
@@ -289,62 +295,64 @@ impl View for TagView {
                 .min_width(320.0)
                 .show_inside(ui, |ui| {
                     ui.style_mut().wrap = Some(false);
-                    ui.label(egui::RichText::new("String Hashes").strong());
-                    ui.group(|ui| {
-                        if self.string_hashes.is_empty() {
-                            ui.label(RichText::new("No strings found").italics());
-                        } else {
-                            for (offset, hash) in &self.string_hashes {
-                                if let Some(strings) = self.string_cache.get(hash) {
-                                    if strings.len() > 1 {
-                                        ui.selectable_label(
-                                            false,
-                                            format!(
-                                                "'{}' ({} collisions) {:08x} @ 0x{:X}",
-                                                strings[(self.start_time.elapsed().as_secs()
-                                                    as usize)
-                                                    % strings.len()],
-                                                strings.len(),
-                                                hash,
-                                                offset
-                                            ),
-                                        )
-                                        .on_hover_text(strings.join("\n"))
-                                        .clicked();
-                                    } else {
-                                        ui.selectable_label(
-                                            false,
-                                            format!(
-                                                "'{}' {:08x} @ 0x{:X}",
-                                                strings[0], hash, offset
-                                            ),
-                                        )
-                                        .clicked();
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.label(egui::RichText::new("String Hashes").strong());
+                        ui.group(|ui| {
+                            if self.string_hashes.is_empty() {
+                                ui.label(RichText::new("No strings found").italics());
+                            } else {
+                                for (offset, hash) in &self.string_hashes {
+                                    if let Some(strings) = self.string_cache.get(hash) {
+                                        if strings.len() > 1 {
+                                            ui.selectable_label(
+                                                false,
+                                                format!(
+                                                    "'{}' ({} collisions) {:08x} @ 0x{:X}",
+                                                    strings[(self.start_time.elapsed().as_secs()
+                                                        as usize)
+                                                        % strings.len()],
+                                                    strings.len(),
+                                                    hash,
+                                                    offset
+                                                ),
+                                            )
+                                            .on_hover_text(strings.join("\n"))
+                                            .clicked();
+                                        } else {
+                                            ui.selectable_label(
+                                                false,
+                                                format!(
+                                                    "'{}' {:08x} @ 0x{:X}",
+                                                    strings[0], hash, offset
+                                                ),
+                                            )
+                                            .clicked();
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
 
-                    ui.label(egui::RichText::new("Raw strings (65008080)").strong());
-                    ui.group(|ui| {
-                        if self.raw_strings.is_empty() {
-                            ui.label(RichText::new("No raw strings found").italics());
-                        } else {
-                            for (offset, string) in &self.raw_strings {
-                                ui.selectable_label(
-                                    false,
-                                    format!("'{}' @ 0x{:X}", string, offset),
-                                )
-                                .context_menu(|ui| {
-                                    if ui.selectable_label(false, "Copy text").clicked() {
-                                        ui.output_mut(|o| o.copied_text = string.clone());
-                                        ui.close_menu();
-                                    }
-                                })
-                                .clicked();
+                        ui.label(egui::RichText::new("Raw strings (65008080)").strong());
+                        ui.group(|ui| {
+                            if self.raw_strings.is_empty() {
+                                ui.label(RichText::new("No raw strings found").italics());
+                            } else {
+                                for (offset, string) in &self.raw_strings {
+                                    ui.selectable_label(
+                                        false,
+                                        format!("'{}' @ 0x{:X}", string, offset),
+                                    )
+                                    .context_menu(|ui| {
+                                        if ui.selectable_label(false, "Copy text").clicked() {
+                                            ui.output_mut(|o| o.copied_text = string.clone());
+                                            ui.close_menu();
+                                        }
+                                    })
+                                    .clicked();
+                                }
                             }
-                        }
+                        });
                     });
                 });
         }
