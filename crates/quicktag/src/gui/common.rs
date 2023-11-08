@@ -1,13 +1,20 @@
-use destiny_pkg::TagHash;
+use destiny_pkg::{TagHash, TagHash64};
 use eframe::egui;
 use log::warn;
 
 use crate::packages::package_manager;
 
-pub fn tag_context(ui: &mut egui::Ui, tag: TagHash) {
+pub fn tag_context(ui: &mut egui::Ui, tag: TagHash, tag64: Option<TagHash64>) {
     if ui.selectable_label(false, "📋 Copy tag").clicked() {
         ui.output_mut(|o| o.copied_text = tag.to_string());
         ui.close_menu();
+    }
+
+    if let Some(tag64) = tag64 {
+        if ui.selectable_label(false, "📋 Copy 64-bit tag").clicked() {
+            ui.output_mut(|o| o.copied_text = tag64.to_string());
+            ui.close_menu();
+        }
     }
 
     if ui

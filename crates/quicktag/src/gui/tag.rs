@@ -38,7 +38,7 @@ pub struct TagView {
     raw_strings: Vec<(u64, String)>,
 
     tag: TagHash,
-    // tag_data: Vec<u8>,
+    tag64: Option<TagHash64>,
     tag_entry: UEntryHeader,
     tag_type: TagType,
 
@@ -76,11 +76,17 @@ impl TagView {
             .flat_map(|o| read_raw_string_blob(&tag_data, o))
             .collect_vec();
 
+        let tag64 = package_manager()
+            .hash64_table
+            .iter()
+            .find(|(_, e)| e.hash32 == tag)
+            .map(|(&h64, _)| TagHash64(h64));
+
         let tag_entry = package_manager().get_entry(tag)?;
         Some(Self {
             string_hashes,
             tag,
-            // tag_data,
+            tag64,
             tag_type: TagType::from_type_subtype(tag_entry.file_type, tag_entry.file_subtype),
             tag_entry,
 
@@ -122,7 +128,7 @@ impl View for TagView {
             self.tag_entry.file_subtype,
             TagHash(self.tag_entry.reference)
         ))
-        .context_menu(|ui| tag_context(ui, self.tag));
+        .context_menu(|ui| tag_context(ui, self.tag, self.tag64));
         ui.label(
             RichText::new(format!(
                 "Package {}",
@@ -172,7 +178,10 @@ impl View for TagView {
                                     egui::SelectableLabel::new(false, fancy_tag),
                                 );
 
-                                if response.context_menu(|ui| tag_context(ui, *tag)).clicked() {
+                                if response
+                                    .context_menu(|ui| tag_context(ui, *tag, None))
+                                    .clicked()
+                                {
                                     open_new_tag = Some(*tag);
                                 }
                             }
@@ -214,7 +223,16 @@ impl View for TagView {
                                 );
 
                                 if response
-                                    .context_menu(|ui| tag_context(ui, tag.hash.hash32()))
+                                    .context_menu(|ui| {
+                                        tag_context(
+                                            ui,
+                                            tag.hash.hash32(),
+                                            match tag.hash {
+                                                ExtendedTagHash::Hash32(_) => None,
+                                                ExtendedTagHash::Hash64(t) => Some(t),
+                                            },
+                                        )
+                                    })
                                     .clicked()
                                 {
                                     open_new_tag = Some(tag.hash.hash32());
@@ -365,7 +383,7 @@ impl View for TagView {
     }
 }
 
-enum ExtendedTagHash {
+pub enum ExtendedTagHash {
     Hash32(TagHash),
     Hash64(TagHash64),
 }
@@ -654,7 +672,7 @@ fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
     strings
 }
 
-fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
+pub fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
     if let Some(entry) = entry {
         let ref_label = REFERENCE_MAP
             .read()

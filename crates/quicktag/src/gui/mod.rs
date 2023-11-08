@@ -3,7 +3,7 @@ mod tag;
 
 use std::sync::Arc;
 
-use destiny_pkg::{PackageVersion, TagHash};
+use destiny_pkg::{package::UEntryHeader, PackageNamedTagEntry, PackageVersion, TagHash};
 use eframe::{
     egui::{self},
     emath::Align2,
@@ -15,21 +15,35 @@ use poll_promise::Promise;
 use crate::{
     packages::package_manager,
     scanner::{load_tag_cache, scanner_progress, ScanStatus, TagCache},
+    tagtypes::TagType,
     text::{create_stringmap, StringCache},
 };
 
-use self::tag::TagView;
+use self::{
+    common::tag_context,
+    tag::{format_tag_entry, TagView},
+};
+
+#[derive(PartialEq)]
+pub enum Panel {
+    Tag,
+    NamedTags,
+}
 
 pub struct QuickTagApp {
     cache_load: Option<Promise<TagCache>>,
     cache: Arc<TagCache>,
     strings: Arc<StringCache>,
 
-    tag_view: Option<TagView>,
-
     tag_input: String,
 
     toasts: Toasts,
+
+    open_panel: Panel,
+
+    tag_view: Option<TagView>,
+    named_tags: NamedTags,
+    named_tag_filter: String,
 }
 
 impl QuickTagApp {
@@ -44,6 +58,10 @@ impl QuickTagApp {
             tag_view: None,
             tag_input: String::new(),
             toasts: Toasts::default(),
+
+            open_panel: Panel::Tag,
+            named_tags: NamedTags::new(),
+            named_tag_filter: String::new(),
         }
     }
 }
@@ -113,19 +131,29 @@ impl eframe::App for QuickTagApp {
                         let hash = u32::from_str_radix(&self.tag_input, 16).unwrap_or_default();
                         TagHash(u32::from_be(hash))
                     };
-                    let new_view = TagView::create(self.cache.clone(), self.strings.clone(), tag);
-                    if new_view.is_some() {
-                        self.tag_view = new_view;
-                    } else if package_manager().get_entry(tag).is_some() {
-                        self.toasts.warning(format!("Could not find tag '{}' ({tag}) in cache\nThis usually means it has no references", self.tag_input));
-                    } else {
-                        self.toasts.error(format!("Could not find tag '{}' ({tag})", self.tag_input));
-                    }
+
+                    self.open_tag(tag);
                 }
             });
 
-            if let Some(tagview) = &mut self.tag_view {
-                tagview.view(ctx, ui);
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut self.open_panel, Panel::Tag, "Tag");
+                ui.selectable_value(&mut self.open_panel, Panel::NamedTags, "Named tags");
+            });
+
+            ui.separator();
+
+            match self.open_panel {
+                Panel::Tag => {
+                    if let Some(tagview) = &mut self.tag_view {
+                        tagview.view(ctx, ui);
+                    } else {
+                        ui.label("No tag loaded");
+                    }
+                }
+                Panel::NamedTags => {
+                    self.named_tags_panel(ui);
+                }
             }
         });
 
@@ -133,6 +161,74 @@ impl eframe::App for QuickTagApp {
     }
 }
 
+impl QuickTagApp {
+    fn open_tag(&mut self, tag: TagHash) {
+        let new_view = TagView::create(self.cache.clone(), self.strings.clone(), tag);
+        if new_view.is_some() {
+            self.tag_view = new_view;
+            self.open_panel = Panel::Tag;
+        } else if package_manager().get_entry(tag).is_some() {
+            self.toasts.warning(format!(
+                "Could not find tag '{}' ({tag}) in cache\nThis usually means it has no references",
+                self.tag_input
+            ));
+        } else {
+            self.toasts
+                .error(format!("Could not find tag '{}' ({tag})", self.tag_input));
+        }
+    }
+
+    fn named_tags_panel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Search:");
+            ui.text_edit_singleline(&mut self.named_tag_filter);
+        });
+
+        egui::ScrollArea::vertical()
+            .max_width(f32::INFINITY)
+            .show(ui, |ui| {
+                for i in 0..self.named_tags.tags.len() {
+                    let (entry, nt) = self.named_tags.tags[i].clone();
+                    if !nt.name.to_lowercase().contains(&self.named_tag_filter) {
+                        continue;
+                    }
+
+                    let tagtype = TagType::from_type_subtype(entry.file_type, entry.file_subtype);
+
+                    let fancy_tag = format_tag_entry(nt.hash, Some(&entry));
+
+                    let tag_label = egui::RichText::new(format!("{} {fancy_tag}", nt.name))
+                        .color(tagtype.display_color());
+
+                    if ui
+                        .add(egui::SelectableLabel::new(false, tag_label))
+                        .context_menu(|ui| tag_context(ui, nt.hash, None))
+                        .clicked()
+                    {
+                        self.open_tag(nt.hash);
+                    }
+                }
+            });
+    }
+}
+
 pub trait View {
     fn view(&mut self, ctx: &egui::Context, ui: &mut egui::Ui);
+}
+
+pub struct NamedTags {
+    pub tags: Vec<(UEntryHeader, PackageNamedTagEntry)>,
+}
+
+impl NamedTags {
+    pub fn new() -> NamedTags {
+        NamedTags {
+            tags: package_manager()
+                .named_tags
+                .to_vec()
+                .into_iter()
+                .filter_map(|n| Some((package_manager().get_entry(n.hash)?, n)))
+                .collect(),
+        }
+    }
 }

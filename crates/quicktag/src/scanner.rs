@@ -13,7 +13,7 @@ use log::{error, info, warn};
 use nohash_hasher::{IntMap, IntSet};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{packages::package_manager, references::REFERENCE_MAP, tagtypes::TagType};
+use crate::packages::package_manager;
 
 pub type TagCache = IntMap<TagHash, ScanResult>;
 
