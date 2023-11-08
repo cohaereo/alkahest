@@ -9,7 +9,7 @@ use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::dxgi::DxgiFormat;
-use crate::material::Material;
+use crate::material::Technique;
 use crate::packages::package_manager;
 use crate::render::vertex_layout::InputElement;
 use crate::structure::ExtendedHash;
@@ -22,7 +22,7 @@ use super::vertex_layout::OutputElement;
 use super::{resource_mt, DeviceContextSwapchain};
 
 pub struct RenderData {
-    pub materials: IntMap<TagHash, Material>,
+    pub materials: IntMap<TagHash, Technique>,
     pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
     pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<OutputElement>)>,
     pub textures: IntMap<u64, Texture>,
@@ -257,7 +257,7 @@ impl RenderDataManager {
             .materials
             .entry(material)
             .or_insert_with(|| {
-                Material::load(
+                Technique::load(
                     renderer,
                     package_manager().read_tag_struct(material).unwrap(),
                     material,

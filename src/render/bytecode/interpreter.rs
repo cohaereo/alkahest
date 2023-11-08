@@ -180,7 +180,7 @@ impl TfxBytecodeInterpreter {
                     stack_push!(Vec4::Z);
                     stack_push!(Vec4::W);
                 }
-                TfxBytecodeOp::Unk3f { .. }
+                TfxBytecodeOp::PushExternInputU64 { .. }
                 | TfxBytecodeOp::Unk4c { .. }
                 | TfxBytecodeOp::Unk4d { .. }
                 | TfxBytecodeOp::Unk4e { .. }

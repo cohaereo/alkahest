@@ -1,5 +1,5 @@
 use crate::util::RwLock;
-use destiny_pkg::PackageManager;
+use destiny_pkg::{PackageManager, TagHash};
 use lazy_static::lazy_static;
 use std::sync::Arc;
 
@@ -17,4 +17,15 @@ pub fn package_manager_checked() -> anyhow::Result<Arc<PackageManager>> {
 
 pub fn package_manager() -> Arc<PackageManager> {
     package_manager_checked().unwrap()
+}
+
+/// In case of multiple tags, the last one is returned
+pub fn get_named_tag(name: &str) -> Option<TagHash> {
+    package_manager()
+        .named_tags
+        .iter()
+        .rev()
+        .find(|n| n.name == name)
+        .map(|n| &n.hash)
+        .cloned()
 }

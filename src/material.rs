@@ -15,7 +15,7 @@ use destiny_pkg::TagHash;
 use glam::Vec4;
 
 #[derive(BinRead, Debug, Clone)]
-pub struct SMaterial {
+pub struct STechnique {
     pub file_size: u64,
     /// 0 = ???
     /// 1 = normal
@@ -79,8 +79,8 @@ pub struct SMaterialTextureAssignment {
 //     pub unkc: u32,
 // }
 
-pub struct Material {
-    pub mat: SMaterial,
+pub struct Technique {
+    pub mat: STechnique,
     tag: TagHash,
 
     pub cb0_vs: Option<ConstantBuffer<Vec4>>,
@@ -89,9 +89,9 @@ pub struct Material {
     tfx_bytecode_ps: Option<TfxBytecodeInterpreter>,
 }
 
-impl Material {
+impl Technique {
     // TODO(cohae): load_shaders is a hack, i fucking hate locks
-    pub fn load(renderer: &Renderer, mat: SMaterial, tag: TagHash, load_shaders: bool) -> Self {
+    pub fn load(renderer: &Renderer, mat: STechnique, tag: TagHash, load_shaders: bool) -> Self {
         let _span = debug_span!("Load material", hash = %tag).entered();
         let cb0_vs = if mat.unke4.is_some() {
             let buffer_header_ref = package_manager().get_entry(mat.unke4).unwrap().reference;
@@ -359,8 +359,8 @@ impl Material {
     }
 }
 
-impl Deref for Material {
-    type Target = SMaterial;
+impl Deref for Technique {
+    type Target = STechnique;
 
     fn deref(&self) -> &Self::Target {
         &self.mat

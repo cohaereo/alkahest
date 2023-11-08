@@ -2,6 +2,8 @@ use std::io::Cursor;
 
 use binrw::{binread, BinReaderExt, Endian};
 
+use crate::render::bytecode::externs::TfxShaderStage;
+
 use super::externs::TfxExtern;
 
 #[rustfmt::skip]
@@ -68,9 +70,9 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x3d_u8)] Unk3d { extern_: TfxExtern, offset: u8 },
     // TODO(cohae): from first glance this looks like a weird copy of 0x3d
     #[br(magic = 0x3e_u8)] Unk3e { extern_: TfxExtern, offset: u8 },
-    /// Pushes an extern vec2 to the stack
-    /// Offset is in vec2s (8 bytes)
-    #[br(magic = 0x3f_u8)] Unk3f { extern_: TfxExtern, offset: u8 },
+    /// Pushes an extern u64 to the stack, usually a shader resource
+    /// Offset is in u64s (8 bytes)
+    #[br(magic = 0x3f_u8)] PushExternInputU64 { extern_: TfxExtern, offset: u8 },
     #[br(magic = 0x40_u8)] Unk40 { extern_: TfxExtern, offset: u8 },
     // TODO(cohae): Carbon copy of 0x3f???
     #[br(magic = 0x41_u8)] Unk41 { extern_: TfxExtern, offset: u8 },
@@ -81,9 +83,21 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x45_u8)] Unk45 { slot: u8 },
     #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
     #[br(magic = 0x47_u8)] PopTemp { slot: u8 },
-    #[br(magic = 0x48_u8)] Unk48 { unk1: u8 },
+    #[br(magic = 0x48_u8)] SetShaderResource {
+        value: u8,
+        #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
+        stage: TfxShaderStage,
+        #[br(calc(value & 0x1f))]
+        slot: u8
+    },
     #[br(magic = 0x49_u8)] Unk49 { unk1: u8 },
-    #[br(magic = 0x4a_u8)] Unk4a { unk1: u8 }, // Has conditional execution (unk1=1/2/3/4/5/6)
+    #[br(magic = 0x4a_u8)] SetShaderSampler { 
+        value: u8,
+        #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
+        stage: TfxShaderStage,
+        #[br(calc(value & 0x1f))]
+        slot: u8 
+    },
     #[br(magic = 0x4b_u8)] Unk4b { unk1: u8 },
     #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
     #[br(magic = 0x4d_u8)] Unk4d { unk1: u8 }, // push_object_channel_vector? (push_object_channel_*??)
@@ -193,8 +207,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk3e { extern_, offset } => {
                 format!("unk3e extern={extern_:?} offset={offset}")
             }
-            TfxBytecodeOp::Unk3f { extern_, offset } => {
-                format!("unk3f extern={extern_:?} offset={offset}")
+            TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
+                format!("push_extern_input_u64 ({extern_:?}+{offset})")
             }
             TfxBytecodeOp::Unk40 { extern_, offset } => {
                 format!("unk40 extern={extern_:?} offset={offset}")
@@ -218,14 +232,14 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PopTemp { slot } => {
                 format!("pop_temp({slot})")
             }
-            TfxBytecodeOp::Unk48 { unk1 } => {
-                format!("unk48 unk1={unk1}")
+            TfxBytecodeOp::SetShaderResource { stage, slot, .. } => {
+                format!("set_shader_resource stage={stage:?} slot={slot}")
             }
             TfxBytecodeOp::Unk49 { unk1 } => {
                 format!("unk49 unk1={unk1}")
             }
-            TfxBytecodeOp::Unk4a { unk1 } => {
-                format!("unk4a unk1={unk1}")
+            TfxBytecodeOp::SetShaderSampler { stage, slot, .. } => {
+                format!("set_shader_sampler stage={stage:?} slot={slot}")
             }
             TfxBytecodeOp::Unk4b { unk1 } => {
                 format!("unk4b unk1={unk1}")

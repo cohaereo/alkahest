@@ -33,7 +33,9 @@ use glam::Vec3;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
+use packages::get_named_tag;
 use poll_promise::Promise;
+use render_globals::SRenderGlobals;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, Layer};
@@ -93,6 +95,7 @@ mod overlays;
 mod packages;
 mod panic_handler;
 mod render;
+mod render_globals;
 mod resources;
 mod statics;
 mod structure;
@@ -121,8 +124,8 @@ pub async fn main() -> anyhow::Result<()> {
     util::fix_windows_command_prompt();
     panic_handler::install_hook();
 
-    #[cfg(not(debug_assertions))]
-    std::env::set_var("RUST_BACKTRACE", "0");
+    // #[cfg(not(debug_assertions))]
+    // std::env::set_var("RUST_BACKTRACE", "0");
 
     let args = Args::parse();
 
@@ -219,6 +222,8 @@ pub async fn main() -> anyhow::Result<()> {
     let stringmap = Arc::new(stringmap);
 
     info!("Loaded {} global strings", stringmap.len());
+
+    load_render_globals();
 
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
@@ -722,4 +727,34 @@ pub async fn main() -> anyhow::Result<()> {
             _ => (),
         }
     });
+}
+
+fn load_render_globals() {
+    let tag = get_named_tag("render_globals").expect("Could not find render globals!");
+    let globals: SRenderGlobals = package_manager()
+        .read_tag_struct(tag)
+        .expect("Failed to read render globals");
+
+    // println!("{globals:#?}");
+    for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
+        println!("scope #{i}: {}", s.name.to_string());
+        if s.scope.stage_vertex.constant_buffer.is_some() {
+            println!("\tVS cb{}", s.scope.stage_vertex.constant_buffer_slot);
+        }
+        if s.scope.stage_pixel.constant_buffer.is_some() {
+            println!("\tPS cb{}", s.scope.stage_pixel.constant_buffer_slot);
+        }
+        if s.scope.stage_geometry.constant_buffer.is_some() {
+            println!("\tGS cb{}", s.scope.stage_geometry.constant_buffer_slot);
+        }
+        if s.scope.stage_hull.constant_buffer.is_some() {
+            println!("\tHS cb{}", s.scope.stage_hull.constant_buffer_slot);
+        }
+        if s.scope.stage_compute.constant_buffer.is_some() {
+            println!("\tCS cb{}", s.scope.stage_compute.constant_buffer_slot);
+        }
+        if s.scope.stage_domain.constant_buffer.is_some() {
+            println!("\tDS cb{}", s.scope.stage_domain.constant_buffer_slot);
+        }
+    }
 }

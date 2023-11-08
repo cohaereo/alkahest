@@ -3,7 +3,7 @@ use crate::ecs::components::EntityModel;
 use crate::ecs::transform::Transform;
 use crate::entity::Unk808073a5;
 use crate::map::MapDataList;
-use crate::material::Material;
+use crate::material::Technique;
 use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
@@ -365,7 +365,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
 
             info!("TFX Disassembly:");
             for (i, o) in opcodes.into_iter().enumerate() {
-                info!(" - {i}: {}", o.disassemble());
+                info!(" {i}: {}", o.disassemble());
             }
 
             // 3C0100340003293401340212232200350334050E44043C01003406032934073408122322003509340B0E440D
@@ -383,7 +383,7 @@ fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<Ent
             if p.material.is_some() {
                 renderer.render_data.data_mut().materials.insert(
                     p.material,
-                    Material::load(
+                    Technique::load(
                         renderer,
                         package_manager().read_tag_struct(p.material)?,
                         p.material,

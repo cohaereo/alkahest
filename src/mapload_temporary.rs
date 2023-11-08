@@ -46,7 +46,7 @@ use crate::{
         Unk8080714b, Unk8080714f,
     },
     map_resources::MapResource,
-    material::{Material, SMaterial},
+    material::{STechnique, Technique},
     packages::package_manager,
     render::{
         scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
@@ -73,7 +73,7 @@ pub async fn load_maps(
     let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
     let mut terrain_headers = vec![];
     let mut static_map: IntMap<TagHash, Arc<StaticModel>> = Default::default();
-    let mut material_map: IntMap<TagHash, Material> = Default::default();
+    let mut material_map: IntMap<TagHash, Technique> = Default::default();
     let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
     let renderer_ch = renderer.clone();
 
@@ -345,12 +345,12 @@ pub async fn load_maps(
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
                         let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                        let materials: TablePointer<Tag<SMaterial>> = cur.read_le()?;
+                        let materials: TablePointer<Tag<STechnique>> = cur.read_le()?;
 
                         for m in &materials {
                             material_map.insert(
                                 m.tag(),
-                                Material::load(&renderer, m.0.clone(), m.tag(), true),
+                                Technique::load(&renderer, m.0.clone(), m.tag(), true),
                             );
                         }
 
@@ -359,7 +359,7 @@ pub async fn load_maps(
                                 if p.material.is_some() {
                                     material_map.insert(
                                         p.material,
-                                        Material::load(
+                                        Technique::load(
                                             &renderer,
                                             package_manager().read_tag_struct(p.material)?,
                                             p.material,
@@ -416,7 +416,7 @@ pub async fn load_maps(
                 if p.material.is_some() {
                     material_map.insert(
                         p.material,
-                        Material::load(
+                        Technique::load(
                             &renderer,
                             package_manager().read_tag_struct(p.material)?,
                             p.material,
@@ -537,7 +537,7 @@ pub async fn load_maps(
                 {
                     material_map.insert(
                         *m,
-                        Material::load(
+                        Technique::load(
                             &renderer,
                             package_manager().read_tag_struct(*m).unwrap(),
                             *m,
@@ -554,7 +554,7 @@ pub async fn load_maps(
                 {
                     material_map.insert(
                         m,
-                        Material::load(
+                        Technique::load(
                             &renderer,
                             package_manager().read_tag_struct(m).unwrap(),
                             m,
@@ -794,7 +794,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
     terrain_headers: &mut Vec<(TagHash, Unk8080714f)>,
     placement_groups: &mut Vec<Tag<Unk8080966d>>,
-    material_map: &mut IntMap<TagHash, Material>,
+    material_map: &mut IntMap<TagHash, Technique>,
     to_load_entitymodels: &mut IntSet<TagHash>,
     unknown_root_resources: &mut IntMap<u32, usize>,
 ) -> anyhow::Result<()> {
@@ -852,7 +852,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         if p.material.is_some() {
                             material_map.insert(
                                 p.material,
-                                Material::load(
+                                Technique::load(
                                     &renderer,
                                     package_manager().read_tag_struct(p.material)?,
                                     p.material,

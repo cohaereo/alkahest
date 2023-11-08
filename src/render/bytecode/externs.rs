@@ -1,5 +1,7 @@
+use anyhow::Context;
 use binrw::binread;
 use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 
 #[binread]
 #[br(repr(u8))]
@@ -103,4 +105,24 @@ pub enum TfxExtern {
     UiHdrTransform = 94,
     PlayerCenteredCascadedGrid = 95,
     SoftDeform = 96,
+}
+
+#[binread]
+#[br(repr(u8))]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum TfxShaderStage {
+    Pixel = 1,
+    Vertex = 2,
+    Geometry = 3,
+    Hull = 4,
+    Compute = 5,
+    Domain = 6,
+}
+
+impl TfxShaderStage {
+    /// Decodes shader stage from TFX bytecode value
+    pub fn from_tfx_value(value: u8) -> anyhow::Result<TfxShaderStage> {
+        Self::from_u8(value >> 5).context("Invalid shader stage index")
+    }
 }
