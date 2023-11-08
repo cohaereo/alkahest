@@ -27,7 +27,7 @@ use crate::{
     util::fnv1,
 };
 use anyhow::Context;
-use binrw::BinReaderExt;
+use binrw::{BinReaderExt, VecArgs};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::Itertools;
@@ -1403,20 +1403,41 @@ fn is_physics_entity(entity: ExtendedHash) -> bool {
 }
 
 fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
-    let data = package_manager().read_tag(entity).ok()?;
-    let mut cur = Cursor::new(data);
+    let data: Vec<u8> = package_manager().read_tag(entity).ok()?;
+    let mut cur = Cursor::new(&data);
 
     let e = cur.read_le::<SEntityResource>().ok()?;
-    let mut world_id_list = vec![];
+    let mut world_id_list: Vec<Unk80809905> = vec![];
     if e.unk80.is_none() {
         return None;
     }
 
-    if matches!(e.unk18.resource_type, 0x80808cf8 | 0x808098fa) {
-        cur.seek(SeekFrom::Start(e.unk18.offset + 0x50)).ok()?;
-        let list: TablePointer<Unk80809905> = cur.read_le().ok()?;
-        world_id_list = list.take_data();
+    for (i, b) in data.chunks_exact(4).enumerate() {
+        let v: [u8; 4] = b.try_into().unwrap();
+        let hash = u32::from_le_bytes(v);
+        let offset = i as u64 * 4;
+
+        if hash == 0x80809905 {
+            cur.seek(SeekFrom::Start(offset - 8)).ok()?;
+            let count: u64 = cur.read_le().ok()?;
+            cur.seek(SeekFrom::Start(offset + 8)).ok()?;
+            world_id_list = cur
+                .read_le_args(VecArgs {
+                    count: count as usize,
+                    inner: (),
+                })
+                .ok()?;
+            // let list: TablePointer<Unk80809905> = cur.read_le().ok()?;
+            // world_id_list = list.take_data();
+            break;
+        }
     }
+
+    // if matches!(e.unk18.resource_type, 0x80808cf8 | 0x808098fa) {
+    //     cur.seek(SeekFrom::Start(e.unk18.offset + 0x50)).ok()?;
+    //     let list: TablePointer<Unk80809905> = cur.read_le().ok()?;
+    //     world_id_list = list.take_data();
+    // }
 
     // TODO(cohae): There's volumes and stuff without a world ID that still have a name
     world_id_list.retain(|w| w.world_id != u64::MAX);
