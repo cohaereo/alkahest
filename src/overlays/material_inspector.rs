@@ -118,8 +118,8 @@ impl MaterialInspector {
             let mut handles: Vec<TextureView> = Vec::new();
             for texture in textures.iter() {
                 let view = TextureView::create(texture, gui, self.dcs.as_ref());
-                if view.is_some() {
-                    handles.push(view.unwrap());
+                if let Some(view) = view {
+                    handles.push(view);
                 }
             }
             self.texture_handlers.insert(shader_type, handles);
