@@ -77,8 +77,9 @@ impl SortValue3d {
 #[derive(Debug, PartialEq, Eq)]
 pub enum GeometryType {
     Static = 0,
-    Terrain = 1,
-    Entity = 2,
+    StaticDecal = 1,
+    Terrain = 2,
+    Entity = 3,
     // Decal = 4,
 }
 
@@ -90,8 +91,9 @@ impl GeometryType {
     const fn from_bits(value: u64) -> Self {
         match value {
             0 => Self::Static,
-            1 => Self::Terrain,
-            2 => Self::Entity,
+            1 => Self::StaticDecal,
+            2 => Self::Terrain,
+            3 => Self::Entity,
             // 4 => Self::Decal,
             _ => Self::Static,
         }

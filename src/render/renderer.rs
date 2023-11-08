@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Instant};
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::util::RwLock;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4};
 use nohash_hasher::IntSet;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -350,8 +350,32 @@ impl Renderer {
         //region Deferred
         let draw_queue = self.draw_queue.read();
         for i in 0..draw_queue.len() {
-            if draw_queue[i].0.technique() != ShadingTechnique::Deferred {
+            if draw_queue[i].0.technique() != ShadingTechnique::Deferred
+                || draw_queue[i].0.geometry_type() == GeometryType::StaticDecal
+            {
                 continue;
+            }
+
+            let (s, d) = draw_queue[i].clone();
+            self.draw(s, &d, &shader_overrides, DrawMode::Normal);
+        }
+        //endregion
+
+        //region Deferred (decals)
+        self.gbuffer.rt1.copy_to(&self.gbuffer.rt1_clone);
+        let draw_queue = self.draw_queue.read();
+        for i in 0..draw_queue.len() {
+            if draw_queue[i].0.technique() != ShadingTechnique::Deferred
+                || draw_queue[i].0.geometry_type() != GeometryType::StaticDecal
+            {
+                continue;
+            }
+
+            unsafe {
+                // Necessary for propery decal mesh blending
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(2, Some(&[Some(self.gbuffer.rt1_clone.view.clone())]));
             }
 
             let (s, d) = draw_queue[i].clone();
@@ -395,11 +419,24 @@ impl Renderer {
             );
         }
 
+        self.gbuffer.staging.copy_to(&self.gbuffer.staging_clone);
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..draw_queue.len() {
             if draw_queue[i].0.technique() != ShadingTechnique::Forward {
                 continue;
+            }
+
+            self.render_data
+                .data()
+                .blend_texture
+                .bind(&self.dcs, 0, ShaderStages::PIXEL);
+            for i in 1..8 {
+                self.render_data.data().debug_textures[i].bind(
+                    &self.dcs,
+                    i as u32,
+                    ShaderStages::all(),
+                );
             }
 
             self.render_data
@@ -420,18 +457,22 @@ impl Renderer {
                     10,
                     Some(&[Some(self.gbuffer.depth.texture_copy_view.clone())]),
                 );
-                self.dcs
-                    .context()
-                    .PSSetShaderResources(11, Some(&[Some(self.gbuffer.rt0.view.clone())]));
-                self.dcs
-                    .context()
-                    .PSSetShaderResources(13, Some(&[Some(self.gbuffer.rt0.view.clone())]));
-                self.dcs
-                    .context()
-                    .PSSetShaderResources(20, Some(&[Some(self.gbuffer.rt0.view.clone())]));
-                self.dcs
-                    .context()
-                    .PSSetShaderResources(23, Some(&[Some(self.gbuffer.rt0.view.clone())]));
+                self.dcs.context().PSSetShaderResources(
+                    11,
+                    Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
+                );
+                self.dcs.context().PSSetShaderResources(
+                    13,
+                    Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
+                );
+                self.dcs.context().PSSetShaderResources(
+                    20,
+                    Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
+                );
+                self.dcs.context().PSSetShaderResources(
+                    23,
+                    Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
+                );
 
                 let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
                     self.render_data
@@ -602,6 +643,7 @@ impl Renderer {
 
         match sort.geometry_type() {
             GeometryType::Static => {}
+            GeometryType::StaticDecal => {}
             GeometryType::Terrain => {}
             GeometryType::Entity => unsafe {
                 if shader_overrides.entity_vs {
@@ -1046,7 +1088,13 @@ impl Renderer {
             camera_backward: -camera.front.extend(1.0),
             camera_position: camera.position.extend(1.0),
 
-            // target_pixel_to_camera: Mat4::IDENTITY,
+            target_pixel_to_camera: Mat4::from_scale_rotation_translation(
+                Vec3::new(2.0, 1.0, 1.0),
+                Quat::IDENTITY,
+                Vec3::new(2.0, 1.0, 1.0) * 100.0,
+            )
+            .inverse(),
+
             target_resolution: (self.window_size.0 as f32, self.window_size.1 as f32),
             inverse_target_resolution: (
                 (1. / (self.window_size.0 as f32)),

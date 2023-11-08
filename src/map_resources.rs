@@ -36,7 +36,7 @@ pub enum MapResource {
     Unk80806aa3(AABB, TagHash, Mat4),
     Unk808085c0,
     Unk80806a40,
-    Unk80806cc3(AABB),
+    Unk80806cc3(AABB, TagHash),
     Unk8080917b(TagHash),
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
@@ -94,9 +94,9 @@ impl MapResource {
                     "Ambient Sound (no header?)".to_string()
                 }
             }
-            MapResource::Unk80806cc3(_) => "Unk80806cc3".to_string(),
-            MapResource::ShadowingLight => "Spotlight".to_string(),
-            MapResource::NamedArea(_, s) => format!("NamedArea ('{s}')\n(TODO: havok)"),
+            MapResource::Unk80806cc3(_, t) => format!("Unk80806cc3 ({t})"),
+            MapResource::ShadowingLight => "Shadowing Light".to_string(),
+            MapResource::NamedArea(_, s) => format!("Named Area ('{s}')\n(TODO: havok)"),
             MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
         }
     }
@@ -121,7 +121,7 @@ impl MapResource {
             MapResource::Unk80806aa3(bounds, _, _) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
-            MapResource::Unk80806cc3(bounds) => {
+            MapResource::Unk80806cc3(bounds, _) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
             MapResource::ShadowingLight => {

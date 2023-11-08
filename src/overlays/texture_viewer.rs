@@ -1,4 +1,4 @@
-use egui::{Color32, RichText, TextureId};
+use egui::{vec2, Color32, ComboBox, RichText, Rounding, TextureId};
 
 use crate::{
     packages::package_manager,
@@ -14,6 +14,13 @@ pub struct TextureViewer {
     header: TextureHeader,
     texture: Texture,
     texture_egui: TextureId,
+
+    channel_r: bool,
+    channel_g: bool,
+    channel_b: bool,
+    channel_a: bool,
+
+    selected_mip: usize,
 }
 
 impl TextureViewer {
@@ -29,6 +36,12 @@ impl TextureViewer {
             header,
             texture,
             texture_egui: TextureId::default(),
+            channel_r: true,
+            channel_g: true,
+            channel_b: true,
+            channel_a: true,
+
+            selected_mip: 0,
         })
     }
 }
@@ -50,11 +63,81 @@ impl Overlay for TextureViewer {
         }
 
         let mut open = true;
+        // open.tex 000091B7DB39C3C0
         egui::Window::new(format!("Texture {}", self.tag))
             .open(&mut open)
             .show(ctx, |ui| {
                 egui::Frame::default().show(ui, |ui| {
-                    ui.image(self.texture_egui, egui::Vec2::splat(ui.available_width()));
+                    ui.horizontal(|ui| {
+                        let rounding_l = Rounding {
+                            ne: 0.0,
+                            se: 0.0,
+                            nw: 2.0,
+                            sw: 2.0,
+                        };
+                        let rounding_m = Rounding::none();
+                        let rounding_r = Rounding {
+                            nw: 0.0,
+                            sw: 0.0,
+                            ne: 2.0,
+                            se: 2.0,
+                        };
+
+                        ui.style_mut().spacing.item_spacing = [0.0; 2].into();
+
+                        ui.style_mut().visuals.widgets.active.rounding = rounding_l;
+                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
+                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+
+                        if ui.selectable_label(self.channel_r, "R").clicked() {
+                            self.channel_r = !self.channel_r;
+                        }
+
+                        ui.style_mut().visuals.widgets.active.rounding = rounding_m;
+                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
+                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
+
+                        if ui.selectable_label(self.channel_g, "G").clicked() {
+                            self.channel_g = !self.channel_g;
+                        }
+                        if ui.selectable_label(self.channel_b, "B").clicked() {
+                            self.channel_b = !self.channel_b;
+                        }
+
+                        ui.style_mut().visuals.widgets.active.rounding = rounding_r;
+                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
+                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+
+                        if ui.selectable_label(self.channel_a, "A").clicked() {
+                            self.channel_a = !self.channel_a;
+                        }
+
+                        ui.style_mut().spacing.item_spacing = vec2(8.0, 3.0);
+
+                        ui.add_space(16.0);
+
+                        ComboBox::from_label("Mip")
+                            .wrap(false)
+                            .width(128.0)
+                            .show_index(
+                                ui,
+                                &mut self.selected_mip,
+                                self.header.mip_count as usize,
+                                |i| {
+                                    format!(
+                                        "{i} - {}x{}",
+                                        self.header.width as usize >> i,
+                                        self.header.height as usize >> i
+                                    )
+                                },
+                            )
+                    });
+
+                    let height_ratio = self.header.height as f32 / self.header.width as f32;
+                    ui.image(
+                        self.texture_egui,
+                        egui::Vec2::new(ui.available_width(), ui.available_width() * height_ratio),
+                    );
                 });
 
                 ui.label(format!(

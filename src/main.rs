@@ -337,6 +337,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(CurrentCubemap(None, None));
     resources.insert(ActivityGroupFilter::default());
     resources.insert(ViewerWindows::default());
+    resources.insert(renderer.clone());
     resources.insert(renderer.read().dcs.clone());
 
     let _blend_state = unsafe {

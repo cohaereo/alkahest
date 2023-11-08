@@ -77,7 +77,6 @@ impl EntityRenderer {
         material_map: Vec<Unk808072c5>,
         materials: Vec<TagHash>,
         renderer: &Renderer,
-        _dcs: &DeviceContextSwapchain,
     ) -> anyhow::Result<Self> {
         let mut meshes = vec![];
 

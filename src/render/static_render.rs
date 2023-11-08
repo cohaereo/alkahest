@@ -296,9 +296,13 @@ impl StaticOverlayModel {
                 // TODO(cohae): calculate depth (need to draw instances separately)
                 .with_depth(u32::MAX)
                 .with_material(self.model.material.0)
+                .with_transparency(if technique == ShadingTechnique::Deferred {
+                    Transparency::None
+                } else {
+                    Transparency::Additive
+                })
                 .with_technique(technique)
-                .with_transparency(Transparency::Additive)
-                .with_geometry_type(GeometryType::Static),
+                .with_geometry_type(GeometryType::StaticDecal),
             DrawCall {
                 vertex_buffers: vec![self.buffers.vertex_buffer1, self.buffers.vertex_buffer2],
                 index_buffer: self.buffers.index_buffer,

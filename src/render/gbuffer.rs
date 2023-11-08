@@ -11,8 +11,10 @@ use windows::Win32::Graphics::Dxgi::Common::*;
 pub struct GBuffer {
     pub rt0: RenderTarget,
     pub rt1: RenderTarget,
+    pub rt1_clone: RenderTarget,
     pub rt2: RenderTarget,
     pub staging: RenderTarget,
+    pub staging_clone: RenderTarget,
     pub depth: DepthState,
     dcs: Arc<DeviceContextSwapchain>,
 }
@@ -20,14 +22,18 @@ pub struct GBuffer {
 impl GBuffer {
     pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         Ok(Self {
-            rt0: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM_SRGB)
+            rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("RT0")?,
-            rt1: RenderTarget::create(size, &dcs.device, DxgiFormat::R10G10B10A2_UNORM)
+            rt1: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, dcs.clone())
                 .context("RT1")?,
-            rt2: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM)
+            rt1_clone: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, dcs.clone())
+                .context("RT1_Clone")?,
+            rt2: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
                 .context("RT2")?,
-            staging: RenderTarget::create(size, &dcs.device, DxgiFormat::B8G8R8A8_UNORM_SRGB)
+            staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Staging")?,
+            staging_clone: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+                .context("Staging_Clone")?,
             depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,
         })
@@ -38,12 +44,14 @@ impl GBuffer {
             return Ok(());
         }
 
-        self.rt0.resize(new_size, &self.dcs.device).context("RT0")?;
-        self.rt1.resize(new_size, &self.dcs.device).context("RT1")?;
-        self.rt2.resize(new_size, &self.dcs.device).context("RT2")?;
-        self.staging
-            .resize(new_size, &self.dcs.device)
-            .context("Staging")?;
+        self.rt0.resize(new_size).context("RT0")?;
+        self.rt1.resize(new_size).context("RT1")?;
+        self.rt1_clone.resize(new_size).context("RT1_Clone")?;
+        self.rt2.resize(new_size).context("RT2")?;
+        self.staging.resize(new_size).context("Staging")?;
+        self.staging_clone
+            .resize(new_size)
+            .context("Staging_Clone")?;
         self.depth
             .resize(new_size, &self.dcs.device)
             .context("Depth")?;
@@ -57,16 +65,18 @@ pub struct RenderTarget {
     pub render_target: ID3D11RenderTargetView,
     pub view: ID3D11ShaderResourceView,
     pub format: DxgiFormat,
+    dcs: Arc<DeviceContextSwapchain>,
 }
 
 impl RenderTarget {
     pub fn create(
         size: (u32, u32),
-        device: &ID3D11Device,
         format: DxgiFormat,
+        dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
         unsafe {
-            let texture = device
+            let texture = dcs
+                .device
                 .CreateTexture2D(
                     &D3D11_TEXTURE2D_DESC {
                         Width: size.0,
@@ -87,10 +97,12 @@ impl RenderTarget {
                 )
                 .context("Failed to create texture")?;
 
-            let render_target = device
+            let render_target = dcs
+                .device
                 .CreateRenderTargetView(&texture, None)
                 .context("Failed to create RTV")?;
-            let view = device
+            let view = dcs
+                .device
                 .CreateShaderResourceView(
                     &texture,
                     Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
@@ -111,12 +123,21 @@ impl RenderTarget {
                 render_target,
                 view,
                 format,
+                dcs,
             })
         }
     }
 
-    pub fn resize(&mut self, new_size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<()> {
-        *self = Self::create(new_size, device, self.format)?;
+    pub fn copy_to(&self, dest: &RenderTarget) {
+        unsafe {
+            self.dcs
+                .context()
+                .CopyResource(&dest.texture, &self.texture)
+        }
+    }
+
+    pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
+        *self = Self::create(new_size, self.format, self.dcs.clone())?;
         Ok(())
     }
 }

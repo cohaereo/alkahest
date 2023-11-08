@@ -1,10 +1,20 @@
 use crate::camera::FpsCamera;
+use crate::ecs::components::EntityModel;
+use crate::ecs::transform::Transform;
+use crate::entity::Unk808073a5;
+use crate::map::MapDataList;
+use crate::material::Material;
 use crate::overlays::gui::Overlay;
+use crate::packages::package_manager;
+use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::dcs::DcsShared;
+use crate::render::EntityRenderer;
 
+use crate::render::renderer::{Renderer, RendererShared};
 use crate::resources::Resources;
 use crate::structure::ExtendedHash;
 
+use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
@@ -17,7 +27,6 @@ use std::io::Cursor;
 use std::sync::Arc;
 use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
-use tracing_subscriber::layer::Context;
 use tracing_subscriber::Layer;
 use winit::window::Window;
 
@@ -54,7 +63,7 @@ impl<S> Layer<S> for ConsoleLogLayer
 where
     S: Subscriber,
 {
-    fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+    fn on_event(&self, event: &Event<'_>, _ctx: tracing_subscriber::layer::Context<'_, S>) {
         let mut visitor = ConsoleLogVisitor { fields: vec![] };
 
         event.record(&mut visitor);
@@ -277,6 +286,113 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             }
         }
         "open.mat" | "open.material" => {}
+        "clear_map" => {
+            if let Some(mut maps) = resources.get_mut::<MapDataList>() {
+                let current_map = maps.current_map;
+                let scene = &mut maps.maps[current_map].2.scene;
+                scene.clear();
+            }
+        }
+        "spawn_entity_model" => {
+            if let Some(mut maps) = resources.get_mut::<MapDataList>() {
+                // TODO(cohae): Make some abstraction for this
+                if args.len() != 1 {
+                    error!("Missing tag argument, expected 32/64-bit tag");
+                    return;
+                }
+
+                let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
+                    if args[0].len() > 8 {
+                        let h = u64::from_be(u64::from_str_radix(args[0], 16)?);
+                        Ok(ExtendedHash::Hash64(TagHash64(h)))
+                    } else {
+                        let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
+                        Ok(ExtendedHash::Hash32(TagHash(h)))
+                    }
+                })();
+
+                let tag = match tag_parsed {
+                    Ok(o) => o,
+                    Err(e) => {
+                        error!("Failed to parse tag: {e}");
+                        return;
+                    }
+                };
+
+                let current_map = maps.current_map;
+                let scene = &mut maps.maps[current_map].2.scene;
+                let camera = resources.get::<FpsCamera>().unwrap();
+
+                let renderer = resources.get_mut::<RendererShared>().unwrap();
+                let rb = renderer.read();
+                println!("Spawning entity {tag}...");
+                match load_entity_model(tag, &rb) {
+                    Ok(er) => {
+                        scene.spawn((
+                            Transform {
+                                translation: camera.position,
+                                ..Default::default()
+                            },
+                            EntityModel(er),
+                        ));
+                    }
+                    Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
+                }
+            }
+        }
+        "disassemble_tfx" => {
+            if args.is_empty() {
+                error!("Missing bytes argument, expected hex bytestream");
+                return;
+            }
+
+            let hex_stream = args.iter().join("").replace(" ", "");
+            let data = match hex::decode(hex_stream) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Invalid hex data: {e}");
+                    return;
+                }
+            };
+
+            let opcodes = match TfxBytecodeOp::parse_all(&data, binrw::Endian::Little) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to decode TFX bytecode: {e}");
+                    return;
+                }
+            };
+
+            info!("TFX Disassembly:");
+            for (i, o) in opcodes.into_iter().enumerate() {
+                info!(" - {i}: {}", o.disassemble());
+            }
+
+            // 3C0100340003293401340212232200350334050E44043C01003406032934073408122322003509340B0E440D
+        }
         _ => error!("Unknown command '{command}'"),
     }
+}
+
+fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
+    let model: Unk808073a5 =
+        package_manager().read_tag_struct(t.hash32().context("Couldnt lookup hash64")?)?;
+
+    for m in &model.meshes {
+        for p in &m.parts {
+            if p.material.is_some() {
+                renderer.render_data.data_mut().materials.insert(
+                    p.material,
+                    Material::load(
+                        renderer,
+                        package_manager().read_tag_struct(p.material)?,
+                        p.material,
+                        true,
+                    ),
+                );
+            }
+        }
+    }
+
+    EntityRenderer::load(model, vec![], vec![], renderer)
 }

@@ -376,7 +376,6 @@ pub async fn load_maps(
                                 entity_material_map.to_vec(),
                                 materials.iter().map(|m| m.tag()).collect_vec(),
                                 &renderer,
-                                &dcs,
                             )
                         }) {
                             Ok(er) => {
@@ -429,7 +428,7 @@ pub async fn load_maps(
         }
 
         match debug_span!("load EntityRenderer")
-            .in_scope(|| EntityRenderer::load(model, vec![], vec![], &renderer, &dcs))
+            .in_scope(|| EntityRenderer::load(model, vec![], vec![], &renderer))
         {
             Ok(er) => {
                 entity_renderers.insert(t.0 as u64, er);
@@ -1230,7 +1229,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..Default::default()
                             },
                             ResourcePoint {
-                                resource: MapResource::Unk80806cc3(b.bb),
+                                resource: MapResource::Unk80806cc3(b.bb, header_tag),
                                 entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                 ..base_rp
                             },
