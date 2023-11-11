@@ -88,7 +88,7 @@ pub struct Unk8080737e {
 pub struct Unk808072c5 {
     pub material_count: u32,
     pub material_start: u32,
-    pub unk6: u32,
+    pub unk8: u32,
 }
 
 #[derive(BinRead, Debug, PartialEq, Copy, Clone)]

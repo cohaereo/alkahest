@@ -1,4 +1,6 @@
-use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
+use windows::Win32::Graphics::Direct3D11::{
+    ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
+};
 
 use super::{
     scopes::{ScopeFrame, ScopeUnk2, ScopeUnk3, ScopeUnk8, ScopeView},
@@ -8,6 +10,8 @@ use super::{
 pub struct EnabledShaderOverrides {
     pub entity_vs: bool,
     pub entity_ps: bool,
+
+    pub terrain_ps: bool,
 }
 
 impl Default for EnabledShaderOverrides {
@@ -16,6 +20,7 @@ impl Default for EnabledShaderOverrides {
             // TODO(cohae): remove when we fix entity VS
             entity_vs: true,
             entity_ps: false,
+            terrain_ps: false,
         }
     }
 }
@@ -24,6 +29,9 @@ pub struct ShaderOverrides {
     pub entity_vs: ID3D11VertexShader,
     pub entity_ps_deferred: ID3D11PixelShader,
     pub entity_ps_forward: ID3D11PixelShader,
+
+    pub terrain_ps: ID3D11PixelShader,
+    pub terrain_debug_sampler: ID3D11SamplerState,
 }
 
 impl ShaderOverrides {
@@ -55,10 +63,39 @@ impl ShaderOverrides {
 
         let (entity_ps_forward, _) = shader::load_pshader(dcs, &pshader_blob)?;
 
+        let pshader_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/overrides/terrain.psh"),
+            "main",
+            "ps_5_0",
+        )
+        .unwrap();
+
+        let (terrain_ps, _) = shader::load_pshader(dcs, &pshader_blob)?;
+
+        let terrain_debug_sampler = unsafe {
+            use windows::Win32::Graphics::Direct3D11::*;
+            let desc = D3D11_SAMPLER_DESC {
+                Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+                AddressU: D3D11_TEXTURE_ADDRESS_WRAP,
+                AddressV: D3D11_TEXTURE_ADDRESS_WRAP,
+                AddressW: D3D11_TEXTURE_ADDRESS_WRAP,
+                MipLODBias: 0.,
+                ComparisonFunc: D3D11_COMPARISON_ALWAYS,
+                MinLOD: 0.,
+                MaxLOD: 0.,
+                BorderColor: [1., 0., 0., 1.],
+                ..Default::default()
+            };
+
+            dcs.device.CreateSamplerState(&desc)?
+        };
+
         Ok(Self {
             entity_vs,
             entity_ps_deferred,
             entity_ps_forward,
+            terrain_ps,
+            terrain_debug_sampler,
         })
     }
 }

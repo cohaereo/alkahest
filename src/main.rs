@@ -737,24 +737,53 @@ fn load_render_globals() {
 
     // println!("{globals:#?}");
     for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
-        println!("scope #{i}: {}", s.name.to_string());
+        println!("scope #{i}: {}", *s.name);
         if s.scope.stage_vertex.constant_buffer.is_some() {
-            println!("\tVS cb{}", s.scope.stage_vertex.constant_buffer_slot);
+            println!(
+                "\tVS cb{} ({} bytes)",
+                s.scope.stage_vertex.constant_buffer_slot,
+                buffer_size(s.scope.stage_vertex.constant_buffer)
+            );
         }
         if s.scope.stage_pixel.constant_buffer.is_some() {
-            println!("\tPS cb{}", s.scope.stage_pixel.constant_buffer_slot);
+            println!(
+                "\tPS cb{} ({} bytes)",
+                s.scope.stage_pixel.constant_buffer_slot,
+                buffer_size(s.scope.stage_pixel.constant_buffer)
+            );
         }
         if s.scope.stage_geometry.constant_buffer.is_some() {
-            println!("\tGS cb{}", s.scope.stage_geometry.constant_buffer_slot);
+            println!(
+                "\tGS cb{} ({} bytes)",
+                s.scope.stage_geometry.constant_buffer_slot,
+                buffer_size(s.scope.stage_geometry.constant_buffer)
+            );
         }
         if s.scope.stage_hull.constant_buffer.is_some() {
-            println!("\tHS cb{}", s.scope.stage_hull.constant_buffer_slot);
+            println!(
+                "\tHS cb{} ({} bytes)",
+                s.scope.stage_hull.constant_buffer_slot,
+                buffer_size(s.scope.stage_hull.constant_buffer)
+            );
         }
         if s.scope.stage_compute.constant_buffer.is_some() {
-            println!("\tCS cb{}", s.scope.stage_compute.constant_buffer_slot);
+            println!(
+                "\tCS cb{} ({} bytes)",
+                s.scope.stage_compute.constant_buffer_slot,
+                buffer_size(s.scope.stage_compute.constant_buffer)
+            );
         }
         if s.scope.stage_domain.constant_buffer.is_some() {
-            println!("\tDS cb{}", s.scope.stage_domain.constant_buffer_slot);
+            println!(
+                "\tDS cb{} ({} bytes)",
+                s.scope.stage_domain.constant_buffer_slot,
+                buffer_size(s.scope.stage_domain.constant_buffer)
+            );
         }
     }
+}
+
+fn buffer_size(tag: TagHash) -> usize {
+    let eeee = package_manager().get_entry(tag).unwrap().reference;
+    package_manager().read_tag(TagHash(eeee)).unwrap().len()
 }

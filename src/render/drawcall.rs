@@ -187,6 +187,7 @@ pub struct DrawCall {
     // pub cb11: Option<ID3D11Buffer>,
     /// Applied on top of the base material
     pub variant_material: Option<TagHash>,
+    pub dyemap: Option<TagHash>,
 
     pub index_start: u32,
     pub index_count: u32,

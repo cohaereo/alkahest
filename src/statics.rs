@@ -84,7 +84,8 @@ pub struct Unk808071a7 {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80807193 {
-    pub unk0: u16,
+    pub unk0: u8,
+    pub unk1: u8,
     pub lod: ELodCategory,
     pub unk3: i8,
     pub primitive_type: EPrimitiveType,

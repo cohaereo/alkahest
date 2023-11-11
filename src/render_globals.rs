@@ -62,6 +62,7 @@ pub struct SScope {
     pub name: RelPointer<NullString>,
 
     #[br(seek_before(SeekFrom::Start(0x58)))]
+    // TODO(cohae): Order *might* be incorrect
     pub stage_pixel: SScopeStage,
     pub stage_vertex: SScopeStage,
     pub stage_geometry: SScopeStage,

@@ -19,8 +19,8 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121, Unk80809178,
-        Unk8080917b, Unk80809802,
+        SimpleLight, Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121,
+        Unk80809178, Unk8080917b, Unk80809802,
     },
     render::renderer::RendererShared,
     types::{FnvHash, ResourceHash},
@@ -30,7 +30,7 @@ use anyhow::Context;
 use binrw::{BinReaderExt, VecArgs};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
-use itertools::Itertools;
+use itertools::{multizip, Itertools};
 use nohash_hasher::{IntMap, IntSet};
 use windows::Win32::Graphics::{
     Direct3D::WKPDID_D3DDebugObjectName,
@@ -42,8 +42,8 @@ use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     entity::{Unk808072c5, Unk808073a5, Unk80809c0f},
     map::{
-        MapData, SBubbleParent, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68, Unk80806ef4,
-        Unk8080714b, Unk8080714f,
+        MapData, SBubbleParent, STerrain, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68,
+        Unk80806ef4, Unk8080714b,
     },
     map_resources::MapResource,
     material::{STechnique, Technique},
@@ -108,7 +108,7 @@ pub async fn load_maps(
             continue;
         };
 
-        let mut terrains: Vec<(TagHash, Unk8080714f)> = vec![];
+        let mut terrains: Vec<(TagHash, STerrain)> = vec![];
         let mut placement_groups = vec![];
         let mut scene = Scene::new();
 
@@ -285,12 +285,22 @@ pub async fn load_maps(
                 .count()
         );
 
-        let mut point_lights = vec![Vec4::ZERO, Vec4::ZERO];
-        for (_, (transform, _)) in scene.query::<(&Transform, &PointLight)>().iter() {
-            point_lights.push(transform.translation.extend(1.0));
+        let mut point_lights = vec![
+            SimpleLight {
+                pos: Vec4::ZERO,
+                attenuation: Vec4::ONE,
+            };
+            2
+        ];
+        for (_, (transform, light)) in scene.query::<(&Transform, &PointLight)>().iter() {
+            point_lights.push(SimpleLight {
+                pos: transform.translation.extend(1.0),
+                attenuation: light.attenuation,
+            });
         }
+
         let cb_composite_lights =
-            ConstantBuffer::<Vec4>::create_array_init(dcs.clone(), &point_lights)?;
+            ConstantBuffer::<SimpleLight>::create_array_init(dcs.clone(), &point_lights)?;
 
         maps.push((
             hash,
@@ -397,10 +407,6 @@ pub async fn load_maps(
                         )
                     }
                 }
-            }
-
-            if !entity_renderers.contains_key(&te.key()) {
-                warn!("Entity {nh} does not contain any geometry!");
             }
         }
     }
@@ -611,78 +617,85 @@ pub async fn load_maps(
 
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
-            for sampler in m.vs_samplers.iter().chain(m.ps_samplers.iter()) {
+            for sampler in m
+                .shader_vertex
+                .samplers
+                .iter()
+                .chain(m.shader_pixel.samplers.iter())
+            {
                 to_load_samplers.insert(*sampler);
             }
 
-            if let Some(v) = package_manager().get_entry(m.vertex_shader) {
-                let _span = debug_span!("load vshader", shader = ?m.vertex_shader).entered();
+            if let Some(v) = package_manager().get_entry(m.shader_vertex.shader) {
+                let _span = debug_span!("load vshader", shader = ?m.shader_vertex.shader).entered();
 
-                vshader_map.entry(m.vertex_shader).or_insert_with(|| {
-                    let vs_data = package_manager().read_tag(v.reference).unwrap();
+                vshader_map
+                    .entry(m.shader_vertex.shader)
+                    .or_insert_with(|| {
+                        let vs_data = package_manager().read_tag(v.reference).unwrap();
 
-                    let mut vs_cur = Cursor::new(&vs_data);
-                    let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
-                    let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
+                        let mut vs_cur = Cursor::new(&vs_data);
+                        let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
+                        let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
 
-                    let layout_converted = input_sig
-                        .elements
-                        .iter()
-                        .map(|e| {
-                            InputElement::from_dxbc(
-                                e,
-                                e.component_type == DxbcInputType::Float,
-                                false,
+                        let layout_converted = input_sig
+                            .elements
+                            .iter()
+                            .map(|e| {
+                                InputElement::from_dxbc(
+                                    e,
+                                    e.component_type == DxbcInputType::Float,
+                                    false,
+                                )
+                            })
+                            .collect_vec();
+
+                        unsafe {
+                            let v = dcs
+                                .device
+                                .CreateVertexShader(&vs_data, None)
+                                .context("Failed to load vertex shader")
+                                .unwrap();
+
+                            let name = format!("VS {:?} (mat {})\0", m.shader_vertex.shader, t);
+                            v.SetPrivateData(
+                                &WKPDID_D3DDebugObjectName,
+                                name.len() as u32 - 1,
+                                Some(name.as_ptr() as _),
                             )
-                        })
-                        .collect_vec();
+                            .expect("Failed to set VS name");
 
-                    unsafe {
-                        let v = dcs
-                            .device
-                            .CreateVertexShader(&vs_data, None)
-                            .context("Failed to load vertex shader")
-                            .unwrap();
+                            // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
+                            // let layout_string = layout_converted
+                            //     .iter()
+                            //     .enumerate()
+                            //     .map(|(i, e)| {
+                            //         format!(
+                            //             "\t{}{} v{i} : {}{}",
+                            //             e.component_type,
+                            //             e.component_count,
+                            //             e.semantic_type.to_pcstr().display(),
+                            //             e.semantic_index
+                            //         )
+                            //     })
+                            //     .join("\n");
 
-                        let name = format!("VS {:?} (mat {})\0", m.vertex_shader, t);
-                        v.SetPrivateData(
-                            &WKPDID_D3DDebugObjectName,
-                            name.len() as u32 - 1,
-                            Some(name.as_ptr() as _),
-                        )
-                        .expect("Failed to set VS name");
+                            // error!(
+                            //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
+                            //     m.vertex_shader, layout_string
+                            // );
 
-                        // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
-                        // let layout_string = layout_converted
-                        //     .iter()
-                        //     .enumerate()
-                        //     .map(|(i, e)| {
-                        //         format!(
-                        //             "\t{}{} v{i} : {}{}",
-                        //             e.component_type,
-                        //             e.component_count,
-                        //             e.semantic_type.to_pcstr().display(),
-                        //             e.semantic_index
-                        //         )
-                        //     })
-                        //     .join("\n");
-
-                        // error!(
-                        //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
-                        //     m.vertex_shader, layout_string
-                        // );
-
-                        (v, layout_converted, vs_data)
-                    }
-                });
+                            (v, layout_converted, vs_data)
+                        }
+                    });
             }
 
             // return Ok(());
 
-            if let Some(v) = package_manager().get_entry(m.pixel_shader) {
-                let _span = debug_span!("load pshader", shader = ?m.pixel_shader).entered();
+            if let Some(v) = package_manager().get_entry(m.shader_pixel.shader) {
+                let _span = debug_span!("load pshader", shader = ?m.shader_pixel.shader).entered();
 
-                pshader_map.entry(m.pixel_shader).or_insert_with(|| {
+                pshader_map.entry(m.shader_pixel.shader).or_insert_with(|| {
                     let ps_data = package_manager().read_tag(v.reference).unwrap();
 
                     let mut ps_cur = Cursor::new(&ps_data);
@@ -708,7 +721,7 @@ pub async fn load_maps(
                             .context("Failed to load pixel shader")
                             .unwrap();
 
-                        let name = format!("PS {:?} (mat {})\0", m.pixel_shader, t);
+                        let name = format!("PS {:?} (mat {})\0", m.shader_pixel.shader, t);
                         v.SetPrivateData(
                             &WKPDID_D3DDebugObjectName,
                             name.len() as u32 - 1,
@@ -733,7 +746,12 @@ pub async fn load_maps(
     {
         let renderer = renderer.read();
         for m in material_map.values() {
-            for t in m.ps_textures.iter().chain(m.vs_textures.iter()) {
+            for t in m
+                .shader_pixel
+                .textures
+                .iter()
+                .chain(m.shader_vertex.textures.iter())
+            {
                 renderer.render_data.load_texture(t.texture);
             }
         }
@@ -792,7 +810,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     stringmap: Arc<IntMap<u32, String>>,
     entity_worldid_name_map: &IntMap<u64, String>,
 
-    terrain_headers: &mut Vec<(TagHash, Unk8080714f)>,
+    terrain_headers: &mut Vec<(TagHash, STerrain)>,
     placement_groups: &mut Vec<Tag<Unk8080966d>>,
     material_map: &mut IntMap<TagHash, Technique>,
     to_load_entitymodels: &mut IntSet<TagHash>,
@@ -844,7 +862,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .unwrap();
 
                     let terrain_resource: Unk8080714b = table_data.read_le().unwrap();
-                    let terrain: Unk8080714f = package_manager()
+                    let terrain: STerrain = package_manager()
                         .read_tag_struct(terrain_resource.terrain)
                         .unwrap();
 
@@ -1088,7 +1106,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let header: Unk80806c65 = package_manager().read_tag_struct(tag).unwrap();
 
-                    for (transform, _unk) in header.unk40.iter().zip(&header.unk30) {
+                    for (i, (transform, _unk, bounds)) in multizip((
+                        &header.unk40,
+                        &header.unk30,
+                        &header.occlusion_bounds.bounds,
+                    ))
+                    .enumerate()
+                    {
                         ents.push(scene.spawn((
                             Transform {
                                 translation: Vec3::new(
@@ -1105,12 +1129,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..Default::default()
                             },
                             ResourcePoint {
-                                resource: MapResource::Light,
+                                resource: MapResource::Light(bounds.bb, tag, i),
                                 entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
-                            PointLight,
+                            PointLight {
+                                attenuation: Vec4::ONE,
+                            },
                         )));
                     }
                 }
@@ -1250,10 +1276,15 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     // });
                 }
                 0x80806c5e => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                        .unwrap();
+                    let tag: TagHash = table_data.read_le().unwrap();
+
                     ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
-                            resource: MapResource::ShadowingLight,
+                            resource: MapResource::ShadowingLight(tag),
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),

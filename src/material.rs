@@ -32,36 +32,33 @@ pub struct STechnique {
     pub unk24: u32,
     pub unk28: u32,
     pub unk2c: u32,
-    pub unk30: [u32; 6],
+    pub unk30: [u32; 16],
 
-    #[br(seek_before(SeekFrom::Start(0x70)))]
-    pub vertex_shader: TagHash,
-    pub unk5c: u32,
-    pub vs_textures: TablePointer<SMaterialTextureAssignment>,
-    pub unk70: u64,
-    pub vs_bytecode: TablePointer<u8>,
-    pub vs_bytecode_constants: TablePointer<Vector4>,
-    pub vs_samplers: TablePointer<ExtendedHash>,
-    pub unka8: TablePointer<Vector4>,
-    pub unkb8: [u32; 9],
+    pub shader_vertex: STechniqueShader,
+    pub shader_unk1: STechniqueShader,
+    pub shader_unk2: STechniqueShader,
+    pub shader_unk3: STechniqueShader,
+    pub shader_pixel: STechniqueShader,
+    pub shader_compute: STechniqueShader,
+}
 
-    #[br(seek_before(SeekFrom::Start(0xe4)))]
-    pub unke4: TagHash,
+#[derive(BinRead, Debug, Clone)]
+pub struct STechniqueShader {
+    pub shader: TagHash,
+    pub unk4: u32,
+    pub textures: TablePointer<SMaterialTextureAssignment>, // 0x8
+    pub unk18: u64,
+    pub bytecode: TablePointer<u8>,                // 0x20
+    pub bytecode_constants: TablePointer<Vector4>, // 0x30
+    pub samplers: TablePointer<ExtendedHash>,      // 0x40
+    pub unk50: TablePointer<Vector4>,              // 0x50
 
-    // pub unke0: [u32; 126],
-    #[br(seek_before(SeekFrom::Start(0x2b0)))]
-    pub pixel_shader: TagHash,
-    pub unk2b4: u32,
-    pub ps_textures: TablePointer<SMaterialTextureAssignment>,
-    pub unk2c8: u64,
-    pub ps_bytecode: TablePointer<u8>,
-    pub ps_bytecode_constants: TablePointer<Vector4>,
-    pub ps_samplers: TablePointer<ExtendedHash>,
-    pub unk2f8: TablePointer<Vector4>,
-    // pub unk2f8: [u32; 9],
-    /// Pointer to a float4 buffer, usually passed into cbuffer0
-    #[br(seek_before(SeekFrom::Start(0x324)))]
-    pub unk334: TagHash,
+    pub unk60: [u32; 4], // 0x60
+
+    pub constant_buffer_slot: u32, // 0x70
+    pub constant_buffer: TagHash,  // 0x74
+
+    pub unk78: [u32; 6],
 }
 
 #[derive(BinRead, Debug, Clone)]
@@ -71,13 +68,6 @@ pub struct SMaterialTextureAssignment {
     _pad: u32,
     pub texture: ExtendedHash,
 }
-
-// #[derive(BinRead, Debug, Clone)]
-// pub struct Unk808073f3 {
-//     pub sampler: TagHash64,
-//     pub unk8: u32,
-//     pub unkc: u32,
-// }
 
 pub struct Technique {
     pub mat: STechnique,
@@ -93,8 +83,11 @@ impl Technique {
     // TODO(cohae): load_shaders is a hack, i fucking hate locks
     pub fn load(renderer: &Renderer, mat: STechnique, tag: TagHash, load_shaders: bool) -> Self {
         let _span = debug_span!("Load material", hash = %tag).entered();
-        let cb0_vs = if mat.unke4.is_some() {
-            let buffer_header_ref = package_manager().get_entry(mat.unke4).unwrap().reference;
+        let cb0_vs = if mat.shader_vertex.constant_buffer.is_some() {
+            let buffer_header_ref = package_manager()
+                .get_entry(mat.shader_vertex.constant_buffer)
+                .unwrap()
+                .reference;
 
             let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
             let data = bytemuck::cast_slice(&data_raw);
@@ -106,16 +99,20 @@ impl Technique {
             let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
-        } else if mat.unka8.len() > 1
+        } else if mat.shader_vertex.unk50.len() > 1
             && mat
-                .unka8
+                .shader_vertex
+                .unk50
                 .iter()
                 .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
         {
-            trace!("Loading float4 cbuffer with {} elements", mat.unk2f8.len());
+            trace!(
+                "Loading float4 cbuffer with {} elements",
+                mat.shader_vertex.unk50.len()
+            );
             let buf = ConstantBuffer::create_array_init(
                 renderer.dcs.clone(),
-                bytemuck::cast_slice(&mat.unka8),
+                bytemuck::cast_slice(&mat.shader_vertex.unk50),
             )
             .unwrap();
 
@@ -131,8 +128,11 @@ impl Technique {
             Some(buf)
         };
 
-        let cb0_ps = if mat.unk334.is_some() {
-            let buffer_header_ref = package_manager().get_entry(mat.unk334).unwrap().reference;
+        let cb0_ps = if mat.shader_pixel.constant_buffer.is_some() {
+            let buffer_header_ref = package_manager()
+                .get_entry(mat.shader_pixel.constant_buffer)
+                .unwrap()
+                .reference;
 
             let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
 
@@ -144,16 +144,20 @@ impl Technique {
             let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
-        } else if !mat.unk2f8.is_empty()
+        } else if !mat.shader_pixel.unk50.is_empty()
             && mat
-                .unk2f8
+                .shader_pixel
+                .unk50
                 .iter()
                 .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
         {
-            trace!("Loading float4 cbuffer with {} elements", mat.unk2f8.len());
+            trace!(
+                "Loading float4 cbuffer with {} elements",
+                mat.shader_pixel.unk50.len()
+            );
             let buf = ConstantBuffer::create_array_init(
                 renderer.dcs.clone(),
-                bytemuck::cast_slice(&mat.unk2f8),
+                bytemuck::cast_slice(&mat.shader_pixel.unk50),
             )
             .unwrap();
 
@@ -165,31 +169,31 @@ impl Technique {
         if load_shaders {
             renderer
                 .render_data
-                .load_vshader(&renderer.dcs, mat.vertex_shader);
+                .load_vshader(&renderer.dcs, mat.shader_vertex.shader);
             renderer
                 .render_data
-                .load_pshader(&renderer.dcs, mat.pixel_shader);
+                .load_pshader(&renderer.dcs, mat.shader_pixel.shader);
         }
 
         let tfx_bytecode_vs =
-            match TfxBytecodeOp::parse_all(&mat.vs_bytecode, binrw::Endian::Little) {
+            match TfxBytecodeOp::parse_all(&mat.shader_vertex.bytecode, binrw::Endian::Little) {
                 Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
                 Err(e) => {
                     debug!(
                         "Failed to parse VS TFX bytecode: {e} (data={})",
-                        hex::encode(mat.vs_bytecode.data())
+                        hex::encode(mat.shader_vertex.bytecode.data())
                     );
                     None
                 }
             };
 
         let tfx_bytecode_ps =
-            match TfxBytecodeOp::parse_all(&mat.ps_bytecode, binrw::Endian::Little) {
+            match TfxBytecodeOp::parse_all(&mat.shader_pixel.bytecode, binrw::Endian::Little) {
                 Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
                 Err(e) => {
                     debug!(
                         "Failed to parse PS TFX bytecode: {e} (data={})",
-                        hex::encode(mat.ps_bytecode.data())
+                        hex::encode(mat.shader_pixel.bytecode.data())
                     );
                     None
                 }
@@ -217,7 +221,7 @@ impl Technique {
     ) -> anyhow::Result<()> {
         unsafe {
             if stages.contains(ShaderStages::VERTEX) {
-                for (si, s) in self.vs_samplers.iter().enumerate() {
+                for (si, s) in self.shader_vertex.samplers.iter().enumerate() {
                     dcs.context().VSSetSamplers(
                         1 + si as u32,
                         Some(&[render_data.samplers.get(&s.key()).cloned()]),
@@ -231,14 +235,14 @@ impl Technique {
                     dcs.context().VSSetConstantBuffers(0, Some(&[None]));
                 }
 
-                if let Some((vs, _, _)) = render_data.vshaders.get(&self.vertex_shader) {
+                if let Some((vs, _, _)) = render_data.vshaders.get(&self.shader_vertex.shader) {
                     dcs.context().VSSetShader(vs, None);
                 } else {
                     // TODO: should still be handled, but not here
                     // anyhow::bail!("No vertex shader/input layout bound");
                 }
 
-                for p in &self.vs_textures {
+                for p in &self.shader_vertex.textures {
                     let tex = render_data
                         .textures
                         .get(&p.texture.key())
@@ -250,7 +254,7 @@ impl Technique {
             }
 
             if stages.contains(ShaderStages::PIXEL) {
-                for (si, s) in self.ps_samplers.iter().enumerate() {
+                for (si, s) in self.shader_pixel.samplers.iter().enumerate() {
                     dcs.context().PSSetSamplers(
                         1 + si as u32,
                         Some(&[render_data.samplers.get(&s.key()).cloned()]),
@@ -263,13 +267,13 @@ impl Technique {
                 } else {
                     dcs.context().PSSetConstantBuffers(0, Some(&[None]));
                 }
-                if let Some((ps, _)) = render_data.pshaders.get(&self.pixel_shader) {
+                if let Some((ps, _)) = render_data.pshaders.get(&self.shader_pixel.shader) {
                     dcs.context().PSSetShader(ps, None);
                 } else {
                     // TODO: should still be handled, but not here
                     // anyhow::bail!("No pixel shader bound");
                 }
-                for p in &self.ps_textures {
+                for p in &self.shader_pixel.textures {
                     let tex = render_data
                         .textures
                         .get(&p.texture.key())
@@ -291,10 +295,10 @@ impl Technique {
                 let res = self.tfx_bytecode_vs.as_mut().unwrap().evaluate(
                     renderer,
                     cb0_vs,
-                    if self.mat.vs_bytecode_constants.is_empty() {
+                    if self.mat.shader_pixel.bytecode_constants.is_empty() {
                         &[]
                     } else {
-                        bytemuck::cast_slice(&self.mat.vs_bytecode_constants)
+                        bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
                     },
                 );
                 if let Err(e) = res {
@@ -303,10 +307,10 @@ impl Technique {
                         self.tag
                     );
                     self.tfx_bytecode_vs.as_ref().unwrap().dump(
-                        if self.mat.vs_bytecode_constants.is_empty() {
+                        if self.mat.shader_vertex.bytecode_constants.is_empty() {
                             &[]
                         } else {
-                            bytemuck::cast_slice(&self.mat.vs_bytecode_constants)
+                            bytemuck::cast_slice(&self.mat.shader_vertex.bytecode_constants)
                         },
                         cb0_vs,
                     );
@@ -321,10 +325,10 @@ impl Technique {
                 let res = self.tfx_bytecode_ps.as_mut().unwrap().evaluate(
                     renderer,
                     cb0_ps,
-                    if self.mat.ps_bytecode_constants.is_empty() {
+                    if self.mat.shader_pixel.bytecode_constants.is_empty() {
                         &[]
                     } else {
-                        bytemuck::cast_slice(&self.mat.ps_bytecode_constants)
+                        bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
                     },
                 );
                 if let Err(e) = res {
@@ -333,10 +337,10 @@ impl Technique {
                         self.tag
                     );
                     self.tfx_bytecode_ps.as_ref().unwrap().dump(
-                        if self.mat.ps_bytecode_constants.is_empty() {
+                        if self.mat.shader_pixel.bytecode_constants.is_empty() {
                             &[]
                         } else {
-                            bytemuck::cast_slice(&self.mat.ps_bytecode_constants)
+                            bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
                         },
                         cb0_ps,
                     );
@@ -348,11 +352,11 @@ impl Technique {
 
     pub fn unbind_textures(&self, dcs: &DeviceContextSwapchain) {
         unsafe {
-            for p in &self.vs_textures {
+            for p in &self.shader_vertex.textures {
                 dcs.context().VSSetShaderResources(p.index, Some(&[None]));
             }
 
-            for p in &self.ps_textures {
+            for p in &self.shader_pixel.textures {
                 dcs.context().PSSetShaderResources(p.index, Some(&[None]));
             }
         }

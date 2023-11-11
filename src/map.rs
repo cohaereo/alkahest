@@ -84,12 +84,14 @@ pub struct Unk80806ef4 {
 
 /// Terrain
 #[derive(BinRead, Debug)]
-pub struct Unk8080714f {
+pub struct STerrain {
     pub file_size: u64,
-    #[br(seek_before(SeekFrom::Start(0x10)))]
+    pub unk8: u64,
+
     pub unk10: Vector4,
     pub unk20: Vector4,
     pub unk30: Vector4,
+
     #[br(seek_before(SeekFrom::Start(0x50)))]
     pub mesh_groups: TablePointer<Unk80807154>,
 
@@ -105,10 +107,7 @@ pub struct Unk8080714f {
 
 #[derive(BinRead, Debug)]
 pub struct Unk80807154 {
-    pub unk0: f32,
-    pub unk4: f32,
-    pub unk8: f32,
-    pub unkc: f32,
+    pub unk0: Vector4,
     pub unk10: f32,
     pub unk14: f32,
     pub unk18: f32,
@@ -143,10 +142,16 @@ pub struct MapData {
     pub placement_groups: Vec<Tag<Unk8080966d>>,
     // pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
     pub terrains: Vec<TagHash>,
-    pub lights: Vec<Vec4>,
-    pub lights_cbuffer: ConstantBuffer<Vec4>,
+    pub lights: Vec<SimpleLight>,
+    pub lights_cbuffer: ConstantBuffer<SimpleLight>,
 
     pub scene: Scene,
+}
+
+#[derive(Clone)]
+pub struct SimpleLight {
+    pub pos: Vec4,
+    pub attenuation: Vec4,
 }
 
 pub struct MapDataList {
@@ -343,6 +348,9 @@ pub struct Unk80806c65 {
     pub bounds: AABB,
     pub unk30: TablePointer<Unk80806c70>,
     pub unk40: TablePointer<Unk80809f4f>,
+    pub light_count: u32,
+    pub unk54: u32,
+    pub occlusion_bounds: Tag<SOcclusionBounds>,
 }
 
 #[derive(BinRead, Debug, Clone)]
@@ -363,9 +371,9 @@ pub struct Unk80806c70 {
     pub unkb8: f32,
     pub unkbc: f32,
 
-    pub unkc0: TagHash,
-    pub unkc4: TagHash,
-    pub unkc8: TagHash,
+    pub technique_unkc0: TagHash,
+    pub technique_unkc4: TagHash,
+    pub compute_technique_unkc8: TagHash,
     pub unkcc: TagHash,
     pub unkd0: TagHash,
     pub unkd4: [u32; 7],

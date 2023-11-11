@@ -1,4 +1,5 @@
 use destiny_pkg::TagHash;
+use glam::Vec4;
 
 use crate::{
     map_resources::MapResource,
@@ -42,8 +43,9 @@ impl ResourcePoint {
     }
 }
 
-/// Just a marker for now
-pub struct PointLight;
+pub struct PointLight {
+    pub attenuation: Vec4,
+}
 
 pub struct CubemapVolume(pub TagHash, pub AABB, pub String);
 

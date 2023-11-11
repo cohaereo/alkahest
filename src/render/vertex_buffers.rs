@@ -42,7 +42,7 @@ pub fn load_vertex_buffers(
         let render_data = renderer.render_data.data();
         let mat = &render_data.materials[&material];
 
-        (mat.vertex_shader, mat.pixel_shader)
+        (mat.shader_vertex.shader, mat.shader_pixel.shader)
     };
 
     let vshader = renderer

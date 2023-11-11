@@ -163,6 +163,7 @@ impl EntityRenderer {
                         input_layout_hash: buffers.input_layout,
                         buffer_bindings: vec![ConstantBufferBinding::new(1, cb11.clone())],
                         variant_material,
+                        dyemap: None,
                         index_start: p.index_start,
                         index_count: p.index_count,
                         instance_start: None,

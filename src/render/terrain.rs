@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::map::Unk8080714f;
+use crate::map::STerrain;
 
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
@@ -15,7 +15,7 @@ use super::vertex_buffers::load_vertex_buffers;
 use super::{ConstantBuffer, DeviceContextSwapchain};
 
 pub struct TerrainRenderer {
-    terrain: Unk8080714f,
+    terrain: STerrain,
     group_cbuffers: Vec<ConstantBuffer<Mat4>>,
 
     vertex_buffer1: TagHash,
@@ -27,7 +27,7 @@ pub struct TerrainRenderer {
 
 impl TerrainRenderer {
     pub fn load(
-        terrain: Unk8080714f,
+        terrain: STerrain,
         dcs: Arc<DeviceContextSwapchain>,
         renderer: &Renderer,
     ) -> anyhow::Result<TerrainRenderer> {
@@ -48,7 +48,6 @@ impl TerrainRenderer {
                 terrain.unk30.w,
             );
 
-            // let texcoord_transform = Vec4::new(4.0, 4.0, 0.0, 0.0);
             let texcoord_transform =
                 Vec4::new(group.unk20.x, group.unk20.y, group.unk20.z, group.unk20.w);
 
@@ -93,16 +92,8 @@ impl TerrainRenderer {
         for part in self.terrain.mesh_parts.iter()
         // .filter(|u| u.detail_level == 0)
         {
-            if let Some(_group) = self.terrain.mesh_groups.get(part.group_index as usize) {
+            if let Some(group) = self.terrain.mesh_groups.get(part.group_index as usize) {
                 let cb11 = &self.group_cbuffers[part.group_index as usize];
-
-                // TODO(cohae): Dyemaps
-                // if let Some(dyemap) = render_data.textures.get(&group.dyemap.0) {
-                //     dcs.context
-                //         .PSSetShaderResources(14, Some(&[Some(dyemap.view.clone())]));
-                // } else {
-                //     dcs.context().PSSetShaderResources(14, Some(&[None]));
-                // }
 
                 renderer.push_drawcall(
                     SortValue3d::empty()
@@ -121,6 +112,7 @@ impl TerrainRenderer {
                             11,
                             cb11.buffer().clone(),
                         )],
+                        dyemap: Some(group.dyemap),
                         variant_material: None,
                         index_start: part.index_start,
                         index_count: part.index_count as _,

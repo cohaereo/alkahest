@@ -46,7 +46,7 @@ cbuffer CompositeOptions : register(b0) {
 };
 
 cbuffer Lights : register(b1) {
-    float4 lights[1024];
+    float4 lights[2048];
 };
 
 cbuffer Cascades : register(b3) {
@@ -287,14 +287,16 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
     // reflectance equation
     float3 directLighting = float3(0.0, 0.0, 0.0);
-    const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
+    // const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
 
     [loop] for (uint i = 0; i < lightCount; ++i)
     {
         float shadow = 1;
-        float3 light_pos = lights[i].xyz;
+        float3 light_pos = lights[i*2+0].xyz;
+        float3 light_col = lights[i*2+1].xyz;
         if(i == 0) {
             light_pos = cameraPos.xyz;
+            light_col = float3(1, 1, 1);
         }
 
         float distance = length(light_pos - worldPos);
@@ -307,8 +309,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         float3 H = normalize(V + L);
         // float distance    = length(lights[i].xyz - worldPos);
         float attenuation = 1.0 / (distance * distance);
-        //float attenuation = 10.0 / (distance);
-        float3 radiance     = LIGHT_COL.xyz * attenuation;
+        float3 radiance     = (light_col * 20) * attenuation;
 
         if(i == 1) {
             radiance = float3(1.0, 1.0, 1.0) * 5.0;

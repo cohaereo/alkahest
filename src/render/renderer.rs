@@ -604,6 +604,18 @@ impl Renderer {
 
         let render_data = self.render_data.data();
 
+        if let Some(dyemap) = drawcall.dyemap {
+            unsafe {
+                self.dcs.context().PSSetShaderResources(
+                    14,
+                    Some(&[render_data
+                        .textures
+                        .get(&(dyemap.0 as u64))
+                        .map(|t| t.view.clone())]),
+                );
+            }
+        }
+
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
                 return;
@@ -644,7 +656,17 @@ impl Renderer {
         match sort.geometry_type() {
             GeometryType::Static => {}
             GeometryType::StaticDecal => {}
-            GeometryType::Terrain => {}
+            GeometryType::Terrain => unsafe {
+                if shader_overrides.terrain_ps {
+                    self.dcs
+                        .context()
+                        .PSSetShader(&self.shader_overrides.terrain_ps, None);
+                    self.dcs.context().PSSetSamplers(
+                        0,
+                        Some(&[Some(self.shader_overrides.terrain_debug_sampler.clone())]),
+                    );
+                }
+            },
             GeometryType::Entity => unsafe {
                 if shader_overrides.entity_vs {
                     self.dcs

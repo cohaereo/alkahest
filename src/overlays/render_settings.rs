@@ -149,6 +149,10 @@ impl Overlay for RenderSettingsOverlay {
                 ui.collapsing("Shader Overrides", |ui| {
                     ui.checkbox(&mut enabled_overrides.entity_vs, "Entity (VS)");
                     ui.checkbox(&mut enabled_overrides.entity_ps, "Entity (PS)");
+                    ui.checkbox(
+                        &mut enabled_overrides.terrain_ps,
+                        "Terrain texturemap debug (PS)",
+                    );
                 });
             }
 

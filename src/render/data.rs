@@ -42,6 +42,11 @@ pub struct RenderData {
     pub white: Texture,
     pub blend_texture: Texture,
     pub blend_texture15: Texture,
+
+    pub solid_texture_red: Texture,
+    pub solid_texture_green: Texture,
+    pub solid_texture_blue: Texture,
+    pub solid_texture_magenta: Texture,
 }
 
 impl RenderData {
@@ -113,6 +118,42 @@ impl RenderData {
             Some("2x2 blend factor15"),
         )?;
 
+        let solid_texture_red = Texture::load_2d_raw(
+            dcs,
+            2,
+            2,
+            &[0xff, 0x00, 0x00, 0xff].repeat(2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2 solid red"),
+        )?;
+
+        let solid_texture_green = Texture::load_2d_raw(
+            dcs,
+            2,
+            2,
+            &[0x00, 0xff, 0x00, 0xff].repeat(2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2 solid green"),
+        )?;
+
+        let solid_texture_blue = Texture::load_2d_raw(
+            dcs,
+            2,
+            2,
+            &[0x00, 0x00, 0xff, 0xff].repeat(2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2 solid blue"),
+        )?;
+
+        let solid_texture_magenta = Texture::load_2d_raw(
+            dcs,
+            2,
+            2,
+            &[0xff, 0x00, 0xff, 0xff].repeat(2 * 2),
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("2x2 solid magenta"),
+        )?;
+
         Ok(RenderData {
             materials: Default::default(),
             vshaders: Default::default(),
@@ -129,12 +170,16 @@ impl RenderData {
             white,
             blend_texture,
             blend_texture15,
+            solid_texture_red,
+            solid_texture_green,
+            solid_texture_blue,
+            solid_texture_magenta,
         })
     }
 
     // Get the shading technique for a material based on it's pixel shader output signature
     pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingTechnique> {
-        let pixel_shader = self.materials.get(&material)?.pixel_shader;
+        let pixel_shader = self.materials.get(&material)?.shader_pixel.shader;
 
         if self.pshaders.get(&pixel_shader)?.1.len() == 1 {
             Some(ShadingTechnique::Forward)

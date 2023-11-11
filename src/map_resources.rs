@@ -1,7 +1,7 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_LIGHTBULB_ON_50, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER,
-    ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
+    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH,
+    ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
 use crate::render::debug::DebugShapes;
@@ -27,8 +27,8 @@ pub enum MapResource {
     CubemapVolume(Box<Unk80806b7f>, AABB),
     RespawnPoint,
     AmbientSound(Option<Unk80809802>),
-    Light,
-    ShadowingLight,
+    Light(AABB, TagHash, usize),
+    ShadowingLight(TagHash),
     NamedArea(Unk80809178, String),
 
     Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash),
@@ -77,7 +77,7 @@ impl MapResource {
                 )
             }
             MapResource::Unk80806aa3(_, _, _) => "Unk80806aa3".to_string(),
-            MapResource::Light => "Light".to_string(),
+            MapResource::Light(_, t, i) => format!("Light ({t}+{i})"),
             MapResource::RespawnPoint => "Respawn Point".to_string(),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
@@ -95,7 +95,7 @@ impl MapResource {
                 }
             }
             MapResource::Unk80806cc3(_, t) => format!("Unk80806cc3 ({t})"),
-            MapResource::ShadowingLight => "Shadowing Light".to_string(),
+            MapResource::ShadowingLight(t) => format!("Shadowing Light ({t})"),
             MapResource::NamedArea(_, s) => format!("Named Area ('{s}')\n(TODO: havok)"),
             MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
         }
@@ -124,8 +124,17 @@ impl MapResource {
             MapResource::Unk80806cc3(bounds, _) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
-            MapResource::ShadowingLight => {
+            MapResource::ShadowingLight(_) => {
                 debug_shapes.line_orientation(translation, rotation, 2.5, self.debug_color())
+            }
+            MapResource::Light(_bounds, _, _) => {
+                debug_shapes.line_orientation(translation, rotation, 1.0, self.debug_color());
+                // debug_shapes.cube_aabb(
+                //     *bounds,
+                //     Quat::IDENTITY,
+                //     darken_color(self.debug_color()),
+                //     false,
+                // )
             }
             MapResource::RespawnPoint => {
                 debug_shapes.line_orientation(translation, rotation, 1.0, self.debug_color())
@@ -239,7 +248,7 @@ mapresource_info!(
     2, CubemapVolume, [50, 255, 50], ICON_SPHERE
     3, RespawnPoint, [220, 20, 20], ICON_ACCOUNT_CONVERT
     4, AmbientSound, [0, 192, 0], ICON_VOLUME_HIGH
-    5, ShadowingLight, [255, 255, 0], ICON_LIGHTBULB_ON_50
+    5, ShadowingLight, [255, 255, 0], ICON_SPOTLIGHT_BEAM
     6, Light, [255, 255, 0], ICON_LIGHTBULB_ON
     7, NamedArea, [0, 127, 0], ICON_TAG
     8, Unknown, [255, 255, 255], ICON_HELP
