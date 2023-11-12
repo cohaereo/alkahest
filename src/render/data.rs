@@ -15,7 +15,7 @@ use crate::render::vertex_layout::InputElement;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
 
-use super::drawcall::ShadingTechnique;
+use super::drawcall::ShadingMode;
 use super::renderer::Renderer;
 use super::shader::{load_pshader, load_vshader};
 use super::vertex_layout::OutputElement;
@@ -178,13 +178,13 @@ impl RenderData {
     }
 
     // Get the shading technique for a material based on it's pixel shader output signature
-    pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingTechnique> {
+    pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingMode> {
         let pixel_shader = self.materials.get(&material)?.shader_pixel.shader;
 
         if self.pshaders.get(&pixel_shader)?.1.len() == 1 {
-            Some(ShadingTechnique::Forward)
+            Some(ShadingMode::Forward)
         } else {
-            Some(ShadingTechnique::Deferred)
+            Some(ShadingMode::Deferred)
         }
     }
 }

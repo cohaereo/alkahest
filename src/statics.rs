@@ -3,6 +3,7 @@ use destiny_pkg::TagHash;
 use std::io::SeekFrom;
 
 use crate::entity::{ELodCategory, EPrimitiveType};
+use crate::render::tfx::TfxRenderStage;
 use crate::types::Vector2;
 use crate::{
     structure::TablePointer,
@@ -84,7 +85,7 @@ pub struct Unk808071a7 {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80807193 {
-    pub unk0: u8,
+    pub render_stage: TfxRenderStage,
     pub unk1: u8,
     pub lod: ELodCategory,
     pub unk3: i8,

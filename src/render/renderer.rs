@@ -23,7 +23,7 @@ use super::gbuffer::ShadowDepthMap;
 use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
 use super::scopes::{ScopeUnk2, ScopeUnk8};
 use super::{
-    drawcall::{DrawCall, ShadingTechnique, SortValue3d},
+    drawcall::{DrawCall, ShadingMode, SortValue3d},
     scopes::{ScopeFrame, ScopeView},
     ConstantBuffer, DeviceContextSwapchain, GBuffer,
 };
@@ -350,7 +350,7 @@ impl Renderer {
         //region Deferred
         let draw_queue = self.draw_queue.read();
         for i in 0..draw_queue.len() {
-            if draw_queue[i].0.technique() != ShadingTechnique::Deferred
+            if draw_queue[i].0.shading_mode() != ShadingMode::Deferred
                 || draw_queue[i].0.geometry_type() == GeometryType::StaticDecal
             {
                 continue;
@@ -365,7 +365,7 @@ impl Renderer {
         self.gbuffer.rt1.copy_to(&self.gbuffer.rt1_clone);
         let draw_queue = self.draw_queue.read();
         for i in 0..draw_queue.len() {
-            if draw_queue[i].0.technique() != ShadingTechnique::Deferred
+            if draw_queue[i].0.shading_mode() != ShadingMode::Deferred
                 || draw_queue[i].0.geometry_type() != GeometryType::StaticDecal
             {
                 continue;
@@ -423,7 +423,7 @@ impl Renderer {
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..draw_queue.len() {
-            if draw_queue[i].0.technique() != ShadingTechnique::Forward {
+            if draw_queue[i].0.shading_mode() != ShadingMode::Forward {
                 continue;
             }
 
@@ -675,7 +675,7 @@ impl Renderer {
                 }
                 if shader_overrides.entity_ps {
                     self.dcs.context().PSSetShader(
-                        if sort.technique() == ShadingTechnique::Deferred {
+                        if sort.shading_mode() == ShadingMode::Deferred {
                             &self.shader_overrides.entity_ps_deferred
                         } else {
                             &self.shader_overrides.entity_ps_forward

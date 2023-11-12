@@ -39,7 +39,7 @@ impl SortValue3d {
         Self(self.0 | (t.into_bits()) << 56)
     }
 
-    pub fn with_technique(self, t: ShadingTechnique) -> Self {
+    pub fn with_shading_mode(self, t: ShadingMode) -> Self {
         Self(self.0 | (t.into_bits()) << 63)
     }
 
@@ -62,9 +62,9 @@ impl SortValue3d {
         GeometryType::from_bits(this)
     }
 
-    pub const fn technique(&self) -> ShadingTechnique {
+    pub const fn shading_mode(&self) -> ShadingMode {
         let this = (self.0 >> 63usize) & 0x1;
-        ShadingTechnique::from_bits(this)
+        ShadingMode::from_bits(this)
     }
 
     pub const fn transparency(&self) -> Transparency {
@@ -131,12 +131,12 @@ impl Transparency {
 
 #[repr(u64)]
 #[derive(Debug, PartialEq)]
-pub enum ShadingTechnique {
+pub enum ShadingMode {
     Deferred = 0,
     Forward = 1,
 }
 
-impl ShadingTechnique {
+impl ShadingMode {
     const fn into_bits(self) -> u64 {
         self as _
     }

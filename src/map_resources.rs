@@ -22,6 +22,7 @@ pub enum MapResource {
     Entity(ExtendedHash, u64),
     Decal {
         material: TagHash,
+        bounds: AABB,
         scale: f32,
     },
     CubemapVolume(Box<Unk80806b7f>, AABB),
@@ -53,8 +54,8 @@ impl MapResource {
                 };
                 format!("Entity {hash:?}{hash32}\n(0x{world_id:016x})",)
             }
-            MapResource::Decal { material, scale } => {
-                format!("Decal (mat {material}, scale {scale})")
+            MapResource::Decal { material, .. } => {
+                format!("Decal (mat {material})")
             }
             MapResource::Unknown(u, world_id, entity, res_ptr, table_tag) => {
                 let hash32 = if let Some(h32) = entity.hash32() {

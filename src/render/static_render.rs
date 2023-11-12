@@ -1,4 +1,3 @@
-use crate::entity::EPrimitiveType;
 use crate::render::vertex_buffers::load_vertex_buffers;
 use crate::statics::{Unk80807193, Unk80807194, Unk808071a7};
 
@@ -9,11 +8,10 @@ use itertools::Itertools;
 
 use crate::packages::package_manager;
 
-use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use super::drawcall::{
-    ConstantBufferBinding, DrawCall, GeometryType, ShadingTechnique, SortValue3d, Transparency,
+    ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
 };
 use super::renderer::Renderer;
 
@@ -219,7 +217,7 @@ impl StaticModel {
                             // TODO(cohae): calculate depth (need to draw instances separately)
                             .with_depth(u32::MIN)
                             .with_material(material.0)
-                            .with_technique(ShadingTechnique::Deferred)
+                            .with_shading_mode(ShadingMode::Deferred)
                             .with_transparency(Transparency::None)
                             .with_geometry_type(GeometryType::Static),
                         DrawCall {
@@ -286,23 +284,20 @@ impl StaticOverlayModel {
         if !self.model.lod.is_highest_detail() {
             return;
         }
-        let technique = renderer
-            .render_data
-            .data()
-            .material_shading_technique(self.model.material)
-            .unwrap_or(ShadingTechnique::Forward);
+
+        let shading_mode = self.model.render_stage.shading_mode();
 
         renderer.push_drawcall(
             SortValue3d::empty()
                 // TODO(cohae): calculate depth (need to draw instances separately)
                 .with_depth(u32::MAX)
                 .with_material(self.model.material.0)
-                .with_transparency(if technique == ShadingTechnique::Deferred {
+                .with_transparency(if shading_mode == ShadingMode::Deferred {
                     Transparency::None
                 } else {
                     Transparency::Additive
                 })
-                .with_technique(technique)
+                .with_shading_mode(shading_mode)
                 .with_geometry_type(GeometryType::StaticDecal),
             DrawCall {
                 vertex_buffers: vec![self.buffers.vertex_buffer1, self.buffers.vertex_buffer2],

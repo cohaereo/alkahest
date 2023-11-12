@@ -1,7 +1,7 @@
 use crate::camera::FpsCamera;
 use crate::ecs::components::EntityModel;
 use crate::ecs::transform::Transform;
-use crate::entity::Unk808073a5;
+use crate::entity::SEntityModel;
 use crate::map::MapDataList;
 use crate::material::Technique;
 use crate::overlays::gui::Overlay;
@@ -346,7 +346,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 return;
             }
 
-            let hex_stream = args.iter().join("").replace(" ", "");
+            let hex_stream = args.iter().join("").replace(' ', "");
             let data = match hex::decode(hex_stream) {
                 Ok(o) => o,
                 Err(e) => {
@@ -375,7 +375,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
 }
 
 fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
-    let model: Unk808073a5 =
+    let model: SEntityModel =
         package_manager().read_tag_struct(t.hash32().context("Couldnt lookup hash64")?)?;
 
     for m in &model.meshes {

@@ -1,5 +1,5 @@
 use crate::structure::{DeadBeefMarker, RelPointer, ResourcePointer, TablePointer, Tag};
-use crate::types::{FnvHash, ResourceHash, Vector2, Vector4};
+use crate::types::{FnvHash, Vector2, Vector4};
 
 use binrw::{BinRead, BinReaderExt, NullString};
 
@@ -40,10 +40,10 @@ pub struct Unk80809b06 {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk808073a5 {
+pub struct SEntityModel {
     pub file_size: u64,
     pub unk8: u64,
-    pub meshes: TablePointer<Unk80807378>,
+    pub meshes: TablePointer<SEntityModelMesh>,
     #[br(seek_before(SeekFrom::Start(0x50)))]
     pub model_scale: Vector4,
     pub model_offset: Vector4,
@@ -52,7 +52,7 @@ pub struct Unk808073a5 {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk80807378 {
+pub struct SEntityModelMesh {
     pub vertex_buffer1: TagHash,
     pub vertex_buffer2: TagHash,
     pub buffer2: TagHash,

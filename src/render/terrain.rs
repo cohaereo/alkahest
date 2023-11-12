@@ -8,7 +8,7 @@ use glam::{Mat4, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
 use super::drawcall::{
-    ConstantBufferBinding, DrawCall, GeometryType, ShadingTechnique, SortValue3d, Transparency,
+    ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
 };
 use super::renderer::Renderer;
 use super::vertex_buffers::load_vertex_buffers;
@@ -100,7 +100,7 @@ impl TerrainRenderer {
                         // TODO(cohae): calculate depth
                         .with_depth(u32::MIN)
                         .with_material(part.material.0)
-                        .with_technique(ShadingTechnique::Deferred)
+                        .with_shading_mode(ShadingMode::Deferred)
                         .with_transparency(Transparency::None)
                         .with_geometry_type(GeometryType::Terrain),
                     DrawCall {

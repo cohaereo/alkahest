@@ -3,24 +3,21 @@ use destiny_pkg::TagHash;
 
 use glam::Vec4;
 
-use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
-use crate::entity::EPrimitiveType;
 use crate::entity::Unk808072c5;
 use crate::entity::Unk8080737e;
 
-use crate::entity::Unk808073a5;
+use crate::entity::SEntityModel;
 use crate::render::vertex_buffers::load_vertex_buffers;
 
 use super::drawcall::ConstantBufferBinding;
 use super::drawcall::DrawCall;
 use super::drawcall::GeometryType;
-use super::drawcall::ShadingTechnique;
+use super::drawcall::ShadingMode;
 use super::drawcall::SortValue3d;
 use super::drawcall::Transparency;
 use super::renderer::Renderer;
-use super::DeviceContextSwapchain;
 
 #[derive(Clone)]
 pub struct EntityModelBuffer {
@@ -39,7 +36,7 @@ pub struct EntityRenderer {
     material_map: Vec<Unk808072c5>,
     materials: Vec<TagHash>,
 
-    model: Unk808073a5,
+    model: SEntityModel,
 }
 
 impl EntityRenderer {
@@ -73,7 +70,7 @@ impl EntityRenderer {
     }
 
     pub fn load(
-        model: Unk808073a5,
+        model: SEntityModel,
         material_map: Vec<Unk808072c5>,
         materials: Vec<TagHash>,
         renderer: &Renderer,
@@ -142,19 +139,19 @@ impl EntityRenderer {
                     .render_data
                     .data()
                     .material_shading_technique(variant_material.unwrap_or(p.material))
-                    .unwrap_or(ShadingTechnique::Forward);
+                    .unwrap_or(ShadingMode::Forward);
 
                 renderer.push_drawcall(
                     SortValue3d::empty()
                         // TODO(cohae): calculate depth (need to draw instances separately)
                         .with_depth(u32::MAX)
                         .with_material(p.material.0)
-                        .with_transparency(if shading_technique == ShadingTechnique::Deferred {
+                        .with_transparency(if shading_technique == ShadingMode::Deferred {
                             Transparency::None
                         } else {
                             Transparency::Additive
                         })
-                        .with_technique(shading_technique)
+                        .with_shading_mode(shading_technique)
                         .with_geometry_type(GeometryType::Entity),
                     DrawCall {
                         vertex_buffers: vec![buffers.vertex_buffer1, buffers.vertex_buffer2],

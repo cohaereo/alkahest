@@ -40,7 +40,7 @@ use windows::Win32::Graphics::{
 use crate::structure::ExtendedHash;
 use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
-    entity::{Unk808072c5, Unk808073a5, Unk80809c0f},
+    entity::{SEntityModel, Unk808072c5, Unk80809c0f},
     map::{
         MapData, SBubbleParent, STerrain, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68,
         Unk80806ef4, Unk8080714b,
@@ -351,7 +351,7 @@ pub async fn load_maps(
                         );
                         let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-                        let model: Tag<Unk808073a5> = cur.read_le()?;
+                        let model: Tag<SEntityModel> = cur.read_le()?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
                         let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
@@ -415,7 +415,7 @@ pub async fn load_maps(
 
     for t in to_load_entitymodels {
         let renderer = renderer.read();
-        let model: Unk808073a5 = package_manager().read_tag_struct(t)?;
+        let model: SEntityModel = package_manager().read_tag_struct(t)?;
 
         for m in &model.meshes {
             for p in &m.parts {
@@ -961,6 +961,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     for inst in &header.instances {
                         for i in inst.start..(inst.start + inst.count) {
                             let transform = header.transforms[i as usize];
+                            let bounds = &header.occlusion_bounds.bounds[i as usize];
                             ents.push(scene.spawn((
                                 Transform {
                                     translation: Vec3::new(transform.x, transform.y, transform.z),
@@ -969,6 +970,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ResourcePoint {
                                     resource: MapResource::Decal {
                                         material: inst.material,
+                                        bounds: bounds.bb,
                                         scale: transform.w,
                                     },
                                     entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
@@ -1072,6 +1074,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         header.unk28.iter(),
                     )) {
                         to_load_entitymodels.insert(unk8.unk60.entity_model);
+                        println!("{}", unk8.unk60.entity_model);
 
                         let mat = Mat4 {
                             x_axis: unk8.transform[0].into(),

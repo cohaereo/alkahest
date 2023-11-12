@@ -7,7 +7,6 @@ use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
-use serde::{Deserialize, Serialize};
 
 use std::fmt::Debug;
 use std::io::SeekFrom;
@@ -213,6 +212,13 @@ pub struct Unk80806e68 {
     pub file_size: u64,
     pub instances: TablePointer<Unk80806e6c>,
     pub transforms: TablePointer<Vector4>, // 80806e6d
+    pub instance_points: TagHash,
+    pub unk_vertex_colors: TagHash,
+
+    pub unk30: [u32; 2],
+    pub occlusion_bounds: Tag<SOcclusionBounds>,
+    _pad3c: u32,
+    pub bounds: AABB,
 }
 
 #[derive(BinRead, Debug, Clone)]
