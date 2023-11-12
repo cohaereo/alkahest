@@ -13,10 +13,10 @@ lazy_static::lazy_static! {
         (0x80806F07, "SEntityModel"),
         (0x80806EC5, "SEntityModelMesh"),
         (0x80806695, "CubemapResource"),
-        (0x80806DBA, "SDye"),
+        (0x80806DBA, "SScope"),
         (0x808051F2, "SDyeChannels"),
         (0x80804F2C, "SDyeChannelHash"),
-        (0x80806DAA, "SMaterial"),
+        (0x80806DAA, "STechnique"),
         (0x80807211, "STextureTag"),
         (0x80806DCF, "STextureTag64"),
         (0x80800090, "Vec4"),
@@ -50,7 +50,6 @@ lazy_static::lazy_static! {
         (0x808099F7, "SStringPart"),
         (0x80800005, "SStringCharacter"),
         (0x808099F5, "SStringPartDefinition"),
-        (0x8080695B, "UnkLights"),
         (0x80809B06, "SEntityResource")
     ]);
 
