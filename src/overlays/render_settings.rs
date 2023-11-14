@@ -171,6 +171,42 @@ impl Overlay for RenderSettingsOverlay {
                     };
                 }
 
+                macro_rules! input_float {
+                    ($ui:expr, $label:expr, $v:expr) => {
+                        $ui.horizontal(|ui| {
+                            ui.label($label);
+                            ui.add(egui::DragValue::new(&mut $v).speed(0.1));
+                        });
+                    };
+                }
+
+                ui.collapsing("frame", |ui| {
+                    input_float!(ui, "exposure_scale", overrides.frame.exposure_scale);
+                    input_float!(
+                        ui,
+                        "exposure_illum_relative_glow",
+                        overrides.frame.exposure_illum_relative_glow
+                    );
+                    input_float!(
+                        ui,
+                        "exposure_scale_for_shading",
+                        overrides.frame.exposure_scale_for_shading
+                    );
+                    input_float!(
+                        ui,
+                        "exposure_illum_relative",
+                        overrides.frame.exposure_illum_relative
+                    );
+
+                    input_float4!(ui, "random_seed_scales", overrides.frame.random_seed_scales);
+                    input_float4!(ui, "overrides", overrides.frame.overrides);
+                    ui.separator();
+                    input_float4!(ui, "unk4", overrides.frame.unk4);
+                    input_float4!(ui, "unk5", overrides.frame.unk5);
+                    input_float4!(ui, "unk6", overrides.frame.unk6);
+                    input_float4!(ui, "unk7", overrides.frame.unk7);
+                });
+
                 ui.collapsing("unk2", |ui| {
                     input_float4!(ui, "unk0", overrides.unk2.unk0);
                 });
