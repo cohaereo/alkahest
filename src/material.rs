@@ -9,6 +9,7 @@ use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
 use crate::structure::ExtendedHash;
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
+use crate::util::RwLock;
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::Vec4;
@@ -73,9 +74,9 @@ pub struct Technique {
     tag: TagHash,
 
     pub cb0_vs: Option<ConstantBuffer<Vec4>>,
-    tfx_bytecode_vs: Option<TfxBytecodeInterpreter>,
+    tfx_bytecode_vs: RwLock<Option<TfxBytecodeInterpreter>>,
     pub cb0_ps: Option<ConstantBuffer<Vec4>>,
-    tfx_bytecode_ps: Option<TfxBytecodeInterpreter>,
+    tfx_bytecode_ps: RwLock<Option<TfxBytecodeInterpreter>>,
 }
 
 impl Technique {
@@ -202,9 +203,9 @@ impl Technique {
             mat,
             tag,
             cb0_vs,
-            tfx_bytecode_vs,
             cb0_ps,
-            tfx_bytecode_ps,
+            tfx_bytecode_vs: RwLock::new(tfx_bytecode_vs),
+            tfx_bytecode_ps: RwLock::new(tfx_bytecode_ps),
         }
     }
 
@@ -287,64 +288,71 @@ impl Technique {
         Ok(())
     }
 
-    pub fn evaluate_bytecode(&mut self, renderer: &Renderer) {
+    pub fn evaluate_bytecode(&self, renderer: &Renderer, render_data: &RenderData) {
         if let Some(ref cb0_vs) = self.cb0_vs {
-            if self.tfx_bytecode_vs.is_some() {
-                let _span = info_span!("Evaluating TFX bytecode (VS)").entered();
-                let res = self.tfx_bytecode_vs.as_mut().unwrap().evaluate(
+            let _span = info_span!("Evaluating TFX bytecode (VS)").entered();
+            let res = if let Some(interpreter) = self.tfx_bytecode_vs.read().as_ref() {
+                interpreter.evaluate(
                     renderer,
+                    render_data,
                     cb0_vs,
                     if self.mat.shader_pixel.bytecode_constants.is_empty() {
                         &[]
                     } else {
                         bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
                     },
+                )
+            } else {
+                Ok(())
+            };
+
+            if let Err(e) = res {
+                error!(
+                    "TFX bytecode evaluation failed for {} (VS), disabling: {e}",
+                    self.tag
                 );
-                if let Err(e) = res {
-                    error!(
-                        "TFX bytecode evaluation failed for {} (VS), disabling: {e}",
-                        self.tag
-                    );
-                    self.tfx_bytecode_vs.as_ref().unwrap().dump(
-                        if self.mat.shader_vertex.bytecode_constants.is_empty() {
-                            &[]
-                        } else {
-                            bytemuck::cast_slice(&self.mat.shader_vertex.bytecode_constants)
-                        },
-                        cb0_vs,
-                    );
-                    self.tfx_bytecode_vs = None;
-                }
+                self.tfx_bytecode_vs.read().as_ref().unwrap().dump(
+                    if self.mat.shader_vertex.bytecode_constants.is_empty() {
+                        &[]
+                    } else {
+                        bytemuck::cast_slice(&self.mat.shader_vertex.bytecode_constants)
+                    },
+                    cb0_vs,
+                );
+                *self.tfx_bytecode_vs.write() = None;
             }
         }
-
         if let Some(ref cb0_ps) = self.cb0_ps {
-            if self.tfx_bytecode_ps.is_some() {
-                let _span = info_span!("Evaluating TFX bytecode (PS)").entered();
-                let res = self.tfx_bytecode_ps.as_mut().unwrap().evaluate(
+            let _span = info_span!("Evaluating TFX bytecode (PS)").entered();
+            let res = if let Some(interpreter) = self.tfx_bytecode_ps.read().as_ref() {
+                interpreter.evaluate(
                     renderer,
+                    render_data,
                     cb0_ps,
                     if self.mat.shader_pixel.bytecode_constants.is_empty() {
                         &[]
                     } else {
                         bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
                     },
+                )
+            } else {
+                Ok(())
+            };
+
+            if let Err(e) = res {
+                error!(
+                    "TFX bytecode evaluation failed for {} (PS), disabling: {e}",
+                    self.tag
                 );
-                if let Err(e) = res {
-                    error!(
-                        "TFX bytecode evaluation failed for {} (PS), disabling: {e}",
-                        self.tag
-                    );
-                    self.tfx_bytecode_ps.as_ref().unwrap().dump(
-                        if self.mat.shader_pixel.bytecode_constants.is_empty() {
-                            &[]
-                        } else {
-                            bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
-                        },
-                        cb0_ps,
-                    );
-                    self.tfx_bytecode_ps = None;
-                }
+                self.tfx_bytecode_ps.read().as_ref().unwrap().dump(
+                    if self.mat.shader_pixel.bytecode_constants.is_empty() {
+                        &[]
+                    } else {
+                        bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
+                    },
+                    cb0_ps,
+                );
+                *self.tfx_bytecode_ps.write() = None;
             }
         }
     }

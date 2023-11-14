@@ -1,10 +1,15 @@
+use std::mem::transmute;
+
 use glam::{Mat4, Vec4, Vec4Swizzles};
 use tinyvec::ArrayVec;
 use windows::Win32::Graphics::Direct3D11::D3D11_MAP_WRITE_NO_OVERWRITE;
 
-use crate::render::{renderer::Renderer, ConstantBuffer};
+use crate::render::{renderer::Renderer, ConstantBuffer, RenderData};
 
-use super::{externs::TfxExtern, opcodes::TfxBytecodeOp};
+use super::{
+    externs::{TfxExtern, TfxShaderStage},
+    opcodes::TfxBytecodeOp,
+};
 
 pub struct TfxBytecodeInterpreter {
     opcodes: Vec<TfxBytecodeOp>,
@@ -16,8 +21,9 @@ impl TfxBytecodeInterpreter {
     }
 
     pub fn evaluate(
-        &mut self,
+        &self,
         renderer: &Renderer,
+        render_data: &RenderData,
         buffer: &ConstantBuffer<Vec4>,
         constants: &[Vec4],
     ) -> anyhow::Result<()> {
@@ -159,8 +165,13 @@ impl TfxBytecodeInterpreter {
                     stack_push!(mat.z_axis);
                     stack_push!(mat.w_axis);
                 }
-                TfxBytecodeOp::PushExternInputU64 { .. }
-                | TfxBytecodeOp::PushExternInputU64Unknown { .. } => {
+                TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
+                    let handle =
+                        self.get_extern_u64(renderer, render_data, *extern_, *offset as usize)?;
+                    let v: Vec4 = bytemuck::cast([handle, 0]);
+                    stack_push!(v);
+                }
+                TfxBytecodeOp::PushExternInputU64Unknown { .. } => {
                     let v: Vec4 = bytemuck::cast([u64::MAX, 0]);
                     stack_push!(v);
                 }
@@ -168,9 +179,10 @@ impl TfxBytecodeInterpreter {
                     let v: Vec4 = bytemuck::cast([u32::MAX, 0, 0, 0]);
                     stack_push!(v);
                 }
-                TfxBytecodeOp::SetShaderResource { .. } => {
-                    // Pop for now to make sure we don't overrun the stack
-                    let _ = stack_pop!(1);
+                TfxBytecodeOp::SetShaderResource { stage, slot, .. } => {
+                    let [v] = stack_pop!(1);
+                    let [handle, _] = bytemuck::cast(v);
+                    self.set_shader_resource(renderer, *stage, *slot as _, handle)
                 }
 
                 TfxBytecodeOp::Unk27 => {
@@ -327,6 +339,43 @@ impl TfxBytecodeInterpreter {
         })
     }
 
+    pub fn get_extern_u64(
+        &self,
+        _renderer: &Renderer,
+        render_data: &RenderData,
+        extern_: TfxExtern,
+        offset: usize,
+    ) -> anyhow::Result<u64> {
+        unsafe {
+            Ok(match extern_ {
+                TfxExtern::Deferred => match offset {
+                    7 => transmute(render_data.debug_textures[7].view.clone()),
+                    u => {
+                        anyhow::bail!(
+                            "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
+                            u * 16
+                        )
+                    }
+                },
+                TfxExtern::Atmosphere => match offset {
+                    28 => transmute(render_data.debug_textures[2].view.clone()),
+                    u => {
+                        anyhow::bail!(
+                            "get_extern_u64: Unsupported atmosphere extern offset {u} (0x{:0X})",
+                            u * 16
+                        )
+                    }
+                },
+                u => {
+                    anyhow::bail!(
+                        "get_extern_u64: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                        offset * 8
+                    )
+                }
+            })
+        }
+    }
+
     pub fn dump(&self, constants: &[Vec4], buffer: &ConstantBuffer<Vec4>) {
         debug!("Dumping TFX interpreter");
         debug!("- cb0 size: {} elements", buffer.elements());
@@ -345,6 +394,43 @@ impl TfxBytecodeInterpreter {
         debug!("- Bytecode:");
         for (i, op) in self.opcodes.iter().enumerate() {
             debug!("\t{i}: {}", op.disassemble());
+        }
+    }
+
+    pub fn set_shader_resource(
+        &self,
+        renderer: &Renderer,
+        stage: TfxShaderStage,
+        slot: u32,
+        handle: u64,
+    ) {
+        unsafe {
+            match stage {
+                TfxShaderStage::Pixel => renderer
+                    .dcs
+                    .context()
+                    .PSSetShaderResources(slot, Some(&[Some(std::mem::transmute(handle))])),
+                TfxShaderStage::Vertex => renderer
+                    .dcs
+                    .context()
+                    .PSSetShaderResources(slot, Some(&[Some(std::mem::transmute(handle))])),
+                TfxShaderStage::Geometry => renderer
+                    .dcs
+                    .context()
+                    .PSSetShaderResources(slot, Some(&[Some(std::mem::transmute(handle))])),
+                TfxShaderStage::Hull => renderer
+                    .dcs
+                    .context()
+                    .PSSetShaderResources(slot, Some(&[Some(std::mem::transmute(handle))])),
+                TfxShaderStage::Compute => renderer
+                    .dcs
+                    .context()
+                    .PSSetShaderResources(slot, Some(&[Some(std::mem::transmute(handle))])),
+                TfxShaderStage::Domain => renderer
+                    .dcs
+                    .context()
+                    .PSSetShaderResources(slot, Some(&[Some(std::mem::transmute(handle))])),
+            }
         }
     }
 }

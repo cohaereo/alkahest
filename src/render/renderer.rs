@@ -83,6 +83,8 @@ pub struct Renderer {
 
     light_cascade_transforms: RwLock<[Mat4; Self::CAMERA_CASCADE_LEVEL_COUNT]>,
     shadow_rs: ID3D11RasterizerState,
+
+    last_material: RwLock<u32>,
 }
 
 impl Renderer {
@@ -267,6 +269,7 @@ impl Renderer {
             final_vs: vshader_final,
             final_ps: pshader_final,
             null_ps: pshader_null,
+            last_material: RwLock::new(u32::MAX),
         })
     }
 
@@ -301,9 +304,6 @@ impl Renderer {
             .expect("Renderer::update_buffers");
 
         let render_settings = resources.get::<RenderSettings>().unwrap();
-        if render_settings.evaluate_bytecode {
-            self.evaluate_tfx_expressions();
-        }
 
         self.scope_unk2.bind(2, ShaderStages::all());
         self.scope_unk3.bind(3, ShaderStages::all());
@@ -357,7 +357,13 @@ impl Renderer {
             }
 
             let (s, d) = draw_queue[i].clone();
-            self.draw(s, &d, &shader_overrides, DrawMode::Normal);
+            self.draw(
+                s,
+                &d,
+                &shader_overrides,
+                DrawMode::Normal,
+                render_settings.evaluate_bytecode,
+            );
         }
         //endregion
 
@@ -379,7 +385,13 @@ impl Renderer {
             }
 
             let (s, d) = draw_queue[i].clone();
-            self.draw(s, &d, &shader_overrides, DrawMode::Normal);
+            self.draw(
+                s,
+                &d,
+                &shader_overrides,
+                DrawMode::Normal,
+                render_settings.evaluate_bytecode,
+            );
         }
         //endregion
 
@@ -547,7 +559,13 @@ impl Renderer {
                 transparency_mode = s.transparency();
             }
 
-            self.draw(s, &d, &shader_overrides, DrawMode::Normal);
+            self.draw(
+                s,
+                &d,
+                &shader_overrides,
+                DrawMode::Normal,
+                render_settings.evaluate_bytecode,
+            );
         }
         //endregion
 
@@ -586,6 +604,7 @@ impl Renderer {
         drawcall: &DrawCall,
         shader_overrides: &EnabledShaderOverrides,
         mode: DrawMode,
+        evaluate_tfx_bytecode: bool,
     ) {
         if mode == DrawMode::DepthPrepass && !sort.transparency().should_write_depth() {
             return;
@@ -602,7 +621,7 @@ impl Renderer {
             DrawMode::DepthPrepass => ShaderStages::VERTEX,
         };
 
-        let render_data = self.render_data.data();
+        let mut render_data = self.render_data.data_mut();
 
         if let Some(dyemap) = drawcall.dyemap {
             unsafe {
@@ -698,6 +717,23 @@ impl Renderer {
                     self.dcs
                         .context()
                         .VSSetShaderResources(0, Some(&[Some(srv.clone())]))
+                }
+            }
+        }
+
+        if evaluate_tfx_bytecode {
+            let mut last_material = self.last_material.write();
+            if *last_material != sort.material() {
+                if let Some(mat) = render_data.materials.get(&sort.material().into()) {
+                    mat.evaluate_bytecode(self, &render_data)
+                }
+
+                *last_material = sort.material()
+            }
+
+            if let Some(variant_material) = drawcall.variant_material {
+                if let Some(mat) = render_data.materials.get(&variant_material) {
+                    mat.evaluate_bytecode(self, &render_data)
                 }
             }
         }
@@ -1064,7 +1100,7 @@ impl Renderer {
                 }
 
                 let (s, d) = draw_queue[i].clone();
-                self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass);
+                self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass, false);
             }
         }
     }
@@ -1168,26 +1204,26 @@ impl Renderer {
         }
     }
 
-    fn evaluate_tfx_expressions(&self) {
-        let materials_to_update: IntSet<TagHash> = self
-            .draw_queue
-            .read()
-            .iter()
-            .map(|(s, _)| TagHash(s.material()))
-            .collect();
-        let _span = info_span!(
-            "Evaluating TFX bytecode",
-            shader_count = materials_to_update.len()
-        )
-        .entered();
+    // fn evaluate_tfx_expressions(&self) {
+    //     let materials_to_update: IntSet<TagHash> = self
+    //         .draw_queue
+    //         .read()
+    //         .iter()
+    //         .map(|(s, _)| TagHash(s.material()))
+    //         .collect();
+    //     let _span = info_span!(
+    //         "Evaluating TFX bytecode",
+    //         shader_count = materials_to_update.len()
+    //     )
+    //     .entered();
 
-        let mut r = self.render_data.data_mut();
-        for hash in materials_to_update {
-            if let Some(m) = r.materials.get_mut(&hash) {
-                m.evaluate_bytecode(self)
-            }
-        }
-    }
+    //     let mut r = self.render_data.data_mut();
+    //     for hash in materials_to_update {
+    //         if let Some(m) = r.materials.get_mut(&hash) {
+    //             m.evaluate_bytecode(self)
+    //         }
+    //     }
+    // }
 }
 
 #[derive(Default, PartialEq)]
