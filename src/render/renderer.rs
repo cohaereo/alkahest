@@ -2,9 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::util::RwLock;
-use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3, Vec4};
-use nohash_hasher::IntSet;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -621,7 +619,7 @@ impl Renderer {
             DrawMode::DepthPrepass => ShaderStages::VERTEX,
         };
 
-        let mut render_data = self.render_data.data_mut();
+        let render_data = self.render_data.data();
 
         if let Some(dyemap) = drawcall.dyemap {
             unsafe {

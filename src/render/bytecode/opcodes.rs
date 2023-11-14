@@ -24,8 +24,8 @@ pub enum TfxBytecodeOp {
     // ?
     #[br(magic = 0x0a_u8)] Unk0a,
     #[br(magic = 0x0b_u8)] Unk0b,
-    #[br(magic = 0x0c_u8)] Merge1_3, // merge_1_3?
-    #[br(magic = 0x0d_u8)] Unk0d,
+    #[br(magic = 0x0c_u8)] Merge1_3,
+    #[br(magic = 0x0d_u8)] Merge2_2, // merge_2_2?
     #[br(magic = 0x0e_u8)] Unk0e,
     #[br(magic = 0x0f_u8)] Unk0f,
     #[br(magic = 0x10_u8)] Unk10,
@@ -61,7 +61,7 @@ pub enum TfxBytecodeOp {
 
     // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
-    #[br(magic = 0x35_u8)] Unk35 { unk1: u8 },
+    #[br(magic = 0x35_u8)] Unk35 { constant_start: u8 },
     #[br(magic = 0x37_u8)] Unk37 { unk1: u8 }, // spline4_const?
     #[br(magic = 0x38_u8)] Unk38 { unk1: u8 },
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
@@ -155,7 +155,7 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk0a => "unk0a".to_string(),
             TfxBytecodeOp::Unk0b => "unk0b".to_string(),
             TfxBytecodeOp::Merge1_3 => "merge_1_3".to_string(),
-            TfxBytecodeOp::Unk0d => "unk0d".to_string(),
+            TfxBytecodeOp::Merge2_2 => "merge_2_2".to_string(),
             TfxBytecodeOp::Unk0e => "unk0e".to_string(),
             TfxBytecodeOp::Unk0f => "unk0f".to_string(),
             TfxBytecodeOp::Unk10 => "unk10".to_string(),
@@ -193,8 +193,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PushConstVec4 { constant_index } => {
                 format!("push_const_vec4({constant_index})")
             }
-            TfxBytecodeOp::Unk35 { unk1 } => {
-                format!("unk35 unk1={unk1}")
+            TfxBytecodeOp::Unk35 { constant_start } => {
+                format!("unk35 constant_start={constant_start}")
             }
             TfxBytecodeOp::Unk37 { unk1 } => {
                 format!("unk37 unk1={unk1}")

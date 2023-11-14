@@ -27,7 +27,7 @@ impl TfxBytecodeInterpreter {
         buffer: &ConstantBuffer<Vec4>,
         constants: &[Vec4],
     ) -> anyhow::Result<()> {
-        let mut stack: ArrayVec<[Vec4; 128]> = Default::default();
+        let mut stack: ArrayVec<[Vec4; 64]> = Default::default();
         let mut temp = [Vec4::ZERO; 16];
 
         let Ok(buffer_map) = buffer.map(D3D11_MAP_WRITE_NO_OVERWRITE) else {
@@ -39,6 +39,7 @@ impl TfxBytecodeInterpreter {
             ($pops:literal) => {{
                 anyhow::ensure!(!stack.is_empty() && stack.len() >= $pops);
                 let v: [Vec4; $pops] = stack[stack.len() - $pops..stack.len()].try_into().unwrap();
+                stack.truncate(stack.len() - $pops);
                 v
             }};
         }
@@ -110,14 +111,17 @@ impl TfxBytecodeInterpreter {
                     };
                     stack_push!(Vec4::from(v));
                 }
+                // TODO(cohae): Is the parameter order for merges correct?
                 TfxBytecodeOp::Merge1_3 => {
                     let [t1, t0] = stack_pop!(2);
-                    // TODO(cohae): Is the parameter order correct?
                     stack_push!(Vec4::new(t1.x, t0.x, t0.y, t0.z));
                 }
-                TfxBytecodeOp::Unk0d => {
-                    let vals = stack_pop!(2);
-                    stack_push!(fast_impls::byteop_0d(vals));
+                TfxBytecodeOp::Merge2_2 => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(Vec4::new(t1.x, t1.y, t0.x, t0.y));
+
+                    // let vals = stack_pop!(2);
+                    // stack_push!(fast_impls::byteop_0d(vals));
                 }
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t0] = stack_pop!(2);
@@ -141,13 +145,12 @@ impl TfxBytecodeInterpreter {
                         )
                     };
 
-                    stack_push!(v.into());
+                    stack_push!(Vec4::from(v));
                 }
                 // TODO(cohae): Check the SIMD output again, seems like frac but not really
                 TfxBytecodeOp::Unk1a => {
                     let v = stack_top!();
                     *v = fast_impls::byteop_1a([*v]);
-                    // *v = v.fract();
                 }
 
                 TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
@@ -178,6 +181,10 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::PushExternInputU32 { .. } => {
                     let v: Vec4 = bytemuck::cast([u32::MAX, 0, 0, 0]);
                     stack_push!(v);
+                }
+                TfxBytecodeOp::SetShaderSampler { .. } => {
+                    // Just pop for now to prevent the stack from overflowing
+                    let [_] = stack_pop!(1);
                 }
                 TfxBytecodeOp::SetShaderResource { stage, slot, .. } => {
                     let [v] = stack_pop!(1);
@@ -220,6 +227,14 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::PushConstVec4 { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
                     stack_push!(constants[*constant_index as usize])
+                }
+                TfxBytecodeOp::Unk35 { constant_start } => {
+                    anyhow::ensure!((*constant_start as usize + 1) < constants.len());
+                    let v1 = constants[*constant_start as usize];
+                    let v2 = constants[*constant_start as usize + 1];
+
+                    let v = stack_top!();
+                    *v = ((v2 - v1) * *v) + v1;
                 }
                 // // TODO(cohae): Very wrong, but does seem to push something onto the stack
                 TfxBytecodeOp::PermuteAllX => {
@@ -358,10 +373,21 @@ impl TfxBytecodeInterpreter {
                     }
                 },
                 TfxExtern::Atmosphere => match offset {
-                    28 => transmute(render_data.debug_textures[2].view.clone()),
+                    11 => transmute(render_data.debug_textures[1].view.clone()),
+                    28 => transmute(render_data.blend_texture.view.clone()),
+                    // 28 => transmute(render_data.debug_textures[2].view.clone()),
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported atmosphere extern offset {u} (0x{:0X})",
+                            u * 16
+                        )
+                    }
+                },
+                TfxExtern::WaterDisplacement => match offset {
+                    0 => transmute(render_data.debug_textures[0].view.clone()),
+                    u => {
+                        anyhow::bail!(
+                            "get_extern_u64: Unsupported water displacement extern offset {u} (0x{:0X})",
                             u * 16
                         )
                     }
@@ -438,27 +464,6 @@ impl TfxBytecodeInterpreter {
 mod fast_impls {
     use glam::Vec4;
     use std::arch::x86_64::*;
-
-    pub fn byteop_0d([t1, t0]: [Vec4; 2]) -> Vec4 {
-        unsafe {
-            let a = t1.into();
-            let b = t0.into();
-
-            let v28 = _mm_set1_ps(f32::NAN);
-            let v29 = _mm_andnot_ps(v28, _mm_set1_ps(1.0));
-            let v30 = _mm_and_ps(a, _mm_set_ps(f32::NAN, f32::NAN, 0.0, 0.0));
-            let v31 = _mm_and_ps(
-                _mm_shuffle_ps(b, b, 64),
-                _mm_set_ps(0.0, 0.0, f32::NAN, f32::NAN),
-            );
-
-            _mm_add_ps(
-                _mm_or_ps(_mm_and_ps(v31, v28), v29),
-                _mm_or_ps(_mm_and_ps(v30, v28), v29),
-            )
-            .into()
-        }
-    }
 
     pub fn byteop_1a([t0]: [Vec4; 1]) -> Vec4 {
         unsafe {
