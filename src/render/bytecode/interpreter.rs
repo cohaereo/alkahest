@@ -144,9 +144,26 @@ impl TfxBytecodeInterpreter {
                     // *v = v.fract();
                 }
 
-                // TODO(cohae): uses offset thingy, not elements
                 TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
                     let v = self.get_extern(renderer, *extern_, *offset)?;
+                    stack_push!(v.xxxx());
+                }
+                TfxBytecodeOp::PushExternInputVec4 { .. } => {
+                    stack_push!(Vec4::ONE);
+                }
+                TfxBytecodeOp::PushExternInputMat4 { .. } => {
+                    stack_push!(Vec4::X);
+                    stack_push!(Vec4::Y);
+                    stack_push!(Vec4::Z);
+                    stack_push!(Vec4::W);
+                }
+                TfxBytecodeOp::PushExternInputU64 { .. }
+                | TfxBytecodeOp::PushExternInputU64Unknown { .. } => {
+                    let v: Vec4 = bytemuck::cast([u64::MAX, 0]);
+                    stack_push!(v);
+                }
+                TfxBytecodeOp::PushExternInputU32 { .. } => {
+                    let v: Vec4 = bytemuck::cast([u32::MAX, 0, 0, 0]);
                     stack_push!(v);
                 }
 
@@ -171,17 +188,7 @@ impl TfxBytecodeInterpreter {
                     *v = tfx_converted::bytecode_op_rand_smooth(*v);
                 }
 
-                TfxBytecodeOp::Unk3d { .. } => {
-                    stack_push!(Vec4::ONE);
-                }
-                TfxBytecodeOp::Unk3e { .. } => {
-                    stack_push!(Vec4::X);
-                    stack_push!(Vec4::Y);
-                    stack_push!(Vec4::Z);
-                    stack_push!(Vec4::W);
-                }
-                TfxBytecodeOp::PushExternInputU64 { .. }
-                | TfxBytecodeOp::Unk4c { .. }
+                TfxBytecodeOp::Unk4c { .. }
                 | TfxBytecodeOp::Unk4d { .. }
                 | TfxBytecodeOp::Unk4e { .. }
                 | TfxBytecodeOp::Unk4f { .. } => {

@@ -1074,7 +1074,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         header.unk28.iter(),
                     )) {
                         to_load_entitymodels.insert(unk8.unk60.entity_model);
-                        println!("{}", unk8.unk60.entity_model);
 
                         let mat = Mat4 {
                             x_axis: unk8.transform[0].into(),

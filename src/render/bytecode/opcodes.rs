@@ -10,6 +10,7 @@ use super::externs::TfxExtern;
 #[binread]
 #[derive(Debug)]
 pub enum TfxBytecodeOp {
+    // Basic math ops
     #[br(magic = 0x01_u8)] Add,
     #[br(magic = 0x02_u8)] Subtract,
     #[br(magic = 0x03_u8)] Multiply,
@@ -19,6 +20,8 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x07_u8)] Unk07,
     #[br(magic = 0x08_u8)] Min,
     #[br(magic = 0x09_u8)] Max,
+
+    // ?
     #[br(magic = 0x0a_u8)] Unk0a,
     #[br(magic = 0x0b_u8)] Unk0b,
     #[br(magic = 0x0c_u8)] Merge1_3, // merge_1_3?
@@ -55,6 +58,8 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x2c_u8)] Unk2c,
     #[br(magic = 0x2d_u8)] Unk2d,
     #[br(magic = 0x2e_u8)] Unk2e,
+
+    // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
     #[br(magic = 0x35_u8)] Unk35 { unk1: u8 },
     #[br(magic = 0x37_u8)] Unk37 { unk1: u8 }, // spline4_const?
@@ -62,24 +67,32 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
     #[br(magic = 0x3a_u8)] Unk3a { unk1: u8 },
     #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
+    
+    // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
     /// Offset is in single floats (4 bytes)
     #[br(magic = 0x3c_u8)] PushExternInputFloat { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern vec4 to the stack
     /// Offset is in vec4s (16 bytes)
-    #[br(magic = 0x3d_u8)] Unk3d { extern_: TfxExtern, offset: u8 },
-    // TODO(cohae): from first glance this looks like a weird copy of 0x3d
-    #[br(magic = 0x3e_u8)] Unk3e { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x3d_u8)] PushExternInputVec4 { extern_: TfxExtern, offset: u8 },
+    /// Pushes an extern mat4 to the stack
+    /// Offset is in vec4s (16 bytes)
+    #[br(magic = 0x3e_u8)] PushExternInputMat4 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern u64 to the stack, usually a shader resource
     /// Offset is in u64s (8 bytes)
     #[br(magic = 0x3f_u8)] PushExternInputU64 { extern_: TfxExtern, offset: u8 },
-    #[br(magic = 0x40_u8)] Unk40 { extern_: TfxExtern, offset: u8 },
+    /// Pushes an extern u32 to the stack as a u64
+    /// Offset is in u32s (4 bytes)
+    #[br(magic = 0x40_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
     // TODO(cohae): Carbon copy of 0x3f???
-    #[br(magic = 0x41_u8)] Unk41 { extern_: TfxExtern, offset: u8 },
+    /// Pushes an extern u64 to the stack, purpose unknown
+    /// Offset is in u64s (8 bytes)
+    #[br(magic = 0x41_u8)] PushExternInputU64Unknown { extern_: TfxExtern, offset: u8 },
+
     // TODO(cohae): Loads a value from the interpreter state + 0x44a0
     #[br(magic = 0x42_u8)] Unk42,
     #[br(magic = 0x43_u8)] Unk43 { unk1: u8 },
-    #[br(magic = 0x44_u8)] PopOutput { element: u8 }, // pop_output? 0x43 in bytecode from talk
+    #[br(magic = 0x44_u8)] PopOutput { element: u8 },
     #[br(magic = 0x45_u8)] Unk45 { slot: u8 },
     #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
     #[br(magic = 0x47_u8)] PopTemp { slot: u8 },
@@ -199,22 +212,25 @@ impl TfxBytecodeOp {
                 format!("unk_load_constant constants[{constant_index}]")
             }
             TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
-                format!("push_extern_input_float ({extern_:?}+{offset})")
+                format!("push_extern_input_float ({extern_:?}+0x{:0X})", offset * 4)
             }
-            TfxBytecodeOp::Unk3d { extern_, offset } => {
-                format!("unk3d extern={extern_:?} offset={offset}")
+            TfxBytecodeOp::PushExternInputVec4 { extern_, offset } => {
+                format!("push_extern_input_vec4 ({extern_:?}+0x{:0X})", offset * 16)
             }
-            TfxBytecodeOp::Unk3e { extern_, offset } => {
-                format!("unk3e extern={extern_:?} offset={offset}")
+            TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
+                format!("push_extern_input_mat4 ({extern_:?}+0x{:0X})", offset * 16)
             }
             TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
-                format!("push_extern_input_u64 ({extern_:?}+{offset})")
+                format!("push_extern_input_u64 ({extern_:?}+0x{:0X})", offset * 8)
             }
-            TfxBytecodeOp::Unk40 { extern_, offset } => {
-                format!("unk40 extern={extern_:?} offset={offset}")
+            TfxBytecodeOp::PushExternInputU32 { extern_, offset } => {
+                format!("push_extern_input_u32 ({extern_:?}+0x{:0X})", offset * 4)
             }
-            TfxBytecodeOp::Unk41 { extern_, offset } => {
-                format!("unk41 extern={extern_:?} offset={offset}")
+            TfxBytecodeOp::PushExternInputU64Unknown { extern_, offset } => {
+                format!(
+                    "push_extern_input_u64_unknown ({extern_:?}+0x{:0X})",
+                    offset * 8
+                )
             }
             TfxBytecodeOp::Unk42 => "unk42".to_string(),
             TfxBytecodeOp::Unk43 { unk1 } => {
