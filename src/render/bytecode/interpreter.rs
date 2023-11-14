@@ -119,9 +119,6 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Merge2_2 => {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(Vec4::new(t1.x, t1.y, t0.x, t0.y));
-
-                    // let vals = stack_pop!(2);
-                    // stack_push!(fast_impls::byteop_0d(vals));
                 }
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t0] = stack_pop!(2);
@@ -150,7 +147,8 @@ impl TfxBytecodeInterpreter {
                 // TODO(cohae): Check the SIMD output again, seems like frac but not really
                 TfxBytecodeOp::Unk1a => {
                     let v = stack_top!();
-                    *v = fast_impls::byteop_1a([*v]);
+                    // *v = fast_impls::byteop_1a([*v]);
+                    *v = v.fract();
                 }
 
                 TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
@@ -461,35 +459,35 @@ impl TfxBytecodeInterpreter {
     }
 }
 
-mod fast_impls {
-    use glam::Vec4;
-    use std::arch::x86_64::*;
+// mod fast_impls {
+//     use glam::Vec4;
+//     use std::arch::x86_64::*;
 
-    pub fn byteop_1a([t0]: [Vec4; 1]) -> Vec4 {
-        unsafe {
-            let v49 = _mm_cmpgt_epi32(
-                _mm_castps_si128(_mm_set1_ps(8388608.0)),
-                _mm_castps_si128(_mm_and_ps(_mm_set1_ps(f32::NAN), t0.into())),
-            );
-            let v50 = _mm_cvtepi32_ps(_mm_cvttps_epi32(t0.into()));
+//     pub fn byteop_1a([t0]: [Vec4; 1]) -> Vec4 {
+//         unsafe {
+//             let v49 = _mm_cmpgt_epi32(
+//                 _mm_castps_si128(_mm_set1_ps(8388608.0)),
+//                 _mm_castps_si128(_mm_and_ps(_mm_set1_ps(f32::NAN), t0.into())),
+//             );
+//             let v50 = _mm_cvtepi32_ps(_mm_cvttps_epi32(t0.into()));
 
-            _mm_sub_ps(
-                t0.into(),
-                _mm_or_ps(
-                    _mm_and_ps(
-                        _mm_sub_ps(
-                            v50,
-                            _mm_and_ps(_mm_cmplt_ps(t0.into(), v50), _mm_set1_ps(1.0)),
-                        ),
-                        _mm_castsi128_ps(v49),
-                    ),
-                    _mm_castsi128_ps(_mm_andnot_si128(v49, _mm_castps_si128(t0.into()))),
-                ),
-            )
-            .into()
-        }
-    }
-}
+//             _mm_sub_ps(
+//                 t0.into(),
+//                 _mm_or_ps(
+//                     _mm_and_ps(
+//                         _mm_sub_ps(
+//                             v50,
+//                             _mm_and_ps(_mm_cmplt_ps(t0.into(), v50), _mm_set1_ps(1.0)),
+//                         ),
+//                         _mm_castsi128_ps(v49),
+//                     ),
+//                     _mm_castsi128_ps(_mm_andnot_si128(v49, _mm_castps_si128(t0.into()))),
+//                 ),
+//             )
+//             .into()
+//         }
+//     }
+// }
 
 // Methods adapted from HLSL TFX sources
 mod tfx_converted {
