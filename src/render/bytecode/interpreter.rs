@@ -1,4 +1,4 @@
-use glam::{Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec4, Vec4Swizzles};
 use tinyvec::ArrayVec;
 use windows::Win32::Graphics::Direct3D11::D3D11_MAP_WRITE_NO_OVERWRITE;
 
@@ -145,17 +145,19 @@ impl TfxBytecodeInterpreter {
                 }
 
                 TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
-                    let v = self.get_extern(renderer, *extern_, *offset)?;
-                    stack_push!(v.xxxx());
+                    let v = self.get_extern_float(renderer, *extern_, *offset as usize)?;
+                    stack_push!(Vec4::splat(v));
                 }
-                TfxBytecodeOp::PushExternInputVec4 { .. } => {
-                    stack_push!(Vec4::ONE);
+                TfxBytecodeOp::PushExternInputVec4 { extern_, offset } => {
+                    let v = self.get_extern_vec4(renderer, *extern_, *offset as usize)?;
+                    stack_push!(v);
                 }
                 TfxBytecodeOp::PushExternInputMat4 { .. } => {
-                    stack_push!(Vec4::X);
-                    stack_push!(Vec4::Y);
-                    stack_push!(Vec4::Z);
-                    stack_push!(Vec4::W);
+                    let mat = Mat4::IDENTITY;
+                    stack_push!(mat.x_axis);
+                    stack_push!(mat.y_axis);
+                    stack_push!(mat.z_axis);
+                    stack_push!(mat.w_axis);
                 }
                 TfxBytecodeOp::PushExternInputU64 { .. }
                 | TfxBytecodeOp::PushExternInputU64Unknown { .. } => {
@@ -165,6 +167,10 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::PushExternInputU32 { .. } => {
                     let v: Vec4 = bytemuck::cast([u32::MAX, 0, 0, 0]);
                     stack_push!(v);
+                }
+                TfxBytecodeOp::SetShaderResource { .. } => {
+                    // Pop for now to make sure we don't overrun the stack
+                    let _ = stack_pop!(1);
                 }
 
                 TfxBytecodeOp::Unk27 => {
@@ -265,28 +271,60 @@ impl TfxBytecodeInterpreter {
         Ok(())
     }
 
-    pub fn get_extern(
+    pub fn get_extern_float(
         &self,
         renderer: &Renderer,
         extern_: TfxExtern,
-        element: u8,
-    ) -> anyhow::Result<Vec4> {
+        offset: usize,
+    ) -> anyhow::Result<f32> {
         match extern_ {
-            TfxExtern::Frame => match element {
-                0 => Ok(Vec4::new(
-                    renderer.start_time.elapsed().as_secs_f32(),
-                    renderer.start_time.elapsed().as_secs_f32(),
-                    *renderer.delta_time.read(),
-                    1.0,
-                )),
-                1 => Ok(Vec4::ONE),  // Exposure scales
-                4 => Ok(Vec4::ZERO), // Stubbed
-                u => anyhow::bail!("Unsupported element {u} for extern {extern_:?}"),
+            TfxExtern::Frame => match offset {
+                0 => Ok(renderer.start_time.elapsed().as_secs_f32()),
+
+                // TODO(cohae): wrooong
+                1 => Ok(renderer.start_time.elapsed().as_secs_f32()),
+                4 => Ok(renderer.start_time.elapsed().as_secs_f32()),
+
+                _ => {
+                    anyhow::bail!(
+                        "get_extern_float: Unsupported extern {extern_:?}+{offset} (0x{:0X})",
+                        offset * 4
+                    )
+                }
             },
             u => {
-                anyhow::bail!("Unsupported extern {u:?}[{element}]")
+                anyhow::bail!(
+                    "get_extern_float: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                    offset * 4
+                )
             }
         }
+    }
+
+    pub fn get_extern_vec4(
+        &self,
+        _renderer: &Renderer,
+        extern_: TfxExtern,
+        offset: usize,
+    ) -> anyhow::Result<Vec4> {
+        Ok(match extern_ {
+            TfxExtern::Frame => match offset {
+                // 26.x is something to do with alpha clipping. We keep it disabled, as enabling it causes a fuzzy alpha clip pattern where we dont want it
+                26 => Vec4::ZERO,
+                u => {
+                    anyhow::bail!(
+                        "get_extern_vec4: Unsupported frame extern offset {u} (0x{:0X})",
+                        u * 16
+                    )
+                }
+            },
+            u => {
+                anyhow::bail!(
+                    "get_extern_vec4: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                    offset * 16
+                )
+            }
+        })
     }
 
     pub fn dump(&self, constants: &[Vec4], buffer: &ConstantBuffer<Vec4>) {

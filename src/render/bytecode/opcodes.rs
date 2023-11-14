@@ -212,23 +212,23 @@ impl TfxBytecodeOp {
                 format!("unk_load_constant constants[{constant_index}]")
             }
             TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
-                format!("push_extern_input_float ({extern_:?}+0x{:0X})", offset * 4)
+                format!("push_extern_input_float ({extern_:?}+0x{:X})", offset * 4)
             }
             TfxBytecodeOp::PushExternInputVec4 { extern_, offset } => {
-                format!("push_extern_input_vec4 ({extern_:?}+0x{:0X})", offset * 16)
+                format!("push_extern_input_vec4 ({extern_:?}+0x{:X})", offset * 16)
             }
             TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
-                format!("push_extern_input_mat4 ({extern_:?}+0x{:0X})", offset * 16)
+                format!("push_extern_input_mat4 ({extern_:?}+0x{:X})", offset * 16)
             }
             TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
-                format!("push_extern_input_u64 ({extern_:?}+0x{:0X})", offset * 8)
+                format!("push_extern_input_u64 ({extern_:?}+0x{:X})", offset * 8)
             }
             TfxBytecodeOp::PushExternInputU32 { extern_, offset } => {
-                format!("push_extern_input_u32 ({extern_:?}+0x{:0X})", offset * 4)
+                format!("push_extern_input_u32 ({extern_:?}+0x{:X})", offset * 4)
             }
             TfxBytecodeOp::PushExternInputU64Unknown { extern_, offset } => {
                 format!(
-                    "push_extern_input_u64_unknown ({extern_:?}+0x{:0X})",
+                    "push_extern_input_u64_unknown ({extern_:?}+0x{:X})",
                     offset * 8
                 )
             }
