@@ -1,6 +1,5 @@
 use crate::ecs::Scene;
 
-use crate::material::Unk80806da1;
 use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ExtendedHash, ExtendedTag, RelPointer, ResourcePointer, TablePointer, Tag};

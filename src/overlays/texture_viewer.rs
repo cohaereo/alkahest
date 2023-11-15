@@ -1,3 +1,5 @@
+use std::{fs::File, io::Write};
+
 use egui::{vec2, Color32, ComboBox, RichText, Rounding, TextureId};
 
 use crate::{
@@ -5,6 +7,7 @@ use crate::{
     render::DeviceContextSwapchain,
     structure::ExtendedHash,
     texture::{Texture, TextureHeader},
+    util::{self, dds, error::ErrorAlert},
 };
 
 use super::gui::Overlay;
@@ -68,70 +71,89 @@ impl Overlay for TextureViewer {
             .open(&mut open)
             .show(ctx, |ui| {
                 egui::Frame::default().show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        let rounding_l = Rounding {
-                            ne: 0.0,
-                            se: 0.0,
-                            nw: 2.0,
-                            sw: 2.0,
-                        };
-                        let rounding_m = Rounding::none();
-                        let rounding_r = Rounding {
-                            nw: 0.0,
-                            sw: 0.0,
-                            ne: 2.0,
-                            se: 2.0,
-                        };
+                    ui.add_enabled_ui(false, |ui| {
+                        ui.horizontal(|ui| {
+                            let rounding_l = Rounding {
+                                ne: 0.0,
+                                se: 0.0,
+                                nw: 2.0,
+                                sw: 2.0,
+                            };
+                            let rounding_m = Rounding::none();
+                            let rounding_r = Rounding {
+                                nw: 0.0,
+                                sw: 0.0,
+                                ne: 2.0,
+                                se: 2.0,
+                            };
 
-                        ui.style_mut().spacing.item_spacing = [0.0; 2].into();
+                            ui.style_mut().spacing.item_spacing = [0.0; 2].into();
 
-                        ui.style_mut().visuals.widgets.active.rounding = rounding_l;
-                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
-                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+                            ui.style_mut().visuals.widgets.active.rounding = rounding_l;
+                            ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
+                            ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
 
-                        if ui.selectable_label(self.channel_r, "R").clicked() {
-                            self.channel_r = !self.channel_r;
-                        }
+                            if ui.selectable_label(self.channel_r, "R").clicked() {
+                                self.channel_r = !self.channel_r;
+                            }
 
-                        ui.style_mut().visuals.widgets.active.rounding = rounding_m;
-                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
-                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
+                            ui.style_mut().visuals.widgets.active.rounding = rounding_m;
+                            ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
+                            ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
 
-                        if ui.selectable_label(self.channel_g, "G").clicked() {
-                            self.channel_g = !self.channel_g;
-                        }
-                        if ui.selectable_label(self.channel_b, "B").clicked() {
-                            self.channel_b = !self.channel_b;
-                        }
+                            if ui.selectable_label(self.channel_g, "G").clicked() {
+                                self.channel_g = !self.channel_g;
+                            }
+                            if ui.selectable_label(self.channel_b, "B").clicked() {
+                                self.channel_b = !self.channel_b;
+                            }
 
-                        ui.style_mut().visuals.widgets.active.rounding = rounding_r;
-                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
-                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+                            ui.style_mut().visuals.widgets.active.rounding = rounding_r;
+                            ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
+                            ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
 
-                        if ui.selectable_label(self.channel_a, "A").clicked() {
-                            self.channel_a = !self.channel_a;
-                        }
+                            if ui.selectable_label(self.channel_a, "A").clicked() {
+                                self.channel_a = !self.channel_a;
+                            }
 
-                        ui.style_mut().spacing.item_spacing = vec2(8.0, 3.0);
+                            ui.style_mut().spacing.item_spacing = vec2(8.0, 3.0);
 
-                        ui.add_space(16.0);
+                            ui.add_space(16.0);
 
-                        ComboBox::from_label("Mip")
-                            .wrap(false)
-                            .width(128.0)
-                            .show_index(
-                                ui,
-                                &mut self.selected_mip,
-                                self.header.mip_count as usize,
-                                |i| {
-                                    format!(
-                                        "{i} - {}x{}",
-                                        self.header.width as usize >> i,
-                                        self.header.height as usize >> i
-                                    )
-                                },
-                            )
+                            ComboBox::from_label("Mip")
+                                .wrap(false)
+                                .width(128.0)
+                                .show_index(
+                                    ui,
+                                    &mut self.selected_mip,
+                                    self.header.mip_count as usize,
+                                    |i| {
+                                        format!(
+                                            "{i} - {}x{}",
+                                            self.header.width as usize >> i,
+                                            self.header.height as usize >> i
+                                        )
+                                    },
+                                )
+                        });
                     });
+
+                    if ui.button("Export image").clicked() {
+                        let mut dds_data: Vec<u8> = vec![];
+                        let (texture, texture_data) = Texture::load_data(self.tag, true).unwrap();
+
+                        dds::dump_to_dds(&mut dds_data, &texture, &texture_data);
+                        if ui.input(|i| i.modifiers.shift) {
+                            std::fs::create_dir("./textures/").ok();
+                            if let Ok(mut f) =
+                                File::create(format!("./textures/{}.dds", self.tag)).err_alert()
+                            {
+                                f.write_all(&dds_data).ok();
+                            }
+                        } else {
+                            util::export::save_dds_dialog(&dds_data, self.tag.to_string());
+                        }
+                    }
 
                     let height_ratio = self.header.height as f32 / self.header.width as f32;
                     ui.image(

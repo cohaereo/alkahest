@@ -80,7 +80,6 @@ use crate::text::{decode_text, StringContainer, StringData, StringPart};
 mod activity;
 mod camera;
 mod config;
-mod dds;
 mod dxbc;
 mod dxgi;
 mod ecs;

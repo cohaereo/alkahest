@@ -64,6 +64,7 @@ ron = "0.8.1"
 # bevy_ecs = "0.11.3"
 hecs = "0.10.3"
 tinyvec = "1.6.0"
+native-dialog = "0.7.0"
 
 [features]
 default = []

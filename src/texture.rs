@@ -84,8 +84,10 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn load(dcs: &DeviceContextSwapchain, hash: ExtendedHash) -> anyhow::Result<Texture> {
-        let _span = debug_span!("Load texture", ?hash).entered();
+    pub fn load_data(
+        hash: ExtendedHash,
+        load_full_mip: bool,
+    ) -> anyhow::Result<(TextureHeader, Vec<u8>)> {
         let texture_header_ref = package_manager()
             .get_entry(
                 hash.hash32()
@@ -106,7 +108,7 @@ impl Texture {
                 .to_vec()
         };
 
-        if texture.large_buffer.is_some() {
+        if load_full_mip && texture.large_buffer.is_some() {
             let ab = package_manager()
                 .read_tag(texture_header_ref)
                 .context("Failed to read large texture buffer")?
@@ -114,6 +116,13 @@ impl Texture {
 
             texture_data.extend(ab);
         }
+
+        Ok((texture, texture_data))
+    }
+
+    pub fn load(dcs: &DeviceContextSwapchain, hash: ExtendedHash) -> anyhow::Result<Texture> {
+        let _span = debug_span!("Load texture", ?hash).entered();
+        let (texture, texture_data) = Self::load_data(hash, true)?;
 
         let (tex, view) = unsafe {
             if texture.depth > 1 {
