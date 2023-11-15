@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 use crate::packages::package_manager;
+use crate::render::bytecode::externs::TfxShaderStage;
 use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::drawcall::ShaderStages;
@@ -13,6 +14,7 @@ use crate::util::RwLock;
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::Vec4;
+use itertools::Itertools;
 
 #[derive(BinRead, Debug, Clone)]
 pub struct STechnique {
@@ -40,6 +42,23 @@ pub struct STechnique {
     pub shader_unk3: STechniqueShader,
     pub shader_pixel: STechniqueShader,
     pub shader_compute: STechniqueShader,
+}
+
+impl STechnique {
+    pub fn all_shaders(&self) -> Vec<(TfxShaderStage, &STechniqueShader)> {
+        vec![
+            (TfxShaderStage::Vertex, &self.shader_vertex),
+            (TfxShaderStage::Pixel, &self.shader_pixel),
+            (TfxShaderStage::Compute, &self.shader_compute),
+        ]
+    }
+
+    pub fn all_valid_shaders(&self) -> Vec<(TfxShaderStage, &STechniqueShader)> {
+        self.all_shaders()
+            .into_iter()
+            .filter(|(_, s)| s.shader.is_some())
+            .collect_vec()
+    }
 }
 
 #[derive(BinRead, Debug, Clone)]
@@ -296,10 +315,10 @@ impl Technique {
                     renderer,
                     render_data,
                     cb0_vs,
-                    if self.mat.shader_pixel.bytecode_constants.is_empty() {
+                    if self.mat.shader_vertex.bytecode_constants.is_empty() {
                         &[]
                     } else {
-                        bytemuck::cast_slice(&self.mat.shader_pixel.bytecode_constants)
+                        bytemuck::cast_slice(&self.mat.shader_vertex.bytecode_constants)
                     },
                 )
             } else {

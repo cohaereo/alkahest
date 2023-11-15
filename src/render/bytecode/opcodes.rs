@@ -44,8 +44,8 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x1d_u8)] Negate,
     #[br(magic = 0x1f_u8)] Cosine, // cosine?
     #[br(magic = 0x20_u8)] Unk20,
-    #[br(magic = 0x21_u8)] PermuteAllX, // Alias for permute(.xxxx) (TODO: confirm)
-    #[br(magic = 0x22_u8)] Permute { fields: u8 }, // permute (TODO: how does the value work? we only see 0 = .xxxx in talk bytecode)
+    #[br(magic = 0x21_u8)] PermuteAllX, // Alias for permute(.xxxx)
+    #[br(magic = 0x22_u8)] Permute { fields: u8 }, // Permute/swizzle values
     #[br(magic = 0x23_u8)] Saturate, // saturate?
     #[br(magic = 0x24_u8)] Unk24,
     #[br(magic = 0x25_u8)] Unk25,

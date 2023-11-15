@@ -3,7 +3,7 @@ use crate::ecs::components::EntityModel;
 use crate::ecs::transform::Transform;
 use crate::entity::SEntityModel;
 use crate::map::MapDataList;
-use crate::material::Technique;
+use crate::material::{STechnique, Technique};
 use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
@@ -366,6 +366,51 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             info!("TFX Disassembly:");
             for (i, o) in opcodes.into_iter().enumerate() {
                 info!(" {i}: {}", o.disassemble());
+            }
+        }
+        "disassemble_tfx_technique" => {
+            // TODO(cohae): Make some abstraction for this
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32-bit tag");
+                return;
+            }
+
+            let tag_parsed: anyhow::Result<TagHash> = (|| {
+                let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
+                Ok(TagHash(h))
+            })();
+
+            let tag = match tag_parsed {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let technique: STechnique = match package_manager().read_tag_struct(tag) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to read technique tag: {e}");
+                    return;
+                }
+            };
+
+            for (stage, shader) in technique.all_valid_shaders() {
+                let opcodes =
+                    match TfxBytecodeOp::parse_all(&shader.bytecode, binrw::Endian::Little) {
+                        Ok(o) => o,
+                        Err(e) => {
+                            error!("Failed to decode TFX bytecode: {e}");
+                            return;
+                        }
+                    };
+
+                println!();
+                info!("TFX Disassembly ({stage:?}):");
+                for (i, o) in opcodes.into_iter().enumerate() {
+                    info!("  {i}: {}", o.disassemble());
+                }
             }
 
             // 3C0100340003293401340212232200350334050E44043C01003406032934073408122322003509340B0E440D
