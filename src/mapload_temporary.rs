@@ -42,7 +42,7 @@ use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     entity::{SEntityModel, Unk808072c5, Unk80809c0f},
     map::{
-        MapData, SBubbleParent, STerrain, Unk80806aa7, Unk80806b7f, Unk80806c65, Unk80806e68,
+        MapData, SBubbleParent, SLightCollection, STerrain, Unk80806aa7, Unk80806b7f, Unk80806e68,
         Unk80806ef4, Unk8080714b,
     },
     map_resources::MapResource,
@@ -1106,7 +1106,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80806c65 = package_manager().read_tag_struct(tag).unwrap();
+                    let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
                     for (i, (transform, _unk, bounds)) in multizip((
                         &header.unk40,

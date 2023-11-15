@@ -416,3 +416,15 @@ pub struct Unk80806cb5 {
 }
 
 pub type Unk80806cb6 = Unk80806cb5;
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806da1 {
+    pub file_size: u64,
+    pub unk8: u64,
+    pub unk10: [u32; 8],
+
+    pub bytecode: TablePointer<u8>,
+    pub bytecode_constants: TablePointer<Vector4>,
+    pub unk50: [u32; 4],
+    pub unk60: TablePointer<Vector4>,
+}

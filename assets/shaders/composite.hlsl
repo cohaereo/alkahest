@@ -94,10 +94,12 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
 Texture2D RenderTarget0 : register(t0);
 Texture2D RenderTarget1 : register(t1);
 Texture2D RenderTarget2 : register(t2);
-Texture2D DepthTarget : register(t3);
-Texture2D Matcap : register(t4);
-TextureCube SpecularMap : register(t5);
-Texture2DArray CascadeShadowMaps : register(t6);
+Texture2D RenderTarget3 : register(t3);
+Texture2D DepthTarget : register(t4);
+
+Texture2D Matcap : register(t8);
+TextureCube SpecularMap : register(t9);
+Texture2DArray CascadeShadowMaps : register(t10);
 // SamplerState SampleType : register(s0);
 SamplerState SampleType
 {
@@ -377,6 +379,7 @@ float4 PShader(VSOutput input) : SV_Target {
     float4 albedo = RenderTarget0.Sample(SampleType, input.uv);
     float4 rt1 = RenderTarget1.Sample(SampleType, input.uv);
     float4 rt2 = RenderTarget2.Sample(SampleType, input.uv);
+    float4 rt3 = RenderTarget3.Sample(SampleType, input.uv);
     float depth = DepthTarget.Sample(SampleType, input.uv).r;
 
     [branch] switch(tex_i) {
@@ -386,33 +389,35 @@ float4 PShader(VSOutput input) : SV_Target {
             return rt1;
         case 3: // RT2
             return rt2;
-        case 4: { // Smoothness
+        case 4: // RT2
+            return rt3;
+        case 5: { // Smoothness
             float3 normal = DecodeNormal(rt1.xyz);
             float smoothness = 4 * (length(normal) - 0.75);
             return float4(smoothness, smoothness, smoothness, 1.0);
         }
-        case 5: { // Metalicness
+        case 6: { // Metalicness
             return float4(rt2.xxx, 1.0);
         }
-        case 6: { // Texture AO
+        case 7: { // Texture AO
             return float4(rt2.yyy * 2.0, 1.0);
         }
-        case 7: { // Emission
+        case 8: { // Emission
             return float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 1.0);
         }
-        case 8: { // Transmission
+        case 9: { // Transmission
             return float4(rt2.zzz, 1.0);
         }
-        case 9: { // Vertex AO
+        case 10: { // Vertex AO
             return float4(rt2.aaa, 1.0);
         }
-        case 10: { // Iridescence
+        case 11: { // Iridescence
             return float4(albedo.aaa, 1.0);
         }
-        case 11: { // Cubemap
+        case 12: { // Cubemap
             return SpecularMap.Sample(SampleType, input.normal.xyz);
         }
-        case 12: { // Matcap
+        case 13: { // Matcap
             float3 normal = DecodeNormal(rt1.xyz);
 
             float2 muv = float2(
@@ -423,7 +428,7 @@ float4 PShader(VSOutput input) : SV_Target {
             float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
             return matcap;
         }
-        case 14: { // Specular
+        case 15: { // Specular
             float3 normal = DecodeNormal(rt1.xyz);    
             float smoothness = 4 * (length(normal) - 0.75);
             float roughness = 1.0 - saturate(smoothness);

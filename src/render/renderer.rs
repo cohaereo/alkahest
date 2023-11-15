@@ -321,6 +321,7 @@ impl Renderer {
                     Some(self.gbuffer.rt0.render_target.clone()),
                     Some(self.gbuffer.rt1.render_target.clone()),
                     Some(self.gbuffer.rt2.render_target.clone()),
+                    Some(self.gbuffer.rt3.render_target.clone()),
                 ]),
                 &self.gbuffer.depth.view,
             );
@@ -845,11 +846,12 @@ impl Renderer {
                     Some(self.gbuffer.rt0.view.clone()),
                     Some(self.gbuffer.rt1.view.clone()),
                     Some(self.gbuffer.rt2.view.clone()),
+                    Some(self.gbuffer.rt3.view.clone()),
                     Some(self.gbuffer.depth.texture_view.clone()),
                 ]),
             );
             self.dcs.context().PSSetShaderResources(
-                6,
+                10,
                 Some(&[Some(
                     resources
                         .get::<ShadowMapsResource>()
@@ -863,7 +865,7 @@ impl Renderer {
             self.render_data
                 .data()
                 .matcap
-                .bind(&self.dcs, 4, ShaderStages::PIXEL);
+                .bind(&self.dcs, 8, ShaderStages::PIXEL);
 
             let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
                 self.render_data
@@ -875,7 +877,7 @@ impl Renderer {
 
             self.dcs
                 .context()
-                .PSSetShaderResources(5, Some(&[cubemap_texture]));
+                .PSSetShaderResources(9, Some(&[cubemap_texture]));
 
             {
                 let camera = resources.get::<FpsCamera>().unwrap();

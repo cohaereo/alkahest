@@ -340,26 +340,27 @@ impl Overlay for RenderSettingsOverlay {
 #[derive(Clone, Copy, Debug)]
 pub enum CompositorMode {
     /// Rendered output
-    Combined = 0,
+    Combined,
 
     /// RT0
-    Albedo = 1,
+    Albedo,
     /// RT1
-    Normal = 2,
+    Normal,
     /// RT2
-    PbrStack = 3,
+    PbrStack,
+    RT3,
 
-    SmoothnessFuzz = 4,
-    Metalicness = 5,
-    TextureAO = 6,
-    Emission = 7,
-    Transmission = 8,
-    VertexAO = 9,
-    Iridescence = 10,
-    Cubemap = 11,
-    Matcap = 12,
-    Depth = 13,
-    Specular = 14,
+    SmoothnessFuzz,
+    Metalicness,
+    TextureAO,
+    Emission,
+    Transmission,
+    VertexAO,
+    Iridescence,
+    Cubemap,
+    Matcap,
+    Depth,
+    Specular,
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
@@ -367,17 +368,18 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::Albedo,         // 1
     CompositorMode::Normal,         // 2
     CompositorMode::PbrStack,       // 3
-    CompositorMode::SmoothnessFuzz, // 4
-    CompositorMode::Metalicness,    // 5
-    CompositorMode::TextureAO,      // 6
-    CompositorMode::Emission,       // 7
-    CompositorMode::Transmission,   // 8
-    CompositorMode::VertexAO,       // 9
-    CompositorMode::Iridescence,    // 10
-    CompositorMode::Cubemap,        // 11
-    CompositorMode::Matcap,         // 12
-    CompositorMode::Depth,          // 13
-    CompositorMode::Specular,       // 14
+    CompositorMode::RT3,            // 4
+    CompositorMode::SmoothnessFuzz, // 5
+    CompositorMode::Metalicness,    // 6
+    CompositorMode::TextureAO,      // 7
+    CompositorMode::Emission,       // 8
+    CompositorMode::Transmission,   // 9
+    CompositorMode::VertexAO,       // 10
+    CompositorMode::Iridescence,    // 11
+    CompositorMode::Cubemap,        // 12
+    CompositorMode::Matcap,         // 13
+    CompositorMode::Depth,          // 14
+    CompositorMode::Specular,       // 15
 ];
 
 impl Display for CompositorMode {
@@ -387,6 +389,7 @@ impl Display for CompositorMode {
             CompositorMode::Albedo => "Albedo (RT0)",
             CompositorMode::Normal => "Normal (RT1)",
             CompositorMode::PbrStack => "PBR Stack (RT2)",
+            CompositorMode::RT3 => "RT3",
             CompositorMode::SmoothnessFuzz => "Smoothness/Fuzz",
             CompositorMode::Metalicness => "Metalicness",
             CompositorMode::TextureAO => "Texture AO",

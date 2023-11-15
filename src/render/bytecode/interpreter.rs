@@ -343,6 +343,15 @@ impl TfxBytecodeInterpreter {
                     )
                 }
             },
+            TfxExtern::Deferred => match offset {
+                0 => Vec4::splat(fastrand::f32()),
+                u => {
+                    anyhow::bail!(
+                        "get_extern_vec4: Unsupported deferred extern offset {u} (0x{:0X})",
+                        u * 16
+                    )
+                }
+            },
             u => {
                 anyhow::bail!(
                     "get_extern_vec4: Unsupported extern {u:?}+{offset} (0x{:0X})",
@@ -366,6 +375,15 @@ impl TfxBytecodeInterpreter {
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
+                            u * 16
+                        )
+                    }
+                },
+                TfxExtern::Decal => match offset {
+                    1 => transmute(_renderer.gbuffer.rt1_clone.view.clone()),
+                    u => {
+                        anyhow::bail!(
+                            "get_extern_u64: Unsupported decal extern offset {u} (0x{:0X})",
                             u * 16
                         )
                     }

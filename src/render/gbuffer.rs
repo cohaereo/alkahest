@@ -13,6 +13,7 @@ pub struct GBuffer {
     pub rt1: RenderTarget,
     pub rt1_clone: RenderTarget,
     pub rt2: RenderTarget,
+    pub rt3: RenderTarget,
     pub staging: RenderTarget,
     pub staging_clone: RenderTarget,
     pub depth: DepthState,
@@ -30,6 +31,8 @@ impl GBuffer {
                 .context("RT1_Clone")?,
             rt2: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
                 .context("RT2")?,
+            rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
+                .context("RT3")?,
             staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Staging")?,
             staging_clone: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
@@ -48,6 +51,7 @@ impl GBuffer {
         self.rt1.resize(new_size).context("RT1")?;
         self.rt1_clone.resize(new_size).context("RT1_Clone")?;
         self.rt2.resize(new_size).context("RT2")?;
+        self.rt2.resize(new_size).context("RT3")?;
         self.staging.resize(new_size).context("Staging")?;
         self.staging_clone
             .resize(new_size)

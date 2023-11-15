@@ -1,5 +1,6 @@
 use crate::ecs::Scene;
 
+use crate::material::Unk80806da1;
 use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ExtendedHash, ExtendedTag, RelPointer, ResourcePointer, TablePointer, Tag};
@@ -348,19 +349,20 @@ pub struct Unk808093b3 {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk80806c65 {
+pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
     pub bounds: AABB,
-    pub unk30: TablePointer<Unk80806c70>,
+    pub unk30: TablePointer<SLight>,
     pub unk40: TablePointer<Unk80809f4f>,
     pub light_count: u32,
     pub unk54: u32,
     pub occlusion_bounds: Tag<SOcclusionBounds>,
 }
 
+// 706C8080
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk80806c70 {
+pub struct SLight {
     pub unk0: Vector4,
     pub unk10: Vector4,
     pub unk20: Vector4,
@@ -377,12 +379,48 @@ pub struct Unk80806c70 {
     pub unkb8: f32,
     pub unkbc: f32,
 
-    pub technique_unkc0: TagHash,
-    pub technique_unkc4: TagHash,
-    pub compute_technique_unkc8: TagHash,
-    pub unkcc: TagHash,
-    pub unkd0: TagHash,
+    pub technique_shading: TagHash,
+    pub technique_volumetrics: TagHash,
+    pub technique_compute_lightprobe: TagHash,
+    pub unkcc: TagHash, // Unk80806da1
+    pub unkd0: TagHash, // Unk80806da1
     pub unkd4: [u32; 7],
+}
+
+// 716C8080
+#[derive(BinRead, Debug, Clone)]
+pub struct SShadowingLight {
+    pub unk0: Vector4,
+    pub unk10: Vector4,
+    pub unk20: Vector4,
+    pub unk30: Vector4,
+    pub unk40: [u32; 4],
+    pub unk50: Vector4,
+    pub unk60: Matrix4,
+    pub unka0: u32,
+    pub unka4: u32,
+    pub unka8: u32,
+    pub unkac: f32,
+    pub unkb0: f32,
+    pub unkb4: f32,
+    pub unkb8: f32,
+    pub unkbc: f32,
+    pub unkc0: f32,
+    pub unkc4: f32,
+    pub unkc8: f32,
+    pub unkcc: f32,
+
+    pub technique_shading: TagHash,
+    pub technique_shading_shadow: TagHash,
+    pub technique_volumetrics: TagHash,
+    pub technique_volumetrics_shadow: TagHash,
+    pub technique_compute_lightprobe: TagHash,
+    pub technique_compute_lightprobe_shadow: TagHash,
+
+    pub unke8: TagHash, // Unk80806da1
+    pub unkec: TagHash, // Unk80806da1
+
+    pub unkd0: [u32; 8],
 }
 
 #[derive(BinRead, Debug, Clone)]
