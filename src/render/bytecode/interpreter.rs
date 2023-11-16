@@ -72,6 +72,10 @@ impl TfxBytecodeInterpreter {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(t1 * t0);
                 }
+                TfxBytecodeOp::Divide => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(t1 / t0);
+                }
                 TfxBytecodeOp::IsZero => {
                     // Cleaned up SIMD: _mm_and_ps(_mm_cmpeq_ps(a, _mm_setzero_ps()), _mm_set1_ps(1.0));
                     // Decompiled and simplified: value == 0.0 ? 1.0 : 0.0 (for each element in the vector)
@@ -99,6 +103,18 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Cosine => {
                     let v = stack_top!();
                     *v = Vec4::new(v.x.cos(), v.y.cos(), v.z.cos(), v.w.cos());
+                }
+                TfxBytecodeOp::Signum => {
+                    let v = stack_top!();
+                    *v = v.signum();
+                }
+                TfxBytecodeOp::Floor => {
+                    let v = stack_top!();
+                    *v = v.floor();
+                }
+                TfxBytecodeOp::Ceil => {
+                    let v = stack_top!();
+                    *v = v.ceil();
                 }
                 TfxBytecodeOp::Unk0b => {
                     let [t1, t0] = stack_pop!(2);
@@ -371,7 +387,7 @@ impl TfxBytecodeInterpreter {
         unsafe {
             Ok(match extern_ {
                 TfxExtern::Deferred => match offset {
-                    7 => transmute(render_data.debug_textures[7].view.clone()),
+                    7 => transmute(_renderer.gbuffer.staging_clone.view.clone()),
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
