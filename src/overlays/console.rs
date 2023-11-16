@@ -365,7 +365,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
 
             info!("TFX Disassembly:");
             for (i, o) in opcodes.into_iter().enumerate() {
-                info!(" {i}: {}", o.disassemble());
+                info!(" {i}: {}", o.disassemble(None));
             }
         }
         "disassemble_tfx_technique" => {
@@ -406,10 +406,16 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                         }
                     };
 
+                let constants = if shader.bytecode_constants.is_empty() {
+                    &[]
+                } else {
+                    bytemuck::cast_slice(&shader.bytecode_constants)
+                };
+
                 println!();
                 info!("TFX Disassembly ({stage:?}):");
                 for (i, o) in opcodes.into_iter().enumerate() {
-                    info!("  {i}: {}", o.disassemble());
+                    info!("  {i}: {}", o.disassemble(Some(constants)));
                 }
             }
 

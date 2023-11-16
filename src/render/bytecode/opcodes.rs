@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use binrw::{binread, BinReaderExt, Endian};
+use glam::Vec4;
 
 use crate::render::bytecode::externs::TfxShaderStage;
 
@@ -14,7 +15,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x01_u8)] Add,
     #[br(magic = 0x02_u8)] Subtract,
     #[br(magic = 0x03_u8)] Multiply,
-    #[br(magic = 0x04_u8)] Divide,
+    #[br(magic = 0x04_u8)] Divide, // TODO(cohae): Might be more than simple division
     #[br(magic = 0x05_u8)] Multiply2, // TODO(cohae): Same as multiply? Might just be an alias used for division
     #[br(magic = 0x06_u8)] Add2,
     #[br(magic = 0x07_u8)] IsZero,
@@ -22,8 +23,8 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x09_u8)] Max,
 
     // ?
-    #[br(magic = 0x0a_u8)] Unk0a,
-    #[br(magic = 0x0b_u8)] Unk0b,
+    #[br(magic = 0x0a_u8)] LessThan,
+    #[br(magic = 0x0b_u8)] Dot,
     #[br(magic = 0x0c_u8)] Merge1_3,
     #[br(magic = 0x0d_u8)] Merge2_2, // merge_2_2?
     #[br(magic = 0x0e_u8)] Unk0e,
@@ -57,7 +58,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x2b_u8)] Unk2b, // rand_smooth?
     #[br(magic = 0x2c_u8)] Unk2c,
     #[br(magic = 0x2d_u8)] Unk2d,
-    #[br(magic = 0x2e_u8)] Unk2e,
+    #[br(magic = 0x2e_u8)] TransformVec4,
 
     // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
@@ -67,6 +68,10 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
     #[br(magic = 0x3a_u8)] Unk3a { unk1: u8 },
     #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
+
+    // #[br(magic = 0x2f_u8)] Spline4Const,
+    // #[br(magic = 0x30_u8)] Spline8Const,
+    // #[br(magic = 0x31_u8)] Spline8ChainConst,
     
     // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
@@ -93,7 +98,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x42_u8)] Unk42,
     #[br(magic = 0x43_u8)] Unk43 { unk1: u8 },
     #[br(magic = 0x44_u8)] PopOutput { element: u8 },
-    #[br(magic = 0x45_u8)] Unk45 { slot: u8 },
+    #[br(magic = 0x45_u8)] PopOutputMat4 { element: u8 },
     #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
     #[br(magic = 0x47_u8)] PopTemp { slot: u8 },
     #[br(magic = 0x48_u8)] SetShaderResource {
@@ -141,7 +146,7 @@ impl TfxBytecodeOp {
     }
 
     /// Formats the opcode to assembly-like output
-    pub fn disassemble(&self) -> String {
+    pub fn disassemble(&self, constants: Option<&[Vec4]>) -> String {
         match self {
             TfxBytecodeOp::Add => "add".to_string(),
             TfxBytecodeOp::Subtract => "subtract".to_string(),
@@ -152,8 +157,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::IsZero => "is_zero".to_string(),
             TfxBytecodeOp::Min => "min".to_string(),
             TfxBytecodeOp::Max => "max".to_string(),
-            TfxBytecodeOp::Unk0a => "unk0a".to_string(),
-            TfxBytecodeOp::Unk0b => "unk0b".to_string(),
+            TfxBytecodeOp::LessThan => "unk0a".to_string(),
+            TfxBytecodeOp::Dot => "unk0b".to_string(),
             TfxBytecodeOp::Merge1_3 => "merge_1_3".to_string(),
             TfxBytecodeOp::Merge2_2 => "merge_2_2".to_string(),
             TfxBytecodeOp::Unk0e => "unk0e".to_string(),
@@ -164,9 +169,9 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Clamp => "clamp".to_string(),
             TfxBytecodeOp::Unk14 => "unk14".to_string(),
             TfxBytecodeOp::Unk15 => "unk15".to_string(),
-            TfxBytecodeOp::Signum => "unk16".to_string(),
-            TfxBytecodeOp::Floor => "unk17".to_string(),
-            TfxBytecodeOp::Ceil => "unk18".to_string(),
+            TfxBytecodeOp::Signum => "signum".to_string(),
+            TfxBytecodeOp::Floor => "floor".to_string(),
+            TfxBytecodeOp::Ceil => "ceil".to_string(),
             TfxBytecodeOp::Unk19 => "unk19".to_string(),
             TfxBytecodeOp::Unk1a => "unk1a".to_string(),
             TfxBytecodeOp::Unk1b => "unk1b".to_string(),
@@ -189,9 +194,19 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk2b => "unk2b".to_string(),
             TfxBytecodeOp::Unk2c => "unk2c".to_string(),
             TfxBytecodeOp::Unk2d => "unk2d".to_string(),
-            TfxBytecodeOp::Unk2e => "unk2e".to_string(),
+            TfxBytecodeOp::TransformVec4 => "transform_vec4".to_string(),
             TfxBytecodeOp::PushConstVec4 { constant_index } => {
-                format!("push_const_vec4({constant_index})")
+                if let Some(constants) = constants {
+                    format!(
+                        "push_const_vec4({constant_index}) // {}",
+                        constants
+                            .get(*constant_index as usize)
+                            .map(Vec4::to_string)
+                            .unwrap_or("CONSTANT OUT OF RANGE".into())
+                    )
+                } else {
+                    format!("push_const_vec4({constant_index})")
+                }
             }
             TfxBytecodeOp::Unk35 { constant_start } => {
                 format!("unk35 constant_start={constant_start}")
@@ -209,7 +224,17 @@ impl TfxBytecodeOp {
                 format!("unk3a unk1={unk1}")
             }
             TfxBytecodeOp::UnkLoadConstant { constant_index } => {
-                format!("unk_load_constant constants[{constant_index}]")
+                if let Some(constants) = constants {
+                    format!(
+                        "unk_load_constant constants[{constant_index}] // {}",
+                        constants
+                            .get(*constant_index as usize)
+                            .map(Vec4::to_string)
+                            .unwrap_or("CONSTANT OUT OF RANGE".into())
+                    )
+                } else {
+                    format!("unk_load_constant constants[{constant_index}]")
+                }
             }
             TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
                 format!("push_extern_input_float ({extern_:?}+0x{:X})", offset * 4)
@@ -239,8 +264,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PopOutput { element } => {
                 format!("pop_output({element})")
             }
-            TfxBytecodeOp::Unk45 { slot } => {
-                format!("unk45 unk1={slot})")
+            TfxBytecodeOp::PopOutputMat4 { element } => {
+                format!("pop_output_mat4({element})")
             }
             TfxBytecodeOp::PushTemp { slot } => {
                 format!("push_temp({slot})")

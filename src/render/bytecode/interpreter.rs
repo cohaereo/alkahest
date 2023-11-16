@@ -82,11 +82,26 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     let c = v.cmpeq(Vec4::ZERO);
                     *v = Vec4::new(
-                        c.test(0) as u32 as f32,
-                        c.test(1) as u32 as f32,
-                        c.test(2) as u32 as f32,
-                        c.test(3) as u32 as f32,
+                        c.test(0).into(),
+                        c.test(1).into(),
+                        c.test(2).into(),
+                        c.test(3).into(),
                     );
+                }
+                TfxBytecodeOp::LessThan => {
+                    let [t1, t0] = stack_pop!(2);
+                    let c = t0.cmplt(t1);
+                    let v = Vec4::new(
+                        c.test(0).into(),
+                        c.test(1).into(),
+                        c.test(2).into(),
+                        c.test(3).into(),
+                    );
+                    stack_push!(v);
+                }
+                TfxBytecodeOp::Dot => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(Vec4::splat(t0.dot(t1)));
                 }
                 TfxBytecodeOp::MultiplyAdd => {
                     let [t2, t1, t0] = stack_pop!(3);
@@ -116,17 +131,6 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     *v = v.ceil();
                 }
-                TfxBytecodeOp::Unk0b => {
-                    let [t1, t0] = stack_pop!(2);
-                    let v = unsafe {
-                        use std::arch::x86_64::*;
-                        let v26 = _mm_mul_ps(t1.into(), t0.into());
-                        // TODO(cohae): Figure out swizzles after i regain my sanity
-                        let v27 = _mm_add_ps(_mm_shuffle_ps(v26, v26, 0b01001110), v26);
-                        _mm_add_ps(_mm_shuffle_ps(v27, v27, 0b10010011), v27)
-                    };
-                    stack_push!(Vec4::from(v));
-                }
                 // TODO(cohae): Is the parameter order for merges correct?
                 TfxBytecodeOp::Merge1_3 => {
                     let [t1, t0] = stack_pop!(2);
@@ -135,6 +139,11 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Merge2_2 => {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(Vec4::new(t1.x, t1.y, t0.x, t0.y));
+                }
+                TfxBytecodeOp::Unk0e => {
+                    // TODO: SIMD implementation, this implementation is 100% incorrect
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!((t0 + t1) / 2.0);
                 }
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t0] = stack_pop!(2);
@@ -175,12 +184,12 @@ impl TfxBytecodeInterpreter {
                     let v = self.get_extern_vec4(renderer, *extern_, *offset as usize)?;
                     stack_push!(v);
                 }
-                TfxBytecodeOp::PushExternInputMat4 { .. } => {
-                    let mat = Mat4::IDENTITY;
-                    stack_push!(mat.x_axis);
-                    stack_push!(mat.y_axis);
-                    stack_push!(mat.z_axis);
-                    stack_push!(mat.w_axis);
+                TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
+                    let v = self.get_extern_mat4(renderer, *extern_, *offset as usize)?;
+                    stack_push!(v.x_axis);
+                    stack_push!(v.y_axis);
+                    stack_push!(v.z_axis);
+                    stack_push!(v.w_axis);
                 }
                 TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
                     let handle =
@@ -225,6 +234,17 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Unk2b => {
                     let v = stack_top!();
                     *v = tfx_converted::bytecode_op_rand_smooth(*v);
+                }
+                TfxBytecodeOp::TransformVec4 => {
+                    let [x_axis, y_axis, z_axis, w_axis, value] = stack_pop!(5);
+                    let mat = Mat4 {
+                        x_axis,
+                        y_axis,
+                        z_axis,
+                        w_axis,
+                    };
+
+                    stack_push!(mat.mul_vec4(value));
                 }
 
                 TfxBytecodeOp::Unk4c { .. }
@@ -288,6 +308,21 @@ impl TfxBytecodeInterpreter {
                         .ptr
                         .offset(*element as isize)
                         .write(stack_pop!(1)[0])
+                },
+                TfxBytecodeOp::PopOutputMat4 { element } => unsafe {
+                    let [x_axis, y_axis, z_axis, w_axis] = stack_pop!(4);
+                    let mat = Mat4 {
+                        x_axis,
+                        y_axis,
+                        z_axis,
+                        w_axis,
+                    };
+
+                    buffer_map
+                        .ptr
+                        .offset(*element as isize)
+                        .cast::<Mat4>()
+                        .write(mat)
                 },
                 TfxBytecodeOp::PushTemp { slot } => {
                     let slotu = *slot as usize;
@@ -377,6 +412,22 @@ impl TfxBytecodeInterpreter {
         })
     }
 
+    pub fn get_extern_mat4(
+        &self,
+        _renderer: &Renderer,
+        extern_: TfxExtern,
+        offset: usize,
+    ) -> anyhow::Result<Mat4> {
+        Ok(match extern_ {
+            u => {
+                anyhow::bail!(
+                    "get_extern_mat4: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                    offset * 16
+                )
+            }
+        })
+    }
+
     pub fn get_extern_u64(
         &self,
         _renderer: &Renderer,
@@ -387,7 +438,10 @@ impl TfxBytecodeInterpreter {
         unsafe {
             Ok(match extern_ {
                 TfxExtern::Deferred => match offset {
-                    7 => transmute(_renderer.gbuffer.staging_clone.view.clone()),
+                    7 => transmute(_renderer.gbuffer.depth.texture_view.clone()),
+                    10 => transmute(_renderer.gbuffer.rt1.view.clone()),
+                    11 => transmute(_renderer.gbuffer.rt2.view.clone()),
+
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
@@ -451,7 +505,7 @@ impl TfxBytecodeInterpreter {
 
         debug!("- Bytecode:");
         for (i, op) in self.opcodes.iter().enumerate() {
-            debug!("\t{i}: {}", op.disassemble());
+            debug!("\t{i}: {}", op.disassemble(Some(constants)));
         }
     }
 
