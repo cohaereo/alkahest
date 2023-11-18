@@ -74,6 +74,11 @@ impl Overlay for RenderSettingsOverlay {
                 );
             }
 
+            ui.horizontal(|ui| {
+                ui.label("Light mul");
+                ui.add(egui::DragValue::new(&mut render_settings.light_mul).speed(0.1));
+            });
+
             let mut c = render_settings.clear_color.to_array();
             ui.horizontal(|ui| {
                 ui.color_edit_button_rgb(unsafe { transmute(&mut c) });
@@ -451,6 +456,7 @@ pub struct RenderSettings {
     pub light_color: Vec4,
     pub use_specular_map: bool,
     pub fxaa: bool,
+    pub light_mul: f32,
 }
 
 impl Default for RenderSettings {
@@ -466,6 +472,7 @@ impl Default for RenderSettings {
             light_color: Vec4::ONE,
             use_specular_map: true,
             fxaa: true,
+            light_mul: 1.0,
         }
     }
 }

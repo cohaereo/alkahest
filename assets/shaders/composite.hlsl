@@ -316,7 +316,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         float3 H = normalize(V + L);
         // float distance    = length(lights[i].xyz - worldPos);
         float attenuation = 1.0 / (distance * distance);
-        float3 radiance     = (light_col * 20) * attenuation;
+        float3 radiance     = light_col * attenuation;
 
         if(i == 1) {
             radiance = globalLightColor * 5.0;

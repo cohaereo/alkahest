@@ -92,6 +92,7 @@ pub struct Renderer {
     // TODO(cohae): find a better way to get the light transform into the bytecode interpreter
     pub light_transform: RwLock<Transform>,
     pub light_mat: RwLock<Mat4>,
+    pub light_mul: RwLock<f32>,
     // TODO(cohae): AAAAAAAAAAAA
     pub camera_viewproj: RwLock<Mat4>,
     pub camera_svp_inv: RwLock<Mat4>,
@@ -291,6 +292,7 @@ impl Renderer {
             }),
             camera_viewproj: RwLock::new(Mat4::IDENTITY),
             camera_svp_inv: RwLock::new(Mat4::IDENTITY),
+            light_mul: RwLock::new(1.0),
         })
     }
 
@@ -952,6 +954,7 @@ impl Renderer {
             {
                 let camera = resources.get::<FpsCamera>().unwrap();
                 let render_settings = resources.get::<RenderSettings>().unwrap();
+                *self.light_mul.write() = render_settings.light_mul;
 
                 let view = camera.calculate_matrix();
                 let proj_view = camera.projection_matrix * view;

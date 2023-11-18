@@ -374,7 +374,7 @@ impl TfxBytecodeInterpreter {
                 4 => Ok(renderer.start_time.elapsed().as_secs_f32()),
 
                 // Light mul
-                7 => Ok(1.0),
+                7 => Ok(*renderer.light_mul.read()),
 
                 _ => {
                     anyhow::bail!(
