@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::map::{SLight, SShadowingLight};
+use crate::map::SLight;
 
 use super::drawcall::ShaderStages;
 use super::renderer::Renderer;
@@ -128,23 +128,23 @@ impl LightRenderer {
         self.draw(renderer)
     }
 
-    pub fn draw_shadowing(&self, renderer: &Renderer, light: &SShadowingLight) {
-        let render_data = renderer.render_data.data();
+    // pub fn draw_shadowing(&self, renderer: &Renderer, light: &SShadowingLight) {
+    //     let render_data = renderer.render_data.data();
 
-        if let Some(mat) = render_data.materials.get(&light.technique_shading) {
-            mat.evaluate_bytecode(renderer, &render_data);
-            if mat
-                .bind(&self.dcs, &render_data, ShaderStages::SHADING)
-                .is_err()
-            {
-                return;
-            }
-        } else {
-            return;
-        }
+    //     if let Some(mat) = render_data.materials.get(&light.technique_shading) {
+    //         mat.evaluate_bytecode(renderer, &render_data);
+    //         if mat
+    //             .bind(&self.dcs, &render_data, ShaderStages::SHADING)
+    //             .is_err()
+    //         {
+    //             return;
+    //         }
+    //     } else {
+    //         return;
+    //     }
 
-        self.draw(renderer)
-    }
+    //     self.draw(renderer)
+    // }
 
     fn draw(&self, renderer: &Renderer) {
         unsafe {

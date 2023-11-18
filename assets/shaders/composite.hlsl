@@ -41,8 +41,9 @@ cbuffer CompositeOptions : register(b0) {
     float4 cameraDir;
     float time;
     uint tex_i;
-    uint lightCount;
+    uint drawLights;
     float4 globalLightDir;
+    float4 globalLightColor;
     float specularScale;
 };
 
@@ -295,7 +296,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     float3 directLighting = float3(0.0, 0.0, 0.0);
     // const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
 
-    [loop] for (uint i = 0; i < lightCount; ++i)
+    [loop] for (uint i = 0; i < 2; ++i)
     {
         float shadow = 1;
         float3 light_pos = lights[i*2+0].xyz;
@@ -318,7 +319,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         float3 radiance     = (light_col * 20) * attenuation;
 
         if(i == 1) {
-            radiance = float3(1.0, 1.0, 1.0) * 5.0;
+            radiance = globalLightColor * 5.0;
                 
             shadow = CalculateShadow(worldPos, normal, globalLightDir.xyz);
                 
@@ -455,7 +456,7 @@ float4 PShader(VSOutput input) : SV_Target {
         }
         default: { // Combined
             float4 emission = float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 0.0);
-            if(lightCount == 0) {
+            if(drawLights == 0) {
                 float3 normal = DecodeNormal(rt1.xyz);
 
                 float2 muv = float2(
@@ -467,6 +468,10 @@ float4 PShader(VSOutput input) : SV_Target {
                 return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
             } else {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.position.xy);
+
+                c += albedo * LightRenderTarget0.Sample(SampleType, input.uv);
+                c += albedo * LightRenderTarget1.Sample(SampleType, input.uv);
+
                 return c;
             }
         }

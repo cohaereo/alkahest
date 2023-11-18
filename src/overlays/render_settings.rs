@@ -113,6 +113,14 @@ impl Overlay for RenderSettingsOverlay {
                 self.light_dir_degrees.z %= 360.0;
             }
 
+            let mut c = render_settings.light_color.to_array();
+            ui.horizontal(|ui| {
+                ui.color_edit_button_rgb(unsafe { transmute(&mut c) });
+                ui.label("Color");
+            });
+            c[3] = 1.0;
+            render_settings.light_color = Vec4::from_array(c);
+
             ui.add(
                 egui::Slider::new(&mut self.light_dir_degrees.x, 0.0..=2.0)
                     .text("Angle")
@@ -425,8 +433,9 @@ pub struct CompositorOptions {
     pub camera_dir: Vec4,
     pub time: f32,
     pub mode: u32,
-    pub light_count: u32,
-    pub light_dir: Vec4,
+    pub draw_lights: u32,
+    pub global_light_dir: Vec4,
+    pub global_light_color: Vec4,
     pub specular_scale: f32,
     pub fxaa_enabled: u32,
 }
@@ -439,6 +448,7 @@ pub struct RenderSettings {
     pub evaluate_bytecode: bool,
     pub clear_color: Vec4,
     pub light_dir: Vec3,
+    pub light_color: Vec4,
     pub use_specular_map: bool,
     pub fxaa: bool,
 }
@@ -453,6 +463,7 @@ impl Default for RenderSettings {
             evaluate_bytecode: false,
             clear_color: Vec4::ZERO,
             light_dir: Vec3::NEG_Z,
+            light_color: Vec4::ONE,
             use_specular_map: true,
             fxaa: true,
         }

@@ -312,7 +312,7 @@ impl Renderer {
     }
 
     /// Submits recorded drawcalls
-    pub fn submit_frame(&self, resources: &Resources, lights: Option<(ID3D11Buffer, usize)>) {
+    pub fn submit_frame(&self, resources: &Resources) {
         if *self.state.read() != RendererState::Recording {
             panic!("Called submit(), but the renderer is not recording! Did you call begin()?")
         }
@@ -424,7 +424,6 @@ impl Renderer {
             resources,
             render_settings.draw_lights,
             render_settings.compositor_mode,
-            lights,
         );
 
         unsafe {
@@ -851,7 +850,6 @@ impl Renderer {
         resources: &Resources,
         draw_lights: bool,
         compositor_mode: usize,
-        lights: Option<(ID3D11Buffer, usize)>,
     ) {
         let maps = resources.get::<MapDataList>().unwrap();
 
@@ -866,30 +864,32 @@ impl Renderer {
             );
         }
 
-        if let Some((_, _, map)) = maps.current_map() {
-            for (_, (transform, light, bounds)) in map
-                .scene
-                .query::<(&Transform, &SLight, Option<&AABB>)>()
-                .iter()
-            {
-                if let Some(bb) = bounds {
-                    *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 8.0));
-                } else {
-                    *self.light_mat.write() = light.unk60.into();
+        if draw_lights {
+            if let Some((_, _, map)) = maps.current_map() {
+                for (_, (transform, light, bounds)) in map
+                    .scene
+                    .query::<(&Transform, &SLight, Option<&AABB>)>()
+                    .iter()
+                {
+                    if let Some(bb) = bounds {
+                        *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 8.0));
+                    } else {
+                        *self.light_mat.write() = light.unk60.into();
+                    }
+
+                    *self.light_transform.write() = *transform;
+                    self.light_renderer.draw_normal(self, light);
                 }
 
-                *self.light_transform.write() = *transform;
-                self.light_renderer.draw_normal(self, light);
+                // for (_, (transform, light)) in
+                //     map.scene.query::<(&Transform, &SShadowingLight)>().iter()
+                // {
+                //     // *self.light_mat.write() = light.unk64.into();
+                //     *self.light_mat.write() = Mat4::from_scale(Vec3::splat(-(50.0 * 2.0)));
+                //     *self.light_transform.write() = *transform;
+                //     self.light_renderer.draw_shadowing(self, light);
+                // }
             }
-
-            // for (_, (transform, light)) in
-            //     map.scene.query::<(&Transform, &SShadowingLight)>().iter()
-            // {
-            //     // *self.light_mat.write() = light.unk64.into();
-            //     *self.light_mat.write() = Mat4::from_scale(Vec3::splat(-(50.0 * 2.0)));
-            //     *self.light_transform.write() = *transform;
-            //     self.light_renderer.draw_shadowing(self, light);
-            // }
         }
 
         unsafe {
@@ -966,12 +966,9 @@ impl Renderer {
                     camera_dir: camera.front.extend(1.0),
                     time: self.start_time.elapsed().as_secs_f32(),
                     mode: compositor_mode as u32,
-                    light_count: if draw_lights {
-                        lights.as_ref().map(|v| v.1).unwrap_or_default() as u32
-                    } else {
-                        0
-                    },
-                    light_dir: render_settings.light_dir.extend(1.0),
+                    draw_lights: draw_lights.into(),
+                    global_light_dir: render_settings.light_dir.extend(1.0),
+                    global_light_color: render_settings.light_color,
                     specular_scale: if render_settings.use_specular_map {
                         1.0
                     } else {
@@ -984,12 +981,6 @@ impl Renderer {
             }
             self.scope_alk_cascade_transforms
                 .bind(3, ShaderStages::PIXEL);
-
-            if let Some(lights) = &lights {
-                self.dcs
-                    .context()
-                    .PSSetConstantBuffers(1, Some(&[Some(lights.0.clone())]));
-            }
 
             self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,

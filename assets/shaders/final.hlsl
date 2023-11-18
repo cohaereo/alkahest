@@ -8,8 +8,9 @@ cbuffer CompositeOptions : register(b0) {
     float4 cameraDir;
     float time;
     uint tex_i;
-    uint lightCount;
+    uint drawLights;
     float4 globalLightDir;
+    float4 globalLightColor;
     float specularScale;
     bool fxaaEnabled;
 };

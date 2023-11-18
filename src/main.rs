@@ -539,10 +539,7 @@ pub async fn main() -> anyhow::Result<()> {
 
                     let maps = resources.get::<MapDataList>().unwrap();
 
-                    let mut lights = None;
                     if let Some((_, _, map)) = maps.current_map() {
-                        lights = Some((map.lights_cbuffer.buffer().clone(), map.lights.len()));
-
                         {
                             let gb = gui_rendersettings.borrow();
 
@@ -657,7 +654,7 @@ pub async fn main() -> anyhow::Result<()> {
                     }
                     drop(maps);
 
-                    renderer.read().submit_frame(&resources, lights);
+                    renderer.read().submit_frame(&resources);
 
                     gui.draw_frame(window.clone(), &mut resources, |ctx| {
                         if let Some(task) = map_load_task.as_ref() {

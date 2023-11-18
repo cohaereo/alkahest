@@ -1,6 +1,5 @@
 use crate::ecs::Scene;
 
-use crate::render::ConstantBuffer;
 use crate::statics::Unk8080966d;
 use crate::structure::{ExtendedHash, ExtendedTag, RelPointer, ResourcePointer, TablePointer, Tag};
 use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
@@ -141,8 +140,6 @@ pub struct MapData {
     pub placement_groups: Vec<Tag<Unk8080966d>>,
     // pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
     pub terrains: Vec<TagHash>,
-    pub lights: Vec<SimpleLight>,
-    pub lights_cbuffer: ConstantBuffer<SimpleLight>,
 
     pub scene: Scene,
 }

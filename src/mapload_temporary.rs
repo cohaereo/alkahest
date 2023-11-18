@@ -299,9 +299,6 @@ pub async fn load_maps(
             });
         }
 
-        let cb_composite_lights =
-            ConstantBuffer::<SimpleLight>::create_array_init(dcs.clone(), &point_lights)?;
-
         maps.push((
             hash,
             hash64,
@@ -310,8 +307,6 @@ pub async fn load_maps(
                 name: map_name,
                 placement_groups,
                 terrains: terrains.iter().map(|v| v.0).collect(),
-                lights: point_lights,
-                lights_cbuffer: cb_composite_lights,
                 scene,
             },
         ));
