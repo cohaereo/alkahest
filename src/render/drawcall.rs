@@ -157,6 +157,8 @@ bitflags! {
         const PIXEL = (1 << 1);
         const COMPUTE = (1 << 2);
         const GEOMETRY = (1 << 3);
+
+        const SHADING = Self::VERTEX.bits() | Self::PIXEL.bits();
     }
 }
 

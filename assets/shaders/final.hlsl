@@ -1,4 +1,5 @@
 cbuffer CompositeOptions : register(b0) {
+    row_major float4x4 viewportProjViewMatrixInv;
     row_major float4x4 projViewMatrixInv;
     row_major float4x4 projViewMatrix;
     float4x4 projMatrix;
@@ -63,6 +64,10 @@ float3 GammaCorrect(float3 c) {
 }
 
 float4 SampleAlbedoFxaa(VSOutput input);
+
+float4 posterize(float4 v, int steps) {
+    return round(v * steps) / (float)steps;
+}
 
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {

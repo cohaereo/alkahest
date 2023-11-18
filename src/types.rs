@@ -103,6 +103,17 @@ pub struct Matrix4 {
     pub row_w: Vector4,
 }
 
+impl From<Matrix4> for Mat4 {
+    fn from(value: Matrix4) -> Self {
+        Mat4 {
+            x_axis: value.row_x.into(),
+            y_axis: value.row_y.into(),
+            z_axis: value.row_z.into(),
+            w_axis: value.row_w.into(),
+        }
+    }
+}
+
 impl Debug for Vector2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("Vector2(x={:.3}, y={:.3})", self.x, self.y))

@@ -1,5 +1,5 @@
-pub mod error;
 pub mod dds;
+pub mod error;
 pub mod export;
 pub mod image;
 pub mod lock;

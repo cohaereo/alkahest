@@ -14,6 +14,10 @@ pub struct GBuffer {
     pub rt1_clone: RenderTarget,
     pub rt2: RenderTarget,
     pub rt3: RenderTarget,
+
+    pub light_rt0: RenderTarget,
+    pub light_rt1: RenderTarget,
+
     pub staging: RenderTarget,
     pub staging_clone: RenderTarget,
     pub depth: DepthState,
@@ -33,6 +37,12 @@ impl GBuffer {
                 .context("RT2")?,
             rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
                 .context("RT3")?,
+
+            light_rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+                .context("Light_RT0")?,
+            light_rt1: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
+                .context("Light_RT1")?,
+
             staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Staging")?,
             staging_clone: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
@@ -51,7 +61,11 @@ impl GBuffer {
         self.rt1.resize(new_size).context("RT1")?;
         self.rt1_clone.resize(new_size).context("RT1_Clone")?;
         self.rt2.resize(new_size).context("RT2")?;
-        self.rt2.resize(new_size).context("RT3")?;
+        self.rt3.resize(new_size).context("RT3")?;
+
+        self.light_rt0.resize(new_size).context("Light_RT0")?;
+        self.light_rt1.resize(new_size).context("Light_RT1")?;
+
         self.staging.resize(new_size).context("Staging")?;
         self.staging_clone
             .resize(new_size)

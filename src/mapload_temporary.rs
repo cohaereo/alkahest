@@ -19,8 +19,8 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        SimpleLight, Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121,
-        Unk80809178, Unk8080917b, Unk80809802,
+        SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2,
+        Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b, Unk80809802,
     },
     render::renderer::RendererShared,
     types::{FnvHash, ResourceHash},
@@ -1108,13 +1108,25 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
-                    for (i, (transform, _unk, bounds)) in multizip((
+                    for (i, (transform, light, bounds)) in multizip((
                         &header.unk40,
                         &header.unk30,
                         &header.occlusion_bounds.bounds,
                     ))
                     .enumerate()
                     {
+                        if light.technique_shading.is_some() {
+                            material_map.insert(
+                                light.technique_shading,
+                                Technique::load(
+                                    &renderer,
+                                    package_manager().read_tag_struct(light.technique_shading)?,
+                                    light.technique_shading,
+                                    true,
+                                ),
+                            );
+                        }
+
                         ents.push(scene.spawn((
                             Transform {
                                 translation: Vec3::new(
@@ -1139,6 +1151,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             PointLight {
                                 attenuation: Vec4::ONE,
                             },
+                            light.clone(),
+                            bounds.bb,
                         )));
                     }
                 }
@@ -1282,6 +1296,19 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
                     let tag: TagHash = table_data.read_le().unwrap();
+                    let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
+
+                    if light.technique_shading.is_some() {
+                        material_map.insert(
+                            light.technique_shading,
+                            Technique::load(
+                                &renderer,
+                                package_manager().read_tag_struct(light.technique_shading)?,
+                                light.technique_shading,
+                                true,
+                            ),
+                        );
+                    }
 
                     ents.push(scene.spawn((
                         transform,
@@ -1290,6 +1317,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
+                        light,
                     )));
                 }
                 0x80809178 => {

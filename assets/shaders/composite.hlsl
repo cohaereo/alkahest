@@ -32,6 +32,7 @@ static const float2 poissonDisk[ 16 ] = {
 };
 
 cbuffer CompositeOptions : register(b0) {
+    row_major float4x4 viewportProjViewMatrixInv;
     row_major float4x4 projViewMatrixInv;
     row_major float4x4 projViewMatrix;
     float4x4 projMatrix;
@@ -56,7 +57,7 @@ cbuffer Cascades : register(b3) {
 struct VSOutput {
     float4 position : SV_POSITION;
     float3 normal : NORMAL;
-    float2 uv : TEXCOORD;
+    float2 uv : TEXCOORD0;
 };
 
 static float2 screenPos[4] = {
@@ -101,6 +102,10 @@ Texture2D Matcap : register(t8);
 TextureCube SpecularMap : register(t9);
 Texture2DArray CascadeShadowMaps : register(t10);
 // SamplerState SampleType : register(s0);
+
+Texture2D LightRenderTarget0 : register(t12);
+Texture2D LightRenderTarget1 : register(t13);
+
 SamplerState SampleType
 {
     Filter = MIN_MAG_MIP_LINEAR;
@@ -155,11 +160,10 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-float3 WorldPosFromDepth(float depth, float2 uv) {
-    float4 clipSpacePos = float4(uv * 2.0 - 1.0, depth, 1.0);
-    clipSpacePos.y *= -1.0;
+float3 WorldPosFromDepth(float depth, float2 viewportPos) {
+    float4 clipSpacePos = float4(viewportPos, depth, 1.0);
 
-    float4 worldSpacePos = mul(clipSpacePos, projViewMatrixInv);
+    float4 worldSpacePos = mul(clipSpacePos, viewportProjViewMatrixInv);
     return worldSpacePos.xyz / worldSpacePos.w;
 }
 
@@ -264,17 +268,17 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
     }
 }
 
-float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 uv) {
+float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 viewportPos) {
     float3 albedo = rt0.xyz;
     float3 normal = DecodeNormal(rt1.xyz);
 
-    float smoothness = 4 * (length(normal) - 0.75);
+    float smoothness = length(normal) * 4 - 3;
     float roughness = 1.0 - saturate(smoothness);
     float metallic = rt2.x;
     float ao = rt2.y * 2.0;
     float emission = rt2.y * 2.0 - 1.0;
 
-    float3 worldPos = WorldPosFromDepth(depth, uv);
+    float3 worldPos = WorldPosFromDepth(depth, viewportPos);
 
 	float3 N = normalize(normal);
     float3 V = normalize(cameraPos.xyz - worldPos);
@@ -393,7 +397,7 @@ float4 PShader(VSOutput input) : SV_Target {
             return rt3;
         case 5: { // Smoothness
             float3 normal = DecodeNormal(rt1.xyz);
-            float smoothness = 4 * (length(normal) - 0.75);
+            float smoothness = length(normal) * 4 - 3;
             return float4(smoothness, smoothness, smoothness, 1.0);
         }
         case 6: { // Metalicness
@@ -430,9 +434,9 @@ float4 PShader(VSOutput input) : SV_Target {
         }
         case 15: { // Specular
             float3 normal = DecodeNormal(rt1.xyz);    
-            float smoothness = 4 * (length(normal) - 0.75);
+            float smoothness = length(normal) * 4 - 3;
             float roughness = 1.0 - saturate(smoothness);
-            float3 worldPos = WorldPosFromDepth(depth, input.uv);
+            float3 worldPos = WorldPosFromDepth(depth, input.position.xy);
 
             float3 N = normalize(normal);
             float3 V = normalize(cameraPos.xyz - worldPos);
@@ -442,6 +446,12 @@ float4 PShader(VSOutput input) : SV_Target {
             float3 Lr = 2.0 * cosLo * N - V;
             const uint specularTextureLevels = 8;
             return float4(smoothness * SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb, 1.0);
+        }
+        case 16: { // LightRT0
+            return LightRenderTarget0.Sample(SampleType, input.uv);
+        }
+        case 17: { // LightRT1
+            return LightRenderTarget1.Sample(SampleType, input.uv);
         }
         default: { // Combined
             float4 emission = float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 0.0);
@@ -456,7 +466,7 @@ float4 PShader(VSOutput input) : SV_Target {
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
                 return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
             } else {
-                float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.uv);
+                float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.position.xy);
                 return c;
             }
         }

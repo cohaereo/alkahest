@@ -118,13 +118,7 @@ impl Technique {
             let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
-        } else if mat.shader_vertex.unk50.len() > 1
-            && mat
-                .shader_vertex
-                .unk50
-                .iter()
-                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-        {
+        } else if mat.shader_vertex.unk50.len() > 1 {
             trace!(
                 "Loading float4 cbuffer with {} elements",
                 mat.shader_vertex.unk50.len()
@@ -163,13 +157,7 @@ impl Technique {
             let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
-        } else if !mat.shader_pixel.unk50.is_empty()
-            && mat
-                .shader_pixel
-                .unk50
-                .iter()
-                .any(|v| v.x != 0.0 || v.y != 0.0 || v.z != 0.0 || v.w != 0.0)
-        {
+        } else if !mat.shader_pixel.unk50.is_empty() {
             trace!(
                 "Loading float4 cbuffer with {} elements",
                 mat.shader_pixel.unk50.len()

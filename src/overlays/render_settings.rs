@@ -361,6 +361,9 @@ pub enum CompositorMode {
     Matcap,
     Depth,
     Specular,
+
+    LightRT0,
+    LightRT1,
 }
 
 pub const COMPOSITOR_MODES: &[CompositorMode] = &[
@@ -380,6 +383,8 @@ pub const COMPOSITOR_MODES: &[CompositorMode] = &[
     CompositorMode::Matcap,         // 13
     CompositorMode::Depth,          // 14
     CompositorMode::Specular,       // 15
+    CompositorMode::LightRT0,       // 16
+    CompositorMode::LightRT1,       // 17
 ];
 
 impl Display for CompositorMode {
@@ -401,6 +406,8 @@ impl Display for CompositorMode {
             CompositorMode::Matcap => "Matcap",
             CompositorMode::Depth => "Depth",
             CompositorMode::Specular => "Specular",
+            CompositorMode::LightRT0 => "LightRT0",
+            CompositorMode::LightRT1 => "LightRT1",
         };
 
         f.write_str(name)
@@ -409,6 +416,7 @@ impl Display for CompositorMode {
 
 #[repr(C)]
 pub struct CompositorOptions {
+    pub viewport_proj_view_matrix_inv: Mat4,
     pub proj_view_matrix_inv: Mat4,
     pub proj_view_matrix: Mat4,
     pub proj_matrix: Mat4,

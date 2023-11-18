@@ -1,6 +1,9 @@
 use std::{sync::Arc, time::Instant};
 
+use crate::ecs::transform::Transform;
+use crate::map::{MapDataList, SLight};
 use crate::overlays::camera_settings::CurrentCubemap;
+use crate::types::AABB;
 use crate::util::RwLock;
 use glam::{Mat4, Quat, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
@@ -18,6 +21,7 @@ use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::{GeometryType, Transparency};
 use super::gbuffer::ShadowDepthMap;
+use super::light::LightRenderer;
 use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
 use super::scopes::{ScopeUnk2, ScopeUnk8};
 use super::{
@@ -45,6 +49,7 @@ pub struct Renderer {
 
     scope_view_backup: RwLock<ScopeView>,
     scope_view: ConstantBuffer<ScopeView>,
+    scope_view_pixel: ConstantBuffer<ScopeView>,
 
     scope_view_csm: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
@@ -62,10 +67,10 @@ pub struct Renderer {
 
     blend_state_none: ID3D11BlendState,
     blend_state_blend: ID3D11BlendState,
-    blend_state_additive: ID3D11BlendState,
+    pub blend_state_additive: ID3D11BlendState,
 
-    rasterizer_state: ID3D11RasterizerState,
-    rasterizer_state_nocull: ID3D11RasterizerState,
+    pub rasterizer_state: ID3D11RasterizerState,
+    pub rasterizer_state_nocull: ID3D11RasterizerState,
 
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
@@ -83,6 +88,14 @@ pub struct Renderer {
     shadow_rs: ID3D11RasterizerState,
 
     last_material: RwLock<u32>,
+
+    // TODO(cohae): find a better way to get the light transform into the bytecode interpreter
+    pub light_transform: RwLock<Transform>,
+    pub light_mat: RwLock<Mat4>,
+    // TODO(cohae): AAAAAAAAAAAA
+    pub camera_viewproj: RwLock<Mat4>,
+    pub camera_svp_inv: RwLock<Mat4>,
+    light_renderer: LightRenderer,
 }
 
 impl Renderer {
@@ -245,6 +258,7 @@ impl Renderer {
             scope_frame: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view_backup: RwLock::new(ScopeView::default()),
             scope_view: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_view_pixel: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view_csm: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
@@ -252,6 +266,7 @@ impl Renderer {
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_cascade_transforms: ConstantBuffer::create(dcs.clone(), None)?,
             render_data: RenderDataManager::new(dcs.clone()),
+            light_renderer: LightRenderer::new(dcs.clone())?,
             dcs,
             start_time: Instant::now(),
             last_frame: RwLock::new(Instant::now()),
@@ -268,6 +283,14 @@ impl Renderer {
             final_ps: pshader_final,
             null_ps: pshader_null,
             last_material: RwLock::new(u32::MAX),
+            light_mat: RwLock::new(Mat4::IDENTITY),
+            light_transform: RwLock::new(Transform {
+                translation: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            }),
+            camera_viewproj: RwLock::new(Mat4::IDENTITY),
+            camera_svp_inv: RwLock::new(Mat4::IDENTITY),
         })
     }
 
@@ -313,6 +336,7 @@ impl Renderer {
         }
 
         self.scope_view.bind(12, ShaderStages::all());
+        self.scope_view_pixel.bind(12, ShaderStages::PIXEL);
 
         unsafe {
             self.dcs.context().RSSetState(&self.shadow_rs);
@@ -829,6 +853,45 @@ impl Renderer {
         compositor_mode: usize,
         lights: Option<(ID3D11Buffer, usize)>,
     ) {
+        let maps = resources.get::<MapDataList>().unwrap();
+
+        unsafe {
+            self.dcs.context().ClearRenderTargetView(
+                &self.gbuffer.light_rt0.render_target,
+                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+            );
+            self.dcs.context().ClearRenderTargetView(
+                &self.gbuffer.light_rt1.render_target,
+                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+            );
+        }
+
+        if let Some((_, _, map)) = maps.current_map() {
+            for (_, (transform, light, bounds)) in map
+                .scene
+                .query::<(&Transform, &SLight, Option<&AABB>)>()
+                .iter()
+            {
+                if let Some(bb) = bounds {
+                    *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 8.0));
+                } else {
+                    *self.light_mat.write() = light.unk60.into();
+                }
+
+                *self.light_transform.write() = *transform;
+                self.light_renderer.draw_normal(self, light);
+            }
+
+            // for (_, (transform, light)) in
+            //     map.scene.query::<(&Transform, &SShadowingLight)>().iter()
+            // {
+            //     // *self.light_mat.write() = light.unk64.into();
+            //     *self.light_mat.write() = Mat4::from_scale(Vec3::splat(-(50.0 * 2.0)));
+            //     *self.light_transform.write() = *transform;
+            //     self.light_renderer.draw_shadowing(self, light);
+            // }
+        }
+
         unsafe {
             self.dcs.context().OMSetBlendState(
                 &self.blend_state_none,
@@ -848,6 +911,13 @@ impl Renderer {
                     Some(self.gbuffer.rt2.view.clone()),
                     Some(self.gbuffer.rt3.view.clone()),
                     Some(self.gbuffer.depth.texture_view.clone()),
+                ]),
+            );
+            self.dcs.context().PSSetShaderResources(
+                12,
+                Some(&[
+                    Some(self.gbuffer.light_rt0.view.clone()),
+                    Some(self.gbuffer.light_rt1.view.clone()),
                 ]),
             );
             self.dcs.context().PSSetShaderResources(
@@ -887,6 +957,7 @@ impl Renderer {
                 let proj_view = camera.projection_matrix * view;
                 let view = Mat4::from_translation(camera.position);
                 let compositor_options = CompositorOptions {
+                    viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
                     proj_view_matrix_inv: proj_view.inverse(),
                     proj_view_matrix: proj_view,
                     proj_matrix: camera.projection_matrix,
@@ -1087,7 +1158,7 @@ impl Renderer {
             self.scope_view_csm
                 .write(&ScopeView {
                     world_to_projective: mat,
-                    camera_position: Vec4::W,
+                    camera_to_world: Mat4::default(),
                     view_miscellaneous: mat.w_axis,
                     ..*scope_view_base
                 })
@@ -1137,15 +1208,34 @@ impl Renderer {
 
         let view: Mat4 = camera.calculate_matrix();
         let world_to_projective = camera.projection_matrix * view;
+        let camera_to_world = Mat4::from_translation(camera.position);
+        // let camera_to_world = Mat4::from_cols(
+        //     view.x_axis,
+        //     view.y_axis,
+        //     view.z_axis,
+        //     camera.position.extend(view.w_axis.w),
+        // );
+
+        let scale_x = 2.0 / self.window_size.0 as f32;
+        let scale_y = -2.0 / self.window_size.1 as f32;
+        let viewport_inv = Mat4::from_cols_array_2d(&[
+            [scale_x, 0.0, 0.0, 0.0],
+            [0.0, scale_y, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0, 1.0],
+        ]);
+
+        *self.camera_viewproj.write() = camera.projection_matrix * view;
+        *self.camera_svp_inv.write() = (camera.projection_matrix * view).inverse() * viewport_inv;
 
         let scope_view_data = ScopeView {
             world_to_projective,
+            camera_to_world,
 
-            camera_right: camera.right.extend(1.0),
-            camera_up: camera.up.extend(1.0),
-            camera_backward: -camera.front.extend(1.0),
-            camera_position: camera.position.extend(1.0),
-
+            // camera_right: camera.right.extend(1.0),
+            // camera_up: camera.up.extend(1.0),
+            // camera_backward: -camera.front.extend(1.0),
+            // camera_position: camera.position.extend(1.0),
             target_pixel_to_camera: Mat4::from_scale_rotation_translation(
                 Vec3::new(2.0, 1.0, 1.0),
                 Quat::IDENTITY,
@@ -1166,7 +1256,14 @@ impl Renderer {
             // misc_unk3: 0.0,
             ..overrides.view
         };
+
+        let scope_view_pixel_data = ScopeView {
+            view_miscellaneous: camera.position.extend(1.0),
+            ..scope_view_data
+        };
+
         self.scope_view.write(&scope_view_data)?;
+        self.scope_view_pixel.write(&scope_view_pixel_data)?;
         *self.scope_view_backup.write() = scope_view_data;
 
         self.scope_unk2.write(&overrides.unk2)?;

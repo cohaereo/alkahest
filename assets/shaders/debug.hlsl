@@ -1,4 +1,5 @@
 cbuffer CompositeOptions : register(b0) {
+    row_major float4x4 screenProjViewMatrixInv;
     row_major float4x4 projViewMatrixInv;
     row_major float4x4 projViewMatrix;
     float4x4 projMatrix;

@@ -9,12 +9,11 @@ pub type Mat3x4 = [Vec4; 3];
 pub struct ScopeView {
     pub world_to_projective: Mat4, // c0
 
-    // pub camera_to_world: mat4
-    pub camera_right: Vec4,    // c4
-    pub camera_up: Vec4,       // c5
-    pub camera_backward: Vec4, // c6
-    pub camera_position: Vec4, // c7
-
+    pub camera_to_world: Mat4, // c4
+    // pub camera_right: Vec4,    // c4
+    // pub camera_up: Vec4,       // c5
+    // pub camera_backward: Vec4, // c6
+    // pub camera_position: Vec4, // c7
     pub target_pixel_to_camera: Mat4, // c8
 
     // pub target: Vec4,
@@ -29,10 +28,11 @@ impl Default for ScopeView {
     fn default() -> Self {
         ScopeView {
             world_to_projective: Default::default(),
-            camera_right: Default::default(),
-            camera_up: Default::default(),
-            camera_backward: Default::default(),
-            camera_position: Default::default(),
+            camera_to_world: Default::default(),
+            // camera_right: Default::default(),
+            // camera_up: Default::default(),
+            // camera_backward: Default::default(),
+            // camera_position: Default::default(),
             target_pixel_to_camera: Default::default(),
             target_resolution: Default::default(),
             inverse_target_resolution: Default::default(),
@@ -60,7 +60,9 @@ pub struct ScopeFrame {
     pub random_seed_scales: Vec4, // c2
     pub overrides: Vec4,          // c3
 
+    // Light related
     pub unk4: Vec4, // c4
+
     pub unk5: Vec4, // c5
     pub unk6: Vec4, // c6
     pub unk7: Vec4, // c7
