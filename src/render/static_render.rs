@@ -14,6 +14,7 @@ use super::drawcall::{
     ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
 };
 use super::renderer::Renderer;
+use super::tfx::TfxRenderStage;
 
 pub struct StaticModelBuffer {
     vertex_buffer1: TagHash,
@@ -190,13 +191,21 @@ impl StaticModel {
         renderer: &Renderer,
         instance_buffer: ID3D11Buffer,
         instance_count: usize,
+        draw_opaque: bool,
         draw_transparent: bool,
+        draw_decals: bool,
     ) -> anyhow::Result<()> {
-        if draw_transparent {
-            for u in &self.overlay_models {
-                u.draw(renderer, instance_buffer.clone(), instance_count);
-            }
-        } else {
+        for u in &self.overlay_models {
+            u.draw(
+                renderer,
+                instance_buffer.clone(),
+                instance_count,
+                draw_transparent,
+                draw_decals,
+            );
+        }
+
+        if draw_opaque {
             for (iu, u) in self
                 .subheader
                 .mesh_groups
@@ -280,12 +289,27 @@ impl StaticOverlayModel {
         })
     }
 
-    pub fn draw(&self, renderer: &Renderer, instance_buffer: ID3D11Buffer, instance_count: usize) {
+    pub fn draw(
+        &self,
+        renderer: &Renderer,
+        instance_buffer: ID3D11Buffer,
+        instance_count: usize,
+        draw_transparent: bool,
+        draw_decals: bool,
+    ) {
         if !self.model.lod.is_highest_detail() {
             return;
         }
 
         let shading_mode = self.model.render_stage.shading_mode();
+
+        if !draw_decals && self.model.render_stage == TfxRenderStage::Decals {
+            return;
+        }
+
+        if !draw_transparent && shading_mode == ShadingMode::Forward {
+            return;
+        }
 
         renderer.push_drawcall(
             SortValue3d::empty()

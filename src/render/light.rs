@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::map::SLight;
+use crate::map::{SLight, SShadowingLight};
 
 use super::drawcall::ShaderStages;
 use super::renderer::Renderer;
@@ -10,6 +10,11 @@ use genmesh::generators::IndexedPolygon;
 use genmesh::generators::SharedVertex;
 use genmesh::Triangulate;
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+use windows::Win32::Graphics::Direct3D11::{
+    ID3D11DepthStencilState, D3D11_COMPARISON_ALWAYS, D3D11_DEPTH_STENCILOP_DESC,
+    D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_STENCIL_OP_DECR,
+    D3D11_STENCIL_OP_INCR, D3D11_STENCIL_OP_KEEP,
+};
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_R16_UINT;
 use windows::Win32::Graphics::{
     Direct3D11::{
@@ -22,6 +27,8 @@ use windows::Win32::Graphics::{
 
 pub struct LightRenderer {
     dcs: Arc<DeviceContextSwapchain>,
+
+    depth_state: ID3D11DepthStencilState,
 
     input_layout: ID3D11InputLayout,
     vb_cube: ID3D11Buffer,
@@ -98,11 +105,37 @@ impl LightRenderer {
                         ..Default::default()
                     }),
                 )
-                .context("Failed to create combined vertex buffer")?
+                .context("Failed to create vertex buffer")?
+        };
+
+        let depth_state = unsafe {
+            dcs.device
+                .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
+                    DepthEnable: false.into(),
+                    DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ZERO,
+                    DepthFunc: D3D11_COMPARISON_ALWAYS,
+                    StencilEnable: false.into(),
+                    StencilReadMask: 0xff,
+                    StencilWriteMask: 0xff,
+                    FrontFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: D3D11_STENCIL_OP_KEEP,
+                        StencilDepthFailOp: D3D11_STENCIL_OP_INCR,
+                        StencilPassOp: D3D11_STENCIL_OP_KEEP,
+                        StencilFunc: D3D11_COMPARISON_ALWAYS,
+                    },
+                    BackFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: D3D11_STENCIL_OP_KEEP,
+                        StencilDepthFailOp: D3D11_STENCIL_OP_DECR,
+                        StencilPassOp: D3D11_STENCIL_OP_KEEP,
+                        StencilFunc: D3D11_COMPARISON_ALWAYS,
+                    },
+                })
+                .context("Failed to create light renderer depth state")?
         };
 
         Ok(Self {
             dcs,
+            depth_state,
             input_layout,
             vb_cube,
             ib_cube,
@@ -128,36 +161,29 @@ impl LightRenderer {
         self.draw(renderer)
     }
 
-    // pub fn draw_shadowing(&self, renderer: &Renderer, light: &SShadowingLight) {
-    //     let render_data = renderer.render_data.data();
+    pub fn draw_shadowing(&self, renderer: &Renderer, light: &SShadowingLight) {
+        let render_data = renderer.render_data.data();
 
-    //     if let Some(mat) = render_data.materials.get(&light.technique_shading) {
-    //         mat.evaluate_bytecode(renderer, &render_data);
-    //         if mat
-    //             .bind(&self.dcs, &render_data, ShaderStages::SHADING)
-    //             .is_err()
-    //         {
-    //             return;
-    //         }
-    //     } else {
-    //         return;
-    //     }
+        if let Some(mat) = render_data.materials.get(&light.technique_shading) {
+            mat.evaluate_bytecode(renderer, &render_data);
+            if mat
+                .bind(&self.dcs, &render_data, ShaderStages::SHADING)
+                .is_err()
+            {
+                return;
+            }
+        } else {
+            return;
+        }
 
-    //     self.draw(renderer)
-    // }
+        self.draw(renderer)
+    }
 
     fn draw(&self, renderer: &Renderer) {
         unsafe {
-            self.dcs.context().RSSetState(&renderer.rasterizer_state);
-
-            self.dcs.context().OMSetDepthStencilState(None, 0);
-            self.dcs.context().OMSetRenderTargets(
-                Some(&[
-                    Some(renderer.gbuffer.light_rt0.render_target.clone()),
-                    Some(renderer.gbuffer.light_rt1.render_target.clone()),
-                ]),
-                None,
-            );
+            self.dcs
+                .context()
+                .OMSetDepthStencilState(Some(&self.depth_state), 0);
 
             self.dcs.context().OMSetBlendState(
                 &renderer.blend_state_additive,

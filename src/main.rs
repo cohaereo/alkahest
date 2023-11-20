@@ -367,6 +367,7 @@ pub async fn main() -> anyhow::Result<()> {
     let gui_rendersettings = Rc::new(RefCell::new(RenderSettingsOverlay {
         renderlayer_statics: true,
         renderlayer_statics_transparent: true,
+        renderlayer_statics_decals: true,
         renderlayer_terrain: true,
         renderlayer_entities: true,
         renderlayer_background: true,
@@ -548,11 +549,14 @@ pub async fn main() -> anyhow::Result<()> {
                                     &placement_renderers[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
                                     if gb.renderlayer_statics {
-                                        instance.draw(&renderer.read(), false).unwrap();
-                                    }
-
-                                    if gui_rendersettings.borrow().renderlayer_statics_transparent {
-                                        instance.draw(&renderer.read(), true).unwrap();
+                                        instance
+                                            .draw(
+                                                &renderer.read(),
+                                                gb.renderlayer_statics,
+                                                gb.renderlayer_statics_transparent,
+                                                gb.renderlayer_statics_decals,
+                                            )
+                                            .unwrap();
                                     }
                                 }
                             }

@@ -40,7 +40,7 @@ impl GBuffer {
 
             light_rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Light_RT0")?,
-            light_rt1: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
+            light_rt1: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Light_RT1")?,
 
             staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())

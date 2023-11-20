@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use crate::ecs::transform::Transform;
-use crate::map::{MapDataList, SLight};
+use crate::map::{MapDataList, SLight, SShadowingLight};
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::types::AABB;
 use crate::util::RwLock;
@@ -68,6 +68,7 @@ pub struct Renderer {
     blend_state_none: ID3D11BlendState,
     blend_state_blend: ID3D11BlendState,
     pub blend_state_additive: ID3D11BlendState,
+    blend_state_decals: ID3D11BlendState,
 
     pub rasterizer_state: ID3D11RasterizerState,
     pub rasterizer_state_nocull: ID3D11RasterizerState,
@@ -154,6 +155,26 @@ impl Renderer {
                         | D3D11_COLOR_WRITE_ENABLE_GREEN.0)
                         as u8,
                 }; 8],
+                ..Default::default()
+            })?
+        };
+
+        let blend_state_decals = unsafe {
+            dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
+                RenderTarget: [D3D11_RENDER_TARGET_BLEND_DESC {
+                    BlendEnable: true.into(),
+                    SrcBlend: D3D11_BLEND_SRC_COLOR,
+                    DestBlend: D3D11_BLEND_DEST_COLOR,
+                    BlendOp: D3D11_BLEND_OP_MAX,
+                    SrcBlendAlpha: D3D11_BLEND_ONE,
+                    DestBlendAlpha: D3D11_BLEND_ZERO,
+                    BlendOpAlpha: D3D11_BLEND_OP_MAX,
+                    RenderTargetWriteMask: (D3D11_COLOR_WRITE_ENABLE_RED.0
+                        | D3D11_COLOR_WRITE_ENABLE_BLUE.0
+                        | D3D11_COLOR_WRITE_ENABLE_GREEN.0)
+                        as u8,
+                }; 8],
+                IndependentBlendEnable: false.into(),
                 ..Default::default()
             })?
         };
@@ -275,6 +296,7 @@ impl Renderer {
             blend_state_none,
             blend_state_blend,
             blend_state_additive,
+            blend_state_decals,
             rasterizer_state,
             rasterizer_state_nocull,
             shadow_rs,
@@ -698,7 +720,15 @@ impl Renderer {
 
         match sort.geometry_type() {
             GeometryType::Static => {}
-            GeometryType::StaticDecal => {}
+            GeometryType::StaticDecal => {
+                if sort.shading_mode() == ShadingMode::Deferred {
+                    unsafe {
+                        self.dcs
+                            .context()
+                            .OMSetBlendState(&self.blend_state_decals, None, u32::MAX)
+                    }
+                }
+            }
             GeometryType::Terrain => unsafe {
                 if shader_overrides.terrain_ps {
                     self.dcs
@@ -867,6 +897,17 @@ impl Renderer {
         }
 
         if draw_lights {
+            unsafe {
+                self.dcs.context().RSSetState(&self.rasterizer_state);
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[
+                        Some(self.gbuffer.light_rt0.render_target.clone()),
+                        Some(self.gbuffer.light_rt1.render_target.clone()),
+                    ]),
+                    None,
+                );
+            }
+
             if let Some((_, _, map)) = maps.current_map() {
                 for (_, (transform, light, bounds)) in map
                     .scene
@@ -874,7 +915,7 @@ impl Renderer {
                     .iter()
                 {
                     if let Some(bb) = bounds {
-                        *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 8.0));
+                        *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 4.0));
                     } else {
                         *self.light_mat.write() = light.unk60.into();
                     }
@@ -883,14 +924,14 @@ impl Renderer {
                     self.light_renderer.draw_normal(self, light);
                 }
 
-                // for (_, (transform, light)) in
-                //     map.scene.query::<(&Transform, &SShadowingLight)>().iter()
-                // {
-                //     // *self.light_mat.write() = light.unk64.into();
-                //     *self.light_mat.write() = Mat4::from_scale(Vec3::splat(-(50.0 * 2.0)));
-                //     *self.light_transform.write() = *transform;
-                //     self.light_renderer.draw_shadowing(self, light);
-                // }
+                for (_, (transform, light)) in
+                    map.scene.query::<(&Transform, &SShadowingLight)>().iter()
+                {
+                    // *self.light_mat.write() = light.unk64.into();
+                    *self.light_mat.write() = Mat4::from_scale(Vec3::splat(-(3000.0 * 2.0)));
+                    *self.light_transform.write() = *transform;
+                    self.light_renderer.draw_shadowing(self, light);
+                }
             }
         }
 
@@ -1112,6 +1153,24 @@ impl Renderer {
         self.update_directional_cascades(resources);
 
         let shader_overrides = resources.get::<EnabledShaderOverrides>().unwrap();
+        let render_settings = resources.get::<RenderSettings>().unwrap();
+
+        let csb = resources.get::<ShadowMapsResource>().unwrap();
+        for v in &csb.cascade_depth_buffers.views {
+            unsafe {
+                self.dcs.context().ClearDepthStencilView(
+                    v,
+                    (D3D11_CLEAR_DEPTH.0 | D3D11_CLEAR_STENCIL.0) as _,
+                    1.0,
+                    0,
+                );
+            }
+        }
+
+        if !render_settings.render_shadows {
+            return;
+        }
+
         let draw_queue = self.draw_queue.read();
 
         unsafe {
@@ -1132,7 +1191,6 @@ impl Renderer {
         let scope_view_base = self.scope_view_backup.read();
         for cascade_level in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
             unsafe {
-                let csb = resources.get::<ShadowMapsResource>().unwrap();
                 self.dcs
                     .context()
                     .OMSetDepthStencilState(&csb.cascade_depth_buffers.state, 0);

@@ -20,6 +20,7 @@ use super::gui::Overlay;
 pub struct RenderSettingsOverlay {
     pub renderlayer_statics: bool,
     pub renderlayer_statics_transparent: bool,
+    pub renderlayer_statics_decals: bool,
     pub renderlayer_terrain: bool,
     pub renderlayer_entities: bool,
     pub renderlayer_background: bool,
@@ -45,10 +46,17 @@ impl Overlay for RenderSettingsOverlay {
         egui::Window::new("Options").show(ctx, |ui| {
             ui.checkbox(&mut render_settings.draw_lights, "Render lights");
             ui.indent("render settings specular option indent", |ui| {
-                ui.add_enabled(
-                    render_settings.draw_lights,
-                    egui::Checkbox::new(&mut render_settings.use_specular_map, "Use Specular Maps"),
-                );
+                ui.add_enabled_ui(render_settings.draw_lights, |ui| {
+                    ui.add(egui::Checkbox::new(
+                        &mut render_settings.use_specular_map,
+                        "Use Specular Maps",
+                    ));
+
+                    ui.add(egui::Checkbox::new(
+                        &mut render_settings.render_shadows,
+                        "Render shadows",
+                    ));
+                });
             });
 
             ui.checkbox(&mut render_settings.fxaa, "Anti-aliasing");
@@ -153,6 +161,7 @@ impl Overlay for RenderSettingsOverlay {
                     &mut self.renderlayer_statics_transparent,
                     "Statics (overlay/transparent)",
                 );
+                ui.checkbox(&mut self.renderlayer_statics_decals, "Statics (decals)");
                 ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
                 ui.checkbox(&mut self.renderlayer_entities, "Entities");
                 ui.checkbox(&mut self.renderlayer_background, "Background Entities");
@@ -447,6 +456,7 @@ pub struct CompositorOptions {
 
 pub struct RenderSettings {
     pub draw_lights: bool,
+    pub render_shadows: bool,
     pub alpha_blending: bool,
     pub compositor_mode: usize,
     pub blend_override: usize,
@@ -465,6 +475,7 @@ impl Default for RenderSettings {
             compositor_mode: CompositorMode::Combined as usize,
             alpha_blending: true,
             draw_lights: false,
+            render_shadows: true,
             blend_override: 0,
             evaluate_bytecode: false,
             clear_color: Vec4::ZERO,
@@ -472,7 +483,7 @@ impl Default for RenderSettings {
             light_color: Vec4::ONE,
             use_specular_map: true,
             fxaa: true,
-            light_mul: 1.0,
+            light_mul: 1.5,
         }
     }
 }
