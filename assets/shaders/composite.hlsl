@@ -470,7 +470,7 @@ float4 PShader(VSOutput input) : SV_Target {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.position.xy);
 
                 c += albedo * LightRenderTarget0.Sample(SampleType, input.uv);
-                c += albedo * LightRenderTarget1.Sample(SampleType, input.uv);
+                c += albedo * LightRenderTarget1.Sample(SampleType, input.uv) * 0.20;
 
                 return c;
             }
