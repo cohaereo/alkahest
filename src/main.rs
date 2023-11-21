@@ -548,16 +548,14 @@ pub async fn main() -> anyhow::Result<()> {
                                 let (_placements, instance_renderers) =
                                     &placement_renderers[&ptag.tag().0];
                                 for instance in instance_renderers.iter() {
-                                    if gb.renderlayer_statics {
-                                        instance
-                                            .draw(
-                                                &renderer.read(),
-                                                gb.renderlayer_statics,
-                                                gb.renderlayer_statics_transparent,
-                                                gb.renderlayer_statics_decals,
-                                            )
-                                            .unwrap();
-                                    }
+                                    instance
+                                        .draw(
+                                            &renderer.read(),
+                                            gb.renderlayer_statics,
+                                            gb.renderlayer_statics_transparent,
+                                            gb.renderlayer_statics_decals,
+                                        )
+                                        .unwrap();
                                 }
                             }
 
