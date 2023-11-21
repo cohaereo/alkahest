@@ -455,7 +455,7 @@ float4 PShader(VSOutput input) : SV_Target {
             return LightRenderTarget1.Sample(SampleType, input.uv);
         }
         default: { // Combined
-            float4 emission = float4(albedo.xyz * (rt2.y * 2.0 - 1.0), 0.0);
+            float3 emission_ao = rt2.y * 2.0 - 1.0;
             if(drawLights == 0) {
                 float3 normal = DecodeNormal(rt1.xyz);
 
@@ -465,12 +465,18 @@ float4 PShader(VSOutput input) : SV_Target {
                 );
 
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
-                return float4((albedo.xyz * matcap.x) * (rt2.y * 2.0), 1.0);
+                float3 res = albedo.xyz * matcap.x;
+                return float4(res + (res * emission_ao), 1.0);
             } else {
                 float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.position.xy);
 
                 c += albedo * LightRenderTarget0.Sample(SampleType, input.uv);
                 c += albedo * LightRenderTarget1.Sample(SampleType, input.uv) * 0.20;
+
+                if(emission_ao.x > 0)
+                    c.xyz += albedo.xyz * emission_ao;
+                else
+                    c.xyz += c.xyz * emission_ao;
 
                 return c;
             }
