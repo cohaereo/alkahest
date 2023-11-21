@@ -17,9 +17,9 @@ use super::renderer::Renderer;
 use super::tfx::TfxRenderStage;
 
 pub struct StaticModelBuffer {
-    vertex_buffer1: TagHash,
-    vertex_buffer2: TagHash,
-    color_buffer: TagHash,
+    pub vertex_buffer1: TagHash,
+    pub vertex_buffer2: TagHash,
+    pub color_buffer: TagHash,
 
     index_buffer: TagHash,
     input_layout: u64,

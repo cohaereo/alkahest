@@ -1,3 +1,5 @@
+use crate::entity::VertexBufferHeader;
+use crate::packages::package_manager;
 use crate::render::scopes::ScopeInstances;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 
@@ -21,12 +23,21 @@ impl InstancedRenderer {
         instances: &[Unk808071a3],
         dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
+        // TODO(cohae): Is this enough to fix it for every buffer set?
+        // The last vertex color index, used by the vertex shader to extend the last vertex color value
+        let vertex_color_last: Option<usize> = (|| {
+            let cbt = model.buffers.get(0)?.color_buffer;
+            let vheader: VertexBufferHeader = package_manager().read_tag_struct(cbt).ok()?;
+
+            Some((vheader.data_size as usize / vheader.stride as usize).saturating_sub(1))
+        })();
+
         let mut instance_data: ScopeInstances = ScopeInstances {
             mesh_offset: model.subheader.mesh_offset.into(),
             mesh_scale: model.subheader.mesh_scale,
             uv_scale: model.subheader.texture_coordinate_scale,
             uv_offset: model.subheader.texture_coordinate_offset.into(),
-            unk1_w: u32::MAX,
+            max_color_index: vertex_color_last.unwrap_or_default() as u32,
 
             transforms: Vec::with_capacity(instances.len()),
         };

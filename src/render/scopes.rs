@@ -96,7 +96,7 @@ pub struct ScopeInstances {
     pub mesh_scale: f32,
     pub uv_scale: f32,
     pub uv_offset: Vec2,
-    pub unk1_w: u32,
+    pub max_color_index: u32,
 
     pub transforms: Vec<Mat4>,
 }
@@ -114,7 +114,7 @@ impl ScopeInstances {
                 self.uv_scale,
                 self.uv_offset.x,
                 self.uv_offset.y,
-                f32::from_bits(self.unk1_w),
+                f32::from_bits(self.max_color_index),
             ]))
             .unwrap();
 

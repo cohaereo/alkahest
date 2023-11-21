@@ -240,9 +240,9 @@ impl RenderDataManager {
     }
 
     /// Load a vertex or index buffer from a hash
-    pub fn load_buffer(&self, buffer: TagHash, create_srv: bool) {
+    pub fn load_buffer(&self, buffer: TagHash, create_rgba_srv: bool) {
         self.tx_buffers
-            .send((buffer, create_srv))
+            .send((buffer, create_rgba_srv))
             .expect("Failed to send load buffer request");
     }
 

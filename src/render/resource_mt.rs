@@ -5,7 +5,7 @@ use destiny_pkg::TagHash;
 use std::sync::Arc;
 use std::time::Instant;
 use windows::Win32::Graphics::{
-    Direct3D::D3D11_SRV_DIMENSION_BUFFER,
+    Direct3D::{WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_BUFFER},
     Direct3D11::{
         D3D11_BIND_INDEX_BUFFER, D3D11_BIND_SHADER_RESOURCE, D3D11_BIND_VERTEX_BUFFER,
         D3D11_BUFFER_DESC, D3D11_BUFFER_SRV, D3D11_BUFFER_SRV_0, D3D11_BUFFER_SRV_1,
@@ -108,7 +108,7 @@ fn spawn_thread_buffers(
     std::thread::Builder::new()
         .name(name.to_string())
         .spawn(move || {
-            while let Ok((hash, create_srv)) = rx.recv() {
+            while let Ok((hash, create_rgba_srv)) = rx.recv() {
                 if hash.is_some() {
                     if let Some(entry) = package_manager().get_entry(hash) {
                         match (entry.file_type, entry.file_subtype) {
@@ -143,7 +143,18 @@ fn spawn_thread_buffers(
                                                 .unwrap()
                                         };
 
-                                        let view = if create_srv {
+                                        let name = format!("VertexBuffer {}\0", hash);
+                                        unsafe {
+                                            vertex_buffer
+                                                .SetPrivateData(
+                                                    &WKPDID_D3DDebugObjectName,
+                                                    name.len() as u32 - 1,
+                                                    Some(name.as_ptr() as _),
+                                                )
+                                                .ok();
+                                        }
+
+                                        let view = if create_rgba_srv {
                                             Some(unsafe {
                                                 dcs.device
                                                     .CreateShaderResourceView(
@@ -165,7 +176,9 @@ fn spawn_thread_buffers(
                                                                                     vertex_data
                                                                                         .len()
                                                                                         as u32
-                                                                                        / 4,
+                                                                                        / vertex_buffer_header
+                                                                                            .stride
+                                                                                            as u32,
                                                                             },
                                                                     },
                                                                 },

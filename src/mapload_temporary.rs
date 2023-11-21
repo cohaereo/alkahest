@@ -498,7 +498,7 @@ pub async fn load_maps(
     }
 
     if placement_renderers.is_empty() {
-        panic!("No map placements found in package");
+        anyhow::bail!("No map placements found in package");
     }
 
     let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
