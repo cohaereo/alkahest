@@ -52,7 +52,7 @@ use crate::{
         scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
         DeviceContextSwapchain, EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
-    statics::{Unk808071a7, Unk8080966d},
+    statics::{SStaticMesh, SStaticMeshInstances},
     structure::{TablePointer, Tag},
     types::AABB,
 };
@@ -483,7 +483,7 @@ pub async fn load_maps(
         }
     }
 
-    let mut placement_renderers: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
+    let mut placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)> =
         IntMap::default();
 
     let mut to_load: HashMap<TagHash, ()> = Default::default();
@@ -529,7 +529,7 @@ pub async fn load_maps(
     info_span!("Loading statics").in_scope(|| {
         let renderer = renderer.read();
         for almostloadable in &to_load_statics {
-            let mheader: Unk808071a7 = debug_span!("load tag Unk808071a7")
+            let mheader: SStaticMesh = debug_span!("load tag Unk808071a7")
                 .in_scope(|| package_manager().read_tag_struct(*almostloadable).unwrap());
             for m in &mheader.materials {
                 if m.is_some()
@@ -566,7 +566,7 @@ pub async fn load_maps(
             }
 
             debug_span!("load StaticModel").in_scope(|| {
-                match StaticModel::load(mheader, &renderer, *almostloadable) {
+                match StaticModel::load(mheader, &renderer) {
                     Ok(model) => {
                         static_map.insert(*almostloadable, Arc::new(model));
                     }
@@ -777,6 +777,8 @@ pub async fn load_maps(
         data.samplers = sampler_map;
     };
 
+    maps.sort_by_key(|m| m.2.name.clone());
+
     Ok(LoadMapsData {
         maps,
         entity_renderers,
@@ -788,7 +790,7 @@ pub async fn load_maps(
 pub struct LoadMapsData {
     pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
     pub entity_renderers: IntMap<u64, EntityRenderer>,
-    pub placement_renderers: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)>,
+    pub placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)>,
     pub terrain_renderers: IntMap<u32, TerrainRenderer>,
 }
 
@@ -806,7 +808,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     entity_worldid_name_map: &IntMap<u64, String>,
 
     terrain_headers: &mut Vec<(TagHash, STerrain)>,
-    placement_groups: &mut Vec<Tag<Unk8080966d>>,
+    placement_groups: &mut Vec<Tag<SStaticMeshInstances>>,
     material_map: &mut IntMap<TagHash, Technique>,
     to_load_entitymodels: &mut IntSet<TagHash>,
     unknown_root_resources: &mut IntMap<u32, usize>,

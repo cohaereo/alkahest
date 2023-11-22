@@ -10,8 +10,21 @@ use crate::{
     types::{Vector3, Vector4},
 };
 
+#[derive(BinRead, Debug, Clone)]
+pub struct SStaticMesh {
+    pub file_size: u64,
+    pub unk8: TagHash,
+    pub unkc: u32,
+    pub materials: TablePointer<TagHash>,
+    pub unk20: TablePointer<SStaticMeshOverlay>, // Overlay/transparent meshes
+    pub unk30: [u32; 2],
+    pub unk38: [f32; 6],
+    pub unk50: Vector3, // ? Similar to model_offset, but not quite right...
+    pub unk5c: f32,
+}
+
 #[derive(BinRead, Debug)]
-pub struct Unk80807194 {
+pub struct SStaticMeshData {
     pub file_size: u64,
     pub mesh_groups: TablePointer<Unk8080719b>,
     pub parts: TablePointer<Unk8080719a>,
@@ -43,7 +56,7 @@ pub struct Unk8080719b {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk8080966d {
+pub struct SStaticMeshInstances {
     #[br(seek_before(SeekFrom::Current(0x40)))]
     pub transforms: TablePointer<Unk808071a3>,
     pub unk50: u64,
@@ -71,20 +84,7 @@ pub struct Unk808071a3 {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk808071a7 {
-    pub file_size: u64,
-    pub unk8: TagHash,
-    pub unkc: u32,
-    pub materials: TablePointer<TagHash>,
-    pub unk20: TablePointer<Unk80807193>, // Overlay/transparent meshes
-    pub unk30: [u32; 2],
-    pub unk38: [f32; 6],
-    pub unk50: Vector3, // ? Similar to model_offset, but not quite right...
-    pub unk5c: f32,
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80807193 {
+pub struct SStaticMeshOverlay {
     pub render_stage: TfxRenderStage,
     pub unk1: u8,
     pub lod: ELodCategory,

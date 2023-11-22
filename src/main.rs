@@ -74,7 +74,7 @@ use crate::render::renderer::{Renderer, RendererShared, ShadowMapsResource};
 use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, TerrainRenderer};
 use crate::resources::Resources;
 
-use crate::statics::Unk8080966d;
+use crate::statics::SStaticMeshInstances;
 use crate::text::{decode_text, StringContainer, StringData, StringPart};
 
 mod activity;
@@ -304,7 +304,7 @@ pub async fn main() -> anyhow::Result<()> {
         activity_hash,
     )));
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
-    let mut placement_renderers: IntMap<u32, (Unk8080966d, Vec<InstancedRenderer>)> =
+    let mut placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)> =
         IntMap::default();
     let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
 

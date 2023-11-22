@@ -1,6 +1,6 @@
 use crate::ecs::Scene;
 
-use crate::statics::Unk8080966d;
+use crate::statics::SStaticMeshInstances;
 use crate::structure::{ExtendedHash, ExtendedTag, RelPointer, ResourcePointer, TablePointer, Tag};
 use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
 use binrw::{BinRead, NullString};
@@ -76,7 +76,7 @@ pub struct Unk808099d8 {
 #[derive(BinRead, Debug)]
 pub struct Unk80806ef4 {
     pub unk0: u64,
-    pub placement_group: Tag<Unk8080966d>,
+    pub placement_group: Tag<SStaticMeshInstances>,
     pub unkc: [u32; 7],
 }
 
@@ -137,7 +137,7 @@ pub struct Unk80807152 {
 pub struct MapData {
     pub hash: TagHash,
     pub name: String,
-    pub placement_groups: Vec<Tag<Unk8080966d>>,
+    pub placement_groups: Vec<Tag<SStaticMeshInstances>>,
     // pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
     pub terrains: Vec<TagHash>,
 

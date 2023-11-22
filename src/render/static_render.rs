@@ -1,5 +1,5 @@
 use crate::render::vertex_buffers::load_vertex_buffers;
-use crate::statics::{Unk80807193, Unk80807194, Unk808071a7};
+use crate::statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay};
 
 use anyhow::ensure;
 use destiny_pkg::TagHash;
@@ -30,19 +30,15 @@ pub struct StaticModel {
 
     pub overlay_models: Vec<StaticOverlayModel>,
 
-    pub subheader: Unk80807194,
+    pub subheader: SStaticMeshData,
 
-    model: Unk808071a7,
+    model: SStaticMesh,
 }
 
 impl StaticModel {
-    pub fn load(
-        model: Unk808071a7,
-        renderer: &Renderer,
-        _model_hash: TagHash,
-    ) -> anyhow::Result<StaticModel> {
+    pub fn load(model: SStaticMesh, renderer: &Renderer) -> anyhow::Result<StaticModel> {
         let pm = package_manager();
-        let header: Unk80807194 = pm.read_tag_struct(model.unk8).unwrap();
+        let header: SStaticMeshData = pm.read_tag_struct(model.unk8).unwrap();
 
         ensure!(header.mesh_groups.len() == model.materials.len());
 
@@ -52,66 +48,6 @@ impl StaticModel {
             (index_buffer_hash, vertex_buffer_hash, vertex2_buffer_hash, color_buffer_hash),
         ) in header.buffers.iter().enumerate()
         {
-            // let vertex_header: VertexBufferHeader =
-            //     pm.read_tag_struct(*vertex_buffer_hash).unwrap();
-
-            // if vertex_header.stride == 24 || vertex_header.stride == 48 {
-            //     warn!("Support for 32-bit floats in vertex buffers are disabled");
-            //     continue;
-            // }
-
-            // let t = pm.get_entry(*vertex_buffer_hash).unwrap().reference;
-
-            // let vertex_data = pm.read_tag(t).unwrap();
-
-            // let mut vertex2_stride = None;
-            // let mut vertex2_data = None;
-            // if vertex2_buffer_hash.is_some() {
-            //     let vertex2_header: VertexBufferHeader =
-            //         pm.read_tag_struct(*vertex2_buffer_hash).unwrap();
-            //     let t = pm.get_entry(*vertex2_buffer_hash).unwrap().reference;
-
-            //     vertex2_stride = Some(vertex2_header.stride as u32);
-            //     vertex2_data = Some(pm.read_tag(t).unwrap());
-            // }
-
-            // let combined_vertex_data = if let Some(vertex2_data) = vertex2_data {
-            //     vertex_data
-            //         .chunks_exact(vertex_header.stride as _)
-            //         .zip(vertex2_data.chunks_exact(vertex2_stride.unwrap() as _))
-            //         .flat_map(|(v1, v2)| [v1, v2].concat())
-            //         .collect()
-            // } else {
-            //     vertex_data
-            // };
-
-            // let combined_vertex_buffer = unsafe {
-            //     device
-            //         .CreateBuffer(
-            //             &D3D11_BUFFER_DESC {
-            //                 ByteWidth: combined_vertex_data.len() as _,
-            //                 Usage: D3D11_USAGE_IMMUTABLE,
-            //                 BindFlags: D3D11_BIND_VERTEX_BUFFER,
-            //                 ..Default::default()
-            //             },
-            //             Some(&D3D11_SUBRESOURCE_DATA {
-            //                 pSysMem: combined_vertex_data.as_ptr() as _,
-            //                 ..Default::default()
-            //             }),
-            //         )
-            //         .context("Failed to create combined vertex buffer")?
-            // };
-            // unsafe {
-            //     let name = format!("VB {} (model {})\0", vertex_buffer_hash, model_hash);
-            //     combined_vertex_buffer
-            //         .SetPrivateData(
-            //             &WKPDID_D3DDebugObjectName,
-            //             name.len() as u32 - 1,
-            //             Some(name.as_ptr() as _),
-            //         )
-            //         .expect("Failed to set VS name")
-            // };
-
             renderer.render_data.load_buffer(*index_buffer_hash, false);
             renderer.render_data.load_buffer(*vertex_buffer_hash, false);
             renderer
@@ -257,11 +193,14 @@ impl StaticModel {
 
 pub struct StaticOverlayModel {
     buffers: StaticModelBuffer,
-    model: Unk80807193,
+    model: SStaticMeshOverlay,
 }
 
 impl StaticOverlayModel {
-    pub fn load(model: Unk80807193, renderer: &Renderer) -> anyhow::Result<StaticOverlayModel> {
+    pub fn load(
+        model: SStaticMeshOverlay,
+        renderer: &Renderer,
+    ) -> anyhow::Result<StaticOverlayModel> {
         let _pm = package_manager();
 
         renderer.render_data.load_buffer(model.index_buffer, false);
