@@ -81,7 +81,7 @@ float4 PShader(VSOutput input) : SV_Target {
     float4 finalColor = float4(0, 0, 0, 1);
     if(tex_i == 0 || tex_i == 1)
         finalColor = float4(GammaCorrect(albedo.xyz), 1.0);
-    else if(tex_i == 13) {
+    else if(tex_i == 14) {
         float4 u0 = 0;
         u0.xy = target.xy * input.uv.xy;
         u0.xy = (int2)u0.xy;
