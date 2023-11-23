@@ -139,7 +139,6 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     *v = v.ceil();
                 }
-                // TODO(cohae): Is the parameter order for merges correct?
                 TfxBytecodeOp::Merge1_3 => {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(Vec4::new(t1.x, t0.x, t0.y, t0.z));
@@ -149,9 +148,8 @@ impl TfxBytecodeInterpreter {
                     stack_push!(Vec4::new(t1.x, t1.y, t0.x, t0.y));
                 }
                 TfxBytecodeOp::Unk0e => {
-                    // TODO: SIMD implementation, this implementation is 100% incorrect
-                    let [t1, t0] = stack_pop!(2);
-                    stack_push!((t0 + t1) / 2.0);
+                    let v = stack_pop!(2);
+                    stack_push!(fast_impls::byteop_0e(v))
                 }
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t0] = stack_pop!(2);
@@ -250,11 +248,6 @@ impl TfxBytecodeInterpreter {
                         w_axis,
                     };
 
-                    // println!(
-                    //     "transform {value}\n{mat}\n{}\n",
-                    //     mat.project_point3(value.truncate())
-                    // );
-
                     stack_push!(mat.mul_vec4(value));
                 }
 
@@ -262,9 +255,12 @@ impl TfxBytecodeInterpreter {
                 | TfxBytecodeOp::Unk4c { .. }
                 | TfxBytecodeOp::Unk4d { .. }
                 | TfxBytecodeOp::Unk4e { .. }
-                | TfxBytecodeOp::Unk4f { .. } => {
+                | TfxBytecodeOp::Unk4f { .. }
+                | TfxBytecodeOp::Unk50 { .. }
+                | TfxBytecodeOp::Unk52 { .. }
+                | TfxBytecodeOp::Unk53 { .. }
+                | TfxBytecodeOp::Unk54 { .. } => {
                     stack_push!(Vec4::ONE);
-                    // stack_push!(Vec4::ZERO);
                 }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
@@ -733,6 +729,34 @@ mod fast_impls {
                 ),
                 v70,
             ))
+        }
+    }
+
+    pub fn byteop_0e([t1, t0]: [Vec4; 2]) -> Vec4 {
+        unsafe {
+            let xmmword_7FF7B2E5E4F0 = _mm_castsi128_ps(_mm_setr_epi32(
+                u32::MAX as _,
+                u32::MAX as _,
+                u32::MAX as _,
+                0,
+            ));
+            let xmmword_7FF7B2E5E5C0 = _mm_castsi128_ps(_mm_setr_epi32(0, 0, 0, u32::MAX as _));
+            let xmmword_7FF7B2E5E4E0 = _mm_set1_ps(f32::NAN);
+
+            _mm_add_ps(
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_and_ps(
+                            _mm_shuffle_ps(t0.into(), t0.into(), 0),
+                            xmmword_7FF7B2E5E5C0,
+                        ),
+                        xmmword_7FF7B2E5E4E0,
+                    ),
+                    _mm_andnot_ps(xmmword_7FF7B2E5E4E0, _mm_set1_ps(1.0)),
+                ),
+                _mm_and_ps(t1.into(), xmmword_7FF7B2E5E4F0),
+            )
+            .into()
         }
     }
 
