@@ -6,7 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use binrw::BinReaderExt;
+use binrw::{binread, BinReaderExt};
 use destiny_pkg::{package::UEntryHeader, TagHash, TagHash64};
 use eframe::{
     egui::{self, CollapsingHeader, RichText},
@@ -36,6 +36,7 @@ pub struct TagView {
     string_cache: Arc<StringCache>,
     string_hashes: Vec<(u64, u32)>,
     raw_strings: Vec<(u64, String)>,
+    arrays: Vec<(u64, TagArray)>,
 
     tag: TagHash,
     tag64: Option<TagHash64>,
@@ -56,18 +57,24 @@ impl TagView {
         tag: TagHash,
     ) -> Option<TagView> {
         let tag_data = package_manager().read_tag(tag).ok()?;
+        let mut array_offsets = vec![];
         let mut raw_string_offsets = vec![];
         let mut string_hashes = vec![];
         for (i, b) in tag_data.chunks_exact(4).enumerate() {
             let v: [u8; 4] = b.try_into().unwrap();
-            let hash = u32::from_le_bytes(v);
+            let value = u32::from_le_bytes(v);
+            let offset = i as u64 * 4;
 
-            if hash == 0x80800065 {
-                raw_string_offsets.push(i as u64 * 4);
+            if value == 0x80809fb8 {
+                array_offsets.push(offset + 4);
             }
 
-            if string_cache.contains_key(&hash) {
-                string_hashes.push((i as u64 * 4, hash));
+            if value == 0x80800065 {
+                raw_string_offsets.push(offset);
+            }
+
+            if string_cache.contains_key(&value) {
+                string_hashes.push((offset, value));
             }
         }
 
@@ -75,6 +82,34 @@ impl TagView {
             .into_iter()
             .flat_map(|o| read_raw_string_blob(&tag_data, o))
             .collect_vec();
+
+        let mut arrays: Vec<(u64, TagArray)> = array_offsets
+            .into_iter()
+            .filter_map(|o| {
+                let mut c = Cursor::new(&tag_data);
+                c.seek(SeekFrom::Start(o)).ok()?;
+                Some((o, c.read_le().ok()?))
+            })
+            .collect_vec();
+
+        let mut cur = Cursor::new(&tag_data);
+        loop {
+            let offset = cur.stream_position().unwrap();
+            let Ok((value1, value2)) = cur.read_le::<(u64, u64)>() else {
+                break;
+            };
+
+            let possibly_count = value1;
+            let possibly_array_offset = offset + 8 + value2;
+
+            if let Some((_, array)) = arrays.iter_mut().find(|(offset, arr)| {
+                *offset == possibly_array_offset && arr.count == possibly_count
+            }) {
+                array.references.push(offset);
+            }
+
+            cur.seek(SeekFrom::Current(-8)).unwrap();
+        }
 
         let tag64 = package_manager()
             .hash64_table
@@ -84,6 +119,7 @@ impl TagView {
 
         let tag_entry = package_manager().get_entry(tag)?;
         Some(Self {
+            arrays,
             string_hashes,
             tag,
             tag64,
@@ -307,13 +343,54 @@ impl View for TagView {
             }
         });
 
-        if !self.string_hashes.is_empty() || !self.raw_strings.is_empty() {
+        if !self.string_hashes.is_empty() || !self.raw_strings.is_empty() || !self.arrays.is_empty()
+        {
             egui::SidePanel::right("tv_right_panel")
                 .resizable(true)
                 .min_width(320.0)
                 .show_inside(ui, |ui| {
                     ui.style_mut().wrap = Some(false);
                     egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.label(egui::RichText::new("Arrays").strong());
+                        ui.group(|ui| {
+                            if self.arrays.is_empty() {
+                                ui.label(RichText::new("No arrays found").italics());
+                            } else {
+                                for (offset, array) in &self.arrays {
+                                    let ref_label = REFERENCE_MAP
+                                        .read()
+                                        .get(&array.tagtype)
+                                        .map(|s| format!("{s} ({:08X})", array.tagtype.to_be()))
+                                        .unwrap_or_else(|| {
+                                            format!("{:08X}", array.tagtype.to_be())
+                                        });
+
+                                    ui.selectable_label(
+                                        false,
+                                        format!(
+                                            "type={} count={} @ 0x{:X}",
+                                            ref_label, array.count, offset
+                                        ),
+                                    )
+                                    .on_hover_text({
+                                        if array.references.is_empty() {
+                                            "⚠ Array is not referenced!".to_string()
+                                        } else {
+                                            format!(
+                                                "Referenced at {}",
+                                                array
+                                                    .references
+                                                    .iter()
+                                                    .map(|o| format!("0x{o:X}"))
+                                                    .join(", ")
+                                            )
+                                        }
+                                    })
+                                    .clicked();
+                                }
+                            }
+                        });
+
                         ui.label(egui::RichText::new("String Hashes").strong());
                         ui.group(|ui| {
                             if self.string_hashes.is_empty() {
@@ -691,4 +768,13 @@ pub fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
     } else {
         format!("{} (pkg entry not found)", tag)
     }
+}
+
+#[binread]
+struct TagArray {
+    pub count: u64,
+    pub tagtype: u32,
+
+    #[br(ignore)]
+    pub references: Vec<u64>,
 }

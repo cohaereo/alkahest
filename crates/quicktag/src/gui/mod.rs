@@ -225,8 +225,8 @@ impl NamedTags {
         NamedTags {
             tags: package_manager()
                 .named_tags
-                .to_vec()
-                .into_iter()
+                .iter()
+                .cloned()
                 .filter_map(|n| Some((package_manager().get_entry(n.hash)?, n)))
                 .collect(),
         }
