@@ -13,11 +13,15 @@ use super::{
 
 pub struct TfxBytecodeInterpreter {
     opcodes: Vec<TfxBytecodeOp>,
+    pub error_shown: bool,
 }
 
 impl TfxBytecodeInterpreter {
     pub fn new(opcodes: Vec<TfxBytecodeOp>) -> Self {
-        Self { opcodes }
+        Self {
+            opcodes,
+            error_shown: false,
+        }
     }
 
     pub fn evaluate(
