@@ -2,6 +2,7 @@ use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::*;
 
@@ -203,5 +204,49 @@ pub struct BufferMapGuard<T: Sized> {
 impl<T> Drop for BufferMapGuard<T> {
     fn drop(&mut self) {
         unsafe { self.dcs.context().Unmap(&self.buffer, 0) }
+    }
+}
+
+pub struct ConstantBufferCached<T: Sized> {
+    data: Vec<T>,
+    cbuffer: ConstantBuffer<T>,
+    updated: AtomicBool,
+}
+
+impl<T: Sized + Clone> ConstantBufferCached<T> {
+    pub fn create_array_init(
+        dcs: Arc<DeviceContextSwapchain>,
+        initial_data: &[T],
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            cbuffer: ConstantBuffer::create_array_init(dcs, initial_data)?,
+            data: initial_data.to_vec(),
+            updated: AtomicBool::new(false),
+        })
+    }
+
+    /// Writes the buffer data to the GPU
+    pub fn write(&self) -> anyhow::Result<()> {
+        if self.updated.load(Ordering::Relaxed) {
+            let map = self.cbuffer.map(D3D11_MAP_WRITE_DISCARD)?;
+            unsafe { map.ptr.copy_from(self.data.as_ptr(), self.data.len()) };
+            self.updated.store(false, Ordering::Relaxed);
+        }
+
+        Ok(())
+    }
+
+    // Deny clippy from the realms of dark magic (the good kind)
+    #[allow(clippy::mut_from_ref)]
+    pub fn data(&self) -> &mut [T] {
+        self.updated.store(true, Ordering::Relaxed);
+        unsafe { std::slice::from_raw_parts_mut(self.data.as_ptr() as *mut T, self.data.len()) }
+    }
+
+    pub fn bind(&self, slot: u32, stages: ShaderStages) {
+        // Make sure the buffer is written before we bind it
+        // Its fine to call this multiple times per draw, as we keep track of whether the buffer has been acquired before we write
+        self.write().ok();
+        self.cbuffer.bind(slot, stages)
     }
 }

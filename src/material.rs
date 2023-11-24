@@ -4,9 +4,10 @@ use crate::packages::package_manager;
 use crate::render::bytecode::externs::TfxShaderStage;
 use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
+use crate::render::cbuffer::ConstantBufferCached;
 use crate::render::drawcall::ShaderStages;
 use crate::render::renderer::Renderer;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, RenderData};
+use crate::render::{DeviceContextSwapchain, RenderData};
 use crate::structure::ExtendedHash;
 use crate::structure::{RelPointer, TablePointer};
 use crate::types::Vector4;
@@ -92,9 +93,9 @@ pub struct Technique {
     pub mat: STechnique,
     tag: TagHash,
 
-    pub cb0_vs: Option<ConstantBuffer<Vec4>>,
+    pub cb0_vs: Option<ConstantBufferCached<Vec4>>,
     tfx_bytecode_vs: RwLock<Option<TfxBytecodeInterpreter>>,
-    pub cb0_ps: Option<ConstantBuffer<Vec4>>,
+    pub cb0_ps: Option<ConstantBufferCached<Vec4>>,
     tfx_bytecode_ps: RwLock<Option<TfxBytecodeInterpreter>>,
 }
 
@@ -115,7 +116,7 @@ impl Technique {
                 "Read {} elements cbuffer from {buffer_header_ref:?}",
                 data.len()
             );
-            let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
+            let buf = ConstantBufferCached::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
         } else if mat.shader_vertex.unk50.len() > 1 {
@@ -123,7 +124,7 @@ impl Technique {
                 "Loading float4 cbuffer with {} elements",
                 mat.shader_vertex.unk50.len()
             );
-            let buf = ConstantBuffer::create_array_init(
+            let buf = ConstantBufferCached::create_array_init(
                 renderer.dcs.clone(),
                 bytemuck::cast_slice(&mat.shader_vertex.unk50),
             )
@@ -132,7 +133,7 @@ impl Technique {
             Some(buf)
         } else {
             trace!("Loading default float4 cbuffer");
-            let buf = ConstantBuffer::create_array_init(
+            let buf = ConstantBufferCached::create_array_init(
                 renderer.dcs.clone(),
                 &[Vec4::new(1.0, 1.0, 1.0, 1.0)],
             )
@@ -154,7 +155,7 @@ impl Technique {
                 "Read {} elements cbuffer from {buffer_header_ref:?}",
                 data.len()
             );
-            let buf = ConstantBuffer::create_array_init(renderer.dcs.clone(), data).unwrap();
+            let buf = ConstantBufferCached::create_array_init(renderer.dcs.clone(), data).unwrap();
 
             Some(buf)
         } else if !mat.shader_pixel.unk50.is_empty() {
@@ -162,7 +163,7 @@ impl Technique {
                 "Loading float4 cbuffer with {} elements",
                 mat.shader_pixel.unk50.len()
             );
-            let buf = ConstantBuffer::create_array_init(
+            let buf = ConstantBufferCached::create_array_init(
                 renderer.dcs.clone(),
                 bytemuck::cast_slice(&mat.shader_pixel.unk50),
             )
@@ -236,8 +237,7 @@ impl Technique {
                 }
 
                 if let Some(ref cbuffer) = self.cb0_vs {
-                    dcs.context()
-                        .VSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
+                    cbuffer.bind(0, ShaderStages::VERTEX);
                 } else {
                     dcs.context().VSSetConstantBuffers(0, Some(&[None]));
                 }
@@ -269,8 +269,7 @@ impl Technique {
                 }
 
                 if let Some(ref cbuffer) = self.cb0_ps {
-                    dcs.context()
-                        .PSSetConstantBuffers(0, Some(&[Some(cbuffer.buffer().clone())]));
+                    cbuffer.bind(0, ShaderStages::PIXEL);
                 } else {
                     dcs.context().PSSetConstantBuffers(0, Some(&[None]));
                 }

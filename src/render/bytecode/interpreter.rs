@@ -2,9 +2,8 @@ use std::mem::transmute;
 
 use glam::{Mat4, Vec4, Vec4Swizzles};
 use tinyvec::ArrayVec;
-use windows::Win32::Graphics::Direct3D11::D3D11_MAP_WRITE_NO_OVERWRITE;
 
-use crate::render::{renderer::Renderer, ConstantBuffer, RenderData};
+use crate::render::{cbuffer::ConstantBufferCached, renderer::Renderer, RenderData};
 
 use super::{
     externs::{TfxExtern, TfxShaderStage},
@@ -28,16 +27,13 @@ impl TfxBytecodeInterpreter {
         &self,
         renderer: &Renderer,
         render_data: &RenderData,
-        buffer: &ConstantBuffer<Vec4>,
+        buffer: &ConstantBufferCached<Vec4>,
         constants: &[Vec4],
     ) -> anyhow::Result<()> {
         let mut stack: ArrayVec<[Vec4; 64]> = Default::default();
         let mut temp = [Vec4::ZERO; 16];
 
-        let Ok(buffer_map) = buffer.map(D3D11_MAP_WRITE_NO_OVERWRITE) else {
-            error!("Failed to map cb0 for TFX interpreter");
-            return Ok(());
-        };
+        let buffer_map = buffer.data();
 
         macro_rules! stack_pop {
             ($pops:literal) => {{
@@ -315,27 +311,25 @@ impl TfxBytecodeInterpreter {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(t1.max(t0))
                 }
-                TfxBytecodeOp::PopOutput { element } => unsafe {
-                    buffer_map
-                        .ptr
-                        .offset(*element as isize)
-                        .write(stack_pop!(1)[0])
-                },
-                TfxBytecodeOp::PopOutputMat4 { element } => unsafe {
-                    let [x_axis, y_axis, z_axis, w_axis] = stack_pop!(4);
-                    let mat = Mat4 {
-                        x_axis,
-                        y_axis,
-                        z_axis,
-                        w_axis,
-                    };
+                TfxBytecodeOp::PopOutput { element } => {
+                    anyhow::ensure!(
+                        (*element as usize) < buffer_map.len(),
+                        "Pop output element is out of range"
+                    );
 
-                    buffer_map
-                        .ptr
-                        .offset(*element as isize)
-                        .cast::<Mat4>()
-                        .write(mat)
-                },
+                    buffer_map[*element as usize] = stack_pop!(1)[0];
+                }
+                TfxBytecodeOp::PopOutputMat4 { element } => {
+                    anyhow::ensure!(
+                        (*element as usize + 3) < buffer_map.len(),
+                        "Pop output mat4 element is out of range"
+                    );
+
+                    let [x_axis, y_axis, z_axis, w_axis] = stack_pop!(4);
+
+                    let start = *element as usize;
+                    buffer_map[start..start + 4].copy_from_slice(&[x_axis, y_axis, z_axis, w_axis]);
+                }
                 TfxBytecodeOp::PushTemp { slot } => {
                     let slotu = *slot as usize;
                     anyhow::ensure!(slotu < temp.len(), "Temp slot is out of range");
@@ -568,9 +562,9 @@ impl TfxBytecodeInterpreter {
         }
     }
 
-    pub fn dump(&self, constants: &[Vec4], buffer: &ConstantBuffer<Vec4>) {
+    pub fn dump(&self, constants: &[Vec4], buffer: &ConstantBufferCached<Vec4>) {
         debug!("Dumping TFX interpreter");
-        debug!("- cb0 size: {} elements", buffer.elements());
+        debug!("- cb0 size: {} elements", buffer.data().len());
         if !constants.is_empty() {
             debug!("- Constant table:");
             for (i, v) in constants.iter().enumerate() {
