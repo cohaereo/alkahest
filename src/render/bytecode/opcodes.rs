@@ -97,7 +97,7 @@ pub enum TfxBytecodeOp {
 
     // TODO(cohae): Loads a value from the interpreter state + 0x44a0
     #[br(magic = 0x42_u8)] Unk42,
-    #[br(magic = 0x43_u8)] Unk43 { unk1: u8 },
+    #[br(magic = 0x43_u8)] PushFromOutput { element: u8 },
     #[br(magic = 0x44_u8)] PopOutput { element: u8 },
     #[br(magic = 0x45_u8)] PopOutputMat4 { element: u8 },
     #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
@@ -260,8 +260,8 @@ impl TfxBytecodeOp {
                 )
             }
             TfxBytecodeOp::Unk42 => "unk42".to_string(),
-            TfxBytecodeOp::Unk43 { unk1 } => {
-                format!("unk43 unk1={unk1}")
+            TfxBytecodeOp::PushFromOutput { element } => {
+                format!("push_from_output({element})")
             }
             TfxBytecodeOp::PopOutput { element } => {
                 format!("pop_output({element})")

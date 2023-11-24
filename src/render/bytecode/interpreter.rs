@@ -251,8 +251,7 @@ impl TfxBytecodeInterpreter {
                     stack_push!(mat.mul_vec4(value));
                 }
 
-                TfxBytecodeOp::Unk43 { .. }
-                | TfxBytecodeOp::Unk4c { .. }
+                TfxBytecodeOp::Unk4c { .. }
                 | TfxBytecodeOp::Unk4d { .. }
                 | TfxBytecodeOp::Unk4e { .. }
                 | TfxBytecodeOp::Unk4f { .. }
@@ -310,6 +309,14 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Max => {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(t1.max(t0))
+                }
+                TfxBytecodeOp::PushFromOutput { element } => {
+                    anyhow::ensure!(
+                        (*element as usize) < buffer_map.len(),
+                        "Push from output element is out of range"
+                    );
+
+                    stack_push!(buffer_map[*element as usize]);
                 }
                 TfxBytecodeOp::PopOutput { element } => {
                     anyhow::ensure!(
