@@ -30,32 +30,32 @@ pub fn install_hook() {
         );
 
         // Write a panic file
-        match write_panic_to_file(info, Backtrace::capture()) {
+        match write_panic_to_file(info, Backtrace::force_capture()) {
             Ok(()) => {}
             Err(e) => eprintln!("Failed to create panic log: {e}"),
         }
 
-        // // Dont show dialog on debug builds
-        // if cfg!(debug_assertions) {
-        //     return;
-        // }
+        // Dont show dialog on debug builds
+        if cfg!(debug_assertions) {
+            return;
+        }
 
-        // // Finally, show a dialog
-        // let panic_message_stripped = &strip_ansi_codes(&format!("{info}"));
-        // if let Err(e) = native_dialog::MessageDialog::new()
-        //     .set_type(native_dialog::MessageType::Error)
-        //     .set_title("Panic!")
-        //     .set_text(&format!(
-        //         "{}\n\nThe panic has been written to panic.log",
-        //         panic_message_stripped
-        //     ))
-        //     .show_alert()
-        // {
-        //     eprintln!("Failed to show error dialog: {e}")
-        // }
+        // Finally, show a dialog
+        let panic_message_stripped = strip_ansi_codes(&format!("{info}"));
+        if let Err(e) = native_dialog::MessageDialog::new()
+            .set_type(native_dialog::MessageType::Error)
+            .set_title("Alkahest crashed!")
+            .set_text(&format!(
+                "{}\n\nA full crash log has been written to panic.log",
+                panic_message_stripped
+            ))
+            .show_alert()
+        {
+            eprintln!("Failed to show error dialog: {e}")
+        }
 
-        // // Make sure the application exits
-        // std::process::exit(-1);
+        // Make sure the application exits
+        std::process::exit(-1);
     }))
 }
 
@@ -76,13 +76,7 @@ fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<(
     Ok(())
 }
 
-// pub fn strip_ansi_codes(input: &str) -> String {
-//     // Create a regex pattern to match ANSI escape sequences
-//     let ansi_escape_pattern = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
-
-//     // Use the regex pattern to replace ANSI escape sequences with an empty string
-//     let result = ansi_escape_pattern.replace_all(input, "");
-
-//     // Convert the result back to a String
-//     result.to_string()
-// }
+pub fn strip_ansi_codes(input: &str) -> String {
+    let ansi_escape_pattern = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
+    ansi_escape_pattern.replace_all(input, "").to_string()
+}
