@@ -34,7 +34,10 @@ pub enum TagType {
 
 impl TagType {
     pub fn is_texture(&self) -> bool {
-        matches!(self, TagType::Texture2D {..} | TagType::TextureCube {..} | TagType::Texture3D {..})
+        matches!(
+            self,
+            TagType::Texture2D { .. } | TagType::TextureCube { .. } | TagType::Texture3D { .. }
+        )
     }
 
     pub fn display_color(&self) -> Color32 {

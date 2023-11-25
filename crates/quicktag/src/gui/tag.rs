@@ -303,6 +303,7 @@ impl View for TagView {
                                     egui::SelectableLabel::new(false, tag_label),
                                 );
 
+                                ctx.style_mut(|s| s.interaction.show_tooltips_only_when_still = false);
                                 if response
                                     .context_menu(|ui| {
                                         tag_context(
@@ -319,7 +320,7 @@ impl View for TagView {
                                             if let Some((tex, egui_tex)) =
                                                 self.textures.get(&tag.hash.hash32())
                                             {
-                                                let max_height = ui.available_height();
+                                                let max_height = ui.available_height() * 0.90;
 
                                                 let tex_size = if ui.input(|i| i.modifiers
                                                     .ctrl) {
