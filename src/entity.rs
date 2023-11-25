@@ -63,6 +63,7 @@ pub struct SEntityModelMesh {
     pub unk1c: u32,
     pub parts: TablePointer<Unk8080737e>,
     pub unk30: [u16; 37],
+    _pad7a: [u16; 3],
 }
 
 #[derive(BinRead, Debug, Clone)]

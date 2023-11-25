@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
-use crate::ecs::components::{ActivityGroup, ResourcePoint};
+use crate::ecs::components::{ActivityGroup, EntityModel, ResourcePoint};
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
@@ -624,6 +624,10 @@ pub async fn main() -> anyhow::Result<()> {
                                     //     view,
                                     // );
                                 }
+                            }
+
+                            for (_, em) in map.scene.query::<&EntityModel>().iter() {
+                                em.0.draw(&renderer.read(), em.1.buffer().clone()).ok();
                             }
                         }
 

@@ -8,9 +8,10 @@ use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::dcs::DcsShared;
-use crate::render::EntityRenderer;
+use crate::render::{ConstantBuffer, EntityRenderer};
 
 use crate::render::renderer::{Renderer, RendererShared};
+use crate::render::scopes::ScopeRigidModel;
 use crate::resources::Resources;
 use crate::structure::ExtendedHash;
 
@@ -18,7 +19,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
-use glam::Vec3;
+use glam::{Mat4, Vec3, Vec4};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -293,7 +294,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 scene.clear();
             }
         }
-        "spawn_entity_model" => {
+        "sem" | "spawn_entity_model" => {
             if let Some(mut maps) = resources.get_mut::<MapDataList>() {
                 // TODO(cohae): Make some abstraction for this
                 if args.len() != 1 {
@@ -328,13 +329,42 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 println!("Spawning entity {tag}...");
                 match load_entity_model(tag, &rb) {
                     Ok(er) => {
-                        scene.spawn((
-                            Transform {
-                                translation: camera.position,
-                                ..Default::default()
-                            },
-                            EntityModel(er),
-                        ));
+                        let transform = Transform {
+                            translation: camera.position,
+                            ..Default::default()
+                        };
+
+                        let mm = transform.to_mat4();
+
+                        let model_matrix = Mat4::from_cols(
+                            mm.x_axis.truncate().extend(mm.w_axis.x),
+                            mm.y_axis.truncate().extend(mm.w_axis.y),
+                            mm.z_axis.truncate().extend(mm.w_axis.z),
+                            mm.w_axis,
+                        );
+
+                        let alt_matrix = Mat4::from_cols(
+                            Vec3::ONE.extend(mm.w_axis.x),
+                            Vec3::ONE.extend(mm.w_axis.y),
+                            Vec3::ONE.extend(mm.w_axis.z),
+                            Vec4::W,
+                        );
+
+                        let scope = ConstantBuffer::create(
+                            renderer.read().dcs.clone(),
+                            Some(&ScopeRigidModel {
+                                mesh_to_world: model_matrix,
+                                position_scale: er.mesh_scale(),
+                                position_offset: er.mesh_offset(),
+                                texcoord0_scale_offset: er.texcoord_transform(),
+                                dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+                                unk8: [alt_matrix; 8],
+                            }),
+                        )
+                        .unwrap();
+
+                        scene.spawn((transform, EntityModel(er, scope)));
+                        info!("Entity spawned");
                     }
                     Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
                 }
@@ -432,15 +462,55 @@ fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<Ent
     for m in &model.meshes {
         for p in &m.parts {
             if p.material.is_some() {
-                renderer.render_data.data_mut().materials.insert(
+                let technique = Technique::load(
+                    renderer,
+                    package_manager().read_tag_struct(p.material)?,
                     p.material,
-                    Technique::load(
-                        renderer,
-                        package_manager().read_tag_struct(p.material)?,
-                        p.material,
-                        true,
-                    ),
+                    true,
                 );
+
+                for s in technique
+                    .shader_vertex
+                    .samplers
+                    .iter()
+                    .chain(technique.shader_pixel.samplers.iter())
+                {
+                    let sampler_header_ref = package_manager()
+                        .get_entry(s.hash32().unwrap())
+                        .unwrap()
+                        .reference;
+                    let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
+
+                    let sampler = unsafe {
+                        renderer
+                            .dcs
+                            .device
+                            .CreateSamplerState(sampler_data.as_ptr() as _)
+                    };
+
+                    if let Ok(sampler) = sampler {
+                        renderer
+                            .render_data
+                            .data_mut()
+                            .samplers
+                            .insert(s.key(), sampler);
+                    }
+                }
+
+                for t in technique
+                    .shader_pixel
+                    .textures
+                    .iter()
+                    .chain(technique.shader_vertex.textures.iter())
+                {
+                    renderer.render_data.load_texture(t.texture);
+                }
+
+                renderer
+                    .render_data
+                    .data_mut()
+                    .materials
+                    .insert(p.material, technique);
             }
         }
     }

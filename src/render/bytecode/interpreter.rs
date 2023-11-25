@@ -1,6 +1,6 @@
 use std::mem::transmute;
 
-use glam::{Mat4, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use tinyvec::ArrayVec;
 
 use crate::render::{cbuffer::ConstantBufferCached, renderer::Renderer, RenderData};
@@ -468,10 +468,7 @@ impl TfxBytecodeInterpreter {
 
                     let viewproj = *renderer.camera_viewproj.read();
 
-                    // let mat = viewproj; // * (slight_scale * light_transform);
-
                     viewproj * (light_transform.to_mat4() * slight_scale)
-                    // viewproj * (Mat4::from_translation(light_transform.translation) * slight_scale)
                 }
                 u => {
                     anyhow::bail!(
@@ -481,8 +478,8 @@ impl TfxBytecodeInterpreter {
                 }
             },
             TfxExtern::DeferredLight => match offset {
-                // TODO(cohae): Dont know what this is used for yet
-                4 => Mat4::IDENTITY,
+                // TODO(cohae): Used for transforming projective textures
+                4 => Mat4::from_scale(Vec3::splat(0.15)),
                 8 => renderer.light_transform.read().to_mat4(),
                 u => {
                     anyhow::bail!(

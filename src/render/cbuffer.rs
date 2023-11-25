@@ -184,15 +184,15 @@ impl<T> ConstantBuffer<T> {
         }
     }
 
-    /// The size of the buffer, in bytes
-    pub fn size(&self) -> usize {
-        self.size
-    }
+    // /// The size of the buffer, in bytes
+    // pub fn size(&self) -> usize {
+    //     self.size
+    // }
 
-    /// The size of the buffer in elements (size / sizeof(T))
-    pub fn elements(&self) -> usize {
-        self.size() / std::mem::size_of::<T>()
-    }
+    // /// The size of the buffer in elements (size / sizeof(T))
+    // pub fn elements(&self) -> usize {
+    //     self.size() / std::mem::size_of::<T>()
+    // }
 }
 
 pub struct BufferMapGuard<T: Sized> {
