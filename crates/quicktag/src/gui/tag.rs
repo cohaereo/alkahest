@@ -8,16 +8,21 @@ use std::{
 
 use binrw::{binread, BinReaderExt};
 use destiny_pkg::{package::UEntryHeader, TagHash, TagHash64};
+use eframe::egui::load::SizedTexture;
+use eframe::egui::{vec2, TextureId};
+use eframe::egui_wgpu::RenderState;
 use eframe::{
     egui::{self, CollapsingHeader, RichText},
     epaint::Color32,
+    wgpu,
 };
 use itertools::Itertools;
 use log::error;
-use nohash_hasher::IntSet;
+use nohash_hasher::{IntMap, IntSet};
 use poll_promise::Promise;
 use std::fmt::Write;
 
+use crate::gui::texture::Texture;
 use crate::{
     packages::package_manager,
     references::REFERENCE_MAP,
@@ -38,6 +43,8 @@ pub struct TagView {
     raw_strings: Vec<(u64, String)>,
     arrays: Vec<(u64, TagArray)>,
 
+    textures: IntMap<TagHash, (Texture, TextureId)>,
+
     tag: TagHash,
     tag64: Option<TagHash64>,
     tag_entry: UEntryHeader,
@@ -48,6 +55,8 @@ pub struct TagView {
     traversal_depth_limit: usize,
     traversal_show_strings: bool,
     start_time: Instant,
+
+    render_state: RenderState,
 }
 
 impl TagView {
@@ -55,6 +64,7 @@ impl TagView {
         cache: Arc<TagCache>,
         string_cache: Arc<StringCache>,
         tag: TagHash,
+        render_state: RenderState,
     ) -> Option<TagView> {
         let tag_data = package_manager().read_tag(tag).ok()?;
         let mut array_offsets = vec![];
@@ -118,6 +128,32 @@ impl TagView {
             .map(|(&h64, _)| TagHash64(h64));
 
         let tag_entry = package_manager().get_entry(tag)?;
+        let scan = ExtendedScanResult::from_scanresult(cache.get(&tag).cloned()?);
+
+        let mut textures: IntMap<TagHash, (Texture, TextureId)> = Default::default();
+        for hash in &scan.file_hashes {
+            if let Some(t) = &hash.entry {
+                let tagtype = TagType::from_type_subtype(t.file_type, t.file_subtype);
+                if tagtype.is_texture() {
+                    match Texture::load(&render_state, hash.hash.hash32()) {
+                        Ok(t) => {
+                            let egui_handle =
+                                render_state.renderer.write().register_native_texture(
+                                    &render_state.device,
+                                    &t.view,
+                                    wgpu::FilterMode::Linear,
+                                );
+
+                            textures.insert(hash.hash.hash32(), (t, egui_handle));
+                        }
+                        Err(e) => {
+                            error!("Failed to load texture {}: {e}", hash.hash);
+                        }
+                    }
+                }
+            }
+        }
+
         Some(Self {
             arrays,
             string_hashes,
@@ -125,8 +161,9 @@ impl TagView {
             tag64,
             tag_type: TagType::from_type_subtype(tag_entry.file_type, tag_entry.file_subtype),
             tag_entry,
+            textures,
 
-            scan: ExtendedScanResult::from_scanresult(cache.get(&tag).cloned()?),
+            scan,
             cache,
             traversal_depth_limit: 16,
             tag_traversal: None,
@@ -134,12 +171,18 @@ impl TagView {
             string_cache,
             raw_strings,
             start_time: Instant::now(),
+            render_state,
         })
     }
 
     /// Replaces this view with another tag
     pub fn open_tag(&mut self, tag: TagHash) {
-        if let Some(tv) = Self::create(self.cache.clone(), self.string_cache.clone(), tag) {
+        if let Some(tv) = Self::create(
+            self.cache.clone(),
+            self.string_cache.clone(),
+            tag,
+            self.render_state.clone(),
+        ) {
             *self = tv;
         } else {
             error!("Could not open new tag view for {tag} (tag not found in cache)");
@@ -233,11 +276,13 @@ impl View for TagView {
                             ui.label(RichText::new("No outgoing references found").italics());
                         } else {
                             for tag in &self.scan.file_hashes {
+                                let mut is_texture = false;
                                 let tag_label = if let Some(entry) = &tag.entry {
                                     let tagtype = TagType::from_type_subtype(
                                         entry.file_type,
                                         entry.file_subtype,
                                     );
+                                    is_texture = tagtype.is_texture();
 
                                     let fancy_tag =
                                         format_tag_entry(tag.hash.hash32(), Some(entry));
@@ -268,6 +313,29 @@ impl View for TagView {
                                                 ExtendedTagHash::Hash64(t) => Some(t),
                                             },
                                         )
+                                    })
+                                    .on_hover_ui(|ui| {
+                                        if is_texture {
+                                            if let Some((tex, egui_tex)) =
+                                                self.textures.get(&tag.hash.hash32())
+                                            {
+                                                let max_height = ui.available_height();
+
+                                                let tex_size = if ui.input(|i| i.modifiers
+                                                    .ctrl) {
+                                                    vec2(max_height * tex.aspect_ratio, max_height)
+                                                } else {
+                                                    ui.label("ℹ Hold ctrl to enlarge");
+                                                    vec2(256. * tex.aspect_ratio, 256.)
+                                                };
+
+                                                ui.image(SizedTexture::new(egui_tex.clone(), tex_size));
+
+                                                ui.label(format!("{}x{}x{} {:?}", tex.width, tex.height, tex.depth, tex.format));
+                                            } else {
+                                                ui.colored_label(Color32::RED, "⚠ Texture not found, check log for more information");
+                                            }
+                                        }
                                     })
                                     .clicked()
                                 {
@@ -469,7 +537,11 @@ impl ExtendedTagHash {
     pub fn hash32(&self) -> TagHash {
         match self {
             ExtendedTagHash::Hash32(h) => *h,
-            ExtendedTagHash::Hash64(h) => package_manager().hash64_table.get(&h.0).unwrap().hash32,
+            ExtendedTagHash::Hash64(h) => package_manager()
+                .hash64_table
+                .get(&h.0)
+                .map(|v| v.hash32)
+                .unwrap_or(TagHash::NONE),
         }
     }
 }
@@ -747,6 +819,14 @@ fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
     .ok();
 
     strings
+}
+
+impl Drop for TagView {
+    fn drop(&mut self) {
+        for (_, (_, t)) in self.textures.iter() {
+            self.render_state.renderer.write().free_texture(t)
+        }
+    }
 }
 
 pub fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {

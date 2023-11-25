@@ -9,7 +9,8 @@ use std::sync::Arc;
 
 use clap::Parser;
 use destiny_pkg::{PackageManager, PackageVersion};
-use eframe::IconData;
+use eframe::egui_wgpu::WgpuConfiguration;
+use eframe::{wgpu, IconData};
 use env_logger::Env;
 use log::info;
 use packages::PACKAGE_MANAGER;
@@ -28,7 +29,10 @@ struct Args {
 }
 
 fn main() -> eframe::Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(
+        Env::default().default_filter_or("info,wgpu_core=warn,naga=warn"),
+    )
+    .init();
     let args = Args::parse();
 
     info!("Initializing package manager");
@@ -43,7 +47,17 @@ fn main() -> eframe::Result<()> {
             IconData::try_from_png_bytes(include_bytes!("../quicktag.png"))
                 .expect("Failed to load icon"),
         ),
-        renderer: eframe::Renderer::Glow,
+        renderer: eframe::Renderer::Wgpu,
+        wgpu_options: WgpuConfiguration {
+            supported_backends: wgpu::Backends::PRIMARY,
+            device_descriptor: Arc::new(|_adapter| wgpu::DeviceDescriptor {
+                features: wgpu::Features::TEXTURE_COMPRESSION_BC
+                    | wgpu::Features::TEXTURE_BINDING_ARRAY,
+                limits: wgpu::Limits::downlevel_defaults(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
         ..Default::default()
     };
     eframe::run_native(

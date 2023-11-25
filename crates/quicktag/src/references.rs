@@ -20,6 +20,7 @@ lazy_static::lazy_static! {
         (0x80807211, "STextureTag"),
         (0x80806DCF, "STextureTag64"),
         (0x80800090, "Vec4"),
+        (0x80800009, "Byte"),
         (0x808093AD, "SStaticMapData"),
         (0x808093B1, "SOcclusionBounds"),
         (0x808093B3, "SMeshInstanceOcclusionBounds"),

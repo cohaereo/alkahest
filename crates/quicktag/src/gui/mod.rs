@@ -1,9 +1,12 @@
 mod common;
+mod dxgi;
 mod tag;
+mod texture;
 
 use std::sync::Arc;
 
 use destiny_pkg::{package::UEntryHeader, PackageNamedTagEntry, PackageVersion, TagHash};
+use eframe::egui_wgpu::RenderState;
 use eframe::{
     egui::{self},
     emath::Align2,
@@ -44,11 +47,13 @@ pub struct QuickTagApp {
     tag_view: Option<TagView>,
     named_tags: NamedTags,
     named_tag_filter: String,
+
+    pub wgpu_state: RenderState,
 }
 
 impl QuickTagApp {
     /// Called once before the first frame.
-    pub fn new(_cc: &eframe::CreationContext<'_>, version: PackageVersion) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, version: PackageVersion) -> Self {
         QuickTagApp {
             cache_load: Some(Promise::spawn_thread("load_cache", move || {
                 load_tag_cache(version)
@@ -62,6 +67,7 @@ impl QuickTagApp {
             open_panel: Panel::Tag,
             named_tags: NamedTags::new(),
             named_tag_filter: String::new(),
+            wgpu_state: cc.wgpu_render_state.clone().unwrap(),
         }
     }
 }
@@ -163,7 +169,12 @@ impl eframe::App for QuickTagApp {
 
 impl QuickTagApp {
     fn open_tag(&mut self, tag: TagHash) {
-        let new_view = TagView::create(self.cache.clone(), self.strings.clone(), tag);
+        let new_view = TagView::create(
+            self.cache.clone(),
+            self.strings.clone(),
+            tag,
+            self.wgpu_state.clone(),
+        );
         if new_view.is_some() {
             self.tag_view = new_view;
             self.open_panel = Panel::Tag;
