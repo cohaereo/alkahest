@@ -777,6 +777,7 @@ pub async fn load_maps(
         data.samplers = sampler_map;
     };
 
+    #[cfg(not(feature = "keep_map_order"))]
     maps.sort_by_key(|m| m.2.name.clone());
 
     Ok(LoadMapsData {
