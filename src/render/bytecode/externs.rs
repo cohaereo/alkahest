@@ -2,6 +2,11 @@ use anyhow::Context;
 use binrw::binread;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use windows::Win32::Graphics::Direct3D11::{
+    ID3D11Buffer, ID3D11SamplerState, ID3D11ShaderResourceView,
+};
+
+use crate::render::DeviceContextSwapchain;
 
 #[binread]
 #[br(repr(u8))]
@@ -120,9 +125,75 @@ pub enum TfxShaderStage {
     Domain = 6,
 }
 
+macro_rules! stage_function_match {
+    ($dcs:expr, $stage:expr, $name:ident, $($arg:expr),+) => {
+        paste::paste! {
+            match $stage {
+                TfxShaderStage::Pixel => $dcs
+                    .context()
+                    .[<PS $name>]($($arg, )*),
+                TfxShaderStage::Vertex => $dcs
+                    .context()
+                    .[<VS $name>]($($arg, )*),
+                TfxShaderStage::Geometry => $dcs
+                    .context()
+                    .[<GS $name>]($($arg, )*),
+                TfxShaderStage::Hull => $dcs
+                    .context()
+                    .[<HS $name>]($($arg, )*),
+                TfxShaderStage::Compute => $dcs
+                    .context()
+                    .[<CS $name>]($($arg, )*),
+                TfxShaderStage::Domain => $dcs
+                    .context()
+                    .[<DS $name>]($($arg, )*),
+            }
+        }
+    };
+}
+
 impl TfxShaderStage {
     /// Decodes shader stage from TFX bytecode value
     pub fn from_tfx_value(value: u8) -> anyhow::Result<TfxShaderStage> {
         Self::from_u8(value >> 5).context("Invalid shader stage index")
+    }
+
+    pub fn set_shader_resources(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        start_slot: u32,
+        shader_resource_views: Option<&[Option<ID3D11ShaderResourceView>]>,
+    ) {
+        unsafe {
+            stage_function_match!(
+                dcs,
+                self,
+                SetShaderResources,
+                start_slot,
+                shader_resource_views
+            );
+        }
+    }
+
+    pub fn set_constant_buffers(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        start_slot: u32,
+        constant_buffers: Option<&[Option<ID3D11Buffer>]>,
+    ) {
+        unsafe {
+            stage_function_match!(dcs, self, SetConstantBuffers, start_slot, constant_buffers);
+        }
+    }
+
+    pub fn set_samplers(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        start_slot: u32,
+        samplers: Option<&[Option<ID3D11SamplerState>]>,
+    ) {
+        unsafe {
+            stage_function_match!(dcs, self, SetSamplers, start_slot, samplers);
+        }
     }
 }

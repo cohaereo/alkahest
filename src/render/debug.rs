@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use super::{color::Color, drawcall::ShaderStages, shader, ConstantBuffer, DeviceContextSwapchain};
+use super::bytecode::externs::TfxShaderStage;
+use super::{color::Color, shader, ConstantBuffer, DeviceContextSwapchain};
 use crate::types::AABB;
 use anyhow::Context;
 use genmesh::generators::IndexedPolygon;
@@ -297,7 +298,9 @@ impl DebugShapeRenderer {
                         })
                         .unwrap();
 
-                    self.scope.bind(10, ShaderStages::all());
+                    self.scope_line.bind(10, TfxShaderStage::Vertex);
+                    self.scope_line.bind(10, TfxShaderStage::Pixel);
+
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
                         self.dcs.context().VSSetShader(&self.vshader, None);
@@ -370,7 +373,9 @@ impl DebugShapeRenderer {
                         })
                         .unwrap();
 
-                    self.scope_line.bind(10, ShaderStages::all());
+                    self.scope_line.bind(10, TfxShaderStage::Vertex);
+                    self.scope_line.bind(10, TfxShaderStage::Pixel);
+
                     unsafe {
                         self.dcs.context().VSSetShader(&self.vshader_line, None);
                         self.dcs.context().PSSetShader(&self.pshader_line, None);

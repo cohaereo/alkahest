@@ -179,7 +179,7 @@ impl RenderData {
 
     // Get the shading technique for a material based on it's pixel shader output signature
     pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingMode> {
-        let pixel_shader = self.materials.get(&material)?.shader_pixel.shader;
+        let pixel_shader = self.materials.get(&material)?.stage_pixel.shader.shader;
 
         if self.pshaders.get(&pixel_shader)?.1.len() == 1 {
             Some(ShadingMode::Forward)

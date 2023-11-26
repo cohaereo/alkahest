@@ -17,6 +17,7 @@ use crate::render::scopes::ScopeUnk3;
 use crate::render::shader;
 use crate::{camera::FpsCamera, resources::Resources};
 
+use super::bytecode::externs::TfxShaderStage;
 use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::{GeometryType, Transparency};
@@ -350,17 +351,21 @@ impl Renderer {
 
         let render_settings = resources.get::<RenderSettings>().unwrap();
 
-        self.scope_unk2.bind(2, ShaderStages::all());
-        self.scope_unk3.bind(3, ShaderStages::all());
-        self.scope_unk8.bind(8, ShaderStages::all());
-        self.scope_frame.bind(13, ShaderStages::all());
+        self.scope_unk2.bind(2, TfxShaderStage::Vertex);
+        self.scope_unk2.bind(2, TfxShaderStage::Pixel);
+        self.scope_unk3.bind(3, TfxShaderStage::Vertex);
+        self.scope_unk3.bind(3, TfxShaderStage::Pixel);
+        self.scope_unk8.bind(8, TfxShaderStage::Vertex);
+        self.scope_unk8.bind(8, TfxShaderStage::Pixel);
+        self.scope_frame.bind(13, TfxShaderStage::Vertex);
+        self.scope_frame.bind(13, TfxShaderStage::Pixel);
 
         if render_settings.draw_lights {
             self.render_cascade_depthmaps(resources);
         }
 
-        self.scope_view.bind(12, ShaderStages::all());
-        self.scope_view_pixel.bind(12, ShaderStages::PIXEL);
+        self.scope_view.bind(12, TfxShaderStage::Vertex);
+        self.scope_view_pixel.bind(12, TfxShaderStage::Pixel);
 
         unsafe {
             self.dcs.context().RSSetState(&self.shadow_rs);
@@ -617,7 +622,8 @@ impl Renderer {
 
         self.run_final();
 
-        self.scope_alk_composite.bind(0, ShaderStages::all());
+        self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+        self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
         if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
             unsafe {
                 self.dcs.context().OMSetRenderTargets(
@@ -1021,10 +1027,11 @@ impl Renderer {
                     fxaa_enabled: if render_settings.fxaa { 1 } else { 0 },
                 };
                 self.scope_alk_composite.write(&compositor_options).unwrap();
-                self.scope_alk_composite.bind(0, ShaderStages::all());
+                self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+                self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
             }
             self.scope_alk_cascade_transforms
-                .bind(3, ShaderStages::PIXEL);
+                .bind(3, TfxShaderStage::Pixel);
 
             self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
@@ -1050,7 +1057,8 @@ impl Renderer {
 
     fn run_final(&self) {
         unsafe {
-            self.scope_alk_composite.bind(0, ShaderStages::all());
+            self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+            self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
             self.dcs.context().OMSetBlendState(
                 &self.blend_state_none,
                 Some(&[1f32, 1., 1., 1.] as _),
@@ -1215,7 +1223,8 @@ impl Renderer {
                     ..*scope_view_base
                 })
                 .expect("Failed to write cascade scope_view");
-            self.scope_view_csm.bind(12, ShaderStages::all());
+            self.scope_view_csm.bind(12, TfxShaderStage::Vertex);
+            self.scope_view_csm.bind(12, TfxShaderStage::Pixel);
 
             for i in 0..draw_queue.len() {
                 if !draw_queue[i].0.transparency().should_write_depth() {

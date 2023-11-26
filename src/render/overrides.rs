@@ -17,7 +17,7 @@ pub struct EnabledShaderOverrides {
 impl Default for EnabledShaderOverrides {
     fn default() -> Self {
         Self {
-            // TODO(cohae): remove when we fix entity VS
+            // TODO(cohae): disable when we fix entity VS
             entity_vs: true,
             entity_ps: false,
             terrain_ps: false,

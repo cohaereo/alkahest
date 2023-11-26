@@ -131,6 +131,7 @@ dependencies = [
  "num-traits 0.2.16",
  "obj",
  "parking_lot",
+ "paste",
  "png",
  "poll-promise",
  "raw-window-handle",
@@ -1810,6 +1811,12 @@ dependencies = [
  "smallvec",
  "windows-targets 0.48.1",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
 
 [[package]]
 name = "percent-encoding"

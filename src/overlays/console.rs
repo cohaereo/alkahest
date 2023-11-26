@@ -469,41 +469,33 @@ fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<Ent
                     true,
                 );
 
-                for s in technique
-                    .shader_vertex
-                    .samplers
-                    .iter()
-                    .chain(technique.shader_pixel.samplers.iter())
-                {
-                    let sampler_header_ref = package_manager()
-                        .get_entry(s.hash32().unwrap())
-                        .unwrap()
-                        .reference;
-                    let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
+                for stage in technique.all_stages() {
+                    for s in stage.shader.samplers.iter() {
+                        let sampler_header_ref = package_manager()
+                            .get_entry(s.hash32().unwrap())
+                            .unwrap()
+                            .reference;
+                        let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
 
-                    let sampler = unsafe {
-                        renderer
-                            .dcs
-                            .device
-                            .CreateSamplerState(sampler_data.as_ptr() as _)
-                    };
+                        let sampler = unsafe {
+                            renderer
+                                .dcs
+                                .device
+                                .CreateSamplerState(sampler_data.as_ptr() as _)
+                        };
 
-                    if let Ok(sampler) = sampler {
-                        renderer
-                            .render_data
-                            .data_mut()
-                            .samplers
-                            .insert(s.key(), sampler);
+                        if let Ok(sampler) = sampler {
+                            renderer
+                                .render_data
+                                .data_mut()
+                                .samplers
+                                .insert(s.key(), sampler);
+                        }
                     }
-                }
 
-                for t in technique
-                    .shader_pixel
-                    .textures
-                    .iter()
-                    .chain(technique.shader_vertex.textures.iter())
-                {
-                    renderer.render_data.load_texture(t.texture);
+                    for t in stage.shader.textures.iter() {
+                        renderer.render_data.load_texture(t.texture);
+                    }
                 }
 
                 renderer

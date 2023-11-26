@@ -612,20 +612,18 @@ pub async fn load_maps(
 
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
-            for sampler in m
-                .shader_vertex
-                .samplers
-                .iter()
-                .chain(m.shader_pixel.samplers.iter())
-            {
-                to_load_samplers.insert(*sampler);
+            // TODO(cohae): Technique is responsible for loading samplers
+            for stage in m.all_stages() {
+                for sampler in stage.shader.samplers.iter() {
+                    to_load_samplers.insert(*sampler);
+                }
             }
 
-            if let Some(v) = package_manager().get_entry(m.shader_vertex.shader) {
-                let _span = debug_span!("load vshader", shader = ?m.shader_vertex.shader).entered();
+            if let Some(v) = package_manager().get_entry(m.stage_vertex.shader.shader) {
+                let _span = debug_span!("load vshader", shader = ?m.stage_vertex.shader).entered();
 
                 vshader_map
-                    .entry(m.shader_vertex.shader)
+                    .entry(m.stage_vertex.shader.shader)
                     .or_insert_with(|| {
                         let vs_data = package_manager().read_tag(v.reference).unwrap();
 
@@ -652,7 +650,8 @@ pub async fn load_maps(
                                 .context("Failed to load vertex shader")
                                 .unwrap();
 
-                            let name = format!("VS {:?} (mat {})\0", m.shader_vertex.shader, t);
+                            let name =
+                                format!("VS {:?} (mat {})\0", m.stage_vertex.shader.shader, t);
                             v.SetPrivateData(
                                 &WKPDID_D3DDebugObjectName,
                                 name.len() as u32 - 1,
@@ -687,46 +686,49 @@ pub async fn load_maps(
 
             // return Ok(());
 
-            if let Some(v) = package_manager().get_entry(m.shader_pixel.shader) {
-                let _span = debug_span!("load pshader", shader = ?m.shader_pixel.shader).entered();
+            if let Some(v) = package_manager().get_entry(m.stage_pixel.shader.shader) {
+                let _span =
+                    debug_span!("load pshader", shader = ?m.stage_pixel.shader.shader).entered();
 
-                pshader_map.entry(m.shader_pixel.shader).or_insert_with(|| {
-                    let ps_data = package_manager().read_tag(v.reference).unwrap();
+                pshader_map
+                    .entry(m.stage_pixel.shader.shader)
+                    .or_insert_with(|| {
+                        let ps_data = package_manager().read_tag(v.reference).unwrap();
 
-                    let mut ps_cur = Cursor::new(&ps_data);
-                    let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
-                    let output_sig = get_output_signature(&mut ps_cur, &dxbc_header).unwrap();
+                        let mut ps_cur = Cursor::new(&ps_data);
+                        let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
+                        let output_sig = get_output_signature(&mut ps_cur, &dxbc_header).unwrap();
 
-                    let layout_converted = output_sig
-                        .elements
-                        .iter()
-                        .map(|e| {
-                            InputElement::from_dxbc(
-                                e,
-                                e.component_type == DxbcInputType::Float,
-                                false,
+                        let layout_converted = output_sig
+                            .elements
+                            .iter()
+                            .map(|e| {
+                                InputElement::from_dxbc(
+                                    e,
+                                    e.component_type == DxbcInputType::Float,
+                                    false,
+                                )
+                            })
+                            .collect_vec();
+
+                        unsafe {
+                            let v = dcs
+                                .device
+                                .CreatePixelShader(&ps_data, None)
+                                .context("Failed to load pixel shader")
+                                .unwrap();
+
+                            let name = format!("PS {:?} (mat {})\0", m.stage_pixel.shader, t);
+                            v.SetPrivateData(
+                                &WKPDID_D3DDebugObjectName,
+                                name.len() as u32 - 1,
+                                Some(name.as_ptr() as _),
                             )
-                        })
-                        .collect_vec();
+                            .expect("Failed to set VS name");
 
-                    unsafe {
-                        let v = dcs
-                            .device
-                            .CreatePixelShader(&ps_data, None)
-                            .context("Failed to load pixel shader")
-                            .unwrap();
-
-                        let name = format!("PS {:?} (mat {})\0", m.shader_pixel.shader, t);
-                        v.SetPrivateData(
-                            &WKPDID_D3DDebugObjectName,
-                            name.len() as u32 - 1,
-                            Some(name.as_ptr() as _),
-                        )
-                        .expect("Failed to set VS name");
-
-                        (v, layout_converted)
-                    }
-                });
+                            (v, layout_converted)
+                        }
+                    });
             }
         }
     });
@@ -739,15 +741,13 @@ pub async fn load_maps(
 
     info!("Loaded {} materials", material_map.len());
     {
+        // TODO(cohae): Technique is responsible for loading textures
         let renderer = renderer.read();
         for m in material_map.values() {
-            for t in m
-                .shader_pixel
-                .textures
-                .iter()
-                .chain(m.shader_vertex.textures.iter())
-            {
-                renderer.render_data.load_texture(t.texture);
+            for stage in m.all_stages() {
+                for t in stage.shader.textures.iter() {
+                    renderer.render_data.load_texture(t.texture);
+                }
             }
         }
     }

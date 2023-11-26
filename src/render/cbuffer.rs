@@ -1,10 +1,11 @@
-use crate::render::drawcall::ShaderStages;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::*;
+
+use super::bytecode::externs::TfxShaderStage;
 
 #[derive(Clone)]
 pub struct ConstantBuffer<T: Sized> {
@@ -156,32 +157,8 @@ impl<T> ConstantBuffer<T> {
         &self.buffer
     }
 
-    pub fn bind(&self, slot: u32, stages: ShaderStages) {
-        unsafe {
-            if stages.contains(ShaderStages::VERTEX) {
-                self.dcs
-                    .context()
-                    .VSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
-            }
-
-            if stages.contains(ShaderStages::PIXEL) {
-                self.dcs
-                    .context()
-                    .PSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
-            }
-
-            if stages.contains(ShaderStages::COMPUTE) {
-                self.dcs
-                    .context()
-                    .CSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
-            }
-
-            if stages.contains(ShaderStages::GEOMETRY) {
-                self.dcs
-                    .context()
-                    .GSSetConstantBuffers(slot, Some(&[Some(self.buffer.clone())]))
-            }
-        }
+    pub fn bind(&self, slot: u32, stage: TfxShaderStage) {
+        stage.set_constant_buffers(&self.dcs, slot, Some(&[Some(self.buffer.clone())]))
     }
 
     // /// The size of the buffer, in bytes
@@ -243,10 +220,10 @@ impl<T: Sized + Clone> ConstantBufferCached<T> {
         unsafe { std::slice::from_raw_parts_mut(self.data.as_ptr() as *mut T, self.data.len()) }
     }
 
-    pub fn bind(&self, slot: u32, stages: ShaderStages) {
+    pub fn bind(&self, slot: u32, stage: TfxShaderStage) {
         // Make sure the buffer is written before we bind it
         // Its fine to call this multiple times per draw, as we keep track of whether the buffer has been acquired before we write
         self.write().ok();
-        self.cbuffer.bind(slot, stages)
+        self.cbuffer.bind(slot, stage)
     }
 }
