@@ -3,12 +3,12 @@ use crate::ecs::components::EntityModel;
 use crate::ecs::transform::Transform;
 use crate::entity::SEntityModel;
 use crate::map::MapDataList;
-use crate::material::{STechnique, Technique};
 use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::dcs::DcsShared;
 use crate::render::{ConstantBuffer, EntityRenderer};
+use crate::technique::{STechnique, Technique};
 
 use crate::render::renderer::{Renderer, RendererShared};
 use crate::render::scopes::ScopeRigidModel;

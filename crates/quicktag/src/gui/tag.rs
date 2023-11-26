@@ -128,7 +128,7 @@ impl TagView {
             .map(|(&h64, _)| TagHash64(h64));
 
         let tag_entry = package_manager().get_entry(tag)?;
-        let scan = ExtendedScanResult::from_scanresult(cache.get(&tag).cloned()?);
+        let scan = ExtendedScanResult::from_scanresult(cache.hashes.get(&tag).cloned()?);
 
         let mut textures: IntMap<TagHash, (Texture, TextureId)> = Default::default();
         for hash in &scan.file_hashes {
@@ -330,7 +330,7 @@ impl View for TagView {
                                                     vec2(256. * tex.aspect_ratio, 256.)
                                                 };
 
-                                                ui.image(SizedTexture::new(egui_tex.clone(), tex_size));
+                                                ui.image(SizedTexture::new(*egui_tex, tex_size));
 
                                                 ui.label(format!("{}x{}x{} {:?}", tex.width, tex.height, tex.depth, tex.format));
                                             } else {
@@ -668,7 +668,7 @@ fn traverse_tag(
         return;
     }
 
-    let Some(scan_result) = cache.get(&tag).cloned() else {
+    let Some(scan_result) = cache.hashes.get(&tag).cloned() else {
         return;
     };
 

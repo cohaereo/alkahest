@@ -46,7 +46,6 @@ use crate::{
         Unk80806ef4, Unk8080714b,
     },
     map_resources::MapResource,
-    material::{STechnique, Technique},
     packages::package_manager,
     render::{
         scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
@@ -54,6 +53,7 @@ use crate::{
     },
     statics::{SStaticMesh, SStaticMeshInstances},
     structure::{TablePointer, Tag},
+    technique::{STechnique, Technique},
     types::AABB,
 };
 

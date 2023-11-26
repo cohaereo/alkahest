@@ -128,14 +128,14 @@ impl eframe::App for QuickTagApp {
                 if ui.button("Open").clicked() || submitted {
                     let tag_input_trimmed = self.tag_input.trim();
                     let tag = if tag_input_trimmed.len() >= 16 {
-                        let hash = u64::from_str_radix(&tag_input_trimmed, 16).unwrap_or_default();
+                        let hash = u64::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
                         if let Some(t) = package_manager().hash64_table.get(&u64::from_be(hash)) {
                             t.hash32
                         } else {
                             TagHash::NONE
                         }
                     } else {
-                        let hash = u32::from_str_radix(&tag_input_trimmed, 16).unwrap_or_default();
+                        let hash = u32::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
                         TagHash(u32::from_be(hash))
                     };
 

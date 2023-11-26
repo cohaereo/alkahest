@@ -4,6 +4,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     sync::Arc,
+    time::SystemTime,
 };
 
 use destiny_pkg::{PackageManager, PackageVersion, TagHash, TagHash64};
@@ -15,7 +16,24 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::packages::package_manager;
 
-pub type TagCache = IntMap<TagHash, ScanResult>;
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct TagCache {
+    /// Timestamp of the packages directory
+    timestamp: u64,
+
+    pub version: u32,
+    pub hashes: IntMap<TagHash, ScanResult>,
+}
+
+impl Default for TagCache {
+    fn default() -> Self {
+        Self {
+            timestamp: 0,
+            version: 2,
+            hashes: Default::default(),
+        }
+    }
+}
 
 // Shareable read-only context
 pub struct ScannerContext {
@@ -196,7 +214,8 @@ pub fn scanner_progress() -> ScanStatus {
 }
 
 pub fn load_tag_cache(version: PackageVersion) -> TagCache {
-    let cache_file_path = exe_relative_path(format!("tags_{}.cache", version.id()));
+    let cache_name = format!("tags_{}.cache", version.id());
+    let cache_file_path = exe_relative_path(&cache_name);
 
     if let Ok(cache_file) = File::open(&cache_file_path) {
         info!("Existing cache file found, loading");
@@ -205,8 +224,66 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
         match zstd::Decoder::new(cache_file) {
             Ok(zstd_decoder) => {
                 if let Ok(cache) = bincode::deserialize_from::<_, TagCache>(zstd_decoder) {
-                    *SCANNER_PROGRESS.write() = ScanStatus::None;
-                    return cache;
+                    match cache.version.cmp(&TagCache::default().version) {
+                        std::cmp::Ordering::Equal => {
+                            let current_pkg_timestamp =
+                                std::fs::metadata(&package_manager().package_dir)
+                                    .ok()
+                                    .and_then(|m| {
+                                        Some(
+                                            m.modified()
+                                                .ok()?
+                                                .duration_since(SystemTime::UNIX_EPOCH)
+                                                .ok()?
+                                                .as_secs(),
+                                        )
+                                    })
+                                    .unwrap_or(0);
+
+                            if cache.timestamp < current_pkg_timestamp {
+                                info!(
+                                    "Cache is out of date, rebuilding (cache: {}, package dir: {})",
+                                    chrono::NaiveDateTime::from_timestamp_opt(
+                                        cache.timestamp as i64,
+                                        0
+                                    )
+                                    .unwrap()
+                                    .format("%Y-%m-%d"),
+                                    chrono::NaiveDateTime::from_timestamp_opt(
+                                        current_pkg_timestamp as i64,
+                                        0
+                                    )
+                                    .unwrap()
+                                    .format("%Y-%m-%d"),
+                                );
+                            } else {
+                                *SCANNER_PROGRESS.write() = ScanStatus::None;
+                                return cache;
+                            }
+                        }
+                        std::cmp::Ordering::Less => {
+                            info!(
+                                "Cache is out of date, rebuilding (cache: {}, quicktag: {})",
+                                cache.version,
+                                TagCache::default().version
+                            );
+                        }
+                        std::cmp::Ordering::Greater => {
+                            error!("Tried to open a future version cache with an old quicktag version (cache: {}, quicktag: {})",
+                                cache.version,
+                                TagCache::default().version
+                            );
+
+                            native_dialog::MessageDialog::new()
+                                .set_type(native_dialog::MessageType::Error)
+                                .set_title("Future cache")
+                                .set_text(&format!("Your cache file ({cache_name}) is newer than this build of quicktag\nCache version: v{}\nExpected version: v{})", cache.version, TagCache::default().version))
+                                .show_alert()
+                                .unwrap();
+
+                            std::process::exit(21);
+                        }
+                    }
                 } else {
                     warn!("Cache file is invalid, creating a new one");
                 }
@@ -356,13 +433,13 @@ fn transform_tag_cache(cache: IntMap<TagHash, ScanResult>) -> TagCache {
             scan.references = refs.clone();
         }
 
-        new_cache.insert(*k, scan);
+        new_cache.hashes.insert(*k, scan);
     }
 
     info!("\t- Adding remaining non-structure tags");
     for (k, v) in direct_reference_cache {
-        if !v.is_empty() && !new_cache.contains_key(&k) {
-            new_cache.insert(
+        if !v.is_empty() && !new_cache.hashes.contains_key(&k) {
+            new_cache.hashes.insert(
                 k,
                 ScanResult {
                     references: v,
@@ -371,6 +448,21 @@ fn transform_tag_cache(cache: IntMap<TagHash, ScanResult>) -> TagCache {
             );
         }
     }
+
+    let timestamp = std::fs::metadata(&package_manager().package_dir)
+        .ok()
+        .and_then(|m| {
+            Some(
+                m.modified()
+                    .ok()?
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .ok()?
+                    .as_secs(),
+            )
+        })
+        .unwrap_or(0);
+
+    new_cache.timestamp = timestamp;
 
     new_cache
 }

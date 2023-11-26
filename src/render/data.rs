@@ -9,10 +9,10 @@ use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::dxgi::DxgiFormat;
-use crate::material::Technique;
 use crate::packages::package_manager;
 use crate::render::vertex_layout::InputElement;
 use crate::structure::ExtendedHash;
+use crate::technique::Technique;
 use crate::texture::Texture;
 
 use super::drawcall::ShadingMode;
