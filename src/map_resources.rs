@@ -1,7 +1,7 @@
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH,
-    ICON_WAVES,
+    ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG,
+    ICON_VOLUME_HIGH, ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
 use crate::render::debug::DebugShapes;
@@ -37,7 +37,7 @@ pub enum MapResource {
     Unk80806aa3(AABB, TagHash, Mat4),
     Unk808085c0,
     Unk80806a40,
-    Unk80806cc3(AABB, TagHash),
+    Decoration(AABB, TagHash),
     Unk8080917b(TagHash),
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
@@ -95,7 +95,7 @@ impl MapResource {
                     "Ambient Sound (no header?)".to_string()
                 }
             }
-            MapResource::Unk80806cc3(_, t) => format!("Unk80806cc3 ({t})"),
+            MapResource::Decoration(_, t) => format!("Decoration ({t})"),
             MapResource::ShadowingLight(t) => format!("Shadowing Light ({t})"),
             MapResource::NamedArea(_, s) => format!("Named Area ('{s}')\n(TODO: havok)"),
             MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
@@ -122,7 +122,7 @@ impl MapResource {
             MapResource::Unk80806aa3(bounds, _, _) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
-            MapResource::Unk80806cc3(bounds, _) => {
+            MapResource::Decoration(bounds, _) => {
                 debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
             }
             MapResource::ShadowingLight(_) => {
@@ -257,7 +257,7 @@ mapresource_info!(
     10, Unk80806aa3, [96, 96, 255], ICON_HELP
     11, Unk808085c0, [255, 96, 96], ICON_HELP
     12, Unk80806a40, [255, 44, 44], ICON_HELP
-    13, Unk80806cc3, [96, 96, 255], ICON_HELP
+    13, Decoration, [80, 210, 80], ICON_PINE_TREE
     14, Unk8080917b, [96, 96, 255], ICON_HELP
     15, Unk80809121, [96, 96, 255], ICON_HELP
     16, Unk808068d4, [22, 230, 190], ICON_WAVES

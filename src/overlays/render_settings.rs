@@ -6,6 +6,7 @@ use std::{fmt::Display, fmt::Formatter, mem::transmute, time::Instant};
 use winit::window::Window;
 
 use crate::{
+    discord,
     ecs::components::ActivityGroup,
     map::MapDataList,
     render::{
@@ -307,12 +308,12 @@ impl Overlay for RenderSettingsOverlay {
             let mut maps = resources.get_mut::<MapDataList>().unwrap();
             if !maps.maps.is_empty() {
                 let mut current_map = maps.current_map;
-                egui::ComboBox::from_label("Map").width(192.0).show_index(
-                    ui,
-                    &mut current_map,
-                    maps.maps.len(),
-                    |i| &maps.maps[i].2.name,
-                );
+                let map_changed = egui::ComboBox::from_label("Map")
+                    .width(192.0)
+                    .show_index(ui, &mut current_map, maps.maps.len(), |i| {
+                        &maps.maps[i].2.name
+                    })
+                    .changed();
                 ui.label(format!("Map hash: {}", maps.maps[maps.current_map].0));
                 ui.label(format!(
                     "Map hash64: {}",
@@ -320,6 +321,11 @@ impl Overlay for RenderSettingsOverlay {
                 ));
 
                 maps.current_map = current_map;
+
+                #[cfg(feature = "discord_rpc")]
+                if map_changed {
+                    discord::set_status_from_mapdata(&maps.maps[maps.current_map].2);
+                }
 
                 let groups_in_current_scene: IntSet<u32> = maps
                     .current_map()

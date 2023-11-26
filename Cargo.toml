@@ -67,13 +67,16 @@ tinyvec = "1.6.0"
 native-dialog = "0.7.0"
 paste = "1.0.14"
 
+discord-rpc-client = { version = "0.4.0", optional = true }
+
 [features]
-default = []
+default = ["discord_rpc"]
 tracy = []
 debug_lock = []
 # Ensures all TFX opcodes are interpreted
 # TODO(cohae): Should this be a runtime configuration setting?
 tfx_strict_interpreter = []
+discord_rpc = ["dep:discord-rpc-client"]
 
 [package.metadata.imgui-dx11-renderer]
 targets = ["x86_64-pc-windows-gnu"]

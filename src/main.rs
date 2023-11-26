@@ -80,6 +80,8 @@ use crate::text::{decode_text, StringContainer, StringData, StringPart};
 mod activity;
 mod camera;
 mod config;
+#[cfg(feature = "discord_rpc")]
+mod discord;
 mod dxbc;
 mod dxgi;
 mod ecs;
@@ -517,6 +519,11 @@ pub async fn main() -> anyhow::Result<()> {
                         let mut maps = resources.get_mut::<MapDataList>().unwrap();
                         maps.maps = map_res.maps;
                         map_load_task = None;
+
+                        #[cfg(feature = "discord_rpc")]
+                        if let Some((_, _, map)) = maps.current_map() {
+                            discord::set_status_from_mapdata(map);
+                        }
                     }
                 }
 

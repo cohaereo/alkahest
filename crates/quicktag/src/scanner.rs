@@ -19,9 +19,10 @@ use crate::packages::package_manager;
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TagCache {
     /// Timestamp of the packages directory
-    timestamp: u64,
+    pub timestamp: u64,
 
     pub version: u32,
+
     pub hashes: IntMap<TagHash, ScanResult>,
 }
 
@@ -277,7 +278,7 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
                             native_dialog::MessageDialog::new()
                                 .set_type(native_dialog::MessageType::Error)
                                 .set_title("Future cache")
-                                .set_text(&format!("Your cache file ({cache_name}) is newer than this build of quicktag\nCache version: v{}\nExpected version: v{})", cache.version, TagCache::default().version))
+                                .set_text(&format!("Your cache file ({cache_name}) is newer than this build of quicktag\n\nCache version: v{}\nExpected version: v{}", cache.version, TagCache::default().version))
                                 .show_alert()
                                 .unwrap();
 

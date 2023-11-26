@@ -1268,7 +1268,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..Default::default()
                             },
                             ResourcePoint {
-                                resource: MapResource::Unk80806cc3(b.bb, header_tag),
+                                resource: MapResource::Decoration(b.bb, header_tag),
                                 entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
                                 ..base_rp
                             },
