@@ -26,7 +26,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
-use destiny_pkg::{PackageManager, TagHash};
+use destiny_pkg::{tag, PackageManager, TagHash};
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
 use glam::Vec3;
@@ -52,7 +52,7 @@ use winit::{
 use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::input::InputState;
-use crate::map::MapDataList;
+use crate::map::{MapDataList, SBubbleParent};
 use crate::map_resources::MapResource;
 use crate::mapload_temporary::load_maps;
 use crate::overlays::camera_settings::CameraPositionOverlay;
@@ -221,6 +221,25 @@ pub async fn main() -> anyhow::Result<()> {
     }
 
     let stringmap = Arc::new(stringmap);
+
+    // for (tag, _) in package_manager().get_all_by_reference(0x8080891e) {
+    //     if let Ok(m) = package_manager().read_tag_struct::<SBubbleParent>(tag) {
+    //         let map_name = stringmap
+    //             .get(&m.map_name.0)
+    //             .cloned()
+    //             .unwrap_or(format!("[MissingString_{:08x}]", m.map_name.0));
+
+    //         let pkg_name = PathBuf::from_str(&package_manager().package_paths[&tag.pkg_id()])?
+    //             .file_stem()
+    //             .unwrap()
+    //             .to_string_lossy()
+    //             .to_string();
+
+    //         println!("{pkg_name} - {tag} ('{map_name}')");
+    //     }
+    // }
+
+    // return Ok(());
 
     info!("Loaded {} global strings", stringmap.len());
 
@@ -789,6 +808,10 @@ fn load_render_globals() {
                 buffer_size(s.scope.stage_domain.constant_buffer)
             );
         }
+    }
+
+    for (i, t) in globals.unk8[0].unk8.unk20.iter().enumerate() {
+        println!("technique #{i}: {}, {}", t.name.to_string(), t.unkc);
     }
 }
 

@@ -34,32 +34,36 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x12_u8)] MultiplyAdd,
     #[br(magic = 0x13_u8)] Clamp,
     #[br(magic = 0x14_u8)] Unk14,
-    #[br(magic = 0x15_u8)] Unk15,
+    #[br(magic = 0x15_u8)] Abs,
     #[br(magic = 0x16_u8)] Signum,
     #[br(magic = 0x17_u8)] Floor,
     #[br(magic = 0x18_u8)] Ceil,
-    #[br(magic = 0x19_u8)] Unk19,
+    #[br(magic = 0x19_u8)] Round,
     #[br(magic = 0x1a_u8)] Frac,
     #[br(magic = 0x1b_u8)] Unk1b,
     #[br(magic = 0x1c_u8)] Unk1c,
     #[br(magic = 0x1d_u8)] Negate,
-    #[br(magic = 0x1e_u8)] Unk1e,
-    #[br(magic = 0x1f_u8)] Unk1f,
-    #[br(magic = 0x20_u8)] Unk20,
-    #[br(magic = 0x21_u8)] PermuteAllX, // Alias for permute(.xxxx)
+    #[br(magic = 0x1e_u8)] VectorRotationsSin, // _trig_helper_vector_sin_rotations_estimate?
+    #[br(magic = 0x1f_u8)] VectorRotationsCos, // _trig_helper_vector_cos_rotations_estimate?
+    #[br(magic = 0x20_u8)] VectorRotationsSinCos, // _trig_helper_vector_sin_cos_rotations_estimate?
+    #[br(magic = 0x21_u8)] PermuteExtendX, // Alias for permute(.xxxx)
     #[br(magic = 0x22_u8)] Permute { fields: u8 }, // Permute/swizzle values
     #[br(magic = 0x23_u8)] Saturate, // saturate?
     #[br(magic = 0x24_u8)] Unk24,
     #[br(magic = 0x25_u8)] Unk25,
     #[br(magic = 0x26_u8)] Unk26,
-    #[br(magic = 0x27_u8)] Unk27, // triangle???
-    #[br(magic = 0x28_u8)] Unk28, // jitter?
-    #[br(magic = 0x29_u8)] Unk29, // wander?
-    #[br(magic = 0x2a_u8)] Unk2a, // rand?
-    #[br(magic = 0x2b_u8)] Unk2b, // rand_smooth?
+    #[br(magic = 0x27_u8)] Triangle,
+    #[br(magic = 0x28_u8)] Jitter, // jitter?
+    #[br(magic = 0x29_u8)] Wander,
+    #[br(magic = 0x2a_u8)] Rand, // rand?
+    #[br(magic = 0x2b_u8)] RandSmooth, // rand_smooth?
     #[br(magic = 0x2c_u8)] Unk2c,
     #[br(magic = 0x2d_u8)] Unk2d,
     #[br(magic = 0x2e_u8)] TransformVec4,
+
+    // #[br(magic = 0x2f_u8)] Spline4Const,
+    // #[br(magic = 0x30_u8)] Spline8Const,
+    // #[br(magic = 0x31_u8)] Spline8ChainConst,
 
     // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
@@ -69,10 +73,6 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
     #[br(magic = 0x3a_u8)] Unk3a { unk1: u8 },
     #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
-
-    // #[br(magic = 0x2f_u8)] Spline4Const,
-    // #[br(magic = 0x30_u8)] Spline8Const,
-    // #[br(magic = 0x31_u8)] Spline8ChainConst,
     
     // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
@@ -158,30 +158,30 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::IsZero => "is_zero".to_string(),
             TfxBytecodeOp::Min => "min".to_string(),
             TfxBytecodeOp::Max => "max".to_string(),
-            TfxBytecodeOp::LessThan => "unk0a".to_string(),
-            TfxBytecodeOp::Dot => "unk0b".to_string(),
+            TfxBytecodeOp::LessThan => "less_than".to_string(),
+            TfxBytecodeOp::Dot => "dot".to_string(),
             TfxBytecodeOp::Merge1_3 => "merge_1_3".to_string(),
             TfxBytecodeOp::Merge2_2 => "merge_2_2".to_string(),
             TfxBytecodeOp::Unk0e => "unk0e".to_string(),
             TfxBytecodeOp::Unk0f => "unk0f".to_string(),
             TfxBytecodeOp::Unk10 => "unk10".to_string(),
-            TfxBytecodeOp::Unk11 => "unk11".to_string(),
+            TfxBytecodeOp::Unk11 => "unk11".to_string(), // not really used in regular bytecode
             TfxBytecodeOp::MultiplyAdd => "multiply_add".to_string(),
             TfxBytecodeOp::Clamp => "clamp".to_string(),
             TfxBytecodeOp::Unk14 => "unk14".to_string(),
-            TfxBytecodeOp::Unk15 => "unk15".to_string(),
+            TfxBytecodeOp::Abs => "abs".to_string(),
             TfxBytecodeOp::Signum => "signum".to_string(),
             TfxBytecodeOp::Floor => "floor".to_string(),
             TfxBytecodeOp::Ceil => "ceil".to_string(),
-            TfxBytecodeOp::Unk19 => "unk19".to_string(),
+            TfxBytecodeOp::Round => "round".to_string(),
             TfxBytecodeOp::Frac => "frac".to_string(),
             TfxBytecodeOp::Unk1b => "unk1b".to_string(),
             TfxBytecodeOp::Unk1c => "unk1c".to_string(),
             TfxBytecodeOp::Negate => "negate".to_string(),
-            TfxBytecodeOp::Unk1e => "unk1e".to_string(),
-            TfxBytecodeOp::Unk1f => "unk1f".to_string(),
-            TfxBytecodeOp::Unk20 => "unk20".to_string(),
-            TfxBytecodeOp::PermuteAllX => "permute(.xxxx) (permute_all_x)".to_string(),
+            TfxBytecodeOp::VectorRotationsSin => "vector_rotations_sin".to_string(),
+            TfxBytecodeOp::VectorRotationsCos => "vector_rotations_cos".to_string(),
+            TfxBytecodeOp::VectorRotationsSinCos => "vector_rotations_sin_cos".to_string(),
+            TfxBytecodeOp::PermuteExtendX => "permute(.xxxx) (permute_extend_x)".to_string(),
             TfxBytecodeOp::Permute { fields } => {
                 format!("permute({})", decode_permute_param(*fields))
             }
@@ -189,11 +189,11 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk24 => "unk24".to_string(),
             TfxBytecodeOp::Unk25 => "unk25".to_string(),
             TfxBytecodeOp::Unk26 => "unk26".to_string(),
-            TfxBytecodeOp::Unk27 => "unk27".to_string(),
-            TfxBytecodeOp::Unk28 => "unk28".to_string(),
-            TfxBytecodeOp::Unk29 => "unk29".to_string(),
-            TfxBytecodeOp::Unk2a => "unk2a".to_string(),
-            TfxBytecodeOp::Unk2b => "unk2b".to_string(),
+            TfxBytecodeOp::Triangle => "triangle".to_string(),
+            TfxBytecodeOp::Jitter => "jitter".to_string(),
+            TfxBytecodeOp::Wander => "wander".to_string(),
+            TfxBytecodeOp::Rand => "rand".to_string(),
+            TfxBytecodeOp::RandSmooth => "rand_smooth".to_string(),
             TfxBytecodeOp::Unk2c => "unk2c".to_string(),
             TfxBytecodeOp::Unk2d => "unk2d".to_string(),
             TfxBytecodeOp::TransformVec4 => "transform_vec4".to_string(),

@@ -1,4 +1,4 @@
-use std::mem::transmute;
+use std::{mem::transmute, ops::Neg};
 
 use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use tinyvec::ArrayVec;
@@ -113,19 +113,11 @@ impl TfxBytecodeInterpreter {
                 }
                 TfxBytecodeOp::Negate => {
                     let v = stack_top!();
-                    *v = -*v;
+                    *v = v.neg();
                 }
-                TfxBytecodeOp::Unk1e => {
+                TfxBytecodeOp::Abs => {
                     let v = stack_top!();
-                    *v = fast_impls::byteop_20(*v, true);
-                }
-                TfxBytecodeOp::Unk1f => {
-                    let v = stack_top!();
-                    *v = fast_impls::byteop_1f(*v);
-                }
-                TfxBytecodeOp::Unk20 => {
-                    let v = stack_top!();
-                    *v = fast_impls::byteop_20(*v, false);
+                    *v = v.abs();
                 }
                 TfxBytecodeOp::Signum => {
                     let v = stack_top!();
@@ -138,6 +130,25 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Ceil => {
                     let v = stack_top!();
                     *v = v.ceil();
+                }
+                TfxBytecodeOp::Round => {
+                    let v = stack_top!();
+                    *v = v.round();
+                }
+                TfxBytecodeOp::VectorRotationsSin => {
+                    let v = stack_top!();
+                    *v = tfx_converted::_trig_helper_vector_sin_rotations_estimate(*v);
+                    // *v = fast_impls::byteop_20(*v, true);
+                }
+                TfxBytecodeOp::VectorRotationsCos => {
+                    let v = stack_top!();
+                    *v = tfx_converted::_trig_helper_vector_cos_rotations_estimate(*v);
+                    // *v = fast_impls::byteop_1f(*v);
+                }
+                TfxBytecodeOp::VectorRotationsSinCos => {
+                    let v = stack_top!();
+                    *v = tfx_converted::_trig_helper_vector_sin_cos_rotations_estimate(*v);
+                    // *v = fast_impls::byteop_20(*v, false);
                 }
                 TfxBytecodeOp::Merge1_3 => {
                     let [t1, t0] = stack_pop!(2);
@@ -154,26 +165,14 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t0] = stack_pop!(2);
 
-                    let v = unsafe {
-                        use std::arch::x86_64::*;
-                        let a = t1.into();
-                        let b = t0.into();
-                        _mm_add_ps(
-                            _mm_mul_ps(
-                                _mm_add_ps(
-                                    _mm_mul_ps(_mm_shuffle_ps(b, b, 0), a),
-                                    _mm_shuffle_ps(b, b, 85),
-                                ),
-                                _mm_mul_ps(a, a),
-                            ),
-                            _mm_add_ps(
-                                _mm_mul_ps(_mm_shuffle_ps(b, b, 170), a),
-                                _mm_shuffle_ps(b, b, 255),
-                            ),
-                        )
-                    };
-
-                    stack_push!(Vec4::from(v));
+                    stack_push!(
+                        (t0.xxxx() * t1 + t0.yyyy()) * (t1 * t1) + (t0.zzzz() * t1 + t0.wwww())
+                    );
+                }
+                TfxBytecodeOp::Unk10 => {
+                    let [t2, t1, t0] = stack_pop!(3);
+                    let v33 = t1 - t2;
+                    stack_push!((v33 * t0) + t2);
                 }
                 TfxBytecodeOp::Frac => {
                     let v = stack_top!();
@@ -219,23 +218,23 @@ impl TfxBytecodeInterpreter {
                     self.set_shader_resource(renderer, *stage, *slot as _, handle)
                 }
 
-                TfxBytecodeOp::Unk27 => {
+                TfxBytecodeOp::Triangle => {
                     let v = stack_top!();
                     *v = tfx_converted::bytecode_op_triangle(*v);
                 }
-                TfxBytecodeOp::Unk28 => {
+                TfxBytecodeOp::Jitter => {
                     let v = stack_top!();
                     *v = tfx_converted::bytecode_op_jitter(*v);
                 }
-                TfxBytecodeOp::Unk29 => {
+                TfxBytecodeOp::Wander => {
                     let v = stack_top!();
                     *v = tfx_converted::bytecode_op_wander(*v);
                 }
-                TfxBytecodeOp::Unk2a => {
+                TfxBytecodeOp::Rand => {
                     let v = stack_top!();
                     *v = tfx_converted::bytecode_op_rand(*v);
                 }
-                TfxBytecodeOp::Unk2b => {
+                TfxBytecodeOp::RandSmooth => {
                     let v = stack_top!();
                     *v = tfx_converted::bytecode_op_rand_smooth(*v);
                 }
@@ -278,7 +277,7 @@ impl TfxBytecodeInterpreter {
                     *v = ((v2 - v1) * *v) + v1;
                 }
                 // // TODO(cohae): Very wrong, but does seem to push something onto the stack
-                TfxBytecodeOp::PermuteAllX => {
+                TfxBytecodeOp::PermuteExtendX => {
                     let v = stack_top!();
                     *v = v.xxxx();
                 }
@@ -630,109 +629,108 @@ mod fast_impls {
     use glam::Vec4;
     use std::arch::x86_64::*;
 
-    pub fn byteop_1f(t0: Vec4) -> Vec4 {
-        unsafe {
-            let zero = _mm_set1_ps(0.0);
-            let xmmword_7FF7B2ECADE0 = _mm_set1_ps(f32::NAN);
-            let xmmword_7FF7B2EC6A30 = _mm_set1_ps(0.25);
-            let xmmword_7FF7B2ED3870 = _mm_set1_ps(-16.0);
-            let xmmword_7FF7B2ED3840 = _mm_set1_ps(8.0);
-            let xmmword_7FF7B2ED21C0 = _mm_set1_epi32(0x4B000000);
-            let xmmword_7FF7B2ED37A0 = _mm_set1_ps(0.225);
-            let xmmword_7FF7B2ED37F0 = _mm_set1_ps(0.775);
+    // pub fn byteop_1f(t0: Vec4) -> Vec4 {
+    //     unsafe {
+    //         let xmm_zero = _mm_set1_ps(0.0);
+    //         let xmm_inv_sign_mask = _mm_set1_ps(f32::NAN);
+    //         let xmm_0_25 = _mm_set1_ps(0.25);
+    //         let xmm_minus_16 = _mm_set1_ps(-16.0);
+    //         let xmm_8 = _mm_set1_ps(8.0);
+    //         let xmm_no_fraction_mask = _mm_set1_epi32(0x4B000000);
+    //         let xmm_0_225 = _mm_set1_ps(0.225);
+    //         let xmm_0_775 = _mm_set1_ps(0.775);
 
-            let stack_top_cached_value = t0.into();
+    //         let stack_top_cached_value = t0.into();
 
-            let v64 = _mm_add_ps(xmmword_7FF7B2EC6A30, stack_top_cached_value);
-            let v65 = _mm_castsi128_ps(_mm_cmpgt_epi32(
-                xmmword_7FF7B2ED21C0,
-                _mm_castps_si128(_mm_and_ps(xmmword_7FF7B2ECADE0, v64)),
-            ));
+    //         // a + 0.25f
+    //         let v64 = _mm_add_ps(xmm_0_25, stack_top_cached_value);
 
-            let v66 = _mm_sub_ps(
-                v64,
-                _mm_or_ps(
-                    _mm_and_ps(_mm_cvtepi32_ps(_mm_cvtps_epi32(v64)), v65),
-                    _mm_andnot_ps(v65, v64),
-                ),
-            );
+    //         // a - round?
+    //         let v65 = _mm_castsi128_ps(_mm_cmpgt_epi32(
+    //             xmm_no_fraction_mask,
+    //             _mm_castps_si128(_mm_and_ps(xmm_inv_sign_mask, v64)),
+    //         ));
 
-            let v67 = _mm_mul_ps(
-                _mm_add_ps(
-                    _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v66), v66), xmmword_7FF7B2ED3870),
-                    xmmword_7FF7B2ED3840,
-                ),
-                v66,
-            );
+    //         let v66 = _mm_sub_ps(
+    //             v64,
+    //             _mm_or_ps(_mm_and_ps(v64, v65), _mm_andnot_ps(v65, v64)),
+    //         );
 
-            Vec4::from(_mm_mul_ps(
-                _mm_add_ps(
-                    _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v67), v67), xmmword_7FF7B2ED37A0),
-                    xmmword_7FF7B2ED37F0,
-                ),
-                v67,
-            ))
-        }
-    }
+    //         // a * (-16.0f * abs(a) + 8.0f)
+    //         let v67 = _mm_mul_ps(
+    //             _mm_add_ps(
+    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(xmm_zero, v66), v66), xmm_minus_16),
+    //                 xmm_8,
+    //             ),
+    //             v66,
+    //         );
 
-    pub fn byteop_20(t0: Vec4, variant_1e: bool) -> Vec4 {
-        unsafe {
-            let zero = _mm_set1_ps(0.0);
-            let xmmword_7FF7B2ED37B0 = _mm_setr_ps(0.0, 0.25, 0.0, 0.25);
-            let xmmword_7FF7B2ECADE0 = _mm_set1_ps(f32::NAN);
-            let xmmword_7FF7B2ED3870 = _mm_set1_ps(-16.0);
-            let xmmword_7FF7B2ED3840 = _mm_set1_ps(8.0);
-            let xmmword_7FF7B2ED21C0 = _mm_set1_epi32(0x4B000000);
-            let xmmword_7FF7B2ED37A0 = _mm_set1_ps(0.225);
-            let xmmword_7FF7B2ED37F0 = _mm_set1_ps(0.775);
+    //         Vec4::from(_mm_mul_ps(
+    //             _mm_add_ps(
+    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(xmm_zero, v67), v67), xmm_0_225),
+    //                 xmm_0_775,
+    //             ),
+    //             v67,
+    //         ))
+    //     }
+    // }
 
-            let stack_top_cached_value = t0.into();
+    // pub fn byteop_20(t0: Vec4, variant_1e: bool) -> Vec4 {
+    //     unsafe {
+    //         let zero = _mm_set1_ps(0.0);
+    //         let xmm_0_quarter_0_quarter = _mm_setr_ps(0.0, 0.25, 0.0, 0.25);
+    //         let xmm_nan = _mm_set1_ps(f32::NAN);
+    //         let xmm_minus_16 = _mm_set1_ps(-16.0);
+    //         let xmm_8 = _mm_set1_ps(8.0);
+    //         let xmm_4b000000 = _mm_set1_epi32(0x4B000000);
+    //         let xmm_0_225 = _mm_set1_ps(0.225);
+    //         let xmm_0_775 = _mm_set1_ps(0.775);
 
-            let v67 = if !variant_1e {
-                _mm_add_ps(
-                    _mm_shuffle_ps(stack_top_cached_value, stack_top_cached_value, 80),
-                    xmmword_7FF7B2ED37B0,
-                )
-            } else {
-                stack_top_cached_value
-            };
+    //         let stack_top_cached_value = t0.into();
 
-            let v68 = _mm_castsi128_ps(_mm_cmpgt_epi32(
-                xmmword_7FF7B2ED21C0,
-                _mm_and_si128(
-                    _mm_castps_si128(xmmword_7FF7B2ECADE0),
-                    _mm_castps_si128(v67),
-                ),
-            ));
+    //         // 20 is cos_sin, 1e is just sin
+    //         let v67 = if variant_1e {
+    //             stack_top_cached_value
+    //         } else {
+    //             _mm_add_ps(
+    //                 _mm_shuffle_ps(stack_top_cached_value, stack_top_cached_value, 80),
+    //                 xmm_0_quarter_0_quarter,
+    //             )
+    //         };
 
-            let v69 = _mm_sub_ps(
-                v67,
-                _mm_or_ps(
-                    _mm_and_ps(_mm_cvtepi32_ps(_mm_cvtps_epi32(v67)), v68),
-                    _mm_castsi128_ps(_mm_andnot_si128(
-                        _mm_castps_si128(v68),
-                        _mm_castps_si128(v67),
-                    )),
-                ),
-            );
+    //         let v68 = _mm_castsi128_ps(_mm_cmpgt_epi32(
+    //             xmm_4b000000,
+    //             _mm_and_si128(_mm_castps_si128(xmm_nan), _mm_castps_si128(v67)),
+    //         ));
 
-            let v70 = _mm_mul_ps(
-                _mm_add_ps(
-                    _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v69), v69), xmmword_7FF7B2ED3870),
-                    xmmword_7FF7B2ED3840,
-                ),
-                v69,
-            );
+    //         let v69 = _mm_sub_ps(
+    //             v67,
+    //             _mm_or_ps(
+    //                 _mm_and_ps(_mm_cvtepi32_ps(_mm_cvtps_epi32(v67)), v68),
+    //                 _mm_castsi128_ps(_mm_andnot_si128(
+    //                     _mm_castps_si128(v68),
+    //                     _mm_castps_si128(v67),
+    //                 )),
+    //             ),
+    //         );
 
-            Vec4::from(_mm_mul_ps(
-                _mm_add_ps(
-                    _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v70), v70), xmmword_7FF7B2ED37A0),
-                    xmmword_7FF7B2ED37F0,
-                ),
-                v70,
-            ))
-        }
-    }
+    //         let v70 = _mm_mul_ps(
+    //             _mm_add_ps(
+    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v69), v69), xmm_minus_16),
+    //                 xmm_8,
+    //             ),
+    //             v69,
+    //         );
+
+    //         Vec4::from(_mm_mul_ps(
+    //             _mm_add_ps(
+    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v70), v70), xmm_0_225),
+    //                 xmm_0_775,
+    //             ),
+    //             v70,
+    //         ))
+    //     }
+    // }
 
     pub fn byteop_0e([t1, t0]: [Vec4; 2]) -> Vec4 {
         unsafe {
@@ -897,5 +895,23 @@ mod tfx_converted {
         let rand_smooth_result = lerp(val0, val1, smooth_f);
 
         Vec4::splat(rand_smooth_result)
+    }
+
+    pub fn _trig_helper_vector_sin_rotations_estimate_clamped(a: Vec4) -> Vec4 {
+        let y = a * (-16.0 * a.abs() + 8.0);
+        y * (0.225 * y.abs() + 0.775)
+    }
+
+    pub fn _trig_helper_vector_sin_rotations_estimate(a: Vec4) -> Vec4 {
+        let w = a - a.round(); // wrap to [-0.5, 0.5] range
+        _trig_helper_vector_sin_rotations_estimate_clamped(w)
+    }
+
+    pub fn _trig_helper_vector_cos_rotations_estimate(a: Vec4) -> Vec4 {
+        _trig_helper_vector_sin_rotations_estimate(a + 0.25)
+    }
+
+    pub fn _trig_helper_vector_sin_cos_rotations_estimate(a: Vec4) -> Vec4 {
+        _trig_helper_vector_sin_rotations_estimate(a + Vec4::new(0.0, 0.25, 0.0, 0.25))
     }
 }
