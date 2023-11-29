@@ -1,7 +1,7 @@
 use crate::camera::FpsCamera;
 use crate::ecs::components::EntityModel;
 use crate::ecs::transform::Transform;
-use crate::entity::SEntityModel;
+use crate::entity::{SEntityModel, Unk808072c5, Unk80809c0f};
 use crate::map::MapDataList;
 use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
@@ -13,7 +13,7 @@ use crate::technique::{STechnique, Technique};
 use crate::render::renderer::{Renderer, RendererShared};
 use crate::render::scopes::ScopeRigidModel;
 use crate::resources::Resources;
-use crate::structure::ExtendedHash;
+use crate::structure::{ExtendedHash, TablePointer, Tag};
 
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -24,7 +24,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::fmt::Debug;
-use std::io::Cursor;
+use std::io::{Cursor, Seek, SeekFrom};
 use std::sync::Arc;
 use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
@@ -327,7 +327,83 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 let renderer = resources.get_mut::<RendererShared>().unwrap();
                 let rb = renderer.read();
                 println!("Spawning entity {tag}...");
-                match load_entity_model(tag, &rb) {
+                match load_entity_model(tag, &rb, vec![], vec![]) {
+                    Ok(er) => {
+                        let transform = Transform {
+                            translation: camera.position,
+                            ..Default::default()
+                        };
+
+                        let mm = transform.to_mat4();
+
+                        let model_matrix = Mat4::from_cols(
+                            mm.x_axis.truncate().extend(mm.w_axis.x),
+                            mm.y_axis.truncate().extend(mm.w_axis.y),
+                            mm.z_axis.truncate().extend(mm.w_axis.z),
+                            mm.w_axis,
+                        );
+
+                        let alt_matrix = Mat4::from_cols(
+                            Vec3::ONE.extend(mm.w_axis.x),
+                            Vec3::ONE.extend(mm.w_axis.y),
+                            Vec3::ONE.extend(mm.w_axis.z),
+                            Vec4::W,
+                        );
+
+                        let scope = ConstantBuffer::create(
+                            renderer.read().dcs.clone(),
+                            Some(&ScopeRigidModel {
+                                mesh_to_world: model_matrix,
+                                position_scale: er.mesh_scale(),
+                                position_offset: er.mesh_offset(),
+                                texcoord0_scale_offset: er.texcoord_transform(),
+                                dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+                                unk8: [alt_matrix; 8],
+                            }),
+                        )
+                        .unwrap();
+
+                        scene.spawn((transform, EntityModel(er, scope)));
+                        info!("Entity spawned");
+                    }
+                    Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
+                }
+            }
+        }
+        "se" | "spawn_entity" => {
+            if let Some(mut maps) = resources.get_mut::<MapDataList>() {
+                // TODO(cohae): Make some abstraction for this
+                if args.len() != 1 {
+                    error!("Missing tag argument, expected 32/64-bit tag");
+                    return;
+                }
+
+                let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
+                    if args[0].len() > 8 {
+                        let h = u64::from_be(u64::from_str_radix(args[0], 16)?);
+                        Ok(ExtendedHash::Hash64(TagHash64(h)))
+                    } else {
+                        let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
+                        Ok(ExtendedHash::Hash32(TagHash(h)))
+                    }
+                })();
+
+                let tag = match tag_parsed {
+                    Ok(o) => o,
+                    Err(e) => {
+                        error!("Failed to parse tag: {e}");
+                        return;
+                    }
+                };
+
+                let current_map = maps.current_map;
+                let scene = &mut maps.maps[current_map].2.scene;
+                let camera = resources.get::<FpsCamera>().unwrap();
+
+                let renderer = resources.get_mut::<RendererShared>().unwrap();
+                let rb = renderer.read();
+                println!("Spawning entity {tag}...");
+                match load_entity(tag, &rb) {
                     Ok(er) => {
                         let transform = Transform {
                             translation: camera.position,
@@ -455,57 +531,102 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
     }
 }
 
-fn load_entity_model(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
+fn load_entity_model(
+    t: ExtendedHash,
+    renderer: &Renderer,
+    material_map: Vec<Unk808072c5>,
+    materials: Vec<TagHash>,
+) -> anyhow::Result<EntityRenderer> {
     let model: SEntityModel =
         package_manager().read_tag_struct(t.hash32().context("Couldnt lookup hash64")?)?;
 
+    let mut part_materials = vec![];
     for m in &model.meshes {
         for p in &m.parts {
             if p.material.is_some() {
-                let technique = Technique::load(
-                    renderer,
-                    package_manager().read_tag_struct(p.material)?,
-                    p.material,
-                    true,
-                );
-
-                for stage in technique.all_stages() {
-                    for s in stage.shader.samplers.iter() {
-                        let sampler_header_ref = package_manager()
-                            .get_entry(s.hash32().unwrap())
-                            .unwrap()
-                            .reference;
-                        let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
-
-                        let sampler = unsafe {
-                            renderer
-                                .dcs
-                                .device
-                                .CreateSamplerState(sampler_data.as_ptr() as _)
-                        };
-
-                        if let Ok(sampler) = sampler {
-                            renderer
-                                .render_data
-                                .data_mut()
-                                .samplers
-                                .insert(s.key(), sampler);
-                        }
-                    }
-
-                    for t in stage.shader.textures.iter() {
-                        renderer.render_data.load_texture(t.texture);
-                    }
-                }
-
-                renderer
-                    .render_data
-                    .data_mut()
-                    .materials
-                    .insert(p.material, technique);
+                part_materials.push(p.material);
             }
         }
     }
 
-    EntityRenderer::load(model, vec![], vec![], renderer)
+    for mat in materials.iter().chain(part_materials.iter()) {
+        let technique = Technique::load(
+            renderer,
+            package_manager().read_tag_struct(*mat)?,
+            *mat,
+            true,
+        );
+
+        for stage in technique.all_stages() {
+            for s in stage.shader.samplers.iter() {
+                let sampler_header_ref = package_manager()
+                    .get_entry(s.hash32().unwrap())
+                    .unwrap()
+                    .reference;
+                let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
+
+                let sampler = unsafe {
+                    renderer
+                        .dcs
+                        .device
+                        .CreateSamplerState(sampler_data.as_ptr() as _)
+                };
+
+                if let Ok(sampler) = sampler {
+                    renderer
+                        .render_data
+                        .data_mut()
+                        .samplers
+                        .insert(s.key(), sampler);
+                }
+            }
+
+            for t in stage.shader.textures.iter() {
+                renderer.render_data.load_texture(t.texture);
+            }
+        }
+
+        renderer
+            .render_data
+            .data_mut()
+            .materials
+            .insert(*mat, technique);
+    }
+
+    EntityRenderer::load(model, material_map, materials, renderer)
+}
+
+fn load_entity(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
+    if let Some(nh) = t.hash32() {
+        let _span = debug_span!("Load entity", hash = %nh).entered();
+        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+            anyhow::bail!("Could not load entity {nh} ({t:?})");
+        };
+        debug!("Loading entity {nh}");
+        for e in &header.entity_resources {
+            if e.unk0.unk10.resource_type == 0x80806d8a {
+                debug!(
+                    "\t- EntityModel {:08x}/{}",
+                    e.unk0.unk18.resource_type.to_be(),
+                    e.unk0.unk10.resource_type.to_be(),
+                );
+                let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
+                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
+                let model: TagHash = cur.read_le()?;
+                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
+                let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
+                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
+                let materials: TablePointer<TagHash> = cur.read_le()?;
+
+                return load_entity_model(
+                    ExtendedHash::Hash32(model),
+                    renderer,
+                    entity_material_map.to_vec(),
+                    materials.to_vec(),
+                );
+            }
+        }
+    }
+
+    anyhow::bail!("No entitymodel found in entity");
 }
