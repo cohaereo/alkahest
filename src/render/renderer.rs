@@ -360,7 +360,7 @@ impl Renderer {
         self.scope_frame.bind(13, TfxShaderStage::Vertex);
         self.scope_frame.bind(13, TfxShaderStage::Pixel);
 
-        if render_settings.draw_lights {
+        if render_settings.draw_lights && !render_settings.use_global_deferred_shading {
             self.render_cascade_depthmaps(resources);
         }
 
