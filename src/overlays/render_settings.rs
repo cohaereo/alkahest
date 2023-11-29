@@ -492,7 +492,7 @@ impl Default for RenderSettings {
             render_shadows: true,
             blend_override: 0,
             evaluate_bytecode: false,
-            ambient_light: Vec4::ZERO,
+            ambient_light: Vec4::splat(0.04),
             light_dir: Vec3::NEG_Z,
             light_color: Vec4::ONE,
             use_specular_map: true,
