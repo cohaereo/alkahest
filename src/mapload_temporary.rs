@@ -718,7 +718,8 @@ pub async fn load_maps(
                                 .context("Failed to load pixel shader")
                                 .unwrap();
 
-                            let name = format!("PS {:?} (mat {})\0", m.stage_pixel.shader, t);
+                            let name =
+                                format!("PS {:?} (mat {})\0", m.stage_pixel.shader.shader, t);
                             v.SetPrivateData(
                                 &WKPDID_D3DDebugObjectName,
                                 name.len() as u32 - 1,
@@ -771,10 +772,10 @@ pub async fn load_maps(
     {
         let renderer = renderer.read();
         let mut data = renderer.render_data.data_mut();
-        data.materials = material_map;
-        data.vshaders = vshader_map;
-        data.pshaders = pshader_map;
-        data.samplers = sampler_map;
+        data.materials.extend(material_map);
+        data.vshaders.extend(vshader_map);
+        data.pshaders.extend(pshader_map);
+        data.samplers.extend(sampler_map);
     };
 
     #[cfg(not(feature = "keep_map_order"))]

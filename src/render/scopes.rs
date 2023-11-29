@@ -62,8 +62,8 @@ pub struct ScopeFrame {
 
     // Light related
     pub unk4: Vec4, // c4
-
     pub unk5: Vec4, // c5
+
     pub unk6: Vec4, // c6
     pub unk7: Vec4, // c7
 }
@@ -82,7 +82,7 @@ impl Default for ScopeFrame {
             random_seed_scales: Default::default(),
             overrides: Default::default(),
             unk4: Default::default(),
-            unk5: Default::default(),
+            unk5: Vec4::new(0.0, 0.0, 1.0, 0.0),
             unk6: Default::default(),
             unk7: Default::default(),
         }

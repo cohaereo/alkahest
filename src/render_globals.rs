@@ -51,7 +51,7 @@ pub struct Unk808067ad {
 pub struct Unk808067ac {
     pub name: RelPointer<NullString>,
     pub unk8: u32,
-    pub unkc: TagHash,
+    pub technique: TagHash,
 }
 
 #[binread]

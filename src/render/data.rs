@@ -38,6 +38,8 @@ pub struct RenderData {
     pub debug_textures: Vec<Texture>,
 
     pub matcap: Texture,
+    // A 2x2 black texture
+    pub black: Texture,
     // A 2x2 white texture
     pub white: Texture,
     pub blend_texture: Texture,
@@ -47,6 +49,8 @@ pub struct RenderData {
     pub solid_texture_green: Texture,
     pub solid_texture_blue: Texture,
     pub solid_texture_magenta: Texture,
+
+    pub technique_deferred_shading_no_atm: Option<Technique>,
 }
 
 impl RenderData {
@@ -95,6 +99,15 @@ impl RenderData {
             1,
             1,
             &[0xffu8; 4],
+            DxgiFormat::R8G8B8A8_UNORM,
+            Some("1x1 white"),
+        )?;
+
+        let black = Texture::load_2d_raw(
+            dcs,
+            1,
+            1,
+            &[0x00u8; 4],
             DxgiFormat::R8G8B8A8_UNORM,
             Some("1x1 white"),
         )?;
@@ -167,6 +180,7 @@ impl RenderData {
             rainbow_texture,
             debug_textures,
             matcap,
+            black,
             white,
             blend_texture,
             blend_texture15,
@@ -174,6 +188,7 @@ impl RenderData {
             solid_texture_green,
             solid_texture_blue,
             solid_texture_magenta,
+            technique_deferred_shading_no_atm: None,
         })
     }
 

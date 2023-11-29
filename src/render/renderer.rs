@@ -452,6 +452,7 @@ impl Renderer {
         self.run_deferred_shading(
             resources,
             render_settings.draw_lights,
+            render_settings.use_global_deferred_shading,
             render_settings.compositor_mode,
         );
 
@@ -887,17 +888,18 @@ impl Renderer {
         &self,
         resources: &Resources,
         draw_lights: bool,
+        use_global_deferred_shading: bool,
         compositor_mode: usize,
     ) {
         let maps = resources.get::<MapDataList>().unwrap();
 
         unsafe {
             self.dcs.context().ClearRenderTargetView(
-                &self.gbuffer.light_rt0.render_target,
+                &self.gbuffer.light_diffuse.render_target,
                 [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
-                &self.gbuffer.light_rt1.render_target,
+                &self.gbuffer.light_specular.render_target,
                 [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
         }
@@ -907,8 +909,8 @@ impl Renderer {
                 self.dcs.context().RSSetState(&self.rasterizer_state);
                 self.dcs.context().OMSetRenderTargets(
                     Some(&[
-                        Some(self.gbuffer.light_rt0.render_target.clone()),
-                        Some(self.gbuffer.light_rt1.render_target.clone()),
+                        Some(self.gbuffer.light_diffuse.render_target.clone()),
+                        Some(self.gbuffer.light_specular.render_target.clone()),
                     ]),
                     None,
                 );
@@ -952,106 +954,132 @@ impl Renderer {
                 Some(&[Some(self.gbuffer.staging.render_target.clone())]),
                 None,
             );
-            self.dcs.context().PSSetShaderResources(
-                0,
-                Some(&[
-                    Some(self.gbuffer.rt0.view.clone()),
-                    Some(self.gbuffer.rt1.view.clone()),
-                    Some(self.gbuffer.rt2.view.clone()),
-                    Some(self.gbuffer.rt3.view.clone()),
-                    Some(self.gbuffer.depth.texture_view.clone()),
-                ]),
+            self.dcs.context().ClearRenderTargetView(
+                &self.gbuffer.staging.render_target,
+                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
-            self.dcs.context().PSSetShaderResources(
-                12,
-                Some(&[
-                    Some(self.gbuffer.light_rt0.view.clone()),
-                    Some(self.gbuffer.light_rt1.view.clone()),
-                ]),
-            );
-            self.dcs.context().PSSetShaderResources(
-                10,
-                Some(&[Some(
-                    resources
-                        .get::<ShadowMapsResource>()
-                        .unwrap()
-                        .cascade_depth_buffers
-                        .texture_view
-                        .clone(),
-                )]),
-            );
+        }
 
-            self.render_data
-                .data()
-                .matcap
-                .bind(&self.dcs, 8, ShaderStages::PIXEL);
+        if use_global_deferred_shading {
+            let render_data = self.render_data.data();
 
-            let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
+            if let Some(mat) = &render_data.technique_deferred_shading_no_atm {
+                mat.evaluate_bytecode(self, &render_data);
+                if let Err(e) = mat.bind(&self.dcs, &render_data, ShaderStages::SHADING) {
+                    error!("Failed to run deferred_shading_no_atm: {e}");
+                    return;
+                }
+
+                unsafe {
+                    self.dcs
+                        .context()
+                        .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                    self.dcs.context().Draw(6, 0);
+                }
+            }
+        } else {
+            unsafe {
+                self.dcs.context().PSSetShaderResources(
+                    0,
+                    Some(&[
+                        Some(self.gbuffer.rt0.view.clone()),
+                        Some(self.gbuffer.rt1.view.clone()),
+                        Some(self.gbuffer.rt2.view.clone()),
+                        Some(self.gbuffer.rt3.view.clone()),
+                        Some(self.gbuffer.depth.texture_view.clone()),
+                    ]),
+                );
+                self.dcs.context().PSSetShaderResources(
+                    12,
+                    Some(&[
+                        Some(self.gbuffer.light_diffuse.view.clone()),
+                        Some(self.gbuffer.light_specular.view.clone()),
+                    ]),
+                );
+                self.dcs.context().PSSetShaderResources(
+                    10,
+                    Some(&[Some(
+                        resources
+                            .get::<ShadowMapsResource>()
+                            .unwrap()
+                            .cascade_depth_buffers
+                            .texture_view
+                            .clone(),
+                    )]),
+                );
+
                 self.render_data
                     .data()
-                    .textures
-                    .get(&t.key())
-                    .map(|t| t.view.clone())
-            });
+                    .matcap
+                    .bind(&self.dcs, 8, ShaderStages::PIXEL);
 
-            self.dcs
-                .context()
-                .PSSetShaderResources(9, Some(&[cubemap_texture]));
+                let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
+                    self.render_data
+                        .data()
+                        .textures
+                        .get(&t.key())
+                        .map(|t| t.view.clone())
+                });
 
-            {
-                let camera = resources.get::<FpsCamera>().unwrap();
-                let render_settings = resources.get::<RenderSettings>().unwrap();
-                *self.light_mul.write() = render_settings.light_mul;
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(9, Some(&[cubemap_texture]));
 
-                let view = camera.calculate_matrix();
-                let proj_view = camera.projection_matrix * view;
-                let view = Mat4::from_translation(camera.position);
-                let compositor_options = CompositorOptions {
-                    viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
-                    proj_view_matrix_inv: proj_view.inverse(),
-                    proj_view_matrix: proj_view,
-                    proj_matrix: camera.projection_matrix,
-                    view_matrix: view,
-                    camera_pos: camera.position.extend(1.0),
-                    camera_dir: camera.front.extend(1.0),
-                    time: self.start_time.elapsed().as_secs_f32(),
-                    mode: compositor_mode as u32,
-                    draw_lights: draw_lights.into(),
-                    global_light_dir: render_settings.light_dir.extend(1.0),
-                    global_light_color: render_settings.light_color,
-                    specular_scale: if render_settings.use_specular_map {
-                        1.0
-                    } else {
-                        0.0
-                    },
-                    fxaa_enabled: if render_settings.fxaa { 1 } else { 0 },
-                };
-                self.scope_alk_composite.write(&compositor_options).unwrap();
-                self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
-                self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
+                {
+                    let camera = resources.get::<FpsCamera>().unwrap();
+                    let render_settings = resources.get::<RenderSettings>().unwrap();
+                    *self.light_mul.write() = render_settings.light_mul;
+
+                    let view = camera.calculate_matrix();
+                    let proj_view = camera.projection_matrix * view;
+                    let view = Mat4::from_translation(camera.position);
+                    let compositor_options = CompositorOptions {
+                        viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
+                        proj_view_matrix_inv: proj_view.inverse(),
+                        proj_view_matrix: proj_view,
+                        proj_matrix: camera.projection_matrix,
+                        view_matrix: view,
+                        camera_pos: camera.position.extend(1.0),
+                        camera_dir: camera.front.extend(1.0),
+                        time: self.start_time.elapsed().as_secs_f32(),
+                        mode: compositor_mode as u32,
+                        draw_lights: draw_lights.into(),
+                        global_light_dir: render_settings.light_dir.extend(1.0),
+                        global_light_color: render_settings.light_color,
+                        specular_scale: if render_settings.use_specular_map {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                        fxaa_enabled: if render_settings.fxaa { 1 } else { 0 },
+                    };
+                    self.scope_alk_composite.write(&compositor_options).unwrap();
+                    self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+                    self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
+                }
+                self.scope_alk_cascade_transforms
+                    .bind(3, TfxShaderStage::Pixel);
+
+                self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                    TopLeftX: 0.0,
+                    TopLeftY: 0.0,
+                    Width: self.window_size.0 as f32,
+                    Height: self.window_size.1 as f32,
+                    MinDepth: 0.0,
+                    MaxDepth: 1.0,
+                }]));
+
+                self.dcs.context().VSSetShader(&self.composite_vs, None);
+                self.dcs.context().PSSetShader(&self.composite_ps, None);
+                self.dcs
+                    .context()
+                    .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                self.dcs.context().Draw(4, 0);
+
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
             }
-            self.scope_alk_cascade_transforms
-                .bind(3, TfxShaderStage::Pixel);
-
-            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
-                TopLeftX: 0.0,
-                TopLeftY: 0.0,
-                Width: self.window_size.0 as f32,
-                Height: self.window_size.1 as f32,
-                MinDepth: 0.0,
-                MaxDepth: 1.0,
-            }]));
-
-            self.dcs.context().VSSetShader(&self.composite_vs, None);
-            self.dcs.context().PSSetShader(&self.composite_ps, None);
-            self.dcs
-                .context()
-                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-            self.dcs.context().Draw(4, 0);
-
-            self.dcs
-                .context()
-                .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
         }
     }
 
@@ -1343,7 +1371,7 @@ impl Renderer {
         unsafe {
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt0.render_target,
-                rt0_clear.to_array().as_ptr() as _,
+                [rt0_clear.x, rt0_clear.y, rt0_clear.z, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt1.render_target,

@@ -384,7 +384,7 @@ impl View for TagView {
                     }
 
                     ui.add(
-                        egui::DragValue::new(&mut self.traversal_depth_limit).clamp_range(4..=256),
+                        egui::DragValue::new(&mut self.traversal_depth_limit).clamp_range(1..=256),
                     );
                     ui.label("Max depth");
 

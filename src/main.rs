@@ -8,7 +8,6 @@ extern crate windows;
 extern crate tracing;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
@@ -27,19 +26,25 @@ use binrw::BinReaderExt;
 use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
 use destiny_pkg::{tag, PackageManager, TagHash};
+use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
+use egui::epaint::ahash::HashMap;
 use glam::Vec3;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
+use render::vertex_layout::InputElement;
+use render::RenderData;
 use render_globals::SRenderGlobals;
+use technique::Technique;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, Layer};
 use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
+use windows::Win32::Graphics::Direct3D::WKPDID_D3DDebugObjectName;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -243,8 +248,6 @@ pub async fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} global strings", stringmap.len());
 
-    load_render_globals();
-
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
@@ -262,6 +265,8 @@ pub async fn main() -> anyhow::Result<()> {
 
     // TODO(cohae): resources should be added to renderdata directly
     let renderer: RendererShared = Arc::new(RwLock::new(Renderer::create(&window, dcs.clone())?));
+
+    load_render_globals(&mut renderer.write());
 
     let mut map_hashes = if let Some(map_hash) = &args.map {
         let hash = match u32::from_str_radix(map_hash, 16) {
@@ -757,7 +762,7 @@ pub async fn main() -> anyhow::Result<()> {
     });
 }
 
-fn load_render_globals() {
+fn load_render_globals(renderer: &Renderer) {
     let tag = get_named_tag("render_globals").expect("Could not find render globals!");
     let globals: SRenderGlobals = package_manager()
         .read_tag_struct(tag)
@@ -810,12 +815,119 @@ fn load_render_globals() {
         }
     }
 
+    let mut techniques: HashMap<String, TagHash> = HashMap::default();
     for (i, t) in globals.unk8[0].unk8.unk20.iter().enumerate() {
-        println!("technique #{i}: {}, {}", t.name.to_string(), t.unkc);
+        println!("technique #{i}: {}, {}", *t.name, t.technique);
+        techniques.insert(t.name.to_string(), t.technique);
     }
+
+    let technique_tag = techniques["deferred_shading_no_atm"];
+    let technique = Technique::load(
+        renderer,
+        package_manager().read_tag_struct(technique_tag).unwrap(),
+        technique_tag,
+        true,
+    );
+
+    load_shaders(renderer, &technique);
+
+    renderer
+        .render_data
+        .data_mut()
+        .technique_deferred_shading_no_atm = Some(technique);
+
+    info!("Loaded deferred_shading_no_atm");
 }
 
 fn buffer_size(tag: TagHash) -> usize {
     let eeee = package_manager().get_entry(tag).unwrap().reference;
     package_manager().read_tag(TagHash(eeee)).unwrap().len()
+}
+
+fn load_shaders(renderer: &Renderer, m: &Technique) {
+    let mut render_data = renderer.render_data.data_mut();
+
+    if let Some(v) = package_manager().get_entry(m.stage_vertex.shader.shader) {
+        let _span = debug_span!("load vshader", shader = ?m.stage_vertex.shader).entered();
+
+        let vs_data = package_manager().read_tag(v.reference).unwrap();
+
+        let mut vs_cur = Cursor::new(&vs_data);
+        let dxbc_header: DxbcHeader = vs_cur.read_le().unwrap();
+        let input_sig = get_input_signature(&mut vs_cur, &dxbc_header).unwrap();
+
+        let layout_converted = input_sig
+            .elements
+            .iter()
+            .map(|e| InputElement::from_dxbc(e, e.component_type == DxbcInputType::Float, false))
+            .collect_vec();
+
+        let shader = unsafe {
+            let v = renderer
+                .dcs
+                .device
+                .CreateVertexShader(&vs_data, None)
+                .context("Failed to load vertex shader")
+                .unwrap();
+
+            // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
+            // let layout_string = layout_converted
+            //     .iter()
+            //     .enumerate()
+            //     .map(|(i, e)| {
+            //         format!(
+            //             "\t{}{} v{i} : {}{}",
+            //             e.component_type,
+            //             e.component_count,
+            //             e.semantic_type.to_pcstr().display(),
+            //             e.semantic_index
+            //         )
+            //     })
+            //     .join("\n");
+
+            // error!(
+            //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
+            //     m.vertex_shader, layout_string
+            // );
+
+            (v, layout_converted, vs_data)
+        };
+
+        render_data
+            .vshaders
+            .insert(m.stage_vertex.shader.shader, shader);
+    }
+
+    // return Ok(());
+
+    if let Some(v) = package_manager().get_entry(m.stage_pixel.shader.shader) {
+        let _span = debug_span!("load pshader", shader = ?m.stage_pixel.shader.shader).entered();
+
+        let ps_data = package_manager().read_tag(v.reference).unwrap();
+
+        let mut ps_cur = Cursor::new(&ps_data);
+        let dxbc_header: DxbcHeader = ps_cur.read_le().unwrap();
+        let output_sig = get_output_signature(&mut ps_cur, &dxbc_header).unwrap();
+
+        let layout_converted = output_sig
+            .elements
+            .iter()
+            .map(|e| InputElement::from_dxbc(e, e.component_type == DxbcInputType::Float, false))
+            .collect_vec();
+
+        let shader = unsafe {
+            let v = renderer
+                .dcs
+                .device
+                .CreatePixelShader(&ps_data, None)
+                .context("Failed to load pixel shader")
+                .unwrap();
+
+            (v, layout_converted)
+        };
+
+        render_data
+            .pshaders
+            .insert(m.stage_pixel.shader.shader, shader);
+    }
 }

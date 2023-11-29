@@ -48,15 +48,21 @@ impl Overlay for RenderSettingsOverlay {
             ui.checkbox(&mut render_settings.draw_lights, "Render lights");
             ui.indent("render settings specular option indent", |ui| {
                 ui.add_enabled_ui(render_settings.draw_lights, |ui| {
-                    ui.add(egui::Checkbox::new(
-                        &mut render_settings.use_specular_map,
-                        "Use Specular Maps",
-                    ));
+                    ui.checkbox(
+                        &mut render_settings.use_global_deferred_shading,
+                        "deferred_shading_no_atm",
+                    );
+                    ui.add_enabled_ui(!render_settings.use_global_deferred_shading, |ui| {
+                        ui.add(egui::Checkbox::new(
+                            &mut render_settings.use_specular_map,
+                            "Use Specular Maps",
+                        ));
 
-                    ui.add(egui::Checkbox::new(
-                        &mut render_settings.render_shadows,
-                        "Render shadows",
-                    ));
+                        ui.add(egui::Checkbox::new(
+                            &mut render_settings.render_shadows,
+                            "Render shadows",
+                        ));
+                    });
                 });
             });
 
@@ -461,6 +467,7 @@ pub struct CompositorOptions {
 }
 
 pub struct RenderSettings {
+    pub use_global_deferred_shading: bool,
     pub draw_lights: bool,
     pub render_shadows: bool,
     pub alpha_blending: bool,
@@ -478,6 +485,7 @@ pub struct RenderSettings {
 impl Default for RenderSettings {
     fn default() -> Self {
         Self {
+            use_global_deferred_shading: false,
             compositor_mode: CompositorMode::Combined as usize,
             alpha_blending: true,
             draw_lights: false,
@@ -489,7 +497,7 @@ impl Default for RenderSettings {
             light_color: Vec4::ONE,
             use_specular_map: true,
             fxaa: true,
-            light_mul: 1.5,
+            light_mul: 1.0,
         }
     }
 }

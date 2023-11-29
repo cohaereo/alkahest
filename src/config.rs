@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use crate::util::{exe_relative_path, RwLock};
+use egui::epaint::ahash::HashMap;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 

@@ -60,14 +60,11 @@ Texture2D RenderTargetStaging : register(t0);
 Texture2D RenderTargetDepth : register(t1);
 SamplerState SampleType : register(s0);
 
+float4 SampleAlbedoFxaa(VSOutput input);
+float4 FinalCombineFilmCurve(float4 v);
+
 float3 GammaCorrect(float3 c) {
     return pow(abs(c), (1.0/2.2).xxx);
-}
-
-float4 SampleAlbedoFxaa(VSOutput input);
-
-float4 posterize(float4 v, int steps) {
-    return round(v * steps) / (float)steps;
 }
 
 // Pixel Shader
@@ -80,7 +77,7 @@ float4 PShader(VSOutput input) : SV_Target {
 
     float4 finalColor = float4(0, 0, 0, 1);
     if(tex_i == 0 || tex_i == 1)
-        finalColor = float4(GammaCorrect(albedo.xyz), 1.0);
+        finalColor = FinalCombineFilmCurve(albedo);
     else if(tex_i == 14) {
         float4 u0 = 0;
         u0.xy = target.xy * input.uv.xy;
@@ -94,6 +91,19 @@ float4 PShader(VSOutput input) : SV_Target {
         finalColor = float4(albedo.xyz, 1.0);
 
     return finalColor;
+}
+
+float4 FinalCombineFilmCurve(float4 v) {
+    float4 r0, r1, r2, o0;
+    r0 = v;
+    r1.xyz = r0.xyz * float3(1.04874694,1.04874694,1.04874694) + float3(3.13439703,3.13439703,3.13439703);
+    r1.xyz = r1.xyz * r0.xyz;
+    r2.xyz = r0.xyz * float3(0.990440011,0.990440011,0.990440011) + float3(3.24044991,3.24044991,3.24044991);
+    r0.xyz = r0.xyz * r2.xyz + float3(0.651790023,0.651790023,0.651790023);
+    o0.xyz = saturate(r1.xyz / r0.xyz);
+    o0.w = 1;
+
+    return o0;
 }
 
 // FXAA implementation below this line

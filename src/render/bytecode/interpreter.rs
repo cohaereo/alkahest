@@ -414,6 +414,7 @@ impl TfxBytecodeInterpreter {
             TfxExtern::Frame => match offset {
                 // 26.x is something to do with alpha clipping. We keep it disabled, as enabling it causes a fuzzy alpha clip pattern where we dont want it
                 26 => Vec4::ZERO,
+                27 => Vec4::ONE,
                 u => {
                     anyhow::bail!(
                         "get_extern_vec4: Unsupported frame extern offset {u} (0x{:0X})",
@@ -426,6 +427,15 @@ impl TfxBytecodeInterpreter {
                 u => {
                     anyhow::bail!(
                         "get_extern_vec4: Unsupported deferred extern offset {u} (0x{:0X})",
+                        u * 16
+                    )
+                }
+            },
+            TfxExtern::Atmosphere => match offset {
+                7 => Vec4::splat(1.0),
+                u => {
+                    anyhow::bail!(
+                        "get_extern_vec4: Unsupported atmosphere extern offset {u} (0x{:0X})",
                         u * 16
                     )
                 }
@@ -488,6 +498,8 @@ impl TfxBytecodeInterpreter {
                 }
             },
             TfxExtern::View => match offset {
+                0 => Mat4::IDENTITY,
+                16 => Mat4::IDENTITY,
                 40 => *renderer.camera_svp_inv.read(),
                 u => {
                     anyhow::bail!(
@@ -507,31 +519,45 @@ impl TfxBytecodeInterpreter {
 
     pub fn get_extern_u64(
         &self,
-        _renderer: &Renderer,
+        renderer: &Renderer,
         render_data: &RenderData,
         extern_: TfxExtern,
         offset: usize,
     ) -> anyhow::Result<u64> {
         unsafe {
             Ok(match extern_ {
+                TfxExtern::Frame => match offset {
+                    24 => transmute(render_data.debug_textures[6].view.clone()),
+
+                    u => {
+                        anyhow::bail!(
+                            "get_extern_u64: Unsupported frame extern offset {u} (0x{:0X})",
+                            u * 8
+                        )
+                    }
+                },
                 TfxExtern::Deferred => match offset {
-                    7 => transmute(_renderer.gbuffer.depth.texture_view.clone()),
-                    10 => transmute(_renderer.gbuffer.rt1.view.clone()),
-                    11 => transmute(_renderer.gbuffer.rt2.view.clone()),
+                    7 => transmute(renderer.gbuffer.depth.texture_view.clone()),
+                    9 => transmute(renderer.gbuffer.rt0.view.clone()),
+                    10 => transmute(renderer.gbuffer.rt1.view.clone()),
+                    11 => transmute(renderer.gbuffer.rt2.view.clone()),
+                    12 => transmute(renderer.gbuffer.light_diffuse.view.clone()),
+                    13 => transmute(renderer.gbuffer.light_specular.view.clone()),
+                    14 => transmute(render_data.black.view.clone()), // light_ibl_specular
 
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
-                            u * 16
+                            u * 8
                         )
                     }
                 },
                 TfxExtern::Decal => match offset {
-                    1 => transmute(_renderer.gbuffer.rt1_clone.view.clone()),
+                    1 => transmute(renderer.gbuffer.rt1_clone.view.clone()),
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported decal extern offset {u} (0x{:0X})",
-                            u * 16
+                            u * 8
                         )
                     }
                 },
@@ -542,7 +568,7 @@ impl TfxBytecodeInterpreter {
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported atmosphere extern offset {u} (0x{:0X})",
-                            u * 16
+                            u * 8
                         )
                     }
                 },
@@ -551,7 +577,16 @@ impl TfxBytecodeInterpreter {
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported water displacement extern offset {u} (0x{:0X})",
-                            u * 16
+                            u * 8
+                        )
+                    }
+                },
+                TfxExtern::ShadowMask => match offset {
+                    1 => transmute(render_data.debug_textures[7].view.clone()),
+                    u => {
+                        anyhow::bail!(
+                            "get_extern_u64: Unsupported shadow mask extern offset {u} (0x{:0X})",
+                            u * 8
                         )
                     }
                 },

@@ -15,8 +15,8 @@ pub struct GBuffer {
     pub rt2: RenderTarget,
     pub rt3: RenderTarget,
 
-    pub light_rt0: RenderTarget,
-    pub light_rt1: RenderTarget,
+    pub light_diffuse: RenderTarget,
+    pub light_specular: RenderTarget,
 
     pub staging: RenderTarget,
     pub staging_clone: RenderTarget,
@@ -38,10 +38,14 @@ impl GBuffer {
             rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
                 .context("RT3")?,
 
-            light_rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
-                .context("Light_RT0")?,
-            light_rt1: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
-                .context("Light_RT1")?,
+            light_diffuse: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+                .context("Light_Diffuse")?,
+            light_specular: RenderTarget::create(
+                size,
+                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                dcs.clone(),
+            )
+            .context("Light_Specular")?,
 
             staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Staging")?,
@@ -63,8 +67,12 @@ impl GBuffer {
         self.rt2.resize(new_size).context("RT2")?;
         self.rt3.resize(new_size).context("RT3")?;
 
-        self.light_rt0.resize(new_size).context("Light_RT0")?;
-        self.light_rt1.resize(new_size).context("Light_RT1")?;
+        self.light_diffuse
+            .resize(new_size)
+            .context("Light_Diffuse")?;
+        self.light_specular
+            .resize(new_size)
+            .context("Light_Specular")?;
 
         self.staging.resize(new_size).context("Staging")?;
         self.staging_clone

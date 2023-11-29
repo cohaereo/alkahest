@@ -370,7 +370,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 }
             }
         }
-        "disassemble_tfx" => {
+        "distfx" | "disassemble_tfx" => {
             if args.is_empty() {
                 error!("Missing bytes argument, expected hex bytestream");
                 return;
@@ -398,7 +398,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 info!(" {i}: {}", o.disassemble(None));
             }
         }
-        "disassemble_tfx_technique" => {
+        "distfxt" | "disassemble_tfx_technique" => {
             // TODO(cohae): Make some abstraction for this
             if args.len() != 1 {
                 error!("Missing tag argument, expected 32-bit tag");
