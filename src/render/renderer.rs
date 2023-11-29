@@ -467,20 +467,6 @@ impl Renderer {
                 )]),
                 &self.gbuffer.depth.view,
             );
-
-            let rt = self.gbuffer.staging.view.clone();
-            self.dcs.context().PSSetShaderResources(
-                12,
-                Some(&[
-                    // TODO(cohae): Totally wrong, obviously
-                    Some(rt.clone()),
-                    Some(rt.clone()),
-                    Some(rt.clone()),
-                    Some(rt.clone()),
-                    Some(rt.clone()),
-                    Some(rt),
-                ]),
-            );
         }
 
         self.gbuffer.staging.copy_to(&self.gbuffer.staging_clone);
@@ -894,9 +880,10 @@ impl Renderer {
         let maps = resources.get::<MapDataList>().unwrap();
 
         unsafe {
+            let ambient_light = resources.get::<RenderSettings>().unwrap().ambient_light;
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.light_diffuse.render_target,
-                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
+                [ambient_light.x, ambient_light.y, ambient_light.z, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.light_specular.render_target,
@@ -1367,15 +1354,15 @@ impl Renderer {
         self.gbuffer.resize(new_size)
     }
 
-    pub fn clear_render_targets(&self, rt0_clear: Vec4) {
+    pub fn clear_render_targets(&self) {
         unsafe {
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt0.render_target,
-                [rt0_clear.x, rt0_clear.y, rt0_clear.z, 0.0].as_ptr() as _,
+                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt1.render_target,
-                [0.0, 0.0, 1.0, 0.0].as_ptr() as _,
+                [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.rt2.render_target,
@@ -1389,27 +1376,6 @@ impl Renderer {
             );
         }
     }
-
-    // fn evaluate_tfx_expressions(&self) {
-    //     let materials_to_update: IntSet<TagHash> = self
-    //         .draw_queue
-    //         .read()
-    //         .iter()
-    //         .map(|(s, _)| TagHash(s.material()))
-    //         .collect();
-    //     let _span = info_span!(
-    //         "Evaluating TFX bytecode",
-    //         shader_count = materials_to_update.len()
-    //     )
-    //     .entered();
-
-    //     let mut r = self.render_data.data_mut();
-    //     for hash in materials_to_update {
-    //         if let Some(m) = r.materials.get_mut(&hash) {
-    //             m.evaluate_bytecode(self)
-    //         }
-    //     }
-    // }
 }
 
 #[derive(Default, PartialEq)]

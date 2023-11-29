@@ -94,13 +94,13 @@ impl Overlay for RenderSettingsOverlay {
                 ui.add(egui::DragValue::new(&mut render_settings.light_mul).speed(0.1));
             });
 
-            let mut c = render_settings.clear_color.to_array();
+            let mut c = render_settings.ambient_light.to_array();
             ui.horizontal(|ui| {
                 ui.color_edit_button_rgb(unsafe { transmute(&mut c) });
-                ui.label("Clear color");
+                ui.label("Ambient light");
             });
             c[3] = 1.0;
-            render_settings.clear_color = Vec4::from_array(c);
+            render_settings.ambient_light = Vec4::from_array(c);
 
             {
                 const SHADOW_RESOLUTIONS: &[usize] = &[2048, 4096, 8192, 16384];
@@ -474,7 +474,7 @@ pub struct RenderSettings {
     pub compositor_mode: usize,
     pub blend_override: usize,
     pub evaluate_bytecode: bool,
-    pub clear_color: Vec4,
+    pub ambient_light: Vec4,
     pub light_dir: Vec3,
     pub light_color: Vec4,
     pub use_specular_map: bool,
@@ -492,7 +492,7 @@ impl Default for RenderSettings {
             render_shadows: true,
             blend_override: 0,
             evaluate_bytecode: false,
-            clear_color: Vec4::ZERO,
+            ambient_light: Vec4::ZERO,
             light_dir: Vec3::NEG_Z,
             light_color: Vec4::ONE,
             use_specular_map: true,
