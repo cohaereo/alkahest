@@ -674,7 +674,7 @@ impl Renderer {
             }
         }
 
-        if let Some(mat) = render_data.materials.get(&sort.material().into()) {
+        if let Some(mat) = render_data.techniques.get(&sort.material().into()) {
             if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
                 return;
             }
@@ -698,7 +698,7 @@ impl Renderer {
         }
 
         if let Some(variant_material) = drawcall.variant_material {
-            if let Some(mat) = render_data.materials.get(&variant_material) {
+            if let Some(mat) = render_data.techniques.get(&variant_material) {
                 if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
                     return;
                 }
@@ -771,7 +771,7 @@ impl Renderer {
         if evaluate_tfx_bytecode {
             let mut last_material = self.last_material.write();
             if *last_material != sort.material() {
-                if let Some(mat) = render_data.materials.get(&sort.material().into()) {
+                if let Some(mat) = render_data.techniques.get(&sort.material().into()) {
                     mat.evaluate_bytecode(self, &render_data)
                 }
 
@@ -779,7 +779,7 @@ impl Renderer {
             }
 
             if let Some(variant_material) = drawcall.variant_material {
-                if let Some(mat) = render_data.materials.get(&variant_material) {
+                if let Some(mat) = render_data.techniques.get(&variant_material) {
                     mat.evaluate_bytecode(self, &render_data)
                 }
             }
@@ -858,12 +858,12 @@ impl Renderer {
             }
         }
 
-        if let Some(mat) = render_data.materials.get(&sort.material().into()) {
+        if let Some(mat) = render_data.techniques.get(&sort.material().into()) {
             mat.unbind_textures(&self.dcs)
         }
 
         if let Some(variant_material) = drawcall.variant_material {
-            if let Some(mat) = render_data.materials.get(&variant_material) {
+            if let Some(mat) = render_data.techniques.get(&variant_material) {
                 mat.unbind_textures(&self.dcs)
             }
         }
@@ -965,6 +965,8 @@ impl Renderer {
                 }
             }
         } else {
+            let render_data = self.render_data.data();
+
             unsafe {
                 self.dcs.context().PSSetShaderResources(
                     0,
@@ -995,18 +997,13 @@ impl Renderer {
                     )]),
                 );
 
-                self.render_data
-                    .data()
-                    .matcap
-                    .bind(&self.dcs, 8, ShaderStages::PIXEL);
+                render_data.matcap.bind(&self.dcs, 8, ShaderStages::PIXEL);
 
-                let cubemap_texture = resources.get::<CurrentCubemap>().unwrap().1.and_then(|t| {
-                    self.render_data
-                        .data()
-                        .textures
-                        .get(&t.key())
-                        .map(|t| t.view.clone())
-                });
+                let cubemap_texture = resources
+                    .get::<CurrentCubemap>()
+                    .unwrap()
+                    .1
+                    .and_then(|t| render_data.textures.get(&t.key()).map(|t| t.view.clone()));
 
                 self.dcs
                     .context()
@@ -1277,7 +1274,7 @@ impl Renderer {
         })?;
 
         camera.projection_matrix = Mat4::perspective_infinite_reverse_rh(
-            90f32.to_radians(),
+            camera.fov.to_radians(),
             self.window_size.0 as f32 / self.window_size.1 as f32,
             0.0001,
         );

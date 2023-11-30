@@ -11,6 +11,7 @@ pub struct FpsCamera {
     pub up: Vec3,
     pub position: Vec3,
     pub speed_mul: f32,
+    pub fov: f32,
 
     pub projection_matrix: Mat4,
 }
@@ -24,6 +25,7 @@ impl Default for FpsCamera {
             position: Vec3::ZERO,
             orientation: Vec2::ZERO,
             speed_mul: 1.0,
+            fov: 90.0,
             projection_matrix: Mat4::IDENTITY,
         }
     }
@@ -138,7 +140,7 @@ impl FpsCamera {
         aspect_ratio: f32,
     ) -> Mat4 {
         let proj = Mat4::perspective_rh(
-            90f32.to_radians(),
+            self.fov.to_radians(),
             aspect_ratio,
             cascade_z_start,
             cascade_z_end,

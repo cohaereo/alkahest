@@ -37,10 +37,10 @@ pub fn load_vertex_buffers(
         .collect_vec();
 
     let (material_vshader, material_pshader) = {
-        renderer.render_data.load_material(renderer, material);
+        renderer.render_data.load_technique(renderer, material);
 
         let render_data = renderer.render_data.data();
-        let mat = &render_data.materials[&material];
+        let mat = &render_data.techniques[&material];
 
         (
             mat.stage_vertex.shader.shader,

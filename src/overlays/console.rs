@@ -589,7 +589,7 @@ fn load_entity_model(
         renderer
             .render_data
             .data_mut()
-            .materials
+            .techniques
             .insert(*mat, technique);
     }
 

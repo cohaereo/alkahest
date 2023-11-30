@@ -58,13 +58,13 @@ impl TerrainRenderer {
         }
 
         for p in &terrain.mesh_parts {
-            renderer.render_data.load_material(renderer, p.material);
+            renderer.render_data.load_technique(renderer, p.material);
         }
 
         // Find the first normal material to use for the input layout
         let mut buffer_layout_material = TagHash(u32::MAX);
         for m in terrain.mesh_parts.iter() {
-            if let Some(mat) = renderer.render_data.data().materials.get(&m.material) {
+            if let Some(mat) = renderer.render_data.data().techniques.get(&m.material) {
                 if mat.unk8 == 1 {
                     buffer_layout_material = m.material;
                     break;

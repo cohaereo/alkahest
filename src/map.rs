@@ -400,7 +400,10 @@ pub struct SShadowingLight {
     pub unkb0: f32,
     pub unkb4: f32,
     pub unkb8: f32,
+
+    // Might be FoV?
     pub unkbc: f32,
+
     pub unkc0: f32,
     pub unkc4: f32,
     pub unkc8: f32,

@@ -35,13 +35,13 @@ impl Overlay for ResourceTypeOverlay {
 
             let painter = ctx.layer_painter(egui::LayerId::background());
 
+            let camera = resources.get::<FpsCamera>().unwrap();
             let projection = Mat4::perspective_infinite_reverse_rh(
-                90f32.to_radians(),
+                camera.fov.to_radians(),
                 screen_size.x / screen_size.y,
                 0.0001,
             );
 
-            let camera = resources.get::<FpsCamera>().unwrap();
             let view = camera.calculate_matrix();
             let proj_view = projection.mul_mat4(&view);
             let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());

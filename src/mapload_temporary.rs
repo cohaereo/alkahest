@@ -534,7 +534,7 @@ pub async fn load_maps(
             for m in &mheader.materials {
                 if m.is_some()
                     && !material_map.contains_key(m)
-                    && !renderer.render_data.data().materials.contains_key(m)
+                    && !renderer.render_data.data().techniques.contains_key(m)
                 {
                     material_map.insert(
                         *m,
@@ -551,7 +551,7 @@ pub async fn load_maps(
                 let m = m.material;
                 if m.is_some()
                     && !material_map.contains_key(&m)
-                    && !renderer.render_data.data().materials.contains_key(&m)
+                    && !renderer.render_data.data().techniques.contains_key(&m)
                 {
                     material_map.insert(
                         m,
@@ -772,7 +772,7 @@ pub async fn load_maps(
     {
         let renderer = renderer.read();
         let mut data = renderer.render_data.data_mut();
-        data.materials.extend(material_map);
+        data.techniques.extend(material_map);
         data.vshaders.extend(vshader_map);
         data.pshaders.extend(pshader_map);
         data.samplers.extend(sampler_map);

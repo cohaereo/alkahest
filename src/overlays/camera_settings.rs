@@ -62,6 +62,7 @@ impl Overlay for CameraPositionOverlay {
             ));
             ui.separator();
             ui.add(egui::Slider::new(&mut camera.speed_mul, 0.01..=10.0).text("Speed Multiplier"));
+            ui.add(egui::Slider::new(&mut camera.fov, 10.0..=120.0).text("Field of View"));
             ui.separator();
             ui.checkbox(&mut self.show_map_resources, "Show map resources");
             if self.show_map_resources {

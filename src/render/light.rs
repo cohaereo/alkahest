@@ -146,7 +146,7 @@ impl LightRenderer {
     pub fn draw_normal(&self, renderer: &Renderer, light: &SLight) {
         let render_data = renderer.render_data.data();
 
-        if let Some(mat) = render_data.materials.get(&light.technique_shading) {
+        if let Some(mat) = render_data.techniques.get(&light.technique_shading) {
             mat.evaluate_bytecode(renderer, &render_data);
             if mat
                 .bind(&self.dcs, &render_data, ShaderStages::SHADING)
@@ -164,7 +164,7 @@ impl LightRenderer {
     pub fn draw_shadowing(&self, renderer: &Renderer, light: &SShadowingLight) {
         let render_data = renderer.render_data.data();
 
-        if let Some(mat) = render_data.materials.get(&light.technique_shading) {
+        if let Some(mat) = render_data.techniques.get(&light.technique_shading) {
             mat.evaluate_bytecode(renderer, &render_data);
             if mat
                 .bind(&self.dcs, &render_data, ShaderStages::SHADING)

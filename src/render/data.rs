@@ -22,7 +22,7 @@ use super::vertex_layout::OutputElement;
 use super::{resource_mt, DeviceContextSwapchain};
 
 pub struct RenderData {
-    pub materials: IntMap<TagHash, Technique>,
+    pub techniques: IntMap<TagHash, Technique>,
     pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
     pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<OutputElement>)>,
     pub textures: IntMap<u64, Texture>,
@@ -168,7 +168,7 @@ impl RenderData {
         )?;
 
         Ok(RenderData {
-            materials: Default::default(),
+            techniques: Default::default(),
             vshaders: Default::default(),
             pshaders: Default::default(),
             textures: Default::default(),
@@ -194,7 +194,7 @@ impl RenderData {
 
     // Get the shading technique for a material based on it's pixel shader output signature
     pub fn material_shading_technique(&self, material: TagHash) -> Option<ShadingMode> {
-        let pixel_shader = self.materials.get(&material)?.stage_pixel.shader.shader;
+        let pixel_shader = self.techniques.get(&material)?.stage_pixel.shader.shader;
 
         if self.pshaders.get(&pixel_shader)?.1.len() == 1 {
             Some(ShadingMode::Forward)
@@ -308,19 +308,19 @@ impl RenderDataManager {
         });
     }
 
-    pub fn load_material(&self, renderer: &Renderer, material: TagHash) {
-        if !material.is_some() {
+    pub fn load_technique(&self, renderer: &Renderer, technique: TagHash) {
+        if !technique.is_some() {
             return;
         }
 
         self.data_mut()
-            .materials
-            .entry(material)
+            .techniques
+            .entry(technique)
             .or_insert_with(|| {
                 Technique::load(
                     renderer,
-                    package_manager().read_tag_struct(material).unwrap(),
-                    material,
+                    package_manager().read_tag_struct(technique).unwrap(),
+                    technique,
                     false,
                 )
             });

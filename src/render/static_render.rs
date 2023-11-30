@@ -56,7 +56,7 @@ impl StaticModel {
             renderer.render_data.load_buffer(*color_buffer_hash, true);
 
             for m in &model.materials {
-                renderer.render_data.load_material(renderer, *m);
+                renderer.render_data.load_technique(renderer, *m);
             }
 
             // Find the first normal material to use for the input layout
@@ -66,7 +66,7 @@ impl StaticModel {
 
                 if p.buffer_index == buffer_index as u8 {
                     let material = model.materials[iu];
-                    if let Some(mat) = renderer.render_data.data().materials.get(&material) {
+                    if let Some(mat) = renderer.render_data.data().techniques.get(&material) {
                         if mat.unk8 == 1 {
                             buffer_layout_material = material;
                             break;
@@ -78,7 +78,7 @@ impl StaticModel {
             // Fall back to any working material in the material array
             if !buffer_layout_material.is_some() {
                 for material in &model.materials {
-                    if let Some(mat) = renderer.render_data.data().materials.get(material) {
+                    if let Some(mat) = renderer.render_data.data().techniques.get(material) {
                         if mat.unk8 == 1 {
                             buffer_layout_material = *material;
                             break;
