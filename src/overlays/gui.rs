@@ -29,6 +29,8 @@ pub struct GuiManager {
     overlays: Vec<Rc<RefCell<dyn Overlay>>>,
     dcs: Arc<DeviceContextSwapchain>,
     resources: GuiResources,
+
+    show_ui: bool,
 }
 
 impl GuiManager {
@@ -72,6 +74,7 @@ impl GuiManager {
             renderer,
             overlays: vec![],
             dcs,
+            show_ui: true,
         }
     }
 
@@ -87,6 +90,21 @@ impl GuiManager {
     where
         MF: FnOnce(&egui::Context),
     {
+        if self.egui.input_mut(|i| {
+            i.consume_key(
+                egui::Modifiers {
+                    alt: false,
+                    ctrl: true,
+                    shift: true,
+                    mac_cmd: false,
+                    command: false,
+                },
+                egui::Key::H,
+            )
+        }) {
+            self.show_ui = !self.show_ui;
+        }
+
         let input = self.integration.take_egui_input(&window);
 
         let output = self
@@ -97,44 +115,46 @@ impl GuiManager {
                 &self.egui,
                 window.scale_factor() as f32,
                 |integration, ctx| {
-                    for overlay in self.overlays.iter() {
-                        overlay.as_ref().borrow_mut().draw(
-                            ctx,
-                            &window,
-                            resources,
-                            GuiContext {
-                                icons: &self.resources,
-                                integration,
-                            },
-                        );
+                    if self.show_ui {
+                        for overlay in self.overlays.iter() {
+                            overlay.as_ref().borrow_mut().draw(
+                                ctx,
+                                &window,
+                                resources,
+                                GuiContext {
+                                    icons: &self.resources,
+                                    integration,
+                                },
+                            );
+                        }
+
+                        // Take all viewers out of the resource and put them back in later so that we can pass resources into it
+                        // This is a cheap operation because Box<> is a pointer
+                        let mut views =
+                            if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
+                                std::mem::take(&mut viewers.0)
+                            } else {
+                                vec![]
+                            };
+
+                        views.retain_mut(|v| {
+                            v.draw(
+                                ctx,
+                                &window,
+                                resources,
+                                GuiContext {
+                                    icons: &self.resources,
+                                    integration,
+                                },
+                            )
+                        });
+
+                        if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
+                            viewers.0 = views;
+                        }
+
+                        misc_draw(ctx);
                     }
-
-                    // Take all viewers out of the resource and put them back in later so that we can pass resources into it
-                    // This is a cheap operation because Box<> is a pointer
-                    let mut views = if let Some(mut viewers) = resources.get_mut::<ViewerWindows>()
-                    {
-                        std::mem::take(&mut viewers.0)
-                    } else {
-                        vec![]
-                    };
-
-                    views.retain_mut(|v| {
-                        v.draw(
-                            ctx,
-                            &window,
-                            resources,
-                            GuiContext {
-                                icons: &self.resources,
-                                integration,
-                            },
-                        )
-                    });
-
-                    if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
-                        viewers.0 = views;
-                    }
-
-                    misc_draw(ctx);
                 },
             )
             .unwrap();
