@@ -194,20 +194,9 @@ impl View for TagView {
     fn view(&mut self, ctx: &eframe::egui::Context, ui: &mut eframe::egui::Ui) {
         let mut open_new_tag = None;
 
-        let ref_label = REFERENCE_MAP
-            .read()
-            .get(&self.tag_entry.reference)
-            .map(|s| format!(" ({s})"))
-            .unwrap_or_default();
-        ui.heading(format!(
-            "{} {} {ref_label} ({}+{}, ref {})",
-            self.tag,
-            TagType::from_type_subtype(self.tag_entry.file_type, self.tag_entry.file_subtype),
-            self.tag_entry.file_type,
-            self.tag_entry.file_subtype,
-            TagHash(self.tag_entry.reference)
-        ))
-        .context_menu(|ui| tag_context(ui, self.tag, self.tag64));
+        ui.heading(format_tag_entry(self.tag, Some(&self.tag_entry)))
+            .context_menu(|ui| tag_context(ui, self.tag, self.tag64));
+
         ui.label(
             RichText::new(format!(
                 "Package {}",
@@ -832,6 +821,13 @@ impl Drop for TagView {
 
 pub fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
     if let Some(entry) = entry {
+        let named_tag = package_manager()
+            .named_tags
+            .iter()
+            .find(|v| v.hash == tag)
+            .map(|v| format!("{} ", v.name))
+            .unwrap_or_default();
+
         let ref_label = REFERENCE_MAP
             .read()
             .get(&entry.reference)
@@ -839,8 +835,7 @@ pub fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
             .unwrap_or_default();
 
         format!(
-            "{} {}{ref_label} ({}+{}, ref {})",
-            tag,
+            "{named_tag}{tag} {}{ref_label} ({}+{}, ref {})",
             TagType::from_type_subtype(entry.file_type, entry.file_subtype),
             entry.file_type,
             entry.file_subtype,

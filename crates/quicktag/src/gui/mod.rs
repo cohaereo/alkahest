@@ -209,8 +209,7 @@ impl QuickTagApp {
 
                     let fancy_tag = format_tag_entry(nt.hash, Some(&entry));
 
-                    let tag_label = egui::RichText::new(format!("{} {fancy_tag}", nt.name))
-                        .color(tagtype.display_color());
+                    let tag_label = egui::RichText::new(fancy_tag).color(tagtype.display_color());
 
                     if ui
                         .add(egui::SelectableLabel::new(false, tag_label))
