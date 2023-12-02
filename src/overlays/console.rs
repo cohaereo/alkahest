@@ -13,7 +13,7 @@ use crate::technique::{STechnique, Technique};
 use crate::render::renderer::{Renderer, RendererShared};
 use crate::render::scopes::ScopeRigidModel;
 use crate::resources::Resources;
-use crate::structure::{ExtendedHash, TablePointer, Tag};
+use crate::structure::{ExtendedHash, TablePointer};
 
 use anyhow::Context;
 use binrw::BinReaderExt;

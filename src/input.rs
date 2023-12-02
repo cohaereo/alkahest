@@ -14,11 +14,11 @@ pub enum KeyState {
 #[allow(unused)]
 #[derive(PartialEq, Eq)]
 pub enum MouseButton {
-    /// Alias for Mouse1
+    #[doc(alias = "Mouse1")]
     Left,
-    /// Alias for Mouse2
+    #[doc(alias = "Mouse2")]
     Right,
-    /// Alias for Mouse3
+    #[doc(alias = "Mouse3")]
     Middle,
     // /// Alias for Mouse5
     // Forward,

@@ -63,6 +63,7 @@ pub async fn load_maps(
     map_hashes: Vec<TagHash>,
     stringmap: Arc<IntMap<u32, String>>,
     activity_hash: Option<TagHash>,
+    load_ambient_activity: bool,
 ) -> anyhow::Result<LoadMapsData> {
     let mut vshader_map: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> =
         Default::default();
@@ -96,6 +97,39 @@ pub async fn load_maps(
                         .entry(map32)
                         .or_default()
                         .push((u2.unk_entity_reference.clone(), u2.activity_phase_name2));
+                }
+            }
+        }
+
+        if load_ambient_activity {
+            match package_manager().read_tag_struct::<SActivity>(
+                activity.ambient_activity.hash32().unwrap_or_default(),
+            ) {
+                Ok(activity) => {
+                    for u1 in &activity.unk50 {
+                        for map in &u1.map_references {
+                            let map32 = match map.hash32() {
+                                Some(m) => m,
+                                None => {
+                                    error!("Couldn't translate map hash64 {map:?}");
+                                    continue;
+                                }
+                            };
+
+                            for u2 in &u1.unk18 {
+                                activity_entref_tables.entry(map32).or_default().push((
+                                    u2.unk_entity_reference.clone(),
+                                    u2.activity_phase_name2,
+                                ));
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to load ambient activity {}: {e}",
+                        activity.ambient_activity
+                    );
                 }
             }
         }

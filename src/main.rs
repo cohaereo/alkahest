@@ -25,7 +25,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
 use destiny_pkg::PackageVersion::{self};
-use destiny_pkg::{tag, PackageManager, TagHash};
+use destiny_pkg::{PackageManager, TagHash};
 use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
@@ -37,14 +37,14 @@ use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
 use render::vertex_layout::InputElement;
-use render::RenderData;
+
 use render_globals::SRenderGlobals;
 use technique::Technique;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, Layer};
 use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
-use windows::Win32::Graphics::Direct3D::WKPDID_D3DDebugObjectName;
+
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -57,7 +57,7 @@ use winit::{
 use crate::camera::FpsCamera;
 use crate::config::{WindowConfig, CONFIGURATION};
 use crate::input::InputState;
-use crate::map::{MapDataList, SBubbleParent};
+use crate::map::MapDataList;
 use crate::map_resources::MapResource;
 use crate::mapload_temporary::load_maps;
 use crate::overlays::camera_settings::CameraPositionOverlay;
@@ -123,6 +123,9 @@ struct Args {
 
     #[arg(short, long)]
     activity: Option<String>,
+
+    #[arg(long, alias = "na")]
+    no_ambient: bool,
 }
 
 #[tokio::main]
@@ -266,7 +269,7 @@ pub async fn main() -> anyhow::Result<()> {
     // TODO(cohae): resources should be added to renderdata directly
     let renderer: RendererShared = Arc::new(RwLock::new(Renderer::create(&window, dcs.clone())?));
 
-    load_render_globals(&mut renderer.write());
+    load_render_globals(&renderer.read());
 
     let mut map_hashes = if let Some(map_hash) = &args.map {
         let hash = match u32::from_str_radix(map_hash, 16) {
@@ -328,6 +331,7 @@ pub async fn main() -> anyhow::Result<()> {
         map_hashes,
         stringmap.clone(),
         activity_hash,
+        !args.no_ambient,
     )));
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
     let mut placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)> =

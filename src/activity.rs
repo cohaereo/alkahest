@@ -23,6 +23,7 @@ pub struct SActivity {
     pub unk60: [u32; 4],
     pub unk70: ResourceHash,
     pub unk74: TagHash,
+    pub ambient_activity: ExtendedHash,
 }
 
 #[derive(Debug, BinRead)]
