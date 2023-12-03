@@ -3,8 +3,10 @@ mod dxgi;
 mod tag;
 mod texture;
 
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use destiny_pkg::{package::UEntryHeader, PackageNamedTagEntry, PackageVersion, TagHash};
 use eframe::egui::RichText;
@@ -15,6 +17,7 @@ use eframe::{
     epaint::{Color32, Rounding, Vec2},
 };
 use egui_notify::Toasts;
+use itertools::Itertools;
 use poll_promise::Promise;
 
 use crate::{
@@ -34,6 +37,7 @@ pub enum Panel {
     Tag,
     NamedTags,
     Packages,
+    Strings,
 }
 
 pub struct QuickTagApp {
@@ -59,7 +63,14 @@ pub struct QuickTagApp {
     package_filter: String,
     package_entry_filter: String,
 
+    // TODO(cohae): Split strings panel to it's own view
+    selected_string: u32,
+    string_selected_entries: Vec<(TagHash, String, TagType)>,
+    string_filter: String,
+
     pub wgpu_state: RenderState,
+
+    start_time: Instant,
 }
 
 impl QuickTagApp {
@@ -84,7 +95,12 @@ impl QuickTagApp {
             package_filter: String::new(),
             package_entry_filter: String::new(),
 
+            selected_string: u32::MAX,
+            string_filter: String::new(),
+            string_selected_entries: vec![],
+
             wgpu_state: cc.wgpu_render_state.clone().unwrap(),
+            start_time: Instant::now(),
         }
     }
 }
@@ -164,6 +180,7 @@ impl eframe::App for QuickTagApp {
                 ui.selectable_value(&mut self.open_panel, Panel::Tag, "Tag");
                 ui.selectable_value(&mut self.open_panel, Panel::NamedTags, "Named tags");
                 ui.selectable_value(&mut self.open_panel, Panel::Packages, "Packages");
+                ui.selectable_value(&mut self.open_panel, Panel::Strings, "Strings");
             });
 
             ui.separator();
@@ -181,6 +198,9 @@ impl eframe::App for QuickTagApp {
                 }
                 Panel::Packages => {
                     self.packages_panel(ui);
+                }
+                Panel::Strings => {
+                    self.strings_panel(ui);
                 }
             }
         });
@@ -338,6 +358,111 @@ impl QuickTagApp {
                 });
         });
     }
+
+    fn strings_panel(&mut self, ui: &mut egui::Ui) {
+        egui::SidePanel::left("strings_left_panel")
+            .resizable(true)
+            .min_width(384.0)
+            .show_inside(ui, |ui| {
+                ui.style_mut().wrap = Some(false);
+                egui::ScrollArea::vertical()
+                    .max_width(ui.available_width() * 0.70)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Search:");
+                            ui.text_edit_singleline(&mut self.string_filter);
+                        });
+                        for (hash, strings) in self.strings.iter() {
+                            if !self.string_filter.is_empty()
+                                && !strings
+                                    .iter()
+                                    .any(|s| s.to_lowercase().contains(&self.string_filter))
+                            {
+                                continue;
+                            }
+
+                            let clicked = if strings.len() > 1 {
+                                ui.selectable_value(
+                                    &mut self.selected_string,
+                                    *hash,
+                                    format!(
+                                        "'{}' {:08x} ({} collisions)",
+                                        truncate_string_stripped(&strings[0], 192),
+                                        hash,
+                                        strings.len()
+                                    ),
+                                )
+                                .on_hover_text(
+                                    strings
+                                        .iter()
+                                        .map(|s| truncate_string_stripped(s, 192))
+                                        .join("\n\n"),
+                                )
+                                .clicked()
+                            } else {
+                                ui.selectable_value(
+                                    &mut self.selected_string,
+                                    *hash,
+                                    format!(
+                                        "'{}' {:08x}",
+                                        truncate_string_stripped(&strings[0], 192),
+                                        hash
+                                    ),
+                                )
+                                .clicked()
+                            };
+
+                            if clicked {
+                                self.string_selected_entries = vec![];
+                                for (tag, _) in
+                                    self.cache.hashes.iter().filter(|v| {
+                                        v.1.string_hashes.iter().any(|c| c.hash == *hash)
+                                    })
+                                {
+                                    if let Some(e) = package_manager().get_entry(*tag) {
+                                        let label = format_tag_entry(*tag, Some(&e));
+
+                                        self.string_selected_entries.push((
+                                            *tag,
+                                            label,
+                                            TagType::from_type_subtype(e.file_type, e.file_subtype),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    });
+            });
+
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .max_width(f32::INFINITY)
+                .show(ui, |ui| {
+                    ui.style_mut().wrap = Some(false);
+                    if self.selected_string == u32::MAX {
+                        ui.label(RichText::new("No string selected").italics());
+                    } else {
+                        let mut open_tag = None;
+                        for (tag, label, tag_type) in &self.string_selected_entries {
+                            if ui
+                                .add(egui::SelectableLabel::new(
+                                    false,
+                                    RichText::new(label).color(tag_type.display_color()),
+                                ))
+                                .context_menu(|ui| tag_context(ui, *tag, None))
+                                .clicked()
+                            {
+                                open_tag = Some(*tag);
+                            }
+                        }
+
+                        if let Some(tag) = open_tag {
+                            self.open_tag(tag);
+                        }
+                    }
+                });
+        });
+    }
 }
 
 pub trait View {
@@ -358,5 +483,15 @@ impl NamedTags {
                 .filter_map(|n| Some((package_manager().get_entry(n.hash)?, n)))
                 .collect(),
         }
+    }
+}
+
+fn truncate_string_stripped(s: &str, max_length: usize) -> String {
+    let s = s.replace('\n', "\\n");
+
+    if s.len() >= max_length {
+        format!("{}...", s.chars().take(max_length).collect::<String>())
+    } else {
+        s.to_string()
     }
 }

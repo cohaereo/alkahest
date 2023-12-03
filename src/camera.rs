@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec2, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use winit::event::VirtualKeyCode;
 
 use crate::input::InputState;
@@ -6,6 +6,8 @@ use crate::input::InputState;
 #[derive(Clone)]
 pub struct FpsCamera {
     orientation: Vec2,
+    pub rotation: Quat,
+
     pub front: Vec3,
     pub right: Vec3,
     pub up: Vec3,
@@ -19,6 +21,7 @@ pub struct FpsCamera {
 impl Default for FpsCamera {
     fn default() -> Self {
         Self {
+            rotation: Quat::IDENTITY,
             front: Vec3::Y,
             right: -Vec3::X,
             up: Vec3::Z,
@@ -41,6 +44,10 @@ impl FpsCamera {
         self.front = front.normalize();
         self.right = -self.front.cross(Vec3::Z).normalize();
         self.up = self.right.cross(self.front).normalize();
+
+        self.rotation = Mat4::look_at_rh(self.position, self.position + self.front, Vec3::Z)
+            .to_scale_rotation_translation()
+            .1;
     }
 
     pub fn update_mouse(&mut self, mouse_delta: Vec2) {

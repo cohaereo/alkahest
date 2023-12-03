@@ -17,6 +17,7 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     packages::package_manager,
+    text::create_stringmap,
     util::{u32_from_endian, u64_from_endian},
 };
 
@@ -107,7 +108,7 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
         //     });
         // }
 
-        if value == 0x811c9dc5 || context.known_string_hashes.contains(&value) {
+        if context.known_string_hashes.contains(&value) {
             r.string_hashes.push(ScannedHash {
                 offset,
                 hash: value,
@@ -155,6 +156,8 @@ pub fn create_scanner_context(package_manager: &PackageManager) -> anyhow::Resul
         _ => Endian::Little,
     };
 
+    let stringmap = create_stringmap()?;
+
     Ok(ScannerContext {
         valid_file_hashes: package_manager
             .package_entry_index
@@ -172,8 +175,7 @@ pub fn create_scanner_context(package_manager: &PackageManager) -> anyhow::Resul
             .keys()
             .map(|&v| TagHash64(v))
             .collect(),
-        // TODO
-        known_string_hashes: Default::default(),
+        known_string_hashes: stringmap.keys().cloned().collect(),
         endian,
     })
 }
