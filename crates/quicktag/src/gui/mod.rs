@@ -3,9 +3,11 @@ mod dxgi;
 mod tag;
 mod texture;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use destiny_pkg::{package::UEntryHeader, PackageNamedTagEntry, PackageVersion, TagHash};
+use eframe::egui::RichText;
 use eframe::egui_wgpu::RenderState;
 use eframe::{
     egui::{self},
@@ -31,6 +33,7 @@ use self::{
 pub enum Panel {
     Tag,
     NamedTags,
+    Packages,
 }
 
 pub struct QuickTagApp {
@@ -45,8 +48,16 @@ pub struct QuickTagApp {
     open_panel: Panel,
 
     tag_view: Option<TagView>,
+
+    // TODO(cohae): Split named tag panel to it's own view
     named_tags: NamedTags,
     named_tag_filter: String,
+
+    // TODO(cohae): Split package panel to it's own view
+    selected_package: u16,
+    package_entry_search_cache: Vec<(String, TagType)>,
+    package_filter: String,
+    package_entry_filter: String,
 
     pub wgpu_state: RenderState,
 }
@@ -67,6 +78,12 @@ impl QuickTagApp {
             open_panel: Panel::Tag,
             named_tags: NamedTags::new(),
             named_tag_filter: String::new(),
+
+            selected_package: u16::MAX,
+            package_entry_search_cache: vec![],
+            package_filter: String::new(),
+            package_entry_filter: String::new(),
+
             wgpu_state: cc.wgpu_render_state.clone().unwrap(),
         }
     }
@@ -146,6 +163,7 @@ impl eframe::App for QuickTagApp {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.open_panel, Panel::Tag, "Tag");
                 ui.selectable_value(&mut self.open_panel, Panel::NamedTags, "Named tags");
+                ui.selectable_value(&mut self.open_panel, Panel::Packages, "Packages");
             });
 
             ui.separator();
@@ -160,6 +178,9 @@ impl eframe::App for QuickTagApp {
                 }
                 Panel::NamedTags => {
                     self.named_tags_panel(ui);
+                }
+                Panel::Packages => {
+                    self.packages_panel(ui);
                 }
             }
         });
@@ -220,6 +241,102 @@ impl QuickTagApp {
                     }
                 }
             });
+    }
+
+    fn packages_panel(&mut self, ui: &mut egui::Ui) {
+        egui::SidePanel::left("packages_left_panel")
+            .resizable(true)
+            .min_width(256.0)
+            .show_inside(ui, |ui| {
+                ui.style_mut().wrap = Some(false);
+                egui::ScrollArea::vertical()
+                    .max_width(f32::INFINITY)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Search:");
+                            ui.text_edit_singleline(&mut self.package_filter);
+                        });
+                        for (id, path) in package_manager().package_paths.iter() {
+                            let path_stem = PathBuf::from(path)
+                                .file_stem()
+                                .unwrap()
+                                .to_string_lossy()
+                                .to_string();
+
+                            if !self.package_filter.is_empty()
+                                && !path_stem.to_lowercase().contains(&self.package_filter)
+                            {
+                                continue;
+                            }
+
+                            if ui
+                                .selectable_value(
+                                    &mut self.selected_package,
+                                    *id,
+                                    format!("{id:04x}: {path_stem}"),
+                                )
+                                .changed()
+                            {
+                                self.package_entry_search_cache = vec![];
+                                if let Ok(p) = package_manager().version.open(path) {
+                                    for (i, e) in p.entries().iter().enumerate() {
+                                        let label =
+                                            format_tag_entry(TagHash::new(*id, i as u16), Some(e));
+
+                                        self.package_entry_search_cache.push((
+                                            label,
+                                            TagType::from_type_subtype(e.file_type, e.file_subtype),
+                                        ));
+                                    }
+                                } else {
+                                    self.toasts.error(format!("Failed to open package {path}"));
+                                }
+                            }
+                        }
+                    });
+            });
+
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .max_width(f32::INFINITY)
+                .show(ui, |ui| {
+                    ui.style_mut().wrap = Some(false);
+                    ui.horizontal(|ui| {
+                        ui.label("Search:");
+                        ui.text_edit_singleline(&mut self.package_entry_filter);
+                    });
+
+                    if self.selected_package == u16::MAX {
+                        ui.label(RichText::new("No package selected").italics());
+                    } else {
+                        let mut open_tag = None;
+                        for (i, (label, tag_type)) in
+                            self.package_entry_search_cache.iter().enumerate().filter(
+                                |(_, (label, _))| {
+                                    self.package_entry_filter.is_empty()
+                                        || label.to_lowercase().contains(&self.package_entry_filter)
+                                },
+                            )
+                        {
+                            let tag = TagHash::new(self.selected_package, i as u16);
+                            if ui
+                                .add(egui::SelectableLabel::new(
+                                    false,
+                                    RichText::new(label).color(tag_type.display_color()),
+                                ))
+                                .context_menu(|ui| tag_context(ui, tag, None))
+                                .clicked()
+                            {
+                                open_tag = Some(tag);
+                            }
+                        }
+
+                        if let Some(tag) = open_tag {
+                            self.open_tag(tag);
+                        }
+                    }
+                });
+        });
     }
 }
 

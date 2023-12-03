@@ -42,8 +42,6 @@ fn main() -> eframe::Result<()> {
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
     let native_options = eframe::NativeOptions {
-        initial_window_size: Some([400.0, 300.0].into()),
-        min_window_size: Some([300.0, 220.0].into()),
         icon_data: Some(
             IconData::try_from_png_bytes(include_bytes!("../quicktag.png"))
                 .expect("Failed to load icon"),

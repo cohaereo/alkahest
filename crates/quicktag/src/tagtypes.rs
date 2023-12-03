@@ -71,7 +71,8 @@ impl TagType {
             }
             TagType::Havok | TagType::UmbraTome | TagType::CriwareUsm => Color32::YELLOW,
 
-            TagType::Tag | TagType::TagGlobal => Color32::GRAY,
+            TagType::TagGlobal => Color32::WHITE,
+            TagType::Tag => Color32::GRAY,
 
             TagType::Unknown { .. } => Color32::LIGHT_RED,
         }
