@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
-
 use crate::map::Unk8080714f;
 
 use crate::packages::package_manager;
-
 
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
 
 use super::drawcall::{DrawCall, ShadingTechnique, SortValue3d, Transparency};
 use super::renderer::Renderer;
@@ -142,16 +139,8 @@ impl TerrainRenderer {
             .iter()
             .filter(|u| u.detail_level == 0)
         {
-            if let Some(_group) = self.terrain.mesh_groups.get(part.group_index as usize) {
+            if let Some(group) = self.terrain.mesh_groups.get(part.group_index as usize) {
                 let cb11 = &self.group_cbuffers[part.group_index as usize];
-
-                // TODO(cohae): Dyemaps
-                // if let Some(dyemap) = render_data.textures.get(&group.dyemap.0) {
-                //     dcs.context
-                //         .PSSetShaderResources(14, Some(&[Some(dyemap.view.clone())]));
-                // } else {
-                //     dcs.context().PSSetShaderResources(14, Some(&[None]));
-                // }
 
                 renderer.push_drawcall(
                     SortValue3d::empty()
@@ -165,6 +154,7 @@ impl TerrainRenderer {
                         index_buffer: self.index_buffer,
                         input_layout_hash: self.input_layout,
                         cb11: Some(cb11.buffer().clone()),
+                        dyemap: Some(group.dyemap),
                         variant_material: None,
                         index_start: part.index_start,
                         index_count: part.index_count as _,

@@ -1,14 +1,13 @@
-use crate::entity::{EPrimitiveType};
+use crate::entity::EPrimitiveType;
 use crate::render::vertex_buffers::load_vertex_buffers;
 use crate::statics::{Unk80807193, Unk80807194, Unk8080719a, Unk8080719b, Unk808071a7};
 
-use anyhow::{ensure};
+use anyhow::ensure;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3};
 use itertools::Itertools;
 
 use crate::packages::package_manager;
-
 
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -235,6 +234,7 @@ impl StaticModel {
                             index_buffer: buffers.index_buffer,
                             input_layout_hash: buffers.input_layout,
                             cb11: Some(instance_buffer.clone()),
+                            dyemap: None,
                             variant_material: None,
                             index_start: p.index_start,
                             index_count: p.index_count,
@@ -356,6 +356,7 @@ impl StaticOverlayModel {
                 index_buffer: self.buffers.index_buffer,
                 input_layout_hash: self.buffers.input_layout,
                 cb11: Some(instance_buffer),
+                dyemap: None,
                 variant_material: None,
                 index_start: self.model.index_start,
                 index_count: self.model.index_count,

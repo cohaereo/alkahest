@@ -25,8 +25,9 @@ impl InputElement {
             _ => unreachable!(),
         };
 
+        let full_semname = format!("{}{}", *e.semantic_name, e.semantic_index);
         InputElement {
-            format: ty.into_dxgi_type(&e.semantic_name.to_string(), interpolated, is_float),
+            format: ty.into_dxgi_type(&full_semname, interpolated, is_float),
             input_slot: 0,
             semantic_index: e.semantic_index,
             semantic_type: DxbcSemanticType::from_str(&e.semantic_name.to_string())
@@ -74,8 +75,8 @@ impl InputType {
                 }
             }
             InputType::Scalar2 => {
-                if is_float {
-                    DxgiFormat::R32G32_FLOAT
+                if is_float || semantic_name == "TEXCOORD1" {
+                    DxgiFormat::R16G16_FLOAT
                 } else if interpolated {
                     DxgiFormat::R16G16_SNORM
                 } else {

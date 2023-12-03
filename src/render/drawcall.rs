@@ -164,6 +164,7 @@ pub struct DrawCall {
 
     /// Applied on top of the base material
     pub variant_material: Option<TagHash>,
+    pub dyemap: Option<TagHash>,
 
     pub index_start: u32,
     pub index_count: u32,

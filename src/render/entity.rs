@@ -221,6 +221,7 @@ impl EntityRenderer {
                         index_buffer: buffers.index_buffer,
                         input_layout_hash: buffers.input_layout,
                         cb11: Some(cb11.clone()),
+                        dyemap: None,
                         variant_material,
                         index_start: p.index_start,
                         index_count: p.index_count,

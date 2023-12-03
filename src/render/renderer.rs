@@ -455,6 +455,16 @@ impl Renderer {
 
     fn draw(&mut self, sort: SortValue3d, drawcall: &DrawCall) {
         let render_data = self.render_data.data();
+
+        if let Some(dyemap) = drawcall.dyemap {
+            unsafe {
+                self.dcs.context().PSSetShaderResources(
+                    14,
+                    Some(&[render_data.textures.get(&dyemap).map(|t| t.view.clone())]),
+                );
+            }
+        }
+
         if let Some(mat) = render_data.materials.get(&sort.material().into()) {
             if mat.unk8 != 1 {
                 return;
