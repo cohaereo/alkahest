@@ -22,7 +22,7 @@ use nohash_hasher::{IntMap, IntSet};
 use poll_promise::Promise;
 use std::fmt::Write;
 
-use crate::gui::texture::Texture;
+use crate::{gui::texture::Texture, util::u32_from_endian};
 use crate::{
     packages::package_manager,
     references::REFERENCE_MAP,
@@ -70,12 +70,14 @@ impl TagView {
         let mut array_offsets = vec![];
         let mut raw_string_offsets = vec![];
         let mut string_hashes = vec![];
+
+        let endian = package_manager().version.endian();
         for (i, b) in tag_data.chunks_exact(4).enumerate() {
             let v: [u8; 4] = b.try_into().unwrap();
-            let value = u32::from_le_bytes(v);
+            let value = u32_from_endian(endian, v);
             let offset = i as u64 * 4;
 
-            if value == 0x80809fb8 {
+            if matches!(value, 0x80809fb8 | 0x80800184) {
                 array_offsets.push(offset + 4);
             }
 
@@ -93,14 +95,32 @@ impl TagView {
             .flat_map(|o| read_raw_string_blob(&tag_data, o))
             .collect_vec();
 
-        let mut arrays: Vec<(u64, TagArray)> = array_offsets
-            .into_iter()
-            .filter_map(|o| {
-                let mut c = Cursor::new(&tag_data);
-                c.seek(SeekFrom::Start(o)).ok()?;
-                Some((o, c.read_le().ok()?))
-            })
-            .collect_vec();
+        let mut arrays: Vec<(u64, TagArray)> = if package_manager().version.is_d1() {
+            array_offsets
+                .into_iter()
+                .filter_map(|o| {
+                    let mut c = Cursor::new(&tag_data);
+                    c.seek(SeekFrom::Start(o)).ok()?;
+                    Some((
+                        o,
+                        TagArray {
+                            count: c.read_be::<u32>().ok()? as _,
+                            tagtype: c.read_be::<u32>().ok()?,
+                            references: vec![],
+                        },
+                    ))
+                })
+                .collect_vec()
+        } else {
+            array_offsets
+                .into_iter()
+                .filter_map(|o| {
+                    let mut c = Cursor::new(&tag_data);
+                    c.seek(SeekFrom::Start(o)).ok()?;
+                    Some((o, c.read_le().ok()?))
+                })
+                .collect_vec()
+        };
 
         let mut cur = Cursor::new(&tag_data);
         loop {
@@ -110,7 +130,7 @@ impl TagView {
             };
 
             let possibly_count = value1;
-            let possibly_array_offset = offset + 8 + value2;
+            let possibly_array_offset = (offset + 8).saturating_add(value2);
 
             if let Some((_, array)) = arrays.iter_mut().find(|(offset, arr)| {
                 *offset == possibly_array_offset && arr.count == possibly_count
@@ -266,6 +286,12 @@ impl View for TagView {
                         } else {
                             for tag in &self.scan.file_hashes {
                                 let mut is_texture = false;
+                                let offset_label = if tag.offset == u64::MAX {
+                                    "TagHeader reference".to_string()
+                                } else {
+                                    format!("0x{:X}", tag.offset)
+                                };
+
                                 let tag_label = if let Some(entry) = &tag.entry {
                                     let tagtype = TagType::from_type_subtype(
                                         entry.file_type,
@@ -276,12 +302,12 @@ impl View for TagView {
                                     let fancy_tag =
                                         format_tag_entry(tag.hash.hash32(), Some(entry));
 
-                                    egui::RichText::new(format!("{fancy_tag} @ 0x{:X}", tag.offset))
+                                    egui::RichText::new(format!("{fancy_tag} @ {offset_label}"))
                                         .color(tagtype.display_color())
                                 } else {
                                     egui::RichText::new(format!(
-                                        "{} (pkg entry not found) @ 0x{:X}",
-                                        tag.hash, tag.offset
+                                        "{} (pkg entry not found) @ {offset_label}",
+                                        tag.hash
                                     ))
                                     .color(Color32::LIGHT_RED)
                                 };
@@ -342,7 +368,7 @@ impl View for TagView {
                 ui.heading(RichText::new("⚠ Tag data failed to read").color(Color32::YELLOW));
             }
 
-            if matches!(self.tag_type, TagType::Tag | TagType::TagGlobal) {
+            if self.tag_type.is_tag() {
                 ui.horizontal(|ui| {
                     if ui
                         .add_enabled(
@@ -729,27 +755,33 @@ fn traverse_tag(
             let entry = pm.get_entry(*t);
             let fancy_tag = format_tag_entry(*t, entry.as_ref());
 
+            let offset_label = if *offset == u64::MAX {
+                "TagHeader reference".to_string()
+            } else {
+                format!("0x{:X}", offset)
+            };
+
             if entry
                 .map(|e| e.file_type != 8 && e.file_subtype != 16)
                 .unwrap_or_default()
             {
-                writeln!(out, "{line_header}{branch}──{fancy_tag} @ 0x{offset:X}").ok();
+                writeln!(out, "{line_header}{branch}──{fancy_tag} @ {offset_label}").ok();
             } else if *t == parent_tag {
                 writeln!(
                     out,
-                    "{line_header}{branch}──{fancy_tag} @ 0x{offset:X} (parent)"
+                    "{line_header}{branch}──{fancy_tag} @ {offset_label} (parent)"
                 )
                 .ok();
             } else if *t == tag {
                 writeln!(
                     out,
-                    "{line_header}{branch}──{fancy_tag} @ 0x{offset:X} (self reference)"
+                    "{line_header}{branch}──{fancy_tag} @ {offset_label} (self reference)"
                 )
                 .ok();
             } else {
                 writeln!(
                     out,
-                    "{line_header}{branch}──{fancy_tag} @ 0x{offset:X} (already traversed)"
+                    "{line_header}{branch}──{fancy_tag} @ {offset_label} (already traversed)"
                 )
                 .ok();
             }
@@ -779,8 +811,16 @@ fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
     let mut c = Cursor::new(data);
     (|| {
         c.seek(SeekFrom::Start(offset + 4))?;
-        let buffer_size: u64 = c.read_le()?;
-        let buffer_base_offset = offset + 4 + 8;
+        let (buffer_size, buffer_base_offset) = if package_manager().version.is_d1() {
+            let buffer_size: u32 = c.read_be()?;
+            let buffer_base_offset = offset + 4 + 4;
+            (buffer_size as u64, buffer_base_offset)
+        } else {
+            let buffer_size: u64 = c.read_le()?;
+            let buffer_base_offset = offset + 4 + 8;
+            (buffer_size, buffer_base_offset)
+        };
+
         let mut buffer = vec![0u8; buffer_size as usize];
         c.read_exact(&mut buffer)?;
 

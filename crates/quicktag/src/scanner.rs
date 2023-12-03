@@ -7,6 +7,7 @@ use std::{
     time::SystemTime,
 };
 
+use binrw::Endian;
 use destiny_pkg::{PackageManager, PackageVersion, TagHash, TagHash64};
 use eframe::epaint::mutex::RwLock;
 use itertools::Itertools;
@@ -14,7 +15,10 @@ use log::{error, info, warn};
 use nohash_hasher::{IntMap, IntSet};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::packages::package_manager;
+use crate::{
+    packages::package_manager,
+    util::{u32_from_endian, u64_from_endian},
+};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TagCache {
@@ -41,6 +45,7 @@ pub struct ScannerContext {
     pub valid_file_hashes: IntSet<TagHash>,
     pub valid_file_hashes64: IntSet<TagHash64>,
     pub known_string_hashes: IntSet<u32>,
+    pub endian: Endian,
 }
 
 #[derive(Clone, serde::Deserialize, serde::Serialize, Debug)]
@@ -86,10 +91,11 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
 
     for (i, v) in data.chunks_exact(4).enumerate() {
         let m: [u8; 4] = v.try_into().unwrap();
-        let value = u32::from_le_bytes(m);
+        let value = u32_from_endian(context.endian, m);
 
         let offset = (i * 4) as u64;
         let hash = TagHash(value);
+
         if hash.is_pkg_file() && context.valid_file_hashes.contains(&hash) {
             r.file_hashes.push(ScannedHash { offset, hash });
         }
@@ -111,7 +117,7 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
 
     for (i, v) in data.chunks_exact(8).enumerate() {
         let m: [u8; 8] = v.try_into().unwrap();
-        let value = u64::from_le_bytes(m);
+        let value = u64_from_endian(context.endian, m);
 
         let offset = (i * 8) as u64;
         let hash = TagHash64(value);
@@ -144,6 +150,11 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
 pub fn create_scanner_context(package_manager: &PackageManager) -> anyhow::Result<ScannerContext> {
     info!("Creating scanner context");
 
+    let endian = match package_manager.version {
+        PackageVersion::DestinyTheTakenKing => Endian::Big,
+        _ => Endian::Little,
+    };
+
     Ok(ScannerContext {
         valid_file_hashes: package_manager
             .package_entry_index
@@ -163,6 +174,7 @@ pub fn create_scanner_context(package_manager: &PackageManager) -> anyhow::Resul
             .collect(),
         // TODO
         known_string_hashes: Default::default(),
+        endian,
     })
 }
 
@@ -329,12 +341,15 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
             info!("Opening pkg {path} ({}/{package_count})", current_package);
             let pkg = version.open(path).unwrap();
 
-            let mut all_tags = pkg
-                .get_all_by_type(8, None)
-                .iter()
-                .chain(pkg.get_all_by_type(16, None).iter())
-                .cloned()
-                .collect_vec();
+            let mut all_tags = if version.is_d1() {
+                [pkg.get_all_by_type(0, None)].concat()
+            } else {
+                pkg.get_all_by_type(8, None)
+                    .iter()
+                    .chain(pkg.get_all_by_type(16, None).iter())
+                    .cloned()
+                    .collect_vec()
+            };
 
             // Sort tags by entry index to optimize sequential block reads
             all_tags.sort_by_key(|v| v.0);
@@ -342,6 +357,7 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
             let mut results = IntMap::default();
             for (t, _) in all_tags {
                 let hash = TagHash::new(pkg.pkg_id(), t as u16);
+
                 let data = match pkg.read_entry(t) {
                     Ok(d) => d,
                     Err(e) => {
@@ -357,7 +373,21 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
                     }
                 };
 
-                let scan_result = scan_file(context, &data);
+                let mut scan_result = scan_file(context, &data);
+                if version.is_d1() {
+                    if let Some(entry) = pkg.entry(t) {
+                        let ref_tag = TagHash(entry.reference);
+                        if context.valid_file_hashes.contains(&ref_tag) {
+                            scan_result.file_hashes.insert(
+                                0,
+                                ScannedHash {
+                                    offset: u64::MAX,
+                                    hash: ref_tag,
+                                },
+                            );
+                        }
+                    }
+                }
                 results.insert(hash, scan_result);
             }
 
@@ -365,6 +395,8 @@ pub fn load_tag_cache(version: PackageVersion) -> TagCache {
         })
         .flatten()
         .collect();
+
+    // panic!("{:?}", cache[&TagHash(u32::from_be(0x00408180))]);
 
     let cache = transform_tag_cache(cache);
 

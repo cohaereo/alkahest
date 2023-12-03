@@ -4,6 +4,7 @@ mod references;
 mod scanner;
 mod tagtypes;
 mod text;
+mod util;
 
 use std::sync::Arc;
 
@@ -61,7 +62,7 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
     eframe::run_native(
-        "QuickTag",
+        &format!("Quicktag - {}", args.version.name()),
         native_options,
         Box::new(|cc| Box::new(QuickTagApp::new(cc, package_manager().version))),
     )

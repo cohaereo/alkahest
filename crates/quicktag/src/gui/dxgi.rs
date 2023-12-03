@@ -150,7 +150,7 @@ impl TryFrom<u32> for DxgiFormat {
 
 #[allow(unused)]
 impl DxgiFormat {
-    pub fn to_wgpu(&self) -> anyhow::Result<wgpu::TextureFormat> {
+    pub fn to_wgpu(self) -> anyhow::Result<wgpu::TextureFormat> {
         Ok(match self {
             DxgiFormat::R32G32B32A32_TYPELESS => wgpu::TextureFormat::Rgba32Float,
             DxgiFormat::R32G32B32A32_FLOAT => wgpu::TextureFormat::Rgba32Float,

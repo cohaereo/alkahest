@@ -6,6 +6,7 @@ use eframe::epaint::Color32;
 use crate::packages::package_manager;
 
 pub enum TagType {
+    TextureOld,
     Texture2D { is_header: bool },
     TextureCube { is_header: bool },
     Texture3D { is_header: bool },
@@ -19,6 +20,7 @@ pub enum TagType {
     VertexShader { is_header: bool },
     ComputeShader { is_header: bool },
 
+    WwiseWaveStream,
     WwiseBank,
     WwiseStream,
 
@@ -36,13 +38,21 @@ impl TagType {
     pub fn is_texture(&self) -> bool {
         matches!(
             self,
-            TagType::Texture2D { .. } | TagType::TextureCube { .. } | TagType::Texture3D { .. }
+            TagType::TextureOld
+                | TagType::Texture2D { .. }
+                | TagType::TextureCube { .. }
+                | TagType::Texture3D { .. }
         )
+    }
+
+    pub fn is_tag(&self) -> bool {
+        matches!(self, TagType::Tag | TagType::TagGlobal)
     }
 
     pub fn display_color(&self) -> Color32 {
         match self {
-            TagType::Texture2D { .. }
+            TagType::TextureOld
+            | TagType::Texture2D { .. }
             | TagType::TextureCube { .. }
             | TagType::Texture3D { .. }
             | TagType::TextureSampler { .. }
@@ -56,7 +66,9 @@ impl TagType {
             | TagType::VertexShader { .. }
             | TagType::ComputeShader { .. } => Color32::from_rgb(249, 168, 71),
 
-            TagType::WwiseBank | TagType::WwiseStream => Color32::from_rgb(191, 106, 247),
+            TagType::WwiseWaveStream | TagType::WwiseBank | TagType::WwiseStream => {
+                Color32::from_rgb(191, 106, 247)
+            }
             TagType::Havok | TagType::UmbraTome | TagType::CriwareUsm => Color32::YELLOW,
 
             TagType::Tag | TagType::TagGlobal => Color32::GRAY,
@@ -69,6 +81,7 @@ impl TagType {
 impl Display for TagType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            TagType::TextureOld => f.write_str("Texture (D1)"),
             TagType::Texture2D { is_header } => f.write_fmt(format_args!(
                 "Texture2D{}",
                 if *is_header { "" } else { " (Data)" }
@@ -112,6 +125,7 @@ impl Display for TagType {
             )),
             TagType::Tag => f.write_str("Tag"),
             TagType::TagGlobal => f.write_str("TagGlobal"),
+            TagType::WwiseWaveStream => f.write_str("WwiseWaveStream"),
             TagType::WwiseBank => f.write_str("WwiseBank"),
             TagType::WwiseStream => f.write_str("WwiseStream"),
             TagType::Havok => f.write_str("Havok"),
@@ -127,6 +141,7 @@ impl Display for TagType {
 impl TagType {
     pub fn from_type_subtype(t: u8, st: u8) -> TagType {
         match package_manager().version {
+            PackageVersion::DestinyTheTakenKing => Self::from_type_subtype_ttk(t, st),
             PackageVersion::Destiny2Shadowkeep => Self::from_type_subtype_sk(t, st),
             PackageVersion::Destiny2BeyondLight
             | PackageVersion::Destiny2WitchQueen
@@ -135,6 +150,16 @@ impl TagType {
                 ftype: t,
                 fsubtype: st,
             },
+        }
+    }
+
+    pub fn from_type_subtype_ttk(t: u8, st: u8) -> TagType {
+        match (t, st) {
+            (0, 0) => TagType::Tag,
+            (0, 1) => TagType::TextureOld,
+            (2, 20) => TagType::WwiseBank,
+            (2, 21) => TagType::WwiseWaveStream,
+            (ftype, fsubtype) => TagType::Unknown { ftype, fsubtype },
         }
     }
 
