@@ -20,7 +20,6 @@ pub enum TagType {
     VertexShader { is_header: bool },
     ComputeShader { is_header: bool },
 
-    WwiseWaveStream,
     WwiseBank,
     WwiseStream,
 
@@ -66,9 +65,7 @@ impl TagType {
             | TagType::VertexShader { .. }
             | TagType::ComputeShader { .. } => Color32::from_rgb(249, 168, 71),
 
-            TagType::WwiseWaveStream | TagType::WwiseBank | TagType::WwiseStream => {
-                Color32::from_rgb(191, 106, 247)
-            }
+            TagType::WwiseBank | TagType::WwiseStream => Color32::from_rgb(191, 106, 247),
             TagType::Havok | TagType::UmbraTome | TagType::CriwareUsm => Color32::YELLOW,
 
             TagType::TagGlobal => Color32::WHITE,
@@ -126,7 +123,6 @@ impl Display for TagType {
             )),
             TagType::Tag => f.write_str("Tag"),
             TagType::TagGlobal => f.write_str("TagGlobal"),
-            TagType::WwiseWaveStream => f.write_str("WwiseWaveStream"),
             TagType::WwiseBank => f.write_str("WwiseBank"),
             TagType::WwiseStream => f.write_str("WwiseStream"),
             TagType::Havok => f.write_str("Havok"),
@@ -159,7 +155,7 @@ impl TagType {
             (0, 0) => TagType::Tag,
             (0, 1) => TagType::TextureOld,
             (2, 20) => TagType::WwiseBank,
-            (2, 21) => TagType::WwiseWaveStream,
+            (2, 21) => TagType::WwiseStream,
             (ftype, fsubtype) => TagType::Unknown { ftype, fsubtype },
         }
     }
