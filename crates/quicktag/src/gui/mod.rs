@@ -5,7 +5,6 @@ mod texture;
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 
 use destiny_pkg::{package::UEntryHeader, PackageNamedTagEntry, PackageVersion, TagHash};
 use eframe::egui::RichText;
@@ -68,8 +67,6 @@ pub struct QuickTagApp {
     string_filter: String,
 
     pub wgpu_state: RenderState,
-
-    start_time: Instant,
 }
 
 impl QuickTagApp {
@@ -99,13 +96,13 @@ impl QuickTagApp {
             string_selected_entries: vec![],
 
             wgpu_state: cc.wgpu_render_state.clone().unwrap(),
-            start_time: Instant::now(),
         }
     }
 }
 
 impl eframe::App for QuickTagApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let mut is_loading_cache = false;
         if let Some(cache_promise) = self.cache_load.as_ref() {
             if cache_promise.poll().is_pending() {
                 {
@@ -138,6 +135,8 @@ impl eframe::App for QuickTagApp {
                                 .text(scanner_progress().to_string()),
                         );
                     });
+
+                is_loading_cache = true;
             }
         }
 
@@ -153,60 +152,65 @@ impl eframe::App for QuickTagApp {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Tag:");
-                let submitted = ui.text_edit_singleline(&mut self.tag_input).lost_focus()
-                    && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                if ui.button("Open").clicked() || submitted {
-                    let tag_input_trimmed = self.tag_input.trim();
-                    let tag = if tag_input_trimmed.len() >= 16 {
-                        let hash = u64::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
-                        if let Some(t) = package_manager().hash64_table.get(&u64::from_be(hash)) {
-                            t.hash32
+            ui.add_enabled_ui(!is_loading_cache, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Tag:");
+                    let submitted = ui.text_edit_singleline(&mut self.tag_input).lost_focus()
+                        && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    if ui.button("Open").clicked() || submitted {
+                        let tag_input_trimmed = self.tag_input.trim();
+                        let tag = if tag_input_trimmed.len() >= 16 {
+                            let hash =
+                                u64::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
+                            if let Some(t) = package_manager().hash64_table.get(&u64::from_be(hash))
+                            {
+                                t.hash32
+                            } else {
+                                TagHash::NONE
+                            }
+                        } else if tag_input_trimmed.len() > 8
+                            && tag_input_trimmed.chars().all(char::is_numeric)
+                        {
+                            let hash = tag_input_trimmed.parse().unwrap_or_default();
+                            TagHash(hash)
                         } else {
-                            TagHash::NONE
+                            let hash =
+                                u32::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
+                            TagHash(u32::from_be(hash))
+                        };
+
+                        self.open_tag(tag);
+                    }
+                });
+
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut self.open_panel, Panel::Tag, "Tag");
+                    ui.selectable_value(&mut self.open_panel, Panel::NamedTags, "Named tags");
+                    ui.selectable_value(&mut self.open_panel, Panel::Packages, "Packages");
+                    ui.selectable_value(&mut self.open_panel, Panel::Strings, "Strings");
+                });
+
+                ui.separator();
+
+                match self.open_panel {
+                    Panel::Tag => {
+                        if let Some(tagview) = &mut self.tag_view {
+                            tagview.view(ctx, ui);
+                        } else {
+                            ui.label("No tag loaded");
                         }
-                    } else if tag_input_trimmed.len() > 8
-                        && tag_input_trimmed.chars().all(char::is_numeric)
-                    {
-                        let hash = tag_input_trimmed.parse().unwrap_or_default();
-                        TagHash(hash)
-                    } else {
-                        let hash = u32::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
-                        TagHash(u32::from_be(hash))
-                    };
-
-                    self.open_tag(tag);
-                }
-            });
-
-            ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.open_panel, Panel::Tag, "Tag");
-                ui.selectable_value(&mut self.open_panel, Panel::NamedTags, "Named tags");
-                ui.selectable_value(&mut self.open_panel, Panel::Packages, "Packages");
-                ui.selectable_value(&mut self.open_panel, Panel::Strings, "Strings");
-            });
-
-            ui.separator();
-
-            match self.open_panel {
-                Panel::Tag => {
-                    if let Some(tagview) = &mut self.tag_view {
-                        tagview.view(ctx, ui);
-                    } else {
-                        ui.label("No tag loaded");
+                    }
+                    Panel::NamedTags => {
+                        self.named_tags_panel(ui);
+                    }
+                    Panel::Packages => {
+                        self.packages_panel(ui);
+                    }
+                    Panel::Strings => {
+                        self.strings_panel(ui);
                     }
                 }
-                Panel::NamedTags => {
-                    self.named_tags_panel(ui);
-                }
-                Panel::Packages => {
-                    self.packages_panel(ui);
-                }
-                Panel::Strings => {
-                    self.strings_panel(ui);
-                }
-            }
+            });
         });
 
         self.toasts.show(ctx);
