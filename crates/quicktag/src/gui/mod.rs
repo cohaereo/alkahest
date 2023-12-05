@@ -3,7 +3,6 @@ mod dxgi;
 mod tag;
 mod texture;
 
-use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -167,6 +166,11 @@ impl eframe::App for QuickTagApp {
                         } else {
                             TagHash::NONE
                         }
+                    } else if tag_input_trimmed.len() > 8
+                        && tag_input_trimmed.chars().all(char::is_numeric)
+                    {
+                        let hash = tag_input_trimmed.parse().unwrap_or_default();
+                        TagHash(hash)
                     } else {
                         let hash = u32::from_str_radix(tag_input_trimmed, 16).unwrap_or_default();
                         TagHash(u32::from_be(hash))
