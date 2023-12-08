@@ -5,6 +5,7 @@ use eframe::epaint::Color32;
 
 use crate::packages::package_manager;
 
+#[derive(PartialEq)]
 pub enum TagType {
     TextureOld,
     Texture2D { is_header: bool },

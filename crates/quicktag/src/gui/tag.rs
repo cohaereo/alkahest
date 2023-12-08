@@ -32,7 +32,9 @@ use crate::{
 };
 
 use super::{
-    common::{open_tag_in_default_application, tag_context},
+    common::{
+        open_audio_file_in_default_application, open_tag_in_default_application, tag_context,
+    },
     View,
 };
 
@@ -233,6 +235,10 @@ impl View for TagView {
         ui.horizontal(|ui| {
             if ui.button("Open tag data in external application").clicked() {
                 open_tag_in_default_application(self.tag);
+            }
+
+            if self.tag_type == TagType::WwiseStream && ui.button("Play audio").clicked() {
+                open_audio_file_in_default_application(self.tag, "wem");
             }
 
             if TagHash(self.tag_entry.reference).is_pkg_file()
