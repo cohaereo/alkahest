@@ -47,6 +47,10 @@ fn main() -> eframe::Result<()> {
                 .expect("Failed to load icon"),
         ),
         renderer: eframe::Renderer::Wgpu,
+        window_builder: Some(Box::new(|b| {
+            b.with_title(format!("Quicktag - {}", package_manager().version.name()))
+        })),
+        persist_window: true,
         wgpu_options: WgpuConfiguration {
             supported_backends: wgpu::Backends::PRIMARY,
             device_descriptor: Arc::new(|_adapter| wgpu::DeviceDescriptor {
@@ -60,7 +64,7 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
     eframe::run_native(
-        &format!("Quicktag - {}", args.version.name()),
+        "Quicktag",
         native_options,
         Box::new(|cc| Box::new(QuickTagApp::new(cc, package_manager().version))),
     )
