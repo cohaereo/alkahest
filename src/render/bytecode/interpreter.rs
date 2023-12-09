@@ -73,6 +73,7 @@ impl TfxBytecodeInterpreter {
                     stack_push!(t1 * t0);
                 }
                 TfxBytecodeOp::Divide => {
+                    // cohae: Bungie's SIMD implementation appears to do some extra zero checks, don't know if those are necessary.
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(t1 / t0);
                 }
@@ -138,17 +139,14 @@ impl TfxBytecodeInterpreter {
                 TfxBytecodeOp::VectorRotationsSin => {
                     let v = stack_top!();
                     *v = tfx_converted::_trig_helper_vector_sin_rotations_estimate(*v);
-                    // *v = fast_impls::byteop_20(*v, true);
                 }
                 TfxBytecodeOp::VectorRotationsCos => {
                     let v = stack_top!();
                     *v = tfx_converted::_trig_helper_vector_cos_rotations_estimate(*v);
-                    // *v = fast_impls::byteop_1f(*v);
                 }
                 TfxBytecodeOp::VectorRotationsSinCos => {
                     let v = stack_top!();
                     *v = tfx_converted::_trig_helper_vector_sin_cos_rotations_estimate(*v);
-                    // *v = fast_impls::byteop_20(*v, false);
                 }
                 TfxBytecodeOp::Merge1_3 => {
                     let [t1, t0] = stack_pop!(2);
@@ -169,10 +167,9 @@ impl TfxBytecodeInterpreter {
                         (t0.xxxx() * t1 + t0.yyyy()) * (t1 * t1) + (t0.zzzz() * t1 + t0.wwww())
                     );
                 }
-                TfxBytecodeOp::Unk10 => {
-                    let [t2, t1, t0] = stack_pop!(3);
-                    let v33 = t1 - t2;
-                    stack_push!((v33 * t0) + t2);
+                TfxBytecodeOp::Lerp => {
+                    let [b, a, v] = stack_pop!(3);
+                    stack_push!(a + v * (b - a));
                 }
                 TfxBytecodeOp::Frac => {
                     let v = stack_top!();
@@ -268,13 +265,13 @@ impl TfxBytecodeInterpreter {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
                     stack_push!(constants[*constant_index as usize])
                 }
-                TfxBytecodeOp::Unk35 { constant_start } => {
+                TfxBytecodeOp::LerpConstant { constant_start } => {
                     anyhow::ensure!((*constant_start as usize + 1) < constants.len());
-                    let v1 = constants[*constant_start as usize];
-                    let v2 = constants[*constant_start as usize + 1];
+                    let a = constants[*constant_start as usize];
+                    let b = constants[*constant_start as usize + 1];
 
                     let v = stack_top!();
-                    *v = ((v2 - v1) * *v) + v1;
+                    *v = a + *v * (b - a);
                 }
                 // // TODO(cohae): Very wrong, but does seem to push something onto the stack
                 TfxBytecodeOp::PermuteExtendX => {
@@ -664,109 +661,6 @@ mod fast_impls {
     use glam::Vec4;
     use std::arch::x86_64::*;
 
-    // pub fn byteop_1f(t0: Vec4) -> Vec4 {
-    //     unsafe {
-    //         let xmm_zero = _mm_set1_ps(0.0);
-    //         let xmm_inv_sign_mask = _mm_set1_ps(f32::NAN);
-    //         let xmm_0_25 = _mm_set1_ps(0.25);
-    //         let xmm_minus_16 = _mm_set1_ps(-16.0);
-    //         let xmm_8 = _mm_set1_ps(8.0);
-    //         let xmm_no_fraction_mask = _mm_set1_epi32(0x4B000000);
-    //         let xmm_0_225 = _mm_set1_ps(0.225);
-    //         let xmm_0_775 = _mm_set1_ps(0.775);
-
-    //         let stack_top_cached_value = t0.into();
-
-    //         // a + 0.25f
-    //         let v64 = _mm_add_ps(xmm_0_25, stack_top_cached_value);
-
-    //         // a - round?
-    //         let v65 = _mm_castsi128_ps(_mm_cmpgt_epi32(
-    //             xmm_no_fraction_mask,
-    //             _mm_castps_si128(_mm_and_ps(xmm_inv_sign_mask, v64)),
-    //         ));
-
-    //         let v66 = _mm_sub_ps(
-    //             v64,
-    //             _mm_or_ps(_mm_and_ps(v64, v65), _mm_andnot_ps(v65, v64)),
-    //         );
-
-    //         // a * (-16.0f * abs(a) + 8.0f)
-    //         let v67 = _mm_mul_ps(
-    //             _mm_add_ps(
-    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(xmm_zero, v66), v66), xmm_minus_16),
-    //                 xmm_8,
-    //             ),
-    //             v66,
-    //         );
-
-    //         Vec4::from(_mm_mul_ps(
-    //             _mm_add_ps(
-    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(xmm_zero, v67), v67), xmm_0_225),
-    //                 xmm_0_775,
-    //             ),
-    //             v67,
-    //         ))
-    //     }
-    // }
-
-    // pub fn byteop_20(t0: Vec4, variant_1e: bool) -> Vec4 {
-    //     unsafe {
-    //         let zero = _mm_set1_ps(0.0);
-    //         let xmm_0_quarter_0_quarter = _mm_setr_ps(0.0, 0.25, 0.0, 0.25);
-    //         let xmm_nan = _mm_set1_ps(f32::NAN);
-    //         let xmm_minus_16 = _mm_set1_ps(-16.0);
-    //         let xmm_8 = _mm_set1_ps(8.0);
-    //         let xmm_4b000000 = _mm_set1_epi32(0x4B000000);
-    //         let xmm_0_225 = _mm_set1_ps(0.225);
-    //         let xmm_0_775 = _mm_set1_ps(0.775);
-
-    //         let stack_top_cached_value = t0.into();
-
-    //         // 20 is cos_sin, 1e is just sin
-    //         let v67 = if variant_1e {
-    //             stack_top_cached_value
-    //         } else {
-    //             _mm_add_ps(
-    //                 _mm_shuffle_ps(stack_top_cached_value, stack_top_cached_value, 80),
-    //                 xmm_0_quarter_0_quarter,
-    //             )
-    //         };
-
-    //         let v68 = _mm_castsi128_ps(_mm_cmpgt_epi32(
-    //             xmm_4b000000,
-    //             _mm_and_si128(_mm_castps_si128(xmm_nan), _mm_castps_si128(v67)),
-    //         ));
-
-    //         let v69 = _mm_sub_ps(
-    //             v67,
-    //             _mm_or_ps(
-    //                 _mm_and_ps(_mm_cvtepi32_ps(_mm_cvtps_epi32(v67)), v68),
-    //                 _mm_castsi128_ps(_mm_andnot_si128(
-    //                     _mm_castps_si128(v68),
-    //                     _mm_castps_si128(v67),
-    //                 )),
-    //             ),
-    //         );
-
-    //         let v70 = _mm_mul_ps(
-    //             _mm_add_ps(
-    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v69), v69), xmm_minus_16),
-    //                 xmm_8,
-    //             ),
-    //             v69,
-    //         );
-
-    //         Vec4::from(_mm_mul_ps(
-    //             _mm_add_ps(
-    //                 _mm_mul_ps(_mm_max_ps(_mm_sub_ps(zero, v70), v70), xmm_0_225),
-    //                 xmm_0_775,
-    //             ),
-    //             v70,
-    //         ))
-    //     }
-    // }
-
     pub fn byteop_0e([t1, t0]: [Vec4; 2]) -> Vec4 {
         unsafe {
             let xmmword_7FF7B2E5E4F0 = _mm_castsi128_ps(_mm_setr_epi32(
@@ -794,31 +688,6 @@ mod fast_impls {
             .into()
         }
     }
-
-    //     pub fn byteop_1a([t0]: [Vec4; 1]) -> Vec4 {
-    //         unsafe {
-    //             let v49 = _mm_cmpgt_epi32(
-    //                 _mm_castps_si128(_mm_set1_ps(8388608.0)),
-    //                 _mm_castps_si128(_mm_and_ps(_mm_set1_ps(f32::NAN), t0.into())),
-    //             );
-    //             let v50 = _mm_cvtepi32_ps(_mm_cvttps_epi32(t0.into()));
-
-    //             _mm_sub_ps(
-    //                 t0.into(),
-    //                 _mm_or_ps(
-    //                     _mm_and_ps(
-    //                         _mm_sub_ps(
-    //                             v50,
-    //                             _mm_and_ps(_mm_cmplt_ps(t0.into(), v50), _mm_set1_ps(1.0)),
-    //                         ),
-    //                         _mm_castsi128_ps(v49),
-    //                     ),
-    //                     _mm_castsi128_ps(_mm_andnot_si128(v49, _mm_castps_si128(t0.into()))),
-    //                 ),
-    //             )
-    //             .into()
-    //         }
-    //     }
 }
 
 // Methods adapted from HLSL TFX sources

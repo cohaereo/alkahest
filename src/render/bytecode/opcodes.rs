@@ -15,21 +15,20 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x01_u8)] Add,
     #[br(magic = 0x02_u8)] Subtract,
     #[br(magic = 0x03_u8)] Multiply,
-    #[br(magic = 0x04_u8)] Divide, // TODO(cohae): Might be more than simple division
-    #[br(magic = 0x05_u8)] Multiply2, // TODO(cohae): Same as multiply? Might just be an alias used for division
+    #[br(magic = 0x04_u8)] Divide,
+    #[br(magic = 0x05_u8)] Multiply2,
     #[br(magic = 0x06_u8)] Add2,
     #[br(magic = 0x07_u8)] IsZero,
     #[br(magic = 0x08_u8)] Min,
     #[br(magic = 0x09_u8)] Max,
 
-    // ?
     #[br(magic = 0x0a_u8)] LessThan,
     #[br(magic = 0x0b_u8)] Dot,
     #[br(magic = 0x0c_u8)] Merge1_3,
     #[br(magic = 0x0d_u8)] Merge2_2, // merge_2_2?
     #[br(magic = 0x0e_u8)] Unk0e,
     #[br(magic = 0x0f_u8)] Unk0f,
-    #[br(magic = 0x10_u8)] Unk10,
+    #[br(magic = 0x10_u8)] Lerp,
     #[br(magic = 0x11_u8)] Unk11,
     #[br(magic = 0x12_u8)] MultiplyAdd,
     #[br(magic = 0x13_u8)] Clamp,
@@ -43,9 +42,9 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x1b_u8)] Unk1b,
     #[br(magic = 0x1c_u8)] Unk1c,
     #[br(magic = 0x1d_u8)] Negate,
-    #[br(magic = 0x1e_u8)] VectorRotationsSin, // _trig_helper_vector_sin_rotations_estimate?
-    #[br(magic = 0x1f_u8)] VectorRotationsCos, // _trig_helper_vector_cos_rotations_estimate?
-    #[br(magic = 0x20_u8)] VectorRotationsSinCos, // _trig_helper_vector_sin_cos_rotations_estimate?
+    #[br(magic = 0x1e_u8)] VectorRotationsSin, // _trig_helper_vector_sin_rotations_estimate
+    #[br(magic = 0x1f_u8)] VectorRotationsCos, // _trig_helper_vector_cos_rotations_estimate
+    #[br(magic = 0x20_u8)] VectorRotationsSinCos, // _trig_helper_vector_sin_cos_rotations_estimate
     #[br(magic = 0x21_u8)] PermuteExtendX, // Alias for permute(.xxxx)
     #[br(magic = 0x22_u8)] Permute { fields: u8 }, // Permute/swizzle values
     #[br(magic = 0x23_u8)] Saturate, // saturate?
@@ -67,7 +66,7 @@ pub enum TfxBytecodeOp {
 
     // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
-    #[br(magic = 0x35_u8)] Unk35 { constant_start: u8 },
+    #[br(magic = 0x35_u8)] LerpConstant { constant_start: u8 },
     #[br(magic = 0x37_u8)] Unk37 { unk1: u8 }, // spline4_const?
     #[br(magic = 0x38_u8)] Unk38 { unk1: u8 },
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
@@ -164,7 +163,7 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Merge2_2 => "merge_2_2".to_string(),
             TfxBytecodeOp::Unk0e => "unk0e".to_string(),
             TfxBytecodeOp::Unk0f => "unk0f".to_string(),
-            TfxBytecodeOp::Unk10 => "unk10".to_string(),
+            TfxBytecodeOp::Lerp => "unk10".to_string(),
             TfxBytecodeOp::Unk11 => "unk11".to_string(), // not really used in regular bytecode
             TfxBytecodeOp::MultiplyAdd => "multiply_add".to_string(),
             TfxBytecodeOp::Clamp => "clamp".to_string(),
@@ -210,8 +209,24 @@ impl TfxBytecodeOp {
                     format!("push_const_vec4({constant_index})")
                 }
             }
-            TfxBytecodeOp::Unk35 { constant_start } => {
-                format!("unk35 constant_start={constant_start}")
+            TfxBytecodeOp::LerpConstant { constant_start } => {
+                if let Some(constants) = constants {
+                    format!(
+                        "lerp_constant({}, {}) // a={} b={}",
+                        constant_start,
+                        constant_start + 1,
+                        constants
+                            .get(*constant_start as usize)
+                            .map(Vec4::to_string)
+                            .unwrap_or("CONSTANT OUT OF RANGE".into()),
+                        constants
+                            .get(*constant_start as usize + 1)
+                            .map(Vec4::to_string)
+                            .unwrap_or("CONSTANT OUT OF RANGE".into())
+                    )
+                } else {
+                    format!("lerp_constant({}, {})", constant_start, constant_start + 1)
+                }
             }
             TfxBytecodeOp::Unk37 { unk1 } => {
                 format!("unk37 unk1={unk1}")
