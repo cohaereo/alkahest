@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.75"
 clap = { version = "4.3.11", features = ["derive"] }
 destiny-pkg = { git = "https://github.com/v4nguard/destiny-pkg", version = "0.7.0" }
-vgmstream = { git = "https://github.com/cohaereo/vgmstream-rs/" }
+vgmstream = { git = "https://github.com/cohaereo/vgmstream-rs/", version = "0.1.1" }
 eframe = { version = "0.23.0", default-features = false, features = [
     "default_fonts",
     "wayland",
