@@ -35,7 +35,7 @@ use super::{
     common::{
         open_audio_file_in_default_application, open_tag_in_default_application, tag_context,
     },
-    View,
+    View, ViewAction,
 };
 
 pub struct TagView {
@@ -213,7 +213,11 @@ impl TagView {
 }
 
 impl View for TagView {
-    fn view(&mut self, ctx: &eframe::egui::Context, ui: &mut eframe::egui::Ui) {
+    fn view(
+        &mut self,
+        ctx: &eframe::egui::Context,
+        ui: &mut eframe::egui::Ui,
+    ) -> Option<ViewAction> {
         let mut open_new_tag = None;
 
         ui.heading(format_tag_entry(self.tag, Some(&self.tag_entry)))
@@ -545,8 +549,10 @@ impl View for TagView {
         ctx.request_repaint_after(Duration::from_secs(1));
 
         if let Some(new_tag) = open_new_tag {
-            self.open_tag(new_tag)
+            self.open_tag(new_tag);
         }
+
+        None
     }
 }
 

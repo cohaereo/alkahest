@@ -1,13 +1,14 @@
 mod common;
 mod dxgi;
+mod named_tags;
+mod packages;
+mod strings;
 mod tag;
 mod texture;
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use destiny_pkg::{package::UEntryHeader, PackageNamedTagEntry, PackageVersion, TagHash};
-use eframe::egui::RichText;
+use destiny_pkg::{PackageVersion, TagHash};
 use eframe::egui_wgpu::RenderState;
 use eframe::{
     egui::{self},
@@ -15,21 +16,18 @@ use eframe::{
     epaint::{Color32, Rounding, Vec2},
 };
 use egui_notify::Toasts;
-use itertools::Itertools;
 use poll_promise::Promise;
 
-use crate::text::StringCacheVec;
 use crate::{
     packages::package_manager,
     scanner::{load_tag_cache, scanner_progress, ScanStatus, TagCache},
-    tagtypes::TagType,
     text::{create_stringmap, StringCache},
 };
 
-use self::{
-    common::tag_context,
-    tag::{format_tag_entry, TagView},
-};
+use self::named_tags::NamedTagView;
+use self::packages::PackagesView;
+use self::strings::StringsView;
+use self::tag::TagView;
 
 #[derive(PartialEq)]
 pub enum Panel {
@@ -43,7 +41,6 @@ pub struct QuickTagApp {
     cache_load: Option<Promise<TagCache>>,
     cache: Arc<TagCache>,
     strings: Arc<StringCache>,
-    strings_vec_filtered: StringCacheVec,
 
     tag_input: String,
 
@@ -53,20 +50,9 @@ pub struct QuickTagApp {
 
     tag_view: Option<TagView>,
 
-    // TODO(cohae): Split named tag panel to it's own view
-    named_tags: NamedTags,
-    named_tag_filter: String,
-
-    // TODO(cohae): Split package panel to it's own view
-    selected_package: u16,
-    package_entry_search_cache: Vec<(String, TagType)>,
-    package_filter: String,
-    package_entry_filter: String,
-
-    // TODO(cohae): Split strings panel to it's own view
-    selected_string: u32,
-    string_selected_entries: Vec<(TagHash, String, TagType)>,
-    string_filter: String,
+    named_tags_view: NamedTagView,
+    packages_view: PackagesView,
+    strings_view: StringsView,
 
     pub wgpu_state: RenderState,
 }
@@ -89,33 +75,22 @@ impl QuickTagApp {
         cc.egui_ctx.set_fonts(fonts);
 
         let strings = Arc::new(create_stringmap().unwrap());
-        let strings_vec_filtered: StringCacheVec =
-            strings.iter().map(|(k, v)| (*k, v.clone())).collect();
 
         QuickTagApp {
             cache_load: Some(Promise::spawn_thread("load_cache", move || {
                 load_tag_cache(version)
             })),
             cache: Default::default(),
-            strings_vec_filtered,
-            strings,
             tag_view: None,
             tag_input: String::new(),
             toasts: Toasts::default(),
 
             open_panel: Panel::Tag,
-            named_tags: NamedTags::new(),
-            named_tag_filter: String::new(),
+            named_tags_view: NamedTagView::new(),
+            packages_view: PackagesView::new(),
+            strings_view: StringsView::new(strings.clone(), Default::default()),
 
-            selected_package: u16::MAX,
-            package_entry_search_cache: vec![],
-            package_filter: String::new(),
-            package_entry_filter: String::new(),
-
-            selected_string: u32::MAX,
-            string_filter: String::new(),
-            string_selected_entries: vec![],
-
+            strings,
             wgpu_state: cc.wgpu_render_state.clone().unwrap(),
         }
     }
@@ -170,6 +145,8 @@ impl eframe::App for QuickTagApp {
             let c = self.cache_load.take().unwrap();
             let cache = c.try_take().unwrap_or_default();
             self.cache = Arc::new(cache);
+
+            self.strings_view = StringsView::new(self.strings.clone(), self.cache.clone());
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -213,22 +190,23 @@ impl eframe::App for QuickTagApp {
 
                 ui.separator();
 
-                match self.open_panel {
+                let action = match self.open_panel {
                     Panel::Tag => {
                         if let Some(tagview) = &mut self.tag_view {
-                            tagview.view(ctx, ui);
+                            tagview.view(ctx, ui)
                         } else {
                             ui.label("No tag loaded");
+                            None
                         }
                     }
-                    Panel::NamedTags => {
-                        self.named_tags_panel(ui);
-                    }
-                    Panel::Packages => {
-                        self.packages_panel(ui);
-                    }
-                    Panel::Strings => {
-                        self.strings_panel(ui);
+                    Panel::NamedTags => self.named_tags_view.view(ctx, ui),
+                    Panel::Packages => self.packages_view.view(ctx, ui),
+                    Panel::Strings => self.strings_view.view(ctx, ui),
+                };
+
+                if let Some(action) = action {
+                    match action {
+                        ViewAction::OpenTag(t) => self.open_tag(t),
                     }
                 }
             });
@@ -259,290 +237,12 @@ impl QuickTagApp {
                 .error(format!("Could not find tag '{}' ({tag})", self.tag_input));
         }
     }
+}
 
-    fn named_tags_panel(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Search:");
-            ui.text_edit_singleline(&mut self.named_tag_filter);
-        });
-
-        egui::ScrollArea::vertical()
-            .max_width(f32::INFINITY)
-            .show(ui, |ui| {
-                for i in 0..self.named_tags.tags.len() {
-                    let (entry, nt) = self.named_tags.tags[i].clone();
-                    if !nt.name.to_lowercase().contains(&self.named_tag_filter) {
-                        continue;
-                    }
-
-                    let tagtype = TagType::from_type_subtype(entry.file_type, entry.file_subtype);
-
-                    let fancy_tag = format_tag_entry(nt.hash, Some(&entry));
-
-                    let tag_label = egui::RichText::new(fancy_tag).color(tagtype.display_color());
-
-                    if ui
-                        .add(egui::SelectableLabel::new(false, tag_label))
-                        .context_menu(|ui| tag_context(ui, nt.hash, None))
-                        .clicked()
-                    {
-                        self.open_tag(nt.hash);
-                    }
-                }
-            });
-    }
-
-    fn packages_panel(&mut self, ui: &mut egui::Ui) {
-        egui::SidePanel::left("packages_left_panel")
-            .resizable(true)
-            .min_width(256.0)
-            .show_inside(ui, |ui| {
-                ui.style_mut().wrap = Some(false);
-                egui::ScrollArea::vertical()
-                    .max_width(f32::INFINITY)
-                    .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label("Search:");
-                            ui.text_edit_singleline(&mut self.package_filter);
-                        });
-                        for (id, path) in package_manager().package_paths.iter() {
-                            let path_stem = PathBuf::from(path)
-                                .file_stem()
-                                .unwrap()
-                                .to_string_lossy()
-                                .to_string();
-
-                            if !self.package_filter.is_empty()
-                                && !path_stem.to_lowercase().contains(&self.package_filter)
-                            {
-                                continue;
-                            }
-
-                            if ui
-                                .selectable_value(
-                                    &mut self.selected_package,
-                                    *id,
-                                    format!("{id:04x}: {path_stem}"),
-                                )
-                                .changed()
-                            {
-                                self.package_entry_search_cache = vec![];
-                                if let Ok(p) = package_manager().version.open(path) {
-                                    for (i, e) in p.entries().iter().enumerate() {
-                                        let label =
-                                            format_tag_entry(TagHash::new(*id, i as u16), Some(e));
-
-                                        self.package_entry_search_cache.push((
-                                            label,
-                                            TagType::from_type_subtype(e.file_type, e.file_subtype),
-                                        ));
-                                    }
-                                } else {
-                                    self.toasts.error(format!("Failed to open package {path}"));
-                                }
-                            }
-                        }
-                    });
-            });
-
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            egui::ScrollArea::vertical()
-                .max_width(f32::INFINITY)
-                .show(ui, |ui| {
-                    ui.style_mut().wrap = Some(false);
-                    ui.horizontal(|ui| {
-                        ui.label("Search:");
-                        ui.text_edit_singleline(&mut self.package_entry_filter);
-                    });
-
-                    if self.selected_package == u16::MAX {
-                        ui.label(RichText::new("No package selected").italics());
-                    } else {
-                        let mut open_tag = None;
-                        for (i, (label, tag_type)) in
-                            self.package_entry_search_cache.iter().enumerate().filter(
-                                |(_, (label, _))| {
-                                    self.package_entry_filter.is_empty()
-                                        || label.to_lowercase().contains(&self.package_entry_filter)
-                                },
-                            )
-                        {
-                            let tag = TagHash::new(self.selected_package, i as u16);
-                            if ui
-                                .add(egui::SelectableLabel::new(
-                                    false,
-                                    RichText::new(label).color(tag_type.display_color()),
-                                ))
-                                .context_menu(|ui| tag_context(ui, tag, None))
-                                .clicked()
-                            {
-                                open_tag = Some(tag);
-                            }
-                        }
-
-                        if let Some(tag) = open_tag {
-                            self.open_tag(tag);
-                        }
-                    }
-                });
-        });
-    }
-
-    fn strings_panel(&mut self, ui: &mut egui::Ui) {
-        egui::SidePanel::left("strings_left_panel")
-            .resizable(true)
-            .min_width(384.0)
-            .show_inside(ui, |ui| {
-                ui.style_mut().wrap = Some(false);
-                ui.horizontal(|ui| {
-                    ui.label("Search:");
-                    if ui.text_edit_singleline(&mut self.string_filter).changed() {
-                        self.strings_vec_filtered = if !self.string_filter.is_empty() {
-                            self.strings
-                                .iter()
-                                .filter(|(_, s)| {
-                                    s.iter()
-                                        .any(|s| s.to_lowercase().contains(&self.string_filter))
-                                })
-                                .map(|(k, v)| (*k, v.clone()))
-                                .collect()
-                        } else {
-                            self.strings
-                                .iter()
-                                .map(|(k, v)| (*k, v.clone()))
-                                .collect_vec()
-                        };
-                    }
-                });
-
-                let string_height = {
-                    let s = ui.spacing();
-                    s.interact_size.y
-                };
-
-                egui::ScrollArea::vertical()
-                    .max_width(ui.available_width() * 0.70)
-                    .show_rows(
-                        ui,
-                        string_height,
-                        self.strings_vec_filtered.len(),
-                        |ui, range| {
-                            for (hash, strings) in &self.strings_vec_filtered[range] {
-                                let response = if strings.len() > 1 {
-                                    ui.selectable_value(
-                                        &mut self.selected_string,
-                                        *hash,
-                                        format!(
-                                            "'{}' {:08x} ({} collisions)",
-                                            truncate_string_stripped(&strings[0], 192),
-                                            hash,
-                                            strings.len()
-                                        ),
-                                    )
-                                    .on_hover_text(
-                                        strings.iter().map(|s| s.replace('\n', "\\n")).join("\n\n"),
-                                    )
-                                } else {
-                                    ui.selectable_value(
-                                        &mut self.selected_string,
-                                        *hash,
-                                        format!(
-                                            "'{}' {:08x}",
-                                            truncate_string_stripped(&strings[0], 192),
-                                            hash
-                                        ),
-                                    )
-                                    .on_hover_text(strings[0].clone())
-                                }
-                                .context_menu(|ui| {
-                                    if ui.selectable_label(false, "Copy string").clicked() {
-                                        ui.output_mut(|o| o.copied_text = strings[0].clone());
-                                        ui.close_menu();
-                                    }
-                                });
-
-                                if response.clicked() {
-                                    self.string_selected_entries = vec![];
-                                    for (tag, _) in self.cache.hashes.iter().filter(|v| {
-                                        v.1.string_hashes.iter().any(|c| c.hash == *hash)
-                                    }) {
-                                        if let Some(e) = package_manager().get_entry(*tag) {
-                                            let label = format_tag_entry(*tag, Some(&e));
-
-                                            self.string_selected_entries.push((
-                                                *tag,
-                                                label,
-                                                TagType::from_type_subtype(
-                                                    e.file_type,
-                                                    e.file_subtype,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                    );
-            });
-
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            egui::ScrollArea::vertical()
-                .max_width(f32::INFINITY)
-                .show(ui, |ui| {
-                    ui.style_mut().wrap = Some(false);
-                    if self.selected_string == u32::MAX {
-                        ui.label(RichText::new("No string selected").italics());
-                    } else {
-                        let mut open_tag = None;
-                        for (tag, label, tag_type) in &self.string_selected_entries {
-                            if ui
-                                .add(egui::SelectableLabel::new(
-                                    false,
-                                    RichText::new(label).color(tag_type.display_color()),
-                                ))
-                                .context_menu(|ui| tag_context(ui, *tag, None))
-                                .clicked()
-                            {
-                                open_tag = Some(*tag);
-                            }
-                        }
-
-                        if let Some(tag) = open_tag {
-                            self.open_tag(tag);
-                        }
-                    }
-                });
-        });
-    }
+pub enum ViewAction {
+    OpenTag(TagHash),
 }
 
 pub trait View {
-    fn view(&mut self, ctx: &egui::Context, ui: &mut egui::Ui);
-}
-
-pub struct NamedTags {
-    pub tags: Vec<(UEntryHeader, PackageNamedTagEntry)>,
-}
-
-impl NamedTags {
-    pub fn new() -> NamedTags {
-        NamedTags {
-            tags: package_manager()
-                .named_tags
-                .iter()
-                .cloned()
-                .filter_map(|n| Some((package_manager().get_entry(n.hash)?, n)))
-                .collect(),
-        }
-    }
-}
-
-fn truncate_string_stripped(s: &str, max_length: usize) -> String {
-    let s = s.replace('\n', "\\n");
-
-    if s.len() >= max_length {
-        format!("{}...", s.chars().take(max_length).collect::<String>())
-    } else {
-        s.to_string()
-    }
+    fn view(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) -> Option<ViewAction>;
 }
