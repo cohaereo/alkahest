@@ -40,6 +40,8 @@ wav = "1.0.0"
 
 [profile.dev]
 opt-level = 3
+# cohae: Overflow checks are nice for some, but not for us
+overflow-checks = false
 
 # [profile.release]
 # opt-level = 3

@@ -90,5 +90,7 @@ targets = ["x86_64-pc-windows-gnu"]
 [profile.dev.package.destiny-pkg]
 opt-level = 3
 
-# [profile.dev]
+[profile.dev]
 # opt-level = 3
+# cohae: Overflow checks are nice for some, but not for us
+overflow-checks = false

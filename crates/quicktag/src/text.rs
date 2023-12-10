@@ -246,41 +246,38 @@ pub struct StringPart {
 }
 
 /// Expects raw un-shifted data as input
-/// Currently very incomplete
-// TODO(cohae): Support for wide characters
 pub fn decode_text(data: &[u8], cipher: u16) -> String {
+    // cohae: Modern versions of D2 no longer use the cipher system, we can take a shortcut
     if cipher == 0 {
         return String::from_utf8_lossy(data).to_string();
     }
 
-    let mut result = String::new();
+    let mut data_clone = data.to_vec();
 
-    let mut offset = 0;
-    while offset < data.len() {
-        let b0 = data[offset];
-        let u0 = b0.wrapping_add(cipher as u8);
-
-        match b0 {
+    let mut off = 0;
+    // TODO(cohae): Shifting doesn't work entirely yet, there's still some weird characters beyond starting byte 0xe0
+    while off < data.len() {
+        match data[off] {
+            0..=0xbf => {
+                data_clone[off] += cipher as u8;
+                off += 1
+            }
             0xc0..=0xdf => {
-                result.push(char::REPLACEMENT_CHARACTER);
-                offset += 2
+                data_clone[off + 1] += cipher as u8;
+                off += 2
             }
             0xe0..=0xef => {
-                result.push(char::REPLACEMENT_CHARACTER);
-                offset += 3
+                data_clone[off + 2] += cipher as u8;
+                off += 3
             }
-            0..=0x7f => {
-                result.push(char::from(u0));
-                offset += 1
-            }
-            _ => {
-                result.push(char::REPLACEMENT_CHARACTER);
-                offset += 1
+            0xf0..=0xff => {
+                data_clone[off + 3] += cipher as u8;
+                off += 4
             }
         }
     }
 
-    result
+    String::from_utf8_lossy(&data_clone).to_string()
 }
 
 pub fn create_stringmap() -> anyhow::Result<StringCache> {
