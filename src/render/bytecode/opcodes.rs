@@ -29,7 +29,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x0e_u8)] Unk0e,
     #[br(magic = 0x0f_u8)] Unk0f,
     #[br(magic = 0x10_u8)] Lerp,
-    #[br(magic = 0x11_u8)] Unk11,
+    #[br(magic = 0x11_u8)] LerpSaturated,
     #[br(magic = 0x12_u8)] MultiplyAdd,
     #[br(magic = 0x13_u8)] Clamp,
     #[br(magic = 0x14_u8)] Unk14,
@@ -67,7 +67,8 @@ pub enum TfxBytecodeOp {
     // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 }, // push_const_vec4?
     #[br(magic = 0x35_u8)] LerpConstant { constant_start: u8 },
-    #[br(magic = 0x37_u8)] Unk37 { unk1: u8 }, // spline4_const?
+    #[br(magic = 0x36_u8)] LerpConstantSaturated { constant_start: u8 },
+    #[br(magic = 0x37_u8)] Unk37 { constant_start: u8 }, // spline4_const?
     #[br(magic = 0x38_u8)] Unk38 { unk1: u8 },
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
     #[br(magic = 0x3a_u8)] Unk3a { unk1: u8 },
@@ -163,8 +164,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Merge2_2 => "merge_2_2".to_string(),
             TfxBytecodeOp::Unk0e => "unk0e".to_string(),
             TfxBytecodeOp::Unk0f => "unk0f".to_string(),
-            TfxBytecodeOp::Lerp => "unk10".to_string(),
-            TfxBytecodeOp::Unk11 => "unk11".to_string(), // not really used in regular bytecode
+            TfxBytecodeOp::Lerp => "lerp".to_string(),
+            TfxBytecodeOp::LerpSaturated => "lerp_saturated".to_string(), // not really used in regular bytecode
             TfxBytecodeOp::MultiplyAdd => "multiply_add".to_string(),
             TfxBytecodeOp::Clamp => "clamp".to_string(),
             TfxBytecodeOp::Unk14 => "unk14".to_string(),
@@ -228,7 +229,17 @@ impl TfxBytecodeOp {
                     format!("lerp_constant({}, {})", constant_start, constant_start + 1)
                 }
             }
-            TfxBytecodeOp::Unk37 { unk1 } => {
+            TfxBytecodeOp::LerpConstantSaturated { constant_start } => {
+                // not really used in regular bytecode
+                format!(
+                    "lerp_constant_saturated({}, {})",
+                    constant_start,
+                    constant_start + 1
+                )
+            }
+            TfxBytecodeOp::Unk37 {
+                constant_start: unk1,
+            } => {
                 format!("unk37 unk1={unk1}")
             }
             TfxBytecodeOp::Unk38 { unk1 } => {

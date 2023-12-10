@@ -273,7 +273,36 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     *v = a + *v * (b - a);
                 }
-                // // TODO(cohae): Very wrong, but does seem to push something onto the stack
+                TfxBytecodeOp::Unk37 { constant_start } => {
+                    anyhow::ensure!((*constant_start as usize + 4) < constants.len());
+                    let v = stack_top!();
+                    *v = unsafe {
+                        use std::arch::x86_64::*;
+                        let t0: __m128 = (*v).into();
+                        let v264 = _mm_cmple_ps(constants[*constant_start as usize + 4].into(), t0);
+                        let v265 = _mm_and_ps(
+                            _mm_add_ps(
+                                _mm_mul_ps(
+                                    _mm_add_ps(
+                                        _mm_mul_ps(t0, constants[*constant_start as usize].into()),
+                                        constants[*constant_start as usize + 1].into(),
+                                    ),
+                                    _mm_mul_ps(t0, t0),
+                                ),
+                                _mm_add_ps(
+                                    _mm_mul_ps(constants[*constant_start as usize + 2].into(), t0),
+                                    constants[*constant_start as usize + 3].into(),
+                                ),
+                            ),
+                            _mm_xor_ps(
+                                v264,
+                                _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v264), 4)),
+                            ),
+                        );
+                        let v266 = _mm_xor_ps(_mm_shuffle_ps(v265, v265, 78), v265);
+                        _mm_xor_ps(_mm_shuffle_ps(v266, v266, 27), v266).into()
+                    };
+                }
                 TfxBytecodeOp::PermuteExtendX => {
                     let v = stack_top!();
                     *v = v.xxxx();

@@ -502,6 +502,11 @@ impl Renderer {
                 );
             }
 
+            self.render_data
+                .data()
+                .blend_texture15
+                .bind(&self.dcs, 20, ShaderStages::all());
+
             unsafe {
                 self.dcs.context().PSSetShaderResources(
                     10,
@@ -515,10 +520,10 @@ impl Renderer {
                     13,
                     Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
                 );
-                self.dcs.context().PSSetShaderResources(
-                    20,
-                    Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
-                );
+                // self.dcs.context().PSSetShaderResources(
+                //     20,
+                //     Some(&[Some(self.gbuffer.staging_clone.view.clone())]),
+                // );
                 self.dcs.context().PSSetShaderResources(
                     23,
                     Some(&[Some(self.gbuffer.staging_clone.view.clone())]),

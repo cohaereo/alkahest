@@ -26,7 +26,7 @@ impl InstancedRenderer {
         // TODO(cohae): Is this enough to fix it for every buffer set?
         // The last vertex color index, used by the vertex shader to extend the last vertex color value
         let vertex_color_last: Option<usize> = (|| {
-            let cbt = model.buffers.get(0)?.color_buffer;
+            let cbt = model.buffers.first()?.color_buffer;
             let vheader: VertexBufferHeader = package_manager().read_tag_struct(cbt).ok()?;
 
             Some((vheader.data_size as usize / vheader.stride as usize).saturating_sub(1))
