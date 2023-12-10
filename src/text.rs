@@ -58,6 +58,10 @@ pub struct StringPart {
 /// Currently very incomplete
 // TODO(cohae): Support for wide characters
 pub fn decode_text(data: &[u8], cipher: u16) -> String {
+    if cipher == 0 {
+        return String::from_utf8_lossy(data).to_string();
+    }
+
     let mut result = String::new();
 
     let mut offset = 0;
