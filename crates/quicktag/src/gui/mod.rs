@@ -18,6 +18,7 @@ use egui_notify::Toasts;
 use itertools::Itertools;
 use poll_promise::Promise;
 
+use crate::text::StringCacheVec;
 use crate::{
     packages::package_manager,
     scanner::{load_tag_cache, scanner_progress, ScanStatus, TagCache},
@@ -42,6 +43,7 @@ pub struct QuickTagApp {
     cache_load: Option<Promise<TagCache>>,
     cache: Arc<TagCache>,
     strings: Arc<StringCache>,
+    strings_vec_filtered: StringCacheVec,
 
     tag_input: String,
 
@@ -72,12 +74,31 @@ pub struct QuickTagApp {
 impl QuickTagApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>, version: PackageVersion) -> Self {
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "Destiny_Keys".into(),
+            egui::FontData::from_static(include_bytes!("../../Destiny_Keys.otf")),
+        );
+
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(1, "Destiny_Keys".to_owned());
+
+        cc.egui_ctx.set_fonts(fonts);
+
+        let strings = Arc::new(create_stringmap().unwrap());
+        let strings_vec_filtered: StringCacheVec =
+            strings.iter().map(|(k, v)| (*k, v.clone())).collect();
+
         QuickTagApp {
             cache_load: Some(Promise::spawn_thread("load_cache", move || {
                 load_tag_cache(version)
             })),
             cache: Default::default(),
-            strings: Arc::new(create_stringmap().unwrap()),
+            strings_vec_filtered,
+            strings,
             tag_view: None,
             tag_input: String::new(),
             toasts: Toasts::default(),
@@ -373,73 +394,95 @@ impl QuickTagApp {
             .min_width(384.0)
             .show_inside(ui, |ui| {
                 ui.style_mut().wrap = Some(false);
+                ui.horizontal(|ui| {
+                    ui.label("Search:");
+                    if ui.text_edit_singleline(&mut self.string_filter).changed() {
+                        self.strings_vec_filtered = if !self.string_filter.is_empty() {
+                            self.strings
+                                .iter()
+                                .filter(|(_, s)| {
+                                    s.iter()
+                                        .any(|s| s.to_lowercase().contains(&self.string_filter))
+                                })
+                                .map(|(k, v)| (*k, v.clone()))
+                                .collect()
+                        } else {
+                            self.strings
+                                .iter()
+                                .map(|(k, v)| (*k, v.clone()))
+                                .collect_vec()
+                        };
+                    }
+                });
+
+                let string_height = {
+                    let s = ui.spacing();
+                    s.interact_size.y
+                };
+
                 egui::ScrollArea::vertical()
                     .max_width(ui.available_width() * 0.70)
-                    .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label("Search:");
-                            ui.text_edit_singleline(&mut self.string_filter);
-                        });
-                        for (hash, strings) in self.strings.iter() {
-                            if !self.string_filter.is_empty()
-                                && !strings
-                                    .iter()
-                                    .any(|s| s.to_lowercase().contains(&self.string_filter))
-                            {
-                                continue;
-                            }
+                    .show_rows(
+                        ui,
+                        string_height,
+                        self.strings_vec_filtered.len(),
+                        |ui, range| {
+                            for (hash, strings) in &self.strings_vec_filtered[range] {
+                                let response = if strings.len() > 1 {
+                                    ui.selectable_value(
+                                        &mut self.selected_string,
+                                        *hash,
+                                        format!(
+                                            "'{}' {:08x} ({} collisions)",
+                                            truncate_string_stripped(&strings[0], 192),
+                                            hash,
+                                            strings.len()
+                                        ),
+                                    )
+                                    .on_hover_text(
+                                        strings.iter().map(|s| s.replace('\n', "\\n")).join("\n\n"),
+                                    )
+                                } else {
+                                    ui.selectable_value(
+                                        &mut self.selected_string,
+                                        *hash,
+                                        format!(
+                                            "'{}' {:08x}",
+                                            truncate_string_stripped(&strings[0], 192),
+                                            hash
+                                        ),
+                                    )
+                                    .on_hover_text(strings[0].clone())
+                                }
+                                .context_menu(|ui| {
+                                    if ui.selectable_label(false, "Copy string").clicked() {
+                                        ui.output_mut(|o| o.copied_text = strings[0].clone());
+                                        ui.close_menu();
+                                    }
+                                });
 
-                            let clicked = if strings.len() > 1 {
-                                ui.selectable_value(
-                                    &mut self.selected_string,
-                                    *hash,
-                                    format!(
-                                        "'{}' {:08x} ({} collisions)",
-                                        truncate_string_stripped(&strings[0], 192),
-                                        hash,
-                                        strings.len()
-                                    ),
-                                )
-                                .on_hover_text(
-                                    strings
-                                        .iter()
-                                        .map(|s| truncate_string_stripped(s, 192))
-                                        .join("\n\n"),
-                                )
-                                .clicked()
-                            } else {
-                                ui.selectable_value(
-                                    &mut self.selected_string,
-                                    *hash,
-                                    format!(
-                                        "'{}' {:08x}",
-                                        truncate_string_stripped(&strings[0], 192),
-                                        hash
-                                    ),
-                                )
-                                .clicked()
-                            };
-
-                            if clicked {
-                                self.string_selected_entries = vec![];
-                                for (tag, _) in
-                                    self.cache.hashes.iter().filter(|v| {
+                                if response.clicked() {
+                                    self.string_selected_entries = vec![];
+                                    for (tag, _) in self.cache.hashes.iter().filter(|v| {
                                         v.1.string_hashes.iter().any(|c| c.hash == *hash)
-                                    })
-                                {
-                                    if let Some(e) = package_manager().get_entry(*tag) {
-                                        let label = format_tag_entry(*tag, Some(&e));
+                                    }) {
+                                        if let Some(e) = package_manager().get_entry(*tag) {
+                                            let label = format_tag_entry(*tag, Some(&e));
 
-                                        self.string_selected_entries.push((
-                                            *tag,
-                                            label,
-                                            TagType::from_type_subtype(e.file_type, e.file_subtype),
-                                        ));
+                                            self.string_selected_entries.push((
+                                                *tag,
+                                                label,
+                                                TagType::from_type_subtype(
+                                                    e.file_type,
+                                                    e.file_subtype,
+                                                ),
+                                            ));
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        },
+                    );
             });
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
