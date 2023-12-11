@@ -82,6 +82,10 @@ impl Texture {
     }
 
     pub fn load(rs: &RenderState, hash: TagHash) -> anyhow::Result<Texture> {
+        if package_manager().version.is_d1() {
+            anyhow::bail!("Textures are not supported for D1");
+        }
+
         let (texture, texture_data) = Self::load_data(hash, true)?;
 
         let handle = rs.device.create_texture_with_data(
