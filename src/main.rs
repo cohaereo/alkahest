@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
-use crate::ecs::components::{ActivityGroup, EntityModel, ResourcePoint};
+use crate::ecs::components::{ActivityGroup, EntityModel, ResourcePoint, Terrain};
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
@@ -76,7 +76,7 @@ use crate::render::error::ErrorRenderer;
 use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
 use crate::render::renderer::{Renderer, RendererShared, ShadowMapsResource};
 
-use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer, TerrainRenderer};
+use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer};
 use crate::resources::Resources;
 
 use crate::statics::SStaticMeshInstances;
@@ -336,7 +336,6 @@ pub async fn main() -> anyhow::Result<()> {
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
     let mut placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)> =
         IntMap::default();
-    let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -542,7 +541,6 @@ pub async fn main() -> anyhow::Result<()> {
                     if let Some(Ok(map_res)) = map_load_task.take().map(|v| v.try_take()) {
                         let map_res = map_res.expect("Failed to load map(s)");
                         entity_renderers.extend(map_res.entity_renderers);
-                        terrain_renderers.extend(map_res.terrain_renderers);
                         placement_renderers.extend(map_res.placement_renderers);
                         let mut maps = resources.get_mut::<MapDataList>().unwrap();
                         maps.maps = map_res.maps;
@@ -593,10 +591,8 @@ pub async fn main() -> anyhow::Result<()> {
                             }
 
                             if gb.renderlayer_terrain {
-                                for th in &map.terrains {
-                                    if let Some(t) = terrain_renderers.get(&th.0) {
-                                        t.draw(&renderer.read()).unwrap();
-                                    }
+                                for (_, terrain) in map.scene.query::<&Terrain>().iter() {
+                                    terrain.0.draw(&renderer.read()).unwrap();
                                 }
                             }
 

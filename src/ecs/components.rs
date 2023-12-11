@@ -3,7 +3,7 @@ use glam::Vec4;
 
 use crate::{
     map_resources::MapResource,
-    render::{scopes::ScopeRigidModel, ConstantBuffer, EntityRenderer},
+    render::{scopes::ScopeRigidModel, ConstantBuffer, EntityRenderer, TerrainRenderer},
     structure::ExtendedHash,
     types::AABB,
 };
@@ -56,3 +56,5 @@ pub struct Label(pub String);
 // TODO(cohae): This is currently only used by the spawn_entity_model command, should be used for all entity models for coherency sake
 // TODO(cohae): use asset system hashes
 pub struct EntityModel(pub EntityRenderer, pub ConstantBuffer<ScopeRigidModel>);
+
+pub struct Terrain(pub TerrainRenderer);

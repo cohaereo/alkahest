@@ -139,8 +139,7 @@ pub struct MapData {
     pub name: String,
     pub placement_groups: Vec<Tag<SStaticMeshInstances>>,
     // pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
-    pub terrains: Vec<TagHash>,
-
+    // pub terrains: Vec<TagHash>,
     pub scene: Scene,
 }
 

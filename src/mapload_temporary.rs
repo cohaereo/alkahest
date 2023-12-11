@@ -11,7 +11,7 @@ use crate::{
     ecs::{
         components::{
             ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
-            ResourcePoint,
+            ResourcePoint, Terrain,
         },
         transform::Transform,
         Scene,
@@ -72,7 +72,6 @@ pub async fn load_maps(
     let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
 
     let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
-    let mut terrain_headers = vec![];
     let mut static_map: IntMap<TagHash, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<TagHash, Technique> = Default::default();
     let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
@@ -142,7 +141,6 @@ pub async fn load_maps(
             continue;
         };
 
-        let mut terrains: Vec<(TagHash, STerrain)> = vec![];
         let mut placement_groups = vec![];
         let mut scene = Scene::new();
 
@@ -174,7 +172,6 @@ pub async fn load_maps(
                     0,
                     stringmap.clone(),
                     &entity_worldid_name_map,
-                    &mut terrains,
                     &mut placement_groups,
                     &mut material_map,
                     &mut to_load_entitymodels,
@@ -257,7 +254,6 @@ pub async fn load_maps(
                                 phase_name2.0,
                                 stringmap.clone(),
                                 &entity_worldid_name_map,
-                                &mut terrains,
                                 &mut placement_groups,
                                 &mut material_map,
                                 &mut to_load_entitymodels,
@@ -280,7 +276,6 @@ pub async fn load_maps(
                                 phase_name2.0,
                                 stringmap.clone(),
                                 &entity_worldid_name_map,
-                                &mut terrains,
                                 &mut placement_groups,
                                 &mut material_map,
                                 &mut to_load_entitymodels,
@@ -340,12 +335,9 @@ pub async fn load_maps(
                 hash,
                 name: map_name,
                 placement_groups,
-                terrains: terrains.iter().map(|v| v.0).collect(),
                 scene,
             },
         ));
-
-        terrain_headers.extend(terrains);
     }
 
     let to_load_entities: HashSet<ExtendedHash> = maps
@@ -534,28 +526,6 @@ pub async fn load_maps(
     if placement_renderers.is_empty() {
         anyhow::bail!("No map placements found in package");
     }
-
-    let mut terrain_renderers: IntMap<u32, TerrainRenderer> = Default::default();
-    info!("Loading {} terrain renderers", terrain_headers.len());
-    info_span!("Loading terrain").in_scope(|| {
-        let renderer = renderer.read();
-        for (t, header) in terrain_headers.into_iter() {
-            for t in &header.mesh_groups {
-                renderer
-                    .render_data
-                    .load_texture(ExtendedHash::Hash32(t.dyemap));
-            }
-
-            match TerrainRenderer::load(header, dcs.clone(), &renderer) {
-                Ok(r) => {
-                    terrain_renderers.insert(t.0, r);
-                }
-                Err(e) => {
-                    error!("Failed to load terrain: {e}");
-                }
-            }
-        }
-    });
 
     let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
 
@@ -819,7 +789,6 @@ pub async fn load_maps(
         maps,
         entity_renderers,
         placement_renderers,
-        terrain_renderers,
     })
 }
 
@@ -827,7 +796,6 @@ pub struct LoadMapsData {
     pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
     pub entity_renderers: IntMap<u64, EntityRenderer>,
     pub placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)>,
-    pub terrain_renderers: IntMap<u32, TerrainRenderer>,
 }
 
 // clippy: asset system will fix this lint on it's own (i hope)
@@ -843,7 +811,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
     stringmap: Arc<IntMap<u32, String>>,
     entity_worldid_name_map: &IntMap<u64, String>,
 
-    terrain_headers: &mut Vec<(TagHash, STerrain)>,
     placement_groups: &mut Vec<Tag<SStaticMeshInstances>>,
     material_map: &mut IntMap<TagHash, Technique>,
     to_load_entitymodels: &mut IntSet<TagHash>,
@@ -913,7 +880,20 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         }
                     }
 
-                    terrain_headers.push((terrain_resource.terrain, terrain));
+                    for t in &terrain.mesh_groups {
+                        renderer
+                            .render_data
+                            .load_texture(ExtendedHash::Hash32(t.dyemap));
+                    }
+
+                    match TerrainRenderer::load(terrain, dcs.clone(), &renderer) {
+                        Ok(r) => {
+                            ents.push(scene.spawn((Terrain(r), EntityWorldId(data.world_id))));
+                        }
+                        Err(e) => {
+                            error!("Failed to load terrain: {e}");
+                        }
+                    }
                 }
                 // Cubemap volume
                 0x80806695 => {
