@@ -25,7 +25,7 @@ use std::fmt::Write;
 use crate::{gui::texture::Texture, util::u32_from_endian};
 use crate::{
     packages::package_manager,
-    references::REFERENCE_MAP,
+    references::REFERENCE_NAMES,
     scanner::{ScanResult, TagCache},
     tagtypes::TagType,
     text::StringCache,
@@ -451,7 +451,7 @@ impl View for TagView {
                                 ui.label(RichText::new("No arrays found").italics());
                             } else {
                                 for (offset, array) in &self.arrays {
-                                    let ref_label = REFERENCE_MAP
+                                    let ref_label = REFERENCE_NAMES
                                         .read()
                                         .get(&array.tagtype)
                                         .map(|s| format!("{s} ({:08X})", array.tagtype.to_be()))
@@ -880,7 +880,7 @@ pub fn format_tag_entry(tag: TagHash, entry: Option<&UEntryHeader>) -> String {
             .map(|v| format!("{} ", v.name))
             .unwrap_or_default();
 
-        let ref_label = REFERENCE_MAP
+        let ref_label = REFERENCE_NAMES
             .read()
             .get(&entry.reference)
             .map(|s| format!(" ({s})"))

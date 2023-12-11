@@ -16,6 +16,7 @@ use env_logger::Env;
 use log::info;
 use packages::PACKAGE_MANAGER;
 
+use crate::references::initialize_reference_names;
 use crate::{gui::QuickTagApp, packages::package_manager};
 
 #[derive(clap::Parser, Debug)]
@@ -40,6 +41,8 @@ fn main() -> eframe::Result<()> {
     let pm = PackageManager::new(args.packages_path, args.version).unwrap();
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
+
+    initialize_reference_names();
 
     let native_options = eframe::NativeOptions {
         icon_data: Some(
