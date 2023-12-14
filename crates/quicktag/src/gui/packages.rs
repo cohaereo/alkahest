@@ -108,7 +108,8 @@ impl View for PackagesView {
                                 if ui
                                     .add(egui::SelectableLabel::new(
                                         false,
-                                        RichText::new(label).color(tag_type.display_color()),
+                                        RichText::new(format!("{i}: {label}"))
+                                            .color(tag_type.display_color()),
                                     ))
                                     .context_menu(|ui| tag_context(ui, tag, None))
                                     .clicked()
