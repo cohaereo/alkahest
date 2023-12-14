@@ -19,6 +19,39 @@ pub fn tag_context(ui: &mut egui::Ui, tag: TagHash, tag64: Option<TagHash64>) {
         }
     }
 
+    if let Some(entry) = package_manager().get_entry(tag) {
+        let shift = ui.input(|i| i.modifiers.shift);
+
+        if ui
+            .selectable_label(
+                false,
+                format!(
+                    "📋 Copy reference tag{}",
+                    if shift { " (flipped)" } else { "" }
+                ),
+            )
+            .clicked()
+        {
+            ui.output_mut(|o| {
+                o.copied_text = format!(
+                    "{:08X}",
+                    if shift {
+                        entry.reference.to_be()
+                    } else {
+                        entry.reference
+                    }
+                )
+            });
+            ui.close_menu();
+        }
+
+        let tt = TagType::from_type_subtype(entry.file_type, entry.file_subtype);
+        if tt == TagType::WwiseStream && ui.selectable_label(false, "🎵 Play audio").clicked() {
+            open_audio_file_in_default_application(tag, "wem");
+            ui.close_menu();
+        }
+    }
+
     if ui
         .add_enabled(
             false,
@@ -28,14 +61,6 @@ pub fn tag_context(ui: &mut egui::Ui, tag: TagHash, tag64: Option<TagHash64>) {
     {
         warn!("Alkahest IPC not implemented yet");
         ui.close_menu();
-    }
-
-    if let Some(entry) = package_manager().get_entry(tag) {
-        let tt = TagType::from_type_subtype(entry.file_type, entry.file_subtype);
-        if tt == TagType::WwiseStream && ui.selectable_label(false, "🎵 Play audio").clicked() {
-            open_audio_file_in_default_application(tag, "wem");
-            ui.close_menu();
-        }
     }
 }
 

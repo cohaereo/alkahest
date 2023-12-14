@@ -118,7 +118,7 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
             );
         }
 
-        if context.known_string_hashes.contains(&value) {
+        if value != 0x811c9dc5 && context.known_string_hashes.contains(&value) {
             r.string_hashes.push(ScannedHash {
                 offset,
                 hash: value,

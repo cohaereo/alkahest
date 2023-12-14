@@ -18,6 +18,8 @@ lazy_static::lazy_static! {
         (0x808008BE, "SLocalizedStringsData"),
         (0x80801AD0, "SScope"),
         (0x80801B4C, "STechnique"),
+        (0x80800734, "SEntity"),
+        (0x80800861, "SEntityResource")
     ]);
 
     pub static ref REFERENCE_MAP_SK: IntMap<u32, &'static str> = IntMap::from_iter([]);

@@ -401,6 +401,10 @@ pub fn create_stringmap_d1() -> anyhow::Result<StringCache> {
             .iter()
             .zip(textset_header.string_hashes.iter())
         {
+            if *hash == 0x811c9dc5 {
+                continue;
+            }
+
             let mut final_string = String::new();
 
             for ip in 0..combination.part_count {
