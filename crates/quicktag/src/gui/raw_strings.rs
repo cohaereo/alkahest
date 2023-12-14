@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fs::File, io::Write as _, sync::Arc};
 
 use destiny_pkg::TagHash;
 use eframe::{
@@ -86,6 +86,16 @@ impl View for RawStringsView {
                 let s = ui.spacing();
                 s.interact_size.y
             };
+
+            if !self.strings_vec_filtered.is_empty()
+                && ui.button("Dump strings (filtered)").clicked()
+            {
+                if let Ok(mut f) = File::create("raw_strings_filtered.txt") {
+                    for (_, string, hashes) in &self.strings_vec_filtered {
+                        writeln!(&mut f, "'{string}' - [{}]", hashes.iter().join(", ")).ok();
+                    }
+                }
+            }
 
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
