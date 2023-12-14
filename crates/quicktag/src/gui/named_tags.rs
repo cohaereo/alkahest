@@ -54,7 +54,11 @@ impl View for NamedTagView {
                 } else {
                     for i in 0..self.named_tags.tags.len() {
                         let (entry, nt) = self.named_tags.tags[i].clone();
-                        if !nt.name.to_lowercase().contains(&self.named_tag_filter) {
+                        if !nt
+                            .name
+                            .to_lowercase()
+                            .contains(&self.named_tag_filter.to_lowercase())
+                        {
                             continue;
                         }
 

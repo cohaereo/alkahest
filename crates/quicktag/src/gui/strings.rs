@@ -57,8 +57,10 @@ impl View for StringsView {
                             self.strings
                                 .iter()
                                 .filter(|(_, s)| {
-                                    s.iter()
-                                        .any(|s| s.to_lowercase().contains(&self.string_filter))
+                                    s.iter().any(|s| {
+                                        s.to_lowercase()
+                                            .contains(&self.string_filter.to_lowercase())
+                                    })
                                 })
                                 .map(|(k, v)| (*k, v.clone()))
                                 .collect()

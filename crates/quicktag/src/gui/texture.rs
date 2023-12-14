@@ -95,12 +95,14 @@ impl Texture {
                 size: wgpu::Extent3d {
                     width: texture.width as _,
                     height: texture.height as _,
-                    depth_or_array_layers: if texture.depth == 1 {
-                        texture.array_size as _
-                    } else {
-                        // texture.depth as _
-                        1
-                    },
+                    depth_or_array_layers: 1,
+                    // depth_or_array_layers: if texture.depth == 1 {
+                    //     // texture.array_size as _
+                    //     1
+                    // } else {
+                    //     // texture.depth as _
+                    //     1
+                    // },
                 },
                 mip_level_count: texture.mip_count as u32,
                 sample_count: 1,

@@ -1,13 +1,13 @@
 use std::{
     fmt::Display,
     fs::File,
-    io::Write,
+    io::{Cursor, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     sync::Arc,
     time::SystemTime,
 };
 
-use binrw::Endian;
+use binrw::{BinReaderExt, Endian};
 use destiny_pkg::{PackageManager, PackageVersion, TagHash, TagHash64};
 use eframe::epaint::mutex::RwLock;
 use itertools::Itertools;
@@ -35,7 +35,7 @@ impl Default for TagCache {
     fn default() -> Self {
         Self {
             timestamp: 0,
-            version: 2,
+            version: 3,
             hashes: Default::default(),
         }
     }
@@ -57,6 +57,7 @@ pub struct ScanResult {
     pub file_hashes: Vec<ScannedHash<TagHash>>,
     pub file_hashes64: Vec<ScannedHash<TagHash64>>,
     pub string_hashes: Vec<ScannedHash<u32>>,
+    pub raw_strings: Vec<String>,
 
     /// References from other files
     pub references: Vec<TagHash>,
@@ -69,6 +70,7 @@ impl Default for ScanResult {
             file_hashes: Default::default(),
             file_hashes64: Default::default(),
             string_hashes: Default::default(),
+            raw_strings: Default::default(),
             references: Default::default(),
         }
     }
@@ -108,6 +110,14 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
         //     });
         // }
 
+        if value == 0x80800065 {
+            r.raw_strings.extend(
+                read_raw_string_blob(data, offset)
+                    .into_iter()
+                    .map(|(_, s)| s),
+            );
+        }
+
         if context.known_string_hashes.contains(&value) {
             r.string_hashes.push(ScannedHash {
                 offset,
@@ -146,6 +156,52 @@ pub fn scan_file(context: &ScannerContext, data: &[u8]) -> ScanResult {
     // }
 
     r
+}
+
+pub fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
+    let mut strings = vec![];
+
+    let mut c = Cursor::new(data);
+    (|| {
+        c.seek(SeekFrom::Start(offset + 4))?;
+        let (buffer_size, buffer_base_offset) = if package_manager().version.is_d1() {
+            let buffer_size: u32 = c.read_be()?;
+            let buffer_base_offset = offset + 4 + 4;
+            (buffer_size as u64, buffer_base_offset)
+        } else {
+            let buffer_size: u64 = c.read_le()?;
+            let buffer_base_offset = offset + 4 + 8;
+            (buffer_size, buffer_base_offset)
+        };
+
+        let mut buffer = vec![0u8; buffer_size as usize];
+        c.read_exact(&mut buffer)?;
+
+        let mut s = String::new();
+        let mut string_start = 0_u64;
+        for (i, b) in buffer.into_iter().enumerate() {
+            match b as char {
+                '\0' => {
+                    if !s.is_empty() {
+                        strings.push((buffer_base_offset + string_start, s.clone()));
+                        s.clear();
+                    }
+
+                    string_start = i as u64 + 1;
+                }
+                c => s.push(c),
+            }
+        }
+
+        if !s.is_empty() {
+            strings.push((buffer_base_offset + string_start, s));
+        }
+
+        <anyhow::Result<()>>::Ok(())
+    })()
+    .ok();
+
+    strings
 }
 
 pub fn create_scanner_context(package_manager: &PackageManager) -> anyhow::Result<ScannerContext> {

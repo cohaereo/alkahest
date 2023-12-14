@@ -51,7 +51,9 @@ impl View for PackagesView {
                                 .to_string();
 
                             if !self.package_filter.is_empty()
-                                && !path_stem.to_lowercase().contains(&self.package_filter)
+                                && !path_stem
+                                    .to_lowercase()
+                                    .contains(&self.package_filter.to_lowercase())
                             {
                                 continue;
                             }

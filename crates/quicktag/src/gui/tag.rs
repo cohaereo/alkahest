@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    io::{Cursor, Read, Seek, SeekFrom},
+    io::{Cursor, Seek, SeekFrom},
     path::Path,
     sync::Arc,
     time::{Duration, Instant},
@@ -22,7 +22,7 @@ use nohash_hasher::{IntMap, IntSet};
 use poll_promise::Promise;
 use std::fmt::Write;
 
-use crate::{gui::texture::Texture, util::u32_from_endian};
+use crate::{gui::texture::Texture, scanner::read_raw_string_blob, util::u32_from_endian};
 use crate::{
     packages::package_manager,
     references::REFERENCE_NAMES,
@@ -815,52 +815,6 @@ fn traverse_tag(
     }
 
     writeln!(out, "{line_header}").ok();
-}
-
-fn read_raw_string_blob(data: &[u8], offset: u64) -> Vec<(u64, String)> {
-    let mut strings = vec![];
-
-    let mut c = Cursor::new(data);
-    (|| {
-        c.seek(SeekFrom::Start(offset + 4))?;
-        let (buffer_size, buffer_base_offset) = if package_manager().version.is_d1() {
-            let buffer_size: u32 = c.read_be()?;
-            let buffer_base_offset = offset + 4 + 4;
-            (buffer_size as u64, buffer_base_offset)
-        } else {
-            let buffer_size: u64 = c.read_le()?;
-            let buffer_base_offset = offset + 4 + 8;
-            (buffer_size, buffer_base_offset)
-        };
-
-        let mut buffer = vec![0u8; buffer_size as usize];
-        c.read_exact(&mut buffer)?;
-
-        let mut s = String::new();
-        let mut string_start = 0_u64;
-        for (i, b) in buffer.into_iter().enumerate() {
-            match b as char {
-                '\0' => {
-                    if !s.is_empty() {
-                        strings.push((buffer_base_offset + string_start, s.clone()));
-                        s.clear();
-                    }
-
-                    string_start = i as u64 + 1;
-                }
-                c => s.push(c),
-            }
-        }
-
-        if !s.is_empty() {
-            strings.push((buffer_base_offset + string_start, s));
-        }
-
-        <anyhow::Result<()>>::Ok(())
-    })()
-    .ok();
-
-    strings
 }
 
 impl Drop for TagView {

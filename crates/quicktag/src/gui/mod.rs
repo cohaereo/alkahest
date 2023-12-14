@@ -2,6 +2,7 @@ mod common;
 mod dxgi;
 mod named_tags;
 mod packages;
+mod raw_strings;
 mod strings;
 mod tag;
 mod texture;
@@ -26,6 +27,7 @@ use crate::{
 
 use self::named_tags::NamedTagView;
 use self::packages::PackagesView;
+use self::raw_strings::RawStringsView;
 use self::strings::StringsView;
 use self::tag::TagView;
 
@@ -35,6 +37,7 @@ pub enum Panel {
     NamedTags,
     Packages,
     Strings,
+    RawStrings,
 }
 
 pub struct QuickTagApp {
@@ -53,6 +56,7 @@ pub struct QuickTagApp {
     named_tags_view: NamedTagView,
     packages_view: PackagesView,
     strings_view: StringsView,
+    raw_strings_view: RawStringsView,
 
     pub wgpu_state: RenderState,
 }
@@ -89,6 +93,7 @@ impl QuickTagApp {
             named_tags_view: NamedTagView::new(),
             packages_view: PackagesView::new(),
             strings_view: StringsView::new(strings.clone(), Default::default()),
+            raw_strings_view: RawStringsView::new(Default::default()),
 
             strings,
             wgpu_state: cc.wgpu_render_state.clone().unwrap(),
@@ -147,6 +152,7 @@ impl eframe::App for QuickTagApp {
             self.cache = Arc::new(cache);
 
             self.strings_view = StringsView::new(self.strings.clone(), self.cache.clone());
+            self.raw_strings_view = RawStringsView::new(self.cache.clone());
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -186,6 +192,7 @@ impl eframe::App for QuickTagApp {
                     ui.selectable_value(&mut self.open_panel, Panel::NamedTags, "Named tags");
                     ui.selectable_value(&mut self.open_panel, Panel::Packages, "Packages");
                     ui.selectable_value(&mut self.open_panel, Panel::Strings, "Strings");
+                    ui.selectable_value(&mut self.open_panel, Panel::RawStrings, "Raw Strings");
                 });
 
                 ui.separator();
@@ -202,6 +209,7 @@ impl eframe::App for QuickTagApp {
                     Panel::NamedTags => self.named_tags_view.view(ctx, ui),
                     Panel::Packages => self.packages_view.view(ctx, ui),
                     Panel::Strings => self.strings_view.view(ctx, ui),
+                    Panel::RawStrings => self.raw_strings_view.view(ctx, ui),
                 };
 
                 if let Some(action) = action {
