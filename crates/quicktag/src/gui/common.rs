@@ -27,7 +27,7 @@ pub fn tag_context(ui: &mut egui::Ui, tag: TagHash, tag64: Option<TagHash64>) {
                 false,
                 format!(
                     "📋 Copy reference tag{}",
-                    if shift { " (flipped)" } else { "" }
+                    if shift { " (native endian)" } else { "" }
                 ),
             )
             .clicked()
@@ -36,9 +36,9 @@ pub fn tag_context(ui: &mut egui::Ui, tag: TagHash, tag64: Option<TagHash64>) {
                 o.copied_text = format!(
                     "{:08X}",
                     if shift {
-                        entry.reference.to_be()
-                    } else {
                         entry.reference
+                    } else {
+                        entry.reference.to_be()
                     }
                 )
             });

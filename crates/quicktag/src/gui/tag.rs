@@ -445,102 +445,118 @@ impl View for TagView {
                 .show_inside(ui, |ui| {
                     ui.style_mut().wrap = Some(false);
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.label(egui::RichText::new("Arrays").strong());
-                        ui.group(|ui| {
-                            if self.arrays.is_empty() {
-                                ui.label(RichText::new("No arrays found").italics());
-                            } else {
-                                for (offset, array) in &self.arrays {
-                                    let ref_label = REFERENCE_NAMES
-                                        .read()
-                                        .get(&array.tagtype)
-                                        .map(|s| format!("{s} ({:08X})", array.tagtype.to_be()))
-                                        .unwrap_or_else(|| {
-                                            format!("{:08X}", array.tagtype.to_be())
-                                        });
+                        CollapsingHeader::new(egui::RichText::new("Arrays").strong())
+                            .default_open(true)
+                            .show(ui, |ui| {
+                                ui.group(|ui| {
+                                    if self.arrays.is_empty() {
+                                        ui.label(RichText::new("No arrays found").italics());
+                                    } else {
+                                        for (offset, array) in &self.arrays {
+                                            let ref_label = REFERENCE_NAMES
+                                                .read()
+                                                .get(&array.tagtype)
+                                                .map(|s| {
+                                                    format!("{s} ({:08X})", array.tagtype.to_be())
+                                                })
+                                                .unwrap_or_else(|| {
+                                                    format!("{:08X}", array.tagtype.to_be())
+                                                });
 
-                                    ui.selectable_label(
-                                        false,
-                                        format!(
-                                            "type={} count={} @ 0x{:X}",
-                                            ref_label, array.count, offset
-                                        ),
-                                    )
-                                    .on_hover_text({
-                                        if array.references.is_empty() {
-                                            "⚠ Array is not referenced!".to_string()
-                                        } else {
-                                            format!(
-                                                "Referenced at {}",
-                                                array
-                                                    .references
-                                                    .iter()
-                                                    .map(|o| format!("0x{o:X}"))
-                                                    .join(", ")
-                                            )
-                                        }
-                                    })
-                                    .clicked();
-                                }
-                            }
-                        });
-
-                        ui.label(egui::RichText::new("String Hashes").strong());
-                        ui.group(|ui| {
-                            if self.string_hashes.is_empty() {
-                                ui.label(RichText::new("No strings found").italics());
-                            } else {
-                                for (offset, hash) in &self.string_hashes {
-                                    if let Some(strings) = self.string_cache.get(hash) {
-                                        if strings.len() > 1 {
                                             ui.selectable_label(
                                                 false,
                                                 format!(
-                                                    "'{}' ({} collisions) {:08x} @ 0x{:X}",
-                                                    strings[(self.start_time.elapsed().as_secs()
-                                                        as usize)
-                                                        % strings.len()],
-                                                    strings.len(),
-                                                    hash,
-                                                    offset
+                                                    "type={} count={} @ 0x{:X}",
+                                                    ref_label, array.count, offset
                                                 ),
                                             )
-                                            .on_hover_text(strings.join("\n"))
-                                            .clicked();
-                                        } else {
-                                            ui.selectable_label(
-                                                false,
-                                                format!(
-                                                    "'{}' {:08x} @ 0x{:X}",
-                                                    strings[0], hash, offset
-                                                ),
-                                            )
+                                            .on_hover_text({
+                                                if array.references.is_empty() {
+                                                    "⚠ Array is not referenced!".to_string()
+                                                } else {
+                                                    format!(
+                                                        "Referenced at {}",
+                                                        array
+                                                            .references
+                                                            .iter()
+                                                            .map(|o| format!("0x{o:X}"))
+                                                            .join(", ")
+                                                    )
+                                                }
+                                            })
                                             .clicked();
                                         }
                                     }
-                                }
-                            }
-                        });
+                                });
+                            });
 
-                        ui.label(egui::RichText::new("Raw strings (65008080)").strong());
-                        ui.group(|ui| {
-                            if self.raw_strings.is_empty() {
-                                ui.label(RichText::new("No raw strings found").italics());
-                            } else {
-                                for (offset, string) in &self.raw_strings {
-                                    ui.selectable_label(
-                                        false,
-                                        format!("'{}' @ 0x{:X}", string, offset),
-                                    )
-                                    .context_menu(|ui| {
-                                        if ui.selectable_label(false, "Copy text").clicked() {
-                                            ui.output_mut(|o| o.copied_text = string.clone());
-                                            ui.close_menu();
+                        CollapsingHeader::new(egui::RichText::new("String Hashes").strong())
+                            .default_open(true)
+                            .show(ui, |ui| {
+                                ui.group(|ui| {
+                                    if self.string_hashes.is_empty() {
+                                        ui.label(RichText::new("No strings found").italics());
+                                    } else {
+                                        for (offset, hash) in &self.string_hashes {
+                                            if let Some(strings) = self.string_cache.get(hash) {
+                                                if strings.len() > 1 {
+                                                    ui.selectable_label(
+                                                        false,
+                                                        format!(
+                                                            "'{}' ({} collisions) {:08x} @ 0x{:X}",
+                                                            strings[(self
+                                                                .start_time
+                                                                .elapsed()
+                                                                .as_secs()
+                                                                as usize)
+                                                                % strings.len()],
+                                                            strings.len(),
+                                                            hash,
+                                                            offset
+                                                        ),
+                                                    )
+                                                    .on_hover_text(strings.join("\n"))
+                                                    .clicked();
+                                                } else {
+                                                    ui.selectable_label(
+                                                        false,
+                                                        format!(
+                                                            "'{}' {:08x} @ 0x{:X}",
+                                                            strings[0], hash, offset
+                                                        ),
+                                                    )
+                                                    .clicked();
+                                                }
+                                            }
                                         }
-                                    })
-                                    .clicked();
+                                    }
+                                });
+                            });
+
+                        CollapsingHeader::new(
+                            egui::RichText::new("Raw strings (65008080)").strong(),
+                        )
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            ui.group(|ui| {
+                                if self.raw_strings.is_empty() {
+                                    ui.label(RichText::new("No raw strings found").italics());
+                                } else {
+                                    for (offset, string) in &self.raw_strings {
+                                        ui.selectable_label(
+                                            false,
+                                            format!("'{}' @ 0x{:X}", string, offset),
+                                        )
+                                        .context_menu(|ui| {
+                                            if ui.selectable_label(false, "Copy text").clicked() {
+                                                ui.output_mut(|o| o.copied_text = string.clone());
+                                                ui.close_menu();
+                                            }
+                                        })
+                                        .clicked();
+                                    }
                                 }
-                            }
+                            });
                         });
                     });
                 });
