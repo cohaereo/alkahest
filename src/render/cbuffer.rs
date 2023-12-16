@@ -11,8 +11,6 @@ use super::bytecode::externs::TfxShaderStage;
 pub struct ConstantBuffer<T: Sized> {
     dcs: Arc<DeviceContextSwapchain>,
     buffer: ID3D11Buffer,
-    /// Size of the buffer, in bytes
-    size: usize,
     _marker: PhantomData<T>,
 }
 
@@ -44,7 +42,6 @@ impl<T> ConstantBuffer<T> {
             let b = Self {
                 dcs,
                 buffer,
-                size: std::mem::size_of::<T>(),
                 _marker: Default::default(),
             };
 
@@ -96,7 +93,6 @@ impl<T> ConstantBuffer<T> {
             Ok(Self {
                 dcs,
                 buffer,
-                size: std::mem::size_of_val(initial_data),
                 _marker: Default::default(),
             })
         }

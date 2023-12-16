@@ -25,6 +25,7 @@ pub struct RenderSettingsOverlay {
     pub renderlayer_terrain: bool,
     pub renderlayer_entities: bool,
     pub renderlayer_background: bool,
+    pub renderlayer_water: bool,
 
     pub shadow_res_index: usize,
     pub animate_light: bool,
@@ -110,7 +111,7 @@ impl Overlay for RenderSettingsOverlay {
                     SHADOW_RESOLUTIONS.len(),
                     |i| {
                         if SHADOW_RESOLUTIONS[i] > 8192 {
-                            format!("{} (may crash)", SHADOW_RESOLUTIONS[i].to_string())
+                            format!("{} (may crash)", SHADOW_RESOLUTIONS[i])
                         } else {
                             SHADOW_RESOLUTIONS[i].to_string()
                         }
@@ -172,6 +173,7 @@ impl Overlay for RenderSettingsOverlay {
                 ui.checkbox(&mut self.renderlayer_terrain, "Terrain");
                 ui.checkbox(&mut self.renderlayer_entities, "Entities");
                 ui.checkbox(&mut self.renderlayer_background, "Background Entities");
+                ui.checkbox(&mut self.renderlayer_water, "Water");
             });
 
             if let Some(mut enabled_overrides) = resources.get_mut::<EnabledShaderOverrides>() {

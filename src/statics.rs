@@ -62,11 +62,11 @@ pub struct SStaticMeshInstances {
     pub unk50: u64,
     pub unk58: [u64; 4],
     pub statics: TablePointer<TagHash>,
-    pub instances: TablePointer<Unk80807190>,
+    pub instance_groups: TablePointer<SStaticMeshInstanceGroup>,
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk80807190 {
+pub struct SStaticMeshInstanceGroup {
     pub instance_count: u16,
     pub instance_start: u16,
     pub static_index: u16,

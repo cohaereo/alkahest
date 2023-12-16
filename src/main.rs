@@ -17,7 +17,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
-use crate::ecs::components::{ActivityGroup, EntityModel, ResourcePoint, Terrain};
+use crate::ecs::components::{
+    ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Water,
+};
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
@@ -76,10 +78,9 @@ use crate::render::error::ErrorRenderer;
 use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
 use crate::render::renderer::{Renderer, RendererShared, ShadowMapsResource};
 
-use crate::render::{DeviceContextSwapchain, EntityRenderer, InstancedRenderer};
+use crate::render::{DeviceContextSwapchain, EntityRenderer};
 use crate::resources::Resources;
 
-use crate::statics::SStaticMeshInstances;
 use crate::text::{decode_text, StringContainer, StringData, StringPart};
 
 mod activity;
@@ -334,8 +335,6 @@ pub async fn main() -> anyhow::Result<()> {
         !args.no_ambient,
     )));
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
-    let mut placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)> =
-        IntMap::default();
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -400,6 +399,7 @@ pub async fn main() -> anyhow::Result<()> {
         renderlayer_terrain: true,
         renderlayer_entities: true,
         renderlayer_background: true,
+        renderlayer_water: true,
         shadow_res_index: 1,
         animate_light: false,
         light_dir_degrees: Vec3::new(1.0, 0.0, 50.0),
@@ -541,7 +541,6 @@ pub async fn main() -> anyhow::Result<()> {
                     if let Some(Ok(map_res)) = map_load_task.take().map(|v| v.try_take()) {
                         let map_res = map_res.expect("Failed to load map(s)");
                         entity_renderers.extend(map_res.entity_renderers);
-                        placement_renderers.extend(map_res.placement_renderers);
                         let mut maps = resources.get_mut::<MapDataList>().unwrap();
                         maps.maps = map_res.maps;
                         map_load_task = None;
@@ -575,19 +574,17 @@ pub async fn main() -> anyhow::Result<()> {
                         {
                             let gb = gui_rendersettings.borrow();
 
-                            for ptag in &map.placement_groups {
-                                let (_placements, instance_renderers) =
-                                    &placement_renderers[&ptag.tag().0];
-                                for instance in instance_renderers.iter() {
-                                    instance
-                                        .draw(
-                                            &renderer.read(),
-                                            gb.renderlayer_statics,
-                                            gb.renderlayer_statics_transparent,
-                                            gb.renderlayer_statics_decals,
-                                        )
-                                        .unwrap();
-                                }
+                            for (_, StaticInstances(instances)) in
+                                map.scene.query::<&StaticInstances>().iter()
+                            {
+                                instances
+                                    .draw(
+                                        &renderer.read(),
+                                        gb.renderlayer_statics,
+                                        gb.renderlayer_statics_transparent,
+                                        gb.renderlayer_statics_decals,
+                                    )
+                                    .unwrap();
                             }
 
                             if gb.renderlayer_terrain {
@@ -596,11 +593,15 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
-                            for (_, (rp, group)) in map
+                            for (_, (rp, group, water)) in map
                                 .scene
-                                .query::<(&ResourcePoint, Option<&ActivityGroup>)>()
+                                .query::<(&ResourcePoint, Option<&ActivityGroup>, Option<&Water>)>()
                                 .iter()
                             {
+                                if !gb.renderlayer_water && water.is_some() {
+                                    continue;
+                                }
+
                                 if let (Some(group), Some(group_filters)) =
                                     (group, resources.get::<ActivityGroupFilter>())
                                 {
@@ -621,17 +622,6 @@ pub async fn main() -> anyhow::Result<()> {
                                         }
                                     }
                                 }
-
-                                // if gb.renderlayer_entities {
-                                //     // Veil roots
-                                //     // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x68e8e780))) {
-                                //     //     continue;
-                                //     // }
-
-                                //     // Metaverse cat
-                                //     // if rp.entity.hash32() != Some(TagHash(u32::from_be(0x2BF6E780))) {
-                                //     //     continue;
-                                //     // }
 
                                 if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
                                     if ent
@@ -868,26 +858,6 @@ fn load_shaders(renderer: &Renderer, m: &Technique) {
                 .CreateVertexShader(&vs_data, None)
                 .context("Failed to load vertex shader")
                 .unwrap();
-
-            // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
-            // let layout_string = layout_converted
-            //     .iter()
-            //     .enumerate()
-            //     .map(|(i, e)| {
-            //         format!(
-            //             "\t{}{} v{i} : {}{}",
-            //             e.component_type,
-            //             e.component_count,
-            //             e.semantic_type.to_pcstr().display(),
-            //             e.semantic_index
-            //         )
-            //     })
-            //     .join("\n");
-
-            // error!(
-            //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
-            //     m.vertex_shader, layout_string
-            // );
 
             (v, layout_converted, vs_data)
         };

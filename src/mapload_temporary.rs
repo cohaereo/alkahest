@@ -1,7 +1,7 @@
 // ! Temporary file to mitigate performance issues in some IDEs while I figure out loading routines
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     io::{Cursor, Read, Seek, SeekFrom},
     sync::Arc,
 };
@@ -11,7 +11,7 @@ use crate::{
     ecs::{
         components::{
             ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
-            ResourcePoint, Terrain,
+            ResourcePoint, StaticInstances, Terrain, Water,
         },
         transform::Transform,
         Scene,
@@ -51,7 +51,7 @@ use crate::{
         scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
         DeviceContextSwapchain, EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
-    statics::{SStaticMesh, SStaticMeshInstances},
+    statics::SStaticMesh,
     structure::{TablePointer, Tag},
     technique::{STechnique, Technique},
     types::AABB,
@@ -72,7 +72,6 @@ pub async fn load_maps(
     let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
 
     let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
-    let mut static_map: IntMap<TagHash, Arc<StaticModel>> = Default::default();
     let mut material_map: IntMap<TagHash, Technique> = Default::default();
     let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
     let renderer_ch = renderer.clone();
@@ -141,7 +140,6 @@ pub async fn load_maps(
             continue;
         };
 
-        let mut placement_groups = vec![];
         let mut scene = Scene::new();
 
         let mut unknown_root_resources: IntMap<u32, usize> = Default::default();
@@ -172,7 +170,6 @@ pub async fn load_maps(
                     0,
                     stringmap.clone(),
                     &entity_worldid_name_map,
-                    &mut placement_groups,
                     &mut material_map,
                     &mut to_load_entitymodels,
                     &mut unknown_root_resources,
@@ -254,7 +251,6 @@ pub async fn load_maps(
                                 phase_name2.0,
                                 stringmap.clone(),
                                 &entity_worldid_name_map,
-                                &mut placement_groups,
                                 &mut material_map,
                                 &mut to_load_entitymodels,
                                 &mut unknown_root_resources,
@@ -276,7 +272,6 @@ pub async fn load_maps(
                                 phase_name2.0,
                                 stringmap.clone(),
                                 &entity_worldid_name_map,
-                                &mut placement_groups,
                                 &mut material_map,
                                 &mut to_load_entitymodels,
                                 &mut unknown_root_resources,
@@ -304,9 +299,9 @@ pub async fn load_maps(
             .map(|v| TagHash64(*v.0));
 
         info!(
-            "Map {:x?} '{map_name}' - {} placement groups, {} decals",
+            "Map {:x?} '{map_name}' - {} instance groups, {} decals",
             think.map_name,
-            placement_groups.len(),
+            scene.query::<&StaticInstances>().iter().count(),
             scene
                 .query::<&ResourcePoint>()
                 .iter()
@@ -334,7 +329,6 @@ pub async fn load_maps(
             MapData {
                 hash,
                 name: map_name,
-                placement_groups,
                 scene,
             },
         ));
@@ -509,110 +503,7 @@ pub async fn load_maps(
         }
     }
 
-    let mut placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)> =
-        IntMap::default();
-
-    let mut to_load: HashMap<TagHash, ()> = Default::default();
     let mut to_load_samplers: HashSet<ExtendedHash> = Default::default();
-    for (_, _, m) in &maps {
-        for placements in m.placement_groups.iter() {
-            for v in &placements.statics {
-                to_load.insert(*v, ());
-            }
-            placement_renderers.insert(placements.tag().0, (placements.0.clone(), vec![]));
-        }
-    }
-
-    if placement_renderers.is_empty() {
-        anyhow::bail!("No map placements found in package");
-    }
-
-    let to_load_statics: Vec<TagHash> = to_load.keys().cloned().collect();
-
-    info!("Loading statics");
-    info_span!("Loading statics").in_scope(|| {
-        let renderer = renderer.read();
-        for almostloadable in &to_load_statics {
-            let mheader: SStaticMesh = debug_span!("load tag Unk808071a7")
-                .in_scope(|| package_manager().read_tag_struct(*almostloadable).unwrap());
-            for m in &mheader.materials {
-                if m.is_some()
-                    && !material_map.contains_key(m)
-                    && !renderer.render_data.data().techniques.contains_key(m)
-                {
-                    material_map.insert(
-                        *m,
-                        Technique::load(
-                            &renderer,
-                            package_manager().read_tag_struct(*m).unwrap(),
-                            *m,
-                            true,
-                        ),
-                    );
-                }
-            }
-            for m in &mheader.unk20 {
-                let m = m.material;
-                if m.is_some()
-                    && !material_map.contains_key(&m)
-                    && !renderer.render_data.data().techniques.contains_key(&m)
-                {
-                    material_map.insert(
-                        m,
-                        Technique::load(
-                            &renderer,
-                            package_manager().read_tag_struct(m).unwrap(),
-                            m,
-                            true,
-                        ),
-                    );
-                }
-            }
-
-            debug_span!("load StaticModel").in_scope(|| {
-                match StaticModel::load(mheader, &renderer) {
-                    Ok(model) => {
-                        static_map.insert(*almostloadable, Arc::new(model));
-                    }
-                    Err(e) => {
-                        error!(model = ?almostloadable, "Failed to load model: {e}");
-                    }
-                }
-            });
-        }
-    });
-
-    info!("Loaded {} statics", static_map.len());
-
-    info_span!("Constructing instance renderers").in_scope(|| {
-        let mut total_instance_data = 0;
-        for (placements, renderers) in placement_renderers.values_mut() {
-            for instance in &placements.instances {
-                if let Some(model_hash) =
-                    placements.statics.iter().nth(instance.static_index as _)
-                {
-                    let _span =
-                        debug_span!("Draw static instance", count = instance.instance_count, model = ?model_hash)
-                            .entered();
-
-                    if let Some(model) = static_map.get(model_hash) {
-                        let transforms = &placements.transforms[instance.instance_start
-                            as usize
-                            ..(instance.instance_start + instance.instance_count) as usize];
-
-                        renderers.push(InstancedRenderer::load(model.clone(), transforms, dcs.clone()).unwrap());
-                    } else {
-                        error!("Couldn't get static model {model_hash}");
-                    }
-
-                    total_instance_data += instance.instance_count as usize * 16 * 4;
-                } else {
-                    error!("Couldn't get instance static #{}", instance.static_index);
-                }
-            }
-        }
-        debug!("Total instance data: {}kb", total_instance_data / 1024);
-    });
 
     info_span!("Loading shaders").in_scope(|| {
         for (t, m) in material_map.iter() {
@@ -788,14 +679,12 @@ pub async fn load_maps(
     Ok(LoadMapsData {
         maps,
         entity_renderers,
-        placement_renderers,
     })
 }
 
 pub struct LoadMapsData {
     pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
     pub entity_renderers: IntMap<u64, EntityRenderer>,
-    pub placement_renderers: IntMap<u32, (SStaticMeshInstances, Vec<InstancedRenderer>)>,
 }
 
 // clippy: asset system will fix this lint on it's own (i hope)
@@ -811,7 +700,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
     stringmap: Arc<IntMap<u32, String>>,
     entity_worldid_name_map: &IntMap<u64, String>,
 
-    placement_groups: &mut Vec<Tag<SStaticMeshInstances>>,
     material_map: &mut IntMap<TagHash, Technique>,
     to_load_entitymodels: &mut IntSet<TagHash>,
     unknown_root_resources: &mut IntMap<u32, usize>,
@@ -853,7 +741,74 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let preheader: Unk80806ef4 =
                         package_manager().read_tag_struct(preheader_tag).unwrap();
 
-                    placement_groups.push(preheader.placement_group);
+                    info_span!("Loading static instances").in_scope(|| {
+                        'next_instance: for s in &preheader.instances.instance_groups {
+                            let mesh_tag = preheader.instances.statics[s.static_index as usize];
+                            let mheader: SStaticMesh = debug_span!("load tag Unk808071a7")
+                                .in_scope(|| package_manager().read_tag_struct(mesh_tag).unwrap());
+                            for m in &mheader.materials {
+                                if m.is_some()
+                                    && !material_map.contains_key(m)
+                                    && !renderer.render_data.data().techniques.contains_key(m)
+                                {
+                                    material_map.insert(
+                                        *m,
+                                        Technique::load(
+                                            &renderer,
+                                            package_manager().read_tag_struct(*m).unwrap(),
+                                            *m,
+                                            true,
+                                        ),
+                                    );
+                                }
+                            }
+                            for m in &mheader.unk20 {
+                                let m = m.material;
+                                if m.is_some()
+                                    && !material_map.contains_key(&m)
+                                    && !renderer.render_data.data().techniques.contains_key(&m)
+                                {
+                                    material_map.insert(
+                                        m,
+                                        Technique::load(
+                                            &renderer,
+                                            package_manager().read_tag_struct(m).unwrap(),
+                                            m,
+                                            true,
+                                        ),
+                                    );
+                                }
+                            }
+
+                            match StaticModel::load(mheader, &renderer) {
+                                Ok(model) => {
+                                    let transforms =
+                                        &preheader.instances.transforms[s.instance_start as usize
+                                            ..(s.instance_start + s.instance_count) as usize];
+
+                                    let instanced_renderer = match InstancedRenderer::load(
+                                        Arc::new(model),
+                                        transforms,
+                                        dcs.clone(),
+                                    ) {
+                                        Ok(o) => o,
+                                        Err(e) => {
+                                            error!("Failed to create InstancedRenderer: {e}");
+                                            continue 'next_instance;
+                                        }
+                                    };
+
+                                    ents.push(scene.spawn((
+                                        StaticInstances(instanced_renderer),
+                                        EntityWorldId(data.world_id),
+                                    )));
+                                }
+                                Err(e) => {
+                                    error!(model = ?mesh_tag, "Failed to load model: {e}");
+                                }
+                            }
+                        }
+                    });
                 }
                 // D2Class_7D6C8080 (terrain)
                 0x80806c7d => {
@@ -994,57 +949,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         }
                     }
                 }
-                // // Unknown, every element has a mesh (material+index+vertex) and the required transforms
-                // 0x80806df1 => {
-                //     table_data.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                //         .unwrap();
-                //     let tag: TagHash = table_data.read_le().unwrap();
-                //     if !tag.is_some() {
-                //         continue;
-                //     }
-
-                //     let header: Unk80806df3 =
-                //         package_manager().read_tag_struct(tag).unwrap();
-
-                //     for p in &header.unk8 {
-                //         resource_points.push(ResourcePoint {
-                //             translation: Vec4::new(
-                //                 p.translation.x,
-                //                 p.translation.y,
-                //                 p.translation.z,
-                //                 p.translation.w,
-                //             ),
-                //             rotation: Quat::IDENTITY,
-                //             entity: data.entity,
-                //             resource_type: data.data_resource.resource_type,
-                //             resource: MapResource::Unk80806df1,
-                //         });
-                //     }
-                // }
-                // // Unknown, structure seems like that of an octree
-                // 0x80806f38 => {
-                //     table_data.seek(SeekFrom::Start(data.data_resource.offset + 16))
-                //         .unwrap();
-                //     let tag: TagHash = table_data.read_le().unwrap();
-                //     if !tag.is_some() {
-                //         continue;
-                //     }
-
-                //     let header: Unk80807268 =
-                //         package_manager().read_tag_struct(tag).unwrap();
-
-                //     for p in &header.unk50 {
-                //         resource_points.push(ResourcePoint {
-                //             translation: Vec4::new(
-                //                 p.unk0.x, p.unk0.y, p.unk0.z, p.unk0.w,
-                //             ),
-                //             rotation: Quat::IDENTITY,
-                //             entity: data.entity,
-                //             resource_type: data.data_resource.resource_type,
-                //             resource: MapResource::Unk80806f38,
-                //         });
-                //     }
-                // }
                 // (ambient) sound source
                 0x8080666f => {
                     table_data
@@ -1404,6 +1308,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
+                        Water,
                     )));
                 }
                 u => {

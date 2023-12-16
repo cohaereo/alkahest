@@ -10,6 +10,33 @@ use glam::Vec4;
 use std::fmt::Debug;
 use std::io::SeekFrom;
 
+pub struct MapData {
+    pub hash: TagHash,
+    pub name: String,
+    pub scene: Scene,
+}
+
+#[derive(Clone)]
+pub struct SimpleLight {
+    pub pos: Vec4,
+    pub attenuation: Vec4,
+}
+
+pub struct MapDataList {
+    pub current_map: usize, // TODO(cohae): Shouldn't be here
+    pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
+}
+
+impl MapDataList {
+    pub fn current_map(&self) -> Option<&(TagHash, Option<TagHash64>, MapData)> {
+        if self.maps.is_empty() {
+            None
+        } else {
+            self.maps.get(self.current_map % self.maps.len())
+        }
+    }
+}
+
 #[derive(BinRead, Debug)]
 pub struct SBubbleParent {
     pub file_size: u64,
@@ -76,7 +103,7 @@ pub struct Unk808099d8 {
 #[derive(BinRead, Debug)]
 pub struct Unk80806ef4 {
     pub unk0: u64,
-    pub placement_group: Tag<SStaticMeshInstances>,
+    pub instances: Tag<SStaticMeshInstances>,
     pub unkc: [u32; 7],
 }
 
@@ -132,36 +159,6 @@ pub struct Unk80807152 {
     pub index_count: u16,
     pub group_index: u8,
     pub detail_level: u8,
-}
-
-pub struct MapData {
-    pub hash: TagHash,
-    pub name: String,
-    pub placement_groups: Vec<Tag<SStaticMeshInstances>>,
-    // pub resource_points: Vec<(ResourcePoint, ConstantBuffer<ScopeRigidModel>)>,
-    // pub terrains: Vec<TagHash>,
-    pub scene: Scene,
-}
-
-#[derive(Clone)]
-pub struct SimpleLight {
-    pub pos: Vec4,
-    pub attenuation: Vec4,
-}
-
-pub struct MapDataList {
-    pub current_map: usize, // TODO(cohae): Shouldn't be here
-    pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
-}
-
-impl MapDataList {
-    pub fn current_map(&self) -> Option<&(TagHash, Option<TagHash64>, MapData)> {
-        if self.maps.is_empty() {
-            None
-        } else {
-            self.maps.get(self.current_map % self.maps.len())
-        }
-    }
 }
 
 /// Terrain resource

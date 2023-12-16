@@ -3,7 +3,9 @@ use glam::Vec4;
 
 use crate::{
     map_resources::MapResource,
-    render::{scopes::ScopeRigidModel, ConstantBuffer, EntityRenderer, TerrainRenderer},
+    render::{
+        scopes::ScopeRigidModel, ConstantBuffer, EntityRenderer, InstancedRenderer, TerrainRenderer,
+    },
     structure::ExtendedHash,
     types::AABB,
 };
@@ -56,3 +58,7 @@ pub struct Label(pub String);
 pub struct EntityModel(pub EntityRenderer, pub ConstantBuffer<ScopeRigidModel>);
 
 pub struct Terrain(pub TerrainRenderer);
+
+pub struct StaticInstances(pub InstancedRenderer);
+
+pub struct Water;
