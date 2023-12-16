@@ -20,12 +20,12 @@ pub fn package_manager() -> Arc<PackageManager> {
 }
 
 /// In case of multiple tags, the last one is returned
-pub fn get_named_tag(name: &str) -> Option<TagHash> {
+pub fn get_named_tag<const T: u32>(name: &str) -> Option<TagHash> {
     package_manager()
         .named_tags
         .iter()
         .rev()
-        .find(|n| n.name == name)
+        .find(|n| n.name == name && n.class_hash == T)
         .map(|n| &n.hash)
         .cloned()
 }

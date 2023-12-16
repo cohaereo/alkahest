@@ -761,7 +761,8 @@ pub async fn main() -> anyhow::Result<()> {
 }
 
 fn load_render_globals(renderer: &Renderer) {
-    let tag = get_named_tag("render_globals").expect("Could not find render globals!");
+    let tag =
+        get_named_tag::<0x8080978C>("render_globals").expect("Could not find render globals!");
     let globals: SRenderGlobals = package_manager()
         .read_tag_struct(tag)
         .expect("Failed to read render globals");
