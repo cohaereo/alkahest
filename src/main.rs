@@ -75,7 +75,6 @@ use crate::overlays::resource_nametags::ResourceTypeOverlay;
 use crate::overlays::tag_dump::TagDumper;
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
-use crate::render::error::ErrorRenderer;
 use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
 use crate::render::renderer::{Renderer, RendererShared, ShadowMapsResource};
 
@@ -361,7 +360,6 @@ pub async fn main() -> anyhow::Result<()> {
         current_map: 0,
         maps: vec![],
     });
-    resources.insert(ErrorRenderer::load(dcs.clone()));
     resources.insert(ScopeOverrides::default());
     resources.insert(DebugShapes::default());
     resources.insert(EnabledShaderOverrides::default());
@@ -594,9 +592,14 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
-                            for (_, (rp, group, water)) in map
+                            for (_, (transform, rp, group, water)) in map
                                 .scene
-                                .query::<(&ResourcePoint, Option<&ActivityGroup>, Option<&Water>)>()
+                                .query::<(
+                                    &Transform,
+                                    &ResourcePoint,
+                                    Option<&ActivityGroup>,
+                                    Option<&Water>,
+                                )>()
                                 .iter()
                             {
                                 if !gb.renderlayer_water && water.is_some() {
@@ -629,20 +632,11 @@ pub async fn main() -> anyhow::Result<()> {
                                         .draw(&renderer.read(), rp.entity_cbuffer.buffer().clone())
                                         .is_err()
                                     {
-                                        // resources.get::<ErrorRenderer>().unwrap().draw(
-                                        //     &mut renderer,
-                                        //     cb.buffer(),
-                                        //     proj_view,
-                                        //     view,
-                                        // );
+                                        renderer.write().push_fiddlesticks(*transform);
                                     }
                                 } else if rp.resource.is_entity() {
-                                    // resources.get::<ErrorRenderer>().unwrap().draw(
-                                    //     &mut renderer,
-                                    //     cb.buffer(),
-                                    //     proj_view,
-                                    //     view,
-                                    // );
+                                    // cohae: This will occur when there's no entitymodel for the given entity. Keeping it in just as a reminder of unimplemented entity rendering stuffs
+                                    renderer.write().push_fiddlesticks(*transform);
                                 }
                             }
 

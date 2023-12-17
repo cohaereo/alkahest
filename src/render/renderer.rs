@@ -21,6 +21,7 @@ use super::bytecode::externs::TfxShaderStage;
 use super::data::RenderDataManager;
 use super::debug::{DebugShapeRenderer, DebugShapes};
 use super::drawcall::{GeometryType, Transparency};
+use super::error::ErrorRenderer;
 use super::gbuffer::ShadowDepthMap;
 use super::light::LightRenderer;
 use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
@@ -83,6 +84,7 @@ pub struct Renderer {
     null_ps: ID3D11PixelShader,
 
     debug_shape_renderer: DebugShapeRenderer,
+    error_renderer: ErrorRenderer,
 
     shader_overrides: ShaderOverrides,
 
@@ -90,6 +92,9 @@ pub struct Renderer {
     shadow_rs: ID3D11RasterizerState,
 
     last_material: RwLock<u32>,
+
+    // Objects that failed to render this frame
+    fiddlesticks: RwLock<Vec<Transform>>,
 
     // TODO(cohae): find a better way to get the light transform into the bytecode interpreter
     pub light_transform: RwLock<Transform>,
@@ -271,6 +276,7 @@ impl Renderer {
             ),
             shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
+            error_renderer: ErrorRenderer::load(dcs.clone()),
             draw_queue: RwLock::new(Vec::with_capacity(8192)),
             state: RwLock::new(RendererState::Awaiting),
             gbuffer: GBuffer::create(
@@ -307,6 +313,7 @@ impl Renderer {
             final_ps: pshader_final,
             null_ps: pshader_null,
             last_material: RwLock::new(u32::MAX),
+            fiddlesticks: RwLock::new(vec![]),
             light_mat: RwLock::new(Mat4::IDENTITY),
             light_transform: RwLock::new(Transform {
                 translation: Vec3::ZERO,
@@ -328,12 +335,17 @@ impl Renderer {
         *self.last_frame.write() = Instant::now();
 
         self.draw_queue.write().clear();
+        self.fiddlesticks.write().clear();
         *self.state.write() = RendererState::Recording;
     }
 
     // TODO(cohae): `begin` should probably return a CommandEncoder that we can record stuff in
     pub fn push_drawcall(&self, ordering: SortValue3d, drawcall: DrawCall) {
         self.draw_queue.write().push((ordering, drawcall))
+    }
+
+    pub fn push_fiddlesticks(&self, transform: Transform) {
+        self.fiddlesticks.write().push(transform)
     }
 
     /// Submits recorded drawcalls
@@ -470,6 +482,26 @@ impl Renderer {
         }
 
         self.gbuffer.staging.copy_to(&self.gbuffer.staging_clone);
+
+        //region Errors
+        if render_settings.draw_errors {
+            let camera = resources.get::<FpsCamera>().unwrap();
+            let view = camera.calculate_matrix();
+            for t in self.fiddlesticks.read().iter() {
+                self.error_renderer.draw(
+                    &self.dcs,
+                    Transform {
+                        scale: t.scale * render_settings.error_scale,
+                        ..*t
+                    }
+                    .to_mat4(),
+                    camera.projection_matrix * view,
+                    view,
+                )
+            }
+        }
+        //endregion
+
         //region Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..draw_queue.len() {

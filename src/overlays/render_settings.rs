@@ -174,6 +174,18 @@ impl Overlay for RenderSettingsOverlay {
                 ui.checkbox(&mut self.renderlayer_entities, "Entities");
                 ui.checkbox(&mut self.renderlayer_background, "Background Entities");
                 ui.checkbox(&mut self.renderlayer_water, "Water");
+
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut render_settings.draw_errors, "Errors");
+                    ui.add_enabled_ui(render_settings.draw_errors, |ui| {
+                        ui.add(
+                            egui::DragValue::new(&mut render_settings.error_scale)
+                                .clamp_range(0.1f32..=50f32)
+                                .speed(0.1),
+                        );
+                        ui.label("Scale");
+                    })
+                });
             });
 
             if let Some(mut enabled_overrides) = resources.get_mut::<EnabledShaderOverrides>() {
@@ -471,6 +483,8 @@ pub struct CompositorOptions {
 pub struct RenderSettings {
     pub use_global_deferred_shading: bool,
     pub draw_lights: bool,
+    pub draw_errors: bool,
+    pub error_scale: f32,
     pub render_shadows: bool,
     pub alpha_blending: bool,
     pub compositor_mode: usize,
@@ -491,6 +505,8 @@ impl Default for RenderSettings {
             compositor_mode: CompositorMode::Combined as usize,
             alpha_blending: true,
             draw_lights: false,
+            draw_errors: true,
+            error_scale: 1.0,
             render_shadows: true,
             blend_override: 0,
             evaluate_bytecode: false,
