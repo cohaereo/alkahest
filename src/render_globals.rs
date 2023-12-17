@@ -33,9 +33,20 @@ pub struct Unk808067a8 {
     _pad10: u32,
     pub scopes: TablePointer<Unk808067ad>,
     pub unk20: TablePointer<Unk808067ac>,
-    pub unk30: TagHash,
+    /// Lookup textures
+    pub unk30: Tag<Unk808066ae>,
     pub unk34: TagHash,
     pub unk38: TagHash,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct Unk808066ae {
+    pub file_size: u64,
+    pub unk8_tex2d: TagHash,
+    pub unkc_tex2d: TagHash,
+    pub unk10_tex3d: TagHash,
+    pub iridescence_lookup_texture: TagHash,
 }
 
 #[binread]

@@ -553,7 +553,13 @@ impl TfxBytecodeInterpreter {
         unsafe {
             Ok(match extern_ {
                 TfxExtern::Frame => match offset {
-                    24 => transmute(render_data.debug_textures[6].view.clone()),
+                    24 => {
+                        if let Some(ir_lookup) = &render_data.iridescence_lookup {
+                            transmute(ir_lookup.view.clone())
+                        } else {
+                            transmute(render_data.fallback_texture.view.clone())
+                        }
+                    }
 
                     u => {
                         anyhow::bail!(

@@ -22,6 +22,7 @@ use crate::ecs::components::{
 };
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
+use crate::texture::Texture;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -824,6 +825,11 @@ fn load_render_globals(renderer: &Renderer) {
         .render_data
         .data_mut()
         .technique_deferred_shading_no_atm = Some(technique);
+
+    renderer.render_data.data_mut().iridescence_lookup = {
+        let texture_tag = globals.unk8[0].unk8.unk30.iridescence_lookup_texture;
+        Texture::load(&renderer.dcs, ExtendedHash::Hash32(texture_tag)).ok()
+    };
 
     info!("Loaded deferred_shading_no_atm");
 }

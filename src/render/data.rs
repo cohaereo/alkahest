@@ -50,6 +50,7 @@ pub struct RenderData {
     pub solid_texture_blue: Texture,
     pub solid_texture_magenta: Texture,
 
+    pub iridescence_lookup: Option<Texture>,
     pub technique_deferred_shading_no_atm: Option<Technique>,
 }
 
@@ -188,6 +189,7 @@ impl RenderData {
             solid_texture_green,
             solid_texture_blue,
             solid_texture_magenta,
+            iridescence_lookup: None,
             technique_deferred_shading_no_atm: None,
         })
     }
