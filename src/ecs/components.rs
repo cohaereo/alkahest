@@ -4,7 +4,8 @@ use glam::Vec4;
 use crate::{
     map_resources::MapResource,
     render::{
-        scopes::ScopeRigidModel, ConstantBuffer, EntityRenderer, InstancedRenderer, TerrainRenderer,
+        cbuffer::ConstantBufferCached, scopes::ScopeRigidModel, ConstantBuffer, EntityRenderer,
+        InstancedRenderer, TerrainRenderer,
     },
     structure::ExtendedHash,
     types::AABB,
@@ -32,7 +33,7 @@ pub struct ResourcePoint {
     pub origin: ResourceOriginType,
 
     // TODO(cohae): Temporary
-    pub entity_cbuffer: ConstantBuffer<ScopeRigidModel>,
+    pub entity_cbuffer: ConstantBufferCached<ScopeRigidModel>,
 }
 
 impl ResourcePoint {

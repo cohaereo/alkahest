@@ -22,7 +22,7 @@ use crate::{
         SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2,
         Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b, Unk80809802,
     },
-    render::renderer::RendererShared,
+    render::{cbuffer::ConstantBufferCached, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
     util::fnv1,
 };
@@ -48,8 +48,8 @@ use crate::{
     map_resources::MapResource,
     packages::package_manager,
     render::{
-        scopes::ScopeRigidModel, vertex_layout::InputElement, ConstantBuffer,
-        DeviceContextSwapchain, EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
+        scopes::ScopeRigidModel, vertex_layout::InputElement, DeviceContextSwapchain,
+        EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
     statics::SStaticMesh,
     structure::{TablePointer, Tag},
@@ -487,16 +487,16 @@ pub async fn load_maps(
                     Vec4::W,
                 );
 
-                rp.entity_cbuffer = ConstantBuffer::create(
+                rp.entity_cbuffer = ConstantBufferCached::create_init(
                     dcs.clone(),
-                    Some(&ScopeRigidModel {
+                    &ScopeRigidModel {
                         mesh_to_world: model_matrix,
                         position_scale: ent.mesh_scale(),
                         position_offset: ent.mesh_offset(),
                         texcoord0_scale_offset: ent.texcoord_transform(),
                         dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
                         unk8: [alt_matrix; 8],
-                    }),
+                    },
                 )
                 .unwrap();
             }
@@ -727,7 +727,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 data.data_resource,
                 table_hash,
             ),
-            entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+            entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
         };
 
         if data.data_resource.is_valid {
@@ -941,7 +941,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         bounds: bounds.bb,
                                         scale: transform.w,
                                     },
-                                    entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                    entity_cbuffer: ConstantBufferCached::create_empty(
+                                        dcs.clone(),
+                                    )?,
                                     ..base_rp
                                 },
                                 EntityWorldId(data.world_id),
@@ -1007,7 +1009,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     unk8.unk60.entity_model,
                                     mat,
                                 ),
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+                                entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
@@ -1061,7 +1063,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             ResourcePoint {
                                 resource: MapResource::Light(bounds.bb, tag, i),
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+
+                                entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
@@ -1102,7 +1105,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             ResourcePoint {
                                 resource: MapResource::RespawnPoint,
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+
+                                entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
@@ -1132,7 +1136,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             ResourcePoint {
                                 resource: MapResource::Unk808085c0,
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+
+                                entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
@@ -1165,7 +1170,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             ResourcePoint {
                                 resource: MapResource::Unk80806a40,
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+
+                                entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),
@@ -1189,7 +1195,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             ResourcePoint {
                                 resource: MapResource::Decoration(b.bb, header_tag),
-                                entity_cbuffer: ConstantBuffer::create(dcs.clone(), None)?,
+
+                                entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp
                             },
                             EntityWorldId(data.world_id),

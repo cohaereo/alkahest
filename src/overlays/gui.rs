@@ -88,7 +88,7 @@ impl GuiManager {
 
     pub fn draw_frame<MF>(&mut self, window: Arc<Window>, resources: &mut Resources, misc_draw: MF)
     where
-        MF: FnOnce(&egui::Context),
+        MF: FnOnce(&egui::Context, &mut Resources),
     {
         if self.egui.input_mut(|i| {
             i.consume_key(
@@ -153,7 +153,7 @@ impl GuiManager {
                             viewers.0 = views;
                         }
 
-                        misc_draw(ctx);
+                        misc_draw(ctx, resources);
                     }
                 },
             )

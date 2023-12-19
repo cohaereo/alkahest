@@ -33,7 +33,7 @@ impl TfxBytecodeInterpreter {
         let mut stack: ArrayVec<[Vec4; 64]> = Default::default();
         let mut temp = [Vec4::ZERO; 16];
 
-        let buffer_map = buffer.data();
+        let buffer_map = buffer.data_array();
 
         macro_rules! stack_pop {
             ($pops:literal) => {{
@@ -634,7 +634,7 @@ impl TfxBytecodeInterpreter {
 
     pub fn dump(&self, constants: &[Vec4], buffer: &ConstantBufferCached<Vec4>) {
         debug!("Dumping TFX interpreter");
-        debug!("- cb0 size: {} elements", buffer.data().len());
+        debug!("- cb0 size: {} elements", buffer.data_array().len());
         if !constants.is_empty() {
             debug!("- Constant table:");
             for (i, v) in constants.iter().enumerate() {

@@ -213,12 +213,12 @@ macro_rules! mapresource_info {
                 }
             }
 
-            pub fn id_to_index(id: &str) -> usize {
+            pub fn id_to_index(id: &str) -> Option<usize> {
                 match id {
                     $(
-                        stringify!($name) => $id,
+                        stringify!($name) => Some($id),
                     )*
-                    _ => 0xff,
+                    _ => None,
                 }
             }
 

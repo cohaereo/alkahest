@@ -187,6 +187,22 @@ pub struct ConstantBufferCached<T: Sized> {
 }
 
 impl<T: Sized + Clone> ConstantBufferCached<T> {
+    pub fn create_empty(dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
+        Ok(Self {
+            cbuffer: ConstantBuffer::create(dcs, None)?,
+            data: vec![],
+            updated: AtomicBool::new(false),
+        })
+    }
+
+    pub fn create_init(dcs: Arc<DeviceContextSwapchain>, initial_data: &T) -> anyhow::Result<Self> {
+        Ok(Self {
+            cbuffer: ConstantBuffer::create(dcs, Some(initial_data))?,
+            data: vec![initial_data.clone()],
+            updated: AtomicBool::new(false),
+        })
+    }
+
     pub fn create_array_init(
         dcs: Arc<DeviceContextSwapchain>,
         initial_data: &[T],
@@ -209,11 +225,23 @@ impl<T: Sized + Clone> ConstantBufferCached<T> {
         Ok(())
     }
 
+    pub fn buffer(&self) -> &ID3D11Buffer {
+        self.write().ok();
+        self.cbuffer.buffer()
+    }
+
     // Deny clippy from the realms of dark magic (the good kind)
     #[allow(clippy::mut_from_ref)]
-    pub fn data(&self) -> &mut [T] {
+    pub fn data_array(&self) -> &mut [T] {
         self.updated.store(true, Ordering::Relaxed);
         unsafe { std::slice::from_raw_parts_mut(self.data.as_ptr() as *mut T, self.data.len()) }
+    }
+
+    // Deny clippy from the realms of dark magic (the good kind)
+    #[allow(clippy::mut_from_ref)]
+    pub fn data(&self) -> &mut T {
+        self.updated.store(true, Ordering::Relaxed);
+        unsafe { &mut *(self.data.as_ptr() as *mut T) }
     }
 
     pub fn bind(&self, slot: u32, stage: TfxShaderStage) {

@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
+use crate::ecs::component_panels::show_inspector_panel;
 use crate::ecs::components::{
     ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Water,
 };
@@ -33,7 +34,8 @@ use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType}
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
 use egui::epaint::ahash::HashMap;
-use glam::Vec3;
+use glam::{Mat4, Vec3};
+use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
@@ -413,8 +415,7 @@ pub async fn main() -> anyhow::Result<()> {
 
             config::with(|cfg| {
                 for (k, v) in cfg.resources.filters.iter() {
-                    let index = MapResource::id_to_index(k);
-                    if index != 0xff {
+                    if let Some(index) = MapResource::id_to_index(k) {
                         f[index] = *v;
                     }
                 }
@@ -447,6 +448,8 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_dump);
     gui.add_overlay(gui_loading);
     gui.add_overlay(gui_fps);
+
+    let mut selected_entity = Entity::from_bits(1u64 << 32 | 2);
 
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
@@ -520,6 +523,24 @@ pub async fn main() -> anyhow::Result<()> {
                         let input = resources.get::<InputState>().unwrap();
                         if input.ctrl() && input.is_key_down(VirtualKeyCode::Q) {
                             *control_flow = ControlFlow::Exit
+                        }
+
+                        if input.is_key_pressed(VirtualKeyCode::Up) {
+                            if let Some(se) = selected_entity {
+                                selected_entity = Some(
+                                    Entity::from_bits(se.to_bits().get().saturating_add(1))
+                                        .unwrap_or(se),
+                                );
+                            }
+                        }
+
+                        if input.is_key_pressed(VirtualKeyCode::Down) {
+                            if let Some(se) = selected_entity {
+                                selected_entity = Some(
+                                    Entity::from_bits(se.to_bits().get().saturating_sub(1))
+                                        .unwrap_or(se),
+                                );
+                            }
                         }
                     }
                     _ => (),
@@ -628,6 +649,17 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
 
                                 if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
+                                    let mm = transform.to_mat4();
+
+                                    let mesh_to_world = Mat4::from_cols(
+                                        mm.x_axis.truncate().extend(mm.w_axis.x),
+                                        mm.y_axis.truncate().extend(mm.w_axis.y),
+                                        mm.z_axis.truncate().extend(mm.w_axis.z),
+                                        mm.w_axis,
+                                    );
+
+                                    rp.entity_cbuffer.data().mesh_to_world = mesh_to_world;
+
                                     if ent
                                         .draw(&renderer.read(), rp.entity_cbuffer.buffer().clone())
                                         .is_err()
@@ -676,7 +708,7 @@ pub async fn main() -> anyhow::Result<()> {
 
                     renderer.read().submit_frame(&resources);
 
-                    gui.draw_frame(window.clone(), &mut resources, |ctx| {
+                    gui.draw_frame(window.clone(), &mut resources, |ctx, resources| {
                         if let Some(task) = map_load_task.as_ref() {
                             if task.ready().is_none() {
                                 egui::Window::new("Loading...")
@@ -689,6 +721,14 @@ pub async fn main() -> anyhow::Result<()> {
                                             ui.heading("Loading maps")
                                         })
                                     });
+                            }
+                        }
+
+                        let maps = resources.get::<MapDataList>().unwrap();
+                        if let Some(ent) = selected_entity {
+                            if let Some((_, _, map)) = maps.current_map() {
+                                egui::Window::new("Inspector")
+                                    .show(ctx, |ui| show_inspector_panel(ui, &map.scene, ent));
                             }
                         }
                     });
