@@ -13,7 +13,7 @@ use crate::{
             ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
             ResourcePoint, StaticInstances, Terrain, Water,
         },
-        transform::Transform,
+        transform::{OriginalTransform, Transform},
         Scene,
     },
     entity::{Unk8080906b, Unk80809905},
@@ -1359,13 +1359,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
         }
     }
 
-    for e in &ents {
-        let Some(world_id) = scene.get::<&EntityWorldId>(*e).map(|w| w.0).ok() else {
+    for e in ents {
+        if let Ok(transform) = scene.get::<&Transform>(e).map(|t| (*t)) {
+            scene.insert_one(e, OriginalTransform(transform)).ok();
+        };
+
+        let Some(world_id) = scene.get::<&EntityWorldId>(e).map(|w| w.0).ok() else {
             continue;
         };
 
         if let Some(name) = entity_worldid_name_map.get(&world_id) {
-            scene.insert_one(*e, Label(name.clone())).ok();
+            scene.insert_one(e, Label(name.clone())).ok();
         }
     }
 

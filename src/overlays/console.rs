@@ -1,6 +1,6 @@
 use crate::camera::FpsCamera;
 use crate::ecs::components::EntityModel;
-use crate::ecs::transform::Transform;
+use crate::ecs::transform::{OriginalTransform, Transform};
 use crate::entity::{SEntityModel, Unk808072c5, Unk80809c0f};
 use crate::map::MapDataList;
 use crate::overlays::gui::Overlay;
@@ -526,6 +526,19 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             }
 
             // 3C0100340003293401340212232200350334050E44043C01003406032934073408122322003509340B0E440D
+        }
+        "reset_all_to_original_pos" => {
+            if let Some(maps) = resources.get::<MapDataList>() {
+                if let Some((_, _, map)) = maps.current_map() {
+                    for (_, (t, ot)) in map
+                        .scene
+                        .query::<(&mut Transform, &OriginalTransform)>()
+                        .iter()
+                    {
+                        *t = ot.0;
+                    }
+                }
+            }
         }
         _ => error!("Unknown command '{command}'"),
     }
