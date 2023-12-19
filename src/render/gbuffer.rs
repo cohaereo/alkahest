@@ -1,12 +1,15 @@
 use crate::dxgi::DxgiFormat;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
+use std::mem::transmute;
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
     D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
 };
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
+
+use super::cbuffer::BufferMapGuard;
 
 pub struct GBuffer {
     pub rt0: RenderTarget,
@@ -17,6 +20,7 @@ pub struct GBuffer {
 
     pub outline_depth: DepthState,
     pub pick_buffer: RenderTarget,
+    pub pick_buffer_staging: CpuStagingBuffer,
 
     pub light_diffuse: RenderTarget,
     pub light_specular: RenderTarget,
@@ -44,6 +48,8 @@ impl GBuffer {
             outline_depth: DepthState::create(size, &dcs.device).context("Outline Depth")?,
             pick_buffer: RenderTarget::create(size, DxgiFormat::R32_UINT, dcs.clone())
                 .context("Entity_Pickbuffer")?,
+            pick_buffer_staging: CpuStagingBuffer::create(size, DxgiFormat::R32_UINT, dcs.clone())
+                .context("Entity_Pickbuffer_Staging")?,
 
             light_diffuse: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Light_Diffuse")?,
@@ -81,6 +87,9 @@ impl GBuffer {
         self.pick_buffer
             .resize(new_size)
             .context("Entity_Pickbuffer")?;
+        self.pick_buffer_staging
+            .resize(new_size)
+            .context("Entity_Pickbuffer_Staging")?;
 
         self.light_diffuse
             .resize(new_size)
@@ -177,9 +186,81 @@ impl RenderTarget {
         }
     }
 
+    pub fn copy_to_staging(&self, dest: &CpuStagingBuffer) {
+        unsafe {
+            self.dcs
+                .context()
+                .CopyResource(&dest.texture, &self.texture)
+        }
+    }
+
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
         *self = Self::create(new_size, self.format, self.dcs.clone())?;
         Ok(())
+    }
+}
+
+pub struct CpuStagingBuffer {
+    pub texture: ID3D11Texture2D,
+    pub format: DxgiFormat,
+    dcs: Arc<DeviceContextSwapchain>,
+}
+
+impl CpuStagingBuffer {
+    pub fn create(
+        size: (u32, u32),
+        format: DxgiFormat,
+        dcs: Arc<DeviceContextSwapchain>,
+    ) -> anyhow::Result<Self> {
+        unsafe {
+            let texture = dcs
+                .device
+                .CreateTexture2D(
+                    &D3D11_TEXTURE2D_DESC {
+                        Width: size.0,
+                        Height: size.1,
+                        MipLevels: 1,
+                        ArraySize: 1,
+                        Format: DXGI_FORMAT(format as u32),
+                        SampleDesc: DXGI_SAMPLE_DESC {
+                            Count: 1,
+                            Quality: 0,
+                        },
+                        Usage: D3D11_USAGE_STAGING,
+                        BindFlags: Default::default(),
+                        CPUAccessFlags: D3D11_CPU_ACCESS_READ,
+                        MiscFlags: Default::default(),
+                    },
+                    None,
+                )
+                .context("Failed to create staging buffer")?;
+
+            Ok(Self {
+                texture,
+                format,
+                dcs,
+            })
+        }
+    }
+
+    pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
+        *self = Self::create(new_size, self.format, self.dcs.clone())?;
+        Ok(())
+    }
+
+    pub fn map(&self, mode: D3D11_MAP) -> anyhow::Result<BufferMapGuard<u8>> {
+        let ptr = unsafe {
+            self.dcs
+                .context()
+                .Map(&self.texture, 0, mode, 0)
+                .context("Failed to map CpuStagingBuffer")?
+        };
+
+        Ok(BufferMapGuard {
+            ptr: ptr.pData as _,
+            resource: unsafe { transmute(&self.texture as *const ID3D11Texture2D as *const _) },
+            dcs: self.dcs.clone(),
+        })
     }
 }
 

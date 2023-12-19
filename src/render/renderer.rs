@@ -7,12 +7,13 @@ use crate::overlays::camera_settings::CurrentCubemap;
 use crate::types::AABB;
 use crate::util::RwLock;
 use glam::{Mat4, Quat, Vec3, Vec4};
+use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use winit::window::Window;
 
-use crate::overlays::render_settings::{CompositorOptions, RenderSettings};
+use crate::overlays::render_settings::{CompositorOptions, PickbufferScope, RenderSettings};
 use crate::render::drawcall::ShaderStages;
 use crate::render::scopes::ScopeUnk3;
 use crate::render::shader;
@@ -84,6 +85,9 @@ pub struct Renderer {
     final_ps: ID3D11PixelShader,
 
     null_ps: ID3D11PixelShader,
+    pickbuffer_ps: ID3D11PixelShader,
+    clear_pickbuffer_vs: ID3D11VertexShader,
+    clear_pickbuffer_ps: ID3D11PixelShader,
 
     debug_shape_renderer: DebugShapeRenderer,
     error_renderer: ErrorRenderer,
@@ -273,6 +277,30 @@ impl Renderer {
         .unwrap();
         let (pshader_null, _) = shader::load_pshader(&dcs, &pshader_null_blob)?;
 
+        let pickbuffer_ps_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/pickbuffer.hlsl"),
+            "main",
+            "ps_5_0",
+        )
+        .unwrap();
+        let (pickbuffer_ps, _) = shader::load_pshader(&dcs, &pickbuffer_ps_blob)?;
+
+        let clear_pickbuffer_vs_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/pickbuffer_clear.hlsl"),
+            "VShader",
+            "vs_5_0",
+        )
+        .unwrap();
+        let (clear_pickbuffer_vs, _) = shader::load_vshader(&dcs, &clear_pickbuffer_vs_blob)?;
+
+        let clear_pickbuffer_ps_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/pickbuffer_clear.hlsl"),
+            "PShader",
+            "ps_5_0",
+        )
+        .unwrap();
+        let (clear_pickbuffer_ps, _) = shader::load_pshader(&dcs, &clear_pickbuffer_ps_blob)?;
+
         Ok(Renderer {
             light_cascade_transforms: RwLock::new(
                 [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT],
@@ -316,6 +344,9 @@ impl Renderer {
             final_vs: vshader_final,
             final_ps: pshader_final,
             null_ps: pshader_null,
+            pickbuffer_ps,
+            clear_pickbuffer_vs,
+            clear_pickbuffer_ps,
             last_material: RwLock::new(u32::MAX),
             fiddlesticks: RwLock::new(vec![]),
             light_mat: RwLock::new(Mat4::IDENTITY),
@@ -715,6 +746,67 @@ impl Renderer {
 
         // endregion
 
+        // region: Pickbuffer
+
+        // Skip the entity that's already selected
+        let skip_entity = resources
+            .get::<SelectedEntity>()
+            .unwrap()
+            .0
+            .unwrap_or(Entity::DANGLING);
+
+        // Render the outline to the screen in conjunction with the scene depth buffer to test occlusion
+        unsafe {
+            self.dcs.context().OMSetRenderTargets(
+                Some(&[Some(self.gbuffer.pick_buffer.render_target.clone())]),
+                None,
+            );
+            self.dcs.context().OMSetBlendState(
+                &self.blend_state_none,
+                Some(&[1f32, 1., 1., 1.] as _),
+                0xffffffff,
+            );
+
+            // Clear pickbuffer using a shader, since OMClearRenderTarget doesnt support big integers as clear value
+            self.dcs
+                .context()
+                .VSSetShader(&self.clear_pickbuffer_vs, None);
+            self.dcs
+                .context()
+                .PSSetShader(&self.clear_pickbuffer_ps, None);
+            self.dcs
+                .context()
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+            self.dcs.context().Draw(4, 0);
+
+            self.dcs.context().OMSetRenderTargets(
+                Some(&[Some(self.gbuffer.pick_buffer.render_target.clone())]),
+                &self.gbuffer.depth.view,
+            );
+            self.dcs
+                .context()
+                .OMSetDepthStencilState(&self.gbuffer.depth.state_readonly, 0);
+        }
+
+        let b = ConstantBuffer::<PickbufferScope>::create(self.dcs.clone(), None).unwrap();
+        b.bind(0, TfxShaderStage::Pixel);
+        for i in 0..draw_queue.len() {
+            if draw_queue[i].1.entity == skip_entity || draw_queue[i].1.entity == Entity::DANGLING {
+                continue;
+            }
+            let (s, d) = draw_queue[i].clone();
+
+            b.write(&PickbufferScope::from_entity(d.entity)).ok();
+
+            self.draw(s, &d, &shader_overrides, DrawMode::PickBuffer, false);
+        }
+
+        self.gbuffer
+            .pick_buffer
+            .copy_to_staging(&self.gbuffer.pick_buffer_staging);
+
+        // endregion
+
         self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
         self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
         if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
@@ -763,7 +855,7 @@ impl Renderer {
         let bind_stages = match mode {
             DrawMode::Normal => ShaderStages::VERTEX | ShaderStages::PIXEL,
             // Don't bother binding anything for the pixel stage
-            DrawMode::DepthPrepass => ShaderStages::VERTEX,
+            DrawMode::DepthPrepass | DrawMode::PickBuffer => ShaderStages::VERTEX,
         };
 
         let render_data = self.render_data.data();
@@ -786,7 +878,7 @@ impl Renderer {
             }
 
             unsafe {
-                if mode != DrawMode::DepthPrepass {
+                if !matches!(mode, DrawMode::DepthPrepass | DrawMode::PickBuffer) {
                     if mat.unkc != 0 {
                         self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
                     } else {
@@ -861,6 +953,12 @@ impl Renderer {
         if mode == DrawMode::DepthPrepass {
             unsafe {
                 self.dcs.context().PSSetShader(&self.null_ps, None);
+            }
+        }
+
+        if mode == DrawMode::PickBuffer {
+            unsafe {
+                self.dcs.context().PSSetShader(&self.pickbuffer_ps, None);
             }
         }
 
@@ -1486,6 +1584,7 @@ pub enum DrawMode {
     #[default]
     Normal = 0,
     DepthPrepass = 1,
+    PickBuffer = 2,
 }
 
 pub struct ShadowMapsResource {

@@ -1,6 +1,7 @@
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
 use std::marker::PhantomData;
+use std::mem::transmute;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -144,7 +145,7 @@ impl<T> ConstantBuffer<T> {
 
         Ok(BufferMapGuard {
             ptr: ptr.pData as _,
-            buffer: self.buffer.clone(),
+            resource: unsafe { transmute(&self.buffer as *const ID3D11Buffer as *const _) },
             dcs: self.dcs.clone(),
         })
     }
@@ -170,13 +171,13 @@ impl<T> ConstantBuffer<T> {
 
 pub struct BufferMapGuard<T: Sized> {
     pub ptr: *mut T,
-    buffer: ID3D11Buffer,
-    dcs: Arc<DeviceContextSwapchain>,
+    pub(super) resource: *const ID3D11Resource,
+    pub(super) dcs: Arc<DeviceContextSwapchain>,
 }
 
 impl<T> Drop for BufferMapGuard<T> {
     fn drop(&mut self) {
-        unsafe { self.dcs.context().Unmap(&self.buffer, 0) }
+        unsafe { self.dcs.context().Unmap(&*self.resource, 0) }
     }
 }
 

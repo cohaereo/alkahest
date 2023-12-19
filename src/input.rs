@@ -1,13 +1,14 @@
-use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
+use winit::event::{KeyboardInput, VirtualKeyCode, WindowEvent};
 
 pub type Key = VirtualKeyCode;
 const WINIT_KEY_COUNT: usize = Key::Cut as usize + 1;
 
 #[derive(PartialEq, Eq, Default, Copy, Clone)]
-pub enum KeyState {
+pub enum ButtonState {
     #[default]
     Up,
     Down,
+    #[doc(alias = "Held")]
     Repeated,
 }
 
@@ -27,18 +28,18 @@ pub enum MouseButton {
 }
 
 pub struct InputState {
-    keys: [KeyState; WINIT_KEY_COUNT],
+    keys: [ButtonState; WINIT_KEY_COUNT],
 
     ctrl: bool,
     alt: bool,
     shift: bool,
 
     /// Left mouse button
-    mouse1: bool,
+    mouse1: ButtonState,
     /// Right mouse button
-    mouse2: bool,
+    mouse2: ButtonState,
     /// Scroll wheel button
-    mouse3: bool,
+    mouse3: ButtonState,
     // /// 'Back' side button
     // mouse4: bool,
     // /// 'Forward' side button
@@ -48,13 +49,13 @@ pub struct InputState {
 impl Default for InputState {
     fn default() -> Self {
         Self {
-            keys: [KeyState::Up; WINIT_KEY_COUNT],
+            keys: [ButtonState::Up; WINIT_KEY_COUNT],
             ctrl: false,
             alt: false,
             shift: false,
-            mouse1: false,
-            mouse2: false,
-            mouse3: false,
+            mouse1: ButtonState::Up,
+            mouse2: ButtonState::Up,
+            mouse3: ButtonState::Up,
             // mouse4: false,
             // mouse5: false,
         }
@@ -81,12 +82,12 @@ impl InputState {
                     let key = &mut self.keys[*vk as usize];
                     match state {
                         winit::event::ElementState::Pressed => match *key {
-                            KeyState::Up => *key = KeyState::Down,
-                            KeyState::Down => *key = KeyState::Repeated,
-                            KeyState::Repeated => {}
+                            ButtonState::Up => *key = ButtonState::Down,
+                            ButtonState::Down => *key = ButtonState::Repeated,
+                            ButtonState::Repeated => {}
                         },
                         winit::event::ElementState::Released => {
-                            *key = KeyState::Up;
+                            *key = ButtonState::Up;
                         }
                     }
                 }
@@ -98,27 +99,57 @@ impl InputState {
             }
             // WindowEvent::MouseWheel { device_id, delta, phase, modifiers } => todo!(),
             WindowEvent::MouseInput { state, button, .. } => match button {
-                winit::event::MouseButton::Left => self.mouse1 = *state == ElementState::Pressed,
-                winit::event::MouseButton::Right => self.mouse2 = *state == ElementState::Pressed,
-                winit::event::MouseButton::Middle => self.mouse3 = *state == ElementState::Pressed,
+                winit::event::MouseButton::Left => {
+                    self.mouse1 = match state {
+                        winit::event::ElementState::Pressed => match self.mouse1 {
+                            ButtonState::Up => ButtonState::Down,
+                            ButtonState::Down => ButtonState::Repeated,
+                            ButtonState::Repeated => self.mouse1,
+                        },
+                        winit::event::ElementState::Released => ButtonState::Up,
+                    }
+                }
+                winit::event::MouseButton::Right => {
+                    self.mouse2 = match state {
+                        winit::event::ElementState::Pressed => match self.mouse2 {
+                            ButtonState::Up => ButtonState::Down,
+                            ButtonState::Down => ButtonState::Repeated,
+                            ButtonState::Repeated => self.mouse2,
+                        },
+                        winit::event::ElementState::Released => ButtonState::Up,
+                    }
+                }
+                winit::event::MouseButton::Middle => {
+                    self.mouse3 = match state {
+                        winit::event::ElementState::Pressed => match self.mouse3 {
+                            ButtonState::Up => ButtonState::Down,
+                            ButtonState::Down => ButtonState::Repeated,
+                            ButtonState::Repeated => self.mouse3,
+                        },
+                        winit::event::ElementState::Released => ButtonState::Up,
+                    }
+                }
                 winit::event::MouseButton::Other(_) => {}
             },
             _ => {}
         }
     }
 
-    pub fn key_state(&self, vk: Key) -> KeyState {
+    pub fn key_state(&self, vk: Key) -> ButtonState {
         self.keys[vk as usize]
     }
 
     /// Returns true if the key is being held.
     pub fn is_key_down(&self, vk: Key) -> bool {
-        matches!(self.key_state(vk), KeyState::Down | KeyState::Repeated)
+        matches!(
+            self.key_state(vk),
+            ButtonState::Down | ButtonState::Repeated
+        )
     }
 
     /// Returns true if the key was pressed (went from !down to down
     pub fn is_key_pressed(&self, vk: Key) -> bool {
-        self.key_state(vk) == KeyState::Down
+        self.key_state(vk) == ButtonState::Down
     }
 
     pub fn ctrl(&self) -> bool {
@@ -133,11 +164,21 @@ impl InputState {
         self.shift
     }
 
+    pub fn is_mouse_pressed(&self, button: MouseButton) -> bool {
+        match button {
+            MouseButton::Left => self.mouse1 == ButtonState::Down,
+            MouseButton::Right => self.mouse2 == ButtonState::Down,
+            MouseButton::Middle => self.mouse3 == ButtonState::Down,
+            // MouseButton::Forward => self.mouse5,
+            // MouseButton::Back => self.mouse4,
+        }
+    }
+
     pub fn is_mouse_down(&self, button: MouseButton) -> bool {
         match button {
-            MouseButton::Left => self.mouse1,
-            MouseButton::Right => self.mouse2,
-            MouseButton::Middle => self.mouse3,
+            MouseButton::Left => matches!(self.mouse1, ButtonState::Down | ButtonState::Repeated),
+            MouseButton::Right => matches!(self.mouse2, ButtonState::Down | ButtonState::Repeated),
+            MouseButton::Middle => matches!(self.mouse3, ButtonState::Down | ButtonState::Repeated),
             // MouseButton::Forward => self.mouse5,
             // MouseButton::Back => self.mouse4,
         }

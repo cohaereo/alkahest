@@ -1,5 +1,6 @@
 use const_format::concatcp;
 use glam::{Mat4, Vec3, Vec4};
+use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use std::{fmt::Display, fmt::Formatter, mem::transmute, time::Instant};
@@ -496,6 +497,22 @@ pub struct RenderSettings {
     pub use_specular_map: bool,
     pub fxaa: bool,
     pub light_mul: f32,
+}
+
+#[repr(C)]
+#[derive(Default)]
+pub struct PickbufferScope {
+    pub entity_id: u32,
+    _align: [u32; 3],
+}
+
+impl PickbufferScope {
+    pub fn from_entity(e: Entity) -> Self {
+        Self {
+            entity_id: e.id(),
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for RenderSettings {
