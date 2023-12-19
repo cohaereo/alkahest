@@ -1,5 +1,6 @@
 use bitflags::bitflags;
 use destiny_pkg::TagHash;
+use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
 
@@ -196,4 +197,5 @@ pub struct DrawCall {
     pub instance_start: Option<u32>,
     pub instance_count: Option<u32>,
     pub primitive_type: D3D_PRIMITIVE_TOPOLOGY,
+    pub entity: Entity,
 }

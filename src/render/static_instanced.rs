@@ -6,6 +6,7 @@ use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 use crate::statics::Unk808071a3;
 
 use glam::{Mat4, Quat, Vec3};
+use hecs::Entity;
 
 use std::sync::Arc;
 
@@ -88,6 +89,7 @@ impl InstancedRenderer {
         draw_opaque: bool,
         draw_transparent: bool,
         draw_decals: bool,
+        entity: Entity,
     ) -> anyhow::Result<()> {
         self.renderer.draw(
             renderer,
@@ -96,6 +98,7 @@ impl InstancedRenderer {
             draw_opaque,
             draw_transparent,
             draw_decals,
+            entity,
         )
     }
 }

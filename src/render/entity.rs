@@ -3,6 +3,7 @@ use destiny_pkg::TagHash;
 
 use glam::Vec4;
 
+use hecs::Entity;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::entity::Unk808072c5;
@@ -126,7 +127,12 @@ impl EntityRenderer {
         }
     }
 
-    pub fn draw(&self, renderer: &Renderer, cb11: ID3D11Buffer) -> anyhow::Result<()> {
+    pub fn draw(
+        &self,
+        renderer: &Renderer,
+        cb11: ID3D11Buffer,
+        entity: Entity,
+    ) -> anyhow::Result<()> {
         for (buffers, parts) in self.meshes.iter() {
             for p in parts {
                 if !p.lod_category.is_highest_detail() {
@@ -166,6 +172,7 @@ impl EntityRenderer {
                         instance_start: None,
                         instance_count: None,
                         primitive_type: p.primitive_type.to_dx(),
+                        entity,
                     },
                 );
             }

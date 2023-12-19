@@ -6,6 +6,7 @@ use crate::map::MapDataList;
 use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
+use crate::render::cbuffer::ConstantBufferCached;
 use crate::render::dcs::DcsShared;
 use crate::render::{ConstantBuffer, EntityRenderer};
 use crate::technique::{STechnique, Technique};
@@ -350,16 +351,16 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                             Vec4::W,
                         );
 
-                        let scope = ConstantBuffer::create(
+                        let scope = ConstantBufferCached::create_init(
                             renderer.read().dcs.clone(),
-                            Some(&ScopeRigidModel {
+                            &ScopeRigidModel {
                                 mesh_to_world: model_matrix,
                                 position_scale: er.mesh_scale(),
                                 position_offset: er.mesh_offset(),
                                 texcoord0_scale_offset: er.texcoord_transform(),
                                 dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
                                 unk8: [alt_matrix; 8],
-                            }),
+                            },
                         )
                         .unwrap();
 
@@ -426,16 +427,16 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                             Vec4::W,
                         );
 
-                        let scope = ConstantBuffer::create(
+                        let scope = ConstantBufferCached::create_init(
                             renderer.read().dcs.clone(),
-                            Some(&ScopeRigidModel {
+                            &ScopeRigidModel {
                                 mesh_to_world: model_matrix,
                                 position_scale: er.mesh_scale(),
                                 position_offset: er.mesh_offset(),
                                 texcoord0_scale_offset: er.texcoord_transform(),
                                 dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
                                 unk8: [alt_matrix; 8],
-                            }),
+                            },
                         )
                         .unwrap();
 

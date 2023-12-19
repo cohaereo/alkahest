@@ -15,6 +15,9 @@ pub struct GBuffer {
     pub rt2: RenderTarget,
     pub rt3: RenderTarget,
 
+    pub outline_depth: DepthState,
+    pub pick_buffer: RenderTarget,
+
     pub light_diffuse: RenderTarget,
     pub light_specular: RenderTarget,
 
@@ -37,6 +40,10 @@ impl GBuffer {
                 .context("RT2")?,
             rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
                 .context("RT3")?,
+
+            outline_depth: DepthState::create(size, &dcs.device).context("Outline Depth")?,
+            pick_buffer: RenderTarget::create(size, DxgiFormat::R32_UINT, dcs.clone())
+                .context("Entity_Pickbuffer")?,
 
             light_diffuse: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Light_Diffuse")?,
@@ -66,6 +73,14 @@ impl GBuffer {
         self.rt1_clone.resize(new_size).context("RT1_Clone")?;
         self.rt2.resize(new_size).context("RT2")?;
         self.rt3.resize(new_size).context("RT3")?;
+
+        self.outline_depth
+            .resize(new_size, &self.dcs.device)
+            .context("Outline Depth")?;
+
+        self.pick_buffer
+            .resize(new_size)
+            .context("Entity_Pickbuffer")?;
 
         self.light_diffuse
             .resize(new_size)

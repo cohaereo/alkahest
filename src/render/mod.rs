@@ -9,6 +9,7 @@ pub mod entity;
 pub mod error;
 pub mod gbuffer;
 pub mod light;
+pub mod outline;
 pub mod overrides;
 pub mod renderer;
 pub mod resource_mt;

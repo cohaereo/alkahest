@@ -61,7 +61,7 @@ pub struct Label(pub String);
 // TODO(cohae): This is currently only used for user-spawned entities, but it should be used for resource points as well
 pub struct EntityModel(
     pub EntityRenderer,
-    pub ConstantBuffer<ScopeRigidModel>,
+    pub ConstantBufferCached<ScopeRigidModel>,
     pub TagHash,
 );
 

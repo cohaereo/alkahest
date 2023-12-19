@@ -21,6 +21,7 @@ use crate::ecs::component_panels::show_inspector_panel;
 use crate::ecs::components::{
     ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Visible, Water,
 };
+use crate::ecs::resources::SelectedEntity;
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
@@ -372,6 +373,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(ViewerWindows::default());
     resources.insert(renderer.clone());
     resources.insert(renderer.read().dcs.clone());
+    resources.insert(SelectedEntity(Entity::from_bits(1u64 << 32 | 2)));
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -449,8 +451,6 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_loading);
     gui.add_overlay(gui_fps);
 
-    let mut selected_entity = Entity::from_bits(1u64 << 32 | 2);
-
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
@@ -526,20 +526,24 @@ pub async fn main() -> anyhow::Result<()> {
                         }
 
                         if input.is_key_pressed(VirtualKeyCode::Up) {
-                            if let Some(se) = selected_entity {
-                                selected_entity = Some(
-                                    Entity::from_bits(se.to_bits().get().saturating_add(1))
-                                        .unwrap_or(se),
-                                );
+                            if let Some(selected_entity) =
+                                resources.get_mut::<SelectedEntity>().unwrap().0.as_mut()
+                            {
+                                *selected_entity = Entity::from_bits(
+                                    selected_entity.to_bits().get().saturating_add(1),
+                                )
+                                .unwrap_or(*selected_entity);
                             }
                         }
 
                         if input.is_key_pressed(VirtualKeyCode::Down) {
-                            if let Some(se) = selected_entity {
-                                selected_entity = Some(
-                                    Entity::from_bits(se.to_bits().get().saturating_sub(1))
-                                        .unwrap_or(se),
-                                );
+                            if let Some(selected_entity) =
+                                resources.get_mut::<SelectedEntity>().unwrap().0.as_mut()
+                            {
+                                *selected_entity = Entity::from_bits(
+                                    selected_entity.to_bits().get().saturating_sub(1),
+                                )
+                                .unwrap_or(*selected_entity);
                             }
                         }
                     }
@@ -594,7 +598,7 @@ pub async fn main() -> anyhow::Result<()> {
                         {
                             let gb = gui_rendersettings.borrow();
 
-                            for (_, (StaticInstances(instances, _), visible)) in map
+                            for (e, (StaticInstances(instances, _), visible)) in map
                                 .scene
                                 .query::<(&StaticInstances, Option<&Visible>)>()
                                 .iter()
@@ -609,23 +613,24 @@ pub async fn main() -> anyhow::Result<()> {
                                         gb.renderlayer_statics,
                                         gb.renderlayer_statics_transparent,
                                         gb.renderlayer_statics_decals,
+                                        e,
                                     )
                                     .unwrap();
                             }
 
                             if gb.renderlayer_terrain {
-                                for (_, (terrain, visible)) in
+                                for (e, (terrain, visible)) in
                                     map.scene.query::<(&Terrain, Option<&Visible>)>().iter()
                                 {
                                     if !visible.map_or(true, |v| v.0) {
                                         continue;
                                     }
 
-                                    terrain.0.draw(&renderer.read()).unwrap();
+                                    terrain.0.draw(&renderer.read(), e).unwrap();
                                 }
                             }
 
-                            for (_, (transform, rp, group, water, visible)) in map
+                            for (e, (transform, rp, group, water, visible)) in map
                                 .scene
                                 .query::<(
                                     &Transform,
@@ -678,7 +683,11 @@ pub async fn main() -> anyhow::Result<()> {
                                     rp.entity_cbuffer.data().mesh_to_world = mesh_to_world;
 
                                     if ent
-                                        .draw(&renderer.read(), rp.entity_cbuffer.buffer().clone())
+                                        .draw(
+                                            &renderer.read(),
+                                            rp.entity_cbuffer.buffer().clone(),
+                                            e,
+                                        )
                                         .is_err()
                                     {
                                         renderer.write().push_fiddlesticks(*transform);
@@ -689,8 +698,27 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
-                            for (_, em) in map.scene.query::<&EntityModel>().iter() {
-                                em.0.draw(&renderer.read(), em.1.buffer().clone()).ok();
+                            for (e, (transform, em)) in
+                                map.scene.query::<(&Transform, &EntityModel)>().iter()
+                            {
+                                let mm = transform.to_mat4();
+
+                                let mesh_to_world = Mat4::from_cols(
+                                    mm.x_axis.truncate().extend(mm.w_axis.x),
+                                    mm.y_axis.truncate().extend(mm.w_axis.y),
+                                    mm.z_axis.truncate().extend(mm.w_axis.z),
+                                    mm.w_axis,
+                                );
+
+                                em.1.data().mesh_to_world = mesh_to_world;
+
+                                if em
+                                    .0
+                                    .draw(&renderer.read(), em.1.buffer().clone(), e)
+                                    .is_err()
+                                {
+                                    renderer.write().push_fiddlesticks(*transform);
+                                }
                             }
                         }
 
@@ -742,7 +770,7 @@ pub async fn main() -> anyhow::Result<()> {
                         }
 
                         let mut maps = resources.get_mut::<MapDataList>().unwrap();
-                        if let Some(ent) = selected_entity {
+                        if let Some(ent) = resources.get::<SelectedEntity>().unwrap().0 {
                             if let Some(map) = maps.current_map_mut() {
                                 egui::Window::new("Inspector")
                                     .show(ctx, |ui| show_inspector_panel(ui, &mut map.scene, ent));

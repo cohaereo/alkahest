@@ -5,6 +5,7 @@ use crate::map::STerrain;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 
+use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
 use super::drawcall::{
@@ -88,7 +89,7 @@ impl TerrainRenderer {
         })
     }
 
-    pub fn draw(&self, renderer: &Renderer) -> anyhow::Result<()> {
+    pub fn draw(&self, renderer: &Renderer, entity: Entity) -> anyhow::Result<()> {
         for part in self.terrain.mesh_parts.iter()
         // .filter(|u| u.detail_level == 0)
         {
@@ -119,6 +120,7 @@ impl TerrainRenderer {
                         instance_start: None,
                         instance_count: None,
                         primitive_type: D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+                        entity,
                     },
                 );
             } else {

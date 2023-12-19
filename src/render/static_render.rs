@@ -4,6 +4,7 @@ use crate::statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay};
 use anyhow::ensure;
 use destiny_pkg::TagHash;
 
+use hecs::Entity;
 use itertools::Itertools;
 
 use crate::packages::package_manager;
@@ -122,6 +123,7 @@ impl StaticModel {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
         renderer: &Renderer,
@@ -130,6 +132,7 @@ impl StaticModel {
         draw_opaque: bool,
         draw_transparent: bool,
         draw_decals: bool,
+        entity: Entity,
     ) -> anyhow::Result<()> {
         for u in &self.overlay_models {
             u.draw(
@@ -138,6 +141,7 @@ impl StaticModel {
                 instance_count,
                 draw_transparent,
                 draw_decals,
+                entity,
             );
         }
 
@@ -181,6 +185,7 @@ impl StaticModel {
                             instance_start: None,
                             instance_count: Some(instance_count as _),
                             primitive_type: p.primitive_type.to_dx(),
+                            entity,
                         },
                     );
                 }
@@ -235,6 +240,7 @@ impl StaticOverlayModel {
         instance_count: usize,
         draw_transparent: bool,
         draw_decals: bool,
+        entity: Entity,
     ) {
         if !self.model.lod.is_highest_detail() {
             return;
@@ -275,6 +281,7 @@ impl StaticOverlayModel {
                 instance_start: None,
                 instance_count: Some(instance_count as _),
                 primitive_type: self.model.primitive_type.to_dx(),
+                entity,
             },
         );
     }

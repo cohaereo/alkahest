@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
+use crate::ecs::resources::SelectedEntity;
 use crate::ecs::transform::Transform;
 use crate::map::{MapDataList, SLight, SShadowingLight};
 use crate::overlays::camera_settings::CurrentCubemap;
@@ -24,6 +25,7 @@ use super::drawcall::{GeometryType, Transparency};
 use super::error::ErrorRenderer;
 use super::gbuffer::ShadowDepthMap;
 use super::light::LightRenderer;
+use super::outline::OutlineScreenEffect;
 use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
 use super::scopes::{ScopeUnk2, ScopeUnk8};
 use super::{
@@ -85,6 +87,7 @@ pub struct Renderer {
 
     debug_shape_renderer: DebugShapeRenderer,
     error_renderer: ErrorRenderer,
+    outline_renderer: OutlineScreenEffect,
 
     shader_overrides: ShaderOverrides,
 
@@ -277,6 +280,7 @@ impl Renderer {
             shader_overrides: ShaderOverrides::load(&dcs)?,
             debug_shape_renderer: DebugShapeRenderer::new(dcs.clone())?,
             error_renderer: ErrorRenderer::load(dcs.clone()),
+            outline_renderer: OutlineScreenEffect::create(&dcs)?,
             draw_queue: RwLock::new(Vec::with_capacity(8192)),
             state: RwLock::new(RendererState::Awaiting),
             gbuffer: GBuffer::create(
@@ -411,7 +415,7 @@ impl Renderer {
 
         let shader_overrides = resources.get::<EnabledShaderOverrides>().unwrap();
 
-        //region Deferred
+        // region: Deferred
         let draw_queue = self.draw_queue.read();
         for i in 0..draw_queue.len() {
             if draw_queue[i].0.shading_mode() != ShadingMode::Deferred
@@ -429,9 +433,9 @@ impl Renderer {
                 render_settings.evaluate_bytecode,
             );
         }
-        //endregion
+        // endregion
 
-        //region Deferred (decals)
+        // region: Deferred (decals)
         self.gbuffer.rt1.copy_to(&self.gbuffer.rt1_clone);
         let draw_queue = self.draw_queue.read();
         for i in 0..draw_queue.len() {
@@ -457,7 +461,7 @@ impl Renderer {
                 render_settings.evaluate_bytecode,
             );
         }
-        //endregion
+        // endregion
 
         self.gbuffer.depth.copy_depth(self.dcs.context());
 
@@ -483,7 +487,7 @@ impl Renderer {
 
         self.gbuffer.staging.copy_to(&self.gbuffer.staging_clone);
 
-        //region Errors
+        // region: Errors
         if render_settings.draw_errors {
             let camera = resources.get::<FpsCamera>().unwrap();
             let view = camera.calculate_matrix();
@@ -500,9 +504,9 @@ impl Renderer {
                 )
             }
         }
-        //endregion
+        // endregion
 
-        //region Forward
+        // region: Forward
         let mut transparency_mode = Transparency::None;
         for i in 0..draw_queue.len() {
             if draw_queue[i].0.shading_mode() != ShadingMode::Forward {
@@ -642,9 +646,74 @@ impl Renderer {
                 render_settings.evaluate_bytecode,
             );
         }
-        //endregion
+        // endregion
 
         self.run_final();
+
+        // Render debug elements after final to prevent color space weirdness
+
+        // region: Outline rendering
+        if let SelectedEntity(Some(entity)) = &(*resources.get().unwrap()) {
+            unsafe {
+                self.dcs.context().OMSetBlendState(
+                    &self.blend_state_none,
+                    Some(&[1f32, 1., 1., 1.] as _),
+                    0xffffffff,
+                );
+                self.dcs
+                    .context()
+                    .OMSetDepthStencilState(&self.gbuffer.outline_depth.state, 0);
+
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[None, None, None]),
+                    &self.gbuffer.outline_depth.view,
+                );
+
+                self.dcs.context().ClearDepthStencilView(
+                    &self.gbuffer.outline_depth.view,
+                    D3D11_CLEAR_DEPTH.0 as _,
+                    0.0,
+                    0,
+                );
+            }
+
+            // Render the selected object to the depth buffer
+            for i in 0..draw_queue.len() {
+                if draw_queue[i].1.entity != *entity {
+                    continue;
+                }
+                let (s, d) = draw_queue[i].clone();
+
+                self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass, false);
+            }
+
+            // Render the outline to the screen in conjunction with the scene depth buffer to test occlusion
+            unsafe {
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[Some(
+                        self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
+                    )]),
+                    None,
+                );
+                self.dcs.context().OMSetBlendState(
+                    &self.blend_state_blend,
+                    Some(&[1f32, 1., 1., 1.] as _),
+                    0xffffffff,
+                );
+
+                self.dcs.context().PSSetShaderResources(
+                    0,
+                    Some(&[
+                        Some(self.gbuffer.outline_depth.texture_view.clone()),
+                        Some(self.gbuffer.depth.texture_view.clone()),
+                    ]),
+                );
+            }
+
+            self.outline_renderer.draw(&self.dcs);
+        }
+
+        // endregion
 
         self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
         self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
