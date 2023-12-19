@@ -58,11 +58,16 @@ pub struct ActivityGroup(pub u32);
 
 pub struct Label(pub String);
 
-pub struct EntityModel(pub EntityRenderer, pub ConstantBuffer<ScopeRigidModel>);
+// TODO(cohae): This is currently only used for user-spawned entities, but it should be used for resource points as well
+pub struct EntityModel(
+    pub EntityRenderer,
+    pub ConstantBuffer<ScopeRigidModel>,
+    pub TagHash,
+);
 
 pub struct Terrain(pub TerrainRenderer);
 
-pub struct StaticInstances(pub InstancedRenderer);
+pub struct StaticInstances(pub InstancedRenderer, pub TagHash);
 
 pub struct Water;
 

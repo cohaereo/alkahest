@@ -799,7 +799,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     };
 
                                     ents.push(scene.spawn((
-                                        StaticInstances(instanced_renderer),
+                                        StaticInstances(instanced_renderer, mesh_tag),
                                         EntityWorldId(data.world_id),
                                     )));
                                 }

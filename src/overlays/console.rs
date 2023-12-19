@@ -363,7 +363,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                         )
                         .unwrap();
 
-                        scene.spawn((transform, EntityModel(er, scope)));
+                        scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
                         info!("Entity spawned");
                     }
                     Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
@@ -439,7 +439,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                         )
                         .unwrap();
 
-                        scene.spawn((transform, EntityModel(er, scope)));
+                        scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
                         info!("Entity spawned");
                     }
                     Err(e) => error!("Failed to load entitymodel {tag}: {e}"),

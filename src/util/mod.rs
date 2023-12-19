@@ -52,3 +52,17 @@ pub fn fnv1(data: &[u8]) -> FnvHash {
         acc.wrapping_mul(FNV1_PRIME) ^ (*b as u32)
     })
 }
+
+pub trait BoolExts {
+    fn yes_no(self) -> &'static str;
+}
+
+impl BoolExts for bool {
+    fn yes_no(self) -> &'static str {
+        if self {
+            "yes"
+        } else {
+            "no"
+        }
+    }
+}

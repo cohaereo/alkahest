@@ -13,7 +13,7 @@ use super::renderer::Renderer;
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
-    instance_count: usize,
+    pub instance_count: usize,
     instance_buffer: ConstantBuffer<u8>,
 }
 

@@ -594,7 +594,7 @@ pub async fn main() -> anyhow::Result<()> {
                         {
                             let gb = gui_rendersettings.borrow();
 
-                            for (_, (StaticInstances(instances), visible)) in map
+                            for (_, (StaticInstances(instances, _), visible)) in map
                                 .scene
                                 .query::<(&StaticInstances, Option<&Visible>)>()
                                 .iter()

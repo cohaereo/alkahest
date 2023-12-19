@@ -173,6 +173,10 @@ impl MapResource {
     pub fn debug_icon(&self) -> char {
         Self::debug_icon_from_index(self.index())
     }
+
+    pub fn debug_id(&self) -> &'static str {
+        Self::index_to_id(self.index())
+    }
 }
 
 fn darken_color(v: [u8; 3]) -> [u8; 3] {
