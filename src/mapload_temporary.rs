@@ -1104,7 +1104,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..Default::default()
                             },
                             ResourcePoint {
-                                resource: MapResource::RespawnPoint,
+                                resource: MapResource::RespawnPoint(transform.unk20),
 
                                 entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp

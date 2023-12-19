@@ -443,7 +443,9 @@ pub struct Unk80808cb7 {
 pub struct Unk80808cb9 {
     pub rotation: Vector4,
     pub translation: Vector4,
-    pub unk20: [u32; 4],
+    pub unk20: u32,
+    // cohae: Probably padding
+    pub unk24: [u32; 3],
 }
 
 #[derive(BinRead, Debug, Clone)]

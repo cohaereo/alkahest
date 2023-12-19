@@ -26,7 +26,7 @@ pub enum MapResource {
         scale: f32,
     },
     CubemapVolume(Box<Unk80806b7f>, AABB),
-    RespawnPoint,
+    RespawnPoint(u32),
     AmbientSound(Option<Unk80809802>),
     Light(AABB, TagHash, usize),
     ShadowingLight(TagHash),
@@ -79,7 +79,7 @@ impl MapResource {
             }
             MapResource::Unk80806aa3(_, _, _) => "Unk80806aa3".to_string(),
             MapResource::Light(_, t, i) => format!("Light ({t}+{i})"),
-            MapResource::RespawnPoint => "Respawn Point".to_string(),
+            MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
             MapResource::Unk8080917b(h) => format!("Unk8080917b (havok {h})"),
@@ -137,7 +137,7 @@ impl MapResource {
                 //     false,
                 // )
             }
-            MapResource::RespawnPoint => {
+            MapResource::RespawnPoint(_) => {
                 debug_shapes.line_orientation(translation, rotation, 1.0, self.debug_color())
             }
             _ => {}
