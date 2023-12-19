@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 use crate::activity::SActivity;
 use crate::ecs::component_panels::show_inspector_panel;
 use crate::ecs::components::{
-    ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Water,
+    ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Visible, Water,
 };
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
@@ -594,9 +594,15 @@ pub async fn main() -> anyhow::Result<()> {
                         {
                             let gb = gui_rendersettings.borrow();
 
-                            for (_, StaticInstances(instances)) in
-                                map.scene.query::<&StaticInstances>().iter()
+                            for (_, (StaticInstances(instances), visible)) in map
+                                .scene
+                                .query::<(&StaticInstances, Option<&Visible>)>()
+                                .iter()
                             {
+                                if !visible.map_or(true, |v| v.0) {
+                                    continue;
+                                }
+
                                 instances
                                     .draw(
                                         &renderer.read(),
@@ -608,21 +614,32 @@ pub async fn main() -> anyhow::Result<()> {
                             }
 
                             if gb.renderlayer_terrain {
-                                for (_, terrain) in map.scene.query::<&Terrain>().iter() {
+                                for (_, (terrain, visible)) in
+                                    map.scene.query::<(&Terrain, Option<&Visible>)>().iter()
+                                {
+                                    if !visible.map_or(true, |v| v.0) {
+                                        continue;
+                                    }
+
                                     terrain.0.draw(&renderer.read()).unwrap();
                                 }
                             }
 
-                            for (_, (transform, rp, group, water)) in map
+                            for (_, (transform, rp, group, water, visible)) in map
                                 .scene
                                 .query::<(
                                     &Transform,
                                     &ResourcePoint,
                                     Option<&ActivityGroup>,
                                     Option<&Water>,
+                                    Option<&Visible>,
                                 )>()
                                 .iter()
                             {
+                                if !visible.map_or(true, |v| v.0) {
+                                    continue;
+                                }
+
                                 if !gb.renderlayer_water && water.is_some() {
                                     continue;
                                 }
@@ -724,11 +741,11 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
 
-                        let maps = resources.get::<MapDataList>().unwrap();
+                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
                         if let Some(ent) = selected_entity {
-                            if let Some((_, _, map)) = maps.current_map() {
+                            if let Some(map) = maps.current_map_mut() {
                                 egui::Window::new("Inspector")
-                                    .show(ctx, |ui| show_inspector_panel(ui, &map.scene, ent));
+                                    .show(ctx, |ui| show_inspector_panel(ui, &mut map.scene, ent));
                             }
                         }
                     });

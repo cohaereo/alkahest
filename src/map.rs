@@ -35,6 +35,15 @@ impl MapDataList {
             self.maps.get(self.current_map % self.maps.len())
         }
     }
+
+    pub fn current_map_mut(&mut self) -> Option<&mut MapData> {
+        if self.maps.is_empty() {
+            None
+        } else {
+            let map_index = self.current_map % self.maps.len();
+            self.maps.get_mut(map_index).map(|v| &mut v.2)
+        }
+    }
 }
 
 #[derive(BinRead, Debug)]

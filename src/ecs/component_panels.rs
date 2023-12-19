@@ -3,16 +3,17 @@ use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
 use crate::icons::{
-    ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_IDENTIFIER, ICON_MAP_MARKER,
+    ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_IDENTIFIER, ICON_MAP_MARKER,
+    ICON_RESIZE, ICON_ROTATE_ORBIT,
 };
 
 use super::{
-    components::{EntityWorldId, Label},
+    components::{EntityWorldId, Label, Visible},
     transform::{OriginalTransform, Transform},
     Scene,
 };
 
-pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &Scene, ent: Entity) {
+pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
     let Ok(e) = scene.entity(ent) else {
         return;
     };
@@ -23,15 +24,40 @@ pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &Scene, ent: Entity) {
         format!("ent_{}", ent.id())
     };
 
+    let mut add_visible = None;
+
     ui.horizontal(|ui| {
-        ui.add_enabled_ui(false, |ui| {
-            ui.button(RichText::new(ICON_EYE).size(24.0).strong())
-        });
+        let visible = if let Some(vis) = e.get::<&Visible>() {
+            vis.0
+        } else {
+            true
+        };
+
+        if ui
+            .button(
+                RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
+                    .size(24.0)
+                    .strong(),
+            )
+            .clicked()
+            || ui.input(|i| i.key_pressed(egui::Key::H))
+        {
+            if let Some(mut vis) = e.get::<&mut Visible>() {
+                vis.0 = !visible;
+            } else {
+                add_visible = Some(Visible(!visible));
+            }
+        }
+
         ui.label(RichText::new(title).size(24.0).strong());
     });
     ui.separator();
 
     show_inspector_components(ui, e);
+
+    if let Some(vis) = add_visible {
+        scene.insert_one(ent, vis).ok();
+    }
 }
 
 fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>) {
@@ -171,11 +197,20 @@ impl ComponentPanel for Transform {
             .spacing([40.0, 4.0])
             .striped(true)
             .show(ui, |ui| {
-                input_float3!(ui, "Translation", &mut self.translation);
+                input_float3!(
+                    ui,
+                    format!("{ICON_AXIS_ARROW} Translation"),
+                    &mut self.translation
+                );
                 ui.end_row();
-                rotation_changed = input_float3!(ui, "Rotation", &mut rotation_euler).inner;
+                rotation_changed = input_float3!(
+                    ui,
+                    format!("{ICON_ROTATE_ORBIT} Rotation"),
+                    &mut rotation_euler
+                )
+                .inner;
                 ui.end_row();
-                input_float3!(ui, "Scale", &mut self.scale);
+                input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale);
                 ui.end_row();
             });
 

@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use destiny_pkg::TagHash;
 use glam::Vec4;
 
@@ -63,3 +65,19 @@ pub struct Terrain(pub TerrainRenderer);
 pub struct StaticInstances(pub InstancedRenderer);
 
 pub struct Water;
+
+pub struct Visible(pub bool);
+
+impl Deref for Visible {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Visible {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
