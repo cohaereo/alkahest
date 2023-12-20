@@ -715,7 +715,14 @@ impl Renderer {
                 }
                 let (s, d) = draw_queue[i].clone();
 
-                self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass, false);
+                // cohae: Let the regular pixel shader take over for cutouts to achieve more accurate outlines
+                let draw_mode = if s.transparency() == Transparency::Cutout {
+                    DrawMode::Normal
+                } else {
+                    DrawMode::DepthOnlyIgnoreTransparent
+                };
+
+                self.draw(s, &d, &shader_overrides, draw_mode, false);
             }
 
             // Render the outline to the screen in conjunction with the scene depth buffer to test occlusion
@@ -843,7 +850,7 @@ impl Renderer {
         mode: DrawMode,
         evaluate_tfx_bytecode: bool,
     ) {
-        if mode == DrawMode::DepthPrepass && !sort.transparency().should_write_depth() {
+        if mode == DrawMode::DepthOnly && !sort.transparency().writes_depth() {
             return;
         }
 
@@ -855,7 +862,9 @@ impl Renderer {
         let bind_stages = match mode {
             DrawMode::Normal => ShaderStages::VERTEX | ShaderStages::PIXEL,
             // Don't bother binding anything for the pixel stage
-            DrawMode::DepthPrepass | DrawMode::PickBuffer => ShaderStages::VERTEX,
+            DrawMode::DepthOnly | DrawMode::DepthOnlyIgnoreTransparent | DrawMode::PickBuffer => {
+                ShaderStages::VERTEX
+            }
         };
 
         let render_data = self.render_data.data();
@@ -878,7 +887,12 @@ impl Renderer {
             }
 
             unsafe {
-                if !matches!(mode, DrawMode::DepthPrepass | DrawMode::PickBuffer) {
+                if !matches!(
+                    mode,
+                    DrawMode::DepthOnly
+                        | DrawMode::DepthOnlyIgnoreTransparent
+                        | DrawMode::PickBuffer
+                ) {
                     if mat.unkc != 0 {
                         self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
                     } else {
@@ -950,7 +964,10 @@ impl Renderer {
             },
         }
 
-        if mode == DrawMode::DepthPrepass {
+        if matches!(
+            mode,
+            DrawMode::DepthOnly | DrawMode::DepthOnlyIgnoreTransparent
+        ) {
             unsafe {
                 self.dcs.context().PSSetShader(&self.null_ps, None);
             }
@@ -1149,6 +1166,15 @@ impl Renderer {
                 &self.gbuffer.staging.render_target,
                 [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
+
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: self.window_size.0 as f32,
+                Height: self.window_size.1 as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
         }
 
         if use_global_deferred_shading {
@@ -1247,15 +1273,6 @@ impl Renderer {
                 }
                 self.scope_alk_cascade_transforms
                     .bind(3, TfxShaderStage::Pixel);
-
-                self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
-                    TopLeftX: 0.0,
-                    TopLeftY: 0.0,
-                    Width: self.window_size.0 as f32,
-                    Height: self.window_size.1 as f32,
-                    MinDepth: 0.0,
-                    MaxDepth: 1.0,
-                }]));
 
                 self.dcs.context().VSSetShader(&self.composite_vs, None);
                 self.dcs.context().PSSetShader(&self.composite_ps, None);
@@ -1443,12 +1460,12 @@ impl Renderer {
             self.scope_view_csm.bind(12, TfxShaderStage::Pixel);
 
             for i in 0..draw_queue.len() {
-                if !draw_queue[i].0.transparency().should_write_depth() {
+                if !draw_queue[i].0.transparency().writes_depth() {
                     continue;
                 }
 
                 let (s, d) = draw_queue[i].clone();
-                self.draw(s, &d, &shader_overrides, DrawMode::DepthPrepass, false);
+                self.draw(s, &d, &shader_overrides, DrawMode::DepthOnly, false);
             }
         }
     }
@@ -1582,9 +1599,10 @@ impl Renderer {
 #[derive(Default, PartialEq)]
 pub enum DrawMode {
     #[default]
-    Normal = 0,
-    DepthPrepass = 1,
-    PickBuffer = 2,
+    Normal,
+    DepthOnly,
+    DepthOnlyIgnoreTransparent,
+    PickBuffer,
 }
 
 pub struct ShadowMapsResource {

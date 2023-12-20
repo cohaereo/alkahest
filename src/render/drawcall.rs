@@ -125,7 +125,7 @@ impl Transparency {
         }
     }
 
-    pub fn should_write_depth(&self) -> bool {
+    pub fn writes_depth(&self) -> bool {
         matches!(self, Self::None | Self::Cutout)
     }
 }
