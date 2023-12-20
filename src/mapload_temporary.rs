@@ -53,7 +53,7 @@ use crate::{
     },
     statics::SStaticMesh,
     structure::{TablePointer, Tag},
-    technique::{STechnique, Technique},
+    technique::Technique,
     types::AABB,
 };
 
@@ -370,13 +370,12 @@ pub async fn load_maps(
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
                         let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                        let materials: TablePointer<Tag<STechnique>> = cur.read_le()?;
+                        let materials: TablePointer<TagHash> = cur.read_le()?;
 
                         for m in &materials {
-                            material_map.insert(
-                                m.tag(),
-                                Technique::load(&renderer, m.0.clone(), m.tag(), true),
-                            );
+                            if let Ok(mat) = package_manager().read_tag_struct(*m) {
+                                material_map.insert(*m, Technique::load(&renderer, mat, *m, true));
+                            }
                         }
 
                         for m in &model.meshes {
@@ -399,7 +398,7 @@ pub async fn load_maps(
                             EntityRenderer::load(
                                 model.0,
                                 entity_material_map.to_vec(),
-                                materials.iter().map(|m| m.tag()).collect_vec(),
+                                materials.to_vec(),
                                 &renderer,
                             )
                         }) {
