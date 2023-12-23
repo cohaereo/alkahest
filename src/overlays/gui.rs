@@ -53,12 +53,21 @@ impl GuiManager {
             "materialdesignicons".into(),
             egui::FontData::from_static(include_bytes!("../../materialdesignicons-webfont.ttf")),
         );
+        fonts.font_data.insert(
+            "Destiny_Keys".into(),
+            egui::FontData::from_static(include_bytes!("../../Destiny_Keys.otf")),
+        );
 
         fonts
             .families
             .entry(egui::FontFamily::Proportional)
             .or_default()
             .insert(1, "materialdesignicons".to_owned());
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(2, "Destiny_Keys".to_owned());
 
         egui.set_fonts(fonts);
 

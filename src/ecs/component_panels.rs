@@ -22,7 +22,7 @@ pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
     };
 
     let title = if let Some(l) = e.get::<&Label>() {
-        l.0.clone()
+        format!("{} (ent_{})", l.0, ent.id())
     } else {
         format!("ent_{}", ent.id())
     };

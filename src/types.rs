@@ -220,26 +220,6 @@ impl AABB {
     //         && point.z <= self.max.z
     // }
 
-    pub fn distance_to_point(&self, point: Vec3) -> f32 {
-        let mut distance_squared = 0.0;
-
-        for i in 0..3 {
-            let mut distance_i = point[i];
-
-            if distance_i < self.min[i] {
-                distance_i -= self.min[i];
-            } else if distance_i > self.max[i] {
-                distance_i -= self.max[i];
-            } else {
-                distance_i = 0.0;
-            }
-
-            distance_squared += distance_i * distance_i;
-        }
-
-        distance_squared.sqrt()
-    }
-
     pub fn contains_point_oriented(&self, point: Vec3, orientation: Quat) -> bool {
         let mut matrix =
             Mat4::from_scale_rotation_translation(self.extents(), orientation, self.center());

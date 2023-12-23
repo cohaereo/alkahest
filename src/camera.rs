@@ -1,10 +1,7 @@
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec3};
 use winit::event::VirtualKeyCode;
 
-use crate::{
-    input::InputState,
-    types::{AABB, OBB},
-};
+use crate::{input::InputState, types::AABB};
 
 #[derive(Clone)]
 pub struct FpsCamera {

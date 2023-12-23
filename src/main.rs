@@ -23,9 +23,9 @@ use crate::ecs::components::{
 };
 use crate::ecs::resources::SelectedEntity;
 use crate::overlays::console::ConsoleOverlay;
+use crate::overlays::inspector::InspectorOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
-use crate::types::AABB;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -36,7 +36,7 @@ use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType}
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
 use egui::epaint::ahash::HashMap;
-use glam::{Mat4, Quat, Vec3, Vec3A};
+use glam::{Mat4, Vec3};
 use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
@@ -452,6 +452,8 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_loading);
     gui.add_overlay(gui_fps);
 
+    gui.add_overlay(Rc::new(RefCell::new(InspectorOverlay)));
+
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
@@ -800,7 +802,7 @@ pub async fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    gui.draw_frame(window.clone(), &mut resources, |ctx, resources| {
+                    gui.draw_frame(window.clone(), &mut resources, |ctx, _resources| {
                         if let Some(task) = map_load_task.as_ref() {
                             if task.ready().is_none() {
                                 egui::Window::new("Loading...")
@@ -813,14 +815,6 @@ pub async fn main() -> anyhow::Result<()> {
                                             ui.heading("Loading maps")
                                         })
                                     });
-                            }
-                        }
-
-                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
-                        if let Some(ent) = resources.get::<SelectedEntity>().unwrap().0 {
-                            if let Some(map) = maps.current_map_mut() {
-                                egui::Window::new("Inspector")
-                                    .show(ctx, |ui| show_inspector_panel(ui, &mut map.scene, ent));
                             }
                         }
                     });

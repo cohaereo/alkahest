@@ -544,7 +544,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         "unhide_all" | "show_all" => {
             if let Some(maps) = resources.get::<MapDataList>() {
                 if let Some((_, _, map)) = maps.current_map() {
-                    for (_, vis) in map.scene.query::<(&mut Visible)>().iter() {
+                    for (_, vis) in map.scene.query::<&mut Visible>().iter() {
                         vis.0 = true;
                     }
                 }
