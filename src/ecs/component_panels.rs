@@ -4,8 +4,8 @@ use hecs::{Entity, EntityRef};
 
 use crate::{
     icons::{
-        ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_IDENTIFIER,
-        ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
+        ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_HAZARD_LIGHTS,
+        ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
     },
     util::BoolExts as _,
 };
@@ -94,7 +94,13 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>) {
 		};
 	}
 
-    component_views!(ResourcePoint, EntityModel, StaticInstances, EntityWorldId);
+    component_views!(
+        ResourcePoint,
+        EntityModel,
+        StaticInstances,
+        // HavokShape,
+        EntityWorldId
+    );
 }
 
 fn inspector_component_frame(
@@ -306,7 +312,7 @@ impl ComponentPanel for StaticInstances {
     fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.strong("Mesh tag:");
-            ui.label(format!("{}", self.1));
+            ui.label(self.1.to_string());
         });
         ui.horizontal(|ui| {
             ui.strong("Instance count:");
@@ -314,3 +320,28 @@ impl ComponentPanel for StaticInstances {
         });
     }
 }
+
+// impl ComponentPanel for HavokShape {
+//     fn inspector_name() -> &'static str {
+//         "Havok Shape"
+//     }
+
+//     fn inspector_icon() -> char {
+//         ICON_HAZARD_LIGHTS
+//     }
+
+//     fn has_inspector_ui() -> bool {
+//         true
+//     }
+
+//     fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+//         ui.horizontal(|ui| {
+//             ui.strong("Havok tag:");
+//             ui.label(self.0.to_string());
+//         });
+//         ui.horizontal(|ui| {
+//             ui.strong("Has debugshape:");
+//             ui.label(self.1.is_some().yes_no());
+//         });
+//     }
+// }

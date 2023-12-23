@@ -6,8 +6,8 @@ use glam::Vec4;
 use crate::{
     map_resources::MapResource,
     render::{
-        cbuffer::ConstantBufferCached, scopes::ScopeRigidModel, EntityRenderer, InstancedRenderer,
-        TerrainRenderer,
+        cbuffer::ConstantBufferCached, debug::CustomDebugShape, scopes::ScopeRigidModel,
+        EntityRenderer, InstancedRenderer, TerrainRenderer,
     },
     structure::ExtendedHash,
     types::AABB,
@@ -51,6 +51,8 @@ impl ResourcePoint {
 pub struct PointLight {
     pub attenuation: Vec4,
 }
+
+// pub struct HavokShape(pub TagHash, pub Option<CustomDebugShape>);
 
 pub struct CubemapVolume(pub TagHash, pub AABB, pub String);
 

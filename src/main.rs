@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
-use crate::ecs::component_panels::show_inspector_panel;
 use crate::ecs::components::{
     ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Visible, Water,
 };

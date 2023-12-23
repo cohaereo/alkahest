@@ -86,11 +86,7 @@ impl Overlay for ResourceTypeOverlay {
 
                     // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
                     let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
-                    res.resource.draw_debug_shape(
-                        transform.translation,
-                        transform.rotation,
-                        &mut debug_shapes,
-                    );
+                    res.resource.draw_debug_shape(transform, &mut debug_shapes);
 
                     if !camera.is_point_visible(transform.translation) {
                         continue;

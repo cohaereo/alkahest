@@ -19,10 +19,10 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98, Unk80806d19, Unk808085c2,
-        Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b, Unk80809802,
+        SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98,
+        Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b, Unk80809802,
     },
-    render::{cbuffer::ConstantBufferCached, renderer::RendererShared},
+    render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
     util::fnv1,
 };
@@ -784,15 +784,29 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     let transforms =
                                         &preheader.instances.transforms[s.instance_start as usize
                                             ..(s.instance_start + s.instance_count) as usize];
-                                    let bounds = &preheader.instances.occlusion_bounds.bounds[s
-                                        .instance_start
-                                        as usize
-                                        ..(s.instance_start + s.instance_count) as usize];
+
+                                    let bounds = if ((s.instance_start + s.instance_count) as usize)
+                                        <= preheader.instances.occlusion_bounds.bounds.len()
+                                    {
+                                        preheader.instances.occlusion_bounds.bounds[s.instance_start
+                                            as usize
+                                            ..(s.instance_start + s.instance_count) as usize]
+                                            .to_vec()
+                                    } else {
+                                        warn!("Instance group doesn't have enough occlusion bounds, need range {}..{}, but there are only {} bounds", s.instance_start, s.instance_start + s.instance_count, preheader.instances.occlusion_bounds.bounds.len());
+                                        vec![
+                                            SMeshInstanceOcclusionBounds {
+                                                bb: AABB::INFINITE,
+                                                unk20: [0; 4]
+                                            };
+                                            s.instance_count as usize
+                                        ]
+                                    };
 
                                     let instanced_renderer = match InstancedRenderer::load(
                                         Arc::new(model),
                                         transforms,
-                                        bounds,
+                                        &bounds,
                                         dcs.clone(),
                                     ) {
                                         Ok(o) => o,
@@ -1276,10 +1290,38 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let d: Unk8080917b = table_data.read_le()?;
 
+                    let havok_debugshape =
+                        if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(o) => {
+                                    if (d.unk0.shape_index as usize) < o.len() {
+                                        CustomDebugShape::from_havok_shape(
+                                            &dcs,
+                                            &o[d.unk0.shape_index as usize],
+                                        )
+                                        .ok()
+                                    } else {
+                                        None
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                    None
+                                }
+                            }
+                        } else {
+                            None
+                        };
+
                     ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
-                            resource: MapResource::Unk8080917b(d.unk0.havok_file),
+                            resource: MapResource::KillOrTurnbackBarrier(
+                                d.unk0.havok_file,
+                                d.unk0.shape_index,
+                                havok_debugshape,
+                            ),
                             has_havok_data: true,
                             ..base_rp
                         },

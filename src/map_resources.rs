@@ -1,10 +1,11 @@
+use crate::ecs::transform::Transform;
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG,
-    ICON_VOLUME_HIGH, ICON_WAVES,
+    ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SKULL, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER,
+    ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
-use crate::render::debug::DebugShapes;
+use crate::render::debug::{CustomDebugShape, DebugShapes};
 use crate::structure::ExtendedHash;
 use crate::structure::ResourcePointer;
 use crate::types::AABB;
@@ -38,7 +39,7 @@ pub enum MapResource {
     Unk808085c0,
     Unk80806a40,
     Decoration(AABB, TagHash),
-    Unk8080917b(TagHash),
+    KillOrTurnbackBarrier(TagHash, u32, Option<CustomDebugShape>),
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
 }
@@ -82,7 +83,9 @@ impl MapResource {
             MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
-            MapResource::Unk8080917b(h) => format!("Unk8080917b (havok {h})"),
+            MapResource::KillOrTurnbackBarrier(h, i, _) => {
+                format!("KillOrTurnbackBarrier (havok {h}:{i})")
+            }
             MapResource::Unk80809121(h) => format!("Unk80809121 (havok {h})"),
             MapResource::AmbientSound(s) => {
                 if let Some(s) = s {
@@ -102,34 +105,40 @@ impl MapResource {
         }
     }
 
-    pub fn draw_debug_shape(
-        &self,
-        translation: Vec3,
-        rotation: Quat,
-        debug_shapes: &mut DebugShapes,
-    ) {
+    pub fn draw_debug_shape(&self, transform: &Transform, debug_shapes: &mut DebugShapes) {
         match self {
             MapResource::Decal { scale, .. } => debug_shapes.cube_extents(
-                translation,
+                transform.translation,
                 Vec3::splat(*scale / 2.0),
-                rotation,
+                transform.rotation,
                 darken_color(self.debug_color()),
                 false,
             ),
-            MapResource::CubemapVolume(_, bounds) => {
-                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), true)
-            }
-            MapResource::Unk80806aa3(bounds, _, _) => {
-                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
-            }
-            MapResource::Decoration(bounds, _) => {
-                debug_shapes.cube_aabb(*bounds, rotation, darken_color(self.debug_color()), false)
-            }
-            MapResource::ShadowingLight(_) => {
-                debug_shapes.line_orientation(translation, rotation, 2.5, self.debug_color())
-            }
+            MapResource::CubemapVolume(_, bounds) => debug_shapes.cube_aabb(
+                *bounds,
+                transform.rotation,
+                darken_color(self.debug_color()),
+                true,
+            ),
+            MapResource::Decoration(bounds, _) => debug_shapes.cube_aabb(
+                *bounds,
+                transform.rotation,
+                darken_color(self.debug_color()),
+                false,
+            ),
+            MapResource::ShadowingLight(_) => debug_shapes.line_orientation(
+                transform.translation,
+                transform.rotation,
+                2.5,
+                self.debug_color(),
+            ),
             MapResource::Light(_bounds, _, _) => {
-                debug_shapes.line_orientation(translation, rotation, 1.0, self.debug_color());
+                debug_shapes.line_orientation(
+                    transform.translation,
+                    transform.rotation,
+                    1.0,
+                    self.debug_color(),
+                );
                 // debug_shapes.cube_aabb(
                 //     *bounds,
                 //     Quat::IDENTITY,
@@ -137,8 +146,14 @@ impl MapResource {
                 //     false,
                 // )
             }
-            MapResource::RespawnPoint(_) => {
-                debug_shapes.line_orientation(translation, rotation, 1.0, self.debug_color())
+            MapResource::RespawnPoint(_) => debug_shapes.line_orientation(
+                transform.translation,
+                transform.rotation,
+                1.0,
+                self.debug_color(),
+            ),
+            MapResource::KillOrTurnbackBarrier(_, _, Some(shape)) => {
+                debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             _ => {}
         }
@@ -262,7 +277,7 @@ mapresource_info!(
     11, Unk808085c0, [255, 96, 96], ICON_HELP
     12, Unk80806a40, [255, 44, 44], ICON_HELP
     13, Decoration, [80, 210, 80], ICON_PINE_TREE
-    14, Unk8080917b, [96, 96, 255], ICON_HELP
+    14, KillOrTurnbackBarrier, [249, 154, 19], ICON_SKULL
     15, Unk80809121, [96, 96, 255], ICON_HELP
     16, Unk808068d4, [22, 230, 190], ICON_WAVES
 );

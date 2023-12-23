@@ -211,6 +211,11 @@ pub struct AABB {
 }
 
 impl AABB {
+    pub const INFINITE: Self = Self {
+        min: Vec3A::splat(f32::NEG_INFINITY),
+        max: Vec3A::splat(f32::INFINITY),
+    };
+
     // pub fn contains_point(&self, point: Vec3) -> bool {
     //     self.min.x <= point.x
     //         && self.min.y <= point.y

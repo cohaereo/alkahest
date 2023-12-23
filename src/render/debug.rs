@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::bytecode::externs::TfxShaderStage;
 use super::{color::Color, shader, ConstantBuffer, DeviceContextSwapchain};
+use crate::ecs::transform::Transform;
 use crate::types::AABB;
 use anyhow::Context;
 use genmesh::generators::IndexedPolygon;
@@ -9,6 +10,7 @@ use genmesh::generators::SharedVertex;
 use genmesh::Triangulate;
 use glam::Vec4;
 use glam::{Mat4, Quat, Vec3};
+use itertools::Itertools;
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
     Direct3D11::{
@@ -20,7 +22,7 @@ use windows::Win32::Graphics::{
     Dxgi::Common::{DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT},
 };
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub enum DebugShape {
     Cube {
         cube: AABB,
@@ -30,6 +32,11 @@ pub enum DebugShape {
     Line {
         start: Vec3,
         end: Vec3,
+    },
+    Custom {
+        transform: Transform,
+        shape: CustomDebugShape,
+        sides: bool,
     },
 }
 
@@ -87,6 +94,23 @@ impl DebugShapes {
         color: C,
     ) {
         self.line(point, point + orientation * Vec3::X * length, color.into())
+    }
+
+    pub fn custom_shape<C: Into<Color>>(
+        &mut self,
+        transform: Transform,
+        shape: CustomDebugShape,
+        color: C,
+        sides: bool,
+    ) {
+        self.shapes.push((
+            DebugShape::Custom {
+                transform,
+                shape,
+                sides,
+            },
+            color.into(),
+        ))
     }
 
     // /// See `FpsCamera::calculate_frustum_corners` for index layout
@@ -282,6 +306,80 @@ impl DebugShapeRenderer {
     pub fn draw_all(&self, shapes: &mut DebugShapes) {
         for (shape, color) in shapes.shape_list() {
             match shape {
+                DebugShape::Custom {
+                    transform,
+                    shape,
+                    sides,
+                } => {
+                    self.scope
+                        .write(&ScopeAlkDebugShape {
+                            model: transform.to_mat4(),
+                            color,
+                        })
+                        .unwrap();
+
+                    self.scope.bind(10, TfxShaderStage::Vertex);
+                    self.scope.bind(10, TfxShaderStage::Pixel);
+
+                    unsafe {
+                        self.dcs.context().IASetInputLayout(&self.input_layout);
+                        self.dcs.context().VSSetShader(&self.vshader, None);
+                        self.dcs.context().PSSetShader(&self.pshader, None);
+
+                        self.dcs.context().IASetVertexBuffers(
+                            0,
+                            1,
+                            Some([Some(shape.vb.clone())].as_ptr()),
+                            Some([16].as_ptr()),
+                            Some(&0),
+                        );
+
+                        self.dcs.context().IASetIndexBuffer(
+                            Some(&shape.ib),
+                            DXGI_FORMAT_R16_UINT,
+                            0,
+                        );
+
+                        self.dcs
+                            .context()
+                            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+                        self.dcs
+                            .context()
+                            .DrawIndexed(shape.outline_index_count as _, 0, 0);
+                    }
+
+                    if sides {
+                        self.scope
+                            .write(&ScopeAlkDebugShape {
+                                model: transform.to_mat4(),
+                                color: Color(color.0.truncate().extend(0.35)),
+                            })
+                            .unwrap();
+
+                        unsafe {
+                            self.dcs.context().IASetVertexBuffers(
+                                0,
+                                1,
+                                Some([Some(shape.vb.clone())].as_ptr()),
+                                Some([16].as_ptr()),
+                                Some(&0),
+                            );
+
+                            self.dcs.context().IASetIndexBuffer(
+                                Some(&shape.ib_sides),
+                                DXGI_FORMAT_R16_UINT,
+                                0,
+                            );
+
+                            self.dcs
+                                .context()
+                                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+                            self.dcs.context().DrawIndexed(shape.index_count, 0, 0);
+                        }
+                    }
+                }
                 DebugShape::Cube {
                     cube,
                     rotation,
@@ -401,4 +499,94 @@ pub struct ScopeAlkDebugShapeLine {
     pub start: Vec4,
     pub end: Vec4,
     pub color: Color,
+}
+
+#[derive(Clone)]
+pub struct CustomDebugShape {
+    vb: ID3D11Buffer,
+    ib: ID3D11Buffer,
+    ib_sides: ID3D11Buffer,
+    outline_index_count: u32,
+    index_count: u32,
+}
+
+impl CustomDebugShape {
+    pub fn new(
+        dcs: &DeviceContextSwapchain,
+        vertices: &[Vec4],
+        indices: &[u16],
+    ) -> anyhow::Result<CustomDebugShape> {
+        // Transform triangle list indices to line list indices
+        let indices_outline = indices
+            .chunks_exact(3)
+            .flat_map(|i| vec![i[0], i[1], i[1], i[2], i[2], i[0]])
+            .collect::<Vec<_>>();
+
+        let ib = unsafe {
+            dcs.device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: (indices_outline.len() * 2) as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_INDEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: indices_outline.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create index buffer")?
+        };
+
+        let ib_sides = unsafe {
+            dcs.device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: (indices.len() * 2) as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_INDEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: indices.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create index buffer")?
+        };
+
+        let vb = unsafe {
+            dcs.device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: (vertices.len() * 16) as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_VERTEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: vertices.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create combined vertex buffer")?
+        };
+
+        Ok(Self {
+            vb,
+            ib,
+            ib_sides,
+            outline_index_count: indices_outline.len() as _,
+            index_count: indices.len() as _,
+        })
+    }
+
+    pub fn from_havok_shape(
+        dcs: &DeviceContextSwapchain,
+        shape: &destiny_havok::shape_collection::Shape,
+    ) -> anyhow::Result<Self> {
+        let vertices_vec4 = shape.vertices.iter().map(|v| v.extend(1.0)).collect_vec();
+        Self::new(dcs, &vertices_vec4, &shape.indices)
+    }
 }
