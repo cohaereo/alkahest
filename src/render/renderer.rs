@@ -1177,6 +1177,35 @@ impl Renderer {
             }]));
         }
 
+        {
+            let camera = resources.get::<FpsCamera>().unwrap();
+            let render_settings = resources.get::<RenderSettings>().unwrap();
+            *self.light_mul.write() = render_settings.light_mul;
+
+            let view = Mat4::from_translation(camera.position);
+            let compositor_options = CompositorOptions {
+                viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
+                proj_view_matrix_inv: camera.projection_view_matrix_inv,
+                proj_view_matrix: camera.projection_view_matrix,
+                proj_matrix: camera.projection_matrix,
+                view_matrix: view,
+                camera_pos: camera.position.extend(1.0),
+                camera_dir: camera.front.extend(1.0),
+                time: self.start_time.elapsed().as_secs_f32(),
+                mode: compositor_mode as u32,
+                draw_lights: draw_lights.into(),
+                global_light_dir: render_settings.light_dir.extend(1.0),
+                global_light_color: render_settings.light_color,
+                specular_scale: if render_settings.use_specular_map {
+                    1.0
+                } else {
+                    0.0
+                },
+                fxaa_enabled: if render_settings.fxaa { 1 } else { 0 },
+            };
+            self.scope_alk_composite.write(&compositor_options).unwrap();
+        }
+
         if use_global_deferred_shading {
             let render_data = self.render_data.data();
 
@@ -1239,36 +1268,8 @@ impl Renderer {
                     .context()
                     .PSSetShaderResources(9, Some(&[cubemap_texture]));
 
-                {
-                    let camera = resources.get::<FpsCamera>().unwrap();
-                    let render_settings = resources.get::<RenderSettings>().unwrap();
-                    *self.light_mul.write() = render_settings.light_mul;
-
-                    let view = Mat4::from_translation(camera.position);
-                    let compositor_options = CompositorOptions {
-                        viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
-                        proj_view_matrix_inv: camera.projection_view_matrix_inv,
-                        proj_view_matrix: camera.projection_view_matrix,
-                        proj_matrix: camera.projection_matrix,
-                        view_matrix: view,
-                        camera_pos: camera.position.extend(1.0),
-                        camera_dir: camera.front.extend(1.0),
-                        time: self.start_time.elapsed().as_secs_f32(),
-                        mode: compositor_mode as u32,
-                        draw_lights: draw_lights.into(),
-                        global_light_dir: render_settings.light_dir.extend(1.0),
-                        global_light_color: render_settings.light_color,
-                        specular_scale: if render_settings.use_specular_map {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                        fxaa_enabled: if render_settings.fxaa { 1 } else { 0 },
-                    };
-                    self.scope_alk_composite.write(&compositor_options).unwrap();
-                    self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
-                    self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
-                }
+                self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+                self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
                 self.scope_alk_cascade_transforms
                     .bind(3, TfxShaderStage::Pixel);
 
