@@ -7,13 +7,17 @@ use eframe::{
 };
 use itertools::Itertools;
 
-use crate::{packages::package_manager, scanner::TagCache, tagtypes::TagType};
+use crate::{
+    packages::package_manager,
+    scanner::{fnv1, TagCache},
+    tagtypes::TagType,
+};
 
 use super::{common::tag_context, tag::format_tag_entry, View, ViewAction};
 
 pub struct RawStringsView {
-    strings: Vec<(String, Vec<TagHash>)>,
-    strings_vec_filtered: Vec<(usize, String, Vec<TagHash>)>,
+    strings: Vec<(String, Vec<TagHash>, u32)>,
+    strings_vec_filtered: Vec<(usize, String, Vec<TagHash>, u32)>,
 
     string_filter: String,
     selected_stringset: usize,
@@ -21,17 +25,18 @@ pub struct RawStringsView {
 
 impl RawStringsView {
     pub fn new(cache: Arc<TagCache>) -> Self {
-        let mut strings: HashMap<String, Vec<TagHash>> = Default::default();
+        let mut strings: HashMap<String, (Vec<TagHash>, u32)> = Default::default();
 
         for (t, s) in cache
             .hashes
             .iter()
             .flat_map(|(t, sc)| sc.raw_strings.iter().map(|s| (*t, s.clone())))
         {
+            let h = fnv1(s.as_bytes());
             match strings.entry(s) {
-                std::collections::hash_map::Entry::Occupied(mut o) => o.get_mut().push(t),
+                std::collections::hash_map::Entry::Occupied(mut o) => o.get_mut().0.push(t),
                 std::collections::hash_map::Entry::Vacant(v) => {
-                    v.insert(vec![t]);
+                    v.insert((vec![t], h));
                 }
             };
         }
@@ -42,9 +47,12 @@ impl RawStringsView {
             strings_vec_filtered: strings
                 .iter()
                 .enumerate()
-                .map(|(i, (k, v))| (i, k.clone(), v.clone()))
+                .map(|(i, (k, (v, h)))| (i, k.clone(), v.clone(), *h))
                 .collect(),
-            strings,
+            strings: strings
+                .into_iter()
+                .map(|(v0, (v1, v2))| (v0, v1, v2))
+                .collect(),
             string_filter: String::new(),
             selected_stringset: usize::MAX,
         }
@@ -66,17 +74,17 @@ impl View for RawStringsView {
                         self.strings
                             .iter()
                             .enumerate()
-                            .filter(|(_, (s, _))| {
+                            .filter(|(_, (s, _, _))| {
                                 s.to_lowercase()
                                     .contains(&self.string_filter.to_lowercase())
                             })
-                            .map(|(i, (k, v))| (i, k.clone(), v.clone()))
+                            .map(|(i, (k, v, h))| (i, k.clone(), v.clone(), *h))
                             .collect()
                     } else {
                         self.strings
                             .iter()
                             .enumerate()
-                            .map(|(i, (k, v))| (i, k.clone(), v.clone()))
+                            .map(|(i, (k, v, h))| (i, k.clone(), v.clone(), *h))
                             .collect_vec()
                     };
                 }
@@ -91,8 +99,13 @@ impl View for RawStringsView {
                 && ui.button("Dump strings (filtered)").clicked()
             {
                 if let Ok(mut f) = File::create("raw_strings_filtered.txt") {
-                    for (_, string, hashes) in &self.strings_vec_filtered {
-                        writeln!(&mut f, "'{string}' - [{}]", hashes.iter().join(", ")).ok();
+                    for (_, string, tags, hash) in &self.strings_vec_filtered {
+                        writeln!(
+                            &mut f,
+                            "'{string}' - [{}] (fnv1=0x{hash:08X})",
+                            tags.iter().join(", ")
+                        )
+                        .ok();
                     }
                 }
             }
@@ -104,15 +117,15 @@ impl View for RawStringsView {
                     string_height,
                     self.strings_vec_filtered.len(),
                     |ui, range| {
-                        for (i, string, hashes) in self.strings_vec_filtered[range].iter() {
+                        for (i, string, tags, _hash) in self.strings_vec_filtered[range].iter() {
                             let response = ui
                                 .selectable_label(
                                     *i == self.selected_stringset,
                                     format!(
                                         "'{}' {}",
                                         truncate_string_stripped(string, 192),
-                                        if hashes.len() > 1 {
-                                            format!("({} occurrences)", hashes.len())
+                                        if tags.len() > 1 {
+                                            format!("({} occurrences)", tags.len())
                                         } else {
                                             String::new()
                                         }
