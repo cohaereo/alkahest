@@ -1468,7 +1468,7 @@ impl Renderer {
     }
 
     fn update_buffers(&self, resources: &Resources) -> anyhow::Result<()> {
-        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+        let camera = resources.get::<FpsCamera>().unwrap();
         let overrides = resources.get::<ScopeOverrides>().unwrap();
 
         self.scope_frame.write(&ScopeFrame {

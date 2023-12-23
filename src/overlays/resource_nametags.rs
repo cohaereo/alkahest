@@ -11,8 +11,7 @@ use crate::{
 };
 
 use egui::{Color32, Rect};
-use frustum_query::frustum::Frustum;
-use glam::{Mat4, Vec2};
+use glam::Vec2;
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
 

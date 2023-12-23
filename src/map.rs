@@ -547,7 +547,7 @@ pub struct Unk80809121 {
     pub unk0: [u32; 4],
     pub havok_file: TagHash,
     pub unk14: u32,
-    pub unk18: u32,
+    pub shape_index: u32,
 }
 
 #[derive(BinRead, Clone)]

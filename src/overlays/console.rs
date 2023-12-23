@@ -1,5 +1,5 @@
 use crate::camera::FpsCamera;
-use crate::ecs::components::EntityModel;
+use crate::ecs::components::{EntityModel, Visible};
 use crate::ecs::transform::{OriginalTransform, Transform};
 use crate::entity::{SEntityModel, Unk808072c5, Unk80809c0f};
 use crate::map::MapDataList;
@@ -8,7 +8,7 @@ use crate::packages::package_manager;
 use crate::render::bytecode::opcodes::TfxBytecodeOp;
 use crate::render::cbuffer::ConstantBufferCached;
 use crate::render::dcs::DcsShared;
-use crate::render::{ConstantBuffer, EntityRenderer};
+use crate::render::EntityRenderer;
 use crate::technique::{STechnique, Technique};
 
 use crate::render::renderer::{Renderer, RendererShared};
@@ -537,6 +537,15 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                         .iter()
                     {
                         *t = ot.0;
+                    }
+                }
+            }
+        }
+        "unhide_all" | "show_all" => {
+            if let Some(maps) = resources.get::<MapDataList>() {
+                if let Some((_, _, map)) = maps.current_map() {
+                    for (_, vis) in map.scene.query::<(&mut Visible)>().iter() {
+                        vis.0 = true;
                     }
                 }
             }

@@ -75,7 +75,7 @@ impl Default for ScopeFrame {
             render_time: Default::default(),
             delta_game_time: Default::default(),
             exposure_time: Default::default(),
-            exposure_scale: 0.0,
+            exposure_scale: 0.25,
             exposure_illum_relative_glow: 1.0,
             exposure_scale_for_shading: 1.0,
             exposure_illum_relative: 1.0,
