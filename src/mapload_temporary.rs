@@ -784,10 +784,15 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     let transforms =
                                         &preheader.instances.transforms[s.instance_start as usize
                                             ..(s.instance_start + s.instance_count) as usize];
+                                    let bounds = &preheader.instances.occlusion_bounds.bounds[s
+                                        .instance_start
+                                        as usize
+                                        ..(s.instance_start + s.instance_count) as usize];
 
                                     let instanced_renderer = match InstancedRenderer::load(
                                         Arc::new(model),
                                         transforms,
+                                        bounds,
                                         dcs.clone(),
                                     ) {
                                         Ok(o) => o,

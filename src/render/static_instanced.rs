@@ -1,9 +1,11 @@
 use crate::entity::VertexBufferHeader;
+use crate::map::SMeshInstanceOcclusionBounds;
 use crate::packages::package_manager;
 use crate::render::scopes::ScopeInstances;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 
 use crate::statics::Unk808071a3;
+use crate::types::AABB;
 
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
@@ -15,6 +17,7 @@ use super::renderer::Renderer;
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,
     pub instance_count: usize,
+    pub occlusion_bounds: Vec<AABB>,
     instance_buffer: ConstantBuffer<u8>,
 }
 
@@ -22,6 +25,7 @@ impl InstancedRenderer {
     pub fn load(
         model: Arc<StaticModel>,
         instances: &[Unk808071a3],
+        occlusion_bounds: &[SMeshInstanceOcclusionBounds],
         dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
         // TODO(cohae): Is this enough to fix it for every buffer set?
@@ -79,6 +83,7 @@ impl InstancedRenderer {
         Ok(Self {
             renderer: model,
             instance_count: instances.len(),
+            occlusion_bounds: occlusion_bounds.iter().map(|v| v.bb).collect(),
             instance_buffer,
         })
     }

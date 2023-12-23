@@ -521,7 +521,6 @@ impl Renderer {
         // region: Errors
         if render_settings.draw_errors {
             let camera = resources.get::<FpsCamera>().unwrap();
-            let view = camera.calculate_matrix();
             for t in self.fiddlesticks.read().iter() {
                 self.error_renderer.draw(
                     &self.dcs,
@@ -530,8 +529,8 @@ impl Renderer {
                         ..*t
                     }
                     .to_mat4(),
-                    camera.projection_matrix * view,
-                    view,
+                    camera.projection_view_matrix,
+                    camera.view_matrix,
                 )
             }
         }
@@ -801,7 +800,8 @@ impl Renderer {
             if draw_queue[i].1.entity == skip_entity || draw_queue[i].1.entity == Entity::DANGLING {
                 continue;
             }
-            let (s, d) = draw_queue[i].clone();
+            let (mut s, d) = draw_queue[i].clone();
+            s = s.with_transparency(Transparency::None);
 
             b.write(&PickbufferScope::from_entity(d.entity)).ok();
 
@@ -1244,13 +1244,11 @@ impl Renderer {
                     let render_settings = resources.get::<RenderSettings>().unwrap();
                     *self.light_mul.write() = render_settings.light_mul;
 
-                    let view = camera.calculate_matrix();
-                    let proj_view = camera.projection_matrix * view;
                     let view = Mat4::from_translation(camera.position);
                     let compositor_options = CompositorOptions {
                         viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
-                        proj_view_matrix_inv: proj_view.inverse(),
-                        proj_view_matrix: proj_view,
+                        proj_view_matrix_inv: camera.projection_view_matrix_inv,
+                        proj_view_matrix: camera.projection_view_matrix,
                         proj_matrix: camera.projection_matrix,
                         view_matrix: view,
                         camera_pos: camera.position.extend(1.0),
@@ -1352,8 +1350,6 @@ impl Renderer {
 
         let mut cascade_matrices = [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT];
 
-        let view = camera.calculate_matrix();
-
         // clippy: Annoying lint, code is harder to read with the lint's suggested method
         #[allow(clippy::needless_range_loop)]
         for i in 0..Self::CAMERA_CASCADE_LEVEL_COUNT {
@@ -1376,7 +1372,7 @@ impl Renderer {
 
             let light_matrix = camera.build_cascade(
                 light_dir,
-                view,
+                camera.view_matrix,
                 z_start,
                 z_end,
                 self.window_size.0 as f32 / self.window_size.1 as f32,
@@ -1494,14 +1490,7 @@ impl Renderer {
             ..overrides.frame
         })?;
 
-        camera.projection_matrix = Mat4::perspective_infinite_reverse_rh(
-            camera.fov.to_radians(),
-            self.window_size.0 as f32 / self.window_size.1 as f32,
-            0.0001,
-        );
-
-        let view: Mat4 = camera.calculate_matrix();
-        let world_to_projective = camera.projection_matrix * view;
+        let world_to_projective = camera.projection_view_matrix;
         let camera_to_world = Mat4::from_translation(camera.position);
         // let camera_to_world = Mat4::from_cols(
         //     view.x_axis,
@@ -1519,8 +1508,8 @@ impl Renderer {
             [-1.0, 1.0, 0.0, 1.0],
         ]);
 
-        *self.camera_viewproj.write() = camera.projection_matrix * view;
-        *self.camera_svp_inv.write() = (camera.projection_matrix * view).inverse() * viewport_inv;
+        *self.camera_viewproj.write() = camera.projection_view_matrix;
+        *self.camera_svp_inv.write() = camera.projection_view_matrix_inv * viewport_inv;
 
         let scope_view_data = ScopeView {
             world_to_projective,

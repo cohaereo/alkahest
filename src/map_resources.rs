@@ -77,7 +77,7 @@ impl MapResource {
                     *c.cubemap_name, c.cubemap_texture, c.unk1c0
                 )
             }
-            MapResource::Unk80806aa3(_, _, _) => "Unk80806aa3".to_string(),
+            MapResource::Unk80806aa3(_, t, _) => format!("Unk80806aa3 (model {t})"),
             MapResource::Light(_, t, i) => format!("Light ({t}+{i})"),
             MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),

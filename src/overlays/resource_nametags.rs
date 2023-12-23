@@ -36,15 +36,6 @@ impl Overlay for ResourceTypeOverlay {
             let painter = ctx.layer_painter(egui::LayerId::background());
 
             let camera = resources.get::<FpsCamera>().unwrap();
-            let projection = Mat4::perspective_infinite_reverse_rh(
-                camera.fov.to_radians(),
-                screen_size.x / screen_size.y,
-                0.0001,
-            );
-
-            let view = camera.calculate_matrix();
-            let proj_view = projection.mul_mat4(&view);
-            let camera_frustum = Frustum::from_modelview_projection(&proj_view.to_cols_array());
 
             let maps = resources.get::<MapDataList>().unwrap();
             if let Some((_, _, m)) = maps.current_map() {
@@ -102,11 +93,7 @@ impl Overlay for ResourceTypeOverlay {
                         &mut debug_shapes,
                     );
 
-                    if !camera_frustum.point_intersecting(
-                        &transform.translation.x,
-                        &transform.translation.y,
-                        &transform.translation.z,
-                    ) {
+                    if !camera.is_point_visible(transform.translation) {
                         continue;
                     }
 
@@ -128,7 +115,9 @@ impl Overlay for ResourceTypeOverlay {
                 }
 
                 for (_, transform, res) in rp_list {
-                    let projected_point = proj_view.project_point3(transform.translation);
+                    let projected_point = camera
+                        .projection_view_matrix
+                        .project_point3(transform.translation);
 
                     let screen_point = Vec2::new(
                         ((projected_point.x + 1.0) * 0.5) * screen_size.x,

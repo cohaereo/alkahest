@@ -3,7 +3,9 @@ use destiny_pkg::TagHash;
 use std::io::SeekFrom;
 
 use crate::entity::{ELodCategory, EPrimitiveType};
+use crate::map::SOcclusionBounds;
 use crate::render::tfx::TfxRenderStage;
+use crate::structure::Tag;
 use crate::types::Vector2;
 use crate::{
     structure::TablePointer,
@@ -57,7 +59,10 @@ pub struct Unk8080719b {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct SStaticMeshInstances {
-    #[br(seek_before(SeekFrom::Current(0x40)))]
+    #[br(seek_before(SeekFrom::Current(0x18)))]
+    pub occlusion_bounds: Tag<SOcclusionBounds>,
+
+    #[br(seek_before(SeekFrom::Current(0x24)))]
     pub transforms: TablePointer<Unk808071a3>,
     pub unk50: u64,
     pub unk58: [u64; 4],

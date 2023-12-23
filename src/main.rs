@@ -25,6 +25,7 @@ use crate::ecs::resources::SelectedEntity;
 use crate::overlays::console::ConsoleOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
+use crate::types::AABB;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -35,7 +36,7 @@ use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType}
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
 use egui::epaint::ahash::HashMap;
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Quat, Vec3, Vec3A};
 use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
@@ -557,7 +558,11 @@ pub async fn main() -> anyhow::Result<()> {
                 {
                     let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                     let input_state = resources.get::<InputState>().unwrap();
-                    camera.update(&input_state, last_frame.elapsed().as_secs_f32());
+                    camera.update(
+                        &input_state,
+                        window.inner_size().into(),
+                        last_frame.elapsed().as_secs_f32(),
+                    );
                 }
                 last_frame = Instant::now();
 
@@ -600,12 +605,19 @@ pub async fn main() -> anyhow::Result<()> {
                         {
                             let gb = gui_rendersettings.borrow();
 
+                            let camera = resources.get::<FpsCamera>().unwrap();
                             for (e, (StaticInstances(instances, _), visible)) in map
                                 .scene
                                 .query::<(&StaticInstances, Option<&Visible>)>()
                                 .iter()
                             {
                                 if !visible.map_or(true, |v| v.0) {
+                                    continue;
+                                }
+
+                                if instances.instance_count == 1
+                                    && !camera.is_aabb_visible(&instances.occlusion_bounds[0])
+                                {
                                     continue;
                                 }
 
