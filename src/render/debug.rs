@@ -298,8 +298,8 @@ impl DebugShapeRenderer {
                         })
                         .unwrap();
 
-                    self.scope_line.bind(10, TfxShaderStage::Vertex);
-                    self.scope_line.bind(10, TfxShaderStage::Pixel);
+                    self.scope.bind(10, TfxShaderStage::Vertex);
+                    self.scope.bind(10, TfxShaderStage::Pixel);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
