@@ -1,6 +1,6 @@
 use crate::ecs::transform::Transform;
 use crate::icons::{
-    ICON_ACCOUNT_CONVERT, ICON_ALERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP,
+    ICON_ACCOUNT_CONVERT, ICON_ALERT, ICON_CHESS_PAWN, ICON_DROPBOX, ICON_FLARE, ICON_HELP,
     ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SKULL, ICON_SPHERE,
     ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
 };
@@ -42,7 +42,7 @@ pub enum MapResource {
     KillOrTurnbackBarrier(TagHash, u32, Option<CustomDebugShape>),
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
-    Unk80808604(TagHash, Option<CustomDebugShape>),
+    PlayAreaBounds(TagHash, Option<CustomDebugShape>),
 }
 
 impl MapResource {
@@ -106,12 +106,12 @@ impl MapResource {
             MapResource::ShadowingLight(t) => format!("Shadowing Light ({t})"),
             MapResource::NamedArea(_, s) => format!("Named Area ('{s}')\n(TODO: havok)"),
             MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
-            MapResource::Unk80808604(t, s) => {
+            MapResource::PlayAreaBounds(t, s) => {
                 if s.is_some() {
-                    format!("Unk80808604 (havok {t})")
+                    format!("Play Area Bounds (havok {t})")
                 } else {
                     format!(
-                        "Unk80808604 (havok {t})\n{} Havok shape visualization failed to load",
+                        "Play Area Bounds (havok {t})\n{} Havok shape visualization failed to load",
                         ICON_ALERT
                     )
                 }
@@ -169,7 +169,7 @@ impl MapResource {
             MapResource::KillOrTurnbackBarrier(_, _, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
-            MapResource::Unk80808604(_, Some(shape)) => {
+            MapResource::PlayAreaBounds(_, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             _ => {}
@@ -282,20 +282,20 @@ macro_rules! mapresource_info {
 mapresource_info!(
     0, Entity, [255, 255, 255], ICON_CHESS_PAWN
     1, Decal, [50, 255, 255], ICON_STICKER
-    2, CubemapVolume, [50, 255, 50], ICON_SPHERE
-    3, RespawnPoint, [220, 20, 20], ICON_ACCOUNT_CONVERT
-    4, AmbientSound, [0, 192, 0], ICON_VOLUME_HIGH
-    5, ShadowingLight, [255, 255, 0], ICON_SPOTLIGHT_BEAM
-    6, Light, [255, 255, 0], ICON_LIGHTBULB_ON
-    7, NamedArea, [0, 127, 0], ICON_TAG
-    8, Unknown, [255, 255, 255], ICON_HELP
-    9, Unk808067b5, [220, 220, 20], ICON_FLARE
-    10, Unk80806aa3, [96, 96, 255], ICON_HELP
-    11, Unk808085c0, [255, 96, 96], ICON_HELP
-    12, Unk80806a40, [255, 44, 44], ICON_HELP
-    13, Decoration, [80, 210, 80], ICON_PINE_TREE
-    14, KillOrTurnbackBarrier, [249, 154, 19], ICON_SKULL
-    15, Unk80809121, [96, 96, 255], ICON_HELP
-    16, Unk808068d4, [22, 230, 190], ICON_WAVES
-    17, Unk80808604, [255, 96, 96], ICON_HELP
+    2, RespawnPoint, [220, 20, 20], ICON_ACCOUNT_CONVERT
+    3, AmbientSound, [0, 192, 0], ICON_VOLUME_HIGH
+    4, ShadowingLight, [255, 255, 0], ICON_SPOTLIGHT_BEAM
+    5, Light, [255, 255, 0], ICON_LIGHTBULB_ON
+    6, Unknown, [255, 255, 255], ICON_HELP
+    7, Unk808067b5, [220, 220, 20], ICON_FLARE
+    8, Unk80806aa3, [96, 96, 255], ICON_HELP
+    9, Unk808085c0, [255, 96, 96], ICON_HELP
+    10, Unk80806a40, [255, 44, 44], ICON_HELP
+    11, Decoration, [80, 210, 80], ICON_PINE_TREE
+    12, Unk80809121, [96, 96, 255], ICON_HELP
+    13, Unk808068d4, [22, 230, 190], ICON_WAVES
+    14, CubemapVolume, [50, 255, 50], ICON_SPHERE
+    15, NamedArea, [0, 127, 0], ICON_TAG
+    16, KillOrTurnbackBarrier, [220, 60, 60], ICON_SKULL
+    17, PlayAreaBounds, [192, 100, 192], ICON_DROPBOX
 );

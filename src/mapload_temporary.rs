@@ -1373,7 +1373,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ents.push(scene.spawn((
                         new_transform,
                         ResourcePoint {
-                            resource: MapResource::Unk80808604(
+                            resource: MapResource::PlayAreaBounds(
                                 d.unk10.havok_file,
                                 havok_debugshape,
                             ),
