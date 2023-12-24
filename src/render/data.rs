@@ -214,7 +214,7 @@ pub struct RenderDataManager {
 }
 
 #[cfg(feature = "debug_lock")]
-use crate::util::LockTracker;
+use crate::util::lock::LockTracker;
 
 impl RenderDataManager {
     pub fn new(dcs: Arc<DeviceContextSwapchain>) -> Self {
