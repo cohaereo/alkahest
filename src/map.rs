@@ -558,3 +558,26 @@ pub struct Unk808068d4 {
     pub unkc: u32,
     pub entity_model: TagHash,
 }
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808604 {
+    pub unk0: [u32; 4],
+    pub unk10: Tag<Unk80808724>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808606 {
+    pub unk0: [u32; 4],
+    pub translation: Vector4,
+    pub unk20: Vector4,
+    pub unk30: Vector4,
+    pub unk40: [u32; 4],
+    pub unk50: [u32; 4],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808724 {
+    pub file_size: u64,
+    pub unk8: TablePointer<Unk80808606>,
+    pub havok_file: TagHash,
+}

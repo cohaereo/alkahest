@@ -20,7 +20,8 @@ use crate::{
     map::SMapDataTable,
     map::{
         SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98,
-        Unk80806d19, Unk808085c2, Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b, Unk80809802,
+        Unk80806d19, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b,
+        Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
@@ -1164,6 +1165,10 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 }
                 0x8080684d => {
                     // TODO(cohae): Collection of havok files
+                    info!(
+                        "TODO: Unk8080684d (file {} @ 0x{:x})",
+                        table_hash, data.data_resource.offset
+                    );
                 }
                 0x80806a40 => {
                     table_data
@@ -1320,6 +1325,56 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             resource: MapResource::KillOrTurnbackBarrier(
                                 d.unk0.havok_file,
                                 d.unk0.shape_index,
+                                havok_debugshape,
+                            ),
+                            has_havok_data: true,
+                            ..base_rp
+                        },
+                        EntityWorldId(data.world_id),
+                    )));
+                }
+                0x80808604 => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk80808604 = table_data.read_le()?;
+
+                    let havok_debugshape =
+                        if let Ok(havok_data) = package_manager().read_tag(d.unk10.havok_file) {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(o) => {
+                                    // TODO(cohae): This probably uses shape indexes as well, but i havent found any yet
+                                    // if (d.unk0.shape_index as usize) < o.len() {
+                                    if o.len() > 1 {
+                                        error!("TODO: More than 1 shape for 0x80808604");
+                                        continue;
+                                    }
+                                    CustomDebugShape::from_havok_shape(&dcs, &o[0]).ok()
+                                    // } else {
+                                    //     None
+                                    // }
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                    None
+                                }
+                            }
+                        } else {
+                            None
+                        };
+
+                    let new_transform = Transform {
+                        translation: Vec4::from(d.unk10.unk8[0].translation).truncate(),
+                        ..Default::default()
+                    };
+
+                    ents.push(scene.spawn((
+                        new_transform,
+                        ResourcePoint {
+                            resource: MapResource::Unk80808604(
+                                d.unk10.havok_file,
                                 havok_debugshape,
                             ),
                             has_havok_data: true,

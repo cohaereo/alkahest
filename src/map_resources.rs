@@ -42,6 +42,7 @@ pub enum MapResource {
     KillOrTurnbackBarrier(TagHash, u32, Option<CustomDebugShape>),
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
+    Unk80808604(TagHash, Option<CustomDebugShape>),
 }
 
 impl MapResource {
@@ -95,7 +96,6 @@ impl MapResource {
                 if let Some(s) = s {
                     format!(
                         "Ambient Sound\n(streams [{}])",
-                        // s.soundbank,
                         s.streams.iter().map(|t| t.to_string()).join(", ")
                     )
                 } else {
@@ -106,6 +106,16 @@ impl MapResource {
             MapResource::ShadowingLight(t) => format!("Shadowing Light ({t})"),
             MapResource::NamedArea(_, s) => format!("Named Area ('{s}')\n(TODO: havok)"),
             MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
+            MapResource::Unk80808604(t, s) => {
+                if s.is_some() {
+                    format!("Unk80808604 (havok {t})")
+                } else {
+                    format!(
+                        "Unk80808604 (havok {t})\n{} Havok shape visualization failed to load",
+                        ICON_ALERT
+                    )
+                }
+            }
         }
     }
 
@@ -157,6 +167,9 @@ impl MapResource {
                 self.debug_color(),
             ),
             MapResource::KillOrTurnbackBarrier(_, _, Some(shape)) => {
+                debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
+            }
+            MapResource::Unk80808604(_, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             _ => {}
@@ -284,4 +297,5 @@ mapresource_info!(
     14, KillOrTurnbackBarrier, [249, 154, 19], ICON_SKULL
     15, Unk80809121, [96, 96, 255], ICON_HELP
     16, Unk808068d4, [22, 230, 190], ICON_WAVES
+    17, Unk80808604, [255, 96, 96], ICON_HELP
 );

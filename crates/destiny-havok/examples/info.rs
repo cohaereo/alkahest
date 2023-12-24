@@ -13,7 +13,7 @@ use destiny_havok::{
     shape_collection::{UnkShapeArrayEntry, UnkShapeArrayParent},
     types::{
         compound_shape::{hkpStaticCompoundShape, hkpStaticCompoundShapeInstance},
-        convex_vertices::hkpConvexVerticesShape,
+        convex_vertices::{hkFourTransposedPoints, hkpConvexVerticesShape},
     },
 };
 use glam::{Mat4, Quat, Vec3, Vec4};
@@ -82,10 +82,25 @@ fn main() -> anyhow::Result<()> {
                                 0x17 => println!("uint16"),
                                 0x18 => println!("uint32"),
                                 0x1b => println!("Vector4"),
-                                0x20 => println!("Matrix3x4"),
+                                0x20 => {
+                                    println!("hkFourTransposedPoints");
+
+                                    f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
+                                    let verts: Vec<hkFourTransposedPoints> = f.read_type_args(
+                                        endian,
+                                        VecArgs {
+                                            count: item.count as _,
+                                            inner: (),
+                                        },
+                                    )?;
+
+                                    // for v in verts {
+                                    //     println!("{:#x?}", v.transpose());
+                                    // }
+                                }
                                 0x3f => println!("s_physics_component_havok_data"),
-                                0x48 => println!("UnkShapeArray"),
-                                0x74 => println!("UnkShapeArrayParent"),
+                                0x48 => println!("s_hkpShape_array_data"),
+                                0x74 => println!("s_hkpShape_array"),
                                 0x7d => println!("hkpBoxShape"),
                                 0x88 => println!("hkpConvexVerticesShape"),
                                 0x8b => println!("hkpBvCompressedMeshShape"),

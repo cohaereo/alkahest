@@ -374,7 +374,9 @@ impl TfxBytecodeInterpreter {
                     temp[slotu] = v;
                 }
                 #[cfg(not(feature = "tfx_strict_interpreter"))]
-                _ => {}
+                _ => {
+                    let _ = ip;
+                }
                 #[cfg(feature = "tfx_strict_interpreter")]
                 u => {
                     anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {ip}")
