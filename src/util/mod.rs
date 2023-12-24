@@ -6,7 +6,7 @@ pub mod lock;
 
 use std::path::PathBuf;
 
-pub use lock::{FilterDebugLockTarget, LockTracker, RwLock};
+pub use lock::{FilterDebugLockTarget, RwLock};
 
 use crate::types::FnvHash;
 

@@ -58,7 +58,7 @@ impl TfxBytecodeInterpreter {
             }};
         }
 
-        for (_ip, op) in self.opcodes.iter().enumerate() {
+        for (ip, op) in self.opcodes.iter().enumerate() {
             match op {
                 TfxBytecodeOp::Add | TfxBytecodeOp::Add2 => {
                     let [t1, t2] = stack_pop!(2);
@@ -377,7 +377,7 @@ impl TfxBytecodeInterpreter {
                 _ => {}
                 #[cfg(feature = "tfx_strict_interpreter")]
                 u => {
-                    anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {_ip}")
+                    anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {ip}")
                 }
             }
         }

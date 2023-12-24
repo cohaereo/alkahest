@@ -84,60 +84,17 @@ fn main() -> anyhow::Result<()> {
                                 0x1b => println!("Vector4"),
                                 0x20 => println!("Matrix3x4"),
                                 0x3f => println!("s_physics_component_havok_data"),
-                                0x48 => {
-                                    println!("UnkShapeArray");
-                                    // f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
-                                    // let shape: Vec<UnkShapeArrayEntry> = f.read_type_args(
-                                    //     endian,
-                                    //     VecArgs {
-                                    //         count: item.count as _,
-                                    //         inner: (),
-                                    //     },
-                                    // )?;
-
-                                    // println!("{shape:#x?}");
-                                }
-                                0x74 => {
-                                    println!("UnkShapeArrayParent");
-                                    // f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
-                                    // let shape: UnkShapeArrayParent = f.read_type(endian)?;
-
-                                    // println!("{shape:#x?}");
-                                }
+                                0x48 => println!("UnkShapeArray"),
+                                0x74 => println!("UnkShapeArrayParent"),
                                 0x7d => println!("hkpBoxShape"),
-                                0x88 => {
-                                    println!("hkpConvexVerticesShape");
-                                    // f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
-                                    // let shape: hkpConvexVerticesShape = f.read_type(endian)?;
-
-                                    // println!("{shape:#x?}");
-                                }
+                                0x88 => println!("hkpConvexVerticesShape"),
                                 0x8b => println!("hkpBvCompressedMeshShape"),
                                 0x99 => println!("hkpBvCompressedMeshShapeTreeDataRun"),
                                 0x9c => println!("hkcdStaticMeshTreeBaseSection"),
                                 0x9e => println!("hkcdStaticMeshTreeBasePrimitive"),
                                 0xac => println!("hkcdStaticTreeCodec3Axis4"),
-                                0xaf => {
-                                    println!("hkpStaticCompoundShape");
-                                    // f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
-                                    // let shape: hkpStaticCompoundShape = f.read_type(endian)?;
-
-                                    // println!("{shape:#x?}");
-                                }
-                                0xb3 => {
-                                    println!("hkpStaticCompoundShapeInstance");
-                                    f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
-                                    let shapes: Vec<hkpStaticCompoundShapeInstance> = f
-                                        .read_type_args(
-                                            endian,
-                                            VecArgs {
-                                                count: item.count as _,
-                                                inner: (),
-                                            },
-                                        )?;
-
-                                    println!("{} instances: {shapes:#x?}", shapes.len());
-                                }
+                                0xaf => println!("hkpStaticCompoundShape"),
+                                0xb3 => println!("hkpStaticCompoundShapeInstance"),
                                 0xb9 => println!("ushort"),
                                 u => eprintln!("{}", format!("Unknown type 0x{u:x}").red()),
                             }

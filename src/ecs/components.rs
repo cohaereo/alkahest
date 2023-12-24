@@ -6,8 +6,8 @@ use glam::Vec4;
 use crate::{
     map_resources::MapResource,
     render::{
-        cbuffer::ConstantBufferCached, debug::CustomDebugShape, scopes::ScopeRigidModel,
-        EntityRenderer, InstancedRenderer, TerrainRenderer,
+        cbuffer::ConstantBufferCached, scopes::ScopeRigidModel, EntityRenderer, InstancedRenderer,
+        TerrainRenderer,
     },
     structure::ExtendedHash,
     types::AABB,

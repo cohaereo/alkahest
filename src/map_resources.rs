@@ -1,8 +1,8 @@
 use crate::ecs::transform::Transform;
 use crate::icons::{
-    ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP, ICON_HELP_BOX_OUTLINE,
-    ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SKULL, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER,
-    ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
+    ICON_ACCOUNT_CONVERT, ICON_ALERT, ICON_CHESS_PAWN, ICON_FLARE, ICON_HELP,
+    ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SKULL, ICON_SPHERE,
+    ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
 use crate::render::debug::{CustomDebugShape, DebugShapes};
@@ -10,7 +10,7 @@ use crate::structure::ExtendedHash;
 use crate::structure::ResourcePointer;
 use crate::types::AABB;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Quat, Vec3};
+use glam::{Mat4, Vec3};
 use itertools::Itertools;
 
 use strum::{EnumCount, EnumIs, EnumVariantNames};
@@ -83,8 +83,12 @@ impl MapResource {
             MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
-            MapResource::KillOrTurnbackBarrier(h, i, _) => {
-                format!("KillOrTurnbackBarrier (havok {h}:{i})")
+            MapResource::KillOrTurnbackBarrier(h, i, s) => {
+                if s.is_some() {
+                    format!("KillOrTurnbackBarrier (havok {h}:{i})")
+                } else {
+                    format!("KillOrTurnbackBarrier (havok {h}:{i})\n{} Shape visualization failed to load", ICON_ALERT)
+                }
             }
             MapResource::Unk80809121(h) => format!("Unk80809121 (havok {h})"),
             MapResource::AmbientSound(s) => {

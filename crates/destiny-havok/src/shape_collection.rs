@@ -11,6 +11,7 @@ use crate::{
         compound_shape::{hkpStaticCompoundShape, hkpStaticCompoundShapeInstance},
         convex_vertices::{hkFourTransposedPoints, hkpConvexVerticesShape},
         hkArrayIndex, hkPointerIndex,
+        unknown::{Unk81, Unk84},
     },
 };
 
@@ -44,6 +45,14 @@ impl Shape {
         for v in self.vertices.iter_mut() {
             *v = transform.transform_point3(*v);
         }
+    }
+
+    pub fn center(&self) -> Vec3 {
+        let mut center = Vec3::ZERO;
+        for v in self.vertices.iter() {
+            center += *v;
+        }
+        center / self.vertices.len() as f32
     }
 }
 
@@ -153,6 +162,36 @@ pub fn read_shape(
         .context("Shape references invalid index")?;
 
     match item.typ {
+        // Some alternative kind of static compound shape?
+        0x81 => {
+            f.seek(SeekFrom::Start(item.offset as u64))?;
+
+            let unk81: Unk81 = f.read_type(endian)?;
+
+            let unk84_item = items
+                .get(unk81.unk38 as usize)
+                .context("unk81 references invalid index")?;
+
+            let unk84: Vec<Unk84> =
+                f.save_pos_seek(SeekFrom::Start(unk84_item.offset as u64), |f| {
+                    f.read_type_args(
+                        endian,
+                        VecArgs {
+                            count: unk84_item.count as _,
+                            inner: (),
+                        },
+                    )
+                    .context("Failed to read compound shape instances array")
+                })?;
+
+            let mut shape = Shape::default();
+            for v in unk84 {
+                let s = read_shape(items, f, v.shape, endian)?;
+                shape.combine(&s);
+            }
+
+            Ok(shape)
+        }
         0x88 => {
             f.seek(SeekFrom::Start(item.offset as u64))?;
 
