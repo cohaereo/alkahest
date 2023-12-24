@@ -516,11 +516,7 @@ impl CustomDebugShape {
         vertices: &[Vec4],
         indices: &[u16],
     ) -> anyhow::Result<CustomDebugShape> {
-        // Transform triangle list indices to line list indices
-        let indices_outline = indices
-            .chunks_exact(3)
-            .flat_map(|i| vec![i[0], i[1], i[1], i[2], i[2], i[0]])
-            .collect::<Vec<_>>();
+        let indices_outline = remove_diagonals_linegulate(vertices, indices);
 
         let ib = unsafe {
             dcs.device
@@ -589,4 +585,39 @@ impl CustomDebugShape {
         let vertices_vec4 = shape.vertices.iter().map(|v| v.extend(1.0)).collect_vec();
         Self::new(dcs, &vertices_vec4, &shape.indices)
     }
+}
+
+// Input: triangulated mesh, output: line list with diagonal edges removed
+pub fn remove_diagonals_linegulate(vertices: &[Vec4], indices: &[u16]) -> Vec<u16> {
+    let mut indices_outline = vec![];
+    for i in indices.chunks_exact(3) {
+        let i0 = i[0];
+        let i1 = i[1];
+        let i2 = i[2];
+
+        let v0 = vertices[i0 as usize];
+        let v1 = vertices[i1 as usize];
+        let v2 = vertices[i2 as usize];
+
+        //         0
+        //         |\ edge_a
+        //  edge c | \
+        //         2--1
+        //           edge_b
+        let edge_a = (v0 - v1).length();
+        let edge_b = (v1 - v2).length();
+        let edge_c = (v2 - v0).length();
+
+        if edge_a > edge_b && edge_a > edge_c {
+            indices_outline.extend_from_slice(&[i0, i2, i2, i1]);
+        } else if edge_b > edge_a && edge_b > edge_c {
+            indices_outline.extend_from_slice(&[i0, i1, i0, i2]);
+        } else if edge_c > edge_a && edge_c > edge_b {
+            indices_outline.extend_from_slice(&[i0, i1, i1, i2]);
+        } else {
+            indices_outline.extend_from_slice(&[i0, i1, i1, i2, i2, i0])
+        }
+    }
+
+    indices_outline
 }

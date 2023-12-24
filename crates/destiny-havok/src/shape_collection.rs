@@ -3,6 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use anyhow::Context;
 use binrw::{binread, BinReaderExt, Endian, VecArgs};
 use glam::Vec3;
+use parry3d::{na::Point3, query::PointQuery, shape::ConvexPolyhedron};
 
 use crate::{
     index::IndexItem,
@@ -218,22 +219,22 @@ pub fn read_shape(
                 .flat_map(|v| v.transpose())
                 .collect::<Vec<_>>();
 
-            let points_raw: Vec<Vec<f32>> = vertices_corrected
+            let points_na: Vec<Point3<f32>> = vertices_corrected
                 .iter()
-                .map(|v| v.to_array().to_vec())
+                .map(|v| v.to_array().into())
                 .collect();
 
-            let hull = chull::ConvexHullWrapper::try_new(&points_raw, None)
+            let hull = ConvexPolyhedron::from_convex_hull(&points_na)
                 .context("Failed to create convex hull")?;
 
-            let (vertices, indices) = hull.vertices_indices();
+            let (vertices, indices) = hull.to_trimesh();
+
             let shape = Shape {
                 vertices: vertices
                     .into_iter()
-                    .map(|v| Vec3::new(v[0], v[1], v[2]))
+                    .map(|v| Vec3::from_array(v.into()))
                     .collect(),
-
-                indices: indices.into_iter().map(|i| i as u16).collect(),
+                indices: indices.into_iter().flatten().map(|i| i as u16).collect(),
             };
 
             Ok(shape)

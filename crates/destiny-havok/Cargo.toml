@@ -9,8 +9,8 @@ edition = "2021"
 anyhow = "1"
 binrw = "0.13.3"
 bitflags = "2.4.1"
-chull = "0.2"
 glam = "0.25"
+parry3d = "0.13.5"
 
 [dev-dependencies]
 anyhow = "1.0.75"
