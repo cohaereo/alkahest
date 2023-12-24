@@ -1340,33 +1340,42 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let d: Unk80808604 = table_data.read_le()?;
 
-                    let havok_debugshape =
-                        if let Ok(havok_data) = package_manager().read_tag(d.unk10.havok_file) {
-                            let mut cur = Cursor::new(&havok_data);
-                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
-                                Ok(o) => {
-                                    // TODO(cohae): This probably uses shape indexes as well, but i havent found any yet
-                                    // if (d.unk0.shape_index as usize) < o.len() {
-                                    if o.len() > 1 {
-                                        error!("TODO: More than 1 shape for 0x80808604");
-                                        continue;
-                                    }
-                                    CustomDebugShape::from_havok_shape(&dcs, &o[0]).ok()
-                                    // } else {
-                                    //     None
-                                    // }
+                    let havok_debugshape = if let Ok(havok_data) =
+                        package_manager().read_tag(d.unk10.havok_file)
+                    {
+                        let mut cur = Cursor::new(&havok_data);
+                        match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                            Ok(o) => {
+                                // TODO(cohae): This probably uses shape indexes as well, but i havent found any yet
+                                // if (d.unk0.shape_index as usize) < o.len() {
+                                if o.len() > 1 {
+                                    error!("TODO: More than 1 shape for 0x80808604");
+                                    continue;
                                 }
-                                Err(e) => {
-                                    error!("Failed to read shapes: {e}");
-                                    None
-                                }
+
+                                let mut shape = o[0].clone();
+                                let extra_translation = shape.center();
+                                shape.apply_transform(Mat4::from_translation(-extra_translation));
+
+                                CustomDebugShape::from_havok_shape(&dcs, &shape)
+                                    .map(|v| (v, extra_translation))
+                                    .ok()
+                                // } else {
+                                //     None
+                                // }
                             }
-                        } else {
-                            None
-                        };
+                            Err(e) => {
+                                error!("Failed to read shapes: {e}");
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
 
                     let new_transform = Transform {
-                        translation: Vec4::from(d.unk10.unk8[0].translation).truncate(),
+                        translation: Vec4::from(d.unk10.unk8[0].translation).truncate()
+                            + havok_debugshape.as_ref().map(|v| v.1).unwrap_or_default(),
                         ..Default::default()
                     };
 
@@ -1375,7 +1384,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         ResourcePoint {
                             resource: MapResource::PlayAreaBounds(
                                 d.unk10.havok_file,
-                                havok_debugshape,
+                                havok_debugshape.map(|v| v.0),
                             ),
                             has_havok_data: true,
                             ..base_rp

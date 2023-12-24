@@ -27,7 +27,7 @@ pub struct UnkShapeArrayEntry {
     pub shape: hkPointerIndex,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Shape {
     pub vertices: Vec<Vec3>,
     pub indices: Vec<u16>,
