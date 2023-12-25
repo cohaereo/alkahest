@@ -567,11 +567,14 @@ pub struct Unk80808604 {
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80808606 {
-    pub unk0: [u32; 4],
+    pub rotation: Vector4,
     pub translation: Vector4,
     pub unk20: Vector4,
     pub unk30: Vector4,
-    pub unk40: [u32; 4],
+    pub unk40: u32,
+    pub shape_index: u32,
+    pub unk48: u32,
+    pub unk4c: u32,
     pub unk50: [u32; 4],
 }
 
