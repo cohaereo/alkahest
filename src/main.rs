@@ -453,7 +453,7 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_fps);
 
     gui.add_overlay(Rc::new(RefCell::new(InspectorOverlay)));
-    gui.add_overlay(Rc::new(RefCell::new(OutlinerOverlay)));
+    gui.add_overlay(Rc::new(RefCell::new(OutlinerOverlay::default())));
 
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
