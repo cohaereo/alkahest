@@ -46,7 +46,7 @@ pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
                     .strong(),
             )
             .clicked()
-            || ui.input(|i| i.key_pressed(egui::Key::H))
+            || ui.input(|i| i.key_pressed(egui::Key::H) && i.modifiers.is_none())
         {
             if let Some(mut vis) = e.get::<&mut Visible>() {
                 vis.0 = !visible;
