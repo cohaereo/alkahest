@@ -859,6 +859,15 @@ impl Renderer {
         // self.white.bind(&self.dcs, 1, ShaderStages::all());
         // self.white.bind(&self.dcs, 2, ShaderStages::all());
 
+        if matches!(
+            mode,
+            DrawMode::DepthOnly | DrawMode::DepthOnlyIgnoreTransparent | DrawMode::PickBuffer
+        ) {
+            unsafe {
+                self.dcs.context().RSSetState(&self.rasterizer_state_nocull);
+            }
+        }
+
         let bind_stages = match mode {
             DrawMode::Normal => ShaderStages::VERTEX | ShaderStages::PIXEL,
             // Don't bother binding anything for the pixel stage
