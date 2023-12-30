@@ -3,7 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use anyhow::Context;
 use binrw::{binread, BinReaderExt, Endian, VecArgs};
 use glam::Vec3;
-use parry3d::{na::Point3, query::PointQuery, shape::ConvexPolyhedron};
+use parry3d::{na::Point3, shape::ConvexPolyhedron};
 
 use crate::{
     index::IndexItem,

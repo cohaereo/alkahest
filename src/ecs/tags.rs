@@ -1,5 +1,5 @@
 use egui::Color32;
-use hecs::{Entity, EntityRef};
+use hecs::Entity;
 use nohash_hasher::IntSet;
 
 use crate::overlays::{chip::name_to_color, UiExt};

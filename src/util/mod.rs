@@ -79,3 +79,20 @@ pub fn prettify_distance(meters: f32) -> String {
         format!("{:.2} km", meters / 1000.0)
     }
 }
+
+pub fn split_pascal_case(s: &str) -> String {
+    let mut result = String::new();
+    let mut last_upper = false;
+    for c in s.chars() {
+        if c.is_uppercase() {
+            if !last_upper {
+                result.push(' ');
+            }
+            last_upper = true;
+        } else {
+            last_upper = false;
+        }
+        result.push(c);
+    }
+    result
+}
