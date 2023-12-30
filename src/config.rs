@@ -51,6 +51,7 @@ pub struct Config {
 pub struct ResourceConfig {
     pub show_resources: bool,
     pub resource_distance_limit: bool,
+    pub map_resource_label_background: bool,
     pub filters: HashMap<String, bool>,
 }
 
@@ -58,6 +59,7 @@ impl Default for ResourceConfig {
     fn default() -> Self {
         Self {
             resource_distance_limit: true,
+            map_resource_label_background: true,
             show_resources: false,
             filters: Default::default(),
         }

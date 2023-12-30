@@ -13,10 +13,10 @@ use crate::{
     },
     icons::ICON_CHESS_PAWN,
     map::MapDataList,
-    util::prettify_distance,
+    util::text::{prettify_distance, text_color_for_background},
 };
 
-use super::{chip::text_color_for_background, gui::Overlay};
+use super::gui::Overlay;
 
 pub struct OutlinerOverlay {
     sort_by_distance: bool,

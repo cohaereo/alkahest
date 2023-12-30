@@ -7,7 +7,7 @@ use crate::{
         ICON_ALPHA_A, ICON_ALPHA_B, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF,
         ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
     },
-    util::{split_pascal_case, BoolExts as _},
+    util::{text::split_pascal_case, BoolExts as _},
 };
 
 use super::{

@@ -10,7 +10,7 @@ use hecs::EntityRef;
 
 use crate::ecs::component_panels::ComponentPanel;
 use crate::ecs::components::*;
-use crate::util::split_pascal_case;
+use crate::util::text::split_pascal_case;
 
 pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
     macro_rules! icon_from_component_panels {

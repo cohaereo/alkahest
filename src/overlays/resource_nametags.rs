@@ -8,6 +8,7 @@ use crate::{
     map_resources::MapResource,
     render::debug::DebugShapes,
     resources::Resources,
+    util::text::text_color_for_background,
 };
 
 use egui::{Color32, Rect};
@@ -143,10 +144,16 @@ impl Overlay for ResourceTypeOverlay {
                             );
                             debug_string_rect.extend_with_x(debug_string_pos.x - 11.0 - 14.0);
 
+                            let background_color = text_color_for_background(color);
+                            let white_bg = background_color.r() == 255;
                             painter.rect(
-                                debug_string_rect,
+                                debug_string_rect.expand(4.0),
                                 egui::Rounding::none(),
-                                Color32::from_black_alpha(128),
+                                if white_bg {
+                                    Color32::from_white_alpha(196)
+                                } else {
+                                    Color32::from_black_alpha(128)
+                                },
                                 egui::Stroke::default(),
                             );
                         }

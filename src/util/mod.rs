@@ -3,6 +3,7 @@ pub mod error;
 pub mod export;
 pub mod image;
 pub mod lock;
+pub mod text;
 
 use std::path::PathBuf;
 
@@ -65,34 +66,4 @@ impl BoolExts for bool {
             "no"
         }
     }
-}
-
-/// Simplifies meters to other metric measurement units (mm, cm, m, km)
-pub fn prettify_distance(meters: f32) -> String {
-    if meters < 0.001 {
-        format!("{:.2} mm", meters * 1000.0)
-    } else if meters < 1.0 {
-        format!("{:.2} cm", meters * 100.0)
-    } else if meters < 1000.0 {
-        format!("{:.2} m", meters)
-    } else {
-        format!("{:.2} km", meters / 1000.0)
-    }
-}
-
-pub fn split_pascal_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut last_upper = false;
-    for c in s.chars() {
-        if c.is_uppercase() {
-            if !last_upper {
-                result.push(' ');
-            }
-            last_upper = true;
-        } else {
-            last_upper = false;
-        }
-        result.push(c);
-    }
-    result
 }

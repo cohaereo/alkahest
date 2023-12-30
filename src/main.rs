@@ -412,7 +412,9 @@ pub async fn main() -> anyhow::Result<()> {
     let gui_debug = Rc::new(RefCell::new(CameraPositionOverlay {
         show_map_resources: config::with(|cfg| cfg.resources.show_resources),
         show_map_resource_label: true,
-        map_resource_label_background: false,
+        map_resource_label_background: config::with(|cfg| {
+            cfg.resources.map_resource_label_background
+        }),
         map_resource_filter: {
             let mut f = vec![false; MapResource::max_index() + 1];
 
@@ -862,6 +864,7 @@ pub async fn main() -> anyhow::Result<()> {
                     }
 
                     c.resources.show_resources = gdb.show_map_resources;
+                    c.resources.map_resource_label_background = gdb.map_resource_label_background;
                     c.resources.resource_distance_limit = gdb.map_resource_distance_limit_enabled;
                     c.resources.filters = resource_filters;
                 });

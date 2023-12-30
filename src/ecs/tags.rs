@@ -2,7 +2,7 @@ use egui::Color32;
 use hecs::Entity;
 use nohash_hasher::IntSet;
 
-use crate::overlays::{chip::name_to_color, UiExt};
+use crate::{overlays::UiExt, util::text::name_to_color};
 
 use super::Scene;
 
