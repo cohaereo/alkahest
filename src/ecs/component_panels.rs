@@ -1,4 +1,4 @@
-use egui::RichText;
+use egui::{Color32, RichText};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
@@ -14,6 +14,7 @@ use super::{
     components::{
         EntityModel, EntityWorldId, Label, ResourcePoint, Ruler, StaticInstances, Visible,
     },
+    tags::Tags,
     transform::{OriginalTransform, Transform},
     Scene,
 };
@@ -57,6 +58,14 @@ pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
         ui.label(RichText::new(title).size(24.0).strong());
     });
     ui.separator();
+
+    if let Some(tags) = e.get::<&Tags>() {
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("Tags: ").color(Color32::WHITE).strong());
+            tags.ui_chips(ui);
+        });
+        ui.separator();
+    }
 
     show_inspector_components(ui, e);
 
