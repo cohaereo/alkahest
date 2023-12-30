@@ -1288,10 +1288,42 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .cloned()
                         .unwrap_or_else(|| format!("[MissingString_{:08x}]", d.area_name.0));
 
+                    let (havok_debugshape, new_transform) =
+                        if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(o) => {
+                                    if (d.unk0.shape_index as usize) < o.len() {
+                                        let mut shape = o[d.unk0.shape_index as usize].clone();
+
+                                        let center = shape.center();
+                                        shape.apply_transform(Mat4::from_translation(-center));
+
+                                        let new_transform = Transform::from_mat4(
+                                            transform.to_mat4() * Mat4::from_translation(center),
+                                        );
+
+                                        (
+                                            CustomDebugShape::from_havok_shape(&dcs, &shape).ok(),
+                                            Some(new_transform),
+                                        )
+                                    } else {
+                                        (None, None)
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                    (None, None)
+                                }
+                            }
+                        } else {
+                            (None, None)
+                        };
+
                     ents.push(scene.spawn((
-                        transform,
+                        new_transform.unwrap_or(transform),
                         ResourcePoint {
-                            resource: MapResource::NamedArea(d, name),
+                            resource: MapResource::NamedArea(d, name, havok_debugshape),
                             has_havok_data: true,
                             ..base_rp
                         },

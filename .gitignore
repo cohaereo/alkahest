@@ -1,4 +1,4 @@
-/target
+**/target
 /.vscode
 imgui.ini
 *.tag

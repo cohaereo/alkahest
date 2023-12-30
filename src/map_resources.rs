@@ -31,7 +31,7 @@ pub enum MapResource {
     AmbientSound(Option<Unk80809802>),
     Light(AABB, TagHash, usize),
     ShadowingLight(TagHash),
-    NamedArea(Unk80809178, String),
+    NamedArea(Unk80809178, String, Option<CustomDebugShape>),
 
     Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash),
     Unk808067b5(TagHash),
@@ -104,7 +104,16 @@ impl MapResource {
             }
             MapResource::Decoration(_, t) => format!("Decoration ({t})"),
             MapResource::ShadowingLight(t) => format!("Shadowing Light ({t})"),
-            MapResource::NamedArea(_, s) => format!("Named Area ('{s}')\n(TODO: havok)"),
+            MapResource::NamedArea(_, s, shape) => {
+                if shape.is_some() {
+                    format!("NamedArea ({s})")
+                } else {
+                    format!(
+                        "NamedArea ({s})\n{} Shape visualization failed to load",
+                        ICON_ALERT
+                    )
+                }
+            }
             MapResource::Unk808068d4(e) => format!("Unk808068d4 ({e}) (water)"),
             MapResource::PlayAreaBounds(t, s) => {
                 if s.is_some() {
@@ -170,6 +179,9 @@ impl MapResource {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             MapResource::PlayAreaBounds(_, Some(shape)) => {
+                debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
+            }
+            MapResource::NamedArea(_, _, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             _ => {}
