@@ -1350,7 +1350,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let d: Unk80808604 = table_data.read_le()?;
 
-                    let havok_debugshape = if let Ok(havok_data) =
+                    let (havok_debugshape, new_transform) = if let Ok(havok_data) =
                         package_manager().read_tag(d.unk10.havok_file)
                     {
                         let mut cur = Cursor::new(&havok_data);
@@ -1380,19 +1380,31 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     final_shape.combine(&shape);
                                 }
 
-                                CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok()
+                                // Re-center the shape
+                                let center = final_shape.center();
+                                final_shape.apply_transform(Mat4::from_translation(-center));
+
+                                let new_transform = Transform {
+                                    translation: center,
+                                    ..Default::default()
+                                };
+
+                                (
+                                    CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok(),
+                                    Some(new_transform),
+                                )
                             }
                             Err(e) => {
                                 error!("Failed to read shapes: {e}");
-                                None
+                                (None, None)
                             }
                         }
                     } else {
-                        None
+                        (None, None)
                     };
 
                     ents.push(scene.spawn((
-                        transform,
+                        new_transform.unwrap_or(transform),
                         ResourcePoint {
                             resource: MapResource::PlayAreaBounds(
                                 d.unk10.havok_file,

@@ -48,12 +48,21 @@ impl Shape {
         }
     }
 
-    pub fn center(&self) -> Vec3 {
-        let mut center = Vec3::ZERO;
+    pub fn min_max(&self) -> (Vec3, Vec3) {
+        let mut min = Vec3::splat(f32::MAX);
+        let mut max = Vec3::splat(f32::MIN);
+
         for v in self.vertices.iter() {
-            center += *v;
+            min = min.min(*v);
+            max = max.max(*v);
         }
-        center / self.vertices.len() as f32
+
+        (min, max)
+    }
+
+    pub fn center(&self) -> Vec3 {
+        let (min, max) = self.min_max();
+        (min + max) / 2.0
     }
 }
 
