@@ -13,6 +13,7 @@ use crate::{
             ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
             ResourcePoint, StaticInstances, Terrain, Water,
         },
+        tags::{insert_tag, EntityTag},
         transform::{OriginalTransform, Transform},
         Scene,
     },
@@ -1472,17 +1473,30 @@ fn load_datatable_into_scene<R: Read + Seek>(
     }
 
     for e in ents {
+        if matches!(
+            resource_origin,
+            ResourceOriginType::Activity | ResourceOriginType::Activity2
+        ) {
+            insert_tag(scene, e, EntityTag::Activity);
+        }
+
+        if scene
+            .get::<&ResourcePoint>(e)
+            .map(|r| r.has_havok_data)
+            .unwrap_or_default()
+        {
+            insert_tag(scene, e, EntityTag::Havok);
+        }
+
         if let Ok(transform) = scene.get::<&Transform>(e).map(|t| (*t)) {
             scene.insert_one(e, OriginalTransform(transform)).ok();
         };
 
-        let Some(world_id) = scene.get::<&EntityWorldId>(e).map(|w| w.0).ok() else {
-            continue;
+        if let Some(world_id) = scene.get::<&EntityWorldId>(e).map(|w| w.0).ok() {
+            if let Some(name) = entity_worldid_name_map.get(&world_id) {
+                scene.insert_one(e, Label(name.clone())).ok();
+            }
         };
-
-        if let Some(name) = entity_worldid_name_map.get(&world_id) {
-            scene.insert_one(e, Label(name.clone())).ok();
-        }
     }
 
     Ok(())

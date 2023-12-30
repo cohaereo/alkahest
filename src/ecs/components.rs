@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use destiny_pkg::TagHash;
-use glam::Vec4;
+use glam::{Vec3, Vec4};
 
 use crate::{
     map_resources::MapResource,
@@ -86,5 +86,17 @@ impl Deref for Visible {
 impl DerefMut for Visible {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+#[derive(Default)]
+pub struct Ruler {
+    pub start: Vec3,
+    pub end: Vec3,
+}
+
+impl Ruler {
+    pub fn length(&self) -> f32 {
+        (self.start - self.end).length()
     }
 }

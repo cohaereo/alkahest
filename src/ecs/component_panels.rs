@@ -4,14 +4,16 @@ use hecs::{Entity, EntityRef};
 
 use crate::{
     icons::{
-        ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_IDENTIFIER,
-        ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
+        ICON_ALPHA_A, ICON_ALPHA_B, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF,
+        ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
     },
     util::BoolExts as _,
 };
 
 use super::{
-    components::{EntityModel, EntityWorldId, Label, ResourcePoint, StaticInstances, Visible},
+    components::{
+        EntityModel, EntityWorldId, Label, ResourcePoint, Ruler, StaticInstances, Visible,
+    },
     transform::{OriginalTransform, Transform},
     Scene,
 };
@@ -115,14 +117,55 @@ fn inspector_component_frame(
     ui.separator();
 }
 
-trait ComponentPanel {
+// TODO(cohae): Move these to a util module together with input_float4
+macro_rules! input_float3 {
+    ($ui:expr, $label:expr, $v:expr) => {{
+        $ui.label($label);
+        $ui.horizontal(|ui| {
+            let c0 = ui
+                .add(
+                    egui::DragValue::new(&mut $v.x)
+                        .speed(0.1)
+                        .prefix("x: ")
+                        .min_decimals(2)
+                        .max_decimals(2),
+                )
+                .changed();
+            let c1 = ui
+                .add(
+                    egui::DragValue::new(&mut $v.y)
+                        .speed(0.1)
+                        .prefix("y: ")
+                        .min_decimals(2)
+                        .max_decimals(2),
+                )
+                .changed();
+            let c2 = ui
+                .add(
+                    egui::DragValue::new(&mut $v.z)
+                        .speed(0.1)
+                        .prefix("z: ")
+                        .min_decimals(2)
+                        .max_decimals(2),
+                )
+                .changed();
+
+            c0 || c1 || c2
+        })
+    }};
+}
+
+pub(super) trait ComponentPanel {
     fn inspector_name() -> &'static str;
     fn inspector_icon() -> char {
         ICON_CUBE_OUTLINE
     }
+
+    // TODO(cohae): Not the most ergonomic thing ever
     fn has_inspector_ui() -> bool {
         false
     }
+
     fn show_inspector_ui(&mut self, _: &mut egui::Ui) {}
 }
 
@@ -140,43 +183,6 @@ impl ComponentPanel for Transform {
     }
 
     fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
-        macro_rules! input_float3 {
-            ($ui:expr, $label:expr, $v:expr) => {{
-                $ui.label($label);
-                $ui.horizontal(|ui| {
-                    let c0 = ui
-                        .add(
-                            egui::DragValue::new(&mut $v.x)
-                                .speed(0.1)
-                                .prefix("x: ")
-                                .min_decimals(2)
-                                .max_decimals(2),
-                        )
-                        .changed();
-                    let c1 = ui
-                        .add(
-                            egui::DragValue::new(&mut $v.y)
-                                .speed(0.1)
-                                .prefix("y: ")
-                                .min_decimals(2)
-                                .max_decimals(2),
-                        )
-                        .changed();
-                    let c2 = ui
-                        .add(
-                            egui::DragValue::new(&mut $v.z)
-                                .speed(0.1)
-                                .prefix("z: ")
-                                .min_decimals(2)
-                                .max_decimals(2),
-                        )
-                        .changed();
-
-                    c0 || c1 || c2
-                })
-            }};
-        }
-
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
         rotation_euler.y = rotation_euler.y.to_degrees();
@@ -345,3 +351,22 @@ impl ComponentPanel for StaticInstances {
 //         });
 //     }
 // }
+
+impl ComponentPanel for Ruler {
+    fn inspector_name() -> &'static str {
+        "Ruler"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_RULER_SQUARE
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+        input_float3!(ui, format!("{ICON_ALPHA_A} Start"), &mut self.start);
+        input_float3!(ui, format!("{ICON_ALPHA_B} End"), &mut self.end);
+    }
+}

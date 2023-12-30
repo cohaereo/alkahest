@@ -66,3 +66,16 @@ impl BoolExts for bool {
         }
     }
 }
+
+/// Simplifies meters to other metric measurement units (mm, cm, m, km)
+pub fn simplify_meters(meters: f32) -> String {
+    if meters < 0.001 {
+        format!("{:.2} mm", meters * 1000.0)
+    } else if meters < 1.0 {
+        format!("{:.2} cm", meters * 100.0)
+    } else if meters < 1000.0 {
+        format!("{:.2} m", meters)
+    } else {
+        format!("{:.2} km", meters / 1000.0)
+    }
+}

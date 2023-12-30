@@ -1,5 +1,6 @@
 use crate::camera::FpsCamera;
 use crate::ecs::components::{EntityModel, Visible};
+use crate::ecs::tags::{insert_tag, EntityTag};
 use crate::ecs::transform::{OriginalTransform, Transform};
 use crate::entity::{SEntityModel, Unk808072c5, Unk80809c0f};
 use crate::map::MapDataList;
@@ -364,7 +365,10 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                         )
                         .unwrap();
 
-                        scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
+                        let e =
+                            scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
+                        insert_tag(scene, e, EntityTag::User);
+
                         info!("Entity spawned");
                     }
                     Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
@@ -440,7 +444,10 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                         )
                         .unwrap();
 
-                        scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
+                        let e =
+                            scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
+                        insert_tag(scene, e, EntityTag::User);
+
                         info!("Entity spawned");
                     }
                     Err(e) => error!("Failed to load entitymodel {tag}: {e}"),

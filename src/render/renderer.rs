@@ -8,7 +8,7 @@ use crate::types::AABB;
 use crate::util::RwLock;
 use glam::{Mat4, Quat, Vec3, Vec4};
 use hecs::Entity;
-use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+use windows::Win32::Graphics::Direct3D::{ID3DInclude, D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP};
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use winit::window::Window;

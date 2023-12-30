@@ -23,6 +23,7 @@ use crate::ecs::components::{
 use crate::ecs::resources::SelectedEntity;
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::inspector::InspectorOverlay;
+use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
@@ -452,6 +453,7 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(gui_fps);
 
     gui.add_overlay(Rc::new(RefCell::new(InspectorOverlay)));
+    gui.add_overlay(Rc::new(RefCell::new(OutlinerOverlay)));
 
     let _start_time = Instant::now();
     let mut last_frame = Instant::now();
