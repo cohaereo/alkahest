@@ -3,7 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use anyhow::Context;
 use binrw::{binread, BinReaderExt, Endian, VecArgs};
 use glam::Vec3;
-use parry3d::{na::Point3, shape::ConvexPolyhedron};
+use parry3d::na::Point3;
 
 use crate::{
     index::IndexItem,
@@ -233,10 +233,7 @@ pub fn read_shape(
                 .map(|v| v.to_array().into())
                 .collect();
 
-            let hull = ConvexPolyhedron::from_convex_hull(&points_na)
-                .context("Failed to create convex hull")?;
-
-            let (vertices, indices) = hull.to_trimesh();
+            let (vertices, indices) = parry3d::transformation::convex_hull(&points_na);
 
             let shape = Shape {
                 vertices: vertices
