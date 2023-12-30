@@ -7,7 +7,7 @@ use crate::{
         ICON_ALPHA_A, ICON_ALPHA_B, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF,
         ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
     },
-    util::BoolExts as _,
+    util::{split_pascal_case, BoolExts as _},
 };
 
 use super::{
@@ -256,7 +256,11 @@ impl ComponentPanel for ResourcePoint {
     fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.strong("Entity:");
-            ui.label(format!("{}", self.entity));
+            ui.label(self.entity.to_string());
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Origin:");
+            ui.label(split_pascal_case(&self.origin.to_string()));
         });
         ui.horizontal(|ui| {
             ui.strong("Has havok data?:");

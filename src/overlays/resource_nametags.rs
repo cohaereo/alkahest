@@ -64,7 +64,7 @@ impl Overlay for ResourceTypeOverlay {
 
                     if matches!(
                         res.origin,
-                        ResourceOriginType::Activity | ResourceOriginType::Activity2
+                        ResourceOriginType::Activity | ResourceOriginType::ActivityBruteforce
                     ) && !self.debug_overlay.borrow().map_resource_show_activity
                     {
                         continue;
@@ -198,13 +198,15 @@ impl Overlay for ResourceTypeOverlay {
                             match res.origin {
                                 ResourceOriginType::Map => "M",
                                 ResourceOriginType::Activity => "A",
-                                ResourceOriginType::Activity2 => "A2",
+                                ResourceOriginType::ActivityBruteforce => "Ab",
+                                ResourceOriginType::Ambient => "AM",
                             },
                             egui::FontId::monospace(12.0),
                             match res.origin {
                                 ResourceOriginType::Map => Color32::LIGHT_RED,
                                 ResourceOriginType::Activity => Color32::GREEN,
-                                ResourceOriginType::Activity2 => Color32::RED,
+                                ResourceOriginType::ActivityBruteforce => Color32::RED,
+                                ResourceOriginType::Ambient => Color32::from_rgb(0, 255, 255),
                             },
                         );
                     }

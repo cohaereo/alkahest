@@ -9,6 +9,7 @@ use super::Scene;
 #[derive(strum::Display, strum::EnumIter, Hash, PartialEq, Eq)]
 pub enum EntityTag {
     Activity,
+    Ambient,
     Havok,
     Utility,
     User,

@@ -17,12 +17,13 @@ use crate::{
 /// Tiger entity world ID
 pub struct EntityWorldId(pub u64);
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(strum::Display, Copy, Clone, PartialEq, Eq)]
 pub enum ResourceOriginType {
     Map,
 
     Activity,
-    Activity2,
+    ActivityBruteforce,
+    Ambient,
 }
 
 pub struct ResourcePoint {

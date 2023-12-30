@@ -78,8 +78,10 @@ pub async fn load_maps(
     let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
     let renderer_ch = renderer.clone();
 
-    let mut activity_entref_tables: IntMap<TagHash, Vec<(Tag<Unk80808e89>, ResourceHash)>> =
-        Default::default();
+    let mut activity_entref_tables: IntMap<
+        TagHash,
+        Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)>,
+    > = Default::default();
     if let Some(activity_hash) = activity_hash {
         let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
         for u1 in &activity.unk50 {
@@ -93,10 +95,11 @@ pub async fn load_maps(
                 };
 
                 for u2 in &u1.unk18 {
-                    activity_entref_tables
-                        .entry(map32)
-                        .or_default()
-                        .push((u2.unk_entity_reference.clone(), u2.activity_phase_name2));
+                    activity_entref_tables.entry(map32).or_default().push((
+                        u2.unk_entity_reference.clone(),
+                        u2.activity_phase_name2,
+                        ResourceOriginType::Activity,
+                    ));
                 }
             }
         }
@@ -120,6 +123,7 @@ pub async fn load_maps(
                                 activity_entref_tables.entry(map32).or_default().push((
                                     u2.unk_entity_reference.clone(),
                                     u2.activity_phase_name2,
+                                    ResourceOriginType::Ambient,
                                 ));
                             }
                         }
@@ -148,7 +152,7 @@ pub async fn load_maps(
 
         let mut entity_worldid_name_map: IntMap<u64, String> = Default::default();
         if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
-            for (e, _) in activity_entrefs {
+            for (e, _, _) in activity_entrefs {
                 for resource in &e.unk18.entity_resources {
                     if let Some(strings) = get_entity_labels(resource.entity_resource) {
                         entity_worldid_name_map.extend(strings);
@@ -181,7 +185,7 @@ pub async fn load_maps(
 
         if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
             let mut unknown_res_types: IntSet<u32> = Default::default();
-            for (e, phase_name2) in activity_entrefs {
+            for (e, phase_name2, origin) in activity_entrefs {
                 for resource in &e.unk18.entity_resources {
                     if resource.entity_resource.is_some() {
                         let data = package_manager().read_tag(resource.entity_resource)?;
@@ -249,7 +253,7 @@ pub async fn load_maps(
                                 &mut cur,
                                 &mut scene,
                                 renderer_ch.clone(),
-                                ResourceOriginType::Activity,
+                                *origin,
                                 phase_name2.0,
                                 stringmap.clone(),
                                 &entity_worldid_name_map,
@@ -270,7 +274,12 @@ pub async fn load_maps(
                                 &mut cur,
                                 &mut scene,
                                 renderer_ch.clone(),
-                                ResourceOriginType::Activity2,
+                                // cohae: yes, this means bruteforced ambient data tables will always be shown as ambient, but i don't think it matters once we fix the normal bruteforced activity tables
+                                if *origin == ResourceOriginType::Ambient {
+                                    *origin
+                                } else {
+                                    ResourceOriginType::ActivityBruteforce
+                                },
                                 phase_name2.0,
                                 stringmap.clone(),
                                 &entity_worldid_name_map,
@@ -1475,9 +1484,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
     for e in ents {
         if matches!(
             resource_origin,
-            ResourceOriginType::Activity | ResourceOriginType::Activity2
+            ResourceOriginType::Activity | ResourceOriginType::ActivityBruteforce
         ) {
             insert_tag(scene, e, EntityTag::Activity);
+        }
+
+        if resource_origin == ResourceOriginType::Ambient {
+            insert_tag(scene, e, EntityTag::Ambient);
         }
 
         if scene
