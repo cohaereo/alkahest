@@ -6,7 +6,7 @@ use crate::overlays::{chip::name_to_color, UiExt};
 
 use super::Scene;
 
-#[derive(strum::Display, Hash, PartialEq, Eq)]
+#[derive(strum::Display, strum::EnumIter, Hash, PartialEq, Eq)]
 pub enum EntityTag {
     Activity,
     Havok,

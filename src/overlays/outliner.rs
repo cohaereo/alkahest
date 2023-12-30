@@ -1,9 +1,14 @@
+use egui::RichText;
 use itertools::Itertools;
+use nohash_hasher::IntMap;
+use strum::IntoEnumIterator;
 
 use crate::{
     camera::FpsCamera,
     ecs::{
-        resolve_entity_icon, resolve_entity_name, resources::SelectedEntity, tags::Tags,
+        resolve_entity_icon, resolve_entity_name,
+        resources::SelectedEntity,
+        tags::{EntityTag, Tags},
         transform::Transform,
     },
     icons::ICON_CHESS_PAWN,
@@ -11,11 +16,23 @@ use crate::{
     util::prettify_distance,
 };
 
-use super::gui::Overlay;
+use super::{chip::text_color_for_background, gui::Overlay};
 
-#[derive(Default)]
 pub struct OutlinerOverlay {
     sort_by_distance: bool,
+
+    filters: IntMap<EntityTag, bool>,
+}
+
+impl Default for OutlinerOverlay {
+    fn default() -> Self {
+        Self {
+            sort_by_distance: false,
+            filters: EntityTag::iter()
+                .map(|tag| (tag, false))
+                .collect::<IntMap<_, _>>(),
+        }
+    }
 }
 
 impl Overlay for OutlinerOverlay {
@@ -32,10 +49,22 @@ impl Overlay for OutlinerOverlay {
 
             let camera = resources.get::<FpsCamera>().unwrap();
 
+            let enabled_filters = self.filters.iter().filter(|(_, v)| **v).count();
             let mut entities = scene
-                .query::<Option<&Transform>>()
+                .query::<(Option<&Transform>, Option<&Tags>)>()
                 .iter()
-                .map(|(e, transform)| {
+                .filter(|(_, (_, tags))| {
+                    if enabled_filters == 0 {
+                        return true;
+                    }
+
+                    tags.map_or(false, |tags| {
+                        tags.0
+                            .iter()
+                            .any(|tag| self.filters.get(tag).copied().unwrap_or_default())
+                    })
+                })
+                .map(|(e, (transform, _tags))| {
                     let distance = if let Some(transform) = transform {
                         (transform.translation - camera.position).length()
                     } else {
@@ -58,6 +87,23 @@ impl Overlay for OutlinerOverlay {
             egui::Window::new("Outliner").show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.checkbox(&mut self.sort_by_distance, "Sort by distance");
+
+                    let filter_count = if enabled_filters > 0 {
+                        format!(" ({})", enabled_filters)
+                    } else {
+                        "".to_string()
+                    };
+                    ui.menu_button(format!("Filters{filter_count}"), |ui| {
+                        for tag in EntityTag::iter() {
+                            let mut enabled = self.filters.get_mut(&tag).unwrap();
+                            ui.toggle_value(
+                                &mut enabled,
+                                RichText::new(tag.to_string())
+                                    .background_color(tag.color())
+                                    .color(text_color_for_background(tag.color())),
+                            );
+                        }
+                    });
                 });
 
                 egui::ScrollArea::vertical()
