@@ -58,10 +58,12 @@ impl Overlay for OutlinerOverlay {
                         return true;
                     }
 
+                    // Check if the entity has all the tags that are enabled
                     tags.map_or(false, |tags| {
-                        tags.0
+                        self.filters
                             .iter()
-                            .any(|tag| self.filters.get(tag).copied().unwrap_or_default())
+                            .filter(|(_, enabled)| **enabled)
+                            .all(|(tag, _)| tags.0.contains(tag))
                     })
                 })
                 .map(|(e, (transform, _tags))| {
