@@ -39,9 +39,9 @@ impl Overlay for MenuBar {
                                 Tags([EntityTag::Utility].into_iter().collect()),
                             ));
 
-                            resources
-                                .get_mut::<SelectedEntity>()
-                                .map(|mut v| v.0 = Some(e));
+                            if let Some(mut se) = resources.get_mut::<SelectedEntity>() {
+                                se.0 = Some(e);
+                            }
 
                             ui.close_menu();
                         }

@@ -1549,7 +1549,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
             scene.insert_one(e, OriginalTransform(transform)).ok();
         };
 
-        if let Some(world_id) = scene.get::<&EntityWorldId>(e).map(|w| w.0).ok() {
+        if let Ok(world_id) = scene.get::<&EntityWorldId>(e).map(|w| w.0) {
             if let Some(name) = entity_worldid_name_map.get(&world_id) {
                 scene.insert_one(e, Label(name.clone())).ok();
             }

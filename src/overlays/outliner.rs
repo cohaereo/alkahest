@@ -98,9 +98,9 @@ impl Overlay for OutlinerOverlay {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
                         ui.menu_button(format!("Filters{filter_count}"), |ui| {
                             for tag in EntityTag::iter() {
-                                let mut enabled = self.filters.get_mut(&tag).unwrap();
+                                let enabled = self.filters.get_mut(&tag).unwrap();
                                 ui.toggle_value(
-                                    &mut enabled,
+                                    enabled,
                                     RichText::new(tag.to_string())
                                         .background_color(tag.color())
                                         .color(text_color_for_background(tag.color())),

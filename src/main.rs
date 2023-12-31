@@ -864,35 +864,34 @@ pub async fn main() -> anyhow::Result<()> {
                     // TODO(cohae): This triggers when dragging as well, which is super annoying. Don't know if we can fix this without a proper egui response object though.
                     if gui.egui.input(|i| i.pointer.secondary_clicked())
                         && !gui.egui.wants_pointer_input()
+                        && !resources.get::<SelectedEntity>().unwrap().1
                     {
-                        if !resources.get::<SelectedEntity>().unwrap().1 {
-                            if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                                let window_size = window.inner_size();
-                                if let Ok(m) = renderer
-                                    .read()
-                                    .gbuffer
-                                    .pick_buffer_staging
-                                    .map(D3D11_MAP_READ)
-                                {
-                                    let data = m.ptr as *mut u32;
+                        if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
+                            let window_size = window.inner_size();
+                            if let Ok(m) = renderer
+                                .read()
+                                .gbuffer
+                                .pick_buffer_staging
+                                .map(D3D11_MAP_READ)
+                            {
+                                let data = m.ptr as *mut u32;
 
-                                    let offset = mouse_pos.y as usize * window_size.width as usize
-                                        + mouse_pos.x as usize;
+                                let offset = mouse_pos.y as usize * window_size.width as usize
+                                    + mouse_pos.x as usize;
 
-                                    let id = *data.add(offset);
-                                    let maps = resources.get::<MapDataList>().unwrap();
+                                let id = *data.add(offset);
+                                let maps = resources.get::<MapDataList>().unwrap();
 
-                                    if let Some((_, _, map)) = maps.current_map() {
-                                        if id != u32::MAX {
-                                            *resources.get_mut::<SelectedEntity>().unwrap() =
-                                                SelectedEntity(
-                                                    Some(map.scene.find_entity_from_id(id)),
-                                                    true,
-                                                );
-                                        } else {
-                                            *resources.get_mut::<SelectedEntity>().unwrap() =
-                                                SelectedEntity(None, true);
-                                        }
+                                if let Some((_, _, map)) = maps.current_map() {
+                                    if id != u32::MAX {
+                                        *resources.get_mut::<SelectedEntity>().unwrap() =
+                                            SelectedEntity(
+                                                Some(map.scene.find_entity_from_id(id)),
+                                                true,
+                                            );
+                                    } else {
+                                        *resources.get_mut::<SelectedEntity>().unwrap() =
+                                            SelectedEntity(None, true);
                                     }
                                 }
                             }
