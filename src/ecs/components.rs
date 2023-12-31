@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use destiny_pkg::TagHash;
+use egui::Color32;
 use glam::{Vec3, Vec4};
 
 use crate::{
@@ -90,10 +91,22 @@ impl DerefMut for Visible {
     }
 }
 
-#[derive(Default)]
 pub struct Ruler {
     pub start: Vec3,
     pub end: Vec3,
+    pub color: [u8; 3],
+    pub rainbow: bool,
+}
+
+impl Default for Ruler {
+    fn default() -> Self {
+        Self {
+            start: Vec3::ZERO,
+            end: Vec3::ZERO,
+            color: [255, 255, 255],
+            rainbow: false,
+        }
+    }
 }
 
 impl Ruler {

@@ -18,11 +18,12 @@ use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
 use crate::ecs::components::{
-    ActivityGroup, EntityModel, ResourcePoint, StaticInstances, Terrain, Visible, Water,
+    ActivityGroup, EntityModel, ResourcePoint, Ruler, StaticInstances, Terrain, Visible, Water,
 };
 use crate::ecs::resources::SelectedEntity;
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::inspector::InspectorOverlay;
+use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
@@ -36,6 +37,7 @@ use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType}
 use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
 use egui::epaint::ahash::HashMap;
+use egui::epaint::Hsva;
 use glam::{Mat4, Vec3};
 use hecs::Entity;
 use itertools::Itertools;
@@ -46,6 +48,7 @@ use poll_promise::Promise;
 use render::vertex_layout::InputElement;
 
 use render_globals::SRenderGlobals;
+use ron::de;
 use technique::Technique;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -456,8 +459,9 @@ pub async fn main() -> anyhow::Result<()> {
 
     gui.add_overlay(Rc::new(RefCell::new(InspectorOverlay)));
     gui.add_overlay(Rc::new(RefCell::new(OutlinerOverlay::default())));
+    gui.add_overlay(Rc::new(RefCell::new(MenuBar)));
 
-    let _start_time = Instant::now();
+    let start_time = Instant::now();
     let mut last_frame = Instant::now();
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
     let mut present_parameters = 0;
@@ -768,6 +772,25 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         } else if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
                             cr.0 = None;
+                        }
+
+                        let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
+                        for (_, ruler) in map.scene.query::<&Ruler>().iter() {
+                            let color = if ruler.rainbow {
+                                Hsva {
+                                    h: (start_time.elapsed().as_secs_f32() * 0.30) % 1.0,
+                                    s: 1.0,
+                                    v: 1.0,
+                                    a: 1.0,
+                                }
+                                .to_srgb()
+                            } else {
+                                ruler.color
+                            };
+
+                            debugshapes.cross(ruler.start, 1.0, color);
+                            debugshapes.cross(ruler.end, 1.0, color);
+                            debugshapes.line_dotted(ruler.start, ruler.end, color);
                         }
                     }
                     drop(maps);

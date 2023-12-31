@@ -21,15 +21,19 @@ cbuffer DebugShapeOptions : register(b10) {
 
 struct VSOutput {
     float4 position : SV_POSITION;
+    float normalizedPositionOnLine : TEXCOORD0;
 };
 
 VSOutput VShader(uint vertex_id: SV_VertexID) {
     VSOutput output;
 
-    if(vertex_id % 2 == 0)
+    if(vertex_id % 2 == 0){
         output.position = mul(lineStart, projViewMatrix);
-    else
+        output.normalizedPositionOnLine = 0.0f;
+    } else{
         output.position = mul(lineEnd, projViewMatrix);
+        output.normalizedPositionOnLine = 1.0f;
+    }
 
     return output;
 }
@@ -37,4 +41,22 @@ VSOutput VShader(uint vertex_id: SV_VertexID) {
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
     return color;
+}
+
+#define SCROLL_SPEED 0.50f
+#define LINE_LENGTH 0.30f
+#define LINE_LENGTH_HALF (LINE_LENGTH / 2.0f)
+
+// Pixel Shader (dotted)
+float4 PShaderDotted(VSOutput input) : SV_Target {
+    float lineLength = length(lineEnd - lineStart);
+    float progress = input.normalizedPositionOnLine * lineLength;
+    progress += time * SCROLL_SPEED;
+
+    if((progress % LINE_LENGTH) < LINE_LENGTH_HALF)
+        return color;
+    else
+        discard;
+
+    return float4(0, 0, 0, 0);
 }

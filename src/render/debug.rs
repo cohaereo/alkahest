@@ -32,6 +32,7 @@ pub enum DebugShape {
     Line {
         start: Vec3,
         end: Vec3,
+        dotted: bool,
     },
     Custom {
         transform: Transform,
@@ -82,8 +83,25 @@ impl DebugShapes {
     }
 
     pub fn line<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
-        self.shapes
-            .push((DebugShape::Line { start, end }, color.into()))
+        self.shapes.push((
+            DebugShape::Line {
+                start,
+                end,
+                dotted: false,
+            },
+            color.into(),
+        ))
+    }
+
+    pub fn line_dotted<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
+        self.shapes.push((
+            DebugShape::Line {
+                start,
+                end,
+                dotted: true,
+            },
+            color.into(),
+        ))
     }
 
     pub fn line_orientation<C: Into<Color>>(
@@ -94,6 +112,26 @@ impl DebugShapes {
         color: C,
     ) {
         self.line(point, point + orientation * Vec3::X * length, color.into())
+    }
+
+    pub fn cross<C: Into<Color> + Copy>(&mut self, point: Vec3, length: f32, color: C) {
+        let color = color.into();
+        let half_length = length / 2.0;
+        self.line(
+            point - Vec3::X * half_length,
+            point + Vec3::X * half_length,
+            color,
+        );
+        self.line(
+            point - Vec3::Y * half_length,
+            point + Vec3::Y * half_length,
+            color,
+        );
+        self.line(
+            point - Vec3::Z * half_length,
+            point + Vec3::Z * half_length,
+            color,
+        );
     }
 
     pub fn custom_shape<C: Into<Color>>(
@@ -156,6 +194,7 @@ pub struct DebugShapeRenderer {
     vshader_line: ID3D11VertexShader,
     pshader: ID3D11PixelShader,
     pshader_line: ID3D11PixelShader,
+    pshader_line_dotted: ID3D11PixelShader,
 
     input_layout: ID3D11InputLayout,
     vb_cube: ID3D11Buffer,
@@ -213,6 +252,14 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (pshader_line, _) = shader::load_pshader(&dcs, &data)?;
+
+        let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/debug_line.hlsl"),
+            "PShaderDotted",
+            "ps_5_0",
+        )
+        .unwrap();
+        let (pshader_line_dotted, _) = shader::load_pshader(&dcs, &data)?;
 
         let mesh = genmesh::generators::Cube::new();
         let vertices: Vec<[f32; 4]> = mesh
@@ -294,6 +341,7 @@ impl DebugShapeRenderer {
             vshader_line,
             pshader,
             pshader_line,
+            pshader_line_dotted,
             input_layout,
             vb_cube,
             ib_cube,
@@ -462,7 +510,7 @@ impl DebugShapeRenderer {
                         }
                     }
                 }
-                DebugShape::Line { start, end } => {
+                DebugShape::Line { start, end, dotted } => {
                     self.scope_line
                         .write(&ScopeAlkDebugShapeLine {
                             start: start.extend(1.0),
@@ -476,7 +524,13 @@ impl DebugShapeRenderer {
 
                     unsafe {
                         self.dcs.context().VSSetShader(&self.vshader_line, None);
-                        self.dcs.context().PSSetShader(&self.pshader_line, None);
+                        if dotted {
+                            self.dcs
+                                .context()
+                                .PSSetShader(&self.pshader_line_dotted, None);
+                        } else {
+                            self.dcs.context().PSSetShader(&self.pshader_line, None);
+                        }
 
                         self.dcs
                             .context()

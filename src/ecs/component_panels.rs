@@ -4,10 +4,14 @@ use hecs::{Entity, EntityRef};
 
 use crate::{
     icons::{
-        ICON_ALPHA_A, ICON_ALPHA_B, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF,
-        ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
+        ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE,
+        ICON_EYE_OFF, ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
+        ICON_RULER_SQUARE,
     },
-    util::{text::split_pascal_case, BoolExts as _},
+    util::{
+        text::{prettify_distance, split_pascal_case},
+        BoolExts as _,
+    },
 };
 
 use super::{
@@ -110,7 +114,8 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>) {
         EntityModel,
         StaticInstances,
         // HavokShape,
-        EntityWorldId
+        EntityWorldId,
+        Ruler
     );
 }
 
@@ -379,7 +384,27 @@ impl ComponentPanel for Ruler {
     }
 
     fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
-        input_float3!(ui, format!("{ICON_ALPHA_A} Start"), &mut self.start);
-        input_float3!(ui, format!("{ICON_ALPHA_B} End"), &mut self.end);
+        ui.horizontal(|ui| {
+            input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Start"), &mut self.start);
+        });
+        ui.horizontal(|ui| {
+            input_float3!(ui, format!("{ICON_ALPHA_B_BOX} End"), &mut self.end);
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Length:");
+            ui.label(prettify_distance(self.length()));
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgb(&mut self.color)
+                .context_menu(|ui| {
+                    ui.checkbox(&mut self.rainbow, "Rainbow mode");
+                });
+
+            ui.label("Color");
+        });
     }
 }

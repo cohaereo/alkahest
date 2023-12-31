@@ -70,12 +70,11 @@ impl Overlay for OutlinerOverlay {
                     let distance = if let Some(transform) = transform {
                         (transform.translation - camera.position).length()
                     } else {
-                        0.0
+                        f32::INFINITY
                     };
 
                     (e, distance)
                 })
-                .filter(|(_, distance)| *distance != 0.0)
                 .collect_vec();
 
             entities.sort_by_key(|(e, _)| e.id());

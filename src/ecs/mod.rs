@@ -45,6 +45,18 @@ pub fn resolve_entity_name(e: EntityRef<'_>) -> String {
     } else if let Some(rp) = e.get::<&ResourcePoint>() {
         format!("{}{postfix}", split_pascal_case(rp.resource.debug_id()))
     } else {
+        macro_rules! name_from_component_panels {
+            ($($component:ty),+) => {
+                $(
+                    if e.has::<$component>() {
+                        return format!("{}{postfix}", <$component>::inspector_name());
+                    }
+                )*
+            };
+        }
+
+        name_from_component_panels!(Ruler, EntityModel, StaticInstances);
+
         format!("ent {}", e.entity().id())
     }
 }
