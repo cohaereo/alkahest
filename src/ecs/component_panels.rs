@@ -5,7 +5,7 @@ use hecs::{Entity, EntityRef};
 use crate::{
     icons::{
         ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE,
-        ICON_EYE_OFF, ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
+        ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
         ICON_RULER_SQUARE,
     },
     util::{
@@ -18,6 +18,7 @@ use super::{
     components::{
         EntityModel, EntityWorldId, Label, ResourcePoint, Ruler, StaticInstances, Visible,
     },
+    resolve_entity_icon, resolve_entity_name,
     tags::Tags,
     transform::{OriginalTransform, Transform},
     Scene,
@@ -28,11 +29,11 @@ pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
         return;
     };
 
-    let title = if let Some(l) = e.get::<&Label>() {
-        format!("{} (ent_{})", l.0, ent.id())
-    } else {
-        format!("ent_{}", ent.id())
-    };
+    let title = format!(
+        "{} {}",
+        resolve_entity_icon(e).unwrap_or(ICON_HELP),
+        resolve_entity_name(e)
+    );
 
     let mut add_visible = None;
 
