@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
 use destiny_pkg::TagHash;
-use egui::Color32;
 use glam::{Vec3, Vec4};
 
 use crate::{

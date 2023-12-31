@@ -3,11 +3,13 @@ use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
 use crate::{
+    camera::FpsCamera,
     icons::{
-        ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CUBE_OUTLINE, ICON_EYE,
-        ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RESIZE, ICON_ROTATE_ORBIT,
-        ICON_RULER_SQUARE,
+        ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
+        ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER,
+        ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
     },
+    resources::Resources,
     util::{
         text::{prettify_distance, split_pascal_case},
         BoolExts as _,
@@ -22,7 +24,12 @@ use super::{
     Scene,
 };
 
-pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
+pub fn show_inspector_panel(
+    ui: &mut egui::Ui,
+    scene: &mut Scene,
+    ent: Entity,
+    resources: &Resources,
+) {
     let Ok(e) = scene.entity(ent) else {
         return;
     };
@@ -70,17 +77,17 @@ pub fn show_inspector_panel(ui: &mut egui::Ui, scene: &mut Scene, ent: Entity) {
         ui.separator();
     }
 
-    show_inspector_components(ui, e);
+    show_inspector_components(ui, e, resources);
 
     if let Some(vis) = add_visible {
         scene.insert_one(ent, vis).ok();
     }
 }
 
-fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>) {
+fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(ui);
+            t.show_inspector_ui(ui, resources);
             if let Some(ot) = e.get::<&OriginalTransform>() {
                 // Has the entity moved from it's original position?
                 let has_moved = *t != ot.0;
@@ -101,7 +108,7 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>) {
 			$(
 				if let Some(mut component) = e.get::<&mut $component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(ui);
+						component.show_inspector_ui(ui, resources);
 					});
 				}
 			)*
@@ -179,7 +186,7 @@ pub(super) trait ComponentPanel {
         false
     }
 
-    fn show_inspector_ui(&mut self, _: &mut egui::Ui) {}
+    fn show_inspector_ui(&mut self, _: &mut egui::Ui, _: &Resources) {}
 }
 
 impl ComponentPanel for Transform {
@@ -195,7 +202,7 @@ impl ComponentPanel for Transform {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
         rotation_euler.y = rotation_euler.y.to_degrees();
@@ -248,7 +255,7 @@ impl ComponentPanel for EntityWorldId {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
         ui.label(format!("World ID: 0x{:016X}", self.0));
     }
 }
@@ -266,7 +273,7 @@ impl ComponentPanel for ResourcePoint {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
         ui.horizontal(|ui| {
             ui.strong("Entity:");
             ui.label(self.entity.to_string());
@@ -311,7 +318,7 @@ impl ComponentPanel for EntityModel {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
         ui.horizontal(|ui| {
             ui.strong("Tag:");
             ui.label(format!("{}", self.2));
@@ -332,7 +339,7 @@ impl ComponentPanel for StaticInstances {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
         ui.horizontal(|ui| {
             ui.strong("Mesh tag:");
             ui.label(self.1.to_string());
@@ -382,12 +389,27 @@ impl ComponentPanel for Ruler {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, resources: &Resources) {
+        let camera = resources.get::<FpsCamera>().unwrap();
         ui.horizontal(|ui| {
             input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Start"), &mut self.start);
+            if ui
+                .button(ICON_CAMERA_CONTROL.to_string())
+                .on_hover_text("Set position to camera")
+                .clicked()
+            {
+                self.start = camera.position;
+            }
         });
         ui.horizontal(|ui| {
             input_float3!(ui, format!("{ICON_ALPHA_B_BOX} End"), &mut self.end);
+            if ui
+                .button(ICON_CAMERA_CONTROL.to_string())
+                .on_hover_text("Set position to camera")
+                .clicked()
+            {
+                self.end = camera.position;
+            }
         });
 
         ui.horizontal(|ui| {

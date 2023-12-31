@@ -7,7 +7,7 @@ use crate::{
     },
     map::MapDataList,
     map_resources::MapResource,
-    render::debug::{DebugShape, DebugShapes},
+    render::debug::DebugShapes,
     resources::Resources,
     util::text::text_color_for_background,
 };

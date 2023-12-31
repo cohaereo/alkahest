@@ -22,7 +22,7 @@ impl Overlay for InspectorOverlay {
         if let Some(map) = maps.current_map_mut() {
             egui::Window::new("Inspector").show(ctx, |ui| {
                 if let Some(ent) = resources.get::<SelectedEntity>().unwrap().0 {
-                    show_inspector_panel(ui, &mut map.scene, ent);
+                    show_inspector_panel(ui, &mut map.scene, ent, resources);
                 } else {
                     ui.colored_label(Color32::WHITE, "No entity selected");
                     ui.horizontal(|ui| {
