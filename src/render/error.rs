@@ -9,7 +9,10 @@ use windows::Win32::Graphics::{
 
 use crate::{render::shader, texture::Texture, util::image::Png};
 
-use super::{drawcall::ShaderStages, ConstantBuffer, DeviceContextSwapchain};
+use super::{
+    bytecode::externs::TfxShaderStage, drawcall::ShaderStages, ConstantBuffer,
+    DeviceContextSwapchain,
+};
 
 #[allow(unused)]
 pub struct ErrorRenderer {
@@ -127,6 +130,20 @@ impl ErrorRenderer {
     }
 
     pub fn draw(&self, dcs: &DeviceContextSwapchain, transform: Mat4, proj_view: Mat4, view: Mat4) {
+        unsafe {
+            dcs.context().PSSetShader(&self.pshader, None);
+
+            self.draw_nopshader(dcs, transform, proj_view, view)
+        }
+    }
+
+    pub fn draw_nopshader(
+        &self,
+        dcs: &DeviceContextSwapchain,
+        transform: Mat4,
+        proj_view: Mat4,
+        view: Mat4,
+    ) {
         self.scope
             .write(&AlkScopeError {
                 proj_view,
@@ -147,13 +164,10 @@ impl ErrorRenderer {
             dcs.context()
                 .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            dcs.context()
-                .VSSetConstantBuffers(7, Some(&[Some(self.scope.buffer().clone())]));
+            self.scope.bind(7, TfxShaderStage::Vertex);
 
             dcs.context().IASetInputLayout(&self.vertex_layout);
             dcs.context().VSSetShader(&self.vshader, None);
-
-            dcs.context().PSSetShader(&self.pshader, None);
 
             dcs.context()
                 .PSSetShaderResources(0, Some(&[Some(self.texture.view.clone())]));

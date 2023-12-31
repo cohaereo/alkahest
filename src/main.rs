@@ -711,11 +711,11 @@ pub async fn main() -> anyhow::Result<()> {
                                         )
                                         .is_err()
                                     {
-                                        renderer.write().push_fiddlesticks(*transform);
+                                        renderer.write().push_fiddlesticks(*transform, Some(e));
                                     }
                                 } else if rp.resource.is_entity() {
                                     // cohae: This will occur when there's no entitymodel for the given entity. Keeping it in just as a reminder of unimplemented entity rendering stuffs
-                                    renderer.write().push_fiddlesticks(*transform);
+                                    renderer.write().push_fiddlesticks(*transform, Some(e));
                                 }
                             }
 
@@ -738,7 +738,7 @@ pub async fn main() -> anyhow::Result<()> {
                                     .draw(&renderer.read(), em.1.buffer().clone(), e)
                                     .is_err()
                                 {
-                                    renderer.write().push_fiddlesticks(*transform);
+                                    renderer.write().push_fiddlesticks(*transform, Some(e));
                                 }
                             }
                         }
@@ -795,7 +795,6 @@ pub async fn main() -> anyhow::Result<()> {
                     if gui.egui.input(|i| i.pointer.secondary_clicked())
                         && !gui.egui.wants_pointer_input()
                     {
-                        // let input = resources.get::<InputState>().unwrap();
                         if !resources.get::<SelectedEntity>().unwrap().1 {
                             if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
                                 let window_size = window.inner_size();

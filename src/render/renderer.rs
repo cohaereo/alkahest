@@ -101,7 +101,7 @@ pub struct Renderer {
     last_material: RwLock<u32>,
 
     // Objects that failed to render this frame
-    fiddlesticks: RwLock<Vec<Transform>>,
+    fiddlesticks: RwLock<Vec<(Transform, Option<Entity>)>>,
 
     // TODO(cohae): find a better way to get the light transform into the bytecode interpreter
     pub light_transform: RwLock<Transform>,
@@ -379,8 +379,8 @@ impl Renderer {
         self.draw_queue.write().push((ordering, drawcall))
     }
 
-    pub fn push_fiddlesticks(&self, transform: Transform) {
-        self.fiddlesticks.write().push(transform)
+    pub fn push_fiddlesticks(&self, transform: Transform, entity: Option<Entity>) {
+        self.fiddlesticks.write().push((transform, entity))
     }
 
     /// Submits recorded drawcalls
@@ -521,7 +521,7 @@ impl Renderer {
         // region: Errors
         if render_settings.draw_errors {
             let camera = resources.get::<FpsCamera>().unwrap();
-            for t in self.fiddlesticks.read().iter() {
+            for (t, _) in self.fiddlesticks.read().iter() {
                 self.error_renderer.draw(
                     &self.dcs,
                     Transform {
@@ -708,7 +708,7 @@ impl Renderer {
         }
 
         // region: Outline rendering
-        if let SelectedEntity(Some(entity), _) = &(*resources.get().unwrap()) {
+        if let SelectedEntity(Some(selected_entity), _) = &(*resources.get().unwrap()) {
             unsafe {
                 self.dcs.context().OMSetBlendState(
                     &self.blend_state_none,
@@ -734,7 +734,7 @@ impl Renderer {
 
             // Render the selected object to the depth buffer
             for i in 0..draw_queue.len() {
-                if draw_queue[i].1.entity != *entity {
+                if draw_queue[i].1.entity != *selected_entity {
                     continue;
                 }
                 let (s, d) = draw_queue[i].clone();
@@ -747,6 +747,27 @@ impl Renderer {
                 };
 
                 self.draw(s, &d, &shader_overrides, draw_mode, false);
+            }
+
+            for (t, e) in self.fiddlesticks.read().iter() {
+                if Some(*selected_entity) != *e {
+                    continue;
+                }
+                let camera = resources.get::<FpsCamera>().unwrap();
+
+                unsafe {
+                    self.dcs.context().PSSetShader(&self.null_ps, None);
+                }
+                self.error_renderer.draw_nopshader(
+                    &self.dcs,
+                    Transform {
+                        scale: t.scale * render_settings.error_scale,
+                        ..*t
+                    }
+                    .to_mat4(),
+                    camera.projection_view_matrix,
+                    camera.view_matrix,
+                );
             }
 
             // Render the outline to the screen in conjunction with the scene depth buffer to test occlusion
@@ -831,6 +852,31 @@ impl Renderer {
             b.write(&PickbufferScope::from_entity(d.entity)).ok();
 
             self.draw(s, &d, &shader_overrides, DrawMode::PickBuffer, false);
+        }
+
+        for (t, e) in self.fiddlesticks.read().iter() {
+            if let Some(e) = e {
+                let camera = resources.get::<FpsCamera>().unwrap();
+                if *e == skip_entity || *e == Entity::DANGLING {
+                    continue;
+                }
+
+                b.write(&PickbufferScope::from_entity(*e)).ok();
+
+                unsafe {
+                    self.dcs.context().PSSetShader(&self.pickbuffer_ps, None);
+                }
+                self.error_renderer.draw_nopshader(
+                    &self.dcs,
+                    Transform {
+                        scale: t.scale * render_settings.error_scale,
+                        ..*t
+                    }
+                    .to_mat4(),
+                    camera.projection_view_matrix,
+                    camera.view_matrix,
+                );
+            }
         }
 
         self.gbuffer
