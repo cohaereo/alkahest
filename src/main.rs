@@ -787,9 +787,9 @@ pub async fn main() -> anyhow::Result<()> {
                                 ruler.color
                             };
 
-                            debugshapes.cross(ruler.start, 1.0, color);
-                            debugshapes.cross(ruler.end, 1.0, color);
-                            debugshapes.line_dotted(ruler.start, ruler.end, color);
+                            debugshapes.cross(ruler.start, ruler.scale, color);
+                            debugshapes.cross(ruler.end, ruler.scale, color);
+                            debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale);
                         }
                     }
                     drop(maps);

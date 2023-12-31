@@ -96,6 +96,7 @@ pub struct Ruler {
     pub end: Vec3,
     pub color: [u8; 3],
     pub rainbow: bool,
+    pub scale: f32,
 }
 
 impl Default for Ruler {
@@ -105,6 +106,7 @@ impl Default for Ruler {
             end: Vec3::ZERO,
             color: [255, 255, 255],
             rainbow: false,
+            scale: 1.0,
         }
     }
 }

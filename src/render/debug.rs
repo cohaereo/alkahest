@@ -33,6 +33,7 @@ pub enum DebugShape {
         start: Vec3,
         end: Vec3,
         dotted: bool,
+        dot_scale: f32,
     },
     Custom {
         transform: Transform,
@@ -88,17 +89,25 @@ impl DebugShapes {
                 start,
                 end,
                 dotted: false,
+                dot_scale: 1.0,
             },
             color.into(),
         ))
     }
 
-    pub fn line_dotted<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
+    pub fn line_dotted<C: Into<Color>>(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+        color: C,
+        dot_scale: f32,
+    ) {
         self.shapes.push((
             DebugShape::Line {
                 start,
                 end,
                 dotted: true,
+                dot_scale,
             },
             color.into(),
         ))
@@ -510,12 +519,18 @@ impl DebugShapeRenderer {
                         }
                     }
                 }
-                DebugShape::Line { start, end, dotted } => {
+                DebugShape::Line {
+                    start,
+                    end,
+                    dotted,
+                    dot_scale,
+                } => {
                     self.scope_line
                         .write(&ScopeAlkDebugShapeLine {
                             start: start.extend(1.0),
                             end: end.extend(1.0),
                             color,
+                            dot_scale,
                         })
                         .unwrap();
 
@@ -544,15 +559,18 @@ impl DebugShapeRenderer {
     }
 }
 
+#[repr(C)]
 pub struct ScopeAlkDebugShape {
     pub model: Mat4,
     pub color: Color,
 }
 
+#[repr(C)]
 pub struct ScopeAlkDebugShapeLine {
     pub start: Vec4,
     pub end: Vec4,
     pub color: Color,
+    pub dot_scale: f32,
 }
 
 #[derive(Clone)]

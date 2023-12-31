@@ -391,6 +391,16 @@ impl ComponentPanel for Ruler {
         });
 
         ui.horizontal(|ui| {
+            ui.strong("Scale");
+            ui.add(
+                egui::DragValue::new(&mut self.scale)
+                    .speed(0.1)
+                    .min_decimals(2)
+                    .max_decimals(2),
+            )
+        });
+
+        ui.horizontal(|ui| {
             ui.strong("Length:");
             ui.label(prettify_distance(self.length()));
         });
