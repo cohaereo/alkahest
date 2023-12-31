@@ -374,7 +374,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(ViewerWindows::default());
     resources.insert(renderer.clone());
     resources.insert(renderer.read().dcs.clone());
-    resources.insert(SelectedEntity(None));
+    resources.insert(SelectedEntity(None, false));
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -559,6 +559,8 @@ pub async fn main() -> anyhow::Result<()> {
                 }
             }
             Event::RedrawRequested(..) => {
+                resources.get_mut::<SelectedEntity>().unwrap().1 = false;
+
                 // if !gui_event_captured
                 {
                     let mut camera = resources.get_mut::<FpsCamera>().unwrap();
@@ -772,39 +774,6 @@ pub async fn main() -> anyhow::Result<()> {
 
                     renderer.read().submit_frame(&resources);
 
-                    // TODO(cohae): This triggers when dragging as well, which is super annoying. Don't know if we can fix this without a proper egui response object though.
-                    if gui.egui.input(|i| i.pointer.secondary_clicked())
-                        && !gui.egui.wants_pointer_input()
-                    {
-                        // let input = resources.get::<InputState>().unwrap();
-                        if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                            let window_size = window.inner_size();
-                            if let Ok(m) = renderer
-                                .read()
-                                .gbuffer
-                                .pick_buffer_staging
-                                .map(D3D11_MAP_READ)
-                            {
-                                let data = m.ptr as *mut u32;
-
-                                let offset = mouse_pos.y as usize * window_size.width as usize
-                                    + mouse_pos.x as usize;
-
-                                let id = *data.add(offset);
-                                let maps = resources.get::<MapDataList>().unwrap();
-
-                                if let Some((_, _, map)) = maps.current_map() {
-                                    if id != u32::MAX {
-                                        resources.get_mut::<SelectedEntity>().unwrap().0 =
-                                            Some(map.scene.find_entity_from_id(id));
-                                    } else {
-                                        resources.get_mut::<SelectedEntity>().unwrap().0 = None;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     gui.draw_frame(window.clone(), &mut resources, |ctx, _resources| {
                         if let Some(task) = map_load_task.as_ref() {
                             if task.ready().is_none() {
@@ -821,6 +790,45 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
                     });
+
+                    // TODO(cohae): This triggers when dragging as well, which is super annoying. Don't know if we can fix this without a proper egui response object though.
+                    if gui.egui.input(|i| i.pointer.secondary_clicked())
+                        && !gui.egui.wants_pointer_input()
+                    {
+                        // let input = resources.get::<InputState>().unwrap();
+                        if !resources.get::<SelectedEntity>().unwrap().1 {
+                            if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
+                                let window_size = window.inner_size();
+                                if let Ok(m) = renderer
+                                    .read()
+                                    .gbuffer
+                                    .pick_buffer_staging
+                                    .map(D3D11_MAP_READ)
+                                {
+                                    let data = m.ptr as *mut u32;
+
+                                    let offset = mouse_pos.y as usize * window_size.width as usize
+                                        + mouse_pos.x as usize;
+
+                                    let id = *data.add(offset);
+                                    let maps = resources.get::<MapDataList>().unwrap();
+
+                                    if let Some((_, _, map)) = maps.current_map() {
+                                        if id != u32::MAX {
+                                            *resources.get_mut::<SelectedEntity>().unwrap() =
+                                                SelectedEntity(
+                                                    Some(map.scene.find_entity_from_id(id)),
+                                                    true,
+                                                );
+                                        } else {
+                                            *resources.get_mut::<SelectedEntity>().unwrap() =
+                                                SelectedEntity(None, true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     dcs.context().OMSetDepthStencilState(None, 0);
 

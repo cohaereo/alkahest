@@ -2,6 +2,7 @@ use crate::{
     camera::FpsCamera,
     ecs::{
         components::{Label, ResourceOriginType, ResourcePoint},
+        resources::SelectedEntity,
         transform::Transform,
     },
     map::MapDataList,
@@ -37,6 +38,9 @@ impl Overlay for ResourceTypeOverlay {
 
             let camera = resources.get::<FpsCamera>().unwrap();
 
+            let SelectedEntity(selected_entity, block_entity_selection) =
+                *resources.get::<SelectedEntity>().unwrap();
+
             let maps = resources.get::<MapDataList>().unwrap();
             if let Some((_, _, m)) = maps.current_map() {
                 struct StrippedResourcePoint {
@@ -48,42 +52,49 @@ impl Overlay for ResourceTypeOverlay {
 
                 let mut rp_list = vec![];
 
-                for (_, (transform, res, label)) in m
+                for (e, (transform, res, label)) in m
                     .scene
                     .query::<(&Transform, &ResourcePoint, Option<&Label>)>()
                     .iter()
                 {
-                    if !self.debug_overlay.borrow().map_resource_filter[res.resource.index()] {
-                        continue;
-                    }
+                    let distance = if selected_entity != Some(e) {
+                        if !self.debug_overlay.borrow().map_resource_filter[res.resource.index()] {
+                            continue;
+                        }
 
-                    if res.origin == ResourceOriginType::Map
-                        && !self.debug_overlay.borrow().map_resource_show_map
-                    {
-                        continue;
-                    }
+                        if res.origin == ResourceOriginType::Map
+                            && !self.debug_overlay.borrow().map_resource_show_map
+                        {
+                            continue;
+                        }
 
-                    if matches!(
-                        res.origin,
-                        ResourceOriginType::Activity | ResourceOriginType::ActivityBruteforce
-                    ) && !self.debug_overlay.borrow().map_resource_show_activity
-                    {
-                        continue;
-                    }
+                        if matches!(
+                            res.origin,
+                            ResourceOriginType::Activity | ResourceOriginType::ActivityBruteforce
+                        ) && !self.debug_overlay.borrow().map_resource_show_activity
+                        {
+                            continue;
+                        }
 
-                    if self.debug_overlay.borrow().map_resource_only_show_named && label.is_none() {
-                        continue;
-                    }
+                        if self.debug_overlay.borrow().map_resource_only_show_named
+                            && label.is_none()
+                        {
+                            continue;
+                        }
 
-                    let distance = transform.translation.distance(camera.position);
-                    {
+                        let distance = transform.translation.distance(camera.position);
                         let debug_overlay = self.debug_overlay.borrow();
                         if debug_overlay.map_resource_distance_limit_enabled
                             && distance > self.debug_overlay.borrow().map_resource_distance
                         {
                             continue;
                         }
-                    }
+
+                        distance
+                    } else {
+                        // If the entity is selected, always sort it in front of everything else
+                        0.0
+                    };
 
                     // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
                     let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
@@ -94,6 +105,7 @@ impl Overlay for ResourceTypeOverlay {
                     }
 
                     rp_list.push((
+                        e,
                         distance,
                         *transform,
                         StrippedResourcePoint {
@@ -105,12 +117,93 @@ impl Overlay for ResourceTypeOverlay {
                     ))
                 }
 
-                if self.debug_overlay.borrow().map_resource_label_background {
-                    rp_list.sort_by(|a, b| a.0.total_cmp(&b.0));
-                    rp_list.reverse();
+                rp_list.sort_by(|a, b| a.1.total_cmp(&b.1));
+
+                if !block_entity_selection {
+                    if let Some(mouse_event) = ctx.input(|i| {
+                        i.events
+                            .iter()
+                            .find(|e| matches!(e, egui::Event::PointerButton { .. }))
+                            .cloned()
+                    }) {
+                        let egui::Event::PointerButton {
+                            pos,
+                            button,
+                            pressed,
+                            modifiers,
+                        } = mouse_event
+                        else {
+                            unreachable!();
+                        };
+
+                        if pressed
+                            && button == egui::PointerButton::Secondary
+                            && modifiers.is_none()
+                        {
+                            for (e, _, transform, res) in &rp_list {
+                                if selected_entity == Some(*e) {
+                                    continue;
+                                }
+
+                                let projected_point = camera
+                                    .projection_view_matrix
+                                    .project_point3(transform.translation);
+
+                                let screen_point = Vec2::new(
+                                    ((projected_point.x + 1.0) * 0.5) * screen_size.x,
+                                    ((1.0 - projected_point.y) * 0.5) * screen_size.y,
+                                );
+
+                                let select_rect =
+                                    if self.debug_overlay.borrow().show_map_resource_label {
+                                        let debug_string = res.resource.debug_string();
+                                        let debug_string = if let Some(l) = &res.label {
+                                            format!("{l}\n{debug_string}")
+                                        } else {
+                                            debug_string
+                                        };
+
+                                        let debug_string_font = egui::FontId::proportional(14.0);
+                                        let debug_string_pos: egui::Pos2 =
+                                            (screen_point + Vec2::new(14.0, 0.0)).to_array().into();
+
+                                        let debug_string_galley = painter.layout_no_wrap(
+                                            debug_string.clone(),
+                                            debug_string_font.clone(),
+                                            Color32::WHITE,
+                                        );
+
+                                        let mut debug_string_rect = egui::Align2::LEFT_CENTER
+                                            .anchor_rect(Rect::from_min_size(
+                                                debug_string_pos,
+                                                debug_string_galley.size(),
+                                            ));
+                                        debug_string_rect
+                                            .extend_with_x(debug_string_pos.x - 11.0 - 14.0);
+
+                                        debug_string_rect
+                                    } else {
+                                        egui::Align2::CENTER_CENTER.anchor_rect(
+                                            Rect::from_min_size(
+                                                screen_point.to_array().into(),
+                                                egui::vec2(22.0, 22.0),
+                                            ),
+                                        )
+                                    };
+
+                                if select_rect.contains(pos) {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(Some(*e), true);
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
 
-                for (_, transform, res) in rp_list {
+                rp_list.reverse();
+
+                for (e, _, transform, res) in rp_list {
                     let projected_point = camera
                         .projection_view_matrix
                         .project_point3(transform.translation);
@@ -122,7 +215,9 @@ impl Overlay for ResourceTypeOverlay {
 
                     let c = res.resource.debug_color();
                     let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
-                    if self.debug_overlay.borrow().show_map_resource_label {
+                    if self.debug_overlay.borrow().show_map_resource_label
+                        || selected_entity == Some(e)
+                    {
                         let debug_string = res.resource.debug_string();
                         let debug_string = if let Some(l) = res.label {
                             format!("{l}\n{debug_string}")
@@ -133,17 +228,28 @@ impl Overlay for ResourceTypeOverlay {
                         let debug_string_font = egui::FontId::proportional(14.0);
                         let debug_string_pos: egui::Pos2 =
                             (screen_point + Vec2::new(14.0, 0.0)).to_array().into();
-                        if self.debug_overlay.borrow().map_resource_label_background {
-                            let debug_string_galley = painter.layout_no_wrap(
-                                debug_string.clone(),
-                                debug_string_font.clone(),
-                                Color32::WHITE,
-                            );
-                            let mut debug_string_rect = egui::Align2::LEFT_CENTER.anchor_rect(
-                                Rect::from_min_size(debug_string_pos, debug_string_galley.size()),
-                            );
-                            debug_string_rect.extend_with_x(debug_string_pos.x - 11.0 - 14.0);
 
+                        let debug_string_galley = painter.layout_no_wrap(
+                            debug_string.clone(),
+                            debug_string_font.clone(),
+                            Color32::WHITE,
+                        );
+
+                        let mut debug_string_rect = egui::Align2::LEFT_CENTER.anchor_rect(
+                            Rect::from_min_size(debug_string_pos, debug_string_galley.size()),
+                        );
+                        debug_string_rect.extend_with_x(debug_string_pos.x - 11.0 - 14.0);
+
+                        if selected_entity == Some(e) {
+                            painter.rect(
+                                debug_string_rect.expand(8.0),
+                                egui::Rounding::same(4.0),
+                                Color32::TRANSPARENT,
+                                egui::Stroke::new(3.0, Color32::from_rgb(255, 150, 50)),
+                            );
+                        }
+
+                        if self.debug_overlay.borrow().map_resource_label_background {
                             let background_color = text_color_for_background(color);
                             let white_bg = background_color.r() == 255;
                             painter.rect(

@@ -708,7 +708,7 @@ impl Renderer {
         }
 
         // region: Outline rendering
-        if let SelectedEntity(Some(entity)) = &(*resources.get().unwrap()) {
+        if let SelectedEntity(Some(entity), _) = &(*resources.get().unwrap()) {
             unsafe {
                 self.dcs.context().OMSetBlendState(
                     &self.blend_state_none,
