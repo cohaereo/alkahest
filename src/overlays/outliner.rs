@@ -6,6 +6,7 @@ use strum::IntoEnumIterator;
 use crate::{
     camera::FpsCamera,
     ecs::{
+        components::Visible,
         resolve_entity_icon, resolve_entity_name,
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
@@ -125,12 +126,21 @@ impl Overlay for OutlinerOverlay {
                                         "".to_string()
                                     };
 
+                                    let visible = e.get::<&Visible>().map_or(true, |v| v.0);
+
                                     let response = ui.selectable_label(
                                         Some(ent) == selected_entity.0,
-                                        format!(
+                                        RichText::new(format!(
                                             "{} {}{postfix}",
                                             resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
                                             resolve_entity_name(e)
+                                        ))
+                                        .color(
+                                            if visible {
+                                                egui::Color32::WHITE
+                                            } else {
+                                                egui::Color32::GRAY
+                                            },
                                         ),
                                     );
 

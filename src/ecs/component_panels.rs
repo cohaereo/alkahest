@@ -15,9 +15,7 @@ use crate::{
 };
 
 use super::{
-    components::{
-        EntityModel, EntityWorldId, Label, ResourcePoint, Ruler, StaticInstances, Visible,
-    },
+    components::{EntityModel, EntityWorldId, ResourcePoint, Ruler, StaticInstances, Visible},
     resolve_entity_icon, resolve_entity_name,
     tags::Tags,
     transform::{OriginalTransform, Transform},
