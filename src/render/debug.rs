@@ -45,6 +45,7 @@ pub enum DebugShape {
 #[derive(Default)]
 pub struct DebugShapes {
     shapes: Vec<(DebugShape, Color)>,
+    labels: Vec<(String, Vec3, egui::Align2, Color)>,
 }
 
 impl DebugShapes {
@@ -160,6 +161,16 @@ impl DebugShapes {
         ))
     }
 
+    pub fn text<C: Into<Color>>(
+        &mut self,
+        text: String,
+        point: Vec3,
+        anchor: egui::Align2,
+        color: C,
+    ) {
+        self.labels.push((text, point, anchor, color.into()))
+    }
+
     // /// See `FpsCamera::calculate_frustum_corners` for index layout
     // /// Silently returns if corners.len() != 8
     // pub fn frustum_corners<C: Into<Color> + Copy>(&mut self, corners: &[Vec3], color: C) {
@@ -189,6 +200,13 @@ impl DebugShapes {
     pub fn shape_list(&mut self) -> Vec<(DebugShape, Color)> {
         let v = self.shapes.clone();
         self.shapes.clear();
+
+        v
+    }
+
+    pub fn label_list(&mut self) -> Vec<(String, Vec3, egui::Align2, Color)> {
+        let v = self.labels.clone();
+        self.labels.clear();
 
         v
     }

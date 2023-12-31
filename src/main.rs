@@ -27,6 +27,7 @@ use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::Texture;
+use crate::util::text::prettify_distance;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -790,6 +791,53 @@ pub async fn main() -> anyhow::Result<()> {
                             debugshapes.cross(ruler.start, ruler.scale, color);
                             debugshapes.cross(ruler.end, ruler.scale, color);
                             debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale);
+
+                            let ruler_center = (ruler.start + ruler.end) / 2.0;
+                            debugshapes.text(
+                                prettify_distance(ruler.length()),
+                                ruler_center,
+                                egui::Align2::CENTER_BOTTOM,
+                                [255, 255, 255],
+                            );
+
+                            if ruler.show_individual_axis {
+                                let end_x = Vec3::new(ruler.end.x, ruler.start.y, ruler.start.z);
+                                let end_y = Vec3::new(ruler.start.x, ruler.end.y, ruler.start.z);
+                                let end_z = Vec3::new(ruler.start.x, ruler.start.y, ruler.end.z);
+
+                                debugshapes.line(ruler.start, end_x, color);
+                                debugshapes.line(ruler.start, end_y, color);
+                                debugshapes.line(ruler.start, end_z, color);
+
+                                let length_x = (ruler.start - end_x).length();
+                                let length_y = (ruler.start - end_y).length();
+                                let length_z = (ruler.start - end_z).length();
+
+                                let center_x = (ruler.start + end_x) / 2.0;
+                                let center_y = (ruler.start + end_y) / 2.0;
+                                let center_z = (ruler.start + end_z) / 2.0;
+
+                                debugshapes.text(
+                                    format!("X: {}", prettify_distance(length_x)),
+                                    center_x,
+                                    egui::Align2::LEFT_CENTER,
+                                    [255, 255, 255],
+                                );
+
+                                debugshapes.text(
+                                    format!("Y: {}", prettify_distance(length_y)),
+                                    center_y,
+                                    egui::Align2::RIGHT_CENTER,
+                                    [255, 255, 255],
+                                );
+
+                                debugshapes.text(
+                                    format!("Z: {}", prettify_distance(length_z)),
+                                    center_z,
+                                    egui::Align2::RIGHT_CENTER,
+                                    [255, 255, 255],
+                                );
+                            }
                         }
                     }
                     drop(maps);

@@ -29,11 +29,11 @@ impl Overlay for MenuBar {
 
                         if let Some(map) = maps.current_map_mut() {
                             let camera = resources.get::<FpsCamera>().unwrap();
-                            let position_base = camera.position + camera.front * 10.0;
+                            let position_base = camera.position + camera.front * 15.0;
                             let e = map.scene.spawn((
                                 Ruler {
-                                    start: position_base - camera.right * 10.0,
-                                    end: position_base + camera.right * 10.0,
+                                    start: position_base + camera.right * 10.0,
+                                    end: position_base - camera.right * 10.0,
                                     ..Default::default()
                                 },
                                 Tags([EntityTag::Utility].into_iter().collect()),

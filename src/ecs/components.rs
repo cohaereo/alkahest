@@ -97,6 +97,7 @@ pub struct Ruler {
     pub color: [u8; 3],
     pub rainbow: bool,
     pub scale: f32,
+    pub show_individual_axis: bool,
 }
 
 impl Default for Ruler {
@@ -107,6 +108,7 @@ impl Default for Ruler {
             color: [255, 255, 255],
             rainbow: false,
             scale: 1.0,
+            show_individual_axis: false,
         }
     }
 }

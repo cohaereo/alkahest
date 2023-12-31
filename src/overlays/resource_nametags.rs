@@ -7,12 +7,12 @@ use crate::{
     },
     map::MapDataList,
     map_resources::MapResource,
-    render::debug::DebugShapes,
+    render::debug::{DebugShape, DebugShapes},
     resources::Resources,
     util::text::text_color_for_background,
 };
 
-use egui::{Color32, Rect};
+use egui::{Color32, Pos2, Rect};
 use glam::Vec2;
 use std::{cell::RefCell, rc::Rc};
 use winit::window::Window;
@@ -31,13 +31,40 @@ impl Overlay for ResourceTypeOverlay {
         resources: &mut Resources,
         gui: super::gui::GuiContext<'_>,
     ) -> bool {
+        let camera = resources.get::<FpsCamera>().unwrap();
+        let screen_size = ctx.screen_rect().size();
+        let painter = ctx.layer_painter(egui::LayerId::background());
+
+        {
+            let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
+            for (text, point, anchor, color) in debugshapes.label_list() {
+                if !camera.is_point_visible(point) {
+                    continue;
+                }
+
+                let projected_point = camera.projection_view_matrix.project_point3(point);
+
+                let screen_point = Pos2::new(
+                    ((projected_point.x + 1.0) * 0.5) * screen_size.x,
+                    ((1.0 - projected_point.y) * 0.5) * screen_size.y,
+                );
+
+                let color_scaled = color.0 * 255.0;
+                painter.text(
+                    screen_point + anchor.to_sign() * -4.,
+                    anchor,
+                    text,
+                    egui::FontId::monospace(12.0),
+                    Color32::from_rgb(
+                        color_scaled.x as u8,
+                        color_scaled.y as u8,
+                        color_scaled.z as u8,
+                    ),
+                );
+            }
+        }
+
         if self.debug_overlay.borrow().show_map_resources {
-            let screen_size = ctx.screen_rect().size();
-
-            let painter = ctx.layer_painter(egui::LayerId::background());
-
-            let camera = resources.get::<FpsCamera>().unwrap();
-
             let SelectedEntity(selected_entity, block_entity_selection) =
                 *resources.get::<SelectedEntity>().unwrap();
 

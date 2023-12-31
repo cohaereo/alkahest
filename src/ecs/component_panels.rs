@@ -395,10 +395,12 @@ impl ComponentPanel for Ruler {
             ui.add(
                 egui::DragValue::new(&mut self.scale)
                     .speed(0.1)
+                    .clamp_range(0f32..=100f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
         });
+        ui.checkbox(&mut self.show_individual_axis, "Show individual axis");
 
         ui.horizontal(|ui| {
             ui.strong("Length:");
