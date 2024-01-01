@@ -99,6 +99,7 @@ mod dxbc;
 mod dxgi;
 mod ecs;
 mod entity;
+mod hotkeys;
 mod icons;
 mod input;
 mod map;
@@ -897,6 +898,8 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
                     }
+
+                    hotkeys::process_hotkeys(&mut gui.egui, &mut resources);
 
                     dcs.context().OMSetDepthStencilState(None, 0);
 
