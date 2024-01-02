@@ -277,7 +277,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
 
             if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
                 let dcs = resources.get::<DcsShared>().unwrap();
-                match TextureViewer::new(tag, &dcs) {
+                match TextureViewer::new(tag, dcs.clone()) {
                     Ok(o) => {
                         info!("Successfully loaded texture {tag}");
                         viewers.0.push(Box::new(o));

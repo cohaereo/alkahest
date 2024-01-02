@@ -5,3 +5,4 @@ imgui.ini
 package_cache.json
 config.yml
 **/.idea
+panic.log

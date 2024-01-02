@@ -1,10 +1,19 @@
 use std::{fs::File, io::Write};
 
 use egui::{vec2, Color32, ComboBox, RichText, Rounding, TextureId};
+use glam::Vec4;
+use windows::Win32::Graphics::{
+    Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+    Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_VIEWPORT},
+};
 
 use crate::{
+    dxgi::DxgiFormat,
     packages::package_manager,
-    render::DeviceContextSwapchain,
+    render::{
+        bytecode::externs::TfxShaderStage, dcs::DcsShared, drawcall::ShaderStages,
+        gbuffer::RenderTarget, shader, ConstantBuffer,
+    },
     structure::ExtendedHash,
     texture::{Texture, TextureHeader},
     util::{self, dds, error::ErrorAlert},
@@ -12,11 +21,24 @@ use crate::{
 
 use super::gui::Overlay;
 
+#[repr(C)]
+pub struct TextureViewerScope {
+    pub channel_mask: Vec4,
+    pub mip_level: u32,
+}
+
 pub struct TextureViewer {
+    dcs: DcsShared,
+
     tag: ExtendedHash,
     header: TextureHeader,
     texture: Texture,
     texture_egui: TextureId,
+    render_target: RenderTarget,
+
+    scope: ConstantBuffer<TextureViewerScope>,
+    viewer_vs: ID3D11VertexShader,
+    viewer_ps: ID3D11PixelShader,
 
     channel_r: bool,
     channel_g: bool,
@@ -27,14 +49,39 @@ pub struct TextureViewer {
 }
 
 impl TextureViewer {
-    pub fn new(tag: ExtendedHash, dcs: &DeviceContextSwapchain) -> anyhow::Result<Self> {
-        let header = match tag {
+    pub fn new(tag: ExtendedHash, dcs: DcsShared) -> anyhow::Result<Self> {
+        let header: TextureHeader = match tag {
             ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h)?,
             ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h)?,
         };
 
-        let texture = Texture::load(dcs, tag)?;
+        let vshader_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/gui/texture_viewer.hlsl"),
+            "VShader",
+            "vs_5_0",
+        )
+        .unwrap();
+        let pshader_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/gui/texture_viewer.hlsl"),
+            "PShader",
+            "ps_5_0",
+        )
+        .unwrap();
+
+        let (viewer_vs, _) = shader::load_vshader(&dcs, &vshader_blob)?;
+        let (viewer_ps, _) = shader::load_pshader(&dcs, &pshader_blob)?;
+
+        let texture = Texture::load(&dcs, tag)?;
         Ok(Self {
+            render_target: RenderTarget::create(
+                (header.width as u32, header.height as u32),
+                DxgiFormat::B8G8R8A8_UNORM,
+                dcs.clone(),
+            )?,
+            scope: ConstantBuffer::create(dcs.clone(), None)?,
+            viewer_vs,
+            viewer_ps,
+            dcs,
             tag,
             header,
             texture,
@@ -42,7 +89,7 @@ impl TextureViewer {
             channel_r: true,
             channel_g: true,
             channel_b: true,
-            channel_a: true,
+            channel_a: false,
 
             selected_mip: 0,
         })
@@ -61,8 +108,54 @@ impl Overlay for TextureViewer {
             self.texture_egui = gui
                 .integration
                 .textures_mut()
-                .allocate_dx(unsafe { std::mem::transmute(self.texture.view.clone()) });
+                .allocate_dx(unsafe { std::mem::transmute(self.render_target.view.clone()) });
             assert_ne!(self.texture_egui, TextureId::default());
+        }
+
+        // Render the viewport
+        unsafe {
+            self.scope
+                .write(&TextureViewerScope {
+                    channel_mask: Vec4::new(
+                        self.channel_r as u32 as f32,
+                        self.channel_g as u32 as f32,
+                        self.channel_b as u32 as f32,
+                        self.channel_a as u32 as f32,
+                    ),
+                    mip_level: self.selected_mip as u32,
+                })
+                .ok();
+
+            self.scope.bind(0, TfxShaderStage::Pixel);
+            self.texture.bind(&self.dcs, 0, ShaderStages::PIXEL);
+
+            self.dcs.context().ClearRenderTargetView(
+                &self.render_target.render_target,
+                [0.0, 0.0, 0.0, 1.0].as_ptr() as _,
+            );
+            self.dcs.context().OMSetRenderTargets(
+                Some(&[Some(self.render_target.render_target.clone())]),
+                None,
+            );
+
+            self.dcs.context().OMSetDepthStencilState(None, 0);
+            self.dcs.context().OMSetBlendState(None, None, 0xFFFFFFFF);
+
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: self.header.width as f32,
+                Height: self.header.height as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
+
+            self.dcs.context().VSSetShader(&self.viewer_vs, None);
+            self.dcs.context().PSSetShader(&self.viewer_ps, None);
+            self.dcs
+                .context()
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+            self.dcs.context().Draw(4, 0);
         }
 
         let mut open = true;
@@ -71,71 +164,69 @@ impl Overlay for TextureViewer {
             .open(&mut open)
             .show(ctx, |ui| {
                 egui::Frame::default().show(ui, |ui| {
-                    ui.add_enabled_ui(false, |ui| {
-                        ui.horizontal(|ui| {
-                            let rounding_l = Rounding {
-                                ne: 0.0,
-                                se: 0.0,
-                                nw: 2.0,
-                                sw: 2.0,
-                            };
-                            let rounding_m = Rounding::none();
-                            let rounding_r = Rounding {
-                                nw: 0.0,
-                                sw: 0.0,
-                                ne: 2.0,
-                                se: 2.0,
-                            };
+                    ui.horizontal(|ui| {
+                        let rounding_l = Rounding {
+                            ne: 0.0,
+                            se: 0.0,
+                            nw: 2.0,
+                            sw: 2.0,
+                        };
+                        let rounding_m = Rounding::none();
+                        let rounding_r = Rounding {
+                            nw: 0.0,
+                            sw: 0.0,
+                            ne: 2.0,
+                            se: 2.0,
+                        };
 
-                            ui.style_mut().spacing.item_spacing = [0.0; 2].into();
+                        ui.style_mut().spacing.item_spacing = [0.0; 2].into();
 
-                            ui.style_mut().visuals.widgets.active.rounding = rounding_l;
-                            ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
-                            ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+                        ui.style_mut().visuals.widgets.active.rounding = rounding_l;
+                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
+                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
 
-                            if ui.selectable_label(self.channel_r, "R").clicked() {
-                                self.channel_r = !self.channel_r;
-                            }
+                        if ui.selectable_label(self.channel_r, "R").clicked() {
+                            self.channel_r = !self.channel_r;
+                        }
 
-                            ui.style_mut().visuals.widgets.active.rounding = rounding_m;
-                            ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
-                            ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
+                        ui.style_mut().visuals.widgets.active.rounding = rounding_m;
+                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
+                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
 
-                            if ui.selectable_label(self.channel_g, "G").clicked() {
-                                self.channel_g = !self.channel_g;
-                            }
-                            if ui.selectable_label(self.channel_b, "B").clicked() {
-                                self.channel_b = !self.channel_b;
-                            }
+                        if ui.selectable_label(self.channel_g, "G").clicked() {
+                            self.channel_g = !self.channel_g;
+                        }
+                        if ui.selectable_label(self.channel_b, "B").clicked() {
+                            self.channel_b = !self.channel_b;
+                        }
 
-                            ui.style_mut().visuals.widgets.active.rounding = rounding_r;
-                            ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
-                            ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+                        ui.style_mut().visuals.widgets.active.rounding = rounding_r;
+                        ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
+                        ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
 
-                            if ui.selectable_label(self.channel_a, "A").clicked() {
-                                self.channel_a = !self.channel_a;
-                            }
+                        if ui.selectable_label(self.channel_a, "A").clicked() {
+                            self.channel_a = !self.channel_a;
+                        }
 
-                            ui.style_mut().spacing.item_spacing = vec2(8.0, 3.0);
+                        ui.style_mut().spacing.item_spacing = vec2(8.0, 3.0);
 
-                            ui.add_space(16.0);
+                        ui.add_space(16.0);
 
-                            ComboBox::from_label("Mip")
-                                .wrap(false)
-                                .width(128.0)
-                                .show_index(
-                                    ui,
-                                    &mut self.selected_mip,
-                                    self.header.mip_count as usize,
-                                    |i| {
-                                        format!(
-                                            "{i} - {}x{}",
-                                            self.header.width as usize >> i,
-                                            self.header.height as usize >> i
-                                        )
-                                    },
-                                )
-                        });
+                        ComboBox::from_label("Mip")
+                            .wrap(false)
+                            .width(128.0)
+                            .show_index(
+                                ui,
+                                &mut self.selected_mip,
+                                self.header.mip_count as usize,
+                                |i| {
+                                    format!(
+                                        "{i} - {}x{}",
+                                        self.header.width as usize >> i,
+                                        self.header.height as usize >> i
+                                    )
+                                },
+                            )
                     });
 
                     if ui.button("Export image").clicked() {
