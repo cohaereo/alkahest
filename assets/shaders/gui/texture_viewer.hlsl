@@ -1,6 +1,7 @@
 cbuffer TextureViewerOptions : register(b0) {
     float4 channelMask;
     uint mipLevel;
+    float depth;
 };
 
 struct VSOutput {
@@ -32,7 +33,7 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
     return output;
 }
 
-Texture2D TextureInput : register(t0);
+Texture3D TextureInput : register(t0);
 SamplerState SampleType : register(s0);
 
 float3 GammaCorrect(float3 c) {
@@ -45,7 +46,7 @@ float sum(float4 v) {
 
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
-    float4 albedo = TextureInput.SampleLevel(SampleType, input.uv, mipLevel);
+    float4 albedo = TextureInput.SampleLevel(SampleType, float3(input.uv, depth), mipLevel);
     albedo.rgb = GammaCorrect(albedo.rgb);
 
     // Only one channel selected, find out which one and output it in greyscale

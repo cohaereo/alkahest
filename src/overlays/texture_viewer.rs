@@ -25,6 +25,7 @@ use super::gui::Overlay;
 pub struct TextureViewerScope {
     pub channel_mask: Vec4,
     pub mip_level: u32,
+    pub depth: f32,
 }
 
 pub struct TextureViewer {
@@ -45,6 +46,7 @@ pub struct TextureViewer {
     channel_b: bool,
     channel_a: bool,
 
+    depth: f32,
     selected_mip: usize,
 }
 
@@ -91,6 +93,7 @@ impl TextureViewer {
             channel_b: true,
             channel_a: false,
 
+            depth: 0.0,
             selected_mip: 0,
         })
     }
@@ -123,6 +126,7 @@ impl Overlay for TextureViewer {
                         self.channel_a as u32 as f32,
                     ),
                     mip_level: self.selected_mip as u32,
+                    depth: self.depth,
                 })
                 .ok();
 
@@ -229,6 +233,15 @@ impl Overlay for TextureViewer {
                             )
                     });
 
+                    if self.header.depth > 1 {
+                        ui.horizontal(|ui| {
+                            ui.label("Depth");
+                            ui.add(
+                                egui::Slider::new(&mut self.depth, 0.0..=1.0).clamp_to_range(true),
+                            );
+                        });
+                    }
+
                     if ui.button("Export image").clicked() {
                         let mut dds_data: Vec<u8> = vec![];
                         let (texture, texture_data) = Texture::load_data(self.tag, true).unwrap();
@@ -261,8 +274,7 @@ impl Overlay for TextureViewer {
                 ui.label(format!("Format: {:?}", self.header.format));
                 ui.separator();
                 ui.label(
-                    RichText::new("TODO: Interaction controls for cubemaps and 3D textures")
-                        .color(Color32::YELLOW),
+                    RichText::new("TODO: Interaction controls for cubemaps").color(Color32::YELLOW),
                 );
             });
 
