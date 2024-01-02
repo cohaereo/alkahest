@@ -1,7 +1,7 @@
 use crate::{
     camera::FpsCamera,
     ecs::{
-        components::{Label, ResourceOriginType, ResourcePoint},
+        components::{Label, ResourceOriginType, ResourcePoint, Visible},
         resources::SelectedEntity,
         transform::Transform,
     },
@@ -79,12 +79,16 @@ impl Overlay for ResourceTypeOverlay {
 
                 let mut rp_list = vec![];
 
-                for (e, (transform, res, label)) in m
+                for (e, (transform, res, label, visible)) in m
                     .scene
-                    .query::<(&Transform, &ResourcePoint, Option<&Label>)>()
+                    .query::<(&Transform, &ResourcePoint, Option<&Label>, Option<&Visible>)>()
                     .iter()
                 {
                     let distance = if selected_entity != Some(e) {
+                        if !visible.map_or(true, |v| v.0) {
+                            continue;
+                        }
+
                         if !self.debug_overlay.borrow().map_resource_filter[res.resource.index()] {
                             continue;
                         }
@@ -123,9 +127,11 @@ impl Overlay for ResourceTypeOverlay {
                         0.0
                     };
 
-                    // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
-                    let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
-                    res.resource.draw_debug_shape(transform, &mut debug_shapes);
+                    if visible.map_or(true, |v| v.0) || selected_entity == Some(e) {
+                        // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
+                        let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
+                        res.resource.draw_debug_shape(transform, &mut debug_shapes);
+                    }
 
                     if !camera.is_point_visible(transform.translation) {
                         continue;
