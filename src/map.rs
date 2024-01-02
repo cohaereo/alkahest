@@ -540,6 +540,10 @@ pub struct Unk80809178 {
 pub struct Unk8080917b {
     // Points to havok pre-tag
     pub unk0: RelPointer<Unk80809121>,
+    pub unk8: u32,
+    pub unkc: u32,
+    pub kind: u8,
+    pub unk11: u8,
 }
 
 #[derive(BinRead, Debug, Clone)]

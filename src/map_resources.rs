@@ -1,7 +1,7 @@
 use crate::ecs::transform::Transform;
 use crate::icons::{
     ICON_ACCOUNT_CONVERT, ICON_ALERT, ICON_CHESS_PAWN, ICON_DROPBOX, ICON_FLARE, ICON_HELP,
-    ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_SKULL, ICON_SPHERE,
+    ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE,
     ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
@@ -39,7 +39,8 @@ pub enum MapResource {
     Unk808085c0,
     Unk80806a40,
     Decoration(AABB, TagHash),
-    KillOrTurnbackBarrier(TagHash, u32, Option<CustomDebugShape>),
+    InstantKillBarrier(TagHash, u32, Option<CustomDebugShape>),
+    TurnbackKillBarrier(TagHash, u32, Option<CustomDebugShape>),
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
     PlayAreaBounds(TagHash, Option<CustomDebugShape>),
@@ -84,11 +85,24 @@ impl MapResource {
             MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
-            MapResource::KillOrTurnbackBarrier(h, i, s) => {
+            MapResource::InstantKillBarrier(h, i, s) => {
                 if s.is_some() {
-                    format!("KillOrTurnbackBarrier (havok {h}:{i})")
+                    format!("InstantKillBarrier (havok {h}:{i})")
                 } else {
-                    format!("KillOrTurnbackBarrier (havok {h}:{i})\n{} Shape visualization failed to load", ICON_ALERT)
+                    format!(
+                        "InstantKillBarrier (havok {h}:{i})\n{} Shape visualization failed to load",
+                        ICON_ALERT
+                    )
+                }
+            }
+            MapResource::TurnbackKillBarrier(h, i, s) => {
+                if s.is_some() {
+                    format!("TurnbackKillBarrier (havok {h}:{i})")
+                } else {
+                    format!(
+                        "TurnbackKillBarrier (havok {h}:{i})\n{} Shape visualization failed to load",
+                        ICON_ALERT
+                    )
                 }
             }
             MapResource::Unk80809121(h) => format!("Unk80809121 (havok {h})"),
@@ -175,7 +189,10 @@ impl MapResource {
                 1.0,
                 self.debug_color(),
             ),
-            MapResource::KillOrTurnbackBarrier(_, _, Some(shape)) => {
+            MapResource::InstantKillBarrier(_, _, Some(shape)) => {
+                debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
+            }
+            MapResource::TurnbackKillBarrier(_, _, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             MapResource::PlayAreaBounds(_, Some(shape)) => {
@@ -308,6 +325,7 @@ mapresource_info!(
     13, Unk808068d4, [22, 230, 190], ICON_WAVES
     14, CubemapVolume, [50, 255, 50], ICON_SPHERE
     15, NamedArea, [0, 127, 0], ICON_TAG
-    16, KillOrTurnbackBarrier, [220, 60, 60], ICON_SKULL
-    17, PlayAreaBounds, [192, 100, 192], ICON_DROPBOX
+    16, InstantKillBarrier, [220, 60, 60], ICON_SKULL
+    17, TurnbackKillBarrier, [220, 120, 60], ICON_REPLY
+    18, PlayAreaBounds, [192, 100, 192], ICON_DROPBOX
 );

@@ -1361,14 +1361,31 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             None
                         };
 
-                    ents.push(scene.spawn((
-                        transform,
-                        ResourcePoint {
-                            resource: MapResource::KillOrTurnbackBarrier(
+                    let resource = match d.kind {
+                        0 => MapResource::InstantKillBarrier(
+                            d.unk0.havok_file,
+                            d.unk0.shape_index,
+                            havok_debugshape,
+                        ),
+                        1 => MapResource::TurnbackKillBarrier(
+                            d.unk0.havok_file,
+                            d.unk0.shape_index,
+                            havok_debugshape,
+                        ),
+                        _ => {
+                            error!("Unknown kill barrier type {}", d.kind);
+                            MapResource::InstantKillBarrier(
                                 d.unk0.havok_file,
                                 d.unk0.shape_index,
                                 havok_debugshape,
-                            ),
+                            )
+                        }
+                    };
+
+                    ents.push(scene.spawn((
+                        transform,
+                        ResourcePoint {
+                            resource,
                             has_havok_data: true,
                             ..base_rp
                         },
