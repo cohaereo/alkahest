@@ -11,6 +11,7 @@ use anyhow::Context;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 use std::io::SeekFrom;
+use std::sync::atomic::{AtomicBool, Ordering};
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
     D3D11_SRV_DIMENSION_TEXTURECUBE,
@@ -20,6 +21,8 @@ use windows::Win32::Graphics::Direct3D11::{
     ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11Texture3D,
 };
 use windows::Win32::Graphics::Dxgi::Common::*;
+
+pub static LOW_RES: AtomicBool = AtomicBool::new(false);
 
 #[derive(BinRead, Debug)]
 pub struct TextureHeader {
@@ -284,6 +287,27 @@ impl Texture {
                     offset += slice_pitch;
                 }
 
+                let mut verylowres_mip = 0;
+                if LOW_RES.load(Ordering::Relaxed) {
+                    // Remove everything but mips under 4x4
+                    let mut new_data = vec![];
+                    for i in 0..mipcount_fixed {
+                        let width: u16 = texture.width >> i;
+                        let height = texture.height >> i;
+                        if width <= 4 || height <= 4 {
+                            if verylowres_mip == 0 {
+                                verylowres_mip = i;
+                            }
+
+                            new_data.push(initial_data[i as usize]);
+                        }
+                    }
+
+                    if !new_data.is_empty() {
+                        initial_data = new_data;
+                    }
+                }
+
                 if mipcount_fixed < 1 {
                     error!(
                         "Invalid mipcount for texture {hash:?} (width={}, height={}, mips={})",
@@ -296,9 +320,9 @@ impl Texture {
                     .device
                     .CreateTexture2D(
                         &D3D11_TEXTURE2D_DESC {
-                            Width: texture.width as _,
-                            Height: texture.height as _,
-                            MipLevels: mipcount_fixed as u32,
+                            Width: (texture.width >> verylowres_mip) as _,
+                            Height: (texture.height >> verylowres_mip) as _,
+                            MipLevels: initial_data.len() as u32,
                             ArraySize: 1 as _,
                             Format: texture.format.into(),
                             SampleDesc: DXGI_SAMPLE_DESC {
@@ -330,7 +354,7 @@ impl Texture {
                         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                             Texture2D: D3D11_TEX2D_SRV {
                                 MostDetailedMip: 0,
-                                MipLevels: mipcount_fixed as _,
+                                MipLevels: initial_data.len() as _,
                             },
                         },
                     }),

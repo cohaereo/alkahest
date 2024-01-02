@@ -13,6 +13,7 @@ use std::mem::transmute;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -26,7 +27,7 @@ use crate::overlays::inspector::InspectorOverlay;
 use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
-use crate::texture::Texture;
+use crate::texture::{Texture, LOW_RES};
 use crate::util::text::prettify_distance;
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
@@ -135,6 +136,9 @@ struct Args {
 
     #[arg(long, alias = "na")]
     no_ambient: bool,
+
+    #[arg(long)]
+    lowres: bool,
 }
 
 #[tokio::main]
@@ -146,6 +150,8 @@ pub async fn main() -> anyhow::Result<()> {
     // std::env::set_var("RUST_BACKTRACE", "0");
 
     let args = Args::parse();
+
+    LOW_RES.store(args.lowres, Ordering::Relaxed);
 
     rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("rayon-worker-{i}"))
