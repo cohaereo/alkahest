@@ -17,7 +17,9 @@ use crate::{
 };
 
 use super::{
-    components::{EntityModel, EntityWorldId, ResourcePoint, Ruler, StaticInstances, Visible},
+    components::{
+        EntityModel, EntityWorldId, Mutable, ResourcePoint, Ruler, StaticInstances, Visible,
+    },
     resolve_entity_icon, resolve_entity_name,
     tags::Tags,
     transform::{OriginalTransform, Transform},
@@ -42,12 +44,19 @@ pub fn show_inspector_panel(
 
     let mut add_visible = None;
 
+    let mut delete = false;
     ui.horizontal(|ui| {
         let visible = if let Some(vis) = e.get::<&Visible>() {
             vis.0
         } else {
             true
         };
+
+        if ui.input(|i| i.key_pressed(egui::Key::Delete) && i.modifiers.shift_only()) {
+            if e.has::<Mutable>() {
+                delete = true;
+            }
+        }
 
         if ui
             .button(
@@ -81,6 +90,10 @@ pub fn show_inspector_panel(
 
     if let Some(vis) = add_visible {
         scene.insert_one(ent, vis).ok();
+    }
+
+    if delete {
+        scene.despawn(ent).ok();
     }
 }
 

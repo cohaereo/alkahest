@@ -6,13 +6,13 @@ use strum::IntoEnumIterator;
 use crate::{
     camera::FpsCamera,
     ecs::{
-        components::Visible,
+        components::{Mutable, Visible},
         resolve_entity_icon, resolve_entity_name,
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::Transform,
     },
-    icons::ICON_CHESS_PAWN,
+    icons::{ICON_CHESS_PAWN, ICON_DELETE},
     map::MapDataList,
     util::text::{prettify_distance, text_color_for_background},
 };
@@ -44,9 +44,9 @@ impl Overlay for OutlinerOverlay {
         resources: &mut crate::resources::Resources,
         _gui: super::gui::GuiContext<'_>,
     ) -> bool {
-        let maps = resources.get::<MapDataList>().unwrap();
-        if let Some(map) = maps.current_map() {
-            let scene = &map.2.scene;
+        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+        if let Some(map) = maps.current_map_mut() {
+            let scene = &mut map.scene;
 
             let camera = resources.get::<FpsCamera>().unwrap();
 
@@ -85,6 +85,7 @@ impl Overlay for OutlinerOverlay {
             }
 
             let mut selected_entity = resources.get_mut::<SelectedEntity>().unwrap();
+            let mut delete_entity = None;
 
             egui::Window::new("Outliner").show(ctx, |ui| {
                 ui.horizontal(|ui| {
@@ -144,6 +145,19 @@ impl Overlay for OutlinerOverlay {
                                         ),
                                     );
 
+                                    let response = response.context_menu(|ui| {
+                                        ui.add_enabled_ui(e.has::<Mutable>(), |ui| {
+                                            // Delete button
+                                            if ui
+                                                .button(format!("{} Delete", ICON_DELETE))
+                                                .clicked()
+                                            {
+                                                selected_entity.0 = None;
+                                                delete_entity = Some(ent);
+                                            }
+                                        });
+                                    });
+
                                     if response.clicked() {
                                         selected_entity.0 = Some(ent);
                                     }
@@ -156,6 +170,10 @@ impl Overlay for OutlinerOverlay {
                         },
                     );
             });
+
+            if let Some(delete) = delete_entity {
+                scene.despawn(delete).ok();
+            }
         }
 
         true

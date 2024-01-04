@@ -1,7 +1,7 @@
 use crate::{
     camera::FpsCamera,
     ecs::{
-        components::Ruler,
+        components::{Mutable, Ruler},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
     },
@@ -37,6 +37,7 @@ impl Overlay for MenuBar {
                                     ..Default::default()
                                 },
                                 Tags([EntityTag::Utility].into_iter().collect()),
+                                Mutable,
                             ));
 
                             if let Some(mut se) = resources.get_mut::<SelectedEntity>() {

@@ -205,15 +205,16 @@ impl_decode_float!(i8, i16);
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Copy, Clone)]
+#[repr(C, align(16))]
 pub struct AABB {
-    pub min: Vec3A,
-    pub max: Vec3A,
+    pub min: Vec3,
+    pub max: Vec3,
 }
 
 impl AABB {
     pub const INFINITE: Self = Self {
-        min: Vec3A::splat(f32::NEG_INFINITY),
-        max: Vec3A::splat(f32::INFINITY),
+        min: Vec3::splat(f32::NEG_INFINITY),
+        max: Vec3::splat(f32::INFINITY),
     };
 
     // pub fn contains_point(&self, point: Vec3) -> bool {
@@ -253,6 +254,20 @@ impl AABB {
     pub fn extents(&self) -> Vec3 {
         self.dimensions() / 2.0
     }
+
+    pub fn from_points(points: impl AsRef<[Vec3]>) -> AABB {
+        let points = points.as_ref();
+
+        let mut min = Vec3::splat(f32::INFINITY);
+        let mut max = Vec3::splat(f32::NEG_INFINITY);
+
+        for point in points {
+            min = min.min(*point);
+            max = max.max(*point);
+        }
+
+        Self { min, max }
+    }
 }
 
 impl BinRead for AABB {
@@ -267,8 +282,8 @@ impl BinRead for AABB {
         let max: Vector4 = reader.read_type(endian)?;
 
         Ok(Self {
-            min: Vec3A::new(min.x, min.y, min.z),
-            max: Vec3A::new(max.x, max.y, max.z),
+            min: Vec3::new(min.x, min.y, min.z),
+            max: Vec3::new(max.x, max.y, max.z),
         })
     }
 }
