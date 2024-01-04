@@ -134,7 +134,7 @@ impl Overlay for OutlinerOverlay {
                                         RichText::new(format!(
                                             "{} {}{postfix}",
                                             resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
-                                            resolve_entity_name(e)
+                                            resolve_entity_name(e, true)
                                         ))
                                         .color(
                                             if visible {

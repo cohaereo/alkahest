@@ -1,4 +1,4 @@
-use egui::{Color32, RichText};
+use egui::{Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
@@ -7,7 +7,7 @@ use crate::{
     icons::{
         ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
         ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER,
-        ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
+        ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_TAG,
     },
     resources::Resources,
     util::{
@@ -18,7 +18,7 @@ use crate::{
 
 use super::{
     components::{
-        EntityModel, EntityWorldId, Mutable, ResourcePoint, Ruler, StaticInstances, Visible,
+        EntityModel, EntityWorldId, Label, Mutable, ResourcePoint, Ruler, StaticInstances, Visible,
     },
     resolve_entity_icon, resolve_entity_name,
     tags::Tags,
@@ -36,15 +36,9 @@ pub fn show_inspector_panel(
         return;
     };
 
-    let title = format!(
-        "{} {}",
-        resolve_entity_icon(e).unwrap_or(ICON_HELP),
-        resolve_entity_name(e)
-    );
-
     let mut add_visible = None;
-
     let mut delete = false;
+    let mut add_label = false;
     ui.horizontal(|ui| {
         let visible = if let Some(vis) = e.get::<&Visible>() {
             vis.0
@@ -74,7 +68,30 @@ pub fn show_inspector_panel(
             }
         }
 
-        ui.label(RichText::new(title).size(24.0).strong());
+        let title = format!(
+            "{} {}",
+            resolve_entity_icon(e).unwrap_or(ICON_HELP),
+            resolve_entity_name(e, true)
+        );
+
+        if e.has::<Mutable>() {
+            if let Some(mut label) = e.get::<&mut Label>() {
+                egui::TextEdit::singleline(&mut label.0)
+                    .font(FontId::proportional(22.0))
+                    .ui(ui);
+            } else {
+                ui.label(RichText::new(title).size(24.0).strong());
+                if ui
+                    .button(RichText::new(ICON_TAG.to_string()).size(24.0).strong())
+                    .on_hover_text("Add label")
+                    .clicked()
+                {
+                    add_label = true;
+                }
+            }
+        } else {
+            ui.label(RichText::new(title).size(24.0).strong());
+        }
     });
     ui.separator();
 
@@ -87,6 +104,12 @@ pub fn show_inspector_panel(
     }
 
     show_inspector_components(ui, e, resources);
+
+    if add_label {
+        scene
+            .insert_one(ent, Label(resolve_entity_name(e, false)))
+            .ok();
+    }
 
     if let Some(vis) = add_visible {
         scene.insert_one(ent, vis).ok();

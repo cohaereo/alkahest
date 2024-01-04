@@ -40,8 +40,13 @@ pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
     None
 }
 
-pub fn resolve_entity_name(e: EntityRef<'_>) -> String {
-    let postfix = format!(" (ent {})", e.entity().id());
+pub fn resolve_entity_name(e: EntityRef<'_>, append_ent: bool) -> String {
+    let postfix = if append_ent {
+        format!(" (ent {})", e.entity().id())
+    } else {
+        String::new()
+    };
+
     if let Some(label) = e.get::<&Label>() {
         format!("{}{postfix}", label.0)
     } else if let Some(rp) = e.get::<&ResourcePoint>() {
