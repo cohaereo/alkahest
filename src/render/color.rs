@@ -34,3 +34,17 @@ impl From<[u8; 3]> for Color {
         )
     }
 }
+
+impl From<[u8; 4]> for Color {
+    fn from(value: [u8; 4]) -> Self {
+        Color(
+            [
+                value[0] as f32 / 255.0,
+                value[1] as f32 / 255.0,
+                value[2] as f32 / 255.0,
+                value[3] as f32 / 255.0,
+            ]
+            .into(),
+        )
+    }
+}

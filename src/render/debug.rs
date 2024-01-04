@@ -29,6 +29,10 @@ pub enum DebugShape {
         rotation: Quat,
         sides: bool,
     },
+    Sphere {
+        center: Vec3,
+        radius: f32,
+    },
     Line {
         start: Vec3,
         end: Vec3,
@@ -82,6 +86,11 @@ impl DebugShapes {
             },
             color.into(),
         ))
+    }
+
+    pub fn sphere<C: Into<Color>>(&mut self, center: Vec3, radius: f32, color: C) {
+        self.shapes
+            .push((DebugShape::Sphere { center, radius }, color.into()))
     }
 
     pub fn line<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
@@ -224,6 +233,11 @@ pub struct DebugShapeRenderer {
     pshader_line_dotted: ID3D11PixelShader,
 
     input_layout: ID3D11InputLayout,
+
+    vb_sphere: ID3D11Buffer,
+    ib_sphere: ID3D11Buffer,
+    sphere_index_count: u32,
+
     vb_cube: ID3D11Buffer,
     ib_cube: ID3D11Buffer,
     ib_cube_sides: ID3D11Buffer,
@@ -287,6 +301,56 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (pshader_line_dotted, _) = shader::load_pshader(&dcs, &data)?;
+
+        let mesh_sphere = genmesh::generators::SphereUv::new(16, 16);
+        let vertices: Vec<[f32; 4]> = mesh_sphere
+            .shared_vertex_iter()
+            .map(|v| {
+                let v = <[f32; 3]>::from(v.pos);
+                [v[0], v[1], v[2], 1.0]
+            })
+            .collect();
+
+        let mut indices = vec![];
+        for i in mesh_sphere.indexed_polygon_iter().triangulate() {
+            indices.extend_from_slice(&[i.x as u16, i.y as u16, i.z as u16]);
+        }
+
+        let ib_sphere = unsafe {
+            dcs.device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: (indices.len() * 2) as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_INDEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: indices.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create index buffer")?
+        };
+
+        let vb_sphere = unsafe {
+            dcs.device
+                .CreateBuffer(
+                    &D3D11_BUFFER_DESC {
+                        ByteWidth: (vertices.len() * 16) as _,
+                        Usage: D3D11_USAGE_IMMUTABLE,
+                        BindFlags: D3D11_BIND_VERTEX_BUFFER,
+                        ..Default::default()
+                    },
+                    Some(&D3D11_SUBRESOURCE_DATA {
+                        pSysMem: vertices.as_ptr() as _,
+                        ..Default::default()
+                    }),
+                )
+                .context("Failed to create combined vertex buffer")?
+        };
+
+        let sphere_index_count = indices.len() as _;
 
         let mesh = genmesh::generators::Cube::new();
         let vertices: Vec<[f32; 4]> = mesh
@@ -370,6 +434,9 @@ impl DebugShapeRenderer {
             pshader_line,
             pshader_line_dotted,
             input_layout,
+            vb_sphere,
+            ib_sphere,
+            sphere_index_count,
             vb_cube,
             ib_cube,
             ib_cube_sides,
@@ -535,6 +602,49 @@ impl DebugShapeRenderer {
 
                             self.dcs.context().DrawIndexed(self.cube_index_count, 0, 0);
                         }
+                    }
+                }
+                DebugShape::Sphere { center, radius } => {
+                    self.scope
+                        .write(&ScopeAlkDebugShape {
+                            model: Mat4::from_scale_rotation_translation(
+                                Vec3::splat(radius),
+                                Quat::IDENTITY,
+                                center,
+                            ),
+                            color,
+                        })
+                        .unwrap();
+
+                    self.scope.bind(10, TfxShaderStage::Vertex);
+                    self.scope.bind(10, TfxShaderStage::Pixel);
+
+                    unsafe {
+                        self.dcs.context().IASetInputLayout(&self.input_layout);
+                        self.dcs.context().VSSetShader(&self.vshader, None);
+                        self.dcs.context().PSSetShader(&self.pshader, None);
+
+                        self.dcs.context().IASetVertexBuffers(
+                            0,
+                            1,
+                            Some([Some(self.vb_sphere.clone())].as_ptr()),
+                            Some([16].as_ptr()),
+                            Some(&0),
+                        );
+
+                        self.dcs.context().IASetIndexBuffer(
+                            Some(&self.ib_sphere),
+                            DXGI_FORMAT_R16_UINT,
+                            0,
+                        );
+
+                        self.dcs
+                            .context()
+                            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+                        self.dcs
+                            .context()
+                            .DrawIndexed(self.sphere_index_count, 0, 0);
                     }
                 }
                 DebugShape::Line {

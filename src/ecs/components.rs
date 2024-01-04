@@ -96,6 +96,7 @@ pub struct Ruler {
     pub color: [u8; 3],
     pub rainbow: bool,
     pub scale: f32,
+    pub marker_interval: f32,
     pub show_individual_axis: bool,
 }
 
@@ -107,6 +108,7 @@ impl Default for Ruler {
             color: [255, 255, 255],
             rainbow: false,
             scale: 1.0,
+            marker_interval: 0.0,
             show_individual_axis: false,
         }
     }
@@ -115,6 +117,10 @@ impl Default for Ruler {
 impl Ruler {
     pub fn length(&self) -> f32 {
         (self.start - self.end).length()
+    }
+
+    pub fn direction(&self) -> Vec3 {
+        (self.end - self.start).normalize()
     }
 }
 

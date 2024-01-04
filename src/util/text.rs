@@ -23,6 +23,14 @@ pub fn name_to_color(name: &str) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
+pub fn invert_color(color: [u8; 3]) -> [u8; 3] {
+    [255 - color[0], 255 - color[1], 255 - color[2]]
+}
+
+pub fn keep_color_bright(color: [u8; 3]) -> [u8; 3] {
+    [color[0].max(127), color[1].max(127), color[2].max(127)]
+}
+
 /// Simplifies meters to other metric measurement units (mm, cm, m, km)
 pub fn prettify_distance(meters: f32) -> String {
     if meters < 0.001 {

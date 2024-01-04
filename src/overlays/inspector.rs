@@ -27,7 +27,6 @@ impl Overlay for InspectorOverlay {
                     ui.colored_label(Color32::WHITE, "No entity selected");
                     ui.horizontal(|ui| {
                         ui.colored_label(Color32::WHITE, "Select one using");
-                        // ui.colored_label(Color32::WHITE, "Select one using ");
                         let p = ui.painter_at(ui.cursor());
                         let pos = ui.cursor().min;
                         ui.label("  ");

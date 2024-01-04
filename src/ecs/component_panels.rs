@@ -459,12 +459,31 @@ impl ComponentPanel for Ruler {
                     .max_decimals(2),
             )
         });
+
+        ui.horizontal(|ui| {
+            ui.strong("Marker Interval");
+            ui.add(
+                egui::DragValue::new(&mut self.marker_interval)
+                    .speed(0.1)
+                    .clamp_range(0f32..=f32::INFINITY)
+                    .min_decimals(2)
+                    .max_decimals(2)
+                    .suffix(" m"),
+            )
+        });
         ui.checkbox(&mut self.show_individual_axis, "Show individual axis");
 
         ui.horizontal(|ui| {
             ui.strong("Length:");
             ui.label(prettify_distance(self.length()));
         });
+
+        if self.marker_interval > 0.0 {
+            ui.horizontal(|ui| {
+                ui.strong("Length remainder at end:");
+                ui.label(prettify_distance(self.length() % self.marker_interval));
+            });
+        }
 
         ui.separator();
 

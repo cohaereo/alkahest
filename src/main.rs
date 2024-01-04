@@ -28,7 +28,7 @@ use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::{Texture, LOW_RES};
-use crate::util::text::prettify_distance;
+use crate::util::text::{invert_color, keep_color_bright, prettify_distance};
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -844,6 +844,23 @@ pub async fn main() -> anyhow::Result<()> {
                                     egui::Align2::RIGHT_CENTER,
                                     [255, 255, 255],
                                 );
+                            }
+
+                            if ruler.marker_interval > 0.0 {
+                                let sphere_color = keep_color_bright(invert_color(color));
+                                let sphere_color =
+                                    [sphere_color[0], sphere_color[1], sphere_color[2], 192];
+
+                                let mut current = 0.0;
+                                while current < ruler.length() {
+                                    if current > 0.0 {
+                                        let pos = ruler.start + ruler.direction() * current;
+
+                                        debugshapes.sphere(pos, ruler.scale * 0.20, sphere_color);
+                                    }
+
+                                    current += ruler.marker_interval;
+                                }
                             }
                         }
                     }
