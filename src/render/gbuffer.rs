@@ -51,18 +51,14 @@ impl GBuffer {
             pick_buffer_staging: CpuStagingBuffer::create(size, DxgiFormat::R32_UINT, dcs.clone())
                 .context("Entity_Pickbuffer_Staging")?,
 
-            light_diffuse: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+            light_diffuse: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
                 .context("Light_Diffuse")?,
-            light_specular: RenderTarget::create(
-                size,
-                DxgiFormat::B8G8R8A8_UNORM_SRGB,
-                dcs.clone(),
-            )
-            .context("Light_Specular")?,
+            light_specular: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
+                .context("Light_Specular")?,
 
-            staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+            staging: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
                 .context("Staging")?,
-            staging_clone: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+            staging_clone: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
                 .context("Staging_Clone")?,
             depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,
