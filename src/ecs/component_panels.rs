@@ -4,6 +4,7 @@ use hecs::{Entity, EntityRef};
 
 use crate::{
     camera::FpsCamera,
+    hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
     icons::{
         ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
         ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER,
@@ -46,7 +47,7 @@ pub fn show_inspector_panel(
             true
         };
 
-        if ui.input(|i| i.key_pressed(egui::Key::Delete) && i.modifiers.shift_only()) {
+        if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)) {
             if e.has::<Mutable>() {
                 delete = true;
             }
@@ -59,7 +60,7 @@ pub fn show_inspector_panel(
                     .strong(),
             )
             .clicked()
-            || ui.input(|i| i.key_pressed(egui::Key::H) && i.modifiers.is_none())
+            || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE))
         {
             if let Some(mut vis) = e.get::<&mut Visible>() {
                 vis.0 = !visible;

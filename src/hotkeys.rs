@@ -4,16 +4,24 @@ use crate::{
     resources::Resources,
 };
 
-fn alt_only(modifiers: egui::Modifiers) -> bool {
-    modifiers.alt && !modifiers.ctrl && !modifiers.command && !modifiers.shift
-}
+pub const SHORTCUT_DELETE: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::Delete);
+
+pub const SHORTCUT_HIDE: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::H);
+
+pub const SHORTCUT_UNHIDE_ALL: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::ALT, egui::Key::H);
+
+pub const SHORTCUT_HIDE_UNSELECTED: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::H);
 
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
-    if ctx.input(|i| alt_only(i.modifiers) && i.key_pressed(egui::Key::H)) {
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);
     }
 
-    if ctx.input(|i| i.modifiers.shift_only() && i.key_pressed(egui::Key::H)) {
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE_UNSELECTED)) {
         hide_unselected(resources);
     }
 }
