@@ -532,9 +532,41 @@ pub async fn main() -> anyhow::Result<()> {
                             {
                                 let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                                 camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
-                            }
 
-                            last_cursor_pos = Some(*position);
+                                // Wrap the cursor around if it goes out of bounds
+                                let window_dims = window.inner_size();
+                                let window_dims =
+                                    (window_dims.width as i32, window_dims.height as i32);
+                                let cursor_pos = (position.x as i32, position.y as i32);
+                                let mut new_cursor_pos = cursor_pos;
+
+                                if cursor_pos.0 <= 0 {
+                                    new_cursor_pos.0 = window_dims.0;
+                                } else if cursor_pos.0 >= (window_dims.0 - 1) {
+                                    new_cursor_pos.0 = 0;
+                                }
+
+                                if cursor_pos.1 <= 0 {
+                                    new_cursor_pos.1 = window_dims.1;
+                                } else if cursor_pos.1 >= window_dims.1 {
+                                    new_cursor_pos.1 = 0;
+                                }
+
+                                if new_cursor_pos != cursor_pos {
+                                    window
+                                        .set_cursor_position(PhysicalPosition::new(
+                                            new_cursor_pos.0 as f64,
+                                            new_cursor_pos.1 as f64,
+                                        ))
+                                        .ok();
+                                }
+                                last_cursor_pos = Some(PhysicalPosition::new(
+                                    new_cursor_pos.0 as f64,
+                                    new_cursor_pos.1 as f64,
+                                ));
+                            } else {
+                                last_cursor_pos = Some(*position);
+                            }
                         } else {
                             last_cursor_pos = Some(*position);
                         }
