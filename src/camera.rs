@@ -1,7 +1,11 @@
 use glam::{Mat4, Quat, Vec2, Vec3};
 use winit::event::VirtualKeyCode;
 
-use crate::{input::InputState, types::AABB};
+use crate::{
+    input::InputState,
+    render::tween::{self, Tween},
+    types::AABB,
+};
 
 #[derive(Clone)]
 pub struct FpsCamera {
@@ -19,6 +23,8 @@ pub struct FpsCamera {
     pub projection_matrix: Mat4,
     pub projection_view_matrix: Mat4,
     pub projection_view_matrix_inv: Mat4,
+
+    pub tween: Option<Tween>,
 }
 
 impl Default for FpsCamera {
@@ -36,6 +42,7 @@ impl Default for FpsCamera {
             projection_matrix: Mat4::IDENTITY,
             projection_view_matrix: Mat4::IDENTITY,
             projection_view_matrix_inv: Mat4::IDENTITY,
+            tween: None,
         }
     }
 }
@@ -98,7 +105,20 @@ impl FpsCamera {
 
         speed *= self.speed_mul;
 
-        self.position += direction * speed;
+        // Cancel tween if the user moves the camera
+        if self.tween.is_some() && direction.length() > 0.0 {
+            self.tween = None;
+        }
+
+        if let Some(tween) = &mut self.tween {
+            self.position = tween.update();
+        } else {
+            self.position += direction * speed;
+        }
+
+        if self.tween.as_ref().is_some_and(Tween::is_finished) {
+            self.tween = None;
+        }
 
         self.orientation.x = self.orientation.x.clamp(-89.9, 89.9);
 
@@ -237,5 +257,21 @@ impl FpsCamera {
         }
 
         false
+    }
+
+    pub fn focus(&mut self, pos: Vec3, distance: f32) {
+        self.tween = Some(Tween::new(
+            tween::ease_out_exponential,
+            self.position,
+            pos - self.front * distance,
+            0.70,
+        ));
+    }
+
+    pub fn focus_aabb(&mut self, bb: &AABB) {
+        let center = bb.center();
+        let radius = bb.radius();
+
+        self.focus(center, radius);
     }
 }

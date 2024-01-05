@@ -21,7 +21,9 @@ use crate::activity::SActivity;
 use crate::ecs::components::{
     ActivityGroup, EntityModel, ResourcePoint, Ruler, StaticInstances, Terrain, Visible, Water,
 };
+use crate::ecs::resolve_aabb;
 use crate::ecs::resources::SelectedEntity;
+use crate::hotkeys::SHORTCUT_FOCUS;
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::inspector::InspectorOverlay;
 use crate::overlays::menu::MenuBar;
@@ -581,6 +583,27 @@ pub async fn main() -> anyhow::Result<()> {
                         window.inner_size().into(),
                         last_frame.elapsed().as_secs_f32(),
                     );
+
+                    if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_FOCUS)) {
+                        if let Some(selected_entity) = resources.get::<SelectedEntity>() {
+                            let maps = resources.get::<MapDataList>().unwrap();
+
+                            if let Some((_, _, map)) = maps.current_map() {
+                                if let Ok(e) = map
+                                    .scene
+                                    .entity(selected_entity.0.unwrap_or(Entity::DANGLING))
+                                {
+                                    if let Some(target) = resolve_aabb(e) {
+                                        camera.focus_aabb(&target);
+                                    } else {
+                                        if let Some(transform) = e.get::<&Transform>() {
+                                            camera.focus(transform.translation, 10.0);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 last_frame = Instant::now();
 

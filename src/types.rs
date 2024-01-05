@@ -1,6 +1,6 @@
 use binrw::{BinRead, BinReaderExt};
 use bytemuck::{Pod, Zeroable};
-use glam::{Mat4, Quat, Vec2, Vec3, Vec3A, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use std::fmt::{Debug, Formatter, Write};
 
 pub type FnvHash = u32;
@@ -253,6 +253,10 @@ impl AABB {
 
     pub fn extents(&self) -> Vec3 {
         self.dimensions() / 2.0
+    }
+
+    pub fn radius(&self) -> f32 {
+        self.extents().length()
     }
 
     pub fn from_points(points: impl AsRef<[Vec3]>) -> AABB {

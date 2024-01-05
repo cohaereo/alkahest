@@ -7,9 +7,11 @@ pub mod transform;
 pub type Scene = hecs::World;
 
 use hecs::EntityRef;
+use itertools::Itertools;
 
 use crate::ecs::component_panels::ComponentPanel;
 use crate::ecs::components::*;
+use crate::types::AABB;
 use crate::util::text::split_pascal_case;
 
 pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
@@ -66,19 +68,19 @@ pub fn resolve_entity_name(e: EntityRef<'_>, append_ent: bool) -> String {
     }
 }
 
-// pub fn resolve_aabb(e: EntityRef<'_>) -> Option<AABB> {
-//     if let Some(ruler) = e.get::<&Ruler>() {
-//         return Some(AABB::from_points(&[ruler.start, ruler.end]));
-//     }
+pub fn resolve_aabb(e: EntityRef<'_>) -> Option<AABB> {
+    if let Some(ruler) = e.get::<&Ruler>() {
+        return Some(AABB::from_points(&[ruler.start, ruler.end]));
+    }
 
-//     if let Some(si) = e.get::<&StaticInstances>() {
-//         let points =
-//             si.0.occlusion_bounds
-//                 .iter()
-//                 .flat_map(|v| [v.min, v.max])
-//                 .collect_vec();
-//         return Some(AABB::from_points(points));
-//     }
+    if let Some(si) = e.get::<&StaticInstances>() {
+        let points =
+            si.0.occlusion_bounds
+                .iter()
+                .flat_map(|v| [v.min, v.max])
+                .collect_vec();
+        return Some(AABB::from_points(points));
+    }
 
-//     None
-// }
+    None
+}
