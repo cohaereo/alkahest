@@ -47,10 +47,8 @@ pub fn show_inspector_panel(
             true
         };
 
-        if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)) {
-            if e.has::<Mutable>() {
-                delete = true;
-            }
+        if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)) && e.has::<Mutable>() {
+            delete = true;
         }
 
         if ui

@@ -907,8 +907,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .load_texture(ExtendedHash::Hash32(cubemap_volume.cubemap_texture));
 
                     let aabb = AABB {
-                        min: volume_min.truncate().into(),
-                        max: volume_max.truncate().into(),
+                        min: volume_min.truncate(),
+                        max: volume_max.truncate(),
                     };
                     ents.push(scene.spawn((
                         Transform {

@@ -70,7 +70,7 @@ pub fn resolve_entity_name(e: EntityRef<'_>, append_ent: bool) -> String {
 
 pub fn resolve_aabb(e: EntityRef<'_>) -> Option<AABB> {
     if let Some(ruler) = e.get::<&Ruler>() {
-        return Some(AABB::from_points(&[ruler.start, ruler.end]));
+        return Some(AABB::from_points([ruler.start, ruler.end]));
     }
 
     if let Some(si) = e.get::<&StaticInstances>() {

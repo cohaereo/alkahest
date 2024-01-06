@@ -244,11 +244,11 @@ impl AABB {
     }
 
     pub fn center(&self) -> Vec3 {
-        ((self.min + self.max) / 2.0).into()
+        (self.min + self.max) / 2.0
     }
 
     pub fn dimensions(&self) -> Vec3 {
-        (self.max - self.min).into()
+        self.max - self.min
     }
 
     pub fn extents(&self) -> Vec3 {
@@ -292,13 +292,13 @@ impl BinRead for AABB {
     }
 }
 
-pub struct OBB {
+pub struct Obb {
     pub center: Vec3,
     pub extents: Vec3,
     pub orientation: Quat,
 }
 
-impl From<AABB> for OBB {
+impl From<AABB> for Obb {
     fn from(aabb: AABB) -> Self {
         Self {
             center: aabb.center(),

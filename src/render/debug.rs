@@ -66,10 +66,7 @@ impl DebugShapes {
 
         self.shapes.push((
             DebugShape::Cube {
-                cube: AABB {
-                    min: min.into(),
-                    max: max.into(),
-                },
+                cube: AABB { min, max },
                 rotation,
                 sides,
             },

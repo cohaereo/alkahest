@@ -627,10 +627,8 @@ pub async fn main() -> anyhow::Result<()> {
                                 {
                                     if let Some(target) = resolve_aabb(e) {
                                         camera.focus_aabb(&target);
-                                    } else {
-                                        if let Some(transform) = e.get::<&Transform>() {
-                                            camera.focus(transform.translation, 10.0);
-                                        }
+                                    } else if let Some(transform) = e.get::<&Transform>() {
+                                        camera.focus(transform.translation, 10.0);
                                     }
                                 }
                             }
@@ -977,7 +975,7 @@ pub async fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    hotkeys::process_hotkeys(&mut gui.egui, &mut resources);
+                    hotkeys::process_hotkeys(&gui.egui, &mut resources);
 
                     dcs.context().OMSetDepthStencilState(None, 0);
 
