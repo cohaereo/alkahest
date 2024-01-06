@@ -280,7 +280,11 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 match TextureViewer::new(tag, dcs.clone()) {
                     Ok(o) => {
                         info!("Successfully loaded texture {tag}");
-                        viewers.0.push(Box::new(o));
+                        // TODO(cohae): Focus window if already open
+                        viewers
+                            .0
+                            .entry(tag.to_string())
+                            .or_insert_with(|| Box::new(o));
                     }
                     Err(e) => {
                         error!("Failed to load texture {tag}: {e}");

@@ -7,6 +7,7 @@ use crate::render::DeviceContextSwapchain;
 use crate::resources::Resources;
 use crate::util::exe_relative_path;
 use crate::util::image::Png;
+use egui::epaint::ahash::HashMap;
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
 use winit::event::WindowEvent;
@@ -143,10 +144,10 @@ impl GuiManager {
                             if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
                                 std::mem::take(&mut viewers.0)
                             } else {
-                                vec![]
+                                Default::default()
                             };
 
-                        views.retain_mut(|v| {
+                        views.retain(|_, v| {
                             v.draw(
                                 ctx,
                                 &window,
@@ -217,4 +218,4 @@ impl GuiResources {
 }
 
 #[derive(Default)]
-pub struct ViewerWindows(pub Vec<Box<dyn Overlay>>);
+pub struct ViewerWindows(pub HashMap<String, Box<dyn Overlay>>);
