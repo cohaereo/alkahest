@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use std::sync::Arc;
 
 use super::bytecode::externs::TfxShaderStage;
@@ -38,6 +39,11 @@ pub enum DebugShape {
         end: Vec3,
         dotted: bool,
         dot_scale: f32,
+    },
+    Circle {
+        center: Vec3,
+        axis: Vec3,
+        edges: u8,
     },
     Custom {
         transform: Transform,
@@ -97,6 +103,17 @@ impl DebugShapes {
                 end,
                 dotted: false,
                 dot_scale: 1.0,
+            },
+            color.into(),
+        ))
+    }
+
+    pub fn circle<C: Into<Color>>(&mut self, center: Vec3, axis: Vec3, edges: u8, color: C) {
+        self.shapes.push((
+            DebugShape::Circle {
+                center,
+                axis,
+                edges,
             },
             color.into(),
         ))
@@ -650,36 +667,62 @@ impl DebugShapeRenderer {
                     dotted,
                     dot_scale,
                 } => {
-                    self.scope_line
-                        .write(&ScopeAlkDebugShapeLine {
-                            start: start.extend(1.0),
-                            end: end.extend(1.0),
-                            color,
-                            dot_scale,
-                        })
-                        .unwrap();
+                    self.draw_line(start, end, color, dotted, dot_scale);
+                }
+                DebugShape::Circle {
+                    center,
+                    axis,
+                    edges,
+                } => {
+                    let a = axis.normalize();
+                    let r = axis.length();
 
-                    self.scope_line.bind(10, TfxShaderStage::Vertex);
-                    self.scope_line.bind(10, TfxShaderStage::Pixel);
+                    let (va, vb) = a.any_orthonormal_pair();
 
-                    unsafe {
-                        self.dcs.context().VSSetShader(&self.vshader_line, None);
-                        if dotted {
-                            self.dcs
-                                .context()
-                                .PSSetShader(&self.pshader_line_dotted, None);
-                        } else {
-                            self.dcs.context().PSSetShader(&self.pshader_line, None);
-                        }
+                    let mut prev;
+                    let mut next = va;
 
-                        self.dcs
-                            .context()
-                            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+                    for t in 0..edges {
+                        prev = next;
+                        let (s, c) = (2.0 * t as f32 * PI / edges as f32).sin_cos();
+                        next = va * c + vb * s;
 
-                        self.dcs.context().Draw(2, 0);
+                        self.draw_line(center + r * prev, center + r * next, color, false, 0.0);
                     }
+                    self.draw_line(center + r * next, center + r * va, color, false, 0.0);
                 }
             }
+        }
+    }
+
+    fn draw_line(&self, start: Vec3, end: Vec3, color: Color, dotted: bool, dot_scale: f32) {
+        self.scope_line
+            .write(&ScopeAlkDebugShapeLine {
+                start: start.extend(1.0),
+                end: end.extend(1.0),
+                color,
+                dot_scale,
+            })
+            .unwrap();
+
+        self.scope_line.bind(10, TfxShaderStage::Vertex);
+        self.scope_line.bind(10, TfxShaderStage::Pixel);
+
+        unsafe {
+            self.dcs.context().VSSetShader(&self.vshader_line, None);
+            if dotted {
+                self.dcs
+                    .context()
+                    .PSSetShader(&self.pshader_line_dotted, None);
+            } else {
+                self.dcs.context().PSSetShader(&self.pshader_line, None);
+            }
+
+            self.dcs
+                .context()
+                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+            self.dcs.context().Draw(2, 0);
         }
     }
 }
