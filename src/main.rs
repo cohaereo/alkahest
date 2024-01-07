@@ -576,9 +576,6 @@ pub async fn main() -> anyhow::Result<()> {
                     // TODO(cohae): Should this even be in here at this point?
                     WindowEvent::KeyboardInput { .. } => {
                         let input = resources.get::<InputState>().unwrap();
-                        if input.ctrl() && input.is_key_down(VirtualKeyCode::Q) {
-                            *control_flow = ControlFlow::Exit
-                        }
 
                         if input.is_key_pressed(VirtualKeyCode::Up) {
                             if let Some(selected_entity) =
