@@ -8,6 +8,7 @@ extern crate windows;
 extern crate tracing;
 
 use std::cell::RefCell;
+use std::f32::consts::PI;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem::transmute;
 use std::path::PathBuf;
@@ -19,7 +20,8 @@ use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
 use crate::ecs::components::{
-    ActivityGroup, EntityModel, ResourcePoint, Ruler, StaticInstances, Terrain, Visible, Water,
+    ActivityGroup, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances, Terrain, Visible,
+    Water,
 };
 use crate::ecs::resolve_aabb;
 use crate::ecs::resources::SelectedEntity;
@@ -915,6 +917,52 @@ pub async fn main() -> anyhow::Result<()> {
                                     current += ruler.marker_interval;
                                 }
                             }
+                        }
+                        for (_, sphere) in map.scene.query::<&Sphere>().iter() {
+                            let color = if sphere.rainbow {
+                                Hsva {
+                                    h: (start_time.elapsed().as_secs_f32() * 0.30) % 1.0,
+                                    s: 1.0,
+                                    v: 1.0,
+                                    a: 1.0,
+                                }
+                                .to_srgb()
+                            } else {
+                                sphere.color
+                            };
+
+                            let cross_color = keep_color_bright(invert_color(color));
+                            debugshapes.cross(sphere.center, 0.25 * sphere.radius, cross_color);
+
+                            for t in 0..sphere.detail {
+                                debugshapes.circle(
+                                    sphere.center,
+                                    Vec3::new(
+                                        sphere.radius
+                                            * (t as f32 * PI / sphere.detail as f32).sin(),
+                                        sphere.radius
+                                            * (t as f32 * PI / sphere.detail as f32).cos(),
+                                        0.0,
+                                    ),
+                                    4 * sphere.detail,
+                                    color,
+                                );
+                            }
+                            debugshapes.circle(
+                                sphere.center,
+                                Vec3::new(0.0, 0.0, sphere.radius),
+                                4 * sphere.detail,
+                                color,
+                            );
+
+                            debugshapes.text(
+                                prettify_distance(sphere.radius),
+                                sphere.center,
+                                egui::Align2::CENTER_BOTTOM,
+                                [255, 255, 255],
+                            );
+                            let color = [color[0], color[1], color[2], sphere.opacity];
+                            debugshapes.sphere(sphere.center, sphere.radius, color);
                         }
                     }
                     drop(maps);

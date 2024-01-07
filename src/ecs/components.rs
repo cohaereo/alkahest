@@ -124,6 +124,27 @@ impl Ruler {
     }
 }
 
+pub struct Sphere {
+    pub center: Vec3,
+    pub radius: f32,
+    pub detail: u8,
+    pub color: [u8; 3],
+    pub opacity: u8,
+    pub rainbow: bool,
+}
+
+impl Default for Sphere {
+    fn default() -> Self {
+        Self {
+            center: Vec3::ZERO,
+            radius: 9.0,
+            detail: 4,
+            color: [255, 255, 255],
+            opacity: 80,
+            rainbow: false,
+        }
+    }
+}
 /// Marker component to indicate that the entity is allowed to be modified in potentially destructive ways
 /// (e.g. deleting it, changing it's name, etc.)
 pub struct Mutable;

@@ -1,11 +1,12 @@
 use crate::{
     camera::FpsCamera,
     ecs::{
-        components::{Mutable, Ruler},
+        components::{Mutable, Ruler, Sphere},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
     },
     icons::ICON_RULER_SQUARE,
+    icons::ICON_SPHERE,
     map::MapDataList,
 };
 
@@ -34,6 +35,28 @@ impl Overlay for MenuBar {
                                 Ruler {
                                     start: position_base + camera.right * 10.0,
                                     end: position_base - camera.right * 10.0,
+                                    ..Default::default()
+                                },
+                                Tags([EntityTag::Utility].into_iter().collect()),
+                                Mutable,
+                            ));
+
+                            if let Some(mut se) = resources.get_mut::<SelectedEntity>() {
+                                se.0 = Some(e);
+                            }
+
+                            ui.close_menu();
+                        }
+                    }
+                    if ui.button(format!("{} Sphere", ICON_SPHERE)).clicked() {
+                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+
+                        if let Some(map) = maps.current_map_mut() {
+                            let camera = resources.get::<FpsCamera>().unwrap();
+                            let position_base = camera.position + camera.front * 15.0;
+                            let e = map.scene.spawn((
+                                Sphere {
+                                    center: position_base,
                                     ..Default::default()
                                 },
                                 Tags([EntityTag::Utility].into_iter().collect()),
