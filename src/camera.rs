@@ -47,6 +47,11 @@ impl Default for FpsCamera {
     }
 }
 
+fn flatten_xy(mut dir: Vec3, default: Vec3) -> Vec3 {
+    dir[2] = 0.0;
+    dir.try_normalize().unwrap_or(default)
+}
+
 impl FpsCamera {
     fn update_vectors(&mut self) {
         let mut front = Vec3::ZERO;
@@ -70,6 +75,7 @@ impl FpsCamera {
 
     pub fn update(&mut self, input: &InputState, window_size: (u32, u32), delta: f32) {
         let mut speed = delta * 35.0;
+        let mut absolute = false;
         if input.shift() {
             speed *= 3.0;
         }
@@ -81,26 +87,54 @@ impl FpsCamera {
             speed *= 10.0;
         }
 
+        if input.is_key_down(VirtualKeyCode::LAlt) {
+            absolute = true;
+        }
+
         let mut direction = Vec3::ZERO;
-        if input.is_key_down(VirtualKeyCode::W) {
-            direction += self.front;
-        }
-        if input.is_key_down(VirtualKeyCode::S) {
-            direction -= self.front;
-        }
 
-        if input.is_key_down(VirtualKeyCode::D) {
-            direction -= self.right;
-        }
-        if input.is_key_down(VirtualKeyCode::A) {
-            direction += self.right;
-        }
+        if absolute {
+            if input.is_key_down(VirtualKeyCode::W) {
+                direction += flatten_xy(self.front, Vec3::X);
+            }
+            if input.is_key_down(VirtualKeyCode::S) {
+                direction -= flatten_xy(self.front, Vec3::X);
+            }
 
-        if input.is_key_down(VirtualKeyCode::Q) {
-            direction -= Vec3::Z;
-        }
-        if input.is_key_down(VirtualKeyCode::E) {
-            direction += Vec3::Z;
+            if input.is_key_down(VirtualKeyCode::D) {
+                direction -= flatten_xy(self.right, Vec3::Y);
+            }
+            if input.is_key_down(VirtualKeyCode::A) {
+                direction += flatten_xy(self.right, Vec3::Y);
+            }
+
+            if input.is_key_down(VirtualKeyCode::Q) {
+                direction -= Vec3::Z;
+            }
+            if input.is_key_down(VirtualKeyCode::E) {
+                direction += Vec3::Z;
+            }
+        } else {
+            if input.is_key_down(VirtualKeyCode::W) {
+                direction += self.front;
+            }
+            if input.is_key_down(VirtualKeyCode::S) {
+                direction -= self.front;
+            }
+
+            if input.is_key_down(VirtualKeyCode::D) {
+                direction -= self.right;
+            }
+            if input.is_key_down(VirtualKeyCode::A) {
+                direction += self.right;
+            }
+
+            if input.is_key_down(VirtualKeyCode::Q) {
+                direction += self.up;
+            }
+            if input.is_key_down(VirtualKeyCode::E) {
+                direction -= self.up;
+            }
         }
 
         speed *= self.speed_mul;
