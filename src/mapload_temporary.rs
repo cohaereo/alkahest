@@ -21,8 +21,8 @@ use crate::{
     map::SMapDataTable,
     map::{
         SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98,
-        Unk80806d19, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809121, Unk80809178, Unk8080917b,
-        Unk80809802,
+        Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809121, Unk80809178,
+        Unk8080917b, Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
@@ -1173,13 +1173,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         )));
                     }
                 }
-                0x8080684d => {
-                    // TODO(cohae): Collection of havok files
-                    info!(
-                        "TODO: Unk8080684d (file {} @ 0x{:x})",
-                        table_hash, data.data_resource.offset
-                    );
-                }
+                // 0x8080684d => {
+                //     // TODO(cohae): Collection of havok files
+                //     info!(
+                //         "TODO: Unk8080684d (file {} @ 0x{:x})",
+                //         table_hash, data.data_resource.offset
+                //     );
+                // }
                 0x80806a40 => {
                     table_data
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
@@ -1235,18 +1235,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             EntityWorldId(data.world_id),
                         )));
                     }
-
-                    // resource_points.push(ResourcePoint {
-                    //     transform: Transform {
-                    //         translation: header.bounds.center(),
-                    //         ..Default::default()
-                    //     },
-                    //     entity: data.entity,
-                    //     has_havok_data: is_physics_entity(data.entity),
-                    //     world_id: data.world_id,
-                    //     resource_type: data.data_resource.resource_type,
-                    //     resource: MapResource::Unk80806cc3(header.bounds),
-                    // });
                 }
                 0x80806c5e => {
                     table_data
@@ -1465,6 +1453,78 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         EntityWorldId(data.world_id),
                     )));
                 }
+                0x80808246 => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk80808246 = table_data.read_le()?;
+
+                    match package_manager().read_tag(d.unk10.havok_file) {
+                        Ok(havok_data) => {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(shapes) => {
+                                    for t in &d.unk10.unk10 {
+                                        if t.shape_index as usize >= shapes.len() {
+                                            error!(
+                                            "Shape index out of bounds for Unk80808246 (table {}, {} shapes, index {})",
+                                            table_hash, shapes.len(), t.shape_index
+                                        );
+                                            continue;
+                                        }
+
+                                        let transform = Transform {
+                                            translation: Vec4::from(t.translation).truncate(),
+                                            rotation: Quat::from(t.rotation),
+                                            ..Default::default()
+                                        };
+
+                                        ents.push(
+                                            scene.spawn((
+                                                transform,
+                                                ResourcePoint {
+                                                    resource: MapResource::Unk80808246(
+                                                        d.unk10.havok_file,
+                                                        t.shape_index,
+                                                        CustomDebugShape::from_havok_shape(
+                                                            &dcs,
+                                                            &shapes[t.shape_index as usize],
+                                                        )
+                                                        .ok(),
+                                                    ),
+                                                    has_havok_data: true,
+                                                    entity_cbuffer:
+                                                        ConstantBufferCached::create_empty(
+                                                            dcs.clone(),
+                                                        )?,
+                                                    ..base_rp
+                                                },
+                                                EntityWorldId(data.world_id),
+                                            )),
+                                        );
+                                    }
+
+                                    // let new_transform = Transform {
+                                    //     translation: center,
+                                    //     ..Default::default()
+                                    // };
+
+                                    // (
+                                    //     CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok(),
+                                    //     Some(new_transform),
+                                    // )
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to read shapes: {e}");
+                        }
+                    };
+                }
                 0x80809121 => {
                     table_data
                         .seek(SeekFrom::Start(data.data_resource.offset))
@@ -1518,10 +1578,41 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     }
 
                     debug!(
-                        "Skipping unknown resource type {u:x} {:?} (table file {:?})",
+                        "Skipping unknown resource type {u:x} {:?} (table file {})",
                         data.translation, table_hash
                     );
                     ents.push(scene.spawn((transform, base_rp, EntityWorldId(data.world_id))));
+
+                    if data.data_resource.is_valid {
+                        table_data
+                            .seek(SeekFrom::Start(data.data_resource.offset))
+                            .unwrap();
+
+                        while let Ok(val) = table_data.read_le::<u32>() {
+                            let tag = TagHash(val);
+                            if tag.is_some() {
+                                if let Some(entry) = package_manager().get_entry(tag) {
+                                    if entry.file_type == 27 && entry.file_subtype == 0 {
+                                        warn!("\t- Havok file found in unknown resource type {u:x} {:?} (table file {}, found havok file {})", data.translation, table_hash, tag);
+                                    } else {
+                                        // We need to go deeper
+                                        if let Some(htag) = contains_havok_references(tag, 3) {
+                                            warn!("\t- Havok file found in unknown resource type {u:x} {:?} (table file {table_hash}, found in subtag {tag}=>{htag})", data.translation);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Probably hit another resource pointer
+                            if (0x80800000..=0x8080ffff).contains(&val) {
+                                break;
+                            }
+                        }
+                    }
+                    // warn!(
+                    //     "- 0x{:08x}: {}",
+                    //     data.data_resource.resource_type, data.data_resource.is_valid
+                    // );
                 }
             };
         } else {
@@ -1574,6 +1665,33 @@ fn load_datatable_into_scene<R: Read + Seek>(
     }
 
     Ok(())
+}
+
+fn contains_havok_references(this_tag: TagHash, max_depth: usize) -> Option<TagHash> {
+    if max_depth == 0 {
+        return None;
+    }
+
+    if let Ok(data) = package_manager().read_tag(this_tag) {
+        let mut cursor = Cursor::new(&data);
+        while let Ok(val) = cursor.read_le::<u32>() {
+            let tag = TagHash(val);
+            if tag.is_some() {
+                if let Some(entry) = package_manager().get_entry(tag) {
+                    if entry.file_type == 27 && entry.file_subtype == 0 {
+                        return Some(tag);
+                    } else {
+                        // We need to go deeper
+                        if let Some(tag) = contains_havok_references(tag, max_depth - 1) {
+                            return Some(tag);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
 }
 
 fn is_physics_entity(entity: ExtendedHash) -> bool {

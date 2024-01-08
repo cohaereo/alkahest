@@ -44,6 +44,7 @@ pub enum MapResource {
     Unk80809121(TagHash),
     Unk808068d4(TagHash),
     PlayAreaBounds(TagHash, Option<CustomDebugShape>),
+    Unk80808246(TagHash, u32, Option<CustomDebugShape>),
 }
 
 impl MapResource {
@@ -139,6 +140,16 @@ impl MapResource {
                     )
                 }
             }
+            MapResource::Unk80808246(t, i, s) => {
+                if s.is_some() {
+                    format!("Unk80808246 (havok {t}:{i})")
+                } else {
+                    format!(
+                        "Unk80808246 (havok {t}:{i})\n{} Havok shape visualization failed to load",
+                        ICON_ALERT
+                    )
+                }
+            }
         }
     }
 
@@ -199,6 +210,9 @@ impl MapResource {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             MapResource::NamedArea(_, _, Some(shape)) => {
+                debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
+            }
+            MapResource::Unk80808246(_, _, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             _ => {}
@@ -328,4 +342,5 @@ mapresource_info!(
     16, InstantKillBarrier, [220, 60, 60], ICON_SKULL
     17, TurnbackKillBarrier, [220, 120, 60], ICON_REPLY
     18, PlayAreaBounds, [192, 100, 192], ICON_DROPBOX
+    19, Unk80808246, [220, 60, 60], ICON_HELP
 );
