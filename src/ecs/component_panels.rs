@@ -8,7 +8,8 @@ use crate::{
     icons::{
         ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
         ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER,
-        ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_TAG,
+        ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_SPHERE,
+        ICON_TAG,
     },
     resources::Resources,
     util::{
@@ -19,7 +20,8 @@ use crate::{
 
 use super::{
     components::{
-        EntityModel, EntityWorldId, Label, Mutable, ResourcePoint, Ruler, StaticInstances, Visible,
+        EntityModel, EntityWorldId, Label, Mutable, ResourcePoint, Ruler, Sphere, StaticInstances,
+        Visible,
     },
     resolve_entity_icon, resolve_entity_name,
     tags::Tags,
@@ -156,7 +158,8 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
         StaticInstances,
         // HavokShape,
         EntityWorldId,
-        Ruler
+        Ruler,
+        Sphere
     );
 }
 
@@ -492,6 +495,81 @@ impl ComponentPanel for Ruler {
                 });
 
             ui.label("Color");
+        });
+    }
+}
+
+impl ComponentPanel for Sphere {
+    fn inspector_name() -> &'static str {
+        "Sphere"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_SPHERE
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, resources: &Resources) {
+        let camera = resources.get::<FpsCamera>().unwrap();
+        ui.horizontal(|ui| {
+            input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Center"), &mut self.center);
+            if ui
+                .button(ICON_CAMERA_CONTROL.to_string())
+                .on_hover_text("Set position to camera")
+                .clicked()
+            {
+                self.center = camera.position;
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Radius");
+            ui.add(
+                egui::DragValue::new(&mut self.radius)
+                    .speed(0.1)
+                    .clamp_range(0f32..=f32::INFINITY)
+                    .min_decimals(2)
+                    .max_decimals(2)
+                    .suffix(" m"),
+            );
+            if ui
+                .button(ICON_RADIUS_OUTLINE.to_string())
+                .on_hover_text("Set radius to camera")
+                .clicked()
+            {
+                self.radius = (self.center - camera.position).length().max(0.1);
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Detail");
+            ui.add(
+                egui::DragValue::new(&mut self.detail)
+                    .speed(0.1)
+                    .clamp_range(2..=32),
+            )
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgb(&mut self.color)
+                .context_menu(|ui| {
+                    ui.checkbox(&mut self.rainbow, "Rainbow mode");
+                });
+
+            ui.label("Color");
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Opacity");
+            ui.add(
+                egui::DragValue::new(&mut self.opacity)
+                    .speed(0.1)
+                    .clamp_range(0u8..=u8::MAX),
+            )
         });
     }
 }
