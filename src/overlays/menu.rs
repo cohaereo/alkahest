@@ -20,7 +20,7 @@ impl Overlay for MenuBar {
         ctx: &egui::Context,
         _window: &winit::window::Window,
         resources: &mut crate::resources::Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -37,7 +37,7 @@ impl Overlay for MenuBar {
                                     end: position_base - camera.right * 10.0,
                                     ..Default::default()
                                 },
-                                Tags([EntityTag::Utility].into_iter().collect()),
+                                Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
                             ));
 
@@ -59,7 +59,7 @@ impl Overlay for MenuBar {
                                     center: position_base,
                                     ..Default::default()
                                 },
-                                Tags([EntityTag::Utility].into_iter().collect()),
+                                Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
                             ));
 

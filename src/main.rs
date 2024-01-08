@@ -1,5 +1,6 @@
 #![warn(rust_2018_idioms)]
 #![deny(clippy::correctness, clippy::suspicious, clippy::complexity)]
+#![allow(clippy::collapsible_else_if)]
 
 #[macro_use]
 extern crate windows;

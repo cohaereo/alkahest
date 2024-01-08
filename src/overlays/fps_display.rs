@@ -27,7 +27,7 @@ impl Overlay for FpsDisplayOverlay {
         ctx: &egui::Context,
         _window: &Window,
         _resources: &mut Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;
 

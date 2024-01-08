@@ -40,7 +40,7 @@ impl Overlay for RenderSettingsOverlay {
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         let delta_time = self.last_frame.elapsed().as_secs_f32();
         self.last_frame = Instant::now();

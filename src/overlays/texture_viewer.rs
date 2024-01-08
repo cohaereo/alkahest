@@ -15,11 +15,11 @@ use crate::{
         gbuffer::RenderTarget, shader, ConstantBuffer,
     },
     structure::ExtendedHash,
-    texture::{Texture, TextureHeader},
+    texture::{STextureHeader, Texture},
     util::{self, dds, error::ErrorAlert},
 };
 
-use super::gui::Overlay;
+use super::gui::{GuiContext, Overlay};
 
 #[repr(C)]
 pub struct TextureViewerScope {
@@ -32,7 +32,7 @@ pub struct TextureViewer {
     dcs: DcsShared,
 
     tag: ExtendedHash,
-    header: TextureHeader,
+    header: STextureHeader,
     texture: Texture,
     texture_egui: TextureId,
     render_target: RenderTarget,
@@ -51,8 +51,12 @@ pub struct TextureViewer {
 }
 
 impl TextureViewer {
-    pub fn new(tag: ExtendedHash, dcs: DcsShared) -> anyhow::Result<Self> {
-        let header: TextureHeader = match tag {
+    pub fn new(
+        tag: ExtendedHash,
+        dcs: DcsShared,
+        gui: &mut GuiContext<'_>,
+    ) -> anyhow::Result<Self> {
+        let header: STextureHeader = match tag {
             ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h)?,
             ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h)?,
         };
@@ -73,13 +77,20 @@ impl TextureViewer {
         let (viewer_vs, _) = shader::load_vshader(&dcs, &vshader_blob)?;
         let (viewer_ps, _) = shader::load_pshader(&dcs, &pshader_blob)?;
 
+        let render_target = RenderTarget::create(
+            (header.width as u32, header.height as u32),
+            DxgiFormat::B8G8R8A8_UNORM,
+            dcs.clone(),
+        )?;
+
         let texture = Texture::load(&dcs, tag)?;
+        let texture_egui = gui
+            .integration
+            .textures_mut()
+            .allocate_dx(unsafe { std::mem::transmute(render_target.view.clone()) });
+
         Ok(Self {
-            render_target: RenderTarget::create(
-                (header.width as u32, header.height as u32),
-                DxgiFormat::B8G8R8A8_UNORM,
-                dcs.clone(),
-            )?,
+            render_target,
             scope: ConstantBuffer::create(dcs.clone(), None)?,
             viewer_vs,
             viewer_ps,
@@ -87,7 +98,7 @@ impl TextureViewer {
             tag,
             header,
             texture,
-            texture_egui: TextureId::default(),
+            texture_egui,
             channel_r: true,
             channel_g: true,
             channel_b: true,
@@ -105,16 +116,8 @@ impl Overlay for TextureViewer {
         ctx: &egui::Context,
         _window: &winit::window::Window,
         _resources: &mut crate::resources::Resources,
-        gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
-        if self.texture_egui == TextureId::default() {
-            self.texture_egui = gui
-                .integration
-                .textures_mut()
-                .allocate_dx(unsafe { std::mem::transmute(self.render_target.view.clone()) });
-            assert_ne!(self.texture_egui, TextureId::default());
-        }
-
         // Render the viewport
         unsafe {
             self.scope

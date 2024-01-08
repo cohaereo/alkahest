@@ -41,7 +41,7 @@ impl Overlay for LoadIndicatorOverlay {
         ctx: &egui::Context,
         _window: &Window,
         _resources: &mut Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         let open = *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
             || *resource_mt::STATUS_BUFFERS.read() != LoadingThreadState::Idle;

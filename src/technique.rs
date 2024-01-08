@@ -84,7 +84,7 @@ pub struct STechniqueShader {
 #[derive(BinRead, Debug, Clone)]
 pub struct SMaterialTextureAssignment {
     /// Material slot to assign to
-    pub index: u32,
+    pub slot: u32,
     _pad: u32,
     pub texture: ExtendedHash,
 }
@@ -292,7 +292,7 @@ impl TechniqueStage {
                     .unwrap_or(&render_data.fallback_texture);
 
                 self.stage
-                    .set_shader_resources(dcs, p.index, Some(&[Some(tex.view.clone())]));
+                    .set_shader_resources(dcs, p.slot, Some(&[Some(tex.view.clone())]));
             }
         }
     }
@@ -348,7 +348,7 @@ impl TechniqueStage {
 
     pub fn unbind_textures(&self, dcs: &DeviceContextSwapchain) {
         for p in &self.shader.textures {
-            self.stage.set_shader_resources(dcs, p.index, Some(&[None]));
+            self.stage.set_shader_resources(dcs, p.slot, Some(&[None]));
         }
     }
 }

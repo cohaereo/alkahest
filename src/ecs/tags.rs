@@ -30,6 +30,10 @@ impl EntityTag {
 pub struct Tags(pub IntSet<EntityTag>);
 
 impl Tags {
+    pub fn from_iter(arr: impl IntoIterator<Item = EntityTag>) -> Self {
+        Self(arr.into_iter().collect())
+    }
+
     pub fn insert(&mut self, tag: EntityTag) {
         self.0.insert(tag);
     }
@@ -51,7 +55,5 @@ pub fn insert_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {
         return;
     }
 
-    scene
-        .insert_one(ent, Tags([tag].into_iter().collect()))
-        .ok();
+    scene.insert_one(ent, Tags::from_iter([tag])).ok();
 }

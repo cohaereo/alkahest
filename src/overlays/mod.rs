@@ -6,12 +6,12 @@ pub mod fps_display;
 pub mod gui;
 pub mod inspector;
 pub mod load_indicator;
-pub mod material_viewer;
 pub mod menu;
 pub mod outliner;
 pub mod render_settings;
 pub mod resource_nametags;
 pub mod tag_dump;
+pub mod technique_viewer;
 pub mod texture_viewer;
 
 pub mod chip;

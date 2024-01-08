@@ -1,9 +1,9 @@
-use crate::texture::TextureHeader;
+use crate::texture::STextureHeader;
 use ddsfile::{AlphaMode, D3D10ResourceDimension};
 use std::io::Write;
 use std::mem::transmute;
 
-pub fn dump_to_dds<W: Write>(out: &mut W, tex: &TextureHeader, data: &[u8]) {
+pub fn dump_to_dds<W: Write>(out: &mut W, tex: &STextureHeader, data: &[u8]) {
     let mut dds = ddsfile::Dds::new_dxgi(ddsfile::NewDxgiParams {
         height: tex.height as u32,
         width: tex.width as u32,
