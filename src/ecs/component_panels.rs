@@ -7,9 +7,9 @@ use crate::{
     hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
     icons::{
         ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
-        ICON_CUBE_OUTLINE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER,
-        ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_SPHERE,
-        ICON_TAG,
+        ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER,
+        ICON_MAP_MARKER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
+        ICON_SPHERE, ICON_TAG,
     },
     resources::Resources,
     util::{
@@ -49,8 +49,14 @@ pub fn show_inspector_panel(
             true
         };
 
-        if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)) && e.has::<Mutable>() {
-            delete = true;
+        if e.has::<Mutable>() {
+            if ui
+                .button(RichText::new(ICON_DELETE).size(24.0).strong())
+                .clicked()
+                || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE))
+            {
+                delete = true;
+            }
         }
 
         if ui
