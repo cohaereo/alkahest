@@ -33,8 +33,8 @@ impl Overlay for MenuBar {
                             let position_base = camera.position + camera.front * 15.0;
                             let e = map.scene.spawn((
                                 Ruler {
-                                    start: position_base + camera.right * 10.0,
-                                    end: position_base - camera.right * 10.0,
+                                    start: position_base - camera.right * 10.0,
+                                    end: position_base + camera.right * 10.0,
                                     ..Default::default()
                                 },
                                 Tags::from_iter([EntityTag::Utility]),

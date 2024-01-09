@@ -60,7 +60,7 @@ impl FpsCamera {
         front.z = -self.orientation.x.to_radians().sin();
 
         self.front = front.normalize();
-        self.right = -self.front.cross(Vec3::Z).normalize();
+        self.right = self.front.cross(Vec3::Z).normalize();
         self.up = self.right.cross(self.front).normalize();
 
         self.rotation = Mat4::look_at_rh(self.position, self.position + self.front, Vec3::Z)
@@ -101,10 +101,10 @@ impl FpsCamera {
                 direction -= flatten_xy(self.front, Vec3::X);
             }
 
-            if input.is_key_down(VirtualKeyCode::D) {
+            if input.is_key_down(VirtualKeyCode::A) {
                 direction -= flatten_xy(self.right, Vec3::Y);
             }
-            if input.is_key_down(VirtualKeyCode::A) {
+            if input.is_key_down(VirtualKeyCode::D) {
                 direction += flatten_xy(self.right, Vec3::Y);
             }
 
@@ -122,18 +122,18 @@ impl FpsCamera {
                 direction -= self.front;
             }
 
-            if input.is_key_down(VirtualKeyCode::D) {
+            if input.is_key_down(VirtualKeyCode::A) {
                 direction -= self.right;
             }
-            if input.is_key_down(VirtualKeyCode::A) {
+            if input.is_key_down(VirtualKeyCode::D) {
                 direction += self.right;
             }
 
             if input.is_key_down(VirtualKeyCode::Q) {
-                direction += self.up;
+                direction -= self.up;
             }
             if input.is_key_down(VirtualKeyCode::E) {
-                direction -= self.up;
+                direction += self.up;
             }
         }
 
