@@ -835,132 +835,21 @@ pub async fn main() -> anyhow::Result<()> {
                         }
 
                         let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
-                        for (_, ruler) in map.scene.query::<&Ruler>().iter() {
-                            let color = if ruler.rainbow {
-                                Hsva {
-                                    h: (start_time.elapsed().as_secs_f32() * 0.30) % 1.0,
-                                    s: 1.0,
-                                    v: 1.0,
-                                    a: 1.0,
-                                }
-                                .to_srgb()
-                            } else {
-                                ruler.color
-                            };
-
-                            debugshapes.cross(ruler.start, ruler.scale, color);
-                            debugshapes.cross(ruler.end, ruler.scale, color);
-                            debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale);
-
-                            let ruler_center = (ruler.start + ruler.end) / 2.0;
-                            debugshapes.text(
-                                prettify_distance(ruler.length()),
-                                ruler_center,
-                                egui::Align2::CENTER_BOTTOM,
-                                [255, 255, 255],
-                            );
-
-                            if ruler.show_individual_axis {
-                                let end_x = Vec3::new(ruler.end.x, ruler.start.y, ruler.start.z);
-                                let end_y = Vec3::new(ruler.start.x, ruler.end.y, ruler.start.z);
-                                let end_z = Vec3::new(ruler.start.x, ruler.start.y, ruler.end.z);
-
-                                debugshapes.line(ruler.start, end_x, color);
-                                debugshapes.line(ruler.start, end_y, color);
-                                debugshapes.line(ruler.start, end_z, color);
-
-                                let length_x = (ruler.start - end_x).length();
-                                let length_y = (ruler.start - end_y).length();
-                                let length_z = (ruler.start - end_z).length();
-
-                                let center_x = (ruler.start + end_x) / 2.0;
-                                let center_y = (ruler.start + end_y) / 2.0;
-                                let center_z = (ruler.start + end_z) / 2.0;
-
-                                debugshapes.text(
-                                    format!("X: {}", prettify_distance(length_x)),
-                                    center_x,
-                                    egui::Align2::LEFT_CENTER,
-                                    [255, 255, 255],
-                                );
-
-                                debugshapes.text(
-                                    format!("Y: {}", prettify_distance(length_y)),
-                                    center_y,
-                                    egui::Align2::RIGHT_CENTER,
-                                    [255, 255, 255],
-                                );
-
-                                debugshapes.text(
-                                    format!("Z: {}", prettify_distance(length_z)),
-                                    center_z,
-                                    egui::Align2::RIGHT_CENTER,
-                                    [255, 255, 255],
-                                );
+                        for (_, (ruler, visible)) in
+                            map.scene.query::<(&Ruler, Option<&Visible>)>().iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
                             }
-
-                            if ruler.marker_interval > 0.0 {
-                                let sphere_color = keep_color_bright(invert_color(color));
-                                let sphere_color =
-                                    [sphere_color[0], sphere_color[1], sphere_color[2], 192];
-
-                                let mut current = 0.0;
-                                while current < ruler.length() {
-                                    if current > 0.0 {
-                                        let pos = ruler.start + ruler.direction() * current;
-
-                                        debugshapes.sphere(pos, ruler.scale * 0.20, sphere_color);
-                                    }
-
-                                    current += ruler.marker_interval;
-                                }
-                            }
+                            add_ruler(&mut debugshapes, ruler, start_time);
                         }
-                        for (_, sphere) in map.scene.query::<&Sphere>().iter() {
-                            let color = if sphere.rainbow {
-                                Hsva {
-                                    h: (start_time.elapsed().as_secs_f32() * 0.30) % 1.0,
-                                    s: 1.0,
-                                    v: 1.0,
-                                    a: 1.0,
-                                }
-                                .to_srgb()
-                            } else {
-                                sphere.color
-                            };
-
-                            let cross_color = keep_color_bright(invert_color(color));
-                            debugshapes.cross(sphere.center, 0.25 * sphere.radius, cross_color);
-
-                            for t in 0..sphere.detail {
-                                debugshapes.circle(
-                                    sphere.center,
-                                    Vec3::new(
-                                        sphere.radius
-                                            * (t as f32 * PI / sphere.detail as f32).sin(),
-                                        sphere.radius
-                                            * (t as f32 * PI / sphere.detail as f32).cos(),
-                                        0.0,
-                                    ),
-                                    4 * sphere.detail,
-                                    color,
-                                );
+                        for (_, (sphere, visible)) in
+                            map.scene.query::<(&Sphere, Option<&Visible>)>().iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
                             }
-                            debugshapes.circle(
-                                sphere.center,
-                                Vec3::new(0.0, 0.0, sphere.radius),
-                                4 * sphere.detail,
-                                color,
-                            );
-
-                            debugshapes.text(
-                                prettify_distance(sphere.radius),
-                                sphere.center,
-                                egui::Align2::CENTER_BOTTOM,
-                                [255, 255, 255],
-                            );
-                            let color = [color[0], color[1], color[2], sphere.opacity];
-                            debugshapes.sphere(sphere.center, sphere.radius, color);
+                            add_sphere(&mut debugshapes, sphere, start_time);
                         }
                     }
                     drop(maps);
@@ -1074,6 +963,130 @@ pub async fn main() -> anyhow::Result<()> {
             _ => (),
         }
     });
+}
+
+fn get_rainbow_color(start_time: Instant) -> [u8; 3] {
+    Hsva {
+        h: (start_time.elapsed().as_secs_f32() * 0.30) % 1.0,
+        s: 1.0,
+        v: 1.0,
+        a: 1.0,
+    }
+    .to_srgb()
+}
+
+fn add_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant) {
+    let color = if ruler.rainbow {
+        get_rainbow_color(start_time)
+    } else {
+        ruler.color
+    };
+
+    debugshapes.cross(ruler.start, ruler.scale, color);
+    debugshapes.cross(ruler.end, ruler.scale, color);
+    debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale);
+
+    let ruler_center = (ruler.start + ruler.end) / 2.0;
+    debugshapes.text(
+        prettify_distance(ruler.length()),
+        ruler_center,
+        egui::Align2::CENTER_BOTTOM,
+        [255, 255, 255],
+    );
+
+    if ruler.show_individual_axis {
+        let end_x = Vec3::new(ruler.end.x, ruler.start.y, ruler.start.z);
+        let end_y = Vec3::new(ruler.start.x, ruler.end.y, ruler.start.z);
+        let end_z = Vec3::new(ruler.start.x, ruler.start.y, ruler.end.z);
+
+        debugshapes.line(ruler.start, end_x, color);
+        debugshapes.line(ruler.start, end_y, color);
+        debugshapes.line(ruler.start, end_z, color);
+
+        let length_x = (ruler.start - end_x).length();
+        let length_y = (ruler.start - end_y).length();
+        let length_z = (ruler.start - end_z).length();
+
+        let center_x = (ruler.start + end_x) / 2.0;
+        let center_y = (ruler.start + end_y) / 2.0;
+        let center_z = (ruler.start + end_z) / 2.0;
+
+        debugshapes.text(
+            format!("X: {}", prettify_distance(length_x)),
+            center_x,
+            egui::Align2::LEFT_CENTER,
+            [255, 255, 255],
+        );
+
+        debugshapes.text(
+            format!("Y: {}", prettify_distance(length_y)),
+            center_y,
+            egui::Align2::RIGHT_CENTER,
+            [255, 255, 255],
+        );
+
+        debugshapes.text(
+            format!("Z: {}", prettify_distance(length_z)),
+            center_z,
+            egui::Align2::RIGHT_CENTER,
+            [255, 255, 255],
+        );
+    }
+
+    if ruler.marker_interval > 0.0 {
+        let sphere_color = keep_color_bright(invert_color(color));
+        let sphere_color = [sphere_color[0], sphere_color[1], sphere_color[2], 192];
+
+        let mut current = 0.0;
+        while current < ruler.length() {
+            if current > 0.0 {
+                let pos = ruler.start + ruler.direction() * current;
+
+                debugshapes.sphere(pos, ruler.scale * 0.20, sphere_color);
+            }
+
+            current += ruler.marker_interval;
+        }
+    }
+}
+
+fn add_sphere(debugshapes: &mut DebugShapes, sphere: &Sphere, start_time: Instant) {
+    let color = if sphere.rainbow {
+        get_rainbow_color(start_time)
+    } else {
+        sphere.color
+    };
+
+    let cross_color = keep_color_bright(invert_color(color));
+    debugshapes.cross(sphere.center, 0.25 * sphere.radius, cross_color);
+
+    for t in 0..sphere.detail {
+        debugshapes.circle(
+            sphere.center,
+            Vec3::new(
+                sphere.radius * (t as f32 * PI / sphere.detail as f32).sin(),
+                sphere.radius * (t as f32 * PI / sphere.detail as f32).cos(),
+                0.0,
+            ),
+            4 * sphere.detail,
+            color,
+        );
+    }
+    debugshapes.circle(
+        sphere.center,
+        Vec3::new(0.0, 0.0, sphere.radius),
+        4 * sphere.detail,
+        color,
+    );
+
+    debugshapes.text(
+        prettify_distance(sphere.radius),
+        sphere.center,
+        egui::Align2::CENTER_BOTTOM,
+        [255, 255, 255],
+    );
+    let color = [color[0], color[1], color[2], sphere.opacity];
+    debugshapes.sphere(sphere.center, sphere.radius, color);
 }
 
 fn load_render_globals(renderer: &Renderer) {
