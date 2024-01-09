@@ -841,7 +841,7 @@ pub async fn main() -> anyhow::Result<()> {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            add_ruler(&mut debugshapes, ruler, start_time);
+                            draw_ruler(&mut debugshapes, ruler, start_time);
                         }
                         for (_, (sphere, visible)) in
                             map.scene.query::<(&Sphere, Option<&Visible>)>().iter()
@@ -849,7 +849,7 @@ pub async fn main() -> anyhow::Result<()> {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            add_sphere(&mut debugshapes, sphere, start_time);
+                            draw_sphere(&mut debugshapes, sphere, start_time);
                         }
                     }
                     drop(maps);
@@ -975,7 +975,7 @@ fn get_rainbow_color(start_time: Instant) -> [u8; 3] {
     .to_srgb()
 }
 
-fn add_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant) {
+fn draw_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant) {
     let color = if ruler.rainbow {
         get_rainbow_color(start_time)
     } else {
@@ -1050,7 +1050,7 @@ fn add_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant) 
     }
 }
 
-fn add_sphere(debugshapes: &mut DebugShapes, sphere: &Sphere, start_time: Instant) {
+fn draw_sphere(debugshapes: &mut DebugShapes, sphere: &Sphere, start_time: Instant) {
     let color = if sphere.rainbow {
         get_rainbow_color(start_time)
     } else {
