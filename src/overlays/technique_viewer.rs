@@ -1,5 +1,4 @@
-use egui::{vec2, Image, Label, Sense, TextureId, Widget};
-use itertools::Itertools;
+use egui::{vec2, Image, Sense, TextureId};
 use nohash_hasher::IntMap;
 
 use crate::{

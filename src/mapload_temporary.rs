@@ -20,9 +20,9 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98,
-        Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809121, Unk80809178,
-        Unk8080917b, Unk80809802,
+        SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806ac2,
+        Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809121,
+        Unk80809178, Unk8080917b, Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
@@ -1514,6 +1514,68 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     //     CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok(),
                                     //     Some(new_transform),
                                     // )
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to read shapes: {e}");
+                        }
+                    };
+                }
+                0x80806ac2 => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset))
+                        .unwrap();
+
+                    let d: Unk80806ac2 = table_data.read_le()?;
+
+                    match package_manager().read_tag(d.unk10.havok_file) {
+                        Ok(havok_data) => {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(shapes) => {
+                                    if let Some(t) = d.unk10.unk10.get(d.array_index as usize) {
+                                        if t.shape_index as usize >= shapes.len() {
+                                            error!(
+                                            "Shape index out of bounds for Unk80808246 (table {}, {} shapes, index {})",
+                                            table_hash, shapes.len(), t.shape_index
+                                        );
+                                            continue;
+                                        }
+
+                                        let transform = Transform {
+                                            translation: Vec4::from(t.translation).truncate(),
+                                            rotation: Quat::from(t.rotation),
+                                            ..Default::default()
+                                        };
+
+                                        ents.push(
+                                            scene.spawn((
+                                                transform,
+                                                ResourcePoint {
+                                                    resource: MapResource::Unk80806ac2(
+                                                        d.unk10.havok_file,
+                                                        t.shape_index,
+                                                        CustomDebugShape::from_havok_shape(
+                                                            &dcs,
+                                                            &shapes[t.shape_index as usize],
+                                                        )
+                                                        .ok(),
+                                                    ),
+                                                    has_havok_data: true,
+                                                    entity_cbuffer:
+                                                        ConstantBufferCached::create_empty(
+                                                            dcs.clone(),
+                                                        )?,
+                                                    ..base_rp
+                                                },
+                                                EntityWorldId(data.world_id),
+                                            )),
+                                        );
+                                    }
                                 }
                                 Err(e) => {
                                     error!("Failed to read shapes: {e}");
