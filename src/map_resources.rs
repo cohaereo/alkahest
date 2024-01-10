@@ -41,7 +41,7 @@ pub enum MapResource {
     Decoration(AABB, TagHash),
     InstantKillBarrier(TagHash, u32, Option<CustomDebugShape>),
     TurnbackKillBarrier(TagHash, u32, Option<CustomDebugShape>),
-    PushSurface(TagHash, Option<CustomDebugShape>),
+    SlipSurfaceVolume(TagHash, Option<CustomDebugShape>),
     Unk808068d4(TagHash),
     PlayAreaBounds(TagHash, Option<CustomDebugShape>),
 }
@@ -105,12 +105,12 @@ impl MapResource {
                     )
                 }
             }
-            MapResource::PushSurface(t, s) => {
+            MapResource::SlipSurfaceVolume(t, s) => {
                 if s.is_some() {
-                    format!("Push Surface (havok {t})")
+                    format!("Slippey Surface Volume (havok {t})")
                 } else {
                     format!(
-                        "Push Surface (havok {t})\n{} Havok shape visualization failed to load",
+                        "Slippey Surface Volume (havok {t})\n{} Havok shape visualization failed to load",
                         ICON_ALERT
                     )
                 }
@@ -198,7 +198,7 @@ impl MapResource {
                 1.0,
                 self.debug_color(),
             ),
-            MapResource::PushSurface(_, Some(shape)) => {
+            MapResource::SlipSurfaceVolume(_, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
             MapResource::InstantKillBarrier(_, _, Some(shape)) => {
@@ -333,7 +333,7 @@ mapresource_info!(
     9, Unk808085c0, [255, 96, 96], ICON_HELP
     10, Unk80806a40, [255, 44, 44], ICON_HELP
     11, Decoration, [80, 210, 80], ICON_PINE_TREE
-    12, PushSurface, [96, 96, 255], ICON_HELP
+    12, SlipSurfaceVolume, [96, 96, 255], ICON_HELP
     13, Unk808068d4, [22, 230, 190], ICON_WAVES
     14, CubemapVolume, [50, 255, 50], ICON_SPHERE
     15, NamedArea, [0, 127, 0], ICON_TAG

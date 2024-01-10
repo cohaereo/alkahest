@@ -21,7 +21,7 @@ use crate::{
     map::SMapDataTable,
     map::{
         SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806c98,
-        Unk80806d19, Unk808085c2, Unk80808604, Unk80808cb7, PushSurface, Unk80809178, Unk8080917b,
+        Unk80806d19, Unk808085c2, Unk80808604, Unk80808cb7, SSlipSurfaceVolume, Unk80809178, Unk8080917b,
         Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
@@ -1470,7 +1470,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: PushSurface = table_data.read_le()?;
+                    let d: SSlipSurfaceVolume = table_data.read_le()?;
                     
                     let (havok_debugshape, new_transform) =
                         if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
@@ -1507,7 +1507,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ents.push(scene.spawn((
                         new_transform.unwrap_or(transform),
                         ResourcePoint {
-                            resource: MapResource::PushSurface(d.havok_file, havok_debugshape),
+                            resource: MapResource::SlipSurfaceVolume(d.havok_file, havok_debugshape),
                             has_havok_data: true,
                             ..base_rp
                         },
