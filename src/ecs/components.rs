@@ -74,21 +74,28 @@ pub struct StaticInstances(pub InstancedRenderer, pub TagHash);
 
 pub struct Water;
 
-pub struct Visible(pub bool);
+macro_rules! bool_trait {
+    ($name: ident) => {
+        pub struct $name(pub bool);
 
-impl Deref for Visible {
-    type Target = bool;
+        impl Deref for $name {
+            type Target = bool;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+    };
 }
 
-impl DerefMut for Visible {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+bool_trait!(Visible);
+bool_trait!(Global);
 
 pub struct Ruler {
     pub start: Vec3,

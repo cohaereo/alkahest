@@ -20,8 +20,8 @@ use crate::{
 
 use super::{
     components::{
-        EntityModel, EntityWorldId, Label, Mutable, ResourcePoint, Ruler, Sphere, StaticInstances,
-        Visible,
+        EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Ruler, Sphere,
+        StaticInstances, Visible,
     },
     resolve_entity_icon, resolve_entity_name,
     tags::Tags,
@@ -40,6 +40,7 @@ pub fn show_inspector_panel(
     };
 
     let mut add_visible = None;
+    let mut add_global = None;
     let mut delete = false;
     let mut add_label = false;
     ui.horizontal(|ui| {
@@ -110,6 +111,21 @@ pub fn show_inspector_panel(
         ui.separator();
     }
 
+    let mut global = if let Some(g) = e.get::<&Global>() {
+        g.0
+    } else {
+        false
+    };
+    if e.has::<Mutable>() {
+        if ui.checkbox(&mut global, "Show in all Maps").clicked() {
+            if let Some(mut g) = e.get::<&mut Global>() {
+                g.0 = global;
+            } else {
+                add_global = Some(Global(global));
+            }
+        };
+        ui.separator();
+    }
     show_inspector_components(ui, e, resources);
 
     if add_label {
@@ -120,6 +136,10 @@ pub fn show_inspector_panel(
 
     if let Some(vis) = add_visible {
         scene.insert_one(ent, vis).ok();
+    }
+
+    if let Some(g) = add_global {
+        scene.insert_one(ent, g).ok();
     }
 
     if delete {
