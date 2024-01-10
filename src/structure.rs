@@ -369,7 +369,7 @@ impl<T: BinRead + Debug> Debug for Tag<T> {
 }
 
 // TODO(cohae): Custom reader once new tag parser comes around
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum ExtendedHash {
     Hash32(TagHash),
     Hash64(TagHash64),
@@ -418,6 +418,14 @@ impl Display for ExtendedHash {
         }
     }
 }
+
+impl std::hash::Hash for ExtendedHash {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u64(self.key());
+    }
+}
+
+impl nohash_hasher::IsEnabled for ExtendedHash {}
 
 impl BinRead for ExtendedHash {
     type Args<'a> = ();

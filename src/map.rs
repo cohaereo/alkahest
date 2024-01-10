@@ -588,3 +588,73 @@ pub struct Unk80808724 {
     pub unk8: TablePointer<Unk80808606>,
     pub havok_file: TagHash,
 }
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk8080824c {
+    pub rotation: Vector4,
+    pub translation: Vector4,
+    pub unk20: Vector4,
+    pub unk30: Vector4,
+    pub unk40: Vector4,
+    pub unk50: Vector4,
+    pub unk60: TablePointer<Vector4>,
+    pub unk70: TablePointer<()>,
+    pub unk80: f32,
+    pub unk84: [u32; 3],
+    pub unk90: [u32; 4],
+    pub unka0: [u32; 3],
+    pub shape_index: u32,
+    pub unkb0: [u32; 4],
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808248 {
+    pub file_size: u64,
+    pub havok_file: TagHash,
+    _pad: u32,
+    pub unk10: TablePointer<Unk8080824c>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80808246 {
+    pub unk0: [u32; 4],
+    pub unk10: Tag<Unk80808248>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806ac2 {
+    pub unk0: [u32; 4],
+    pub unk10: Tag<Unk80806ac4>,
+    pub array_index: u32,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806ac4 {
+    pub file_size: u64,
+    pub havok_file: TagHash,
+    _pad: u32,
+    pub unk10: TablePointer<Unk80806ed8>,
+}
+
+#[derive(BinRead, Debug, Clone)]
+pub struct Unk80806ed8 {
+    pub rotation: Vector4,
+    pub translation: Vector4,
+    pub unk20: Vector4,
+    pub unk30: Vector4,
+    pub unk40: Vector4,
+    pub unk50: Vector4,
+
+    pub unk60: TablePointer<Vector4>,
+    pub unk70: TablePointer<()>,
+
+    pub unk80: f32,
+    pub unk84: [u32; 3],
+    pub unk90: [u32; 4],
+    pub unka0: [u32; 3],
+    pub shape_index: u32,
+    pub unkb0: TablePointer<()>,
+    pub unkc0: [u32; 4],
+    pub unkd0: [u32; 4],
+    pub unke0: [u32; 4],
+}

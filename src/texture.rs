@@ -25,7 +25,7 @@ use windows::Win32::Graphics::Dxgi::Common::*;
 pub static LOW_RES: AtomicBool = AtomicBool::new(false);
 
 #[derive(BinRead, Debug)]
-pub struct TextureHeader {
+pub struct STextureHeader {
     pub data_size: u32,
     pub format: DxgiFormat,
     pub _unk8: u32,
@@ -90,7 +90,7 @@ impl Texture {
     pub fn load_data(
         hash: ExtendedHash,
         load_full_mip: bool,
-    ) -> anyhow::Result<(TextureHeader, Vec<u8>)> {
+    ) -> anyhow::Result<(STextureHeader, Vec<u8>)> {
         let texture_header_ref = package_manager()
             .get_entry(
                 hash.hash32()
@@ -99,7 +99,7 @@ impl Texture {
             .context("Texture header entry not found")?
             .reference;
 
-        let texture: TextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;
+        let texture: STextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;
         let mut texture_data = if let Some(t) = texture.large_buffer {
             package_manager()
                 .read_tag(t)

@@ -66,9 +66,9 @@ dependencies = [
 
 [[package]]
 name = "aes-gcm"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "209b47e8954a928e1d72e86eca7000ebb6655fe1436d33eefc2201cad027e237"
+checksum = "831010a0f742e1209b3bcea8fab6a8e149051ba6099432c8cb2cc117dec3ead1"
 dependencies = [
  "aead",
  "aes",
@@ -858,8 +858,8 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.6.2"
-source = "git+https://github.com/v4nguard/destiny-pkg#0fbac926dad9795d9acbc0d7114124a35d3880b1"
+version = "0.7.1"
+source = "git+https://github.com/v4nguard/destiny-pkg#4fc8c7cfaab146e11a54d998e525ab5904d60007"
 dependencies = [
  "aes",
  "aes-gcm",

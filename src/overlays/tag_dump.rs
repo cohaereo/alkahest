@@ -59,7 +59,7 @@ impl Overlay for TagDumper {
         ctx: &egui::Context,
         _window: &Window,
         _resources: &mut Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         egui::Window::new("Tag Dumper").show(ctx, |ui| {
             ui.horizontal(|ui| {

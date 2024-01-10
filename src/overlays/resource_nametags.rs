@@ -29,7 +29,7 @@ impl Overlay for ResourceTypeOverlay {
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        gui: super::gui::GuiContext<'_>,
+        gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         let camera = resources.get::<FpsCamera>().unwrap();
         let screen_size = ctx.screen_rect().size();

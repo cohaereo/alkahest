@@ -30,7 +30,7 @@ impl Overlay for CameraPositionOverlay {
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         egui::Window::new(format!("{} Debug", ICON_BUG)).show(ctx, |ui| {
             let mut camera = resources.get_mut::<FpsCamera>().unwrap();

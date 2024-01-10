@@ -15,7 +15,7 @@ impl Overlay for InspectorOverlay {
         ctx: &egui::Context,
         _window: &winit::window::Window,
         resources: &mut crate::resources::Resources,
-        _gui: super::gui::GuiContext<'_>,
+        _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         let mut maps = resources.get_mut::<MapDataList>().unwrap();
 

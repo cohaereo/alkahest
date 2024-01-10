@@ -7,8 +7,10 @@ use crate::render::DeviceContextSwapchain;
 use crate::resources::Resources;
 use crate::util::exe_relative_path;
 use crate::util::image::Png;
+use egui::epaint::ahash::HashMap;
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
+use itertools::Itertools;
 use winit::event::WindowEvent;
 use winit::window::Window;
 
@@ -18,7 +20,7 @@ pub trait Overlay {
         ctx: &egui::Context,
         window: &Window,
         resources: &mut Resources,
-        gui: GuiContext<'_>,
+        gui: &mut GuiContext<'_>,
     ) -> bool;
 }
 
@@ -130,36 +132,42 @@ impl GuiManager {
                                 ctx,
                                 &window,
                                 resources,
-                                GuiContext {
+                                &mut GuiContext {
                                     icons: &self.resources,
                                     integration,
                                 },
                             );
                         }
 
-                        // Take all viewers out of the resource and put them back in later so that we can pass resources into it
-                        // This is a cheap operation because Box<> is a pointer
-                        let mut views =
-                            if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
-                                std::mem::take(&mut viewers.0)
-                            } else {
-                                vec![]
-                            };
+                        let viewer_keys = resources
+                            .get::<ViewerWindows>()
+                            .map(|v| v.0.keys().cloned().collect_vec())
+                            .unwrap_or_default();
 
-                        views.retain_mut(|v| {
-                            v.draw(
+                        // Extract each viewer window individually so that we can pass resources into it, adding it back in if the viewer returns true
+                        for k in viewer_keys {
+                            let mut viewer = resources
+                                .get_mut::<ViewerWindows>()
+                                .unwrap()
+                                .0
+                                .remove(&k)
+                                .unwrap();
+
+                            if viewer.draw(
                                 ctx,
                                 &window,
                                 resources,
-                                GuiContext {
+                                &mut GuiContext {
                                     icons: &self.resources,
                                     integration,
                                 },
-                            )
-                        });
-
-                        if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
-                            viewers.0 = views;
+                            ) {
+                                resources
+                                    .get_mut::<ViewerWindows>()
+                                    .unwrap()
+                                    .0
+                                    .insert(k, viewer);
+                            }
                         }
 
                         misc_draw(ctx, resources);
@@ -217,4 +225,4 @@ impl GuiResources {
 }
 
 #[derive(Default)]
-pub struct ViewerWindows(pub Vec<Box<dyn Overlay>>);
+pub struct ViewerWindows(pub HashMap<String, Box<dyn Overlay>>);

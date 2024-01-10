@@ -34,6 +34,7 @@ use tracing_subscriber::Layer;
 use winit::window::Window;
 
 use super::gui::ViewerWindows;
+use super::technique_viewer::TechniqueViewer;
 use super::texture_viewer::TextureViewer;
 
 // ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
@@ -109,7 +110,7 @@ impl Overlay for ConsoleOverlay {
         ctx: &egui::Context,
         _window: &Window,
         resources: &mut Resources,
-        _gui: super::gui::GuiContext<'_>,
+        gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
         let request_focus = if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
             self.open = true;
@@ -176,7 +177,7 @@ impl Overlay for ConsoleOverlay {
                             let command = cmd[0];
                             let args = &cmd[1..];
 
-                            execute_command(command, args, resources);
+                            execute_command(command, args, resources, gui);
                         }
 
                         self.command_buffer.clear();
@@ -199,7 +200,12 @@ impl Overlay for ConsoleOverlay {
     }
 }
 
-fn execute_command(command: &str, args: &[&str], resources: &Resources) {
+fn execute_command(
+    command: &str,
+    args: &[&str],
+    resources: &Resources,
+    gui: &mut super::gui::GuiContext<'_>,
+) {
     match command.to_lowercase().as_str() {
         "goto" => {
             if args.len() != 3 {
@@ -257,17 +263,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 return;
             }
 
-            let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
-                if args[0].len() > 8 {
-                    let h = u64::from_be(u64::from_str_radix(args[0], 16)?);
-                    Ok(ExtendedHash::Hash64(TagHash64(h)))
-                } else {
-                    let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
-                    Ok(ExtendedHash::Hash32(TagHash(h)))
-                }
-            })();
-
-            let tag = match tag_parsed {
+            let tag = match parse_extended_hash(args[0]) {
                 Ok(o) => o,
                 Err(e) => {
                     error!("Failed to parse tag: {e}");
@@ -277,10 +273,14 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
 
             if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
                 let dcs = resources.get::<DcsShared>().unwrap();
-                match TextureViewer::new(tag, dcs.clone()) {
+                match TextureViewer::new(tag, dcs.clone(), gui) {
                     Ok(o) => {
                         info!("Successfully loaded texture {tag}");
-                        viewers.0.push(Box::new(o));
+                        // TODO(cohae): Focus window if already open
+                        viewers
+                            .0
+                            .entry(tag.to_string())
+                            .or_insert_with(|| Box::new(o));
                     }
                     Err(e) => {
                         error!("Failed to load texture {tag}: {e}");
@@ -288,7 +288,37 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 }
             }
         }
-        "open.mat" | "open.material" => {}
+        "open.tech" | "open.technique" | "open.mat" | "open.material" => {
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32/64-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            if let Some(mut viewers) = resources.get_mut::<ViewerWindows>() {
+                let dcs = resources.get::<DcsShared>().unwrap();
+                match TechniqueViewer::new(tag, dcs.clone(), gui) {
+                    Ok(o) => {
+                        info!("Successfully loaded material {tag}");
+                        // TODO(cohae): Focus window if already open
+                        viewers
+                            .0
+                            .entry(tag.to_string())
+                            .or_insert_with(|| Box::new(o));
+                    }
+                    Err(e) => {
+                        error!("Failed to load material {tag}: {e}");
+                    }
+                }
+            }
+        }
         "clear_map" => {
             if let Some(mut maps) = resources.get_mut::<MapDataList>() {
                 let current_map = maps.current_map;
@@ -298,23 +328,12 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         }
         "sem" | "spawn_entity_model" => {
             if let Some(mut maps) = resources.get_mut::<MapDataList>() {
-                // TODO(cohae): Make some abstraction for this
                 if args.len() != 1 {
                     error!("Missing tag argument, expected 32/64-bit tag");
                     return;
                 }
 
-                let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
-                    if args[0].len() > 8 {
-                        let h = u64::from_be(u64::from_str_radix(args[0], 16)?);
-                        Ok(ExtendedHash::Hash64(TagHash64(h)))
-                    } else {
-                        let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
-                        Ok(ExtendedHash::Hash32(TagHash(h)))
-                    }
-                })();
-
-                let tag = match tag_parsed {
+                let tag = match parse_extended_hash(args[0]) {
                     Ok(o) => o,
                     Err(e) => {
                         error!("Failed to parse tag: {e}");
@@ -377,23 +396,12 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         }
         "se" | "spawn_entity" => {
             if let Some(mut maps) = resources.get_mut::<MapDataList>() {
-                // TODO(cohae): Make some abstraction for this
                 if args.len() != 1 {
                     error!("Missing tag argument, expected 32/64-bit tag");
                     return;
                 }
 
-                let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
-                    if args[0].len() > 8 {
-                        let h = u64::from_be(u64::from_str_radix(args[0], 16)?);
-                        Ok(ExtendedHash::Hash64(TagHash64(h)))
-                    } else {
-                        let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
-                        Ok(ExtendedHash::Hash32(TagHash(h)))
-                    }
-                })();
-
-                let tag = match tag_parsed {
+                let tag = match parse_extended_hash(args[0]) {
                     Ok(o) => o,
                     Err(e) => {
                         error!("Failed to parse tag: {e}");
@@ -489,13 +497,15 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 return;
             }
 
-            let tag_parsed: anyhow::Result<TagHash> = (|| {
-                let h = u32::from_be(u32::from_str_radix(args[0], 16)?);
-                Ok(TagHash(h))
-            })();
-
-            let tag = match tag_parsed {
-                Ok(o) => o,
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => {
+                    if let Some(hash32) = o.hash32() {
+                        hash32
+                    } else {
+                        error!("Invalid tag");
+                        return;
+                    }
+                }
                 Err(e) => {
                     error!("Failed to parse tag: {e}");
                     return;
@@ -659,4 +669,25 @@ fn load_entity(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRen
     }
 
     anyhow::bail!("No entitymodel found in entity");
+}
+
+fn parse_extended_hash(s: &str) -> anyhow::Result<ExtendedHash> {
+    let tag_parsed: anyhow::Result<ExtendedHash> = (|| {
+        if s.len() > 8 {
+            let h = u64::from_be(u64::from_str_radix(s, 16)?);
+            Ok(ExtendedHash::Hash64(TagHash64(h)))
+        } else {
+            let h = u32::from_be(u32::from_str_radix(s, 16)?);
+            Ok(ExtendedHash::Hash32(TagHash(h)))
+        }
+    })();
+
+    let tag = match tag_parsed {
+        Ok(o) => o,
+        Err(e) => {
+            anyhow::bail!("Failed to parse tag: {e}");
+        }
+    };
+
+    Ok(tag)
 }
