@@ -21,7 +21,7 @@ use crate::{
     map::SMapDataTable,
     map::{
         SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806ac2,
-        Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809121,
+        Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, SSlipSurfaceVolume,
         Unk80809178, Unk8080917b, Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
@@ -1592,12 +1592,44 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk80809121 = table_data.read_le()?;
+                    let d: SSlipSurfaceVolume = table_data.read_le()?;
+                    
+                    let (havok_debugshape, new_transform) =
+                        if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(o) => {
+                                    if (d.shape_index as usize) < o.len() {
+                                        let mut shape = o[d.shape_index as usize].clone();
+
+                                        let center = shape.center();
+                                        shape.apply_transform(Mat4::from_translation(-center));
+
+                                        let new_transform = Transform::from_mat4(
+                                            transform.to_mat4() * Mat4::from_translation(center),
+                                        );
+
+                                        (
+                                            CustomDebugShape::from_havok_shape(&dcs, &shape).ok(),
+                                            Some(new_transform),
+                                        )
+                                    } else {
+                                        (None, None)
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                    (None, None)
+                                }
+                            }
+                        } else {
+                            (None, None)
+                        };
 
                     ents.push(scene.spawn((
-                        transform,
+                        new_transform.unwrap_or(transform),
                         ResourcePoint {
-                            resource: MapResource::Unk80809121(d.havok_file),
+                            resource: MapResource::SlipSurfaceVolume(d.havok_file, havok_debugshape),
                             has_havok_data: true,
                             ..base_rp
                         },
