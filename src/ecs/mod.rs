@@ -33,6 +33,7 @@ pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
         // TODO(cohae): Custom havok icon
         // HavokShape,
         Ruler,
+        Sphere,
         EntityModel,
         StaticInstances
     );
