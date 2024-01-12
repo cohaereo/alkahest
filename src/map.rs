@@ -528,7 +528,7 @@ pub struct SMeshInstanceOcclusionBounds {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80809178 {
     // Points to havok pre-tag
-    pub unk0: RelPointer<Unk80809121>,
+    pub unk0: RelPointer<SSlipSurfaceVolume>,
 
     pub unk8: u32,
     pub unkc: u32,
@@ -543,7 +543,7 @@ pub struct Unk80809178 {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk8080917b {
     // Points to havok pre-tag
-    pub unk0: RelPointer<Unk80809121>,
+    pub unk0: RelPointer<SSlipSurfaceVolume>,
     pub unk8: u32,
     pub unkc: u32,
     pub kind: u8,
@@ -551,7 +551,7 @@ pub struct Unk8080917b {
 }
 
 #[derive(BinRead, Debug, Clone)]
-pub struct Unk80809121 {
+pub struct SSlipSurfaceVolume {
     pub unk0: [u32; 4],
     pub havok_file: TagHash,
     pub unk14: u32,
