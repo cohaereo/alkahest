@@ -46,11 +46,7 @@ impl MapDataList {
     }
 
     pub fn map_mut(&mut self, i: usize) -> Option<&mut MapData> {
-        if self.maps.is_empty() || i >= self.maps.len() {
-            None
-        } else {
-            self.maps.get_mut(i).map(|v| &mut v.2)
-        }
+        self.maps.get_mut(i).map(|v| &mut v.2)
     }
 }
 

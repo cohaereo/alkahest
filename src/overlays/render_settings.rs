@@ -357,22 +357,17 @@ impl Overlay for RenderSettingsOverlay {
 
                     let mut ent_list = vec![];
 
-                    for (entity, global) in old_scene.query::<Option<&Global>>().iter() {
-                        if let Some(g) = global {
-                            if g.0 {
-                                ent_list.push(entity);
-                            }
+                    for (entity, global) in old_scene.query::<&Global>().iter() {
+                        if global.0 {
+                            ent_list.push(entity);
                         }
                     }
 
                     let mut selected = resources.get_mut::<SelectedEntity>().unwrap();
                     if let Some(map) = maps.current_map_mut() {
                         for entity in ent_list {
-                            let new_ent = map.scene.reserve_entity();
-                            map.scene
-                                .insert(new_ent, old_scene.take(entity).ok().unwrap())
-                                .ok();
-                            if selected.0.is_some_and(|e| e == entity) {
+                            let new_ent = map.scene.spawn(old_scene.take(entity).ok().unwrap());
+                            if selected.0 == Some(entity) {
                                 selected.0.replace(new_ent);
                             }
                         }

@@ -111,11 +111,7 @@ pub fn show_inspector_panel(
         ui.separator();
     }
 
-    let mut global = if let Some(g) = e.get::<&Global>() {
-        g.0
-    } else {
-        false
-    };
+    let mut global = e.get::<&Global>().map_or(false, |g| g.0);
     if e.has::<Mutable>() {
         if ui.checkbox(&mut global, "Show in all Maps").clicked() {
             if let Some(mut g) = e.get::<&mut Global>() {
