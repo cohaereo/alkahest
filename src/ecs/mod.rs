@@ -63,7 +63,7 @@ pub fn resolve_entity_name(e: EntityRef<'_>, append_ent: bool) -> String {
             };
         }
 
-        name_from_component_panels!(Ruler, EntityModel, StaticInstances);
+        name_from_component_panels!(Ruler, Sphere, EntityModel, StaticInstances);
 
         format!("ent {}", e.entity().id())
     }
