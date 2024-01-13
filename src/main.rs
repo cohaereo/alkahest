@@ -670,7 +670,7 @@ pub async fn main() -> anyhow::Result<()> {
 
                     renderer.read().begin_frame();
 
-                    let maps = resources.get::<MapDataList>().unwrap();
+                    let mut maps = resources.get_mut::<MapDataList>().unwrap();
 
                     if let Some((_, _, map)) = maps.current_map() {
                         {
@@ -854,6 +854,11 @@ pub async fn main() -> anyhow::Result<()> {
                             draw_sphere(&mut debugshapes, transform, sphere, start_time);
                         }
                     }
+
+                    if let Some(map) = maps.current_map_mut() {
+                        map.command_buffer.run_on(&mut map.scene);
+                    }
+
                     drop(maps);
 
                     renderer.read().submit_frame(&resources);

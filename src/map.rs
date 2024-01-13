@@ -14,6 +14,7 @@ pub struct MapData {
     pub hash: TagHash,
     pub name: String,
     pub scene: Scene,
+    pub command_buffer: hecs::CommandBuffer,
 }
 
 #[derive(Clone)]

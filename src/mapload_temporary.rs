@@ -341,6 +341,7 @@ pub async fn load_maps(
                 hash,
                 name: map_name,
                 scene,
+                command_buffer: hecs::CommandBuffer::new(),
             },
         ));
     }

@@ -33,19 +33,14 @@ fn hide_unselected(resources: &mut Resources) {
     let selected_entity = resources.get::<SelectedEntity>().unwrap().0;
     if let Some(mut maps) = resources.get_mut::<MapDataList>() {
         if let Some(map) = maps.current_map_mut() {
-            let mut add_vis_to = vec![];
             for (entity, vis) in map.scene.query::<Option<&mut Visible>>().iter() {
                 if Some(entity) != selected_entity {
                     if let Some(vis) = vis {
                         vis.0 = false;
                     } else {
-                        add_vis_to.push(entity);
+                        map.command_buffer.insert_one(entity, Visible(false));
                     }
                 }
-            }
-
-            for entity in add_vis_to {
-                map.scene.insert_one(entity, Visible(false)).ok();
             }
         }
     }

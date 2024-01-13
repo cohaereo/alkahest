@@ -33,6 +33,7 @@ use super::{
 pub fn show_inspector_panel(
     ui: &mut egui::Ui,
     scene: &mut Scene,
+    cmd: &mut hecs::CommandBuffer,
     ent: Entity,
     resources: &Resources,
 ) {
@@ -40,10 +41,6 @@ pub fn show_inspector_panel(
         return;
     };
 
-    let mut add_visible = None;
-    let mut add_global = None;
-    let mut delete = false;
-    let mut add_label = false;
     ui.horizontal(|ui| {
         let visible = if let Some(vis) = e.get::<&Visible>() {
             vis.0
@@ -57,7 +54,7 @@ pub fn show_inspector_panel(
                 .clicked()
                 || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)))
         {
-            delete = true;
+            cmd.despawn(ent);
         }
 
         if ui
@@ -72,7 +69,7 @@ pub fn show_inspector_panel(
             if let Some(mut vis) = e.get::<&mut Visible>() {
                 vis.0 = !visible;
             } else {
-                add_visible = Some(Visible(!visible));
+                cmd.insert_one(ent, Visible(!visible));
             }
         }
 
@@ -94,7 +91,7 @@ pub fn show_inspector_panel(
                     .on_hover_text("Add label")
                     .clicked()
                 {
-                    add_label = true;
+                    cmd.insert_one(ent, Label(resolve_entity_name(e, false)));
                 }
             }
         } else {
@@ -117,30 +114,12 @@ pub fn show_inspector_panel(
             if let Some(mut g) = e.get::<&mut Global>() {
                 g.0 = global;
             } else {
-                add_global = Some(Global(global));
+                cmd.insert_one(ent, Global(global));
             }
         };
         ui.separator();
     }
     show_inspector_components(ui, e, resources);
-
-    if add_label {
-        scene
-            .insert_one(ent, Label(resolve_entity_name(e, false)))
-            .ok();
-    }
-
-    if let Some(vis) = add_visible {
-        scene.insert_one(ent, vis).ok();
-    }
-
-    if let Some(g) = add_global {
-        scene.insert_one(ent, g).ok();
-    }
-
-    if delete {
-        scene.despawn(ent).ok();
-    }
 }
 
 fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
