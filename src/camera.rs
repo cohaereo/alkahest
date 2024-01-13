@@ -155,6 +155,7 @@ impl FpsCamera {
         }
 
         self.orientation.x = self.orientation.x.clamp(-89.9, 89.9);
+        self.orientation.y %= 360.0;
 
         self.update_vectors();
 
