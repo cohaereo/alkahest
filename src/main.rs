@@ -1064,12 +1064,14 @@ fn draw_sphere(
     start_time: Instant,
 ) {
     let color = if sphere.rainbow {
-        get_rainbow_color(start_time)
+        let c = get_rainbow_color(start_time);
+        [c[0], c[1], c[2], sphere.color[3]]
     } else {
         sphere.color
     };
 
-    let cross_color = keep_color_bright(invert_color(color));
+    let color_opaque = [color[0], color[1], color[2]];
+    let cross_color = keep_color_bright(invert_color(color_opaque));
     debugshapes.cross(
         transform.translation,
         0.25 * transform.radius(),
@@ -1101,7 +1103,6 @@ fn draw_sphere(
         egui::Align2::CENTER_BOTTOM,
         [255, 255, 255],
     );
-    let color = [color[0], color[1], color[2], sphere.opacity];
     debugshapes.sphere(transform.translation, transform.radius(), color);
 }
 

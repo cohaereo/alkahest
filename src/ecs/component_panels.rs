@@ -579,23 +579,13 @@ impl ComponentPanel for Sphere {
             )
         });
 
-        ui.separator();
-
         ui.horizontal(|ui| {
-            ui.color_edit_button_srgb(&mut self.color)
+            ui.color_edit_button_srgba_unmultiplied(&mut self.color)
                 .context_menu(|ui| {
                     ui.checkbox(&mut self.rainbow, "Rainbow mode");
                 });
 
             ui.label("Color");
-        });
-        ui.horizontal(|ui| {
-            ui.strong("Opacity");
-            ui.add(
-                egui::DragValue::new(&mut self.opacity)
-                    .speed(0.1)
-                    .clamp_range(0u8..=u8::MAX),
-            )
         });
     }
 }

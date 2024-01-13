@@ -133,8 +133,7 @@ impl Ruler {
 
 pub struct Sphere {
     pub detail: u8,
-    pub color: [u8; 3],
-    pub opacity: u8,
+    pub color: [u8; 4],
     pub rainbow: bool,
 }
 
@@ -142,8 +141,7 @@ impl Default for Sphere {
     fn default() -> Self {
         Self {
             detail: 4,
-            color: [255, 255, 255],
-            opacity: 80,
+            color: [255, 255, 255, 80],
             rainbow: false,
         }
     }
