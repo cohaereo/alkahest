@@ -6,6 +6,7 @@ pub mod transform;
 
 pub type Scene = hecs::World;
 
+use glam::Vec3;
 use hecs::EntityRef;
 use itertools::Itertools;
 
@@ -13,6 +14,8 @@ use crate::ecs::component_panels::ComponentPanel;
 use crate::ecs::components::*;
 use crate::types::AABB;
 use crate::util::text::split_pascal_case;
+
+use self::transform::Transform;
 
 pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
     macro_rules! icon_from_component_panels {
@@ -81,6 +84,16 @@ pub fn resolve_aabb(e: EntityRef<'_>) -> Option<AABB> {
                 .flat_map(|v| [v.min, v.max])
                 .collect_vec();
         return Some(AABB::from_points(points));
+    }
+
+    if let Some(transform) = e.get::<&Transform>() {
+        let radius = transform.radius();
+        if radius.is_normal() {
+            return Some(AABB::from_points([
+                transform.translation - Vec3::ONE * radius,
+                transform.translation + Vec3::ONE * radius,
+            ]));
+        }
     }
 
     None

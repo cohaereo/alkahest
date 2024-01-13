@@ -843,13 +843,15 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                             draw_ruler(&mut debugshapes, ruler, start_time);
                         }
-                        for (_, (sphere, visible)) in
-                            map.scene.query::<(&Sphere, Option<&Visible>)>().iter()
+                        for (_, (transform, sphere, visible)) in map
+                            .scene
+                            .query::<(&Transform, &Sphere, Option<&Visible>)>()
+                            .iter()
                         {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_sphere(&mut debugshapes, sphere, start_time);
+                            draw_sphere(&mut debugshapes, transform, sphere, start_time);
                         }
                     }
                     drop(maps);
@@ -1050,7 +1052,12 @@ fn draw_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant)
     }
 }
 
-fn draw_sphere(debugshapes: &mut DebugShapes, sphere: &Sphere, start_time: Instant) {
+fn draw_sphere(
+    debugshapes: &mut DebugShapes,
+    transform: &Transform,
+    sphere: &Sphere,
+    start_time: Instant,
+) {
     let color = if sphere.rainbow {
         get_rainbow_color(start_time)
     } else {
@@ -1058,14 +1065,18 @@ fn draw_sphere(debugshapes: &mut DebugShapes, sphere: &Sphere, start_time: Insta
     };
 
     let cross_color = keep_color_bright(invert_color(color));
-    debugshapes.cross(sphere.center, 0.25 * sphere.radius, cross_color);
+    debugshapes.cross(
+        transform.translation,
+        0.25 * transform.radius(),
+        cross_color,
+    );
 
     for t in 0..sphere.detail {
         debugshapes.circle(
-            sphere.center,
+            transform.translation,
             Vec3::new(
-                sphere.radius * (t as f32 * PI / sphere.detail as f32).sin(),
-                sphere.radius * (t as f32 * PI / sphere.detail as f32).cos(),
+                transform.radius() * (t as f32 * PI / sphere.detail as f32).sin(),
+                transform.radius() * (t as f32 * PI / sphere.detail as f32).cos(),
                 0.0,
             ),
             4 * sphere.detail,
@@ -1073,20 +1084,20 @@ fn draw_sphere(debugshapes: &mut DebugShapes, sphere: &Sphere, start_time: Insta
         );
     }
     debugshapes.circle(
-        sphere.center,
-        Vec3::new(0.0, 0.0, sphere.radius),
+        transform.translation,
+        Vec3::new(0.0, 0.0, transform.radius()),
         4 * sphere.detail,
         color,
     );
 
     debugshapes.text(
-        prettify_distance(sphere.radius),
-        sphere.center,
+        prettify_distance(transform.radius()),
+        transform.translation,
         egui::Align2::CENTER_BOTTOM,
         [255, 255, 255],
     );
     let color = [color[0], color[1], color[2], sphere.opacity];
-    debugshapes.sphere(sphere.center, sphere.radius, color);
+    debugshapes.sphere(transform.translation, transform.radius(), color);
 }
 
 fn load_render_globals(renderer: &Renderer) {

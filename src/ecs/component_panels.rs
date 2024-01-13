@@ -4,9 +4,10 @@ use hecs::{Entity, EntityRef};
 
 use crate::{
     camera::FpsCamera,
+    ecs::transform::TransformFlags,
     hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
     icons::{
-        ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
+        ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
         ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER,
         ICON_MAP_MARKER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
         ICON_SPHERE, ICON_TAG,
@@ -50,14 +51,13 @@ pub fn show_inspector_panel(
             true
         };
 
-        if e.has::<Mutable>() {
-            if ui
+        if e.has::<Mutable>()
+            && (ui
                 .button(RichText::new(ICON_DELETE).size(24.0).strong())
                 .clicked()
-                || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE))
-            {
-                delete = true;
-            }
+                || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)))
+        {
+            delete = true;
         }
 
         if ui
@@ -146,7 +146,7 @@ pub fn show_inspector_panel(
 fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(ui, resources);
+            t.show_inspector_ui(e, ui, resources);
             if let Some(ot) = e.get::<&OriginalTransform>() {
                 // Has the entity moved from it's original position?
                 let has_moved = *t != ot.0;
@@ -167,7 +167,7 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
 			$(
 				if let Some(mut component) = e.get::<&mut $component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(ui, resources);
+						component.show_inspector_ui(e, ui, resources);
 					});
 				}
 			)*
@@ -246,7 +246,7 @@ pub(super) trait ComponentPanel {
         false
     }
 
-    fn show_inspector_ui(&mut self, _: &mut egui::Ui, _: &Resources) {}
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, _: &mut egui::Ui, _: &Resources) {}
 }
 
 impl ComponentPanel for Transform {
@@ -262,7 +262,7 @@ impl ComponentPanel for Transform {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
         rotation_euler.y = rotation_euler.y.to_degrees();
@@ -274,21 +274,60 @@ impl ComponentPanel for Transform {
             .spacing([40.0, 4.0])
             .striped(true)
             .show(ui, |ui| {
-                input_float3!(
-                    ui,
-                    format!("{ICON_AXIS_ARROW} Translation"),
-                    &mut self.translation
-                );
-                ui.end_row();
-                rotation_changed = input_float3!(
-                    ui,
-                    format!("{ICON_ROTATE_ORBIT} Rotation"),
-                    &mut rotation_euler
-                )
-                .inner;
-                ui.end_row();
-                input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale);
-                ui.end_row();
+                if !self.flags.contains(TransformFlags::IGNORE_TRANSLATION) {
+                    input_float3!(
+                        ui,
+                        format!("{ICON_AXIS_ARROW} Translation"),
+                        &mut self.translation
+                    );
+
+                    if let Some(camera) = resources.get::<FpsCamera>() {
+                        if ui
+                            .button(ICON_CAMERA_CONTROL.to_string())
+                            .on_hover_text("Set position to camera")
+                            .clicked()
+                        {
+                            self.translation = camera.position;
+                        }
+                    }
+                    ui.end_row();
+                }
+                if !self.flags.contains(TransformFlags::IGNORE_ROTATION) {
+                    rotation_changed = input_float3!(
+                        ui,
+                        format!("{ICON_ROTATE_ORBIT} Rotation"),
+                        &mut rotation_euler
+                    )
+                    .inner;
+                    ui.end_row();
+                }
+                if !self.flags.contains(TransformFlags::IGNORE_SCALE) {
+                    if self.flags.contains(TransformFlags::SCALE_IS_RADIUS) {
+                        ui.label(format!("{ICON_RADIUS_OUTLINE} Radius"));
+                        ui.add(
+                            egui::DragValue::new(&mut self.scale.x)
+                                .speed(0.1)
+                                .clamp_range(0f32..=f32::INFINITY)
+                                .min_decimals(2)
+                                .max_decimals(2),
+                        );
+
+                        if let Some(camera) = resources.get::<FpsCamera>() {
+                            if ui
+                                .button(ICON_RADIUS_OUTLINE.to_string())
+                                .on_hover_text("Set radius to camera")
+                                .clicked()
+                            {
+                                self.scale = Vec3::splat(
+                                    (self.translation - camera.position).length().max(0.1),
+                                );
+                            }
+                        }
+                    } else {
+                        input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale);
+                    }
+                    ui.end_row();
+                }
             });
 
         if rotation_changed {
@@ -315,7 +354,7 @@ impl ComponentPanel for EntityWorldId {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
         ui.label(format!("World ID: 0x{:016X}", self.0));
     }
 }
@@ -333,7 +372,7 @@ impl ComponentPanel for ResourcePoint {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
         ui.horizontal(|ui| {
             ui.strong("Entity:");
             ui.label(self.entity.to_string());
@@ -378,7 +417,7 @@ impl ComponentPanel for EntityModel {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
         ui.horizontal(|ui| {
             ui.strong("Tag:");
             ui.label(format!("{}", self.2));
@@ -399,7 +438,7 @@ impl ComponentPanel for StaticInstances {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
         ui.horizontal(|ui| {
             ui.strong("Mesh tag:");
             ui.label(self.1.to_string());
@@ -449,7 +488,7 @@ impl ComponentPanel for Ruler {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
         let camera = resources.get::<FpsCamera>().unwrap();
         ui.horizontal(|ui| {
             input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Start"), &mut self.start);
@@ -534,37 +573,13 @@ impl ComponentPanel for Sphere {
         true
     }
 
-    fn show_inspector_ui(&mut self, ui: &mut egui::Ui, resources: &Resources) {
-        let camera = resources.get::<FpsCamera>().unwrap();
-        ui.horizontal(|ui| {
-            input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Center"), &mut self.center);
-            if ui
-                .button(ICON_CAMERA_CONTROL.to_string())
-                .on_hover_text("Set position to camera")
-                .clicked()
-            {
-                self.center = camera.position;
-            }
-        });
-
-        ui.horizontal(|ui| {
-            ui.strong("Radius");
-            ui.add(
-                egui::DragValue::new(&mut self.radius)
-                    .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
-                    .min_decimals(2)
-                    .max_decimals(2)
-                    .suffix(" m"),
-            );
-            if ui
-                .button(ICON_RADIUS_OUTLINE.to_string())
-                .on_hover_text("Set radius to camera")
-                .clicked()
-            {
-                self.radius = (self.center - camera.position).length().max(0.1);
-            }
-        });
+    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, _resources: &Resources) {
+        if !e.has::<Transform>() {
+            ui.label(format!(
+                "{} This entity has no transform component",
+                ICON_ALERT
+            ));
+        }
 
         ui.horizontal(|ui| {
             ui.strong("Detail");

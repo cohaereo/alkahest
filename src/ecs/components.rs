@@ -132,8 +132,6 @@ impl Ruler {
 }
 
 pub struct Sphere {
-    pub center: Vec3,
-    pub radius: f32,
     pub detail: u8,
     pub color: [u8; 3],
     pub opacity: u8,
@@ -143,8 +141,6 @@ pub struct Sphere {
 impl Default for Sphere {
     fn default() -> Self {
         Self {
-            center: Vec3::ZERO,
-            radius: 9.0,
             detail: 4,
             color: [255, 255, 255],
             opacity: 80,

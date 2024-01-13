@@ -1,9 +1,12 @@
+use glam::Vec3;
+
 use crate::{
     camera::FpsCamera,
     ecs::{
         components::{Mutable, Ruler, Sphere},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
+        transform::{Transform, TransformFlags},
     },
     icons::ICON_RULER_SQUARE,
     icons::ICON_SPHERE,
@@ -55,10 +58,14 @@ impl Overlay for MenuBar {
                             let camera = resources.get::<FpsCamera>().unwrap();
                             let position_base = camera.position + camera.front * 15.0;
                             let e = map.scene.spawn((
-                                Sphere {
-                                    center: position_base,
+                                Transform {
+                                    translation: position_base,
+                                    scale: Vec3::splat(9.0),
+                                    flags: TransformFlags::IGNORE_ROTATION
+                                        | TransformFlags::SCALE_IS_RADIUS,
                                     ..Default::default()
                                 },
+                                Sphere::default(),
                                 Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
                             ));

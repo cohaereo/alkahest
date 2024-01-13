@@ -20,9 +20,9 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        SMeshInstanceOcclusionBounds, SShadowingLight, SimpleLight, Unk808068d4, Unk80806ac2,
-        Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, SSlipSurfaceVolume,
-        Unk80809178, Unk8080917b, Unk80809802,
+        SMeshInstanceOcclusionBounds, SShadowingLight, SSlipSurfaceVolume, SimpleLight,
+        Unk808068d4, Unk80806ac2, Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604,
+        Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
@@ -723,6 +723,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
             translation: Vec3::new(data.translation.x, data.translation.y, data.translation.z),
             rotation: data.rotation.into(),
             scale: Vec3::splat(data.translation.w),
+            ..Default::default()
         };
 
         let base_rp = ResourcePoint {
@@ -1593,7 +1594,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .unwrap();
 
                     let d: SSlipSurfaceVolume = table_data.read_le()?;
-                    
+
                     let (havok_debugshape, new_transform) =
                         if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
                             let mut cur = Cursor::new(&havok_data);
@@ -1629,7 +1630,10 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ents.push(scene.spawn((
                         new_transform.unwrap_or(transform),
                         ResourcePoint {
-                            resource: MapResource::SlipSurfaceVolume(d.havok_file, havok_debugshape),
+                            resource: MapResource::SlipSurfaceVolume(
+                                d.havok_file,
+                                havok_debugshape,
+                            ),
                             has_havok_data: true,
                             ..base_rp
                         },

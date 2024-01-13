@@ -350,11 +350,7 @@ impl Renderer {
             last_material: RwLock::new(u32::MAX),
             fiddlesticks: RwLock::new(vec![]),
             light_mat: RwLock::new(Mat4::IDENTITY),
-            light_transform: RwLock::new(Transform {
-                translation: Vec3::ZERO,
-                rotation: Quat::IDENTITY,
-                scale: Vec3::ONE,
-            }),
+            light_transform: RwLock::new(Transform::default()),
             camera_viewproj: RwLock::new(Mat4::IDENTITY),
             camera_svp_inv: RwLock::new(Mat4::IDENTITY),
             light_mul: RwLock::new(1.0),
