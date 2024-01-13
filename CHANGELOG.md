@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Implement map resources Unk80808246 and Unk80806ac2 by @cohaereo
 - Add Delete Button on Inspector Panel by @Froggy618157725 in [#11](https://github.com/cohaereo/alkahest/pull/11)
 - Show Havok shapes for 80809121 (Push Surfaces) by @DeltaDesigns in [#9](https://github.com/cohaereo/alkahest/pull/9)
+- Add Global Utility Objects by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
 
 ### Changed
 
@@ -49,3 +50,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - Fix camera right and up axis by @cohaereo
 - Fix Utility Visibility by @Froggy618157725 in [#10](https://github.com/cohaereo/alkahest/pull/10)
+- Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)

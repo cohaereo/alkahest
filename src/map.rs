@@ -44,6 +44,10 @@ impl MapDataList {
             self.maps.get_mut(map_index).map(|v| &mut v.2)
         }
     }
+
+    pub fn map_mut(&mut self, i: usize) -> Option<&mut MapData> {
+        self.maps.get_mut(i).map(|v| &mut v.2)
+    }
 }
 
 #[derive(BinRead, Debug)]

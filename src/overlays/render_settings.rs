@@ -3,12 +3,18 @@ use glam::{Mat4, Vec3, Vec4};
 use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
-use std::{fmt::Display, fmt::Formatter, mem::transmute, time::Instant};
+use std::{
+    fmt::Display,
+    fmt::Formatter,
+    mem::{swap, take, transmute},
+    time::Instant,
+};
 use winit::window::Window;
 
 use crate::{
     discord,
-    ecs::components::ActivityGroup,
+    ecs::components::{ActivityGroup, Global},
+    ecs::resources::SelectedEntity,
     map::MapDataList,
     render::{
         overrides::{EnabledShaderOverrides, ScopeOverrides},
@@ -329,6 +335,7 @@ impl Overlay for RenderSettingsOverlay {
             let mut maps = resources.get_mut::<MapDataList>().unwrap();
             if !maps.maps.is_empty() {
                 let mut current_map = maps.current_map;
+                let old_map_index = current_map;
                 let map_changed = egui::ComboBox::from_label("Map")
                     .width(192.0)
                     .show_index(ui, &mut current_map, maps.maps.len(), |i| {
@@ -342,6 +349,34 @@ impl Overlay for RenderSettingsOverlay {
                 ));
 
                 maps.current_map = current_map;
+
+                // Move the Globals from the old scene to the new scene
+                if map_changed {
+                    // We have learned the power to Take worlds
+                    let mut old_scene = take(&mut maps.map_mut(old_map_index).unwrap().scene);
+
+                    let mut ent_list = vec![];
+
+                    for (entity, global) in old_scene.query::<&Global>().iter() {
+                        if global.0 {
+                            ent_list.push(entity);
+                        }
+                    }
+
+                    let mut selected = resources.get_mut::<SelectedEntity>().unwrap();
+                    if let Some(map) = maps.current_map_mut() {
+                        for entity in ent_list {
+                            let new_ent = map.scene.spawn(old_scene.take(entity).ok().unwrap());
+                            if selected.0 == Some(entity) {
+                                selected.0.replace(new_ent);
+                            }
+                        }
+                    }
+                    swap(
+                        &mut old_scene,
+                        &mut maps.map_mut(old_map_index).unwrap().scene,
+                    );
+                }
 
                 #[cfg(feature = "discord_rpc")]
                 if map_changed {
