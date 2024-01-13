@@ -1,15 +1,18 @@
+use std::fmt::Display;
+
 use egui::Color32;
 use hecs::Entity;
 use nohash_hasher::IntSet;
 
-use crate::{overlays::UiExt, util::text::name_to_color};
+use crate::{icons::ICON_WEB, overlays::UiExt, util::text::name_to_color};
 
 use super::Scene;
 
-#[derive(strum::Display, strum::EnumIter, Hash, PartialEq, Eq)]
+#[derive(strum::EnumIter, Hash, PartialEq, Eq)]
 pub enum EntityTag {
     Activity,
     Ambient,
+    Global,
     Havok,
     Utility,
     User,
@@ -22,6 +25,19 @@ impl EntityTag {
         match self {
             EntityTag::Havok => Color32::from_rgb(253, 185, 10),
             u => name_to_color(&u.to_string()),
+        }
+    }
+}
+
+impl Display for EntityTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EntityTag::Activity => write!(f, "Activity"),
+            EntityTag::Ambient => write!(f, "Ambient"),
+            EntityTag::Global => write!(f, "{} Global", ICON_WEB),
+            EntityTag::Havok => write!(f, "Havok"),
+            EntityTag::Utility => write!(f, "Utility"),
+            EntityTag::User => write!(f, "User"),
         }
     }
 }
@@ -56,4 +72,10 @@ pub fn insert_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {
     }
 
     scene.insert_one(ent, Tags::from_iter([tag])).ok();
+}
+
+pub fn remove_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {
+    if let Ok(Some(mut e)) = scene.entity(ent).map(|e| e.get::<&mut Tags>()) {
+        e.0.remove(&tag);
+    }
 }

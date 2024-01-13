@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add Delete Button on Inspector Panel by @Froggy618157725 in [#11](https://github.com/cohaereo/alkahest/pull/11)
 - Show Havok shapes for 80809121 (Push Surfaces) by @DeltaDesigns in [#9](https://github.com/cohaereo/alkahest/pull/9)
 - Add Global Utility Objects by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
+- Lazy entity updating by @cohaereo
+- Global entity tag by @cohaereo
 
 ### Changed
 

@@ -25,7 +25,7 @@ use super::{
         StaticInstances, Visible,
     },
     resolve_entity_icon, resolve_entity_name,
-    tags::Tags,
+    tags::{insert_tag, remove_tag, EntityTag, Tags},
     transform::{OriginalTransform, Transform},
     Scene,
 };
@@ -109,8 +109,10 @@ pub fn show_inspector_panel(
     }
 
     let mut global = e.get::<&Global>().map_or(false, |g| g.0);
+    let mut global_changed = false;
     if e.has::<Mutable>() {
         if ui.checkbox(&mut global, "Show in all Maps").clicked() {
+            global_changed = true;
             if let Some(mut g) = e.get::<&mut Global>() {
                 g.0 = global;
             } else {
@@ -120,6 +122,14 @@ pub fn show_inspector_panel(
         ui.separator();
     }
     show_inspector_components(ui, e, resources);
+
+    if global_changed {
+        if global {
+            insert_tag(scene, ent, EntityTag::Global);
+        } else {
+            remove_tag(scene, ent, EntityTag::Global);
+        }
+    }
 }
 
 fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
