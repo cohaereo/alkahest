@@ -33,6 +33,7 @@ use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::{Texture, LOW_RES};
+use crate::util::consts::print_banner;
 use crate::util::text::{invert_color, keep_color_bright, prettify_distance};
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
@@ -150,6 +151,8 @@ struct Args {
 pub async fn main() -> anyhow::Result<()> {
     util::fix_windows_command_prompt();
     panic_handler::install_hook();
+
+    print_banner();
 
     // #[cfg(not(debug_assertions))]
     // std::env::set_var("RUST_BACKTRACE", "0");
