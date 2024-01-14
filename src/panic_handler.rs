@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
 lazy_static! {
-    static ref PANIC_FILE: Arc<Mutex<Option<std::fs::File>>> = Arc::new(Mutex::new(None));
+    static ref PANIC_FILE: Arc<Mutex<Option<fs_err::File>>> = Arc::new(Mutex::new(None));
     static ref PANIC_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
 }
 
@@ -62,7 +62,7 @@ pub fn install_hook() {
 fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
     let mut file_lock = PANIC_FILE.lock();
     if file_lock.is_none() {
-        *file_lock = Some(std::fs::File::create("panic.log")?);
+        *file_lock = Some(fs_err::File::create("panic.log")?);
     }
 
     let f = file_lock.as_mut().unwrap();
