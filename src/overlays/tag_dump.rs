@@ -3,7 +3,7 @@ use crate::packages::package_manager;
 use crate::resources::Resources;
 use destiny_pkg::package::UEntryHeader;
 use destiny_pkg::TagHash;
-use std::fs::File;
+use fs_err::File;
 use std::io::Write;
 use tracing::error;
 use winit::window::Window;
