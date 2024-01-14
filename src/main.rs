@@ -1147,55 +1147,55 @@ fn load_render_globals(renderer: &Renderer) {
         .expect("Failed to read render globals");
 
     // println!("{globals:#?}");
-    for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
-        println!("scope #{i}: {}", *s.name);
-        if s.scope.stage_vertex.constant_buffer.is_some() {
-            println!(
-                "\tVS cb{} ({} bytes)",
-                s.scope.stage_vertex.constant_buffer_slot,
-                buffer_size(s.scope.stage_vertex.constant_buffer)
-            );
-        }
-        if s.scope.stage_pixel.constant_buffer.is_some() {
-            println!(
-                "\tPS cb{} ({} bytes)",
-                s.scope.stage_pixel.constant_buffer_slot,
-                buffer_size(s.scope.stage_pixel.constant_buffer)
-            );
-        }
-        if s.scope.stage_geometry.constant_buffer.is_some() {
-            println!(
-                "\tGS cb{} ({} bytes)",
-                s.scope.stage_geometry.constant_buffer_slot,
-                buffer_size(s.scope.stage_geometry.constant_buffer)
-            );
-        }
-        if s.scope.stage_hull.constant_buffer.is_some() {
-            println!(
-                "\tHS cb{} ({} bytes)",
-                s.scope.stage_hull.constant_buffer_slot,
-                buffer_size(s.scope.stage_hull.constant_buffer)
-            );
-        }
-        if s.scope.stage_compute.constant_buffer.is_some() {
-            println!(
-                "\tCS cb{} ({} bytes)",
-                s.scope.stage_compute.constant_buffer_slot,
-                buffer_size(s.scope.stage_compute.constant_buffer)
-            );
-        }
-        if s.scope.stage_domain.constant_buffer.is_some() {
-            println!(
-                "\tDS cb{} ({} bytes)",
-                s.scope.stage_domain.constant_buffer_slot,
-                buffer_size(s.scope.stage_domain.constant_buffer)
-            );
-        }
-    }
+    // for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
+    //     println!("scope #{i}: {}", *s.name);
+    //     if s.scope.stage_vertex.constant_buffer.is_some() {
+    //         println!(
+    //             "\tVS cb{} ({} bytes)",
+    //             s.scope.stage_vertex.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_vertex.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_pixel.constant_buffer.is_some() {
+    //         println!(
+    //             "\tPS cb{} ({} bytes)",
+    //             s.scope.stage_pixel.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_pixel.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_geometry.constant_buffer.is_some() {
+    //         println!(
+    //             "\tGS cb{} ({} bytes)",
+    //             s.scope.stage_geometry.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_geometry.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_hull.constant_buffer.is_some() {
+    //         println!(
+    //             "\tHS cb{} ({} bytes)",
+    //             s.scope.stage_hull.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_hull.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_compute.constant_buffer.is_some() {
+    //         println!(
+    //             "\tCS cb{} ({} bytes)",
+    //             s.scope.stage_compute.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_compute.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_domain.constant_buffer.is_some() {
+    //         println!(
+    //             "\tDS cb{} ({} bytes)",
+    //             s.scope.stage_domain.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_domain.constant_buffer)
+    //         );
+    //     }
+    // }
 
     let mut techniques: HashMap<String, TagHash> = HashMap::default();
-    for (i, t) in globals.unk8[0].unk8.unk20.iter().enumerate() {
-        println!("technique #{i}: {}, {}", *t.name, t.technique);
+    for t in &globals.unk8[0].unk8.unk20 {
+        // println!("technique #{i}: {}, {}", *t.name, t.technique);
         techniques.insert(t.name.to_string(), t.technique);
     }
 
