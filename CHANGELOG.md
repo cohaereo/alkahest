@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add Global Utility Objects by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
 - Lazy entity updating by @cohaereo
 - Global entity tag by @cohaereo
+- Add Beacon Utility tool by @Froggy618157725 in [#13](https://github.com/cohaereo/alkahest/pull/13)
 
 ### Changed
 

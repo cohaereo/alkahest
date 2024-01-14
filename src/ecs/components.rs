@@ -146,6 +146,24 @@ impl Default for Sphere {
         }
     }
 }
+
+pub struct Beacon {
+    pub color: [u8; 3],
+    pub freq: f32,
+    pub distance: f32,
+    pub travel_time: f32,
+}
+
+impl Default for Beacon {
+    fn default() -> Self {
+        Self {
+            color: [255, 255, 255],
+            freq: 1.0,
+            distance: 0.5,
+            travel_time: 0.7,
+        }
+    }
+}
 /// Marker component to indicate that the entity is allowed to be modified in potentially destructive ways
 /// (e.g. deleting it, changing it's name, etc.)
 pub struct Mutable;

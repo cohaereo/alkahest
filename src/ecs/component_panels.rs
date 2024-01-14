@@ -7,11 +7,12 @@ use crate::{
     ecs::transform::TransformFlags,
     hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
     icons::{
-        ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
-        ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER,
-        ICON_MAP_MARKER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE,
-        ICON_SPHERE, ICON_TAG,
+        ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA,
+        ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_OFF, ICON_HELP,
+        ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT,
+        ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE, ICON_TAG,
     },
+    render::tween::Tween,
     resources::Resources,
     util::{
         text::{prettify_distance, split_pascal_case},
@@ -21,7 +22,7 @@ use crate::{
 
 use super::{
     components::{
-        EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Ruler, Sphere,
+        Beacon, EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Ruler, Sphere,
         StaticInstances, Visible,
     },
     resolve_entity_icon, resolve_entity_name,
@@ -170,7 +171,8 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
         // HavokShape,
         EntityWorldId,
         Ruler,
-        Sphere
+        Sphere,
+        Beacon
     );
 }
 
@@ -587,5 +589,106 @@ impl ComponentPanel for Sphere {
 
             ui.label("Color");
         });
+    }
+}
+
+impl ComponentPanel for Beacon {
+    fn inspector_name() -> &'static str {
+        "Beacon"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_SIGN_POLE
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+        if !e.has::<Transform>() {
+            ui.label(format!(
+                "{} This entity has no transform component",
+                ICON_ALERT
+            ));
+        }
+
+        ui.horizontal(|ui| {
+            ui.strong("Distance after travel: ");
+            ui.add(
+                egui::DragValue::new(&mut self.distance)
+                    .speed(0.1)
+                    .clamp_range(0f32..=f32::INFINITY)
+                    .min_decimals(2)
+                    .max_decimals(2)
+                    .suffix(" m"),
+            )
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Duration of travel: ");
+            ui.add(
+                egui::DragValue::new(&mut self.travel_time)
+                    .speed(0.1)
+                    .clamp_range(0f32..=60.0)
+                    .min_decimals(2)
+                    .max_decimals(2)
+                    .suffix(" s"),
+            )
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Blink Frequency");
+            ui.add(
+                egui::DragValue::new(&mut self.freq)
+                    .speed(0.1)
+                    .clamp_range(0.0..=20.0),
+            )
+        });
+
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgb(&mut self.color);
+
+            ui.label("Color");
+        });
+
+        ui.separator();
+
+        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+        if let Some(transform) = e.get::<&Transform>() {
+            ui.label(format!(
+                "Distance to Beacon: {:.2} m",
+                (transform.translation - camera.position).length()
+            ));
+
+            ui.horizontal(|ui| {
+                if ui.button(ICON_MAP_MARKER.to_string()).clicked() {
+                    camera.tween = Some(Tween::new(
+                        |x| x,
+                        Some((
+                            camera.position,
+                            transform.translation - camera.front * self.distance,
+                        )),
+                        None,
+                        self.travel_time,
+                    ));
+                }
+                ui.label("Go to Beacon Location");
+            });
+            ui.horizontal(|ui| {
+                if ui.button(ICON_CAMERA.to_string()).clicked() {
+                    camera.tween = Some(Tween::new(
+                        |x| x,
+                        None,
+                        Some((
+                            camera.orientation,
+                            camera.get_look_angle(transform.translation),
+                        )),
+                        self.travel_time,
+                    ));
+                }
+                ui.label("Look at Beacon Location");
+            });
+        }
     }
 }

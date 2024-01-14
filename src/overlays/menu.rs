@@ -3,13 +3,12 @@ use glam::Vec3;
 use crate::{
     camera::FpsCamera,
     ecs::{
-        components::{Mutable, Ruler, Sphere},
+        components::{Beacon, Mutable, Ruler, Sphere},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::{Transform, TransformFlags},
     },
-    icons::ICON_RULER_SQUARE,
-    icons::ICON_SPHERE,
+    icons::{ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     map::MapDataList,
 };
 
@@ -66,6 +65,33 @@ impl Overlay for MenuBar {
                                     ..Default::default()
                                 },
                                 Sphere::default(),
+                                Tags::from_iter([EntityTag::Utility]),
+                                Mutable,
+                            ));
+
+                            if let Some(mut se) = resources.get_mut::<SelectedEntity>() {
+                                se.0 = Some(e);
+                            }
+
+                            ui.close_menu();
+                        }
+                    }
+                    if ui.button(format!("{} Beacon", ICON_SIGN_POLE)).clicked() {
+                        let mut maps: std::cell::RefMut<'_, MapDataList> =
+                            resources.get_mut::<MapDataList>().unwrap();
+
+                        if let Some(map) = maps.current_map_mut() {
+                            let camera = resources.get::<FpsCamera>().unwrap();
+                            let e = map.scene.spawn((
+                                Transform {
+                                    translation: camera.position,
+                                    flags: TransformFlags::IGNORE_ROTATION
+                                        | TransformFlags::IGNORE_SCALE,
+                                    ..Default::default()
+                                },
+                                Beacon {
+                                    ..Default::default()
+                                },
                                 Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
                             ));

@@ -1,36 +1,53 @@
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 use std::time::Instant;
 
 #[derive(Clone)]
 pub struct Tween {
     func: fn(f32) -> f32,
-    pub start: Vec3,
-    pub end: Vec3,
-    pub last_pos: Vec3,
+    pub pos_movement: Option<(Vec3, Vec3)>,
+    pub last_pos: Option<Vec3>,
+    pub angle_movement: Option<(Vec2, Vec2)>,
+    pub last_angle: Option<Vec2>,
     pub start_time: Instant,
     pub duration: f32,
 }
 
 impl Tween {
-    pub fn new(func: fn(f32) -> f32, start: Vec3, end: Vec3, duration: f32) -> Self {
+    pub fn new(
+        func: fn(f32) -> f32,
+        pos_movement: Option<(Vec3, Vec3)>,
+        angle_movement: Option<(Vec2, Vec2)>,
+        duration: f32,
+    ) -> Self {
         Self {
             func,
-            start,
-            end,
-            last_pos: start,
+            pos_movement,
+            last_pos: pos_movement.map(|pos| pos.0),
+            angle_movement,
+            last_angle: angle_movement.map(|angle| angle.0),
             start_time: Instant::now(),
             duration,
         }
     }
 
-    pub fn update(&mut self) -> Vec3 {
+    pub fn update_pos(&mut self) -> Option<Vec3> {
         let time = self.start_time.elapsed().as_secs_f32();
         let t = (time / self.duration).clamp(0., 1.);
         let s = (self.func)(t);
 
-        let new_pos = self.start.lerp(self.end, s);
+        let new_pos = self.pos_movement.map(|pos| pos.0.lerp(pos.1, s));
         self.last_pos = new_pos;
         new_pos
+    }
+
+    pub fn update_angle(&mut self) -> Option<Vec2> {
+        let time = self.start_time.elapsed().as_secs_f32();
+        let t = (time / self.duration).clamp(0., 1.);
+        let s = (self.func)(t);
+
+        let new_angle = self.angle_movement.map(|angle| angle.0.lerp(angle.1, s));
+        self.last_angle = new_angle;
+        new_angle
     }
 
     pub fn is_finished(&self) -> bool {

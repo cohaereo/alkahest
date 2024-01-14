@@ -21,8 +21,8 @@ use std::time::{Duration, Instant};
 
 use crate::activity::SActivity;
 use crate::ecs::components::{
-    ActivityGroup, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances, Terrain, Visible,
-    Water,
+    ActivityGroup, Beacon, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances, Terrain,
+    Visible, Water,
 };
 use crate::ecs::resolve_aabb;
 use crate::ecs::resources::SelectedEntity;
@@ -853,6 +853,16 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                             draw_sphere(&mut debugshapes, transform, sphere, start_time);
                         }
+                        for (_, (transform, beacon, visible)) in map
+                            .scene
+                            .query::<(&Transform, &Beacon, Option<&Visible>)>()
+                            .iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
+                            }
+                            draw_beacon(&mut debugshapes, transform, beacon, start_time);
+                        }
                     }
 
                     if let Some(map) = maps.current_map_mut() {
@@ -1104,6 +1114,26 @@ fn draw_sphere(
         [255, 255, 255],
     );
     debugshapes.sphere(transform.translation, transform.radius(), color);
+}
+
+fn draw_beacon(
+    debugshapes: &mut DebugShapes,
+    transform: &Transform,
+    beacon: &Beacon,
+    start_time: Instant,
+) {
+    let color = [
+        beacon.color[0],
+        beacon.color[1],
+        beacon.color[2],
+        (150.0 + (start_time.elapsed().as_secs_f32() * 2.0 * PI * beacon.freq).sin() * 50.0) as u8,
+    ];
+    debugshapes.sphere(transform.translation, 0.1, color);
+    debugshapes.line(
+        transform.translation + Vec3::Z * 0.1,
+        transform.translation + Vec3::Z * 5000.0,
+        color,
+    );
 }
 
 fn load_render_globals(renderer: &Renderer) {

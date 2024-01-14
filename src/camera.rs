@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct FpsCamera {
-    orientation: Vec2,
+    pub orientation: Vec2,
     pub rotation: Quat,
 
     pub front: Vec3,
@@ -70,6 +70,14 @@ impl FpsCamera {
 
     pub fn update_mouse(&mut self, mouse_delta: Vec2) {
         self.orientation += Vec2::new(mouse_delta.y * 0.8, mouse_delta.x) * 0.15;
+        // Cancel angle tween if the user rotates the camera
+        if self
+            .tween
+            .as_ref()
+            .map_or(false, |t| t.angle_movement.is_some())
+        {
+            self.tween = None;
+        }
         self.update_vectors();
     }
 
@@ -145,7 +153,8 @@ impl FpsCamera {
         }
 
         if let Some(tween) = &mut self.tween {
-            self.position = tween.update();
+            self.position = tween.update_pos().unwrap_or(self.position);
+            self.orientation = tween.update_angle().unwrap_or(self.orientation);
         } else {
             self.position += direction * speed;
         }
@@ -297,8 +306,8 @@ impl FpsCamera {
     pub fn focus(&mut self, pos: Vec3, distance: f32) {
         self.tween = Some(Tween::new(
             tween::ease_out_exponential,
-            self.position,
-            pos - self.front * distance,
+            Some((self.position, pos - self.front * distance)),
+            None,
             0.70,
         ));
     }
@@ -308,5 +317,25 @@ impl FpsCamera {
         let radius = bb.radius();
 
         self.focus(center, radius);
+    }
+
+    // Calculate angle to point camera at pos.
+    // The angle has a minimal diff to current camera angle.
+    pub fn get_look_angle(&self, pos: Vec3) -> Vec2 {
+        let dir = pos - self.position;
+        let inv_r = dir.length_recip();
+        if inv_r.is_infinite() {
+            self.orientation
+        } else {
+            let theta = dir.x.atan2(dir.y).to_degrees();
+            let mut diff = (theta - self.orientation.y).rem_euclid(360.0);
+            if diff > 180.0 {
+                diff -= 360.0;
+            }
+            Vec2::new(
+                (dir.z * inv_r).acos().to_degrees() - 90.0,
+                self.orientation.y + diff,
+            )
+        }
     }
 }
