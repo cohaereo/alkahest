@@ -1,4 +1,5 @@
-use std::{fs::File, io::Write};
+use fs_err::File;
+use std::io::Write;
 
 use super::error::ErrorAlert;
 
