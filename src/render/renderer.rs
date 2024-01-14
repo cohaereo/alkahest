@@ -241,12 +241,14 @@ impl Renderer {
             include_str!("../../assets/shaders/composite.hlsl"),
             "VShader",
             "vs_5_0",
+            "composite.hlsl",
         )
         .unwrap();
         let pshader_composite_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/composite.hlsl"),
             "PShader",
             "ps_5_0",
+            "composite.hlsl",
         )
         .unwrap();
 
@@ -257,12 +259,14 @@ impl Renderer {
             include_str!("../../assets/shaders/final.hlsl"),
             "VShader",
             "vs_5_0",
+            "final.hlsl",
         )
         .unwrap();
         let pshader_final_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/final.hlsl"),
             "PShader",
             "ps_5_0",
+            "final.hlsl",
         )
         .unwrap();
 
@@ -273,6 +277,7 @@ impl Renderer {
             include_str!("../../assets/shaders/null.hlsl"),
             "main",
             "ps_5_0",
+            "null.hlsl",
         )
         .unwrap();
         let (pshader_null, _) = shader::load_pshader(&dcs, &pshader_null_blob)?;
@@ -281,6 +286,7 @@ impl Renderer {
             include_str!("../../assets/shaders/pickbuffer.hlsl"),
             "main",
             "ps_5_0",
+            "null.hlsl",
         )
         .unwrap();
         let (pickbuffer_ps, _) = shader::load_pshader(&dcs, &pickbuffer_ps_blob)?;
@@ -289,6 +295,7 @@ impl Renderer {
             include_str!("../../assets/shaders/pickbuffer_clear.hlsl"),
             "VShader",
             "vs_5_0",
+            "pickbuffer_clear",
         )
         .unwrap();
         let (clear_pickbuffer_vs, _) = shader::load_vshader(&dcs, &clear_pickbuffer_vs_blob)?;
@@ -297,6 +304,7 @@ impl Renderer {
             include_str!("../../assets/shaders/pickbuffer_clear.hlsl"),
             "PShader",
             "ps_5_0",
+            "pickbuffer_clear",
         )
         .unwrap();
         let (clear_pickbuffer_ps, _) = shader::load_pshader(&dcs, &clear_pickbuffer_ps_blob)?;

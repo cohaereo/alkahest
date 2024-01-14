@@ -16,12 +16,14 @@ impl OutlineScreenEffect {
             include_str!("../../assets/shaders/outline.hlsl"),
             "VShader",
             "vs_5_0",
+            "outline.hlsl",
         )
         .unwrap();
         let pshader_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/outline.hlsl"),
             "PShader",
             "ps_5_0",
+            "outline.hlsl",
         )
         .unwrap();
 

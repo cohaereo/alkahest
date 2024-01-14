@@ -78,12 +78,14 @@ impl ErrorRenderer {
             include_str!("../../assets/shaders/error.hlsl"),
             "VShader",
             "vs_5_0",
+            "error.hlsl",
         )
         .unwrap();
         let pshader_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/error.hlsl"),
             "PShader",
             "ps_5_0",
+            "error.hlsl",
         )
         .unwrap();
 

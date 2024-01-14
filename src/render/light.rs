@@ -42,6 +42,7 @@ impl LightRenderer {
             "struct s_vs_in { float3 v0 : POSITION; };  float4 vs(s_vs_in input) : SV_POSITION { return float4(0, 0, 0, 0); }",
             "vs",
             "vs_5_0",
+            "(internal) light renderer input signature"
         )
         .unwrap();
 

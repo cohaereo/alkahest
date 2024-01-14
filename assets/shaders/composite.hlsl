@@ -12,25 +12,6 @@ static float cascadePlaneDistances[CAMERA_CASCADE_LEVEL_COUNT] = {
     CAMERA_CASCADE_CLIP_FAR / 1.0,
 };
 
-static const float2 poissonDisk[ 16 ] = {
-    float2( -0.94201624,  -0.39906216 ),
-    float2(  0.94558609,  -0.76890725 ),
-    float2( -0.094184101, -0.92938870 ),
-    float2(  0.34495938,   0.29387760 ),
-    float2( -0.91588581,   0.45771432 ),
-    float2( -0.81544232,  -0.87912464 ),
-    float2( -0.38277543,   0.27676845 ),
-    float2(  0.97484398,   0.75648379 ),
-    float2(  0.44323325,  -0.97511554 ),
-    float2(  0.53742981,  -0.47373420 ),
-    float2( -0.26496911,  -0.41893023 ),
-    float2(  0.79197514,   0.19090188 ),
-    float2( -0.24188840,   0.99706507 ),
-    float2( -0.81409955,   0.91437590 ),
-    float2(  0.19984126,   0.78641367 ),
-    float2(  0.14383161,  -0.14100790 )
-};
-
 cbuffer CompositeOptions : register(b0) {
     row_major float4x4 viewportProjViewMatrixInv;
     row_major float4x4 projViewMatrixInv;
@@ -107,12 +88,7 @@ Texture2DArray CascadeShadowMaps : register(t10);
 Texture2D LightRenderTarget0 : register(t12);
 Texture2D LightRenderTarget1 : register(t13);
 
-SamplerState SampleType
-{
-    Filter = MIN_MAG_MIP_LINEAR;
-    AddressU = Wrap;
-    AddressV = Wrap;
-};
+SamplerState SampleType : register(s0);
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
@@ -202,7 +178,7 @@ float3 DecodeNormal(float3 n) {
 
 uint CascadeLevel(float depth) {
     int layer = -1;
-    for (int i = 0; i < CAMERA_CASCADE_LEVEL_COUNT; ++i)
+    [unroll] for (int i = 0; i < CAMERA_CASCADE_LEVEL_COUNT; ++i)
     {
         if (depth < cascadePlaneDistances[i])
         {
@@ -245,21 +221,8 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
         return 1;
     }
 
-    // PCF
-    // TODO(cohae): Still not as smooth as it should be
-    float shadow = 0.0;
-    float2 texelSize = QueryShadowMapTexelSize();
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float2 jitter = poissonDisk[(y+1) * 3 + (x+1)];
-            float3 sampleCoords = float3(texCoords.xy + (float2(x, y) + jitter) * texelSize , cascade);
-            float pcfDepth = CascadeShadowMaps.Sample(SampleType, sampleCoords).r;
-            shadow += pcfDepth < (currentDepth - 0.0001) ? 0.0 : 1.0;        
-        }    
-    }
-    shadow /= 9.0;
+    float pcfDepth = CascadeShadowMaps.Sample(SampleType, float3(texCoords.xy, cascade)).r;
+    float shadow = pcfDepth < (currentDepth - 0.0001) ? 0.0 : 1.0;        
             
     if(fragmentDistance < CAMERA_CASCADE_FALLOFF_START)
         return shadow;
@@ -296,7 +259,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     float3 directLighting = float3(0.0, 0.0, 0.0);
     // const float3 LIGHT_COL = float3(1.0, 1.0, 1.0) * 20.0;
 
-    [loop] for (uint i = 0; i < 2; ++i)
+    [unroll] for (uint i = 0; i < 2; ++i)
     {
         float shadow = 1;
         float3 light_pos = lights[i*2+0].xyz;
@@ -319,7 +282,7 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
         float3 radiance     = light_col * attenuation;
 
         if(i == 1) {
-            radiance = globalLightColor * 5.0;
+            radiance = globalLightColor.xyz * 5.0;
                 
             shadow = CalculateShadow(worldPos, normal, globalLightDir.xyz);
                 

@@ -65,12 +65,14 @@ impl TextureViewer {
             include_str!("../../assets/shaders/gui/texture_viewer.hlsl"),
             "VShader",
             "vs_5_0",
+            "texture_viewer.hlsl",
         )
         .unwrap();
         let pshader_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/gui/texture_viewer.hlsl"),
             "PShader",
             "ps_5_0",
+            "texture_viewer.hlsl",
         )
         .unwrap();
 

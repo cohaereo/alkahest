@@ -49,9 +49,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Removed
 
 - Removed CTRL+Q quit shortcut by @Froggy618157725 in [#8](https://github.com/cohaereo/alkahest/pull/8)
+- Disable render globals prints by @cohaereo
 
 ### Fixed
 
 - Fix camera right and up axis by @cohaereo
 - Fix Utility Visibility by @Froggy618157725 in [#10](https://github.com/cohaereo/alkahest/pull/10)
 - Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
+- Fixed shader warnings by @cohaereo
