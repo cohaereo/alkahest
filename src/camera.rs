@@ -70,6 +70,14 @@ impl FpsCamera {
 
     pub fn update_mouse(&mut self, mouse_delta: Vec2) {
         self.orientation += Vec2::new(mouse_delta.y * 0.8, mouse_delta.x) * 0.15;
+        // Cancel angle tween if the user rotates the camera
+        if self
+            .tween
+            .as_ref()
+            .map_or(false, |t| t.angle_movement.is_some())
+        {
+            self.tween = None;
+        }
         self.update_vectors();
     }
 
@@ -145,8 +153,8 @@ impl FpsCamera {
         }
 
         if let Some(tween) = &mut self.tween {
-            self.position = tween.update_pos();
-            self.orientation = tween.update_angle();
+            self.position = tween.update_pos().unwrap_or(self.position);
+            self.orientation = tween.update_angle().unwrap_or(self.orientation);
         } else {
             self.position += direction * speed;
         }
@@ -298,10 +306,8 @@ impl FpsCamera {
     pub fn focus(&mut self, pos: Vec3, distance: f32) {
         self.tween = Some(Tween::new(
             tween::ease_out_exponential,
-            self.position,
-            pos - self.front * distance,
-            self.orientation,
-            self.orientation,
+            Some((self.position, pos - self.front * distance)),
+            None,
             0.70,
         ));
     }

@@ -160,7 +160,7 @@ impl Default for Beacon {
             color: [255, 255, 255],
             freq: 1.0,
             distance: 0.5,
-            travel_time: 0.25,
+            travel_time: 0.7,
         }
     }
 }

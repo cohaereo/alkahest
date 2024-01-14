@@ -665,10 +665,11 @@ impl ComponentPanel for Beacon {
                 if ui.button(ICON_MAP_MARKER.to_string()).clicked() {
                     camera.tween = Some(Tween::new(
                         |x| x,
-                        camera.position,
-                        transform.translation - camera.front * self.distance,
-                        camera.orientation,
-                        camera.orientation,
+                        Some((
+                            camera.position,
+                            transform.translation - camera.front * self.distance,
+                        )),
+                        None,
                         self.travel_time,
                     ));
                 }
@@ -678,10 +679,11 @@ impl ComponentPanel for Beacon {
                 if ui.button(ICON_CAMERA.to_string()).clicked() {
                     camera.tween = Some(Tween::new(
                         |x| x,
-                        camera.position,
-                        camera.position,
-                        camera.orientation,
-                        camera.get_look_angle(transform.translation),
+                        None,
+                        Some((
+                            camera.orientation,
+                            camera.get_look_angle(transform.translation),
+                        )),
                         self.travel_time,
                     ));
                 }
