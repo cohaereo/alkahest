@@ -1,3 +1,4 @@
+use crate::overlays::render_settings::PickbufferScope;
 use bitflags::bitflags;
 use std::f32::consts::PI;
 use std::sync::Arc;
@@ -79,7 +80,7 @@ impl DebugShapes {
         color: C,
         sides: bool,
         flags: DebugDrawFlags,
-        entity: Option<Entity>
+        entity: Option<Entity>,
     ) {
         let min = center - extents;
         let max = center + extents;
@@ -265,11 +266,14 @@ impl DebugShapes {
     // }
 
     /// Returns the drawlist. The internal list is cleared after this call
-    pub fn shape_list(&mut self) -> Vec<(DebugShape, Color, DebugDrawFlags, Option<Entity>)> {
-        let v = self.shapes.clone();
-        self.shapes.clear();
+    pub fn shape_iter(
+        &mut self,
+    ) -> core::slice::Iter<'_, (DebugShape, Color, DebugDrawFlags, Option<Entity>)> {
+        self.shapes.iter()
+    }
 
-        v
+    pub fn clear(&mut self) {
+        self.shapes.clear()
     }
 
     pub fn label_list(&mut self) -> Vec<(String, Vec3, egui::Align2, Color)> {
@@ -285,11 +289,13 @@ pub struct DebugShapeRenderer {
     dcs: Arc<DeviceContextSwapchain>,
     scope: ConstantBuffer<ScopeAlkDebugShape>,
     scope_line: ConstantBuffer<ScopeAlkDebugShapeLine>,
+    scope_pick: ConstantBuffer<PickbufferScope>,
     vshader: ID3D11VertexShader,
     vshader_line: ID3D11VertexShader,
     pshader: ID3D11PixelShader,
     pshader_line: ID3D11PixelShader,
     pshader_line_dotted: ID3D11PixelShader,
+    pshader_pickbuffer: ID3D11PixelShader,
 
     input_layout: ID3D11InputLayout,
 
@@ -360,6 +366,14 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (pshader_line_dotted, _) = shader::load_pshader(&dcs, &data)?;
+
+        let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/pickbuffer.hlsl"),
+            "main",
+            "ps_5_0",
+        )
+        .unwrap();
+        let (pshader_pickbuffer, _) = shader::load_pshader(&dcs, &data)?;
 
         let mesh_sphere = genmesh::generators::SphereUv::new(16, 16);
         let vertices: Vec<[f32; 4]> = mesh_sphere
@@ -486,12 +500,14 @@ impl DebugShapeRenderer {
         Ok(Self {
             scope: ConstantBuffer::create(dcs.clone(), None)?,
             scope_line: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_pick: ConstantBuffer::create(dcs.clone(), None)?,
             dcs,
             vshader,
             vshader_line,
             pshader,
             pshader_line,
             pshader_line_dotted,
+            pshader_pickbuffer,
             input_layout,
             vb_sphere,
             ib_sphere,
@@ -504,43 +520,77 @@ impl DebugShapeRenderer {
         })
     }
 
+    fn set_scope(&self, mode: DrawMode, mat: Mat4, color: Color, entity: Option<Entity>) {
+        match mode {
+            DrawMode::Normal => {
+                self.scope
+                    .write(&ScopeAlkDebugShape { model: mat, color })
+                    .unwrap();
+            }
+            DrawMode::PickBuffer => {
+                if let Some(e) = entity {
+                    self.scope_pick
+                        .write(&PickbufferScope::from_entity(e))
+                        .unwrap();
+                }
+            }
+            _ => (),
+        }
+    }
+
+    fn vs_set_shader(&self, _: DrawMode, v: &ID3D11VertexShader) {
+        unsafe {
+            self.dcs.context().VSSetShader(v, None);
+        }
+    }
+
+    fn ps_set_shader(&self, mode: DrawMode, p: &ID3D11PixelShader) {
+        if mode == DrawMode::PickBuffer {
+            return;
+        }
+        unsafe {
+            self.dcs.context().PSSetShader(p, None);
+        }
+    }
+
     pub fn draw_all(&self, shapes: &mut DebugShapes, mode: DrawMode) {
-        for (shape, color, flags, _) in shapes.shape_list() {
-            match mode {
+        for (shape, color, flags, entity) in shapes.shape_iter() {
+            let slot = match mode {
                 DrawMode::Normal => {
                     if !flags.contains(DebugDrawFlags::DRAW_NORMAL) {
                         continue;
                     }
+                    10
                 }
                 DrawMode::PickBuffer => {
-                    if !flags.contains(DebugDrawFlags::DRAW_PICK) {
+                    if !flags.contains(DebugDrawFlags::DRAW_PICK) || entity.is_none() {
                         continue;
                     }
+                    unsafe {
+                        self.dcs
+                            .context()
+                            .PSSetShader(&self.pshader_pickbuffer, None);
+                    }
+                    0
                 }
                 _ => {
                     break;
                 }
-            }
+            };
             match shape {
                 DebugShape::Custom {
                     transform,
                     shape,
                     sides,
                 } => {
-                    self.scope
-                        .write(&ScopeAlkDebugShape {
-                            model: transform.to_mat4(),
-                            color,
-                        })
-                        .unwrap();
-
-                    self.scope.bind(10, TfxShaderStage::Vertex);
-                    self.scope.bind(10, TfxShaderStage::Pixel);
+                    self.set_scope(mode, transform.to_mat4(), *color, *entity);
+                    self.scope.bind(slot, TfxShaderStage::Vertex);
+                    self.scope.bind(slot, TfxShaderStage::Pixel);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
-                        self.dcs.context().VSSetShader(&self.vshader, None);
-                        self.dcs.context().PSSetShader(&self.pshader, None);
+                        self.vs_set_shader(mode, &self.vshader);
+                        self.ps_set_shader(mode, &self.pshader);
 
                         self.dcs.context().IASetVertexBuffers(
                             0,
@@ -565,13 +615,13 @@ impl DebugShapeRenderer {
                             .DrawIndexed(shape.outline_index_count as _, 0, 0);
                     }
 
-                    if sides {
-                        self.scope
-                            .write(&ScopeAlkDebugShape {
-                                model: transform.to_mat4(),
-                                color: Color(color.0.truncate().extend(0.35)),
-                            })
-                            .unwrap();
+                    if *sides {
+                        self.set_scope(
+                            mode,
+                            transform.to_mat4(),
+                            Color(color.0.truncate().extend(0.35)),
+                            *entity,
+                        );
 
                         unsafe {
                             self.dcs.context().IASetVertexBuffers(
@@ -601,24 +651,24 @@ impl DebugShapeRenderer {
                     rotation,
                     sides,
                 } => {
-                    self.scope
-                        .write(&ScopeAlkDebugShape {
-                            model: Mat4::from_scale_rotation_translation(
-                                cube.extents(),
-                                rotation,
-                                cube.center(),
-                            ),
-                            color,
-                        })
-                        .unwrap();
+                    self.set_scope(
+                        mode,
+                        Mat4::from_scale_rotation_translation(
+                            cube.extents(),
+                            *rotation,
+                            cube.center(),
+                        ),
+                        *color,
+                        *entity,
+                    );
 
-                    self.scope.bind(10, TfxShaderStage::Vertex);
-                    self.scope.bind(10, TfxShaderStage::Pixel);
+                    self.scope.bind(slot, TfxShaderStage::Vertex);
+                    self.scope.bind(slot, TfxShaderStage::Pixel);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
-                        self.dcs.context().VSSetShader(&self.vshader, None);
-                        self.dcs.context().PSSetShader(&self.pshader, None);
+                        self.vs_set_shader(mode, &self.vshader);
+                        self.ps_set_shader(mode, &self.pshader);
 
                         self.dcs.context().IASetVertexBuffers(
                             0,
@@ -643,17 +693,17 @@ impl DebugShapeRenderer {
                             .DrawIndexed(self.cube_outline_index_count as _, 0, 0);
                     }
 
-                    if sides {
-                        self.scope
-                            .write(&ScopeAlkDebugShape {
-                                model: Mat4::from_scale_rotation_translation(
-                                    cube.extents(),
-                                    rotation,
-                                    cube.center(),
-                                ),
-                                color: Color(color.0.truncate().extend(0.25)),
-                            })
-                            .unwrap();
+                    if *sides {
+                        self.set_scope(
+                            mode,
+                            Mat4::from_scale_rotation_translation(
+                                cube.extents(),
+                                *rotation,
+                                cube.center(),
+                            ),
+                            *color,
+                            *entity,
+                        );
 
                         unsafe {
                             self.dcs.context().IASetVertexBuffers(
@@ -679,24 +729,24 @@ impl DebugShapeRenderer {
                     }
                 }
                 DebugShape::Sphere { center, radius } => {
-                    self.scope
-                        .write(&ScopeAlkDebugShape {
-                            model: Mat4::from_scale_rotation_translation(
-                                Vec3::splat(radius),
-                                Quat::IDENTITY,
-                                center,
-                            ),
-                            color,
-                        })
-                        .unwrap();
+                    self.set_scope(
+                        mode,
+                        Mat4::from_scale_rotation_translation(
+                            Vec3::splat(*radius),
+                            Quat::IDENTITY,
+                            *center,
+                        ),
+                        *color,
+                        *entity,
+                    );
 
-                    self.scope.bind(10, TfxShaderStage::Vertex);
-                    self.scope.bind(10, TfxShaderStage::Pixel);
+                    self.scope.bind(slot, TfxShaderStage::Vertex);
+                    self.scope.bind(slot, TfxShaderStage::Pixel);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
-                        self.dcs.context().VSSetShader(&self.vshader, None);
-                        self.dcs.context().PSSetShader(&self.pshader, None);
+                        self.vs_set_shader(mode, &self.vshader);
+                        self.ps_set_shader(mode, &self.pshader);
 
                         self.dcs.context().IASetVertexBuffers(
                             0,
@@ -727,7 +777,7 @@ impl DebugShapeRenderer {
                     dotted,
                     dot_scale,
                 } => {
-                    self.draw_line(start, end, color, dotted, dot_scale);
+                    self.draw_line(*start, *end, *color, *dotted, *dot_scale);
                 }
                 DebugShape::Circle {
                     center,
@@ -742,14 +792,14 @@ impl DebugShapeRenderer {
                     let mut prev;
                     let mut next = va;
 
-                    for t in 0..edges {
+                    for t in 0..*edges {
                         prev = next;
-                        let (s, c) = (2.0 * t as f32 * PI / edges as f32).sin_cos();
+                        let (s, c) = (2.0 * t as f32 * PI / *edges as f32).sin_cos();
                         next = va * c + vb * s;
 
-                        self.draw_line(center + r * prev, center + r * next, color, false, 0.0);
+                        self.draw_line(*center + r * prev, *center + r * next, *color, false, 0.0);
                     }
-                    self.draw_line(center + r * next, center + r * va, color, false, 0.0);
+                    self.draw_line(*center + r * next, *center + r * va, *color, false, 0.0);
                 }
             }
         }
