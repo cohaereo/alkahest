@@ -19,6 +19,8 @@ fn main() {
             "cargo:rustc-env=GIT_HASH={}{dirty}",
             git_hash.strip_suffix('\n').unwrap_or(&git_hash)
         );
+    } else {
+        println!("cargo:rustc-env=GIT_HASH=unknown-revision");
     }
 
     if cfg!(target_os = "windows") {
