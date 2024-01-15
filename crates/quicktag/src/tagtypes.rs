@@ -25,7 +25,7 @@ pub enum TagType {
     WwiseStream,
 
     Havok,
-    UmbraTome,
+    OtfFontOrUmbraTome,
     CriwareUsm,
 
     Tag,
@@ -67,7 +67,7 @@ impl TagType {
             | TagType::ComputeShader { .. } => Color32::from_rgb(249, 168, 71),
 
             TagType::WwiseBank | TagType::WwiseStream => Color32::from_rgb(191, 106, 247),
-            TagType::Havok | TagType::UmbraTome | TagType::CriwareUsm => Color32::YELLOW,
+            TagType::Havok | TagType::OtfFontOrUmbraTome | TagType::CriwareUsm => Color32::YELLOW,
 
             TagType::TagGlobal => Color32::WHITE,
             TagType::Tag => Color32::GRAY,
@@ -127,7 +127,7 @@ impl Display for TagType {
             TagType::WwiseBank => f.write_str("WwiseBank"),
             TagType::WwiseStream => f.write_str("WwiseStream"),
             TagType::Havok => f.write_str("Havok"),
-            TagType::UmbraTome => f.write_str("UmbraTome"),
+            TagType::OtfFontOrUmbraTome => f.write_str("OTF Font / Umbra Tome"),
             TagType::CriwareUsm => f.write_str("CriwareUsm"),
             TagType::Unknown { ftype, fsubtype } => {
                 f.write_fmt(format_args!("Unk{ftype}+{fsubtype}"))
@@ -198,7 +198,7 @@ impl TagType {
         match (t, st) {
             (8, 0) => TagType::Tag,
             (16, 0) => TagType::TagGlobal,
-            (24, 0) => TagType::UmbraTome,
+            (24, 0) => TagType::OtfFontOrUmbraTome,
             (26, 6) => TagType::WwiseBank,
             (26, 7) => TagType::WwiseStream,
             (27, 0) => TagType::Havok,
