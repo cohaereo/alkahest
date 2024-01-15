@@ -76,7 +76,7 @@ fs-err = "2.11.0"
 default = ["discord_rpc"]
 tracy = []
 # Ensures all TFX opcodes are interpreted
-# TODO(cohae): Should this be a runtime configuration setting?
+# TODO(cohae): This should be a runtime configuration setting?
 discord_rpc = ["dep:discord-rpc-client"]
 
 debug_lock = []
