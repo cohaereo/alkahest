@@ -1,7 +1,9 @@
+use bitflags::bitflags;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
 use super::bytecode::externs::TfxShaderStage;
+use super::renderer::DrawMode;
 use super::{color::Color, shader, ConstantBuffer, DeviceContextSwapchain};
 use crate::ecs::transform::Transform;
 use crate::types::AABB;
@@ -11,6 +13,7 @@ use genmesh::generators::SharedVertex;
 use genmesh::Triangulate;
 use glam::Vec4;
 use glam::{Mat4, Quat, Vec3};
+use hecs::Entity;
 use itertools::Itertools;
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
@@ -52,13 +55,22 @@ pub enum DebugShape {
     },
 }
 
+bitflags! {
+    #[derive(Default, Debug, Copy, Clone, PartialEq)]
+    pub struct DebugDrawFlags: u32 {
+        const DRAW_NORMAL = (1 << 0);
+        const DRAW_PICK = (1 << 1);
+    }
+}
+
 #[derive(Default)]
 pub struct DebugShapes {
-    shapes: Vec<(DebugShape, Color)>,
+    shapes: Vec<(DebugShape, Color, DebugDrawFlags, Option<Entity>)>,
     labels: Vec<(String, Vec3, egui::Align2, Color)>,
 }
 
 impl DebugShapes {
+    #![allow(clippy::too_many_arguments)]
     pub fn cube_extents<C: Into<Color>>(
         &mut self,
         center: Vec3,
@@ -66,6 +78,8 @@ impl DebugShapes {
         rotation: Quat,
         color: C,
         sides: bool,
+        flags: DebugDrawFlags,
+        entity: Option<Entity>
     ) {
         let min = center - extents;
         let max = center + extents;
@@ -77,10 +91,20 @@ impl DebugShapes {
                 sides,
             },
             color.into(),
+            flags,
+            entity,
         ))
     }
 
-    pub fn cube_aabb<C: Into<Color>>(&mut self, aabb: AABB, rotation: Quat, color: C, sides: bool) {
+    pub fn cube_aabb<C: Into<Color>>(
+        &mut self,
+        aabb: AABB,
+        rotation: Quat,
+        color: C,
+        sides: bool,
+        flags: DebugDrawFlags,
+        entity: Option<Entity>,
+    ) {
         self.shapes.push((
             DebugShape::Cube {
                 cube: aabb,
@@ -88,12 +112,25 @@ impl DebugShapes {
                 sides,
             },
             color.into(),
+            flags,
+            entity,
         ))
     }
 
-    pub fn sphere<C: Into<Color>>(&mut self, center: Vec3, radius: f32, color: C) {
-        self.shapes
-            .push((DebugShape::Sphere { center, radius }, color.into()))
+    pub fn sphere<C: Into<Color>>(
+        &mut self,
+        center: Vec3,
+        radius: f32,
+        color: C,
+        flags: DebugDrawFlags,
+        entity: Option<Entity>,
+    ) {
+        self.shapes.push((
+            DebugShape::Sphere { center, radius },
+            color.into(),
+            flags,
+            entity,
+        ))
     }
 
     pub fn line<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
@@ -105,6 +142,8 @@ impl DebugShapes {
                 dot_scale: 1.0,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -116,6 +155,8 @@ impl DebugShapes {
                 edges,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -134,6 +175,8 @@ impl DebugShapes {
                 dot_scale,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -181,6 +224,8 @@ impl DebugShapes {
                 sides,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -220,7 +265,7 @@ impl DebugShapes {
     // }
 
     /// Returns the drawlist. The internal list is cleared after this call
-    pub fn shape_list(&mut self) -> Vec<(DebugShape, Color)> {
+    pub fn shape_list(&mut self) -> Vec<(DebugShape, Color, DebugDrawFlags, Option<Entity>)> {
         let v = self.shapes.clone();
         self.shapes.clear();
 
@@ -459,8 +504,23 @@ impl DebugShapeRenderer {
         })
     }
 
-    pub fn draw_all(&self, shapes: &mut DebugShapes) {
-        for (shape, color) in shapes.shape_list() {
+    pub fn draw_all(&self, shapes: &mut DebugShapes, mode: DrawMode) {
+        for (shape, color, flags, _) in shapes.shape_list() {
+            match mode {
+                DrawMode::Normal => {
+                    if !flags.contains(DebugDrawFlags::DRAW_NORMAL) {
+                        continue;
+                    }
+                }
+                DrawMode::PickBuffer => {
+                    if !flags.contains(DebugDrawFlags::DRAW_PICK) {
+                        continue;
+                    }
+                }
+                _ => {
+                    break;
+                }
+            }
             match shape {
                 DebugShape::Custom {
                     transform,

@@ -700,7 +700,8 @@ impl Renderer {
                 );
                 self.dcs.context().RSSetState(&self.rasterizer_state);
             }
-            self.debug_shape_renderer.draw_all(&mut shapes);
+            self.debug_shape_renderer
+                .draw_all(&mut shapes, DrawMode::Normal);
         }
 
         // region: Outline rendering
