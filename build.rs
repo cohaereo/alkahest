@@ -21,6 +21,12 @@ fn main() {
         );
     }
 
+    if cfg!(target_os = "windows") {
+        let mut res = winres::WindowsResource::new();
+        res.set_icon("assets/icon.ico");
+        res.compile().unwrap();
+    }
+
     // Generate UTC BUILD_DATE using chrono
     let build_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
     println!("cargo:rustc-env=BUILD_DATE={build_date}");

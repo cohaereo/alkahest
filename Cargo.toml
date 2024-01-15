@@ -95,6 +95,7 @@ opt-level = 3
 
 [build-dependencies]
 chrono = "0.4.31"
+winres = "0.1.12"
 
 [profile.dev]
 # opt-level = 3

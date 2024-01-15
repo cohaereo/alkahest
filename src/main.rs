@@ -34,6 +34,7 @@ use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::{Texture, LOW_RES};
 use crate::util::consts::print_banner;
+use crate::util::image::Png;
 use crate::util::text::{invert_color, keep_color_bright, prettify_distance};
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
@@ -66,6 +67,7 @@ use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
+use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -274,6 +276,14 @@ pub async fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} global strings", stringmap.len());
 
+    let icon_data = Png::from_bytes(include_bytes!("../assets/icon.png"))?;
+    let icon = winit::window::Icon::from_rgba(
+        icon_data.data.to_vec(),
+        icon_data.dimensions[0] as u32,
+        icon_data.dimensions[1] as u32,
+    )
+    .unwrap();
+
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
@@ -284,6 +294,8 @@ pub async fn main() -> anyhow::Result<()> {
             PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
         }))
         .with_maximized(config!().window.maximised)
+        .with_window_icon(Some(icon.clone()))
+        .with_taskbar_icon(Some(icon))
         .build(&event_loop)?;
     let window = Arc::new(window);
 

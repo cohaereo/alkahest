@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add Beacon Utility tool by @Froggy618157725 in [#13](https://github.com/cohaereo/alkahest/pull/13)
 - Use `fs-err` wrapper for more descriptive filesystem error messages by @cohaereo in [#14](https://github.com/cohaereo/alkahest/pull/14)
 - Print version information in console by @cohaereo
+- Add a window and taskbar icon by @cohaereo
 
 ### Changed
 
