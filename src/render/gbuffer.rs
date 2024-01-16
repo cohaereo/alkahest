@@ -56,9 +56,9 @@ impl GBuffer {
             light_specular: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
                 .context("Light_Specular")?,
 
-            staging: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
+            staging: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Staging")?,
-            staging_clone: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
+            staging_clone: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
                 .context("Staging_Clone")?,
             depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,
@@ -111,6 +111,7 @@ pub struct RenderTarget {
     pub render_target: ID3D11RenderTargetView,
     pub view: ID3D11ShaderResourceView,
     pub format: DxgiFormat,
+
     dcs: Arc<DeviceContextSwapchain>,
 }
 
