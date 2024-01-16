@@ -375,6 +375,7 @@ impl DebugShapeRenderer {
             include_str!("../../assets/shaders/pickbuffer.hlsl"),
             "main",
             "ps_5_0",
+            "pickbuffer.hlsl",
         )
         .unwrap();
         let (pshader_pickbuffer, _) = shader::load_pshader(&dcs, &data)?;
