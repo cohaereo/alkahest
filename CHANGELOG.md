@@ -55,3 +55,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix camera right and up axis by @cohaereo
 - Fix Utility Visibility by @Froggy618157725 in [#10](https://github.com/cohaereo/alkahest/pull/10)
 - Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
+- Fixed Selector behavior on screens with scaling factors @Froggy618157725 in [#14](https://github.com/cohaereo/alkahest/pull/14)

@@ -906,8 +906,11 @@ pub async fn main() -> anyhow::Result<()> {
                             {
                                 let data = m.ptr as *mut u32;
 
-                                let offset = mouse_pos.y as usize * window_size.width as usize
-                                    + mouse_pos.x as usize;
+                                let offset = (mouse_pos.y as f64
+                                    * window_size.width as f64
+                                    * window.scale_factor())
+                                .round() as usize
+                                    + (mouse_pos.x as f64 * window.scale_factor()).round() as usize;
 
                                 let id = *data.add(offset);
                                 let maps = resources.get::<MapDataList>().unwrap();
