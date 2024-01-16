@@ -40,7 +40,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Lazy entity updating by @cohaereo
 - Global entity tag by @cohaereo
 - Add Beacon Utility tool by @Froggy618157725 in [#13](https://github.com/cohaereo/alkahest/pull/13)
-- Make Utility Objects work with the picker by @Froggy618157725 in [#14](https://github.com/cohaereo/alkahest/pull/14)
+- Use `fs-err` wrapper for more descriptive filesystem error messages by @cohaereo in [#14](https://github.com/cohaereo/alkahest/pull/14)
+- Print version information in console by @cohaereo
+- Add a window and taskbar icon by @cohaereo
+- Make Utility Objects work with the picker by @Froggy618157725 in [#16](https://github.com/cohaereo/alkahest/pull/16)
 
 ### Changed
 
@@ -49,10 +52,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Removed
 
 - Removed CTRL+Q quit shortcut by @Froggy618157725 in [#8](https://github.com/cohaereo/alkahest/pull/8)
+- Disable render globals prints by @cohaereo
 
 ### Fixed
 
 - Fix camera right and up axis by @cohaereo
 - Fix Utility Visibility by @Froggy618157725 in [#10](https://github.com/cohaereo/alkahest/pull/10)
 - Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
-- Fixed Selector behavior on screens with scaling factors @Froggy618157725 in [#14](https://github.com/cohaereo/alkahest/pull/14)
+- Fixed shader warnings by @cohaereo
+- Fixed Selector behavior on screens with scaling factors @Froggy618157725 in [#16](https://github.com/cohaereo/alkahest/pull/16)

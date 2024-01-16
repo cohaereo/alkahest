@@ -33,12 +33,7 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
 Texture2D DepthTargetOutline : register(t0);
 Texture2D DepthTargetScene : register(t1);
 
-SamplerState SampleType
-{
-    Filter = MIN_MAG_MIP_LINEAR;
-    AddressU = Wrap;
-    AddressV = Wrap;
-};
+SamplerState SampleType : register(s0);
 
 float2 QueryTexelSize(Texture2D t) {
 	uint width, height;
@@ -55,9 +50,9 @@ float4 PShader(VSOutput input) : SV_Target {
     {
         float2 size = QueryTexelSize(DepthTargetScene);
 
-        for (int i = -OUTLINE_WIDTH; i <= +OUTLINE_WIDTH; i++)
+        [unroll] for (int i = -OUTLINE_WIDTH; i <= +OUTLINE_WIDTH; i++)
         {
-            for (int j = -OUTLINE_WIDTH; j <= +OUTLINE_WIDTH; j++)
+            [unroll] for (int j = -OUTLINE_WIDTH; j <= +OUTLINE_WIDTH; j++)
             {
                 if (i == 0 && j == 0)
                 {

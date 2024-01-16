@@ -27,7 +27,7 @@ pub async fn set_status(details: String, state: String) {
         act.state(state)
             .details(details)
             .timestamps(|ts| ts.start(since_the_epoch.as_secs()))
-            .assets(|a| a.large_image("zaballa"))
+            .assets(|a| a.large_image("clarity_control"))
     }) {
         error!("Failed to set Discord activity: {e}");
     }

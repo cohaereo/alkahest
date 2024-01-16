@@ -14,7 +14,12 @@ use windows::{
 use super::vertex_layout::OutputElement;
 use super::DeviceContextSwapchain;
 
-pub fn compile_hlsl(source: &str, entrypoint: &str, target: &str) -> Result<Vec<u8>, String> {
+pub fn compile_hlsl(
+    source: &str,
+    entrypoint: &str,
+    target: &str,
+    filename: &str,
+) -> Result<Vec<u8>, String> {
     let mut shader = None;
     let mut errors = None;
 
@@ -55,12 +60,12 @@ pub fn compile_hlsl(source: &str, entrypoint: &str, target: &str) -> Result<Vec<
     }
 
     if result.is_err() {
-        error!("Failed to compile shader: {error_string}");
+        error!("Failed to compile shader '{filename}': {error_string}");
         return Err(error_string);
     }
 
     if !error_string.is_empty() {
-        warn!("{error_string}");
+        warn!("Warnings for '{filename}': {error_string}");
     }
 
     let blob = shader.unwrap();

@@ -315,6 +315,7 @@ impl DebugShapeRenderer {
             include_str!("../../assets/shaders/debug.hlsl"),
             "VShader",
             "vs_5_0",
+            "debug.hlsl",
         )
         .unwrap();
         let (vshader, _) = shader::load_vshader(&dcs, &data_vscube)?;
@@ -322,6 +323,7 @@ impl DebugShapeRenderer {
             include_str!("../../assets/shaders/debug_line.hlsl"),
             "VShader",
             "vs_5_0",
+            "debug_line.hlsl",
         )
         .unwrap();
         let (vshader_line, _) = shader::load_vshader(&dcs, &data_vsline)?;
@@ -346,6 +348,7 @@ impl DebugShapeRenderer {
             include_str!("../../assets/shaders/debug.hlsl"),
             "PShader",
             "ps_5_0",
+            "debug.hlsl",
         )
         .unwrap();
         let (pshader, _) = shader::load_pshader(&dcs, &data)?;
@@ -354,6 +357,7 @@ impl DebugShapeRenderer {
             include_str!("../../assets/shaders/debug_line.hlsl"),
             "PShader",
             "ps_5_0",
+            "debug_line.hlsl",
         )
         .unwrap();
         let (pshader_line, _) = shader::load_pshader(&dcs, &data)?;
@@ -362,6 +366,7 @@ impl DebugShapeRenderer {
             include_str!("../../assets/shaders/debug_line.hlsl"),
             "PShaderDotted",
             "ps_5_0",
+            "debug_line.hlsl",
         )
         .unwrap();
         let (pshader_line_dotted, _) = shader::load_pshader(&dcs, &data)?;

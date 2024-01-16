@@ -33,6 +33,8 @@ use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
 use crate::structure::ExtendedHash;
 use crate::texture::{Texture, LOW_RES};
+use crate::util::consts::print_banner;
+use crate::util::image::Png;
 use crate::util::text::{invert_color, keep_color_bright, prettify_distance};
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
 use anyhow::Context;
@@ -66,6 +68,7 @@ use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
+use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -151,6 +154,8 @@ struct Args {
 pub async fn main() -> anyhow::Result<()> {
     util::fix_windows_command_prompt();
     panic_handler::install_hook();
+
+    print_banner();
 
     // #[cfg(not(debug_assertions))]
     // std::env::set_var("RUST_BACKTRACE", "0");
@@ -272,6 +277,14 @@ pub async fn main() -> anyhow::Result<()> {
 
     info!("Loaded {} global strings", stringmap.len());
 
+    let icon_data = Png::from_bytes(include_bytes!("../assets/icon.png"))?;
+    let icon = winit::window::Icon::from_rgba(
+        icon_data.data.to_vec(),
+        icon_data.dimensions[0] as u32,
+        icon_data.dimensions[1] as u32,
+    )
+    .unwrap();
+
     let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
@@ -282,6 +295,8 @@ pub async fn main() -> anyhow::Result<()> {
             PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
         }))
         .with_maximized(config!().window.maximised)
+        .with_window_icon(Some(icon.clone()))
+        .with_taskbar_icon(Some(icon))
         .build(&event_loop)?;
     let window = Arc::new(window);
 
@@ -1193,55 +1208,55 @@ fn load_render_globals(renderer: &Renderer) {
         .expect("Failed to read render globals");
 
     // println!("{globals:#?}");
-    for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
-        println!("scope #{i}: {}", *s.name);
-        if s.scope.stage_vertex.constant_buffer.is_some() {
-            println!(
-                "\tVS cb{} ({} bytes)",
-                s.scope.stage_vertex.constant_buffer_slot,
-                buffer_size(s.scope.stage_vertex.constant_buffer)
-            );
-        }
-        if s.scope.stage_pixel.constant_buffer.is_some() {
-            println!(
-                "\tPS cb{} ({} bytes)",
-                s.scope.stage_pixel.constant_buffer_slot,
-                buffer_size(s.scope.stage_pixel.constant_buffer)
-            );
-        }
-        if s.scope.stage_geometry.constant_buffer.is_some() {
-            println!(
-                "\tGS cb{} ({} bytes)",
-                s.scope.stage_geometry.constant_buffer_slot,
-                buffer_size(s.scope.stage_geometry.constant_buffer)
-            );
-        }
-        if s.scope.stage_hull.constant_buffer.is_some() {
-            println!(
-                "\tHS cb{} ({} bytes)",
-                s.scope.stage_hull.constant_buffer_slot,
-                buffer_size(s.scope.stage_hull.constant_buffer)
-            );
-        }
-        if s.scope.stage_compute.constant_buffer.is_some() {
-            println!(
-                "\tCS cb{} ({} bytes)",
-                s.scope.stage_compute.constant_buffer_slot,
-                buffer_size(s.scope.stage_compute.constant_buffer)
-            );
-        }
-        if s.scope.stage_domain.constant_buffer.is_some() {
-            println!(
-                "\tDS cb{} ({} bytes)",
-                s.scope.stage_domain.constant_buffer_slot,
-                buffer_size(s.scope.stage_domain.constant_buffer)
-            );
-        }
-    }
+    // for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
+    //     println!("scope #{i}: {}", *s.name);
+    //     if s.scope.stage_vertex.constant_buffer.is_some() {
+    //         println!(
+    //             "\tVS cb{} ({} bytes)",
+    //             s.scope.stage_vertex.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_vertex.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_pixel.constant_buffer.is_some() {
+    //         println!(
+    //             "\tPS cb{} ({} bytes)",
+    //             s.scope.stage_pixel.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_pixel.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_geometry.constant_buffer.is_some() {
+    //         println!(
+    //             "\tGS cb{} ({} bytes)",
+    //             s.scope.stage_geometry.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_geometry.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_hull.constant_buffer.is_some() {
+    //         println!(
+    //             "\tHS cb{} ({} bytes)",
+    //             s.scope.stage_hull.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_hull.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_compute.constant_buffer.is_some() {
+    //         println!(
+    //             "\tCS cb{} ({} bytes)",
+    //             s.scope.stage_compute.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_compute.constant_buffer)
+    //         );
+    //     }
+    //     if s.scope.stage_domain.constant_buffer.is_some() {
+    //         println!(
+    //             "\tDS cb{} ({} bytes)",
+    //             s.scope.stage_domain.constant_buffer_slot,
+    //             buffer_size(s.scope.stage_domain.constant_buffer)
+    //         );
+    //     }
+    // }
 
     let mut techniques: HashMap<String, TagHash> = HashMap::default();
-    for (i, t) in globals.unk8[0].unk8.unk20.iter().enumerate() {
-        println!("technique #{i}: {}, {}", *t.name, t.technique);
+    for t in &globals.unk8[0].unk8.unk20 {
+        // println!("technique #{i}: {}, {}", *t.name, t.technique);
         techniques.insert(t.name.to_string(), t.technique);
     }
 

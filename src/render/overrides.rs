@@ -40,6 +40,7 @@ impl ShaderOverrides {
             include_str!("../../assets/shaders/overrides/entity.vsh"),
             "main",
             "vs_5_0",
+            "entity.vsh",
         )
         .unwrap();
 
@@ -49,6 +50,7 @@ impl ShaderOverrides {
             include_str!("../../assets/shaders/overrides/entity_deferred.psh"),
             "main",
             "ps_5_0",
+            "entity_deferred.psh",
         )
         .unwrap();
 
@@ -58,6 +60,7 @@ impl ShaderOverrides {
             include_str!("../../assets/shaders/overrides/entity_forward.psh"),
             "main",
             "ps_5_0",
+            "entity_forward.psh",
         )
         .unwrap();
 
@@ -67,6 +70,7 @@ impl ShaderOverrides {
             include_str!("../../assets/shaders/overrides/terrain.psh"),
             "main",
             "ps_5_0",
+            "terrain.psh",
         )
         .unwrap();
 

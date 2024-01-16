@@ -67,6 +67,7 @@ void main(
   r2.xyz = r1.ywx * r0.zxy;
   r0.xyz = r0.yzx * r1.wxy + -r2.xyz;
   o2.xyz = in_tangent.www * r0.xyz;
+  o2.w = 1;
   o3.xyzw = in_texcoord.xyxy * texcoord0_scale_offset.xyxy + texcoord0_scale_offset.zwzw;
   r0.x = mesh_to_world[0].x;
   r0.y = mesh_to_world[1].x;
