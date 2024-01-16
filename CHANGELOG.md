@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Lazy entity updating by @cohaereo
 - Global entity tag by @cohaereo
 - Add Beacon Utility tool by @Froggy618157725 in [#13](https://github.com/cohaereo/alkahest/pull/13)
+- Make Utility Objects work with the picker by @Froggy618157725 in [#14](https://github.com/cohaereo/alkahest/pull/14)
 
 ### Changed
 

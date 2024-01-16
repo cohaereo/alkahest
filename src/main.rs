@@ -1151,8 +1151,8 @@ fn draw_beacon(
     start_time: Instant,
     entity: Option<Entity>,
 ) {
-    let beam_height = 5000.0;
-    let base_radius = 0.1;
+    const BEAM_HEIGHT: f32 = 5000.0;
+    const BASE_RADIUS: f32 = 0.1;
     let color: [u8; 4] = [
         beacon.color[0],
         beacon.color[1],
@@ -1161,19 +1161,19 @@ fn draw_beacon(
     ];
     debugshapes.sphere(
         transform.translation,
-        base_radius,
+        BASE_RADIUS,
         color,
         DebugDrawFlags::DRAW_NORMAL,
         None,
     );
     debugshapes.line(
-        transform.translation + Vec3::Z * base_radius,
-        transform.translation + Vec3::Z * beam_height,
+        transform.translation + Vec3::Z * BASE_RADIUS,
+        transform.translation + Vec3::Z * BEAM_HEIGHT,
         color,
     );
     debugshapes.cube_extents(
-        transform.translation + Vec3::Z * beam_height / 2.0,
-        Vec3::new(base_radius, base_radius, beam_height / 2.0),
+        transform.translation + Vec3::Z * BEAM_HEIGHT / 2.0,
+        Vec3::new(BASE_RADIUS, BASE_RADIUS, BEAM_HEIGHT / 2.0),
         Quat::IDENTITY,
         color,
         true,
