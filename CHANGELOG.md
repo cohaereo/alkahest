@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Use `fs-err` wrapper for more descriptive filesystem error messages by @cohaereo in [#14](https://github.com/cohaereo/alkahest/pull/14)
 - Print version information in console by @cohaereo
 - Add a window and taskbar icon by @cohaereo
+- Make Utility Objects work with the picker by @Froggy618157725 in [#16](https://github.com/cohaereo/alkahest/pull/16)
 - Variable width line rendering by @cohaereo
 
 ### Changed
@@ -62,4 +63,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
 - Fixed shader warnings by @cohaereo
 - Fix pickbuffer not respecting d3d mapped row pitch by @cohaereo
+- Fixed Selector behavior on screens with scaling factors @Froggy618157725 in [#16](https://github.com/cohaereo/alkahest/pull/16)
 - Fix cubemap view not rotating by @cohaereo

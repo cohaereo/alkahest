@@ -1,7 +1,10 @@
+use crate::overlays::render_settings::PickbufferScope;
+use bitflags::bitflags;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
 use super::bytecode::externs::TfxShaderStage;
+use super::renderer::DrawMode;
 use super::{color::Color, shader, ConstantBuffer, DeviceContextSwapchain};
 use crate::ecs::transform::Transform;
 use crate::types::AABB;
@@ -11,6 +14,7 @@ use genmesh::generators::SharedVertex;
 use genmesh::Triangulate;
 use glam::Vec4;
 use glam::{Mat4, Quat, Vec3};
+use hecs::Entity;
 use itertools::Itertools;
 use windows::Win32::Graphics::Direct3D11::ID3D11GeometryShader;
 use windows::Win32::Graphics::{
@@ -53,13 +57,22 @@ pub enum DebugShape {
     },
 }
 
+bitflags! {
+    #[derive(Default, Debug, Copy, Clone, PartialEq)]
+    pub struct DebugDrawFlags: u32 {
+        const DRAW_NORMAL = (1 << 0);
+        const DRAW_PICK = (1 << 1);
+    }
+}
+
 #[derive(Default)]
 pub struct DebugShapes {
-    shapes: Vec<(DebugShape, Color)>,
+    shapes: Vec<(DebugShape, Color, DebugDrawFlags, Option<Entity>)>,
     labels: Vec<(String, Vec3, egui::Align2, Color)>,
 }
 
 impl DebugShapes {
+    #![allow(clippy::too_many_arguments)]
     pub fn cube_extents<C: Into<Color>>(
         &mut self,
         center: Vec3,
@@ -67,6 +80,8 @@ impl DebugShapes {
         rotation: Quat,
         color: C,
         sides: bool,
+        flags: DebugDrawFlags,
+        entity: Option<Entity>,
     ) {
         let min = center - extents;
         let max = center + extents;
@@ -78,10 +93,20 @@ impl DebugShapes {
                 sides,
             },
             color.into(),
+            flags,
+            entity,
         ))
     }
 
-    pub fn cube_aabb<C: Into<Color>>(&mut self, aabb: AABB, rotation: Quat, color: C, sides: bool) {
+    pub fn cube_aabb<C: Into<Color>>(
+        &mut self,
+        aabb: AABB,
+        rotation: Quat,
+        color: C,
+        sides: bool,
+        flags: DebugDrawFlags,
+        entity: Option<Entity>,
+    ) {
         self.shapes.push((
             DebugShape::Cube {
                 cube: aabb,
@@ -89,12 +114,25 @@ impl DebugShapes {
                 sides,
             },
             color.into(),
+            flags,
+            entity,
         ))
     }
 
-    pub fn sphere<C: Into<Color>>(&mut self, center: Vec3, radius: f32, color: C) {
-        self.shapes
-            .push((DebugShape::Sphere { center, radius }, color.into()))
+    pub fn sphere<C: Into<Color>>(
+        &mut self,
+        center: Vec3,
+        radius: f32,
+        color: C,
+        flags: DebugDrawFlags,
+        entity: Option<Entity>,
+    ) {
+        self.shapes.push((
+            DebugShape::Sphere { center, radius },
+            color.into(),
+            flags,
+            entity,
+        ))
     }
 
     pub fn line<C: Into<Color>>(&mut self, start: Vec3, end: Vec3, color: C) {
@@ -106,6 +144,8 @@ impl DebugShapes {
                 dot_scale: 1.0,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -117,6 +157,8 @@ impl DebugShapes {
                 edges,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -135,6 +177,8 @@ impl DebugShapes {
                 dot_scale,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -182,6 +226,8 @@ impl DebugShapes {
                 sides,
             },
             color.into(),
+            DebugDrawFlags::DRAW_NORMAL,
+            None,
         ))
     }
 
@@ -220,9 +266,14 @@ impl DebugShapes {
     //     }
     // }
 
-    /// Returns the drawlist. The internal list is cleared after this call
-    pub fn shape_list(&mut self) -> Vec<(DebugShape, Color)> {
-        std::mem::take(&mut self.shapes)
+    pub fn shape_iter(
+        &mut self,
+    ) -> core::slice::Iter<'_, (DebugShape, Color, DebugDrawFlags, Option<Entity>)> {
+        self.shapes.iter()
+    }
+
+    pub fn clear(&mut self) {
+        self.shapes.clear()
     }
 
     pub fn label_list(&mut self) -> Vec<(String, Vec3, egui::Align2, Color)> {
@@ -235,12 +286,14 @@ pub struct DebugShapeRenderer {
     dcs: Arc<DeviceContextSwapchain>,
     scope: ConstantBuffer<ScopeAlkDebugShape>,
     scope_line: ConstantBuffer<ScopeAlkDebugShapeLine>,
+    scope_pick: ConstantBuffer<PickbufferScope>,
     vshader: ID3D11VertexShader,
     vshader_line: ID3D11VertexShader,
     gshader_line: ID3D11GeometryShader,
     pshader: ID3D11PixelShader,
     pshader_line: ID3D11PixelShader,
     pshader_line_dotted: ID3D11PixelShader,
+    pshader_pickbuffer: ID3D11PixelShader,
 
     input_layout: ID3D11InputLayout,
 
@@ -325,6 +378,15 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (pshader_line_dotted, _) = shader::load_pshader(&dcs, &data)?;
+
+        let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/pickbuffer.hlsl"),
+            "main",
+            "ps_5_0",
+            "pickbuffer.hlsl",
+        )
+        .unwrap();
+        let (pshader_pickbuffer, _) = shader::load_pshader(&dcs, &data)?;
 
         let mesh_sphere = genmesh::generators::SphereUv::new(32, 32);
         let vertices: Vec<[f32; 4]> = mesh_sphere
@@ -451,6 +513,7 @@ impl DebugShapeRenderer {
         Ok(Self {
             scope: ConstantBuffer::create(dcs.clone(), None)?,
             scope_line: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_pick: ConstantBuffer::create(dcs.clone(), None)?,
             dcs,
             vshader,
             vshader_line,
@@ -458,6 +521,7 @@ impl DebugShapeRenderer {
             pshader,
             pshader_line,
             pshader_line_dotted,
+            pshader_pickbuffer,
             input_layout,
             vb_sphere,
             ib_sphere,
@@ -470,12 +534,49 @@ impl DebugShapeRenderer {
         })
     }
 
-    pub fn draw_all(&self, shapes: &mut DebugShapes) {
-        for (shape, color) in shapes.shape_list() {
-            match shape {
+    fn vs_set_shader(&self, _: DrawMode, v: &ID3D11VertexShader) {
+        unsafe {
+            self.dcs.context().VSSetShader(v, None);
+        }
+    }
+
+    fn ps_set_shader(&self, mode: DrawMode, p: &ID3D11PixelShader) {
+        unsafe {
+            match mode {
+                DrawMode::PickBuffer => self
+                    .dcs
+                    .context()
+                    .PSSetShader(&self.pshader_pickbuffer, None),
+                _ => self.dcs.context().PSSetShader(p, None),
+            }
+        }
+    }
+
+    fn bind_scope_ps<T>(&self, mode: DrawMode, slot: u32, scope: &ConstantBuffer<T>) {
+        match mode {
+            DrawMode::PickBuffer => self.scope_pick.bind(0, TfxShaderStage::Pixel),
+            _ => scope.bind(slot, TfxShaderStage::Pixel),
+        }
+    }
+
+    pub fn draw_all(&self, shapes: &mut DebugShapes, mode: DrawMode) {
+        for &(ref shape, color, _flags, entity) in
+            shapes.shape_iter().filter(|(_, _, flags, _)| match mode {
+                DrawMode::Normal => flags.contains(DebugDrawFlags::DRAW_NORMAL),
+                DrawMode::PickBuffer => flags.contains(DebugDrawFlags::DRAW_PICK),
+                _ => true,
+            })
+        {
+            if let Some(entity) = entity {
+                self.scope_pick
+                    .write(&PickbufferScope::from_entity(entity))
+                    .unwrap();
+            }
+
+            match *shape {
                 DebugShape::Custom {
                     transform,
-                    shape,
+                    ref shape,
                     sides,
                 } => {
                     self.scope
@@ -486,12 +587,12 @@ impl DebugShapeRenderer {
                         .unwrap();
 
                     self.scope.bind(10, TfxShaderStage::Vertex);
-                    self.scope.bind(10, TfxShaderStage::Pixel);
+                    self.bind_scope_ps(mode, 10, &self.scope);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
-                        self.dcs.context().VSSetShader(&self.vshader, None);
-                        self.dcs.context().PSSetShader(&self.pshader, None);
+                        self.vs_set_shader(mode, &self.vshader);
+                        self.ps_set_shader(mode, &self.pshader);
 
                         self.dcs.context().IASetVertexBuffers(
                             0,
@@ -564,12 +665,12 @@ impl DebugShapeRenderer {
                         .unwrap();
 
                     self.scope.bind(10, TfxShaderStage::Vertex);
-                    self.scope.bind(10, TfxShaderStage::Pixel);
+                    self.bind_scope_ps(mode, 10, &self.scope);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
-                        self.dcs.context().VSSetShader(&self.vshader, None);
-                        self.dcs.context().PSSetShader(&self.pshader, None);
+                        self.vs_set_shader(mode, &self.vshader);
+                        self.ps_set_shader(mode, &self.pshader);
 
                         self.dcs.context().IASetVertexBuffers(
                             0,
@@ -642,12 +743,12 @@ impl DebugShapeRenderer {
                         .unwrap();
 
                     self.scope.bind(10, TfxShaderStage::Vertex);
-                    self.scope.bind(10, TfxShaderStage::Pixel);
+                    self.bind_scope_ps(mode, 10, &self.scope);
 
                     unsafe {
                         self.dcs.context().IASetInputLayout(&self.input_layout);
-                        self.dcs.context().VSSetShader(&self.vshader, None);
-                        self.dcs.context().PSSetShader(&self.pshader, None);
+                        self.vs_set_shader(mode, &self.vshader);
+                        self.ps_set_shader(mode, &self.pshader);
 
                         self.dcs.context().IASetVertexBuffers(
                             0,

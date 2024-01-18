@@ -47,13 +47,14 @@ use ecs::components::CubemapVolume;
 use ecs::transform::Transform;
 use egui::epaint::ahash::HashMap;
 use egui::epaint::Hsva;
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
+use render::debug::DebugDrawFlags;
 use render::vertex_layout::InputElement;
 
 use render_globals::SRenderGlobals;
@@ -850,15 +851,15 @@ pub async fn main() -> anyhow::Result<()> {
                         }
 
                         let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
-                        for (_, (ruler, visible)) in
+                        for (e, (ruler, visible)) in
                             map.scene.query::<(&Ruler, Option<&Visible>)>().iter()
                         {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_ruler(&mut debugshapes, ruler, start_time);
+                            draw_ruler(&mut debugshapes, ruler, start_time, Some(e));
                         }
-                        for (_, (transform, sphere, visible)) in map
+                        for (e, (transform, sphere, visible)) in map
                             .scene
                             .query::<(&Transform, &Sphere, Option<&Visible>)>()
                             .iter()
@@ -866,9 +867,9 @@ pub async fn main() -> anyhow::Result<()> {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_sphere(&mut debugshapes, transform, sphere, start_time);
+                            draw_sphere(&mut debugshapes, transform, sphere, start_time, Some(e));
                         }
-                        for (_, (transform, beacon, visible)) in map
+                        for (e, (transform, beacon, visible)) in map
                             .scene
                             .query::<(&Transform, &Beacon, Option<&Visible>)>()
                             .iter()
@@ -876,7 +877,7 @@ pub async fn main() -> anyhow::Result<()> {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_beacon(&mut debugshapes, transform, beacon, start_time);
+                            draw_beacon(&mut debugshapes, transform, beacon, start_time, Some(e));
                         }
                     }
 
@@ -918,8 +919,11 @@ pub async fn main() -> anyhow::Result<()> {
                                 .map(D3D11_MAP_READ)
                             {
                                 let data = m.ptr.add(
-                                    mouse_pos.y as usize * m.row_pitch as usize
-                                        + mouse_pos.x as usize * 4,
+                                    (mouse_pos.y as f64 * window.scale_factor()).round() as usize
+                                        * m.row_pitch as usize
+                                        + (mouse_pos.x as f64 * window.scale_factor()).round()
+                                            as usize
+                                            * 4,
                                 ) as *mut u32;
 
                                 let id = *data;
@@ -1006,7 +1010,12 @@ fn get_rainbow_color(start_time: Instant) -> [u8; 3] {
     .to_srgb()
 }
 
-fn draw_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant) {
+fn draw_ruler(
+    debugshapes: &mut DebugShapes,
+    ruler: &Ruler,
+    start_time: Instant,
+    entity: Option<Entity>,
+) {
     let color = if ruler.rainbow {
         get_rainbow_color(start_time)
     } else {
@@ -1073,12 +1082,27 @@ fn draw_ruler(debugshapes: &mut DebugShapes, ruler: &Ruler, start_time: Instant)
             if current > 0.0 {
                 let pos = ruler.start + ruler.direction() * current;
 
-                debugshapes.sphere(pos, ruler.scale * 0.20, sphere_color);
+                debugshapes.sphere(
+                    pos,
+                    ruler.scale * 0.20,
+                    sphere_color,
+                    DebugDrawFlags::DRAW_NORMAL,
+                    None,
+                );
             }
 
             current += ruler.marker_interval;
         }
     }
+    debugshapes.cube_extents(
+        (ruler.start + ruler.end) / 2.0,
+        Vec3::new(ruler.length() / 2.0, ruler.scale / 2.0, ruler.scale / 2.0),
+        Quat::from_rotation_arc(Vec3::X, (ruler.end - ruler.start).normalize()),
+        color,
+        true,
+        DebugDrawFlags::DRAW_PICK,
+        entity,
+    )
 }
 
 fn draw_sphere(
@@ -1086,6 +1110,7 @@ fn draw_sphere(
     transform: &Transform,
     sphere: &Sphere,
     start_time: Instant,
+    entity: Option<Entity>,
 ) {
     let color = if sphere.rainbow {
         let c = get_rainbow_color(start_time);
@@ -1127,7 +1152,13 @@ fn draw_sphere(
         egui::Align2::CENTER_BOTTOM,
         [255, 255, 255],
     );
-    debugshapes.sphere(transform.translation, transform.radius(), color);
+    debugshapes.sphere(
+        transform.translation,
+        transform.radius(),
+        color,
+        DebugDrawFlags::DRAW_NORMAL | DebugDrawFlags::DRAW_PICK,
+        entity,
+    );
 }
 
 fn draw_beacon(
@@ -1135,18 +1166,36 @@ fn draw_beacon(
     transform: &Transform,
     beacon: &Beacon,
     start_time: Instant,
+    entity: Option<Entity>,
 ) {
-    let color = [
+    const BEAM_HEIGHT: f32 = 5000.0;
+    const BASE_RADIUS: f32 = 0.1;
+    let color: [u8; 4] = [
         beacon.color[0],
         beacon.color[1],
         beacon.color[2],
         (150.0 + (start_time.elapsed().as_secs_f32() * 2.0 * PI * beacon.freq).sin() * 50.0) as u8,
     ];
-    debugshapes.sphere(transform.translation, 0.1, color);
-    debugshapes.line(
-        transform.translation + Vec3::Z * 0.1,
-        transform.translation + Vec3::Z * 5000.0,
+    debugshapes.sphere(
+        transform.translation,
+        BASE_RADIUS,
         color,
+        DebugDrawFlags::DRAW_NORMAL,
+        None,
+    );
+    debugshapes.line(
+        transform.translation + Vec3::Z * BASE_RADIUS,
+        transform.translation + Vec3::Z * BEAM_HEIGHT,
+        color,
+    );
+    debugshapes.cube_extents(
+        transform.translation + Vec3::Z * BEAM_HEIGHT / 2.0,
+        Vec3::new(BASE_RADIUS, BASE_RADIUS, BEAM_HEIGHT / 2.0),
+        Quat::IDENTITY,
+        color,
+        true,
+        DebugDrawFlags::DRAW_PICK,
+        entity,
     );
 }
 

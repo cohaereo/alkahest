@@ -709,7 +709,8 @@ impl Renderer {
                 );
                 self.dcs.context().RSSetState(&self.rasterizer_state);
             }
-            self.debug_shape_renderer.draw_all(&mut shapes);
+            self.debug_shape_renderer
+                .draw_all(&mut shapes, DrawMode::Normal);
         }
 
         // region: Outline rendering
@@ -857,6 +858,31 @@ impl Renderer {
             b.write(&PickbufferScope::from_entity(d.entity)).ok();
 
             self.draw(s, &d, &shader_overrides, DrawMode::PickBuffer, false);
+        }
+
+        if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
+            unsafe {
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[Some(self.gbuffer.pick_buffer.render_target.clone())]),
+                    &self.gbuffer.depth.view,
+                );
+
+                self.dcs
+                    .context()
+                    .OMSetDepthStencilState(&self.gbuffer.depth.state_readonly, 0);
+
+                self.dcs.context().OMSetBlendState(
+                    &self.blend_state_none,
+                    Some(&[1f32, 1., 1., 1.] as _),
+                    0xffffffff,
+                );
+                self.dcs.context().RSSetState(&self.rasterizer_state);
+            }
+
+            self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+            self.debug_shape_renderer
+                .draw_all(&mut shapes, DrawMode::PickBuffer);
+            shapes.clear();
         }
 
         for (t, e) in self.fiddlesticks.read().iter() {
@@ -1646,7 +1672,7 @@ impl Renderer {
     }
 }
 
-#[derive(Default, PartialEq)]
+#[derive(Default, PartialEq, Clone, Copy)]
 pub enum DrawMode {
     #[default]
     Normal,
