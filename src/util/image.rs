@@ -85,4 +85,16 @@ impl Png {
             c => todo!("Unsupported color conversion {c:?} -> RGBA"),
         }
     }
+
+    // /// Converts RGBA data into PNG file data
+    // pub fn from_rgba(data: &[u8], dimensions: (u32, u32)) -> Result<Vec<u8>> {
+    //     let mut result = vec![];
+    //     let mut encoder = png::Encoder::new(&mut result, dimensions.0, dimensions.1);
+    //     encoder.set_color(ColorType::Rgba);
+    //     encoder.set_depth(png::BitDepth::Eight);
+    //     let mut writer = encoder.write_header()?;
+    //     writer.write_image_data(data)?;
+    //     writer.finish()?;
+    //     Ok(result)
+    // }
 }

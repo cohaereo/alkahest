@@ -84,6 +84,7 @@ impl TextureViewer {
             (header.width as u32, header.height as u32),
             DxgiFormat::B8G8R8A8_UNORM,
             dcs.clone(),
+            &format!("Texture Viewer RT for {tag}"),
         )?;
 
         let texture = Texture::load(&dcs, tag)?;

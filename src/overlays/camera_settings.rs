@@ -37,19 +37,34 @@ impl Overlay for CameraPositionOverlay {
             ui.label(format!("X: {}", camera.position.x));
             ui.label(format!("Y: {}", camera.position.y));
             ui.label(format!("Z: {}", camera.position.z));
+
             if ui
-                .button(const_format::formatcp!(
-                    "{} Copy goto command",
-                    ICON_CLIPBOARD
+                .button(format!(
+                    "{} Copy goto command{}",
+                    ICON_CLIPBOARD,
+                    ui.input(|i| i.modifiers.shift)
+                        .then_some(" (+angles)")
+                        .unwrap_or_default()
                 ))
                 .clicked()
             {
-                ui.output_mut(|o| {
-                    o.copied_text = format!(
+                let command = if ui.input(|i| i.modifiers.shift) {
+                    format!(
+                        "goto {} {} {} {} {}",
+                        camera.position.x,
+                        camera.position.y,
+                        camera.position.z,
+                        camera.orientation.x,
+                        camera.orientation.y,
+                    )
+                } else {
+                    format!(
                         "goto {} {} {}",
                         camera.position.x, camera.position.y, camera.position.z
                     )
-                });
+                };
+
+                ui.output_mut(|o| o.copied_text = command);
             }
 
             ui.add_space(4.0);

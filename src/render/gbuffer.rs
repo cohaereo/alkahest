@@ -4,7 +4,7 @@ use anyhow::Context;
 use std::mem::transmute;
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
-    D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
+    WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
 };
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
@@ -34,32 +34,67 @@ pub struct GBuffer {
 impl GBuffer {
     pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         Ok(Self {
-            rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone())
+            rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone(), "RT0")
                 .context("RT0")?,
-            rt1: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, dcs.clone())
+            rt1: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, dcs.clone(), "RT1")
                 .context("RT1")?,
-            rt1_clone: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, dcs.clone())
-                .context("RT1_Clone")?,
-            rt2: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
+            rt1_clone: RenderTarget::create(
+                size,
+                DxgiFormat::R10G10B10A2_UNORM,
+                dcs.clone(),
+                "RT1_Clone",
+            )
+            .context("RT1_Clone")?,
+            rt2: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone(), "RT2")
                 .context("RT2")?,
-            rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone())
+            rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone(), "RT3")
                 .context("RT3")?,
 
             outline_depth: DepthState::create(size, &dcs.device).context("Outline Depth")?,
-            pick_buffer: RenderTarget::create(size, DxgiFormat::R32_UINT, dcs.clone())
-                .context("Entity_Pickbuffer")?,
-            pick_buffer_staging: CpuStagingBuffer::create(size, DxgiFormat::R32_UINT, dcs.clone())
-                .context("Entity_Pickbuffer_Staging")?,
+            pick_buffer: RenderTarget::create(
+                size,
+                DxgiFormat::R32_UINT,
+                dcs.clone(),
+                "Entity_Pickbuffer",
+            )
+            .context("Entity_Pickbuffer")?,
+            pick_buffer_staging: CpuStagingBuffer::create(
+                size,
+                DxgiFormat::R32_UINT,
+                dcs.clone(),
+                "Entity_Pickbuffer_Staging",
+            )
+            .context("Entity_Pickbuffer_Staging")?,
 
-            light_diffuse: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
-                .context("Light_Diffuse")?,
-            light_specular: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
-                .context("Light_Specular")?,
+            light_diffuse: RenderTarget::create(
+                size,
+                DxgiFormat::R16G16B16A16_FLOAT,
+                dcs.clone(),
+                "Light_Diffuse",
+            )
+            .context("Light_Diffuse")?,
+            light_specular: RenderTarget::create(
+                size,
+                DxgiFormat::R16G16B16A16_FLOAT,
+                dcs.clone(),
+                "Light_Specular",
+            )
+            .context("Light_Specular")?,
 
-            staging: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
-                .context("Staging")?,
-            staging_clone: RenderTarget::create(size, DxgiFormat::R16G16B16A16_FLOAT, dcs.clone())
-                .context("Staging_Clone")?,
+            staging: RenderTarget::create(
+                size,
+                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                dcs.clone(),
+                "Staging",
+            )
+            .context("Staging")?,
+            staging_clone: RenderTarget::create(
+                size,
+                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                dcs.clone(),
+                "Staging_Clone",
+            )
+            .context("Staging_Clone")?,
             depth: DepthState::create(size, &dcs.device).context("Depth")?,
             dcs,
         })
@@ -111,6 +146,8 @@ pub struct RenderTarget {
     pub render_target: ID3D11RenderTargetView,
     pub view: ID3D11ShaderResourceView,
     pub format: DxgiFormat,
+    pub name: String,
+
     dcs: Arc<DeviceContextSwapchain>,
 }
 
@@ -119,6 +156,7 @@ impl RenderTarget {
         size: (u32, u32),
         format: DxgiFormat,
         dcs: Arc<DeviceContextSwapchain>,
+        name: &str,
     ) -> anyhow::Result<Self> {
         unsafe {
             let texture = dcs
@@ -164,11 +202,21 @@ impl RenderTarget {
                 )
                 .context("Failed to create SRV")?;
 
+            let name = format!("{name}\0");
+            texture
+                .SetPrivateData(
+                    &WKPDID_D3DDebugObjectName,
+                    name.len() as u32,
+                    Some(name.as_ptr() as _),
+                )
+                .ok();
+
             Ok(Self {
                 texture,
                 render_target,
                 view,
                 format,
+                name: name.to_string(),
                 dcs,
             })
         }
@@ -191,7 +239,7 @@ impl RenderTarget {
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
-        *self = Self::create(new_size, self.format, self.dcs.clone())?;
+        *self = Self::create(new_size, self.format, self.dcs.clone(), &self.name)?;
         Ok(())
     }
 }
@@ -199,6 +247,7 @@ impl RenderTarget {
 pub struct CpuStagingBuffer {
     pub texture: ID3D11Texture2D,
     pub format: DxgiFormat,
+    pub name: String,
     dcs: Arc<DeviceContextSwapchain>,
 }
 
@@ -207,6 +256,7 @@ impl CpuStagingBuffer {
         size: (u32, u32),
         format: DxgiFormat,
         dcs: Arc<DeviceContextSwapchain>,
+        name: &str,
     ) -> anyhow::Result<Self> {
         unsafe {
             let texture = dcs
@@ -231,16 +281,26 @@ impl CpuStagingBuffer {
                 )
                 .context("Failed to create staging buffer")?;
 
+            let name = format!("{name}\0");
+            texture
+                .SetPrivateData(
+                    &WKPDID_D3DDebugObjectName,
+                    name.len() as u32,
+                    Some(name.as_ptr() as _),
+                )
+                .ok();
+
             Ok(Self {
                 texture,
                 format,
+                name: name.to_string(),
                 dcs,
             })
         }
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
-        *self = Self::create(new_size, self.format, self.dcs.clone())?;
+        *self = Self::create(new_size, self.format, self.dcs.clone(), &self.name)?;
         Ok(())
     }
 
@@ -254,6 +314,8 @@ impl CpuStagingBuffer {
 
         Ok(BufferMapGuard {
             ptr: ptr.pData as _,
+            row_pitch: ptr.RowPitch,
+            depth_pitch: ptr.DepthPitch,
             resource: unsafe { transmute(&self.texture as *const ID3D11Texture2D as *const _) },
             dcs: self.dcs.clone(),
         })

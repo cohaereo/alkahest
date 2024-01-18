@@ -145,6 +145,8 @@ impl<T> ConstantBuffer<T> {
 
         Ok(BufferMapGuard {
             ptr: ptr.pData as _,
+            row_pitch: ptr.RowPitch,
+            depth_pitch: ptr.DepthPitch,
             resource: unsafe { transmute(&self.buffer as *const ID3D11Buffer as *const _) },
             dcs: self.dcs.clone(),
         })
@@ -171,6 +173,8 @@ impl<T> ConstantBuffer<T> {
 
 pub struct BufferMapGuard<T: Sized> {
     pub ptr: *mut T,
+    pub row_pitch: u32,
+    pub depth_pitch: u32,
     pub(super) resource: *const ID3D11Resource,
     pub(super) dcs: Arc<DeviceContextSwapchain>,
 }

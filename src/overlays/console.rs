@@ -21,7 +21,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec2, Vec3, Vec4};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -208,8 +208,8 @@ fn execute_command(
 ) {
     match command.to_lowercase().as_str() {
         "goto" => {
-            if args.len() != 3 {
-                error!("Too few/many arguments, expected 3, got {}", args.len());
+            if args.len() < 3 {
+                error!("Too few arguments, expected 3/5, got {}", args.len());
                 return;
             }
 
@@ -229,6 +229,25 @@ fn execute_command(
                 }
                 Err(e) => {
                     error!("Invalid coordinates: {e}");
+                }
+            }
+
+            if args.len() >= 5 {
+                let parsed_ang: anyhow::Result<Vec2> = (|| {
+                    let x = str::parse(args[3])?;
+                    let y = str::parse(args[4])?;
+
+                    Ok(Vec2::new(x, y))
+                })();
+
+                match parsed_ang {
+                    Ok(new_ang) => {
+                        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                        camera.orientation = new_ang;
+                    }
+                    Err(e) => {
+                        error!("Invalid angles: {e}");
+                    }
                 }
             }
         }
