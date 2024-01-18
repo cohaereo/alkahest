@@ -1,8 +1,0 @@
-.vscode
-/target
-
-# QuickTag
-cache.bin
-oo2core_3_win64.dll
-oo2core_9_win64.dll
-package_cache.json

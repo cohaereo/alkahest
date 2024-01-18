@@ -1,8 +1,9 @@
 **/target
-/.vscode
+**/.idea
+**/.vscode
+
 imgui.ini
 *.tag
 package_cache.json
 config.yml
-**/.idea
 panic.log
