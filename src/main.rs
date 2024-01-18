@@ -911,19 +911,18 @@ pub async fn main() -> anyhow::Result<()> {
                         && !resources.get::<SelectedEntity>().unwrap().1
                     {
                         if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                            let window_size = window.inner_size();
                             if let Ok(m) = renderer
                                 .read()
                                 .gbuffer
                                 .pick_buffer_staging
                                 .map(D3D11_MAP_READ)
                             {
-                                let data = m.ptr as *mut u32;
+                                let data = m.ptr.add(
+                                    mouse_pos.y as usize * m.row_pitch as usize
+                                        + mouse_pos.x as usize * 4,
+                                ) as *mut u32;
 
-                                let offset = mouse_pos.y as usize * window_size.width as usize
-                                    + mouse_pos.x as usize;
-
-                                let id = *data.add(offset);
+                                let id = *data;
                                 let maps = resources.get::<MapDataList>().unwrap();
 
                                 if let Some((_, _, map)) = maps.current_map() {
@@ -1234,10 +1233,10 @@ fn load_render_globals(renderer: &Renderer) {
     info!("Loaded deferred_shading_no_atm");
 }
 
-fn buffer_size(tag: TagHash) -> usize {
-    let eeee = package_manager().get_entry(tag).unwrap().reference;
-    package_manager().read_tag(TagHash(eeee)).unwrap().len()
-}
+// fn buffer_size(tag: TagHash) -> usize {
+//     let eeee = package_manager().get_entry(tag).unwrap().reference;
+//     package_manager().read_tag(TagHash(eeee)).unwrap().len()
+// }
 
 fn load_shaders(renderer: &Renderer, m: &Technique) {
     let mut render_data = renderer.render_data.data_mut();

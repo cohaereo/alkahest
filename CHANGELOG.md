@@ -59,3 +59,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix Utility Visibility by @Froggy618157725 in [#10](https://github.com/cohaereo/alkahest/pull/10)
 - Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
 - Fixed shader warnings by @cohaereo
+- Fix pickbuffer not respecting d3d mapped row pitch by @cohaereo
