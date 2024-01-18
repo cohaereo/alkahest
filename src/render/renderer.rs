@@ -1242,13 +1242,12 @@ impl Renderer {
             let render_settings = resources.get::<RenderSettings>().unwrap();
             *self.light_mul.write() = render_settings.light_mul;
 
-            let view = Mat4::from_translation(camera.position);
             let compositor_options = CompositorOptions {
                 viewport_proj_view_matrix_inv: *self.camera_svp_inv.read(),
                 proj_view_matrix_inv: camera.projection_view_matrix_inv,
                 proj_view_matrix: camera.projection_view_matrix,
                 proj_matrix: camera.projection_matrix,
-                view_matrix: view,
+                view_matrix: camera.view_matrix,
                 viewport_size: UVec2::from(self.window_size).as_vec2(),
                 camera_pos: camera.position.extend(1.0),
                 camera_dir: camera.front.extend(1.0),

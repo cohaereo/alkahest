@@ -48,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Changed
 
 - Spruce up Camera Controls by @Froggy618157725 in [#8](https://github.com/cohaereo/alkahest/pull/8)
+- Changed the matcap texture to one with better lighting by @cohaereo
 
 ### Removed
 
@@ -61,3 +62,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fixed Sphere Icon in Inspector Panel by @Froggy618167725 in [#12](https://github.com/cohaereo/alkahest/pull/12)
 - Fixed shader warnings by @cohaereo
 - Fix pickbuffer not respecting d3d mapped row pitch by @cohaereo
+- Fix cubemap view not rotating by @cohaereo

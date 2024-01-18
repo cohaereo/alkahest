@@ -389,10 +389,11 @@ float4 PShader(VSOutput input) : SV_Target {
         }
         case 13: { // Matcap
             float3 normal = DecodeNormal(rt1.xyz);
+            float3 viewNormal = mul(normal, transpose((float3x3)viewMatrix));
 
             float2 muv = float2(
-                atan2(normal.y, normal.x) / (2 * 3.14159265) + 0.5,
-                acos(normal.z) / 3.14159265
+                atan2(viewNormal.y, viewNormal.x) / (2 * 3.14159265) + 0.5,
+                acos(viewNormal.z) / 3.14159265
             );
 
             float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
@@ -423,10 +424,11 @@ float4 PShader(VSOutput input) : SV_Target {
             float3 emission_ao = rt2.y * 2.0 - 1.0;
             if(drawLights == 0) {
                 float3 normal = DecodeNormal(rt1.xyz);
+                float3 viewNormal = mul(normal, transpose((float3x3)viewMatrix));
 
                 float2 muv = float2(
-                    atan2(normal.y, normal.x) / (2 * 3.14159265) + 0.5,
-                    acos(normal.z) / 3.14159265
+                    atan2(viewNormal.y, viewNormal.x) / (2 * 3.14159265) + 0.5,
+                    acos(viewNormal.z) / 3.14159265
                 );
 
                 float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));

@@ -523,7 +523,11 @@ impl Texture {
             } else {
                 &png.data
             },
-            DxgiFormat::R8G8B8A8_UNORM,
+            match png.bit_depth {
+                png::BitDepth::Eight => DxgiFormat::R8G8B8A8_UNORM,
+                png::BitDepth::Sixteen => DxgiFormat::R16G16B16A16_UNORM,
+                u => todo!("Unsupported bit depth {u:?}"),
+            },
             name,
         )
     }
