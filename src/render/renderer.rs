@@ -6,7 +6,7 @@ use crate::map::{MapDataList, SLight, SShadowingLight};
 use crate::overlays::camera_settings::CurrentCubemap;
 use crate::types::AABB;
 use crate::util::RwLock;
-use glam::{Mat4, Quat, Vec3, Vec4};
+use glam::{Mat4, Quat, UVec2, Vec3, Vec4};
 use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -687,6 +687,7 @@ impl Renderer {
         // Render debug elements after final to prevent color space weirdness
 
         self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+        self.scope_alk_composite.bind(0, TfxShaderStage::Geometry);
         self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
         if let Some(mut shapes) = resources.get_mut::<DebugShapes>() {
             unsafe {
@@ -1248,6 +1249,7 @@ impl Renderer {
                 proj_view_matrix: camera.projection_view_matrix,
                 proj_matrix: camera.projection_matrix,
                 view_matrix: view,
+                viewport_size: UVec2::from(self.window_size).as_vec2(),
                 camera_pos: camera.position.extend(1.0),
                 camera_dir: camera.front.extend(1.0),
                 time: self.start_time.elapsed().as_secs_f32(),

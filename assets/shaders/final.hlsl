@@ -6,12 +6,13 @@ cbuffer CompositeOptions : register(b0) {
     float4x4 viewMatrix;
     float4 cameraPos;
     float4 cameraDir;
+    float4 globalLightDir;
+    float4 globalLightColor;
+    float2 viewportSize;
+    float specularScale;
     float time;
     uint tex_i;
     uint drawLights;
-    float4 globalLightDir;
-    float4 globalLightColor;
-    float specularScale;
     bool fxaaEnabled;
 };
 

@@ -1,5 +1,5 @@
 use const_format::concatcp;
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec2, Vec3, Vec4};
 use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
@@ -507,12 +507,13 @@ pub struct CompositorOptions {
     pub view_matrix: Mat4,
     pub camera_pos: Vec4,
     pub camera_dir: Vec4,
+    pub global_light_dir: Vec4,
+    pub global_light_color: Vec4,
+    pub viewport_size: Vec2,
+    pub specular_scale: f32,
     pub time: f32,
     pub mode: u32,
     pub draw_lights: u32,
-    pub global_light_dir: Vec4,
-    pub global_light_color: Vec4,
-    pub specular_scale: f32,
     pub fxaa_enabled: u32,
 }
 

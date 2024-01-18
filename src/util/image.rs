@@ -5,12 +5,13 @@ use std::{
 
 use anyhow::Result;
 use itertools::Itertools;
-use png::ColorType;
+use png::{BitDepth, ColorType};
 
 pub struct Png {
     pub data: Arc<[u8]>,
     pub dimensions: [usize; 2],
     pub color_type: ColorType,
+    pub bit_depth: BitDepth,
 }
 
 impl Png {
@@ -33,6 +34,7 @@ impl Png {
             data: buf.into(),
             dimensions: [frame_info.width as usize, frame_info.height as usize],
             color_type: frame_info.color_type,
+            bit_depth: frame_info.bit_depth,
         })
     }
 
@@ -41,43 +43,59 @@ impl Png {
             data: self.data.to_vec().into(),
             dimensions: self.dimensions,
             color_type: self.color_type,
+            bit_depth: self.bit_depth,
         };
 
         new_png.into_rgba()
     }
 
     pub fn into_rgba(self) -> Result<Self> {
+        match self.bit_depth {
+            BitDepth::Eight => self.into_rgba_impl::<u8>(),
+            BitDepth::Sixteen => self.into_rgba_impl::<u16>(),
+            u => todo!("into_rgba: Unsupported PNG bit depth {u:?}"),
+        }
+    }
+
+    fn into_rgba_impl<T: num::Bounded + num::ToPrimitive + bytemuck::Pod + Sized>(
+        self,
+    ) -> Result<Self> {
+        let num_size = std::mem::size_of::<T>();
+        let num_max = T::max_value();
+
         match self.color_type {
             ColorType::Rgb => {
                 let mut new_self = self;
                 anyhow::ensure!(
-                    new_self.data.len() % 3 == 0,
-                    "Input data length must be a multiple of 3"
+                    new_self.data.len() % (3 * num_size) == 0,
+                    "Input data length must be a multiple of {} (3 * {})",
+                    3 * num_size,
+                    num_size
                 );
 
-                let new_data = new_self
-                    .data
-                    .chunks(3) // Split into RGB triplets
+                let new_data = bytemuck::cast_slice::<u8, T>(&new_self.data)
+                    .chunks_exact(3) // Split into RGB triplets
                     .flat_map(|rgb_triplet| {
                         let [r, g, b] = [rgb_triplet[0], rgb_triplet[1], rgb_triplet[2]];
-                        vec![r, g, b, 255]
+                        [r, g, b, num_max]
                     })
                     .collect_vec();
 
-                new_self.data = new_data.into();
+                // TODO(cohae): Another conversion seems excessive
+                new_self.data = bytemuck::cast_slice::<T, u8>(&new_data).into();
 
                 Ok(new_self)
             }
             ColorType::Grayscale => {
                 let mut new_self = self;
 
-                let new_data = new_self
-                    .data
+                let new_data = bytemuck::cast_slice::<u8, T>(&new_self.data)
                     .iter()
-                    .flat_map(|&luminance| vec![luminance, luminance, luminance, 255])
+                    .flat_map(|&luminance| [luminance, luminance, luminance, num_max])
                     .collect_vec();
 
-                new_self.data = new_data.into();
+                // TODO(cohae): Another conversion seems excessive
+                new_self.data = bytemuck::cast_slice::<T, u8>(&new_data).into();
 
                 Ok(new_self)
             }

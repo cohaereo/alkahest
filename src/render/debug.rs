@@ -12,6 +12,7 @@ use genmesh::Triangulate;
 use glam::Vec4;
 use glam::{Mat4, Quat, Vec3};
 use itertools::Itertools;
+use windows::Win32::Graphics::Direct3D11::ID3D11GeometryShader;
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
     Direct3D11::{
@@ -221,17 +222,11 @@ impl DebugShapes {
 
     /// Returns the drawlist. The internal list is cleared after this call
     pub fn shape_list(&mut self) -> Vec<(DebugShape, Color)> {
-        let v = self.shapes.clone();
-        self.shapes.clear();
-
-        v
+        std::mem::take(&mut self.shapes)
     }
 
     pub fn label_list(&mut self) -> Vec<(String, Vec3, egui::Align2, Color)> {
-        let v = self.labels.clone();
-        self.labels.clear();
-
-        v
+        std::mem::take(&mut self.labels)
     }
 }
 
@@ -242,6 +237,7 @@ pub struct DebugShapeRenderer {
     scope_line: ConstantBuffer<ScopeAlkDebugShapeLine>,
     vshader: ID3D11VertexShader,
     vshader_line: ID3D11VertexShader,
+    gshader_line: ID3D11GeometryShader,
     pshader: ID3D11PixelShader,
     pshader_line: ID3D11PixelShader,
     pshader_line_dotted: ID3D11PixelShader,
@@ -295,6 +291,15 @@ impl DebugShapeRenderer {
         .unwrap();
 
         let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/debug_line.hlsl"),
+            "GShader",
+            "gs_5_0",
+            "debug_line.hlsl",
+        )
+        .unwrap();
+        let gshader_line = shader::load_gshader(&dcs, &data)?;
+
+        let data = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug.hlsl"),
             "PShader",
             "ps_5_0",
@@ -321,7 +326,7 @@ impl DebugShapeRenderer {
         .unwrap();
         let (pshader_line_dotted, _) = shader::load_pshader(&dcs, &data)?;
 
-        let mesh_sphere = genmesh::generators::SphereUv::new(16, 16);
+        let mesh_sphere = genmesh::generators::SphereUv::new(32, 32);
         let vertices: Vec<[f32; 4]> = mesh_sphere
             .shared_vertex_iter()
             .map(|v| {
@@ -449,6 +454,7 @@ impl DebugShapeRenderer {
             dcs,
             vshader,
             vshader_line,
+            gshader_line,
             pshader,
             pshader_line,
             pshader_line_dotted,
@@ -672,7 +678,7 @@ impl DebugShapeRenderer {
                     dotted,
                     dot_scale,
                 } => {
-                    self.draw_line(start, end, color, dotted, dot_scale);
+                    self.draw_line(start, end, color, 2.0, dotted, dot_scale);
                 }
                 DebugShape::Circle {
                     center,
@@ -692,29 +698,47 @@ impl DebugShapeRenderer {
                         let (s, c) = (2.0 * t as f32 * PI / edges as f32).sin_cos();
                         next = va * c + vb * s;
 
-                        self.draw_line(center + r * prev, center + r * next, color, false, 0.0);
+                        self.draw_line(
+                            center + r * prev,
+                            center + r * next,
+                            color,
+                            2.0,
+                            false,
+                            0.0,
+                        );
                     }
-                    self.draw_line(center + r * next, center + r * va, color, false, 0.0);
+                    self.draw_line(center + r * next, center + r * va, color, 2.0, false, 0.0);
                 }
             }
         }
     }
 
-    fn draw_line(&self, start: Vec3, end: Vec3, color: Color, dotted: bool, dot_scale: f32) {
+    fn draw_line(
+        &self,
+        start: Vec3,
+        end: Vec3,
+        color: Color,
+        width: f32,
+        dotted: bool,
+        dot_scale: f32,
+    ) {
         self.scope_line
             .write(&ScopeAlkDebugShapeLine {
                 start: start.extend(1.0),
                 end: end.extend(1.0),
                 color,
+                width,
                 dot_scale,
             })
             .unwrap();
 
         self.scope_line.bind(10, TfxShaderStage::Vertex);
+        self.scope_line.bind(10, TfxShaderStage::Geometry);
         self.scope_line.bind(10, TfxShaderStage::Pixel);
 
         unsafe {
             self.dcs.context().VSSetShader(&self.vshader_line, None);
+            self.dcs.context().GSSetShader(&self.gshader_line, None);
             if dotted {
                 self.dcs
                     .context()
@@ -728,6 +752,7 @@ impl DebugShapeRenderer {
                 .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
             self.dcs.context().Draw(2, 0);
+            self.dcs.context().GSSetShader(None, None);
         }
     }
 }
@@ -743,6 +768,7 @@ pub struct ScopeAlkDebugShapeLine {
     pub start: Vec4,
     pub end: Vec4,
     pub color: Color,
+    pub width: f32,
     pub dot_scale: f32,
 }
 

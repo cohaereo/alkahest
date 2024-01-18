@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Use `fs-err` wrapper for more descriptive filesystem error messages by @cohaereo in [#14](https://github.com/cohaereo/alkahest/pull/14)
 - Print version information in console by @cohaereo
 - Add a window and taskbar icon by @cohaereo
+- Variable width line rendering by @cohaereo
 
 ### Changed
 

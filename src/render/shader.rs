@@ -3,6 +3,7 @@ use crate::render::vertex_layout::InputElement;
 use binrw::BinReaderExt;
 use itertools::Itertools;
 use std::io::Cursor;
+use windows::Win32::Graphics::Direct3D11::ID3D11GeometryShader;
 use windows::{
     core::PCSTR,
     Win32::Graphics::{
@@ -20,6 +21,8 @@ pub fn compile_hlsl(
     target: &str,
     filename: &str,
 ) -> Result<Vec<u8>, String> {
+    debug!("Compiling shader '{filename}:{entrypoint}' for target {target}...");
+
     let mut shader = None;
     let mut errors = None;
 
@@ -115,4 +118,11 @@ pub fn load_pshader(
         unsafe { dcs.device.CreatePixelShader(data, None)? },
         base_layout,
     ))
+}
+
+pub fn load_gshader(
+    dcs: &DeviceContextSwapchain,
+    data: &[u8],
+) -> anyhow::Result<ID3D11GeometryShader> {
+    Ok(unsafe { dcs.device.CreateGeometryShader(data, None)? })
 }
