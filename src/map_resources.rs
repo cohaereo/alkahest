@@ -5,7 +5,7 @@ use crate::icons::{
     ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
-use crate::render::debug::{CustomDebugShape, DebugShapes};
+use crate::render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes};
 use crate::structure::ExtendedHash;
 use crate::structure::ResourcePointer;
 use crate::types::AABB;
@@ -181,18 +181,24 @@ impl MapResource {
                 transform.rotation,
                 darken_color(self.debug_color()),
                 false,
+                DebugDrawFlags::DRAW_NORMAL,
+                None,
             ),
             MapResource::CubemapVolume(_, bounds) => debug_shapes.cube_aabb(
                 *bounds,
                 transform.rotation,
                 darken_color(self.debug_color()),
                 true,
+                DebugDrawFlags::DRAW_NORMAL,
+                None,
             ),
             MapResource::Decoration(bounds, _) => debug_shapes.cube_aabb(
                 *bounds,
                 transform.rotation,
                 darken_color(self.debug_color()),
                 false,
+                DebugDrawFlags::DRAW_NORMAL,
+                None,
             ),
             MapResource::ShadowingLight(_) => debug_shapes.line_orientation(
                 transform.translation,
