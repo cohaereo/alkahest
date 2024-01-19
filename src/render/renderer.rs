@@ -498,7 +498,7 @@ impl Renderer {
         }
         // endregion
 
-        self.gbuffer.depth.copy_depth(self.dcs.context());
+        self.gbuffer.depth.copy_depth();
 
         self.run_deferred_shading(
             resources,
@@ -913,6 +913,9 @@ impl Renderer {
         self.gbuffer
             .pick_buffer
             .copy_to_staging(&self.gbuffer.pick_buffer_staging);
+        self.gbuffer
+            .depth
+            .copy_to_staging(&self.gbuffer.depth_staging);
 
         // endregion
 

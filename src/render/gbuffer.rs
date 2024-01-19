@@ -28,6 +28,7 @@ pub struct GBuffer {
     pub staging: RenderTarget,
     pub staging_clone: RenderTarget,
     pub depth: DepthState,
+    pub depth_staging: CpuStagingBuffer,
     dcs: Arc<DeviceContextSwapchain>,
 }
 
@@ -50,7 +51,7 @@ impl GBuffer {
             rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, dcs.clone(), "RT3")
                 .context("RT3")?,
 
-            outline_depth: DepthState::create(size, &dcs.device).context("Outline Depth")?,
+            outline_depth: DepthState::create(size, dcs.clone()).context("Outline Depth")?,
             pick_buffer: RenderTarget::create(
                 size,
                 DxgiFormat::R32_UINT,
@@ -95,7 +96,14 @@ impl GBuffer {
                 "Staging_Clone",
             )
             .context("Staging_Clone")?,
-            depth: DepthState::create(size, &dcs.device).context("Depth")?,
+            depth: DepthState::create(size, dcs.clone()).context("Depth")?,
+            depth_staging: CpuStagingBuffer::create(
+                size,
+                DxgiFormat::R32_TYPELESS,
+                dcs.clone(),
+                "Depth_Buffer_Staging",
+            )
+            .context("Depth_Buffer_Staging")?,
             dcs,
         })
     }
@@ -112,7 +120,7 @@ impl GBuffer {
         self.rt3.resize(new_size).context("RT3")?;
 
         self.outline_depth
-            .resize(new_size, &self.dcs.device)
+            .resize(new_size)
             .context("Outline Depth")?;
 
         self.pick_buffer
@@ -134,7 +142,7 @@ impl GBuffer {
             .resize(new_size)
             .context("Staging_Clone")?;
         self.depth
-            .resize(new_size, &self.dcs.device)
+            .resize(new_size)
             .context("Depth")?;
 
         Ok(())
@@ -149,6 +157,18 @@ impl GBuffer {
             }
         } else {
             u32::MAX
+        }
+    }
+
+    pub fn depth_buffer_read(&self, x: usize, y: usize) -> f32 {
+        if let Ok(m) = self.depth_staging.map(D3D11_MAP_READ) {
+            unsafe {
+                let data = m.ptr.add(y * m.row_pitch as usize + x * size_of::<f32>()) as *mut f32;
+
+                *data
+            }
+        } else {
+            0.0
         }
     }
 }
@@ -344,12 +364,13 @@ pub struct DepthState {
 
     pub texture_copy: ID3D11Texture2D,
     pub texture_copy_view: ID3D11ShaderResourceView,
+    dcs: Arc<DeviceContextSwapchain>,
 }
 
 impl DepthState {
-    pub fn create(size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<Self> {
+    pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         let texture = unsafe {
-            device
+            dcs.device
                 .CreateTexture2D(
                     &D3D11_TEXTURE2D_DESC {
                         Width: size.0,
@@ -372,7 +393,7 @@ impl DepthState {
         };
 
         let state = unsafe {
-            device
+            dcs.device
                 .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
                     DepthEnable: true.into(),
                     DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ALL,
@@ -397,7 +418,7 @@ impl DepthState {
         };
 
         let state_readonly = unsafe {
-            device
+            dcs.device
                 .CreateDepthStencilState(&D3D11_DEPTH_STENCIL_DESC {
                     DepthEnable: true.into(),
                     DepthWriteMask: D3D11_DEPTH_WRITE_MASK_ZERO,
@@ -422,7 +443,7 @@ impl DepthState {
         };
 
         let view = unsafe {
-            device
+            dcs.device
                 .CreateDepthStencilView(
                     &texture,
                     Some(&D3D11_DEPTH_STENCIL_VIEW_DESC {
@@ -438,7 +459,7 @@ impl DepthState {
         };
 
         let texture_view = unsafe {
-            device.CreateShaderResourceView(
+            dcs.device.CreateShaderResourceView(
                 &texture,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
                     Format: DXGI_FORMAT_R32_FLOAT,
@@ -454,7 +475,7 @@ impl DepthState {
         };
 
         let texture_copy = unsafe {
-            device
+            dcs.device
                 .CreateTexture2D(
                     &D3D11_TEXTURE2D_DESC {
                         Width: size.0,
@@ -477,7 +498,7 @@ impl DepthState {
         };
 
         let texture_copy_view = unsafe {
-            device.CreateShaderResourceView(
+            dcs.device.CreateShaderResourceView(
                 &texture_copy,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
                     Format: DXGI_FORMAT_R32_FLOAT,
@@ -500,18 +521,27 @@ impl DepthState {
             texture_view,
             texture_copy,
             texture_copy_view,
+            dcs,
         })
     }
 
     /// Copies the depth texture to texture_copy
-    pub fn copy_depth(&self, context: &ID3D11DeviceContext) {
+    pub fn copy_depth(&self) {
         unsafe {
-            context.CopyResource(&self.texture_copy, &self.texture);
+            self.dcs.context().CopyResource(&self.texture_copy, &self.texture);
         }
     }
 
-    pub fn resize(&mut self, new_size: (u32, u32), device: &ID3D11Device) -> anyhow::Result<()> {
-        *self = Self::create(new_size, device)?;
+    pub fn copy_to_staging(&self, dest: &CpuStagingBuffer) {
+        unsafe {
+            self.dcs
+                .context()
+                .CopyResource(&dest.texture, &self.texture)
+        }
+    }
+
+    pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
+        *self = Self::create(new_size, self.dcs.clone())?;
         Ok(())
     }
 }
