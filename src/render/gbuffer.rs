@@ -1,7 +1,9 @@
 use crate::dxgi::DxgiFormat;
 use crate::render::DeviceContextSwapchain;
+use crate::FpsCamera;
 use anyhow::Context;
-use std::mem::{transmute, size_of};
+use glam::{Vec3, Vec4, Vec4Swizzles};
+use std::mem::{size_of, transmute};
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
@@ -29,7 +31,7 @@ pub struct GBuffer {
     pub staging_clone: RenderTarget,
     pub depth: DepthState,
     pub depth_staging: CpuStagingBuffer,
-    dcs: Arc<DeviceContextSwapchain>,
+    size: (u32, u32),
 }
 
 impl GBuffer {
@@ -104,7 +106,7 @@ impl GBuffer {
                 "Depth_Buffer_Staging",
             )
             .context("Depth_Buffer_Staging")?,
-            dcs,
+            size,
         })
     }
 
@@ -141,10 +143,9 @@ impl GBuffer {
         self.staging_clone
             .resize(new_size)
             .context("Staging_Clone")?;
-        self.depth
-            .resize(new_size)
-            .context("Depth")?;
-
+        self.depth.resize(new_size).context("Depth")?;
+        self.depth_staging.resize(new_size).context("Depth")?;
+        self.size = new_size;
         Ok(())
     }
 
@@ -170,6 +171,17 @@ impl GBuffer {
         } else {
             0.0
         }
+    }
+    pub fn depth_buffer_read_center(&self) -> f32 {
+        self.depth_buffer_read((self.size.0 / 2) as usize, (self.size.1 / 2) as usize)
+    }
+
+    pub fn depth_buffer_distance_pos_center(&self, camera: &FpsCamera) -> (f32, Vec3) {
+        let raw_depth = self.depth_buffer_read_center();
+        let pos = camera.projection_view_matrix_inv * Vec4::new(0.0, 0.0, raw_depth, 1.0);
+        let pos = pos.xyz() / pos.w;
+        let distance = (pos - camera.position).length();
+        (distance, pos)
     }
 }
 
@@ -528,7 +540,9 @@ impl DepthState {
     /// Copies the depth texture to texture_copy
     pub fn copy_depth(&self) {
         unsafe {
-            self.dcs.context().CopyResource(&self.texture_copy, &self.texture);
+            self.dcs
+                .context()
+                .CopyResource(&self.texture_copy, &self.texture);
         }
     }
 

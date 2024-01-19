@@ -39,8 +39,10 @@ pub fn prettify_distance(meters: f32) -> String {
         format!("{:.2} cm", meters * 100.0)
     } else if meters < 1000.0 {
         format!("{:.2} m", meters)
-    } else {
+    } else if meters.is_finite() {
         format!("{:.2} km", meters / 1000.0)
+    } else {
+        format!("{:.2}", meters)
     }
 }
 
