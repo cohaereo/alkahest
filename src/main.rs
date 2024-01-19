@@ -912,34 +912,22 @@ pub async fn main() -> anyhow::Result<()> {
                         && !resources.get::<SelectedEntity>().unwrap().1
                     {
                         if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                            if let Ok(m) = renderer
-                                .read()
-                                .gbuffer
-                                .pick_buffer_staging
-                                .map(D3D11_MAP_READ)
-                            {
-                                let data = m.ptr.add(
-                                    (mouse_pos.y as f64 * window.scale_factor()).round() as usize
-                                        * m.row_pitch as usize
-                                        + (mouse_pos.x as f64 * window.scale_factor()).round()
-                                            as usize
-                                            * 4,
-                                ) as *mut u32;
+                            let id = renderer.read().gbuffer.pick_buffer_read(
+                                (mouse_pos.x as f64 * window.scale_factor()).round() as usize,
+                                (mouse_pos.y as f64 * window.scale_factor()).round() as usize,
+                            );
+                            let maps = resources.get::<MapDataList>().unwrap();
 
-                                let id = *data;
-                                let maps = resources.get::<MapDataList>().unwrap();
-
-                                if let Some((_, _, map)) = maps.current_map() {
-                                    if id != u32::MAX {
-                                        *resources.get_mut::<SelectedEntity>().unwrap() =
-                                            SelectedEntity(
-                                                Some(map.scene.find_entity_from_id(id)),
-                                                true,
-                                            );
-                                    } else {
-                                        *resources.get_mut::<SelectedEntity>().unwrap() =
-                                            SelectedEntity(None, true);
-                                    }
+                            if let Some((_, _, map)) = maps.current_map() {
+                                if id != u32::MAX {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(
+                                            Some(map.scene.find_entity_from_id(id)),
+                                            true,
+                                        );
+                                } else {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(None, true);
                                 }
                             }
                         }

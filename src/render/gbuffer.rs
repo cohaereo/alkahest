@@ -1,7 +1,7 @@
 use crate::dxgi::DxgiFormat;
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
-use std::mem::transmute;
+use std::mem::{transmute, size_of};
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
     WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
@@ -138,6 +138,18 @@ impl GBuffer {
             .context("Depth")?;
 
         Ok(())
+    }
+
+    pub fn pick_buffer_read(&self, x: usize, y: usize) -> u32 {
+        if let Ok(m) = self.pick_buffer_staging.map(D3D11_MAP_READ) {
+            unsafe {
+                let data = m.ptr.add(y * m.row_pitch as usize + x * size_of::<u32>()) as *mut u32;
+
+                *data
+            }
+        } else {
+            u32::MAX
+        }
     }
 }
 
