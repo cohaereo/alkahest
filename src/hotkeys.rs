@@ -19,6 +19,9 @@ pub const SHORTCUT_HIDE_UNSELECTED: egui::KeyboardShortcut =
 pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F);
 
+pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::G);
+
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);

@@ -27,7 +27,7 @@ use crate::ecs::components::{
 };
 use crate::ecs::resolve_aabb;
 use crate::ecs::resources::SelectedEntity;
-use crate::hotkeys::SHORTCUT_FOCUS;
+use crate::hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::inspector::InspectorOverlay;
 use crate::overlays::menu::MenuBar;
@@ -649,6 +649,14 @@ pub async fn main() -> anyhow::Result<()> {
                                     }
                                 }
                             }
+                        }
+                    } else if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
+                        let (d, pos) = renderer
+                            .read()
+                            .gbuffer
+                            .depth_buffer_distance_pos_center(&camera);
+                        if d.is_finite() {
+                            camera.focus(pos, 10.0);
                         }
                     }
                 }
