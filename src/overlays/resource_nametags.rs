@@ -14,7 +14,7 @@ use crate::{
 
 use egui::{Color32, Pos2, Rect};
 use glam::Vec2;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, time::Instant};
 use winit::window::Window;
 
 use super::{camera_settings::CameraPositionOverlay, gui::Overlay};
@@ -65,7 +65,7 @@ impl Overlay for ResourceTypeOverlay {
         }
 
         if self.debug_overlay.borrow().show_map_resources {
-            let SelectedEntity(selected_entity, block_entity_selection) =
+            let SelectedEntity(selected_entity, block_entity_selection, _) =
                 *resources.get::<SelectedEntity>().unwrap();
 
             let maps = resources.get::<MapDataList>().unwrap();
@@ -226,7 +226,7 @@ impl Overlay for ResourceTypeOverlay {
 
                                 if select_rect.contains(pos) {
                                     *resources.get_mut::<SelectedEntity>().unwrap() =
-                                        SelectedEntity(Some(*e), true);
+                                        SelectedEntity(Some(*e), true, Instant::now());
                                     break;
                                 }
                             }

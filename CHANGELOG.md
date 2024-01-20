@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Variable width line rendering by @cohaereo
 - Ability to query depth buffer by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
 - Added janky crosshair (off by default) by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
+- Utility Objects now flash briefly while selected by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
 
 ### Changed
 
