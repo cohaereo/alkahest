@@ -89,6 +89,9 @@ pub struct Renderer {
     clear_pickbuffer_vs: ID3D11VertexShader,
     clear_pickbuffer_ps: ID3D11PixelShader,
 
+    crosshair_vs: ID3D11VertexShader,
+    crosshair_ps: ID3D11PixelShader,
+
     debug_shape_renderer: DebugShapeRenderer,
     error_renderer: ErrorRenderer,
     outline_renderer: OutlineScreenEffect,
@@ -309,6 +312,24 @@ impl Renderer {
         .unwrap();
         let (clear_pickbuffer_ps, _) = shader::load_pshader(&dcs, &clear_pickbuffer_ps_blob)?;
 
+        let crosshair_vs_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/crosshair.hlsl"),
+            "VShader",
+            "vs_5_0",
+            "crosshair",
+        )
+        .unwrap();
+        let (crosshair_vs, _) = shader::load_vshader(&dcs, &crosshair_vs_blob)?;
+
+        let crosshair_ps_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/crosshair.hlsl"),
+            "PShader",
+            "ps_5_0",
+            "crosshair",
+        )
+        .unwrap();
+        let (crosshair_ps, _) = shader::load_pshader(&dcs, &crosshair_ps_blob)?;
+
         Ok(Renderer {
             light_cascade_transforms: RwLock::new(
                 [Mat4::IDENTITY; Self::CAMERA_CASCADE_LEVEL_COUNT],
@@ -355,6 +376,8 @@ impl Renderer {
             pickbuffer_ps,
             clear_pickbuffer_vs,
             clear_pickbuffer_ps,
+            crosshair_vs,
+            crosshair_ps,
             last_material: RwLock::new(u32::MAX),
             fiddlesticks: RwLock::new(vec![]),
             light_mat: RwLock::new(Mat4::IDENTITY),
@@ -802,6 +825,31 @@ impl Renderer {
             self.outline_renderer.draw(&self.dcs);
         }
 
+        // Draw crosshair
+        if render_settings.draw_crosshair {
+            self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+            self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
+            unsafe {
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[Some(
+                        self.dcs.swapchain_target.read().as_ref().unwrap().clone(),
+                    )]),
+                    None,
+                );
+                self.dcs.context().OMSetBlendState(
+                    &self.blend_state_none,
+                    Some(&[1f32, 1., 1., 1.] as _),
+                    0xffffffff,
+                );
+
+                self.dcs.context().VSSetShader(&self.crosshair_vs, None);
+                self.dcs.context().PSSetShader(&self.crosshair_ps, None);
+                self.dcs
+                    .context()
+                    .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                self.dcs.context().Draw(10, 0);
+            }
+        }
         // endregion
 
         // region: Pickbuffer

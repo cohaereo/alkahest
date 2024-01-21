@@ -53,6 +53,7 @@ impl Overlay for RenderSettingsOverlay {
 
         let mut render_settings = resources.get_mut::<RenderSettings>().unwrap();
         egui::Window::new("Options").show(ctx, |ui| {
+            ui.checkbox(&mut render_settings.draw_crosshair, "Render crosshair");
             ui.checkbox(&mut render_settings.draw_lights, "Render lights");
             ui.indent("render settings specular option indent", |ui| {
                 ui.add_enabled_ui(render_settings.draw_lights, |ui| {
@@ -533,6 +534,7 @@ pub struct RenderSettings {
     pub use_specular_map: bool,
     pub fxaa: bool,
     pub light_mul: f32,
+    pub draw_crosshair: bool,
 }
 
 #[repr(C)]
@@ -569,6 +571,7 @@ impl Default for RenderSettings {
             use_specular_map: true,
             fxaa: true,
             light_mul: 1.0,
+            draw_crosshair: false,
         }
     }
 }
