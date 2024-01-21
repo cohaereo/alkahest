@@ -344,6 +344,11 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     return float4(color, 1.0);
 }
 
+float2 MatcapUV(float3 eye, float3 normal) {
+    float2 muv = normal.xy * 0.5 + 0.5;
+    return float2(muv.x, 1.0 - muv.y);
+}
+
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
     float4 albedo = RenderTarget0.Sample(SampleType, input.uv);
@@ -391,12 +396,7 @@ float4 PShader(VSOutput input) : SV_Target {
             float3 normal = DecodeNormal(rt1.xyz);
             float3 viewNormal = mul(normal, transpose((float3x3)viewMatrix));
 
-            float2 muv = float2(
-                atan2(viewNormal.y, viewNormal.x) / (2 * 3.14159265) + 0.5,
-                acos(viewNormal.z) / 3.14159265
-            );
-
-            float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
+            float4 matcap = Matcap.Sample(SampleType, MatcapUV(cameraDir.xyz, viewNormal));
             return matcap;
         }
         case 15: { // Specular
@@ -426,12 +426,7 @@ float4 PShader(VSOutput input) : SV_Target {
                 float3 normal = DecodeNormal(rt1.xyz);
                 float3 viewNormal = mul(normal, transpose((float3x3)viewMatrix));
 
-                float2 muv = float2(
-                    atan2(viewNormal.y, viewNormal.x) / (2 * 3.14159265) + 0.5,
-                    acos(viewNormal.z) / 3.14159265
-                );
-
-                float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
+                float4 matcap = Matcap.Sample(SampleType, MatcapUV(cameraDir.xyz, viewNormal));
                 float3 res = albedo.xyz * matcap.x;
                 return float4(res + (res * emission_ao), 1.0);
             } else {
