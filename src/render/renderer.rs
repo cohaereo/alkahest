@@ -81,6 +81,9 @@ pub struct Renderer {
     composite_vs: ID3D11VertexShader,
     composite_ps: ID3D11PixelShader,
 
+    cubemap_vs: ID3D11VertexShader,
+    cubemap_ps: ID3D11PixelShader,
+
     final_vs: ID3D11VertexShader,
     final_ps: ID3D11PixelShader,
 
@@ -273,6 +276,23 @@ impl Renderer {
         let (vshader_final, _) = shader::load_vshader(&dcs, &vshader_final_blob)?;
         let (pshader_final, _) = shader::load_pshader(&dcs, &pshader_final_blob)?;
 
+        let vshader_cubemap_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/cubemap.hlsl"),
+            "VShader",
+            "vs_5_0",
+            "cubemap.hlsl",
+        );
+
+        let pshader_cubemap_blob = shader::compile_hlsl(
+            include_str!("../../assets/shaders/cubemap.hlsl"),
+            "PShader",
+            "ps_5_0",
+            "cubemap.hlsl",
+        );
+
+        let (vshader_cubemap, _) = shader::load_vshader(&dcs, &vshader_cubemap_blob.unwrap())?;
+        let (pshader_cubemap, _) = shader::load_pshader(&dcs, &pshader_cubemap_blob.unwrap())?;
+
         let pshader_null_blob = shader::compile_hlsl(
             include_str!("../../assets/shaders/null.hlsl"),
             "main",
@@ -349,6 +369,8 @@ impl Renderer {
             shadow_rs,
             composite_vs: vshader_composite,
             composite_ps: pshader_composite,
+            cubemap_vs: vshader_cubemap,
+            cubemap_ps: pshader_cubemap,
             final_vs: vshader_final,
             final_ps: pshader_final,
             null_ps: pshader_null,
@@ -1243,6 +1265,56 @@ impl Renderer {
                 Some(&[1f32, 1., 1., 1.] as _),
                 0xffffffff,
             );
+            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: self.window_size.0 as f32,
+                Height: self.window_size.1 as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
+
+            self.dcs.context().OMSetRenderTargets(
+                Some(&[Some(self.gbuffer.light_ibl_specular.render_target.clone())]),
+                None,
+            );
+            self.dcs.context().ClearRenderTargetView(
+                &self.gbuffer.light_ibl_specular.render_target,
+                [0.0, 0.0, 0.0, 1.0].as_ptr() as _,
+            );
+
+            self.dcs.context().PSSetShaderResources(
+                0,
+                Some(&[
+                    Some(self.gbuffer.rt0.view.clone()),
+                    Some(self.gbuffer.rt1.view.clone()),
+                    Some(self.gbuffer.rt2.view.clone()),
+                    Some(self.gbuffer.rt3.view.clone()),
+                    Some(self.gbuffer.depth.texture_view.clone()),
+                ]),
+            );
+
+            let render_data = self.render_data.data();
+
+            let cubemap_texture = resources
+                .get::<CurrentCubemap>()
+                .unwrap()
+                .1
+                .and_then(|t| render_data.textures.get(&t.key()).map(|t| t.view.clone()));
+
+            self.dcs
+                .context()
+                .PSSetShaderResources(9, Some(&[cubemap_texture]));
+
+            self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+            self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
+
+            self.dcs.context().VSSetShader(&self.cubemap_vs, None);
+            self.dcs.context().PSSetShader(&self.cubemap_ps, None);
+            self.dcs
+                .context()
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+            self.dcs.context().Draw(4, 0);
 
             self.dcs.context().OMSetRenderTargets(
                 Some(&[Some(self.gbuffer.staging.render_target.clone())]),
@@ -1252,15 +1324,6 @@ impl Renderer {
                 &self.gbuffer.staging.render_target,
                 [0.0, 0.0, 0.0, 0.0].as_ptr() as _,
             );
-
-            self.dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
-                TopLeftX: 0.0,
-                TopLeftY: 0.0,
-                Width: self.window_size.0 as f32,
-                Height: self.window_size.1 as f32,
-                MinDepth: 0.0,
-                MaxDepth: 1.0,
-            }]));
         }
 
         {
@@ -1328,6 +1391,7 @@ impl Renderer {
                     Some(&[
                         Some(self.gbuffer.light_diffuse.view.clone()),
                         Some(self.gbuffer.light_specular.view.clone()),
+                        Some(self.gbuffer.light_ibl_specular.view.clone()),
                     ]),
                 );
                 self.dcs.context().PSSetShaderResources(

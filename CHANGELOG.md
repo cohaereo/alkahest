@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add a window and taskbar icon by @cohaereo
 - Make Utility Objects work with the picker by @Froggy618157725 in [#16](https://github.com/cohaereo/alkahest/pull/16)
 - Variable width line rendering by @cohaereo
+- Partial light_specular_ibl implementation for cubemap support in deferred_shading_no_atm by @cohaereo
 
 ### Changed
 

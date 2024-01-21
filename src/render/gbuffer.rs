@@ -24,6 +24,7 @@ pub struct GBuffer {
 
     pub light_diffuse: RenderTarget,
     pub light_specular: RenderTarget,
+    pub light_ibl_specular: RenderTarget,
 
     pub staging: RenderTarget,
     pub staging_clone: RenderTarget,
@@ -80,6 +81,13 @@ impl GBuffer {
                 "Light_Specular",
             )
             .context("Light_Specular")?,
+            light_ibl_specular: RenderTarget::create(
+                size,
+                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                dcs.clone(),
+                "Specular_IBL",
+            )
+            .context("Specular_IBL")?,
 
             staging: RenderTarget::create(
                 size,
@@ -128,6 +136,9 @@ impl GBuffer {
         self.light_specular
             .resize(new_size)
             .context("Light_Specular")?;
+        self.light_ibl_specular
+            .resize(new_size)
+            .context("Specular_IBL")?;
 
         self.staging.resize(new_size).context("Staging")?;
         self.staging_clone
