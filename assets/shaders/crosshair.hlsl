@@ -20,7 +20,7 @@ struct VSOutput {
     float4 position : SV_POSITION;
 };
 
-static float size = 0.01;
+static float size = 0.008;
 static float width = 0.001;
 
 static float2 screenPos[10] = {
@@ -42,11 +42,9 @@ VSOutput VShader(uint vertexID : SV_VertexID) {
     VSOutput output;
     float ratio = viewportSize.x/viewportSize.y;
     // Let's make the width at least a pixel
-    float w = max(max(1.5/viewportSize.x, width), 1.5/(viewportSize.y * ratio)) / width;
+    float w = max(max(1.0/viewportSize.x, width), 1.0/(viewportSize.y * ratio)) / width;
 
-    output.position = float4(screenPos[vertexID].x * w, screenPos[vertexID].y*ratio * w, 0.0, 1.0);    
-    //output.position = float4(screenPos[vertexID], 0.0, 1.0);
-
+    output.position = float4(screenPos[vertexID].x * w, screenPos[vertexID].y*ratio * w, 0.0, 1.0);
     return output;
 }
 
