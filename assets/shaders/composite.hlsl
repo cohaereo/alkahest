@@ -89,6 +89,7 @@ Texture2DArray CascadeShadowMaps : register(t10);
 
 Texture2D LightRenderTarget0 : register(t12);
 Texture2D LightRenderTarget1 : register(t13);
+Texture2D SpecularIBL : register(t14);
 
 SamplerState SampleType : register(s0);
 
@@ -234,7 +235,7 @@ float CalculateShadow(float3 worldPos, float3 normal, float3 lightDir) {
     }
 }
 
-float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 viewportPos) {
+float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, float2 viewportPos, float2 uv) {
     float3 albedo = rt0.xyz;
     float3 normal = DecodeNormal(rt1.xyz);
 
@@ -317,8 +318,9 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
 
     float3 diffuseIBL = kD * (float3(0.03, 0.03, 0.03) * albedo);
 
-    const uint specularTextureLevels = 8;
-    float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb * specularScale;
+    // const uint specularTextureLevels = 8;
+    // float3 specularIrradiance = SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb * specularScale;
+    float3 specularIrradiance = SpecularIBL.Sample(SampleType, uv).rgb;
 
     // Total specular IBL contribution.
     float3 specularIBL = saturate(smoothness) * (specularIrradiance * F);
@@ -342,6 +344,11 @@ float4 PeanutButterRasputin(float4 rt0, float4 rt1, float4 rt2, float depth, flo
     color = color / (color + float3(1.0, 1.0, 1.0));
 
     return float4(color, 1.0);
+}
+
+float2 MatcapUV(float3 eye, float3 normal) {
+    float2 muv = normal.xy * 0.5 + 0.5;
+    return float2(muv.x, 1.0 - muv.y);
 }
 
 // Pixel Shader
@@ -391,28 +398,24 @@ float4 PShader(VSOutput input) : SV_Target {
             float3 normal = DecodeNormal(rt1.xyz);
             float3 viewNormal = mul(normal, transpose((float3x3)viewMatrix));
 
-            float2 muv = float2(
-                atan2(viewNormal.y, viewNormal.x) / (2 * 3.14159265) + 0.5,
-                acos(viewNormal.z) / 3.14159265
-            );
-
-            float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
+            float4 matcap = Matcap.Sample(SampleType, MatcapUV(cameraDir.xyz, viewNormal));
             return matcap;
         }
         case 15: { // Specular
-            float3 normal = DecodeNormal(rt1.xyz);    
-            float smoothness = length(normal) * 4 - 3;
-            float roughness = 1.0 - saturate(smoothness);
-            float3 worldPos = WorldPosFromDepth(depth, input.position.xy);
+            return SpecularIBL.Sample(SampleType, input.uv);
+            // float3 normal = DecodeNormal(rt1.xyz);    
+            // float smoothness = length(normal) * 4 - 3;
+            // float roughness = 1.0 - saturate(smoothness);
+            // float3 worldPos = WorldPosFromDepth(depth, input.position.xy);
 
-            float3 N = normalize(normal);
-            float3 V = normalize(cameraPos.xyz - worldPos);
+            // float3 N = normalize(normal);
+            // float3 V = normalize(cameraPos.xyz - worldPos);
 
-            float cosLo = max(0.0, dot(N, V));
+            // float cosLo = max(0.0, dot(N, V));
                 
-            float3 Lr = 2.0 * cosLo * N - V;
-            const uint specularTextureLevels = 8;
-            return float4(smoothness * SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb, 1.0);
+            // float3 Lr = 2.0 * cosLo * N - V;
+            // const uint specularTextureLevels = 8;
+            // return float4(smoothness * SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb, 1.0);
         }
         case 16: { // LightRT0
             return LightRenderTarget0.Sample(SampleType, input.uv);
@@ -426,16 +429,11 @@ float4 PShader(VSOutput input) : SV_Target {
                 float3 normal = DecodeNormal(rt1.xyz);
                 float3 viewNormal = mul(normal, transpose((float3x3)viewMatrix));
 
-                float2 muv = float2(
-                    atan2(viewNormal.y, viewNormal.x) / (2 * 3.14159265) + 0.5,
-                    acos(viewNormal.z) / 3.14159265
-                );
-
-                float4 matcap = Matcap.Sample(SampleType, float2(muv.x, muv.y));
+                float4 matcap = Matcap.Sample(SampleType, MatcapUV(cameraDir.xyz, viewNormal));
                 float3 res = albedo.xyz * matcap.x;
                 return float4(res + (res * emission_ao), 1.0);
             } else {
-                float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.position.xy);
+                float4 c = PeanutButterRasputin(albedo, rt1, rt2, depth, input.position.xy, input.uv);
 
                 c += albedo * LightRenderTarget0.Sample(SampleType, input.uv);
                 c += albedo * LightRenderTarget1.Sample(SampleType, input.uv) * 0.20;

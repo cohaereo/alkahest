@@ -577,7 +577,7 @@ impl TfxBytecodeInterpreter {
                     11 => transmute(renderer.gbuffer.rt2.view.clone()),
                     12 => transmute(renderer.gbuffer.light_diffuse.view.clone()),
                     13 => transmute(renderer.gbuffer.light_specular.view.clone()),
-                    14 => transmute(render_data.black.view.clone()), // light_ibl_specular
+                    14 => transmute(renderer.gbuffer.light_ibl_specular.view.clone()),
 
                     u => {
                         anyhow::bail!(
@@ -616,7 +616,8 @@ impl TfxBytecodeInterpreter {
                     }
                 },
                 TfxExtern::ShadowMask => match offset {
-                    1 => transmute(render_data.debug_textures[7].view.clone()),
+                    // 1 => transmute(render_data.debug_textures[7].view.clone()),
+                    1 => transmute(render_data.black.view.clone()),
                     u => {
                         anyhow::bail!(
                             "get_extern_u64: Unsupported shadow mask extern offset {u} (0x{:0X})",

@@ -1,9 +1,16 @@
 use egui::{vec2, Image, Sense, TextureId};
+use glam::Vec4;
 use nohash_hasher::IntMap;
 
 use crate::{
     packages::package_manager,
-    render::{bytecode::externs::TfxShaderStage, dcs::DcsShared, DeviceContextSwapchain},
+    render::{
+        bytecode::{
+            decompiler::TfxBytecodeDecompiler, externs::TfxShaderStage, opcodes::TfxBytecodeOp,
+        },
+        dcs::DcsShared,
+        DeviceContextSwapchain,
+    },
     structure::ExtendedHash,
     technique::{STechnique, STechniqueShader},
     texture::{STextureHeader, Texture},
@@ -140,6 +147,24 @@ impl TechniqueShaderViewer {
             "{} bytecode constants",
             self.header.bytecode_constants.len()
         ));
+
+        // open.mat 89E2D080
+        if ui.button("Decompile bytecode").clicked() {
+            if let Ok(opcodes) =
+                TfxBytecodeOp::parse_all(&self.header.bytecode, binrw::Endian::Little)
+            {
+                let constants: &[Vec4] = if self.header.bytecode_constants.is_empty() {
+                    &[]
+                } else {
+                    bytemuck::cast_slice(&self.header.bytecode_constants)
+                };
+
+                match TfxBytecodeDecompiler::decompile(opcodes, constants) {
+                    Ok(o) => println!("{}", o.pretty_print()),
+                    Err(e) => println!("Failed to decompile bytecode: {e}"),
+                }
+            }
+        }
         ui.collapsing(format!("Textures ({})", self.header.textures.len()), |ui| {
             for assignment in &self.header.textures {
                 let mut clicked = false;
