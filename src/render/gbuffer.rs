@@ -2,7 +2,7 @@ use crate::dxgi::DxgiFormat;
 use crate::render::DeviceContextSwapchain;
 use crate::FpsCamera;
 use anyhow::Context;
-use glam::{Vec3, Vec4, Vec4Swizzles};
+use glam::Vec3;
 use std::mem::{size_of, transmute};
 use std::sync::Arc;
 use windows::Win32::Graphics::Direct3D::{
@@ -152,9 +152,12 @@ impl GBuffer {
     pub fn pick_buffer_read(&self, x: usize, y: usize) -> u32 {
         if let Ok(m) = self.pick_buffer_staging.map(D3D11_MAP_READ) {
             unsafe {
-                let data = m.ptr.add(y * m.row_pitch as usize + x * size_of::<u32>()) as *mut u32;
+                let data = m
+                    .ptr
+                    .add(y * m.row_pitch as usize + x * size_of::<u32>())
+                    .cast::<u32>();
 
-                *data
+                data.read()
             }
         } else {
             u32::MAX
@@ -164,9 +167,12 @@ impl GBuffer {
     pub fn depth_buffer_read(&self, x: usize, y: usize) -> f32 {
         if let Ok(m) = self.depth_staging.map(D3D11_MAP_READ) {
             unsafe {
-                let data = m.ptr.add(y * m.row_pitch as usize + x * size_of::<f32>()) as *mut f32;
+                let data = m
+                    .ptr
+                    .add(y * m.row_pitch as usize + x * size_of::<f32>())
+                    .cast::<f32>();
 
-                *data
+                data.read()
             }
         } else {
             0.0
@@ -178,8 +184,9 @@ impl GBuffer {
 
     pub fn depth_buffer_distance_pos_center(&self, camera: &FpsCamera) -> (f32, Vec3) {
         let raw_depth = self.depth_buffer_read_center();
-        let pos = camera.projection_view_matrix_inv * Vec4::new(0.0, 0.0, raw_depth, 1.0);
-        let pos = pos.xyz() / pos.w;
+        let pos = camera
+            .projection_view_matrix_inv
+            .project_point3(Vec3::new(0.0, 0.0, raw_depth));
         let distance = (pos - camera.position).length();
         (distance, pos)
     }

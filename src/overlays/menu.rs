@@ -41,8 +41,12 @@ impl Overlay for MenuBar {
                             let camera = resources.get::<FpsCamera>().unwrap();
                             let e = map.scene.spawn((
                                 Ruler {
-                                    start: pos,
-                                    end: camera.position,
+                                    start: camera.position,
+                                    end: if pos.is_finite() {
+                                        pos
+                                    } else {
+                                        camera.position
+                                    },
                                     ..Default::default()
                                 },
                                 Tags::from_iter([EntityTag::Utility]),
