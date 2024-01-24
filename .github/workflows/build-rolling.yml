@@ -1,0 +1,44 @@
+name: Build (rolling release)
+
+on:
+  push:
+    branches: ["lightfall"]
+    paths-ignore:
+      - "**/.md"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build RR (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [windows-latest]
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Cargo fetch
+        run: cargo fetch
+
+      - name: Build
+        run: cargo build --verbose --release
+
+      - name: Determine commit hash
+        shell: bash
+        run: |
+          export GITHUB_SHA_SHORT=$(git rev-parse --short "$GITHUB_SHA")
+          echo "GITHUB_SHA_SHORT=$GITHUB_SHA_SHORT" >> $GITHUB_ENV
+
+      - name: Publish artifact
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v3
+        with:
+          name: alkahest-${{ env.GITHUB_SHA_SHORT }}
+          path: |
+            ./target/release/*.exe
+            ./target/release/*.pdb
