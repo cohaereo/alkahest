@@ -38,7 +38,6 @@ impl Overlay for MenuBar {
                             .depth_buffer_distance_pos_center(&camera);
 
                         if let Some(map) = maps.current_map_mut() {
-                            let camera = resources.get::<FpsCamera>().unwrap();
                             let position_base = camera.position + camera.front * 15.0;
                             let e = map.scene.spawn((
                                 if pos.is_finite() {
