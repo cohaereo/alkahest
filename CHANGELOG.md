@@ -27,7 +27,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
-## Unreleased
+## Unreleased (Rolling Release)
 
 ### Added
 
@@ -56,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Changed the matcap texture to one with better lighting by @cohaereo
 - Ruler is spawned extending from where you're looking to you by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
 - Sphere is spawned at 24m away, or on the first map piece encountered by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
+- Update egui to 0.25 by @cohaereo
 
 ### Removed
 

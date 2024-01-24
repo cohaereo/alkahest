@@ -9,7 +9,7 @@ destiny-havok = { path = "./crates/destiny-havok" }
 destiny-pkg = { version = "0.7.1", git = "https://github.com/v4nguard/destiny-pkg" }
 
 anyhow = { version = "1.0.71" }
-winit = { version = "0.28" }
+winit = { version = "0.29.4" }
 binrw = "0.12"
 itertools = "0.11.0"
 ddsfile = "0.5.1"
@@ -39,9 +39,10 @@ clap = { version = "4.4.4", features = ["derive"] }
 color-eyre = "0.6.2"
 const_format = "0.2.31"
 crossbeam = "0.8.2"
-egui = { version = "0.22", features = ["persistence"] }
+egui = { version = "0.25", features = ["persistence"] }
+egui_commonmark = "0.11.0"
 egui-directx11 = { path = "./crates/egui-directx11" }
-egui-winit = "0.22.0"
+egui-winit = "0.25.0"
 frustum_query = "0.1.2"
 genmesh = "0.6.2"
 lazy_static = "1.4.0"

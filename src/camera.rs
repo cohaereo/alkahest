@@ -1,8 +1,8 @@
 use glam::{Mat4, Quat, Vec2, Vec3};
-use winit::event::VirtualKeyCode;
+use winit::keyboard::NamedKey;
 
 use crate::{
-    input::InputState,
+    input::{InputState, Key},
     render::tween::{self, Tween},
     types::AABB,
 };
@@ -91,56 +91,56 @@ impl FpsCamera {
             speed *= 0.10;
         }
         // We're gonna have to go right to... LUDICROUS SPEED
-        if input.is_key_down(VirtualKeyCode::Space) {
+        if input.is_key_down(Key::Named(NamedKey::Space)) {
             speed *= 10.0;
         }
 
-        if input.is_key_down(VirtualKeyCode::LAlt) {
+        if input.alt() {
             absolute = true;
         }
 
         let mut direction = Vec3::ZERO;
 
         if absolute {
-            if input.is_key_down(VirtualKeyCode::W) {
+            if input.is_key_down(Key::Character("w".into())) {
                 direction += flatten_xy(self.front, Vec3::X);
             }
-            if input.is_key_down(VirtualKeyCode::S) {
+            if input.is_key_down(Key::Character("s".into())) {
                 direction -= flatten_xy(self.front, Vec3::X);
             }
 
-            if input.is_key_down(VirtualKeyCode::A) {
+            if input.is_key_down(Key::Character("a".into())) {
                 direction -= flatten_xy(self.right, Vec3::Y);
             }
-            if input.is_key_down(VirtualKeyCode::D) {
+            if input.is_key_down(Key::Character("d".into())) {
                 direction += flatten_xy(self.right, Vec3::Y);
             }
 
-            if input.is_key_down(VirtualKeyCode::Q) {
+            if input.is_key_down(Key::Character("q".into())) {
                 direction -= Vec3::Z;
             }
-            if input.is_key_down(VirtualKeyCode::E) {
+            if input.is_key_down(Key::Character("e".into())) {
                 direction += Vec3::Z;
             }
         } else {
-            if input.is_key_down(VirtualKeyCode::W) {
+            if input.is_key_down(Key::Character("w".into())) {
                 direction += self.front;
             }
-            if input.is_key_down(VirtualKeyCode::S) {
+            if input.is_key_down(Key::Character("s".into())) {
                 direction -= self.front;
             }
 
-            if input.is_key_down(VirtualKeyCode::A) {
+            if input.is_key_down(Key::Character("a".into())) {
                 direction -= self.right;
             }
-            if input.is_key_down(VirtualKeyCode::D) {
+            if input.is_key_down(Key::Character("d".into())) {
                 direction += self.right;
             }
 
-            if input.is_key_down(VirtualKeyCode::Q) {
+            if input.is_key_down(Key::Character("q".into())) {
                 direction -= self.up;
             }
-            if input.is_key_down(VirtualKeyCode::E) {
+            if input.is_key_down(Key::Character("e".into())) {
                 direction += self.up;
             }
         }

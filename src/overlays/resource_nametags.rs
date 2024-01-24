@@ -287,7 +287,7 @@ impl Overlay for ResourceTypeOverlay {
                             let white_bg = background_color.r() == 255;
                             painter.rect(
                                 debug_string_rect.expand(4.0),
-                                egui::Rounding::none(),
+                                egui::Rounding::ZERO,
                                 if white_bg {
                                     Color32::from_white_alpha(196)
                                 } else {
@@ -333,7 +333,7 @@ impl Overlay for ResourceTypeOverlay {
                                 screen_point.to_array().into(),
                                 [11.0, 11.0].into(),
                             ),
-                            egui::Rounding::none(),
+                            egui::Rounding::ZERO,
                             Color32::from_black_alpha(152),
                             egui::Stroke::default(),
                         );

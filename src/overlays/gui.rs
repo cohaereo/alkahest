@@ -46,9 +46,13 @@ impl GuiManager {
             egui.memory_mut(|memory| *memory = data);
         }
 
-        let mut integration = egui_winit::State::new(window);
-        integration.set_pixels_per_point(window.scale_factor() as f32);
-        integration.set_max_texture_side(8192);
+        let integration = egui_winit::State::new(
+            egui.clone(),
+            egui::ViewportId::default(),
+            window,
+            Some(window.scale_factor() as f32),
+            Some(8192),
+        );
 
         let mut fonts = egui::FontDefinitions::default();
         fonts.font_data.insert(
@@ -93,8 +97,8 @@ impl GuiManager {
         self.overlays.push(overlay);
     }
 
-    pub fn handle_event(&mut self, event: &WindowEvent<'_>) -> EventResponse {
-        self.integration.on_event(&self.egui, event)
+    pub fn handle_event(&mut self, window: &Window, event: &WindowEvent) -> EventResponse {
+        self.integration.on_window_event(window, event)
     }
 
     pub fn draw_frame<MF>(&mut self, window: Arc<Window>, resources: &mut Resources, misc_draw: MF)
@@ -177,7 +181,7 @@ impl GuiManager {
             .unwrap();
 
         self.integration
-            .handle_platform_output(&window, &self.egui, output.platform_output)
+            .handle_platform_output(&window, output.platform_output)
     }
 }
 
@@ -210,10 +214,9 @@ impl GuiResources {
         let img = Png::from_bytes(include_bytes!("../../assets/icons/havok_dark_256.png")).unwrap();
         let icon_havok = ctx.load_texture(
             "Havok 64x64",
-            egui::ImageData::Color(egui::ColorImage::from_rgba_premultiplied(
-                img.dimensions,
-                &img.data,
-            )),
+            egui::ImageData::Color(
+                egui::ColorImage::from_rgba_premultiplied(img.dimensions, &img.data).into(),
+            ),
             egui::TextureOptions {
                 magnification: egui::TextureFilter::Linear,
                 minification: egui::TextureFilter::Linear,

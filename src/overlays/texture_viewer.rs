@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use egui::{vec2, Color32, ComboBox, RichText, Rounding, TextureId};
+use egui::{vec2, Color32, ComboBox, ImageSource, RichText, Rounding, TextureId};
 use fs_err::File;
 use glam::Vec4;
 use windows::Win32::Graphics::{
@@ -182,7 +182,7 @@ impl Overlay for TextureViewer {
                             nw: 2.0,
                             sw: 2.0,
                         };
-                        let rounding_m = Rounding::none();
+                        let rounding_m = Rounding::ZERO;
                         let rounding_r = Rounding {
                             nw: 0.0,
                             sw: 0.0,
@@ -267,10 +267,13 @@ impl Overlay for TextureViewer {
                     }
 
                     let height_ratio = self.header.height as f32 / self.header.width as f32;
-                    ui.image(
-                        self.texture_egui,
-                        egui::Vec2::new(ui.available_width(), ui.available_width() * height_ratio),
-                    );
+                    ui.image(ImageSource::Texture(egui::load::SizedTexture {
+                        id: self.texture_egui,
+                        size: egui::Vec2::new(
+                            ui.available_width(),
+                            ui.available_width() * height_ratio,
+                        ),
+                    }))
                 });
 
                 ui.label(format!(

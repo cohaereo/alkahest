@@ -1,7 +1,6 @@
-use winit::event::{KeyboardInput, VirtualKeyCode, WindowEvent};
-
-pub type Key = VirtualKeyCode;
-const WINIT_KEY_COUNT: usize = Key::Cut as usize + 1;
+use egui::ahash::HashMap;
+use winit::event::WindowEvent;
+pub use winit::keyboard::Key;
 
 #[derive(PartialEq, Eq, Default, Copy, Clone)]
 pub enum ButtonState {
@@ -28,7 +27,7 @@ pub enum MouseButton {
 }
 
 pub struct InputState {
-    keys: [ButtonState; WINIT_KEY_COUNT],
+    keys: HashMap<Key, ButtonState>,
 
     ctrl: bool,
     alt: bool,
@@ -49,7 +48,7 @@ pub struct InputState {
 impl Default for InputState {
     fn default() -> Self {
         Self {
-            keys: [ButtonState::Up; WINIT_KEY_COUNT],
+            keys: HashMap::default(),
             ctrl: false,
             alt: false,
             shift: false,
@@ -65,37 +64,41 @@ impl Default for InputState {
 #[allow(unused)]
 impl InputState {
     /// Handles winit events and updates the state accordingly
-    pub fn handle_event(&mut self, event: &WindowEvent<'_>) {
-        // TODO(cohae): Resolve this lint
-        #[allow(clippy::collapsible_match)]
+    pub fn handle_event(&mut self, event: &WindowEvent) {
         match event {
             WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        virtual_keycode,
-                        state,
-                        ..
+                event:
+                    winit::event::KeyEvent {
+                        logical_key, state, ..
                     },
                 ..
             } => {
-                if let Some(vk) = virtual_keycode {
-                    let key = &mut self.keys[*vk as usize];
-                    match state {
-                        winit::event::ElementState::Pressed => match *key {
-                            ButtonState::Up => *key = ButtonState::Down,
-                            ButtonState::Down => *key = ButtonState::Repeated,
-                            ButtonState::Repeated => {}
-                        },
-                        winit::event::ElementState::Released => {
-                            *key = ButtonState::Up;
+                let normalized_key = normalize_key(logical_key.clone());
+                let old_state = self
+                    .keys
+                    .get(&normalized_key)
+                    .copied()
+                    .unwrap_or(ButtonState::Up);
+                match state {
+                    winit::event::ElementState::Pressed => match old_state {
+                        ButtonState::Up => {
+                            self.keys.insert(normalized_key.clone(), ButtonState::Down);
                         }
+                        ButtonState::Down => {
+                            self.keys
+                                .insert(normalized_key.clone(), ButtonState::Repeated);
+                        }
+                        ButtonState::Repeated => {}
+                    },
+                    winit::event::ElementState::Released => {
+                        self.keys.insert(normalized_key.clone(), ButtonState::Up);
                     }
                 }
             }
             WindowEvent::ModifiersChanged(modifiers) => {
-                self.ctrl = modifiers.ctrl();
-                self.alt = modifiers.alt();
-                self.shift = modifiers.shift();
+                self.ctrl = modifiers.state().control_key();
+                self.alt = modifiers.state().alt_key();
+                self.shift = modifiers.state().shift_key();
             }
             // WindowEvent::MouseWheel { device_id, delta, phase, modifiers } => todo!(),
             WindowEvent::MouseInput { state, button, .. } => match button {
@@ -129,14 +132,19 @@ impl InputState {
                         winit::event::ElementState::Released => ButtonState::Up,
                     }
                 }
-                winit::event::MouseButton::Other(_) => {}
+                winit::event::MouseButton::Other(_)
+                | winit::event::MouseButton::Back
+                | winit::event::MouseButton::Forward => {}
             },
             _ => {}
         }
     }
 
-    pub fn key_state(&self, vk: Key) -> ButtonState {
-        self.keys[vk as usize]
+    pub fn key_state(&self, key: Key) -> ButtonState {
+        self.keys
+            .get(&normalize_key(key))
+            .copied()
+            .unwrap_or(ButtonState::Up)
     }
 
     /// Returns true if the key is being held.
@@ -203,4 +211,11 @@ impl InputState {
     // pub fn mouse_forward(&self) -> bool {
     //     self.is_mouse_down(MouseButton::Forward)
     // }
+}
+
+pub fn normalize_key(k: Key) -> Key {
+    match k {
+        Key::Character(c) => Key::Character(c.to_ascii_lowercase().into()),
+        _ => k,
+    }
 }

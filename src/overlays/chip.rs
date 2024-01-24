@@ -46,8 +46,9 @@ impl Chip {
             );
             ui.painter().add(epaint::TextShape {
                 pos,
-                galley: text_galley.galley,
+                galley: text_galley,
                 override_text_color: Some(text_color),
+                fallback_color: Color32::TRANSPARENT,
                 underline: Default::default(),
                 angle: 0.0,
             });

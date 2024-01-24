@@ -15,7 +15,10 @@ use crate::{
 
 use super::gui::Overlay;
 
-pub struct MenuBar;
+#[derive(Default)]
+pub struct MenuBar {
+    about_open: bool,
+}
 
 impl Overlay for MenuBar {
     fn draw(
@@ -133,9 +136,27 @@ impl Overlay for MenuBar {
                         }
                     }
                 });
+
+                ui.menu_button("Help", |ui| {
+                    if ui.button("About").clicked() {
+                        self.about_open = true;
+                    }
+                });
             });
         });
 
+        self.about(ctx);
+
         true
+    }
+}
+
+impl MenuBar {
+    pub fn about(&mut self, ctx: &egui::Context) {
+        egui::Window::new("About")
+            .open(&mut self.about_open)
+            .show(ctx, |ui| {
+                ui.label("Alkahest");
+            });
     }
 }

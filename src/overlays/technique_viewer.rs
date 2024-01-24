@@ -1,4 +1,4 @@
-use egui::{vec2, Image, Sense, TextureId};
+use egui::{vec2, Image, ImageSource, Sense, TextureId};
 use glam::Vec4;
 use nohash_hasher::IntMap;
 
@@ -174,7 +174,13 @@ impl TechniqueShaderViewer {
                             self.textures.get(&assignment.texture)
                         {
                             clicked |= ui
-                                .add(Image::new(*tex_egui, vec2(96.0, 96.0)).sense(Sense::click()))
+                                .add(
+                                    Image::new(ImageSource::Texture(egui::load::SizedTexture {
+                                        id: *tex_egui,
+                                        size: vec2(96.0, 96.0),
+                                    }))
+                                    .sense(Sense::click()),
+                                )
                                 .on_hover_cursor(egui::CursorIcon::PointingHand)
                                 .clicked();
 
