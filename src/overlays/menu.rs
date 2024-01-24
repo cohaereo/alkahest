@@ -39,15 +39,20 @@ impl Overlay for MenuBar {
 
                         if let Some(map) = maps.current_map_mut() {
                             let camera = resources.get::<FpsCamera>().unwrap();
+                            let position_base = camera.position + camera.front * 15.0;
                             let e = map.scene.spawn((
-                                Ruler {
-                                    start: camera.position,
-                                    end: if pos.is_finite() {
-                                        pos
-                                    } else {
-                                        camera.position
-                                    },
-                                    ..Default::default()
+                                if pos.is_finite() {
+                                    Ruler {
+                                        start: camera.position,
+                                        end: pos,
+                                        ..Default::default()
+                                    }
+                                } else {
+                                    Ruler {
+                                        start: position_base - camera.right * 10.0,
+                                        end: position_base + camera.right * 10.0,
+                                        ..Default::default()
+                                    }
                                 },
                                 Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
