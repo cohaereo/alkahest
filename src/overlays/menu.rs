@@ -1,3 +1,5 @@
+use egui::{vec2, Color32, RichText, Vec2};
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use glam::Vec3;
 
 use crate::{
@@ -10,6 +12,7 @@ use crate::{
     },
     icons::{ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     map::MapDataList,
+    util::consts::{self, CHANGELOG_MD},
     RendererShared,
 };
 
@@ -17,7 +20,9 @@ use super::gui::Overlay;
 
 #[derive(Default)]
 pub struct MenuBar {
+    changelog_open: bool,
     about_open: bool,
+    markdown_cache: CommonMarkCache,
 }
 
 impl Overlay for MenuBar {
@@ -138,13 +143,19 @@ impl Overlay for MenuBar {
                 });
 
                 ui.menu_button("Help", |ui| {
+                    if ui.button("Changelog").clicked() {
+                        self.changelog_open = true;
+                        ui.close_menu();
+                    }
                     if ui.button("About").clicked() {
                         self.about_open = true;
+                        ui.close_menu();
                     }
                 });
             });
         });
 
+        self.change_log(ctx);
         self.about(ctx);
 
         true
@@ -152,11 +163,50 @@ impl Overlay for MenuBar {
 }
 
 impl MenuBar {
+    pub fn change_log(&mut self, ctx: &egui::Context) {
+        egui::Window::new("Changelog")
+            .open(&mut self.changelog_open)
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    CommonMarkViewer::new("changelog_md").show(
+                        ui,
+                        &mut self.markdown_cache,
+                        CHANGELOG_MD,
+                    );
+                })
+            });
+    }
     pub fn about(&mut self, ctx: &egui::Context) {
         egui::Window::new("About")
             .open(&mut self.about_open)
             .show(ctx, |ui| {
-                ui.label("Alkahest");
+                egui::Frame::none()
+                    .inner_margin(Vec2::splat(16.0))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.allocate_ui(vec2(128.0, 128.0), |ui| {
+                                ui.add(egui::Image::new(egui::include_image!(
+                                    "../../assets/icons/alkahest.png"
+                                )));
+                            });
+                            ui.add_space(16.0);
+                            ui.vertical(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.heading(
+                                        RichText::new("Alkahest").strong().color(Color32::WHITE),
+                                    );
+                                    ui.heading(format!("- v{}", consts::VERSION));
+                                });
+                                ui.separator();
+                                ui.label(format!("Revision {}", consts::GIT_HASH));
+                                ui.label(format!("Built on {}", consts::BUILD_DATE));
+                                if let Ok(v) = rustc_version::version_meta() {
+                                    ui.add_space(8.0);
+                                    ui.label(format!("rustc {}+{:?}", v.semver, v.channel));
+                                }
+                            })
+                        });
+                    })
             });
     }
 }
