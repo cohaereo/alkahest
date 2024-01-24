@@ -27,7 +27,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
-## Unreleased (Rolling Release)
+## Unreleased / Rolling Release
 
 ### Added
 
@@ -47,8 +47,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Variable width line rendering by @cohaereo
 - Partial light_specular_ibl implementation for cubemap support in deferred_shading_no_atm by @cohaereo
 - Ability to query depth buffer by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
-- Added janky crosshair (off by default) by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
+- Added crosshair (off by default) by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
 - Utility Objects now flash briefly while selected by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
+- Add about menu by @cohaereo in [#19](https://github.com/cohaereo/alkahest/pull/19)
+- Add changelog window by @cohaereo in [#19](https://github.com/cohaereo/alkahest/pull/19)
 
 ### Changed
 

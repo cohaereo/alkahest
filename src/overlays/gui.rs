@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::render::DeviceContextSwapchain;
 use crate::resources::Resources;
 use crate::util::exe_relative_path;
-use crate::util::image::Png;
+use crate::util::image::{EguiPngLoader, Png};
 use egui::epaint::ahash::HashMap;
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
@@ -38,6 +38,8 @@ pub struct GuiManager {
 impl GuiManager {
     pub fn create(window: &Window, dcs: Arc<DeviceContextSwapchain>) -> Self {
         let egui = egui::Context::default();
+
+        egui.add_image_loader(Arc::new(EguiPngLoader::default()));
 
         if let Ok(Ok(data)) = std::fs::read_to_string(exe_relative_path("egui.ron"))
             .map(|s| ron::from_str::<egui::Memory>(&s))
