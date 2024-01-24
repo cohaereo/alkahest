@@ -10,6 +10,7 @@ use crate::{
     },
     icons::{ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     map::MapDataList,
+    RendererShared,
 };
 
 use super::gui::Overlay;
@@ -29,15 +30,28 @@ impl Overlay for MenuBar {
                 ui.menu_button("Utility", |ui| {
                     if ui.button(format!("{} Ruler", ICON_RULER_SQUARE)).clicked() {
                         let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                        let renderer = resources.get::<RendererShared>().unwrap();
+                        let camera = resources.get::<FpsCamera>().unwrap();
+                        let (_, pos) = renderer
+                            .read()
+                            .gbuffer
+                            .depth_buffer_distance_pos_center(&camera);
 
                         if let Some(map) = maps.current_map_mut() {
-                            let camera = resources.get::<FpsCamera>().unwrap();
                             let position_base = camera.position + camera.front * 15.0;
                             let e = map.scene.spawn((
-                                Ruler {
-                                    start: position_base - camera.right * 10.0,
-                                    end: position_base + camera.right * 10.0,
-                                    ..Default::default()
+                                if pos.is_finite() {
+                                    Ruler {
+                                        start: camera.position,
+                                        end: pos,
+                                        ..Default::default()
+                                    }
+                                } else {
+                                    Ruler {
+                                        start: position_base - camera.right * 10.0,
+                                        end: position_base + camera.right * 10.0,
+                                        ..Default::default()
+                                    }
                                 },
                                 Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
@@ -52,13 +66,18 @@ impl Overlay for MenuBar {
                     }
                     if ui.button(format!("{} Sphere", ICON_SPHERE)).clicked() {
                         let mut maps = resources.get_mut::<MapDataList>().unwrap();
-
+                        let renderer = resources.get::<RendererShared>().unwrap();
+                        let camera = resources.get::<FpsCamera>().unwrap();
+                        let (distance, pos) = renderer
+                            .read()
+                            .gbuffer
+                            .depth_buffer_distance_pos_center(&camera);
                         if let Some(map) = maps.current_map_mut() {
                             let camera = resources.get::<FpsCamera>().unwrap();
-                            let position_base = camera.position + camera.front * 15.0;
+                            let position_base = camera.position + camera.front * 24.0;
                             let e = map.scene.spawn((
                                 Transform {
-                                    translation: position_base,
+                                    translation: if distance > 24.0 { position_base } else { pos },
                                     scale: Vec3::splat(9.0),
                                     flags: TransformFlags::IGNORE_ROTATION
                                         | TransformFlags::SCALE_IS_RADIUS,
@@ -79,12 +98,22 @@ impl Overlay for MenuBar {
                     if ui.button(format!("{} Beacon", ICON_SIGN_POLE)).clicked() {
                         let mut maps: std::cell::RefMut<'_, MapDataList> =
                             resources.get_mut::<MapDataList>().unwrap();
+                        let renderer = resources.get::<RendererShared>().unwrap();
+                        let camera = resources.get::<FpsCamera>().unwrap();
+                        let (distance, pos) = renderer
+                            .read()
+                            .gbuffer
+                            .depth_buffer_distance_pos_center(&camera);
 
                         if let Some(map) = maps.current_map_mut() {
                             let camera = resources.get::<FpsCamera>().unwrap();
                             let e = map.scene.spawn((
                                 Transform {
-                                    translation: camera.position,
+                                    translation: if distance > 24.0 {
+                                        camera.position
+                                    } else {
+                                        pos
+                                    },
                                     flags: TransformFlags::IGNORE_ROTATION
                                         | TransformFlags::IGNORE_SCALE,
                                     ..Default::default()

@@ -1,4 +1,4 @@
-use egui::{Color32, FontId, RichText, Widget};
+use egui::{Button, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
@@ -8,7 +8,8 @@ use crate::{
     hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
     icons::{
         ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA,
-        ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_OFF, ICON_HELP,
+        ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
+        ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF, ICON_EYE_OFF_OUTLINE, ICON_HELP,
         ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT,
         ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE, ICON_TAG,
     },
@@ -18,6 +19,7 @@ use crate::{
         text::{prettify_distance, split_pascal_case},
         BoolExts as _,
     },
+    RendererShared,
 };
 
 use super::{
@@ -272,15 +274,38 @@ impl ComponentPanel for Transform {
                         &mut self.translation
                     );
 
-                    if let Some(camera) = resources.get::<FpsCamera>() {
-                        if ui
-                            .button(ICON_CAMERA_CONTROL.to_string())
-                            .on_hover_text("Set position to camera")
-                            .clicked()
-                        {
-                            self.translation = camera.position;
+                    ui.horizontal(|ui| {
+                        if let Some(camera) = resources.get::<FpsCamera>() {
+                            if ui
+                                .button(ICON_CAMERA_CONTROL.to_string())
+                                .on_hover_text("Set position to camera")
+                                .clicked()
+                            {
+                                self.translation = camera.position;
+                            }
+                            if let Some(renderer) = resources.get::<RendererShared>() {
+                                let (d, pos) = renderer
+                                    .read()
+                                    .gbuffer
+                                    .depth_buffer_distance_pos_center(&camera);
+                                if ui
+                                    .add_enabled(
+                                        d.is_finite(),
+                                        Button::new(if d.is_finite() {
+                                            ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                                        } else {
+                                            ICON_EYE_OFF_OUTLINE.to_string()
+                                        }),
+                                    )
+                                    .on_hover_text("Set position to gaze")
+                                    .clicked()
+                                {
+                                    self.translation = pos;
+                                }
+                                ui.label(prettify_distance(d));
+                            }
                         }
-                    }
+                    });
                     ui.end_row();
                 }
                 if !self.flags.contains(TransformFlags::IGNORE_ROTATION) {
@@ -481,26 +506,74 @@ impl ComponentPanel for Ruler {
 
     fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
         let camera = resources.get::<FpsCamera>().unwrap();
-        ui.horizontal(|ui| {
-            input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Start"), &mut self.start);
-            if ui
-                .button(ICON_CAMERA_CONTROL.to_string())
-                .on_hover_text("Set position to camera")
-                .clicked()
-            {
-                self.start = camera.position;
-            }
-        });
-        ui.horizontal(|ui| {
-            input_float3!(ui, format!("{ICON_ALPHA_B_BOX} End"), &mut self.end);
-            if ui
-                .button(ICON_CAMERA_CONTROL.to_string())
-                .on_hover_text("Set position to camera")
-                .clicked()
-            {
-                self.end = camera.position;
-            }
-        });
+        egui::Grid::new("transform_input_grid")
+            .num_columns(2)
+            .spacing([40.0, 4.0])
+            .striped(true)
+            .show(ui, |ui| {
+                let (d, pos) = if let Some(renderer) = resources.get::<RendererShared>() {
+                    renderer
+                        .read()
+                        .gbuffer
+                        .depth_buffer_distance_pos_center(&camera)
+                } else {
+                    (0.0, camera.position)
+                };
+                input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Start"), &mut self.start);
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(ICON_CAMERA_CONTROL.to_string())
+                        .on_hover_text("Set position to camera")
+                        .clicked()
+                    {
+                        self.start = camera.position;
+                    }
+
+                    if ui
+                        .add_enabled(
+                            d.is_finite(),
+                            Button::new(if d.is_finite() {
+                                ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                            } else {
+                                ICON_EYE_OFF_OUTLINE.to_string()
+                            }),
+                        )
+                        .on_hover_text("Set position to gaze")
+                        .clicked()
+                    {
+                        self.start = pos;
+                    }
+                    ui.label(prettify_distance(d));
+                });
+
+                ui.end_row();
+
+                input_float3!(ui, format!("{ICON_ALPHA_B_BOX} End "), &mut self.end);
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(ICON_CAMERA_CONTROL.to_string())
+                        .on_hover_text("Set position to camera")
+                        .clicked()
+                    {
+                        self.end = camera.position;
+                    }
+
+                    if ui
+                        .add_enabled(
+                            d.is_finite(),
+                            Button::new(if d.is_finite() {
+                                ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                            } else {
+                                ICON_EYE_OFF_OUTLINE.to_string()
+                            }),
+                        )
+                        .on_hover_text("Set position to gaze")
+                        .clicked()
+                    {
+                        self.end = pos;
+                    }
+                });
+            });
 
         ui.horizontal(|ui| {
             ui.strong("Scale");

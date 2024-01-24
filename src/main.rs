@@ -8,6 +8,7 @@ extern crate windows;
 #[macro_use]
 extern crate tracing;
 
+use crate::render::tween::ease_out_exponential;
 use std::cell::RefCell;
 use std::f32::consts::PI;
 use std::io::{Cursor, Read, Seek, SeekFrom};
@@ -26,7 +27,7 @@ use crate::ecs::components::{
 };
 use crate::ecs::resolve_aabb;
 use crate::ecs::resources::SelectedEntity;
-use crate::hotkeys::SHORTCUT_FOCUS;
+use crate::hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE};
 use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::inspector::InspectorOverlay;
 use crate::overlays::menu::MenuBar;
@@ -405,7 +406,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(ViewerWindows::default());
     resources.insert(renderer.clone());
     resources.insert(renderer.read().dcs.clone());
-    resources.insert(SelectedEntity(None, false));
+    resources.insert(SelectedEntity(None, false, Instant::now()));
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -649,6 +650,14 @@ pub async fn main() -> anyhow::Result<()> {
                                 }
                             }
                         }
+                    } else if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
+                        let (d, pos) = renderer
+                            .read()
+                            .gbuffer
+                            .depth_buffer_distance_pos_center(&camera);
+                        if d.is_finite() {
+                            camera.focus(pos, 10.0);
+                        }
                     }
                 }
                 last_frame = Instant::now();
@@ -851,13 +860,14 @@ pub async fn main() -> anyhow::Result<()> {
                         }
 
                         let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
+                        let selected = resources.get::<SelectedEntity>().unwrap();
                         for (e, (ruler, visible)) in
                             map.scene.query::<(&Ruler, Option<&Visible>)>().iter()
                         {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_ruler(&mut debugshapes, ruler, start_time, Some(e));
+                            draw_ruler(&mut debugshapes, ruler, start_time, Some(e), &selected);
                         }
                         for (e, (transform, sphere, visible)) in map
                             .scene
@@ -867,7 +877,14 @@ pub async fn main() -> anyhow::Result<()> {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_sphere(&mut debugshapes, transform, sphere, start_time, Some(e));
+                            draw_sphere(
+                                &mut debugshapes,
+                                transform,
+                                sphere,
+                                start_time,
+                                Some(e),
+                                &selected,
+                            );
                         }
                         for (e, (transform, beacon, visible)) in map
                             .scene
@@ -877,7 +894,14 @@ pub async fn main() -> anyhow::Result<()> {
                             if !visible.map_or(true, |v| v.0) {
                                 continue;
                             }
-                            draw_beacon(&mut debugshapes, transform, beacon, start_time, Some(e));
+                            draw_beacon(
+                                &mut debugshapes,
+                                transform,
+                                beacon,
+                                start_time,
+                                Some(e),
+                                &selected,
+                            );
                         }
                     }
 
@@ -912,34 +936,23 @@ pub async fn main() -> anyhow::Result<()> {
                         && !resources.get::<SelectedEntity>().unwrap().1
                     {
                         if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                            if let Ok(m) = renderer
-                                .read()
-                                .gbuffer
-                                .pick_buffer_staging
-                                .map(D3D11_MAP_READ)
-                            {
-                                let data = m.ptr.add(
-                                    (mouse_pos.y as f64 * window.scale_factor()).round() as usize
-                                        * m.row_pitch as usize
-                                        + (mouse_pos.x as f64 * window.scale_factor()).round()
-                                            as usize
-                                            * 4,
-                                ) as *mut u32;
+                            let id = renderer.read().gbuffer.pick_buffer_read(
+                                (mouse_pos.x as f64 * window.scale_factor()).round() as usize,
+                                (mouse_pos.y as f64 * window.scale_factor()).round() as usize,
+                            );
+                            let maps = resources.get::<MapDataList>().unwrap();
 
-                                let id = *data;
-                                let maps = resources.get::<MapDataList>().unwrap();
-
-                                if let Some((_, _, map)) = maps.current_map() {
-                                    if id != u32::MAX {
-                                        *resources.get_mut::<SelectedEntity>().unwrap() =
-                                            SelectedEntity(
-                                                Some(map.scene.find_entity_from_id(id)),
-                                                true,
-                                            );
-                                    } else {
-                                        *resources.get_mut::<SelectedEntity>().unwrap() =
-                                            SelectedEntity(None, true);
-                                    }
+                            if let Some((_, _, map)) = maps.current_map() {
+                                if id != u32::MAX {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(
+                                            Some(map.scene.find_entity_from_id(id)),
+                                            true,
+                                            Instant::now(),
+                                        );
+                                } else {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(None, true, Instant::now());
                                 }
                             }
                         }
@@ -1010,16 +1023,36 @@ fn get_rainbow_color(start_time: Instant) -> [u8; 3] {
     .to_srgb()
 }
 
+fn get_selected_color<const N: usize>(
+    selected: &SelectedEntity,
+    e: Option<Entity>,
+    c: [u8; N],
+) -> [u8; N] {
+    let select_color = [255, 153, 51, 255];
+    let elapsed = ease_out_exponential((selected.2.elapsed().as_secs_f32() / 1.4).min(1.0));
+    if selected.0 == e && elapsed < 1.0 {
+        let mut ret = [0; N];
+        for i in 0..N.min(4) {
+            ret[i] =
+                (select_color[i] as f32 * (1.0 - elapsed) + (c[i] as f32 * elapsed)).round() as u8;
+        }
+        ret
+    } else {
+        c
+    }
+}
+
 fn draw_ruler(
     debugshapes: &mut DebugShapes,
     ruler: &Ruler,
     start_time: Instant,
     entity: Option<Entity>,
+    selected: &SelectedEntity,
 ) {
     let color = if ruler.rainbow {
-        get_rainbow_color(start_time)
+        get_selected_color::<3>(selected, entity, get_rainbow_color(start_time))
     } else {
-        ruler.color
+        get_selected_color::<3>(selected, entity, ruler.color)
     };
 
     debugshapes.cross(ruler.start, ruler.scale, color);
@@ -1111,12 +1144,13 @@ fn draw_sphere(
     sphere: &Sphere,
     start_time: Instant,
     entity: Option<Entity>,
+    selected: &SelectedEntity,
 ) {
     let color = if sphere.rainbow {
         let c = get_rainbow_color(start_time);
-        [c[0], c[1], c[2], sphere.color[3]]
+        get_selected_color::<4>(selected, entity, [c[0], c[1], c[2], sphere.color[3]])
     } else {
-        sphere.color
+        get_selected_color::<4>(selected, entity, sphere.color)
     };
 
     let color_opaque = [color[0], color[1], color[2]];
@@ -1167,15 +1201,21 @@ fn draw_beacon(
     beacon: &Beacon,
     start_time: Instant,
     entity: Option<Entity>,
+    selected: &SelectedEntity,
 ) {
     const BEAM_HEIGHT: f32 = 5000.0;
     const BASE_RADIUS: f32 = 0.1;
-    let color: [u8; 4] = [
-        beacon.color[0],
-        beacon.color[1],
-        beacon.color[2],
-        (150.0 + (start_time.elapsed().as_secs_f32() * 2.0 * PI * beacon.freq).sin() * 50.0) as u8,
-    ];
+    let color: [u8; 4] = get_selected_color::<4>(
+        selected,
+        entity,
+        [
+            beacon.color[0],
+            beacon.color[1],
+            beacon.color[2],
+            (150.0 + (start_time.elapsed().as_secs_f32() * 2.0 * PI * beacon.freq).sin() * 50.0)
+                as u8,
+        ],
+    );
     debugshapes.sphere(
         transform.translation,
         BASE_RADIUS,
