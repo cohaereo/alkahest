@@ -18,7 +18,7 @@ jobs:
       matrix:
         platform: [windows-latest]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: Swatinem/rust-cache@v2
 
@@ -36,7 +36,7 @@ jobs:
 
       - name: Publish artifact
         if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: alkahest-${{ env.GITHUB_SHA_SHORT }}
           path: |
