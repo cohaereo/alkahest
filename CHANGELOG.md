@@ -51,6 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Utility Objects now flash briefly while selected by @Froggy618157725 in [#17](https://github.com/cohaereo/alkahest/pull/17)
 - Add about menu by @cohaereo in [#19](https://github.com/cohaereo/alkahest/pull/19)
 - Add changelog window by @cohaereo in [#19](https://github.com/cohaereo/alkahest/pull/19)
+- Added GitHub actions nightly build workflow
 
 ### Changed
 

@@ -1,4 +1,4 @@
-name: Build (rolling release)
+name: Build (nightly)
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    name: Build RR (${{ matrix.platform }})
+    name: Build Nightly (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: true
