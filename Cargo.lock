@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "binrw 0.12.0",
