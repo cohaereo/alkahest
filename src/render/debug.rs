@@ -1,9 +1,13 @@
 use crate::overlays::render_settings::PickbufferScope;
+use crate::texture::Texture;
+use crate::util::image::Png;
 use bitflags::bitflags;
 use std::f32::consts::PI;
 use std::sync::Arc;
+use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_R32G32B32_FLOAT;
 
 use super::bytecode::externs::TfxShaderStage;
+use super::drawcall::ShaderStages;
 use super::renderer::DrawMode;
 use super::{color::Color, shader, ConstantBuffer, DeviceContextSwapchain};
 use crate::ecs::transform::Transform;
@@ -288,14 +292,17 @@ pub struct DebugShapeRenderer {
     scope_line: ConstantBuffer<ScopeAlkDebugShapeLine>,
     scope_pick: ConstantBuffer<PickbufferScope>,
     vshader: ID3D11VertexShader,
+    vshader_shaded: ID3D11VertexShader,
     vshader_line: ID3D11VertexShader,
     gshader_line: ID3D11GeometryShader,
     pshader: ID3D11PixelShader,
+    pshader_shaded: ID3D11PixelShader,
     pshader_line: ID3D11PixelShader,
     pshader_line_dotted: ID3D11PixelShader,
     pshader_pickbuffer: ID3D11PixelShader,
 
     input_layout: ID3D11InputLayout,
+    input_layout_shaded: ID3D11InputLayout,
 
     vb_sphere: ID3D11Buffer,
     ib_sphere: ID3D11Buffer,
@@ -306,6 +313,8 @@ pub struct DebugShapeRenderer {
     ib_cube_sides: ID3D11Buffer,
     cube_outline_index_count: u32,
     cube_index_count: u32,
+
+    matcap: Texture,
 }
 
 impl DebugShapeRenderer {
@@ -318,6 +327,15 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (vshader, _) = shader::load_vshader(&dcs, &data_vscube)?;
+        let data_shaded = shader::compile_hlsl(
+            include_str!("../../assets/shaders/debug_shaded.hlsl"),
+            "VShader",
+            "vs_5_0",
+            "debug_shaded.hlsl",
+        )
+        .unwrap();
+        let (vshader_shaded, _) = shader::load_vshader(&dcs, &data_shaded)?;
+
         let data_vsline = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug_line.hlsl"),
             "VShader",
@@ -343,6 +361,33 @@ impl DebugShapeRenderer {
         }
         .unwrap();
 
+        let input_layout_shaded = unsafe {
+            dcs.device.CreateInputLayout(
+                &[
+                    D3D11_INPUT_ELEMENT_DESC {
+                        SemanticName: s!("POSITION"),
+                        SemanticIndex: 0,
+                        Format: DXGI_FORMAT_R32G32B32_FLOAT,
+                        InputSlot: 0,
+                        AlignedByteOffset: 0,
+                        InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                        InstanceDataStepRate: 0,
+                    },
+                    D3D11_INPUT_ELEMENT_DESC {
+                        SemanticName: s!("NORMAL"),
+                        SemanticIndex: 0,
+                        Format: DXGI_FORMAT_R32G32B32_FLOAT,
+                        InputSlot: 0,
+                        AlignedByteOffset: 12,
+                        InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                        InstanceDataStepRate: 0,
+                    },
+                ],
+                &data_shaded,
+            )
+        }
+        .unwrap();
+
         let data = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug_line.hlsl"),
             "GShader",
@@ -360,6 +405,15 @@ impl DebugShapeRenderer {
         )
         .unwrap();
         let (pshader, _) = shader::load_pshader(&dcs, &data)?;
+
+        let data = shader::compile_hlsl(
+            include_str!("../../assets/shaders/debug_shaded.hlsl"),
+            "PShader",
+            "ps_5_0",
+            "debug_shaded.hlsl",
+        )
+        .unwrap();
+        let (pshader_shaded, _) = shader::load_pshader(&dcs, &data)?;
 
         let data = shader::compile_hlsl(
             include_str!("../../assets/shaders/debug_line.hlsl"),
@@ -514,15 +568,23 @@ impl DebugShapeRenderer {
             scope: ConstantBuffer::create(dcs.clone(), None)?,
             scope_line: ConstantBuffer::create(dcs.clone(), None)?,
             scope_pick: ConstantBuffer::create(dcs.clone(), None)?,
+            matcap: Texture::load_png(
+                &dcs,
+                &Png::from_bytes(include_bytes!("../../assets/textures/matcap_textured.png"))?,
+                Some("debug matcap"),
+            )?,
             dcs,
             vshader,
+            vshader_shaded,
             vshader_line,
             gshader_line,
             pshader,
+            pshader_shaded,
             pshader_line,
             pshader_line_dotted,
             pshader_pickbuffer,
             input_layout,
+            input_layout_shaded,
             vb_sphere,
             ib_sphere,
             sphere_index_count,
@@ -590,7 +652,6 @@ impl DebugShapeRenderer {
                     self.bind_scope_ps(mode, 10, &self.scope);
 
                     unsafe {
-                        self.dcs.context().IASetInputLayout(&self.input_layout);
                         self.vs_set_shader(mode, &self.vshader);
                         self.ps_set_shader(mode, &self.pshader);
 
@@ -598,23 +659,19 @@ impl DebugShapeRenderer {
                             0,
                             1,
                             Some([Some(shape.vb.clone())].as_ptr()),
-                            Some([16].as_ptr()),
+                            Some([24].as_ptr()),
                             Some(&0),
                         );
 
-                        self.dcs.context().IASetIndexBuffer(
-                            Some(&shape.ib),
-                            DXGI_FORMAT_R16_UINT,
-                            0,
-                        );
+                        self.dcs
+                            .context()
+                            .IASetInputLayout(&self.input_layout_shaded);
 
                         self.dcs
                             .context()
                             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
-                        self.dcs
-                            .context()
-                            .DrawIndexed(shape.outline_index_count as _, 0, 0);
+                        self.dcs.context().Draw(shape.outline_index_count as _, 0);
                     }
 
                     if sides {
@@ -626,14 +683,6 @@ impl DebugShapeRenderer {
                             .unwrap();
 
                         unsafe {
-                            self.dcs.context().IASetVertexBuffers(
-                                0,
-                                1,
-                                Some([Some(shape.vb.clone())].as_ptr()),
-                                Some([16].as_ptr()),
-                                Some(&0),
-                            );
-
                             self.dcs.context().IASetIndexBuffer(
                                 Some(&shape.ib_sides),
                                 DXGI_FORMAT_R16_UINT,
@@ -644,6 +693,9 @@ impl DebugShapeRenderer {
                                 .context()
                                 .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+                            self.vs_set_shader(mode, &self.vshader_shaded);
+                            self.ps_set_shader(mode, &self.pshader_shaded);
+                            self.matcap.bind(&self.dcs, 8, ShaderStages::PIXEL);
                             self.dcs.context().DrawIndexed(shape.index_count, 0, 0);
                         }
                     }
@@ -876,7 +928,6 @@ pub struct ScopeAlkDebugShapeLine {
 #[derive(Clone)]
 pub struct CustomDebugShape {
     vb: ID3D11Buffer,
-    ib: ID3D11Buffer,
     ib_sides: ID3D11Buffer,
     outline_index_count: u32,
     index_count: u32,
@@ -885,33 +936,17 @@ pub struct CustomDebugShape {
 impl CustomDebugShape {
     pub fn new(
         dcs: &DeviceContextSwapchain,
-        vertices: &[Vec4],
+        vertices: &[Vec3],
         indices: &[u16],
     ) -> anyhow::Result<CustomDebugShape> {
-        let indices_outline = remove_diagonals_linegulate(vertices, indices);
-
-        let ib = unsafe {
-            dcs.device
-                .CreateBuffer(
-                    &D3D11_BUFFER_DESC {
-                        ByteWidth: (indices_outline.len() * 2) as _,
-                        Usage: D3D11_USAGE_IMMUTABLE,
-                        BindFlags: D3D11_BIND_INDEX_BUFFER,
-                        ..Default::default()
-                    },
-                    Some(&D3D11_SUBRESOURCE_DATA {
-                        pSysMem: indices_outline.as_ptr() as _,
-                        ..Default::default()
-                    }),
-                )
-                .context("Failed to create index buffer")?
-        };
+        let (vertices, indices) = calculate_mesh_normals_flat(vertices, indices);
+        let indices_outline = remove_diagonals_linegulate(&vertices, &indices);
 
         let ib_sides = unsafe {
             dcs.device
                 .CreateBuffer(
                     &D3D11_BUFFER_DESC {
-                        ByteWidth: (indices.len() * 2) as _,
+                        ByteWidth: std::mem::size_of_val(indices.as_slice()) as _,
                         Usage: D3D11_USAGE_IMMUTABLE,
                         BindFlags: D3D11_BIND_INDEX_BUFFER,
                         ..Default::default()
@@ -928,7 +963,7 @@ impl CustomDebugShape {
             dcs.device
                 .CreateBuffer(
                     &D3D11_BUFFER_DESC {
-                        ByteWidth: (vertices.len() * 16) as _,
+                        ByteWidth: std::mem::size_of_val(vertices.as_slice()) as _,
                         Usage: D3D11_USAGE_IMMUTABLE,
                         BindFlags: D3D11_BIND_VERTEX_BUFFER,
                         ..Default::default()
@@ -943,7 +978,6 @@ impl CustomDebugShape {
 
         Ok(Self {
             vb,
-            ib,
             ib_sides,
             outline_index_count: indices_outline.len() as _,
             index_count: indices.len() as _,
@@ -954,22 +988,21 @@ impl CustomDebugShape {
         dcs: &DeviceContextSwapchain,
         shape: &destiny_havok::shape_collection::Shape,
     ) -> anyhow::Result<Self> {
-        let vertices_vec4 = shape.vertices.iter().map(|v| v.extend(1.0)).collect_vec();
-        Self::new(dcs, &vertices_vec4, &shape.indices)
+        Self::new(dcs, &shape.vertices, &shape.indices)
     }
 }
 
 // Input: triangulated mesh, output: line list with diagonal edges removed
-pub fn remove_diagonals_linegulate(vertices: &[Vec4], indices: &[u16]) -> Vec<u16> {
+pub fn remove_diagonals_linegulate(vertices: &[(Vec3, Vec3)], indices: &[u16]) -> Vec<u16> {
     let mut indices_outline = vec![];
     for i in indices.chunks_exact(3) {
         let i0 = i[0];
         let i1 = i[1];
         let i2 = i[2];
 
-        let v0 = vertices[i0 as usize];
-        let v1 = vertices[i1 as usize];
-        let v2 = vertices[i2 as usize];
+        let v0 = vertices[i0 as usize].0;
+        let v1 = vertices[i1 as usize].0;
+        let v2 = vertices[i2 as usize].0;
 
         //         0
         //         |\ edge_a
@@ -992,4 +1025,34 @@ pub fn remove_diagonals_linegulate(vertices: &[Vec4], indices: &[u16]) -> Vec<u1
     }
 
     indices_outline
+}
+
+pub fn calculate_mesh_normals_flat(
+    vertices: &[Vec3],
+    indices: &[u16],
+) -> (Vec<(Vec3, Vec3)>, Vec<u16>) {
+    let mut new_vertices = vec![];
+    let mut new_indices = vec![];
+
+    for i in indices.chunks_exact(3) {
+        let i0 = i[0];
+        let i1 = i[1];
+        let i2 = i[2];
+
+        let v0 = vertices[i0 as usize];
+        let v1 = vertices[i1 as usize];
+        let v2 = vertices[i2 as usize];
+
+        let normal = (v1 - v0).cross(v2 - v0).normalize();
+
+        let index_start = new_vertices.len() as u16;
+
+        new_vertices.push((v0, normal));
+        new_vertices.push((v1, normal));
+        new_vertices.push((v2, normal));
+
+        new_indices.extend_from_slice(&[index_start, index_start + 1, index_start + 2]);
+    }
+
+    (new_vertices, new_indices)
 }

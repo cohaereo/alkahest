@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add about menu by @cohaereo in [#19](https://github.com/cohaereo/alkahest/pull/19)
 - Add changelog window by @cohaereo in [#19](https://github.com/cohaereo/alkahest/pull/19)
 - Added GitHub actions nightly build workflow
+- Add matcap pseudo-shading to custom debug shapes by @cohaereo
 
 ### Changed
 
@@ -75,3 +76,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix pickbuffer not respecting d3d mapped row pitch by @cohaereo
 - Fixed Selector behavior on screens with scaling factors @Froggy618157725 in [#16](https://github.com/cohaereo/alkahest/pull/16)
 - Fix cubemap view not rotating by @cohaereo
+- Fixed a potential GUI memory leak when using unmanaged DirectX textures by @cohaereo
