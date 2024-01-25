@@ -78,6 +78,14 @@ impl TextureAllocator {
             *f = filter;
         }
     }
+
+    pub fn free(&mut self, tid: TextureId) -> bool {
+        self.allocated
+            .remove(&tid)
+            .map(|_| ())
+            .or_else(|| self.allocated_unmanaged.remove(&tid).map(|_| ()))
+            .is_some()
+    }
 }
 
 impl TextureAllocator {
@@ -90,14 +98,6 @@ impl TextureAllocator {
         let tex = Self::allocate_texture(dev, image)?;
         self.allocated.insert(tid, tex);
         Ok(())
-    }
-
-    fn free(&mut self, tid: TextureId) -> bool {
-        self.allocated
-            .remove(&tid)
-            .map(|_| ())
-            .or_else(|| self.allocated_unmanaged.remove(&tid).map(|_| ()))
-            .is_some()
     }
 
     fn update_partial(

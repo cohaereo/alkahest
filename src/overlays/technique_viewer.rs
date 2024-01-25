@@ -88,6 +88,17 @@ impl Overlay for TechniqueViewer {
 
         open
     }
+
+    fn dispose(
+        &mut self,
+        _ctx: &egui::Context,
+        _resources: &mut crate::resources::Resources,
+        gui: &mut GuiContext<'_>,
+    ) {
+        for s in &mut self.shaders {
+            s.dispose(gui);
+        }
+    }
 }
 
 pub struct TechniqueShaderViewer {
@@ -262,5 +273,11 @@ impl TechniqueShaderViewer {
                 }
             }
         });
+    }
+
+    fn dispose(&mut self, gui: &mut GuiContext<'_>) {
+        for (_, _, texture_egui) in self.textures.values() {
+            gui.integration.textures_mut().free(*texture_egui);
+        }
     }
 }

@@ -22,6 +22,14 @@ pub trait Overlay {
         resources: &mut Resources,
         gui: &mut GuiContext<'_>,
     ) -> bool;
+
+    fn dispose(
+        &mut self,
+        _ctx: &egui::Context,
+        _resources: &mut Resources,
+        _gui: &mut GuiContext<'_>,
+    ) {
+    }
 }
 
 pub struct GuiManager {
@@ -172,6 +180,15 @@ impl GuiManager {
                                     .unwrap()
                                     .0
                                     .insert(k, viewer);
+                            } else {
+                                viewer.dispose(
+                                    ctx,
+                                    resources,
+                                    &mut GuiContext {
+                                        icons: &self.resources,
+                                        integration,
+                                    },
+                                );
                             }
                         }
 
