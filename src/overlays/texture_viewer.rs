@@ -5,7 +5,11 @@ use fs_err::File;
 use glam::Vec4;
 use windows::Win32::Graphics::{
     Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-    Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_VIEWPORT},
+    Direct3D11::{
+        ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader, D3D11_COMPARISON_NEVER,
+        D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT,
+        D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_VIEWPORT,
+    },
 };
 
 use crate::{
@@ -49,6 +53,10 @@ pub struct TextureViewer {
 
     depth: f32,
     selected_mip: usize,
+    selected_sampler: ID3D11SamplerState,
+
+    sampler_point: ID3D11SamplerState,
+    sampler_linear: ID3D11SamplerState,
 }
 
 impl TextureViewer {
@@ -88,10 +96,40 @@ impl TextureViewer {
         )?;
 
         let texture = Texture::load(&dcs, tag)?;
-        let texture_egui = gui
-            .integration
-            .textures_mut()
-            .allocate_dx(unsafe { std::mem::transmute(render_target.view.clone()) });
+        let texture_egui = gui.integration.textures_mut().allocate_dx((
+            unsafe { std::mem::transmute(render_target.view.clone()) },
+            Some(egui::TextureFilter::Linear),
+        ));
+
+        let sampler_point = unsafe {
+            dcs.device.CreateSamplerState(&D3D11_SAMPLER_DESC {
+                Filter: D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT,
+                AddressU: D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressV: D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressW: D3D11_TEXTURE_ADDRESS_CLAMP,
+                MipLODBias: -0.5,
+                MaxAnisotropy: 1,
+                ComparisonFunc: D3D11_COMPARISON_NEVER,
+                BorderColor: [0.0; 4],
+                MinLOD: 0.0,
+                MaxLOD: 3.40282E+38,
+            })?
+        };
+
+        let sampler_linear = unsafe {
+            dcs.device.CreateSamplerState(&D3D11_SAMPLER_DESC {
+                Filter: D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT,
+                AddressU: D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressV: D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressW: D3D11_TEXTURE_ADDRESS_CLAMP,
+                MipLODBias: -0.5,
+                MaxAnisotropy: 1,
+                ComparisonFunc: D3D11_COMPARISON_NEVER,
+                BorderColor: [0.0; 4],
+                MinLOD: 0.0,
+                MaxLOD: 3.40282E+38,
+            })?
+        };
 
         Ok(Self {
             render_target,
@@ -110,6 +148,10 @@ impl TextureViewer {
 
             depth: 0.0,
             selected_mip: 0,
+            selected_sampler: sampler_linear.clone(),
+
+            sampler_point,
+            sampler_linear,
         })
     }
 }
@@ -139,6 +181,10 @@ impl Overlay for TextureViewer {
 
             self.scope.bind(0, TfxShaderStage::Pixel);
             self.texture.bind(&self.dcs, 0, ShaderStages::PIXEL);
+
+            self.dcs
+                .context()
+                .PSSetSamplers(0, Some(&[Some(self.selected_sampler.clone())]));
 
             self.dcs.context().ClearRenderTargetView(
                 &self.render_target.render_target,
@@ -237,7 +283,40 @@ impl Overlay for TextureViewer {
                                         self.header.height as usize >> i
                                     )
                                 },
-                            )
+                            );
+
+                        ComboBox::from_label("Filter")
+                            .wrap(false)
+                            .width(64.0)
+                            .selected_text(match &self.selected_sampler {
+                                x if x == &self.sampler_linear => "Linear",
+                                x if x == &self.sampler_point => "Nearest",
+                                _ => "???",
+                            })
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.selected_sampler,
+                                    self.sampler_linear.clone(),
+                                    "Linear",
+                                );
+                                ui.selectable_value(
+                                    &mut self.selected_sampler,
+                                    self.sampler_point.clone(),
+                                    "Nearest",
+                                );
+                            })
+                        // .show_index(
+                        //     ui,
+                        //     &mut self.selected_mip,
+                        //     self.header.mip_count as usize,
+                        //     |i| {
+                        //         format!(
+                        //             "Point",
+                        //             self.header.width as usize >> i,
+                        //             self.header.height as usize >> i
+                        //         )
+                        //     },
+                        // );
                     });
 
                     if self.header.depth > 1 {
@@ -267,13 +346,28 @@ impl Overlay for TextureViewer {
                     }
 
                     let height_ratio = self.header.height as f32 / self.header.width as f32;
-                    ui.image(ImageSource::Texture(egui::load::SizedTexture {
-                        id: self.texture_egui,
-                        size: egui::Vec2::new(
-                            ui.available_width(),
-                            ui.available_width() * height_ratio,
-                        ),
-                    }))
+                    let filter = match &self.selected_sampler {
+                        x if x == &self.sampler_linear => egui::TextureFilter::Linear,
+                        x if x == &self.sampler_point => egui::TextureFilter::Nearest,
+                        _ => egui::TextureFilter::Linear,
+                    };
+
+                    _gui.integration
+                        .textures_mut()
+                        .set_filter(self.texture_egui, Some(filter));
+                    ui.add(
+                        egui::Image::new(ImageSource::Texture(egui::load::SizedTexture {
+                            id: self.texture_egui,
+                            size: egui::Vec2::new(
+                                ui.available_width(),
+                                ui.available_width() * height_ratio,
+                            ),
+                        }))
+                        .texture_options(egui::TextureOptions {
+                            magnification: filter,
+                            minification: filter,
+                        }),
+                    )
                 });
 
                 ui.label(format!(

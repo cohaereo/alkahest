@@ -22,10 +22,10 @@ use super::{
 };
 
 pub struct TechniqueViewer {
-    dcs: DcsShared,
+    _dcs: DcsShared,
 
     tag: ExtendedHash,
-    header: STechnique,
+    _header: STechnique,
 
     shaders: Vec<TechniqueShaderViewer>,
 }
@@ -57,9 +57,9 @@ impl TechniqueViewer {
         }
 
         Ok(Self {
-            dcs,
+            _dcs: dcs,
             tag,
-            header,
+            _header: header,
             shaders,
         })
     }
@@ -118,10 +118,10 @@ impl TechniqueShaderViewer {
             let Ok(texture) = Texture::load(dcs, assignment.texture) else {
                 continue;
             };
-            let texture_egui = gui
-                .integration
-                .textures_mut()
-                .allocate_dx(unsafe { std::mem::transmute(texture.view.clone()) });
+            let texture_egui = gui.integration.textures_mut().allocate_dx((
+                unsafe { std::mem::transmute(texture.view.clone()) },
+                Some(egui::TextureFilter::Linear),
+            ));
 
             textures.insert(assignment.texture, (header, texture, texture_egui));
         }
