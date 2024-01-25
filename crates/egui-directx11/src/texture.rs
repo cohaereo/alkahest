@@ -25,7 +25,8 @@ struct ManagedTexture {
 pub struct TextureAllocator {
     allocated: HashMap<TextureId, ManagedTexture>,
     /// User-loaded DX11 textures
-    allocated_unmanaged: HashMap<TextureId, ID3D11ShaderResourceView>,
+    allocated_unmanaged:
+        HashMap<TextureId, (ID3D11ShaderResourceView, Option<egui::TextureFilter>)>,
     unmanaged_index: u64,
 }
 
@@ -52,18 +53,38 @@ impl TextureAllocator {
         Ok(())
     }
 
-    pub fn get_by_id(&self, tid: TextureId) -> Option<ID3D11ShaderResourceView> {
+    pub fn get_by_id(
+        &self,
+        tid: TextureId,
+    ) -> Option<(ID3D11ShaderResourceView, Option<egui::TextureFilter>)> {
         self.allocated
             .get(&tid)
-            .map(|t| t.resource.clone())
+            .map(|t| (t.resource.clone(), None))
             .or_else(|| self.allocated_unmanaged.get(&tid).cloned())
     }
 
-    pub fn allocate_dx(&mut self, srv: ID3D11ShaderResourceView) -> TextureId {
+    pub fn allocate_dx(
+        &mut self,
+        srv: (ID3D11ShaderResourceView, Option<egui::TextureFilter>),
+    ) -> TextureId {
         self.unmanaged_index += 1;
         let tid = TextureId::User((1 << 60) + self.unmanaged_index);
         self.allocated_unmanaged.insert(tid, srv);
         tid
+    }
+
+    pub fn set_filter(&mut self, tid: TextureId, filter: Option<egui::TextureFilter>) {
+        if let Some((_, f)) = self.allocated_unmanaged.get_mut(&tid) {
+            *f = filter;
+        }
+    }
+
+    pub fn free(&mut self, tid: TextureId) -> bool {
+        self.allocated
+            .remove(&tid)
+            .map(|_| ())
+            .or_else(|| self.allocated_unmanaged.remove(&tid).map(|_| ()))
+            .is_some()
     }
 }
 
@@ -77,14 +98,6 @@ impl TextureAllocator {
         let tex = Self::allocate_texture(dev, image)?;
         self.allocated.insert(tid, tex);
         Ok(())
-    }
-
-    fn free(&mut self, tid: TextureId) -> bool {
-        self.allocated
-            .remove(&tid)
-            .map(|_| ())
-            .or_else(|| self.allocated_unmanaged.remove(&tid).map(|_| ()))
-            .is_some()
     }
 
     fn update_partial(

@@ -16,13 +16,13 @@ use windows::{
             Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
             Direct3D11::{
                 ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout, ID3D11RenderTargetView,
-                ID3D11Texture2D, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_BLEND_DESC,
-                D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
+                ID3D11SamplerState, ID3D11Texture2D, D3D11_APPEND_ALIGNED_ELEMENT,
+                D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
                 D3D11_BLEND_SRC_ALPHA, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_COMPARISON_ALWAYS,
                 D3D11_CULL_NONE, D3D11_FILL_SOLID, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-                D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC,
-                D3D11_RENDER_TARGET_BLEND_DESC, D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_BORDER,
-                D3D11_VIEWPORT,
+                D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_INPUT_ELEMENT_DESC,
+                D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
+                D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_BORDER, D3D11_VIEWPORT,
             },
             Dxgi::{
                 Common::{
@@ -47,6 +47,8 @@ pub struct DirectX11Renderer {
     shaders: CompiledShaders,
     backup: BackupState,
     hwnd: HWND,
+
+    samplers: [Option<ID3D11SamplerState>; 2],
 }
 
 impl DirectX11Renderer {
@@ -110,6 +112,40 @@ impl DirectX11Renderer {
             let input_layout =
                 input_layout.ok_or(RenderError::General("failed to initialize input layout"))?;
 
+            let samplers = {
+                let desc = D3D11_SAMPLER_DESC {
+                    Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+                    AddressU: D3D11_TEXTURE_ADDRESS_BORDER,
+                    AddressV: D3D11_TEXTURE_ADDRESS_BORDER,
+                    AddressW: D3D11_TEXTURE_ADDRESS_BORDER,
+                    MipLODBias: 0.,
+                    ComparisonFunc: D3D11_COMPARISON_ALWAYS,
+                    MinLOD: 0.,
+                    MaxLOD: 0.,
+                    BorderColor: [1., 1., 1., 1.],
+                    ..Default::default()
+                };
+                let desc2 = D3D11_SAMPLER_DESC {
+                    Filter: D3D11_FILTER_MIN_MAG_MIP_POINT,
+                    AddressU: D3D11_TEXTURE_ADDRESS_BORDER,
+                    AddressV: D3D11_TEXTURE_ADDRESS_BORDER,
+                    AddressW: D3D11_TEXTURE_ADDRESS_BORDER,
+                    MipLODBias: 0.,
+                    ComparisonFunc: D3D11_COMPARISON_ALWAYS,
+                    MinLOD: 0.,
+                    MaxLOD: 0.,
+                    BorderColor: [1., 1., 1., 1.],
+                    ..Default::default()
+                };
+
+                let mut sampler_linear = None;
+                dev.CreateSamplerState(&desc, Some(&mut sampler_linear))?;
+                let mut sampler_point = None;
+                dev.CreateSamplerState(&desc2, Some(&mut sampler_point))?;
+
+                [sampler_linear, sampler_point]
+            };
+
             Ok(Self {
                 tex_alloc: TextureAllocator::default(),
                 backup: BackupState::default(),
@@ -117,6 +153,7 @@ impl DirectX11Renderer {
                 render_view,
                 shaders,
                 hwnd,
+                samplers,
             })
         }
     }
@@ -166,7 +203,6 @@ impl DirectX11Renderer {
 
             self.set_blend_state(dev, ctx)?;
             self.set_raster_options(dev, ctx)?;
-            self.set_sampler_state(dev, ctx)?;
 
             ctx.RSSetViewports(Some(&[self.get_viewport()]));
             ctx.OMSetRenderTargets(Some(&[self.render_view.clone()]), None);
@@ -186,8 +222,12 @@ impl DirectX11Renderer {
                     bottom: mesh.clip.bottom() as _,
                 }]));
 
-                if texture.is_some() {
-                    ctx.PSSetShaderResources(0, Some(&[texture]));
+                if let Some((texture, texture_filter)) = &texture {
+                    self.set_sampler_state(
+                        ctx,
+                        texture_filter.unwrap_or(egui::TextureFilter::Linear),
+                    )?;
+                    ctx.PSSetShaderResources(0, Some(&[Some(texture.clone())]));
                 }
 
                 ctx.IASetVertexBuffers(
@@ -202,6 +242,10 @@ impl DirectX11Renderer {
                 ctx.PSSetShader(&self.shaders.pixel, Some(&[]));
 
                 ctx.DrawIndexed(mesh.indices.len() as _, 0, 0);
+
+                if texture.is_some() {
+                    self.set_sampler_state(ctx, egui::TextureFilter::Linear)?;
+                }
             }
 
             self.backup.restore(ctx);
@@ -325,25 +369,18 @@ impl DirectX11Renderer {
 
     fn set_sampler_state(
         &self,
-        dev: &ID3D11Device,
         ctx: &ID3D11DeviceContext,
+        filter: egui::TextureFilter,
     ) -> Result<(), RenderError> {
-        let desc = D3D11_SAMPLER_DESC {
-            Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-            AddressU: D3D11_TEXTURE_ADDRESS_BORDER,
-            AddressV: D3D11_TEXTURE_ADDRESS_BORDER,
-            AddressW: D3D11_TEXTURE_ADDRESS_BORDER,
-            MipLODBias: 0.,
-            ComparisonFunc: D3D11_COMPARISON_ALWAYS,
-            MinLOD: 0.,
-            MaxLOD: 0.,
-            BorderColor: [1., 1., 1., 1.],
-            ..Default::default()
-        };
-
         unsafe {
-            let mut sampler = None;
-            dev.CreateSamplerState(&desc, Some(&mut sampler))?;
+            let sampler = self
+                .samplers
+                .get(match filter {
+                    egui::TextureFilter::Linear => 0,
+                    egui::TextureFilter::Nearest => 1,
+                })
+                .cloned()
+                .flatten();
             ctx.PSSetSamplers(0, Some(&[sampler]));
             Ok(())
         }

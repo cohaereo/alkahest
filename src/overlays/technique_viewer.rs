@@ -22,10 +22,10 @@ use super::{
 };
 
 pub struct TechniqueViewer {
-    dcs: DcsShared,
+    _dcs: DcsShared,
 
     tag: ExtendedHash,
-    header: STechnique,
+    _header: STechnique,
 
     shaders: Vec<TechniqueShaderViewer>,
 }
@@ -57,9 +57,9 @@ impl TechniqueViewer {
         }
 
         Ok(Self {
-            dcs,
+            _dcs: dcs,
             tag,
-            header,
+            _header: header,
             shaders,
         })
     }
@@ -87,6 +87,17 @@ impl Overlay for TechniqueViewer {
             });
 
         open
+    }
+
+    fn dispose(
+        &mut self,
+        _ctx: &egui::Context,
+        _resources: &mut crate::resources::Resources,
+        gui: &mut GuiContext<'_>,
+    ) {
+        for s in &mut self.shaders {
+            s.dispose(gui);
+        }
     }
 }
 
@@ -118,10 +129,10 @@ impl TechniqueShaderViewer {
             let Ok(texture) = Texture::load(dcs, assignment.texture) else {
                 continue;
             };
-            let texture_egui = gui
-                .integration
-                .textures_mut()
-                .allocate_dx(unsafe { std::mem::transmute(texture.view.clone()) });
+            let texture_egui = gui.integration.textures_mut().allocate_dx((
+                unsafe { std::mem::transmute(texture.view.clone()) },
+                Some(egui::TextureFilter::Linear),
+            ));
 
             textures.insert(assignment.texture, (header, texture, texture_egui));
         }
@@ -262,5 +273,11 @@ impl TechniqueShaderViewer {
                 }
             }
         });
+    }
+
+    fn dispose(&mut self, gui: &mut GuiContext<'_>) {
+        for (_, _, texture_egui) in self.textures.values() {
+            gui.integration.textures_mut().free(*texture_egui);
+        }
     }
 }

@@ -22,6 +22,14 @@ pub trait Overlay {
         resources: &mut Resources,
         gui: &mut GuiContext<'_>,
     ) -> bool;
+
+    fn dispose(
+        &mut self,
+        _ctx: &egui::Context,
+        _resources: &mut Resources,
+        _gui: &mut GuiContext<'_>,
+    ) {
+    }
 }
 
 pub struct GuiManager {
@@ -49,7 +57,6 @@ impl GuiManager {
         }
 
         let integration = egui_winit::State::new(
-            egui.clone(),
             egui::ViewportId::default(),
             window,
             Some(window.scale_factor() as f32),
@@ -99,8 +106,8 @@ impl GuiManager {
         self.overlays.push(overlay);
     }
 
-    pub fn handle_event(&mut self, window: &Window, event: &WindowEvent) -> EventResponse {
-        self.integration.on_window_event(window, event)
+    pub fn handle_event(&mut self, event: &WindowEvent<'_>) -> EventResponse {
+        self.integration.on_window_event(&self.egui, event)
     }
 
     pub fn draw_frame<MF>(&mut self, window: Arc<Window>, resources: &mut Resources, misc_draw: MF)
@@ -173,6 +180,15 @@ impl GuiManager {
                                     .unwrap()
                                     .0
                                     .insert(k, viewer);
+                            } else {
+                                viewer.dispose(
+                                    ctx,
+                                    resources,
+                                    &mut GuiContext {
+                                        icons: &self.resources,
+                                        integration,
+                                    },
+                                );
                             }
                         }
 
@@ -183,7 +199,7 @@ impl GuiManager {
             .unwrap();
 
         self.integration
-            .handle_platform_output(&window, output.platform_output)
+            .handle_platform_output(&window, &self.egui, output.platform_output)
     }
 }
 

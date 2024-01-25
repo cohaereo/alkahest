@@ -68,11 +68,11 @@ use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::keyboard::{Key, NamedKey};
+use winit::event::VirtualKeyCode;
 use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{ControlFlow, EventLoop},
 };
 
 use crate::camera::FpsCamera;
@@ -286,7 +286,7 @@ pub async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let event_loop = EventLoop::new().expect("Failed to create event loop");
+    let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
         .with_inner_size(config::with(|c| {
@@ -495,10 +495,10 @@ pub async fn main() -> anyhow::Result<()> {
     let mut last_cursor_pos: Option<PhysicalPosition<f64>> = None;
     let mut present_parameters = 0;
 
-    event_loop.run(move |event, window_target| {
+    event_loop.run(move |event, _, control_flow| {
         match &event {
             Event::WindowEvent { event, .. } => {
-                let gui_event_captured = gui.handle_event(&window, event).consumed;
+                let gui_event_captured = gui.handle_event(event).consumed;
                 if !gui_event_captured {
                     resources
                         .get_mut::<InputState>()
@@ -541,7 +541,7 @@ pub async fn main() -> anyhow::Result<()> {
                             .unwrap();
                     },
                     WindowEvent::CloseRequested => {
-                        window_target.exit();
+                        *control_flow = ControlFlow::Exit;
                     }
                     WindowEvent::CursorMoved { position, .. } => {
                         if let Some(ref mut p) = last_cursor_pos {
@@ -591,11 +591,11 @@ pub async fn main() -> anyhow::Result<()> {
                             last_cursor_pos = Some(*position);
                         }
                     }
-                    // TODO(cohae): Move this
+                    // TODO(cohae): Should this even be in here at this point?
                     WindowEvent::KeyboardInput { .. } => {
                         let input = resources.get::<InputState>().unwrap();
 
-                        if input.is_key_pressed(Key::Named(NamedKey::ArrowUp)) {
+                        if input.is_key_pressed(VirtualKeyCode::Up) {
                             if let Some(selected_entity) =
                                 resources.get_mut::<SelectedEntity>().unwrap().0.as_mut()
                             {
@@ -606,7 +606,7 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
 
-                        if input.is_key_pressed(Key::Named(NamedKey::ArrowDown)) {
+                        if input.is_key_pressed(VirtualKeyCode::Down) {
                             if let Some(selected_entity) =
                                 resources.get_mut::<SelectedEntity>().unwrap().0.as_mut()
                             {
@@ -617,385 +617,371 @@ pub async fn main() -> anyhow::Result<()> {
                             }
                         }
                     }
-                    WindowEvent::RedrawRequested => {
-                        resources.get_mut::<SelectedEntity>().unwrap().1 = false;
-
-                        // if !gui_event_captured
-                        {
-                            let mut camera = resources.get_mut::<FpsCamera>().unwrap();
-                            let input_state = resources.get::<InputState>().unwrap();
-                            camera.update(
-                                &input_state,
-                                window.inner_size().into(),
-                                last_frame.elapsed().as_secs_f32(),
-                            );
-
-                            if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_FOCUS)) {
-                                if let Some(selected_entity) = resources.get::<SelectedEntity>() {
-                                    let maps = resources.get::<MapDataList>().unwrap();
-
-                                    if let Some((_, _, map)) = maps.current_map() {
-                                        if let Ok(e) = map
-                                            .scene
-                                            .entity(selected_entity.0.unwrap_or(Entity::DANGLING))
-                                        {
-                                            if let Some(target) = resolve_aabb(e) {
-                                                camera.focus_aabb(&target);
-                                            } else if let Some(transform) = e.get::<&Transform>() {
-                                                camera.focus(transform.translation, 10.0);
-                                            }
-                                        }
-                                    }
-                                }
-                            } else if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
-                                let (d, pos) = renderer
-                                    .read()
-                                    .gbuffer
-                                    .depth_buffer_distance_pos_center(&camera);
-                                if d.is_finite() {
-                                    camera.focus(pos, 10.0);
-                                }
-                            }
-                        }
-                        last_frame = Instant::now();
-
-                        let window_dims = window.inner_size();
-
-                        if map_load_task.as_ref().and_then(|v| v.ready()).is_some() {
-                            if let Some(Ok(map_res)) = map_load_task.take().map(|v| v.try_take()) {
-                                let map_res = map_res.expect("Failed to load map(s)");
-                                entity_renderers.extend(map_res.entity_renderers);
-                                let mut maps = resources.get_mut::<MapDataList>().unwrap();
-                                maps.maps = map_res.maps;
-                                map_load_task = None;
-
-                                #[cfg(feature = "discord_rpc")]
-                                if let Some((_, _, map)) = maps.current_map() {
-                                    discord::set_status_from_mapdata(map);
-                                }
-                            }
-                        }
-
-                        unsafe {
-                            renderer.read().clear_render_targets();
-
-                            dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
-                                TopLeftX: 0.0,
-                                TopLeftY: 0.0,
-                                Width: window_dims.width as f32,
-                                Height: window_dims.height as f32,
-                                MinDepth: 0.0,
-                                MaxDepth: 1.0,
-                            }]));
-
-                            dcs.context().RSSetState(&rasterizer_state);
-
-                            renderer.read().begin_frame();
-
-                            let mut maps = resources.get_mut::<MapDataList>().unwrap();
-
-                            if let Some((_, _, map)) = maps.current_map() {
-                                {
-                                    let gb = gui_rendersettings.borrow();
-
-                                    let camera = resources.get::<FpsCamera>().unwrap();
-                                    for (e, (StaticInstances(instances, _), visible)) in map
-                                        .scene
-                                        .query::<(&StaticInstances, Option<&Visible>)>()
-                                        .iter()
-                                    {
-                                        if !visible.map_or(true, |v| v.0) {
-                                            continue;
-                                        }
-
-                                        if instances.instance_count == 1
-                                            && !camera
-                                                .is_aabb_visible(&instances.occlusion_bounds[0])
-                                        {
-                                            continue;
-                                        }
-
-                                        instances
-                                            .draw(
-                                                &renderer.read(),
-                                                gb.renderlayer_statics,
-                                                gb.renderlayer_statics_transparent,
-                                                gb.renderlayer_statics_decals,
-                                                e,
-                                            )
-                                            .unwrap();
-                                    }
-
-                                    if gb.renderlayer_terrain {
-                                        for (e, (terrain, visible)) in
-                                            map.scene.query::<(&Terrain, Option<&Visible>)>().iter()
-                                        {
-                                            if !visible.map_or(true, |v| v.0) {
-                                                continue;
-                                            }
-
-                                            terrain.0.draw(&renderer.read(), e).unwrap();
-                                        }
-                                    }
-
-                                    for (e, (transform, rp, group, water, visible)) in map
-                                        .scene
-                                        .query::<(
-                                            &Transform,
-                                            &ResourcePoint,
-                                            Option<&ActivityGroup>,
-                                            Option<&Water>,
-                                            Option<&Visible>,
-                                        )>()
-                                        .iter()
-                                    {
-                                        if !visible.map_or(true, |v| v.0) {
-                                            continue;
-                                        }
-
-                                        if !gb.renderlayer_water && water.is_some() {
-                                            continue;
-                                        }
-
-                                        if let (Some(group), Some(group_filters)) =
-                                            (group, resources.get::<ActivityGroupFilter>())
-                                        {
-                                            if !group_filters.filters.get(&group.0).unwrap_or(&true)
-                                            {
-                                                continue;
-                                            }
-                                        }
-
-                                        match rp.resource {
-                                            MapResource::Unk80806aa3 { .. } => {
-                                                if !gb.renderlayer_background {
-                                                    continue;
-                                                }
-                                            }
-                                            _ => {
-                                                if !gb.renderlayer_entities {
-                                                    continue;
-                                                }
-                                            }
-                                        }
-
-                                        if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
-                                            let mm = transform.to_mat4();
-
-                                            let mesh_to_world = Mat4::from_cols(
-                                                mm.x_axis.truncate().extend(mm.w_axis.x),
-                                                mm.y_axis.truncate().extend(mm.w_axis.y),
-                                                mm.z_axis.truncate().extend(mm.w_axis.z),
-                                                mm.w_axis,
-                                            );
-
-                                            rp.entity_cbuffer.data().mesh_to_world = mesh_to_world;
-
-                                            if ent
-                                                .draw(
-                                                    &renderer.read(),
-                                                    rp.entity_cbuffer.buffer().clone(),
-                                                    e,
-                                                )
-                                                .is_err()
-                                            {
-                                                renderer
-                                                    .write()
-                                                    .push_fiddlesticks(*transform, Some(e));
-                                            }
-                                        } else if rp.resource.is_entity() {
-                                            // cohae: This will occur when there's no entitymodel for the given entity. Keeping it in just as a reminder of unimplemented entity rendering stuffs
-                                            renderer.write().push_fiddlesticks(*transform, Some(e));
-                                        }
-                                    }
-
-                                    for (e, (transform, em)) in
-                                        map.scene.query::<(&Transform, &EntityModel)>().iter()
-                                    {
-                                        let mm = transform.to_mat4();
-
-                                        let mesh_to_world = Mat4::from_cols(
-                                            mm.x_axis.truncate().extend(mm.w_axis.x),
-                                            mm.y_axis.truncate().extend(mm.w_axis.y),
-                                            mm.z_axis.truncate().extend(mm.w_axis.z),
-                                            mm.w_axis,
-                                        );
-
-                                        em.1.data().mesh_to_world = mesh_to_world;
-
-                                        if em
-                                            .0
-                                            .draw(&renderer.read(), em.1.buffer().clone(), e)
-                                            .is_err()
-                                        {
-                                            renderer.write().push_fiddlesticks(*transform, Some(e));
-                                        }
-                                    }
-                                }
-
-                                // Find the smallest cubemap volume that the camera is in and set it as the current cubemap
-                                let camera = resources.get::<FpsCamera>().unwrap();
-                                let mut smallest_volume = f32::MAX;
-                                let mut smallest_volume_entity = hecs::Entity::DANGLING;
-                                for (e, (transform, volume)) in
-                                    map.scene.query::<(&Transform, &CubemapVolume)>().iter()
-                                {
-                                    if volume.1.volume() < smallest_volume
-                                        && volume.1.contains_point_oriented(
-                                            camera.position,
-                                            transform.rotation,
-                                        )
-                                    {
-                                        smallest_volume = volume.1.volume();
-                                        smallest_volume_entity = e;
-                                    }
-                                }
-
-                                if let Ok(cubemap) =
-                                    map.scene.get::<&CubemapVolume>(smallest_volume_entity)
-                                {
-                                    if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                                        cr.0 = Some(cubemap.2.clone());
-                                        cr.1 = Some(ExtendedHash::Hash32(cubemap.0));
-                                    }
-                                } else if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
-                                    cr.0 = None;
-                                }
-
-                                let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
-                                let selected = resources.get::<SelectedEntity>().unwrap();
-                                for (e, (ruler, visible)) in
-                                    map.scene.query::<(&Ruler, Option<&Visible>)>().iter()
-                                {
-                                    if !visible.map_or(true, |v| v.0) {
-                                        continue;
-                                    }
-                                    draw_ruler(
-                                        &mut debugshapes,
-                                        ruler,
-                                        start_time,
-                                        Some(e),
-                                        &selected,
-                                    );
-                                }
-                                for (e, (transform, sphere, visible)) in map
-                                    .scene
-                                    .query::<(&Transform, &Sphere, Option<&Visible>)>()
-                                    .iter()
-                                {
-                                    if !visible.map_or(true, |v| v.0) {
-                                        continue;
-                                    }
-                                    draw_sphere(
-                                        &mut debugshapes,
-                                        transform,
-                                        sphere,
-                                        start_time,
-                                        Some(e),
-                                        &selected,
-                                    );
-                                }
-                                for (e, (transform, beacon, visible)) in map
-                                    .scene
-                                    .query::<(&Transform, &Beacon, Option<&Visible>)>()
-                                    .iter()
-                                {
-                                    if !visible.map_or(true, |v| v.0) {
-                                        continue;
-                                    }
-                                    draw_beacon(
-                                        &mut debugshapes,
-                                        transform,
-                                        beacon,
-                                        start_time,
-                                        Some(e),
-                                        &selected,
-                                    );
-                                }
-                            }
-
-                            if let Some(map) = maps.current_map_mut() {
-                                map.command_buffer.run_on(&mut map.scene);
-                            }
-
-                            drop(maps);
-
-                            renderer.read().submit_frame(&resources);
-
-                            gui.draw_frame(window.clone(), &mut resources, |ctx, _resources| {
-                                if let Some(task) = map_load_task.as_ref() {
-                                    if task.ready().is_none() {
-                                        egui::Window::new("Loading...")
-                                            .title_bar(false)
-                                            .resizable(false)
-                                            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-                                            .show(ctx, |ui| {
-                                                ui.horizontal(|ui| {
-                                                    ui.spinner();
-                                                    ui.heading("Loading maps")
-                                                })
-                                            });
-                                    }
-                                }
-                            });
-
-                            // TODO(cohae): This triggers when dragging as well, which is super annoying. Don't know if we can fix this without a proper egui response object though.
-                            if gui.egui.input(|i| i.pointer.secondary_clicked())
-                                && !gui.egui.wants_pointer_input()
-                                && !resources.get::<SelectedEntity>().unwrap().1
-                            {
-                                if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                                    let id = renderer.read().gbuffer.pick_buffer_read(
-                                        (mouse_pos.x as f64 * window.scale_factor()).round()
-                                            as usize,
-                                        (mouse_pos.y as f64 * window.scale_factor()).round()
-                                            as usize,
-                                    );
-                                    let maps = resources.get::<MapDataList>().unwrap();
-
-                                    if let Some((_, _, map)) = maps.current_map() {
-                                        if id != u32::MAX {
-                                            *resources.get_mut::<SelectedEntity>().unwrap() =
-                                                SelectedEntity(
-                                                    Some(map.scene.find_entity_from_id(id)),
-                                                    true,
-                                                    Instant::now(),
-                                                );
-                                        } else {
-                                            *resources.get_mut::<SelectedEntity>().unwrap() =
-                                                SelectedEntity(None, true, Instant::now());
-                                        }
-                                    }
-                                }
-                            }
-
-                            hotkeys::process_hotkeys(&gui.egui, &mut resources);
-
-                            dcs.context().OMSetDepthStencilState(None, 0);
-
-                            if dcs
-                                .swap_chain
-                                .Present(DXGI_SWAP_EFFECT_SEQUENTIAL.0 as _, present_parameters)
-                                == DXGI_STATUS_OCCLUDED
-                            {
-                                present_parameters = DXGI_PRESENT_TEST;
-                                std::thread::sleep(Duration::from_millis(50));
-                            } else {
-                                present_parameters = 0;
-                            }
-
-                            if let Some(c) = tracy_client::Client::running() {
-                                c.frame_mark()
-                            }
-                        };
-                    }
                     _ => (),
                 }
             }
-            Event::AboutToWait => {
+            Event::RedrawRequested(..) => {
+                resources.get_mut::<SelectedEntity>().unwrap().1 = false;
+
+                // if !gui_event_captured
+                {
+                    let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+                    let input_state = resources.get::<InputState>().unwrap();
+                    camera.update(
+                        &input_state,
+                        window.inner_size().into(),
+                        last_frame.elapsed().as_secs_f32(),
+                    );
+
+                    if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_FOCUS)) {
+                        if let Some(selected_entity) = resources.get::<SelectedEntity>() {
+                            let maps = resources.get::<MapDataList>().unwrap();
+
+                            if let Some((_, _, map)) = maps.current_map() {
+                                if let Ok(e) = map
+                                    .scene
+                                    .entity(selected_entity.0.unwrap_or(Entity::DANGLING))
+                                {
+                                    if let Some(target) = resolve_aabb(e) {
+                                        camera.focus_aabb(&target);
+                                    } else if let Some(transform) = e.get::<&Transform>() {
+                                        camera.focus(transform.translation, 10.0);
+                                    }
+                                }
+                            }
+                        }
+                    } else if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
+                        let (d, pos) = renderer
+                            .read()
+                            .gbuffer
+                            .depth_buffer_distance_pos_center(&camera);
+                        if d.is_finite() {
+                            camera.focus(pos, 10.0);
+                        }
+                    }
+                }
+                last_frame = Instant::now();
+
+                let window_dims = window.inner_size();
+
+                if map_load_task.as_ref().and_then(|v| v.ready()).is_some() {
+                    if let Some(Ok(map_res)) = map_load_task.take().map(|v| v.try_take()) {
+                        let map_res = map_res.expect("Failed to load map(s)");
+                        entity_renderers.extend(map_res.entity_renderers);
+                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                        maps.maps = map_res.maps;
+                        map_load_task = None;
+
+                        #[cfg(feature = "discord_rpc")]
+                        if let Some((_, _, map)) = maps.current_map() {
+                            discord::set_status_from_mapdata(map);
+                        }
+                    }
+                }
+
+                unsafe {
+                    renderer.read().clear_render_targets();
+
+                    dcs.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                        TopLeftX: 0.0,
+                        TopLeftY: 0.0,
+                        Width: window_dims.width as f32,
+                        Height: window_dims.height as f32,
+                        MinDepth: 0.0,
+                        MaxDepth: 1.0,
+                    }]));
+
+                    dcs.context().RSSetState(&rasterizer_state);
+
+                    renderer.read().begin_frame();
+
+                    let mut maps = resources.get_mut::<MapDataList>().unwrap();
+
+                    if let Some((_, _, map)) = maps.current_map() {
+                        {
+                            let gb = gui_rendersettings.borrow();
+
+                            let camera = resources.get::<FpsCamera>().unwrap();
+                            for (e, (StaticInstances(instances, _), visible)) in map
+                                .scene
+                                .query::<(&StaticInstances, Option<&Visible>)>()
+                                .iter()
+                            {
+                                if !visible.map_or(true, |v| v.0) {
+                                    continue;
+                                }
+
+                                if instances.instance_count == 1
+                                    && !camera.is_aabb_visible(&instances.occlusion_bounds[0])
+                                {
+                                    continue;
+                                }
+
+                                instances
+                                    .draw(
+                                        &renderer.read(),
+                                        gb.renderlayer_statics,
+                                        gb.renderlayer_statics_transparent,
+                                        gb.renderlayer_statics_decals,
+                                        e,
+                                    )
+                                    .unwrap();
+                            }
+
+                            if gb.renderlayer_terrain {
+                                for (e, (terrain, visible)) in
+                                    map.scene.query::<(&Terrain, Option<&Visible>)>().iter()
+                                {
+                                    if !visible.map_or(true, |v| v.0) {
+                                        continue;
+                                    }
+
+                                    terrain.0.draw(&renderer.read(), e).unwrap();
+                                }
+                            }
+
+                            for (e, (transform, rp, group, water, visible)) in map
+                                .scene
+                                .query::<(
+                                    &Transform,
+                                    &ResourcePoint,
+                                    Option<&ActivityGroup>,
+                                    Option<&Water>,
+                                    Option<&Visible>,
+                                )>()
+                                .iter()
+                            {
+                                if !visible.map_or(true, |v| v.0) {
+                                    continue;
+                                }
+
+                                if !gb.renderlayer_water && water.is_some() {
+                                    continue;
+                                }
+
+                                if let (Some(group), Some(group_filters)) =
+                                    (group, resources.get::<ActivityGroupFilter>())
+                                {
+                                    if !group_filters.filters.get(&group.0).unwrap_or(&true) {
+                                        continue;
+                                    }
+                                }
+
+                                match rp.resource {
+                                    MapResource::Unk80806aa3 { .. } => {
+                                        if !gb.renderlayer_background {
+                                            continue;
+                                        }
+                                    }
+                                    _ => {
+                                        if !gb.renderlayer_entities {
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
+                                    let mm = transform.to_mat4();
+
+                                    let mesh_to_world = Mat4::from_cols(
+                                        mm.x_axis.truncate().extend(mm.w_axis.x),
+                                        mm.y_axis.truncate().extend(mm.w_axis.y),
+                                        mm.z_axis.truncate().extend(mm.w_axis.z),
+                                        mm.w_axis,
+                                    );
+
+                                    rp.entity_cbuffer.data().mesh_to_world = mesh_to_world;
+
+                                    if ent
+                                        .draw(
+                                            &renderer.read(),
+                                            rp.entity_cbuffer.buffer().clone(),
+                                            e,
+                                        )
+                                        .is_err()
+                                    {
+                                        renderer.write().push_fiddlesticks(*transform, Some(e));
+                                    }
+                                } else if rp.resource.is_entity() {
+                                    // cohae: This will occur when there's no entitymodel for the given entity. Keeping it in just as a reminder of unimplemented entity rendering stuffs
+                                    renderer.write().push_fiddlesticks(*transform, Some(e));
+                                }
+                            }
+
+                            for (e, (transform, em)) in
+                                map.scene.query::<(&Transform, &EntityModel)>().iter()
+                            {
+                                let mm = transform.to_mat4();
+
+                                let mesh_to_world = Mat4::from_cols(
+                                    mm.x_axis.truncate().extend(mm.w_axis.x),
+                                    mm.y_axis.truncate().extend(mm.w_axis.y),
+                                    mm.z_axis.truncate().extend(mm.w_axis.z),
+                                    mm.w_axis,
+                                );
+
+                                em.1.data().mesh_to_world = mesh_to_world;
+
+                                if em
+                                    .0
+                                    .draw(&renderer.read(), em.1.buffer().clone(), e)
+                                    .is_err()
+                                {
+                                    renderer.write().push_fiddlesticks(*transform, Some(e));
+                                }
+                            }
+                        }
+
+                        // Find the smallest cubemap volume that the camera is in and set it as the current cubemap
+                        let camera = resources.get::<FpsCamera>().unwrap();
+                        let mut smallest_volume = f32::MAX;
+                        let mut smallest_volume_entity = hecs::Entity::DANGLING;
+                        for (e, (transform, volume)) in
+                            map.scene.query::<(&Transform, &CubemapVolume)>().iter()
+                        {
+                            if volume.1.volume() < smallest_volume
+                                && volume
+                                    .1
+                                    .contains_point_oriented(camera.position, transform.rotation)
+                            {
+                                smallest_volume = volume.1.volume();
+                                smallest_volume_entity = e;
+                            }
+                        }
+
+                        if let Ok(cubemap) = map.scene.get::<&CubemapVolume>(smallest_volume_entity)
+                        {
+                            if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                                cr.0 = Some(cubemap.2.clone());
+                                cr.1 = Some(ExtendedHash::Hash32(cubemap.0));
+                            }
+                        } else if let Some(mut cr) = resources.get_mut::<CurrentCubemap>() {
+                            cr.0 = None;
+                        }
+
+                        let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
+                        let selected = resources.get::<SelectedEntity>().unwrap();
+                        for (e, (ruler, visible)) in
+                            map.scene.query::<(&Ruler, Option<&Visible>)>().iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
+                            }
+                            draw_ruler(&mut debugshapes, ruler, start_time, Some(e), &selected);
+                        }
+                        for (e, (transform, sphere, visible)) in map
+                            .scene
+                            .query::<(&Transform, &Sphere, Option<&Visible>)>()
+                            .iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
+                            }
+                            draw_sphere(
+                                &mut debugshapes,
+                                transform,
+                                sphere,
+                                start_time,
+                                Some(e),
+                                &selected,
+                            );
+                        }
+                        for (e, (transform, beacon, visible)) in map
+                            .scene
+                            .query::<(&Transform, &Beacon, Option<&Visible>)>()
+                            .iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
+                            }
+                            draw_beacon(
+                                &mut debugshapes,
+                                transform,
+                                beacon,
+                                start_time,
+                                Some(e),
+                                &selected,
+                            );
+                        }
+                    }
+
+                    if let Some(map) = maps.current_map_mut() {
+                        map.command_buffer.run_on(&mut map.scene);
+                    }
+
+                    drop(maps);
+
+                    renderer.read().submit_frame(&resources);
+
+                    gui.draw_frame(window.clone(), &mut resources, |ctx, _resources| {
+                        if let Some(task) = map_load_task.as_ref() {
+                            if task.ready().is_none() {
+                                egui::Window::new("Loading...")
+                                    .title_bar(false)
+                                    .resizable(false)
+                                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                                    .show(ctx, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.spinner();
+                                            ui.heading("Loading maps")
+                                        })
+                                    });
+                            }
+                        }
+                    });
+
+                    // TODO(cohae): This triggers when dragging as well, which is super annoying. Don't know if we can fix this without a proper egui response object though.
+                    if gui.egui.input(|i| i.pointer.secondary_clicked())
+                        && !gui.egui.wants_pointer_input()
+                        && !resources.get::<SelectedEntity>().unwrap().1
+                    {
+                        if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
+                            let id = renderer.read().gbuffer.pick_buffer_read(
+                                (mouse_pos.x as f64 * window.scale_factor()).round() as usize,
+                                (mouse_pos.y as f64 * window.scale_factor()).round() as usize,
+                            );
+                            let maps = resources.get::<MapDataList>().unwrap();
+
+                            if let Some((_, _, map)) = maps.current_map() {
+                                if id != u32::MAX {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(
+                                            Some(map.scene.find_entity_from_id(id)),
+                                            true,
+                                            Instant::now(),
+                                        );
+                                } else {
+                                    *resources.get_mut::<SelectedEntity>().unwrap() =
+                                        SelectedEntity(None, true, Instant::now());
+                                }
+                            }
+                        }
+                    }
+
+                    hotkeys::process_hotkeys(&gui.egui, &mut resources);
+
+                    dcs.context().OMSetDepthStencilState(None, 0);
+
+                    if dcs
+                        .swap_chain
+                        .Present(DXGI_SWAP_EFFECT_SEQUENTIAL.0 as _, present_parameters)
+                        == DXGI_STATUS_OCCLUDED
+                    {
+                        present_parameters = DXGI_PRESENT_TEST;
+                        std::thread::sleep(Duration::from_millis(50));
+                    } else {
+                        present_parameters = 0;
+                    }
+
+                    if let Some(c) = tracy_client::Client::running() {
+                        c.frame_mark()
+                    }
+                };
+            }
+            Event::MainEventsCleared => {
                 window.request_redraw();
             }
-            Event::LoopExiting => {
+            Event::LoopDestroyed => {
                 config::with_mut(|c| {
                     let size = window.inner_size();
                     let pos = window
@@ -1024,9 +1010,7 @@ pub async fn main() -> anyhow::Result<()> {
             }
             _ => (),
         }
-    })?;
-
-    Ok(())
+    });
 }
 
 fn get_rainbow_color(start_time: Instant) -> [u8; 3] {
