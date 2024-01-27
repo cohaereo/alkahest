@@ -31,6 +31,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## 0.3.0 - 2024-01-25
 
+### Changed
+- Enable TFX bytecode by default by @cohaereo
+
 ### Added
 
 - Add Sphere Utility tool by @Froggy618157725 in [#7](https://github.com/cohaereo/alkahest/pull/7)

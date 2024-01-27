@@ -564,7 +564,7 @@ impl Default for RenderSettings {
             error_scale: 1.0,
             render_shadows: true,
             blend_override: 0,
-            evaluate_bytecode: false,
+            evaluate_bytecode: true,
             ambient_light: Vec4::splat(0.04),
             light_dir: Vec3::NEG_Z,
             light_color: Vec4::ONE,
