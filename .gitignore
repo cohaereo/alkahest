@@ -7,3 +7,5 @@ imgui.ini
 package_cache.json
 config.yml
 panic.log
+
+textures/

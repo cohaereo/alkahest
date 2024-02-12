@@ -35,7 +35,7 @@ pub enum MapResource {
 
     Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash),
     Unk808067b5(TagHash),
-    Unk80806aa3(AABB, TagHash, Mat4),
+    Unk80806aa3(AABB, TagHash),
     Unk808085c0,
     Unk80806a40,
     Decoration(AABB, TagHash),
@@ -82,7 +82,7 @@ impl MapResource {
                     *c.cubemap_name, c.cubemap_texture, c.unk1c0
                 )
             }
-            MapResource::Unk80806aa3(_, t, _) => format!("Unk80806aa3 (model {t})"),
+            MapResource::Unk80806aa3(_, t) => format!("Unk80806aa3 (model {t})"),
             MapResource::Light(_, t, i) => format!("Light ({t}+{i})"),
             MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),

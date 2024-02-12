@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use glam::{Mat4, Quat, Vec3};
+use glam::{Mat4, Quat, Vec3, Vec4};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(C, align(16))]

@@ -90,7 +90,7 @@ use crate::overlays::render_settings::{
     ActivityGroupFilter, RenderSettings, RenderSettingsOverlay,
 };
 use crate::overlays::resource_nametags::ResourceTypeOverlay;
-use crate::overlays::tag_dump::TagDumper;
+use crate::overlays::tag_dump::{BulkTextureDumper, TagDumper};
 use crate::packages::{package_manager, PACKAGE_MANAGER};
 use crate::render::debug::DebugShapes;
 use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
@@ -489,6 +489,7 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(Rc::new(RefCell::new(InspectorOverlay)));
     gui.add_overlay(Rc::new(RefCell::new(OutlinerOverlay::default())));
     gui.add_overlay(Rc::new(RefCell::new(MenuBar::default())));
+    gui.add_overlay(Rc::new(RefCell::new(BulkTextureDumper::default())));
 
     let start_time = Instant::now();
     let mut last_frame = Instant::now();
@@ -783,14 +784,14 @@ pub async fn main() -> anyhow::Result<()> {
                                 if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
                                     let mm = transform.to_mat4();
 
-                                    let mesh_to_world = Mat4::from_cols(
-                                        mm.x_axis.truncate().extend(mm.w_axis.x),
-                                        mm.y_axis.truncate().extend(mm.w_axis.y),
-                                        mm.z_axis.truncate().extend(mm.w_axis.z),
-                                        mm.w_axis,
-                                    );
+                                    // let mesh_to_world = Mat4::from_cols(
+                                    //     mm.x_axis.truncate().extend(mm.w_axis.x),
+                                    //     mm.y_axis.truncate().extend(mm.w_axis.y),
+                                    //     mm.z_axis.truncate().extend(mm.w_axis.z),
+                                    //     mm.w_axis,
+                                    // );
 
-                                    rp.entity_cbuffer.data().mesh_to_world = mesh_to_world;
+                                    rp.entity_cbuffer.data().mesh_to_world = mm;
 
                                     if ent
                                         .draw(

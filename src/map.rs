@@ -321,14 +321,14 @@ pub struct Unk80806aa7 {
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80806aa9 {
     /// Transformation matrix
-    pub transform: [Vector4; 4],
+    pub transform: [f32; 16],
 
     /// Same as the bounding box from the Unk808093b3 array
     pub bounds: AABB,
 
     pub unk60: Tag<Unk80806aae>,
     pub unk64: f32,
-    pub unk68: u32,
+    pub unk68: f32,
     pub unk6c: i16,
     pub unk6e: u16,
 

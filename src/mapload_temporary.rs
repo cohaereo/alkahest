@@ -1025,20 +1025,19 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     )) {
                         to_load_entitymodels.insert(unk8.unk60.entity_model);
 
-                        let mat = Mat4 {
-                            x_axis: unk8.transform[0].into(),
-                            y_axis: unk8.transform[1].into(),
-                            z_axis: unk8.transform[2].into(),
-                            w_axis: unk8.transform[3].into(),
-                        };
+                        if unk8.bounds != unk18.bb {
+                            warn!(
+                                "Bounds mismatch in Unk80806aa3: {:?} != {:?}",
+                                unk8.bounds, unk18.bb
+                            );
+                        }
 
                         ents.push(scene.spawn((
-                            Transform::from_mat4(mat),
+                            Transform::from_mat4(Mat4::from_cols_array(&unk8.transform)),
                             ResourcePoint {
                                 resource: MapResource::Unk80806aa3(
                                     unk18.bb,
                                     unk8.unk60.entity_model,
-                                    mat,
                                 ),
                                 entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp

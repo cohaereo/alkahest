@@ -1,6 +1,9 @@
 use crate::overlays::gui::Overlay;
 use crate::packages::package_manager;
 use crate::resources::Resources;
+use crate::structure::ExtendedHash;
+use crate::texture::Texture;
+use crate::util::dds;
 use destiny_pkg::package::UEntryHeader;
 use destiny_pkg::TagHash;
 use fs_err::File;
@@ -119,6 +122,53 @@ impl Overlay for TagDumper {
                     Err(msg) => ui.label(egui::RichText::new(msg).color(egui::Color32::RED)),
                 };
             }
+        });
+
+        true
+    }
+}
+
+#[derive(Default)]
+pub struct BulkTextureDumper {
+    input: String,
+    bake_png: bool,
+}
+
+impl Overlay for BulkTextureDumper {
+    fn draw(
+        &mut self,
+        ctx: &egui::Context,
+        _window: &Window,
+        _resources: &mut Resources,
+        _gui: &mut super::gui::GuiContext<'_>,
+    ) -> bool {
+        egui::Window::new("Bulk Texture Dumper").show(ctx, |ui| {
+            
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut self.bake_png, false, "DDS");
+                ui.set_enabled(false);
+                ui.radio_value(&mut self.bake_png, true, "PNG");
+            });
+            
+            
+            if ui.button("Dump!").clicked() {
+                for i in self.input.lines() {
+                    if let Ok(itag) = u32::from_str_radix(i, 16) {
+                        let tag = TagHash(itag.to_be());
+                        let mut dds_data: Vec<u8> = vec![];
+                        let (texture, texture_data) =
+                        Texture::load_data(ExtendedHash::Hash32(tag), true).unwrap();
+                        
+                        dds::dump_to_dds(&mut dds_data, &texture, &texture_data);
+                        std::fs::create_dir("./textures/").ok();
+                        if let Ok(mut f) = File::create(format!("./textures/{}.dds", tag)) {
+                            f.write_all(&dds_data).ok();
+                        }
+                    }
+                }
+            }
+            
+            ui.text_edit_multiline(&mut self.input);
         });
 
         true
