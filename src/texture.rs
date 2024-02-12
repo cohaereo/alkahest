@@ -99,7 +99,7 @@ impl Texture {
             .context("Texture header entry not found")?
             .reference;
 
-        let texture: STextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;
+        let texture: STextureHeader = package_manager().read_tag_binrw(hash.hash32().unwrap())?;
         let mut texture_data = if let Some(t) = texture.large_buffer {
             package_manager()
                 .read_tag(t)

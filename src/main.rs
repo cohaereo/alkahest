@@ -225,7 +225,7 @@ pub async fn main() -> anyhow::Result<()> {
             .into_iter()
             .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
         {
-            let textset_header: StringContainer = package_manager().read_tag_struct(t)?;
+            let textset_header: StringContainer = package_manager().read_tag_binrw(t)?;
 
             let data = package_manager()
                 .read_tag(textset_header.language_english)
@@ -258,7 +258,7 @@ pub async fn main() -> anyhow::Result<()> {
     let stringmap = Arc::new(stringmap);
 
     // for (tag, _) in package_manager().get_all_by_reference(0x8080891e) {
-    //     if let Ok(m) = package_manager().read_tag_struct::<SBubbleParent>(tag) {
+    //     if let Ok(m) = package_manager().read_tag_binrw::<SBubbleParent>(tag) {
     //         let map_name = stringmap
     //             .get(&m.map_name.0)
     //             .cloned()
@@ -342,7 +342,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     if args.map.is_none() {
         if let Some(activity_hash) = &activity_hash {
-            let activity: SActivity = package_manager().read_tag_struct(*activity_hash)?;
+            let activity: SActivity = package_manager().read_tag_binrw(*activity_hash)?;
             let mut maps: IntSet<TagHash> = Default::default();
 
             for u in &activity.unk50 {
@@ -1244,7 +1244,7 @@ fn load_render_globals(renderer: &Renderer) {
     let tag =
         get_named_tag::<0x8080978C>("render_globals").expect("Could not find render globals!");
     let globals: SRenderGlobals = package_manager()
-        .read_tag_struct(tag)
+        .read_tag_binrw(tag)
         .expect("Failed to read render globals");
 
     // println!("{globals:#?}");
@@ -1303,7 +1303,7 @@ fn load_render_globals(renderer: &Renderer) {
     let technique_tag = techniques["deferred_shading_no_atm"];
     let technique = Technique::load(
         renderer,
-        package_manager().read_tag_struct(technique_tag).unwrap(),
+        package_manager().read_tag_binrw(technique_tag).unwrap(),
         technique_tag,
         true,
     );

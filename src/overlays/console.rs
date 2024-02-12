@@ -531,7 +531,7 @@ fn execute_command(
                 }
             };
 
-            let technique: STechnique = match package_manager().read_tag_struct(tag) {
+            let technique: STechnique = match package_manager().read_tag_binrw(tag) {
                 Ok(o) => o,
                 Err(e) => {
                     error!("Failed to read technique tag: {e}");
@@ -597,7 +597,7 @@ fn load_entity_model(
     materials: Vec<TagHash>,
 ) -> anyhow::Result<EntityRenderer> {
     let model: SEntityModel =
-        package_manager().read_tag_struct(t.hash32().context("Couldnt lookup hash64")?)?;
+        package_manager().read_tag_binrw(t.hash32().context("Couldnt lookup hash64")?)?;
 
     let mut part_materials = vec![];
     for m in &model.meshes {
@@ -611,7 +611,7 @@ fn load_entity_model(
     for mat in materials.iter().chain(part_materials.iter()) {
         let technique = Technique::load(
             renderer,
-            package_manager().read_tag_struct(*mat)?,
+            package_manager().read_tag_binrw(*mat)?,
             *mat,
             true,
         );
@@ -658,7 +658,7 @@ fn load_entity_model(
 fn load_entity(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
     if let Some(nh) = t.hash32() {
         let _span = debug_span!("Load entity", hash = %nh).entered();
-        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+        let Ok(header) = package_manager().read_tag_binrw::<Unk80809c0f>(nh) else {
             anyhow::bail!("Could not load entity {nh} ({t:?})");
         };
         debug!("Loading entity {nh}");

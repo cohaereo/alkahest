@@ -121,7 +121,7 @@ fn spawn_thread_buffers(
                                 match package_manager().read_tag(entry.reference) {
                                     Ok(vertex_data) => {
                                         let vertex_buffer_header = package_manager()
-                                            .read_tag_struct::<VertexBufferHeader>(hash)
+                                            .read_tag_binrw::<VertexBufferHeader>(hash)
                                             .unwrap();
 
                                         let vertex_buffer = unsafe {
@@ -212,7 +212,7 @@ fn spawn_thread_buffers(
                                 match package_manager().read_tag(entry.reference) {
                                     Ok(index_data) => {
                                         let index_buffer_header = package_manager()
-                                            .read_tag_struct::<IndexBufferHeader>(hash)
+                                            .read_tag_binrw::<IndexBufferHeader>(hash)
                                             .unwrap();
 
                                         let index_buffer = unsafe {

@@ -345,7 +345,7 @@ where
         let taghash: TagHash = reader.read_type(endian)?;
         Ok(Tag(
             package_manager()
-                .read_tag_struct(taghash)
+                .read_tag_binrw(taghash)
                 .map_err(|e| binrw::Error::Custom {
                     pos: reader.stream_position().unwrap(),
                     err: Box::new(e),
@@ -470,7 +470,7 @@ where
         let taghash: ExtendedHash = reader.read_type(endian)?;
         Ok(ExtendedTag(
             package_manager()
-                .read_tag_struct(taghash.hash32().ok_or_else(|| binrw::Error::Custom {
+                .read_tag_binrw(taghash.hash32().ok_or_else(|| binrw::Error::Custom {
                     pos: reader.stream_position().unwrap(),
                     err: Box::new(anyhow::Error::msg("Could not translate hash64")),
                 })?)

@@ -83,7 +83,7 @@ pub async fn load_maps(
         Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)>,
     > = Default::default();
     if let Some(activity_hash) = activity_hash {
-        let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
+        let activity: SActivity = package_manager().read_tag_binrw(activity_hash)?;
         for u1 in &activity.unk50 {
             for map in &u1.map_references {
                 let map32 = match map.hash32() {
@@ -105,9 +105,9 @@ pub async fn load_maps(
         }
 
         if load_ambient_activity {
-            match package_manager().read_tag_struct::<SActivity>(
-                activity.ambient_activity.hash32().unwrap_or_default(),
-            ) {
+            match package_manager()
+                .read_tag_binrw::<SActivity>(activity.ambient_activity.hash32().unwrap_or_default())
+            {
                 Ok(activity) => {
                     for u1 in &activity.unk50 {
                         for map in &u1.map_references {
@@ -141,7 +141,7 @@ pub async fn load_maps(
 
     for hash in map_hashes {
         let _span = debug_span!("Load map", %hash).entered();
-        let Ok(think) = package_manager().read_tag_struct::<SBubbleParent>(hash) else {
+        let Ok(think) = package_manager().read_tag_binrw::<SBubbleParent>(hash) else {
             error!("Failed to load map {hash}");
             continue;
         };
@@ -363,7 +363,7 @@ pub async fn load_maps(
         let renderer = renderer.read();
         if let Some(nh) = te.hash32() {
             let _span = debug_span!("Load entity", hash = %nh).entered();
-            let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+            let Ok(header) = package_manager().read_tag_binrw::<Unk80809c0f>(nh) else {
                 error!("Could not load entity {nh} ({te:?})");
                 continue;
             };
@@ -385,7 +385,7 @@ pub async fn load_maps(
                         let materials: TablePointer<TagHash> = cur.read_le()?;
 
                         for m in &materials {
-                            if let Ok(mat) = package_manager().read_tag_struct(*m) {
+                            if let Ok(mat) = package_manager().read_tag_binrw(*m) {
                                 material_map.insert(*m, Technique::load(&renderer, mat, *m, true));
                             }
                         }
@@ -397,7 +397,7 @@ pub async fn load_maps(
                                         p.material,
                                         Technique::load(
                                             &renderer,
-                                            package_manager().read_tag_struct(p.material)?,
+                                            package_manager().read_tag_binrw(p.material)?,
                                             p.material,
                                             true,
                                         ),
@@ -441,7 +441,7 @@ pub async fn load_maps(
 
     for t in to_load_entitymodels {
         let renderer = renderer.read();
-        let model: SEntityModel = package_manager().read_tag_struct(t)?;
+        let model: SEntityModel = package_manager().read_tag_binrw(t)?;
 
         for m in &model.meshes {
             for p in &m.parts {
@@ -450,7 +450,7 @@ pub async fn load_maps(
                         p.material,
                         Technique::load(
                             &renderer,
-                            package_manager().read_tag_struct(p.material)?,
+                            package_manager().read_tag_binrw(p.material)?,
                             p.material,
                             true,
                         ),
@@ -751,13 +751,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .unwrap();
                     let preheader_tag: TagHash = table_data.read_le().unwrap();
                     let preheader: Unk80806ef4 =
-                        package_manager().read_tag_struct(preheader_tag).unwrap();
+                        package_manager().read_tag_binrw(preheader_tag).unwrap();
 
                     info_span!("Loading static instances").in_scope(|| {
                         'next_instance: for s in &preheader.instances.instance_groups {
                             let mesh_tag = preheader.instances.statics[s.static_index as usize];
                             let mheader: SStaticMesh = debug_span!("load tag Unk808071a7")
-                                .in_scope(|| package_manager().read_tag_struct(mesh_tag).unwrap());
+                                .in_scope(|| package_manager().read_tag_binrw(mesh_tag).unwrap());
                             for m in &mheader.materials {
                                 if m.is_some()
                                     && !material_map.contains_key(m)
@@ -767,7 +767,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         *m,
                                         Technique::load(
                                             &renderer,
-                                            package_manager().read_tag_struct(*m).unwrap(),
+                                            package_manager().read_tag_binrw(*m).unwrap(),
                                             *m,
                                             true,
                                         ),
@@ -784,7 +784,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         m,
                                         Technique::load(
                                             &renderer,
-                                            package_manager().read_tag_struct(m).unwrap(),
+                                            package_manager().read_tag_binrw(m).unwrap(),
                                             m,
                                             true,
                                         ),
@@ -849,7 +849,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let terrain_resource: Unk8080714b = table_data.read_le().unwrap();
                     let terrain: STerrain = package_manager()
-                        .read_tag_struct(terrain_resource.terrain)
+                        .read_tag_binrw(terrain_resource.terrain)
                         .unwrap();
 
                     for p in &terrain.mesh_parts {
@@ -858,7 +858,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 p.material,
                                 Technique::load(
                                     &renderer,
-                                    package_manager().read_tag_struct(p.material)?,
+                                    package_manager().read_tag_binrw(p.material)?,
                                     p.material,
                                     true,
                                 ),
@@ -955,7 +955,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80806e68 = package_manager().read_tag_struct(tag).unwrap();
+                    let header: Unk80806e68 = package_manager().read_tag_binrw(tag).unwrap();
 
                     for inst in &header.instances {
                         for i in inst.start..(inst.start + inst.count) {
@@ -995,7 +995,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     }
 
                     let header = package_manager()
-                        .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
+                        .read_tag_binrw::<Unk80809802>(tag.hash32().unwrap())
                         .ok();
 
                     ents.push(scene.spawn((
@@ -1016,7 +1016,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
+                    let header: Unk80806aa7 = package_manager().read_tag_binrw(tag).unwrap();
 
                     for (unk8, unk18, _unk28) in itertools::multizip((
                         header.unk8.iter(),
@@ -1055,7 +1055,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
+                    let header: SLightCollection = package_manager().read_tag_binrw(tag).unwrap();
 
                     for (i, (transform, light, bounds)) in multizip((
                         &header.unk40,
@@ -1069,7 +1069,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 light.technique_shading,
                                 Technique::load(
                                     &renderer,
-                                    package_manager().read_tag_struct(light.technique_shading)?,
+                                    package_manager().read_tag_binrw(light.technique_shading)?,
                                     light.technique_shading,
                                     true,
                                 ),
@@ -1115,7 +1115,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80808cb7 = package_manager().read_tag_struct(tag).unwrap();
+                    let header: Unk80808cb7 = package_manager().read_tag_binrw(tag).unwrap();
 
                     for transform in header.unk8.iter() {
                         ents.push(scene.spawn((
@@ -1152,7 +1152,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk808085c2 = package_manager().read_tag_struct(tag).unwrap();
+                    let header: Unk808085c2 = package_manager().read_tag_binrw(tag).unwrap();
 
                     for transform in header.unk8.iter() {
                         ents.push(scene.spawn((
@@ -1190,7 +1190,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80806d19 = package_manager().read_tag_struct(tag).unwrap();
+                    let header: Unk80806d19 = package_manager().read_tag_binrw(tag).unwrap();
 
                     for transform in header.unk50.iter() {
                         ents.push(scene.spawn((
@@ -1218,8 +1218,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
                     let header_tag: TagHash = table_data.read_le().unwrap();
-                    let header: Unk80806c98 =
-                        package_manager().read_tag_struct(header_tag).unwrap();
+                    let header: Unk80806c98 = package_manager().read_tag_binrw(header_tag).unwrap();
 
                     for b in &header.unk4c.bounds {
                         ents.push(scene.spawn((
@@ -1242,14 +1241,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
                     let tag: TagHash = table_data.read_le().unwrap();
-                    let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
+                    let light: SShadowingLight = package_manager().read_tag_binrw(tag)?;
 
                     if light.technique_shading.is_some() {
                         material_map.insert(
                             light.technique_shading,
                             Technique::load(
                                 &renderer,
-                                package_manager().read_tag_struct(light.technique_shading)?,
+                                package_manager().read_tag_binrw(light.technique_shading)?,
                                 light.technique_shading,
                                 true,
                             ),
@@ -1794,7 +1793,7 @@ fn contains_havok_references(this_tag: TagHash, max_depth: usize) -> Option<TagH
 
 fn is_physics_entity(entity: ExtendedHash) -> bool {
     if let Some(nh) = entity.hash32() {
-        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+        let Ok(header) = package_manager().read_tag_binrw::<Unk80809c0f>(nh) else {
             return false;
         };
 
@@ -1850,7 +1849,7 @@ fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
 
     let mut name_hash_map: IntMap<FnvHash, String> = IntMap::default();
 
-    let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
+    let tablethingy: Unk8080906b = package_manager().read_tag_binrw(e.unk80).ok()?;
     for v in tablethingy.unk0.into_iter() {
         if let Some(name_ptr) = &v.unk0_name_pointer {
             name_hash_map.insert(fnv1(&name_ptr.name), name_ptr.name.to_string());

@@ -10,7 +10,7 @@ use crate::structure::ExtendedHash;
 use crate::structure::ResourcePointer;
 use crate::types::AABB;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Vec3};
+use glam::Vec3;
 use itertools::Itertools;
 
 use strum::{EnumCount, EnumIs, EnumVariantNames};

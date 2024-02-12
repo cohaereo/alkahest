@@ -321,7 +321,7 @@ impl RenderDataManager {
             .or_insert_with(|| {
                 Technique::load(
                     renderer,
-                    package_manager().read_tag_struct(technique).unwrap(),
+                    package_manager().read_tag_binrw(technique).unwrap(),
                     technique,
                     false,
                 )

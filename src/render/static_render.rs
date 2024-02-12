@@ -39,7 +39,7 @@ pub struct StaticModel {
 impl StaticModel {
     pub fn load(model: SStaticMesh, renderer: &Renderer) -> anyhow::Result<StaticModel> {
         let pm = package_manager();
-        let header: SStaticMeshData = pm.read_tag_struct(model.unk8).unwrap();
+        let header: SStaticMeshData = pm.read_tag_binrw(model.unk8).unwrap();
 
         ensure!(header.mesh_groups.len() == model.materials.len());
 

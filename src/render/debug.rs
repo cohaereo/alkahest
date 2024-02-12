@@ -19,7 +19,6 @@ use genmesh::Triangulate;
 use glam::Vec4;
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
-use itertools::Itertools;
 use windows::Win32::Graphics::Direct3D11::ID3D11GeometryShader;
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},

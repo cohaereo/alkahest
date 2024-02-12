@@ -66,8 +66,8 @@ impl TextureViewer {
         gui: &mut GuiContext<'_>,
     ) -> anyhow::Result<Self> {
         let header: STextureHeader = match tag {
-            ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h)?,
-            ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h)?,
+            ExtendedHash::Hash32(h) => package_manager().read_tag_binrw(h)?,
+            ExtendedHash::Hash64(h) => package_manager().read_tag64_binrw(h)?,
         };
 
         let vshader_blob = shader::compile_hlsl(

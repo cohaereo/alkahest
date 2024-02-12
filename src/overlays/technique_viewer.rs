@@ -37,8 +37,8 @@ impl TechniqueViewer {
         gui: &mut GuiContext<'_>,
     ) -> anyhow::Result<Self> {
         let header: STechnique = match tag {
-            ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h)?,
-            ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h)?,
+            ExtendedHash::Hash32(h) => package_manager().read_tag_binrw(h)?,
+            ExtendedHash::Hash64(h) => package_manager().read_tag64_binrw(h)?,
         };
 
         // let shaders = header
@@ -119,8 +119,8 @@ impl TechniqueShaderViewer {
 
         for assignment in &header.textures {
             let header: anyhow::Result<STextureHeader> = match assignment.texture {
-                ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h),
-                ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h),
+                ExtendedHash::Hash32(h) => package_manager().read_tag_binrw(h),
+                ExtendedHash::Hash64(h) => package_manager().read_tag64_binrw(h),
             };
             let Ok(header) = header else {
                 continue;
