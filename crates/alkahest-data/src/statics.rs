@@ -38,7 +38,7 @@ pub struct SStaticMeshData {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D37)]
 pub struct Unk8080719a {
     pub index_start: u32,
     pub index_count: u32,
@@ -49,7 +49,7 @@ pub struct Unk8080719a {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D38)]
 pub struct Unk8080719b {
     pub part_index: u16,
     pub unk2: u8,
@@ -72,7 +72,7 @@ pub struct SStaticMeshInstances {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D28)]
 pub struct SStaticMeshInstanceGroup {
     pub instance_count: u16,
     pub instance_start: u16,
@@ -81,7 +81,7 @@ pub struct SStaticMeshInstanceGroup {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D40)]
 pub struct Unk808071a3 {
     pub rotation: glam::Vec4, // TODO(cohae): Quat type? (alias?)
     pub translation: glam::Vec3,
@@ -92,7 +92,7 @@ pub struct Unk808071a3 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D2F)]
 pub struct SStaticMeshOverlay {
     pub render_stage: TfxRenderStage,
     pub unk1: u8,

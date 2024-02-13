@@ -16,7 +16,7 @@ use alkahest_data::{
         Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7,
         Unk80809178, Unk8080917b, Unk80809802,
     },
-    occlusion::{SMeshInstanceOcclusionBounds, AABB},
+    occlusion::{SObjectOcclusionBounds, AABB},
     statics::SStaticMesh,
     ExtendedHash, Tag,
 };
@@ -812,7 +812,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     } else {
                                         warn!("Instance group doesn't have enough occlusion bounds, need range {}..{}, but there are only {} bounds", s.instance_start, s.instance_start + s.instance_count, preheader.instances.occlusion_bounds.bounds.len());
                                         vec![
-                                            SMeshInstanceOcclusionBounds {
+                                            SObjectOcclusionBounds {
                                                 bb: AABB::INFINITE,
                                                 unk20: [0; 4]
                                             };

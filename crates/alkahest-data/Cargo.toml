@@ -13,6 +13,7 @@ glam = { version = "0.25" }
 tiger-parse = { path = "../../../tiger-parse", features = [
     "check_types",
     "destiny_pkg",
+    "check_types_debug",
 ] }
 
 nohash-hasher = "0.2.0"

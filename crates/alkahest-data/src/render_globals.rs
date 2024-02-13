@@ -12,7 +12,7 @@ pub struct SRenderGlobals {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x8080870F)]
 pub struct Unk8080870f {
     pub unk0: u32,
     pub unk4: u32,
@@ -35,7 +35,7 @@ pub struct Unk808067a8 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808066ae)]
 pub struct Unk808066ae {
     pub file_size: u64,
     pub unk8_tex2d: TagHash,
@@ -45,7 +45,7 @@ pub struct Unk808066ae {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808067AD)]
 pub struct Unk808067ad {
     pub name: Pointer<NullString>,
     pub unk8: u32,
@@ -53,7 +53,7 @@ pub struct Unk808067ad {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808067AC)]
 pub struct Unk808067ac {
     pub name: Pointer<NullString>,
     pub unk8: u32,

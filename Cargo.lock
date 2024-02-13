@@ -2845,6 +2845,7 @@ dependencies = [
  "glam",
  "thiserror",
  "tiger-parse-derive",
+ "tracing",
 ]
 
 [[package]]

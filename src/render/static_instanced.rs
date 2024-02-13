@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use alkahest_data::{
     entity::VertexBufferHeader,
-    occlusion::{SMeshInstanceOcclusionBounds, AABB},
+    occlusion::{SObjectOcclusionBounds, AABB},
     statics::Unk808071a3,
 };
 use glam::{Mat4, Quat, Vec3};
@@ -26,7 +26,7 @@ impl InstancedRenderer {
     pub fn load(
         model: Arc<StaticModel>,
         instances: &[Unk808071a3],
-        occlusion_bounds: &[SMeshInstanceOcclusionBounds],
+        occlusion_bounds: &[SObjectOcclusionBounds],
         dcs: Arc<DeviceContextSwapchain>,
     ) -> anyhow::Result<Self> {
         // TODO(cohae): Is this enough to fix it for every buffer set?

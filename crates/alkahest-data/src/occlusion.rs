@@ -5,12 +5,12 @@ use tiger_parse::{tiger_tag, TigerReadable};
 #[tiger_tag(id = 0xffffffff, size = 0x18)]
 pub struct SOcclusionBounds {
     pub file_size: u64,
-    pub bounds: Vec<SMeshInstanceOcclusionBounds>,
+    pub bounds: Vec<SObjectOcclusionBounds>,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff, size = 0x30)]
-pub struct SMeshInstanceOcclusionBounds {
+#[tiger_tag(id = 0x808093B3, size = 0x30)]
+pub struct SObjectOcclusionBounds {
     pub bb: AABB,
     pub unk20: [u32; 4],
 }

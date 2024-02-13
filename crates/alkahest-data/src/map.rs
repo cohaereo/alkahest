@@ -2,8 +2,10 @@ use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer};
 
 use crate::{
-    common::ResourceHash, occlusion::AABB, statics::SStaticMeshInstances, ExtendedHash,
-    ExtendedTag, Tag,
+    common::ResourceHash,
+    occlusion::{SObjectOcclusionBounds, SOcclusionBounds, AABB},
+    statics::SStaticMeshInstances,
+    ExtendedHash, ExtendedTag, Tag,
 };
 
 #[derive(Debug)]
@@ -22,7 +24,7 @@ pub struct SBubbleParent {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808096C9)]
 pub struct Unk80809644 {
     pub unk0: u32,
     pub unk4: u32,
@@ -38,27 +40,24 @@ pub struct SBubbleDefinition {
     pub map_resources: Vec<ExtendedTag<SMapContainer>>,
 }
 
-// D2Class_07878080
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x38)]
+#[tiger_tag(id = 0x80808707, size = 0x38)]
 pub struct SMapContainer {
     pub file_size: u64,
     #[tag(offset = 0x28)]
     pub data_tables: Vec<Tag<SMapDataTable>>,
 }
 
-// D2Class_83988080
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80809883)]
 pub struct SMapDataTable {
     pub file_size: u64,
-    pub data_entries: Vec<Unk808099d8>,
+    pub data_entries: Vec<SUnk80809885>,
 }
 
-// D2Class_85988080
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct Unk808099d8 {
+#[tiger_tag(id = 0x80809885)]
+pub struct SUnk80809885 {
     pub rotation: glam::Quat,    // 0x0
     pub translation: glam::Vec4, // 0x10
     pub entity_old: TagHash,     // 0x20
@@ -279,20 +278,20 @@ pub struct Unk80809802 {
     pub streams: Vec<TagHash>,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806AA7)]
 pub struct Unk80806aa7 {
     pub file_size: u64,
     pub unk8: Vec<Unk80806aa9>,
-    pub unk18: Vec<Unk808093b3>,
+    pub unk18: Vec<SObjectOcclusionBounds>,
     pub unk28: Vec<u32>,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806AA9)]
 pub struct Unk80806aa9 {
     /// Transformation matrix
     pub transform: [f32; 16],
 
-    /// Same as the bounding box from the Unk808093b3 array
+    /// Same as the bounding box from the SObjectOcclusionBounds array
     pub bounds: AABB,
 
     pub unk60: Tag<Unk80806aae>,
@@ -318,12 +317,6 @@ pub struct Unk80806aae {
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk808093b3 {
-    pub bb: AABB,
-    pub unk20: [u32; 4],
-}
-#[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
@@ -337,7 +330,7 @@ pub struct SLightCollection {
 
 // 706C8080
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806C70)]
 pub struct SLight {
     pub unk0: glam::Vec4,
     pub unk10: glam::Vec4,
@@ -404,9 +397,9 @@ pub struct SShadowingLight {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80809F4F)]
 pub struct Unk80809f4f {
-    pub rotation: glam::Vec4,
+    pub rotation: glam::Quat,
     pub translation: glam::Vec4,
 }
 
@@ -418,9 +411,9 @@ pub struct Unk80808cb7 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808CB9)]
 pub struct Unk80808cb9 {
-    pub rotation: glam::Vec4,
+    pub rotation: glam::Quat,
     pub translation: glam::Vec4,
     pub unk20: u32,
     // cohae: Probably padding
@@ -460,7 +453,7 @@ pub struct Unk80806d19 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D4F)]
 pub struct Unk80806d4f {
     pub translation: glam::Vec4,
     pub unk10: [u32; 4],
@@ -489,22 +482,6 @@ pub struct Unk80806c98 {
     pub unk50: Vec<u32>,
     pub unk60: [u32; 4],
     pub bounds: AABB,
-}
-
-/// B1938080
-#[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct SOcclusionBounds {
-    pub file_size: u64,
-    pub bounds: Vec<SMeshInstanceOcclusionBounds>,
-}
-
-// B3938080
-#[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct SMeshInstanceOcclusionBounds {
-    pub bb: AABB,
-    pub unk20: [u32; 4],
 }
 
 #[derive(Clone, Debug)]
@@ -561,7 +538,7 @@ pub struct Unk80808604 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808606)]
 pub struct Unk80808606 {
     pub rotation: glam::Quat,
     pub translation: glam::Vec4,
@@ -646,8 +623,9 @@ pub struct Unk80806ed8 {
     pub unk90: [u32; 4],
     pub unka0: [u32; 3],
     pub shape_index: u32,
-    pub unkb0: Vec<()>,
-    pub unkc0: [u32; 4],
+    pub unkb0: u64,
+    pub unkb8: Vec<()>,
+    pub unkc8: [u32; 2],
     pub unkd0: [u32; 4],
     pub unke0: [u32; 4],
 }

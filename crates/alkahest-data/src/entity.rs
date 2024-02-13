@@ -1,7 +1,7 @@
-use super::geometry::{ELodCategory, EPrimitiveType};
-
 use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, FnvHash, NullString, Pointer, PointerOptional, ResourcePointer};
+
+use super::geometry::{ELodCategory, EPrimitiveType};
 
 #[derive(Debug, Clone)]
 #[tiger_tag(id = 0xffffffff)]
@@ -11,7 +11,7 @@ pub struct Unk80809c0f {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80809ACD)]
 pub struct Unk80809c04 {
     pub unk0: super::Tag<Unk80809b06>,
     pub unk4: u32,
@@ -46,7 +46,7 @@ pub struct SEntityModel {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806EC5)]
 pub struct SEntityModelMesh {
     pub vertex_buffer1: TagHash,
     pub vertex_buffer2: TagHash,
@@ -62,7 +62,7 @@ pub struct SEntityModelMesh {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806ECB)]
 pub struct Unk8080737e {
     pub material: TagHash,
     pub variant_shader_index: u16,

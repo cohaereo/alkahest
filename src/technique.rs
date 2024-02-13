@@ -1,7 +1,6 @@
 use std::ops::Deref;
 
 use alkahest_data::technique::{STechnique, STechniqueShader};
-use binrw::BinRead;
 use destiny_pkg::TagHash;
 use glam::Vec4;
 

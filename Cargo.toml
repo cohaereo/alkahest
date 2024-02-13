@@ -10,6 +10,7 @@ alkahest-pm = { path = "./crates/alkahest-pm" }
 tiger-parse = { path = "../tiger-parse", features = [
     "check_types",
     "destiny_pkg",
+    "check_types_debug",
 ] }
 
 destiny-havok = { path = "./crates/destiny-havok" }

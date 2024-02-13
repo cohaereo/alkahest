@@ -70,7 +70,7 @@ pub struct STechniqueShader {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806DCF)]
 pub struct SMaterialTextureAssignment {
     /// Material slot to assign to
     pub slot: u32,
