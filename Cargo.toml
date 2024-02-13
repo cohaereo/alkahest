@@ -5,6 +5,13 @@ edition = "2021"
 authors = ["cohaereo <cohaereo@protonmail.com>"]
 
 [dependencies]
+alkahest-data = { path = "./crates/alkahest-data" }
+alkahest-pm = { path = "./crates/alkahest-pm" }
+tiger-parse = { path = "../tiger-parse", features = [
+    "check_types",
+    "destiny_pkg",
+] }
+
 destiny-havok = { path = "./crates/destiny-havok" }
 destiny-pkg = { version = "0.8", git = "https://github.com/v4nguard/destiny-pkg" }
 

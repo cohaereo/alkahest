@@ -1,3 +1,4 @@
+use alkahest_data::ExtendedHash;
 use egui::{Color32, RichText};
 
 use winit::window::Window;
@@ -5,7 +6,6 @@ use winit::window::Window;
 use crate::icons::{ICON_BUG, ICON_CLIPBOARD};
 use crate::map_resources::MapResource;
 use crate::resources::Resources;
-use crate::structure::ExtendedHash;
 use crate::FpsCamera;
 
 use super::gui::Overlay;

@@ -1,0 +1,13 @@
+[package]
+name = "alkahest-pm"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.79"
+destiny-pkg = { version = "0.8", git = "https://github.com/v4nguard/destiny-pkg" }
+
+lazy_static = "1.4.0"
+parking_lot = "0.12.1"

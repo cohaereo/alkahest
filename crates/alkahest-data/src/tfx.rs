@@ -1,9 +1,7 @@
-use binrw::binread;
+use std::mem::transmute;
 
-use super::drawcall::ShadingMode;
+use tiger_parse::TigerReadable;
 
-#[binread]
-#[br(repr(u8))]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TfxRenderStage {
@@ -33,18 +31,18 @@ pub enum TfxRenderStage {
     ComputeSkinning = 23,
 }
 
-impl TfxRenderStage {
-    pub fn shading_mode(&self) -> ShadingMode {
-        match self {
-            TfxRenderStage::GenerateGbuffer => ShadingMode::Deferred,
-            TfxRenderStage::Decals => ShadingMode::Deferred,
-            _ => ShadingMode::Forward,
-        }
+impl TigerReadable for TfxRenderStage {
+    fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        endian: tiger_parse::Endian,
+    ) -> tiger_parse::Result<Self> {
+        Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
     }
+
+    const ZEROCOPY: bool = true;
+    const SIZE: usize = 1;
 }
 
-#[binread]
-#[br(repr(u8))]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TfxFeatureType {
@@ -75,4 +73,16 @@ pub enum TfxFeatureType {
     LensFlares = 24,
     Volumetrics = 25,
     Cubemaps = 26,
+}
+
+impl TigerReadable for TfxFeatureType {
+    fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        endian: tiger_parse::Endian,
+    ) -> tiger_parse::Result<Self> {
+        Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
+    }
+
+    const ZEROCOPY: bool = true;
+    const SIZE: usize = 1;
 }

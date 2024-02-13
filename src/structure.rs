@@ -1,7 +1,8 @@
 use binrw::{BinRead, BinReaderExt, BinResult, Endian};
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
+use tiger_parse::TigerReadable;
 
-use std::fmt::{Debug, Display, Formatter, Write};
+use std::fmt::{Debug, Formatter, Write};
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::Deref;
 use std::slice::Iter;
@@ -250,6 +251,41 @@ impl BinRead for ResourcePointer {
     }
 }
 
+impl TigerReadable for ResourcePointer {
+    fn read_ds_endian<R: Read + Seek>(
+        reader: &mut R,
+        endian: tiger_parse::Endian,
+    ) -> anyhow::Result<Self> {
+        let offset_base = reader.stream_position()?;
+        let offset: i64 = TigerReadable::read_ds_endian(reader, endian)?;
+        if offset == 0 || offset == i64::MAX {
+            return Ok(ResourcePointer {
+                offset: 0,
+                resource_type: u32::MAX,
+                is_valid: false,
+            });
+        }
+
+        let offset_save = reader.stream_position()?;
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset - 4))?;
+        let resource_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
+
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(ResourcePointer {
+            offset: offset_base.saturating_add_signed(offset),
+            resource_type,
+            is_valid: true,
+        })
+    }
+
+    const ID: Option<u32> = None;
+    const ZEROCOPY: bool = false;
+    const SIZE: usize = 8;
+}
+
 impl Debug for ResourcePointer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
@@ -311,6 +347,48 @@ impl BinRead for ResourcePointerWithClass {
     }
 }
 
+impl TigerReadable for ResourcePointerWithClass {
+    fn read_ds_endian<R: Read + Seek>(
+        reader: &mut R,
+        endian: tiger_parse::Endian,
+    ) -> anyhow::Result<Self> {
+        let offset_base = reader.stream_position()?;
+        let offset: i64 = TigerReadable::read_ds_endian(reader, endian)?;
+        if offset == 0 || offset == i64::MAX {
+            return Ok(ResourcePointerWithClass {
+                offset: 0,
+                is_valid: false,
+                resource_type: u32::MAX,
+                parent_tag: TagHash::NONE,
+                class_type: u32::MAX,
+            });
+        }
+
+        let offset_save = reader.stream_position()?;
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset - 4))?;
+        let resource_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
+        let parent_tag: TagHash = TigerReadable::read_ds_endian(reader, endian)?;
+        let class_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
+
+        let true_offset = reader.stream_position()?;
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(ResourcePointerWithClass {
+            offset: true_offset,
+            is_valid: true,
+            resource_type,
+            parent_tag,
+            class_type,
+        })
+    }
+
+    const ID: Option<u32> = None;
+    const ZEROCOPY: bool = false;
+    const SIZE: usize = 8;
+}
+
 impl Debug for ResourcePointerWithClass {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
@@ -363,134 +441,6 @@ impl<T: BinRead> Deref for Tag<T> {
 }
 
 impl<T: BinRead + Debug> Debug for Tag<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-// TODO(cohae): Custom reader once new tag parser comes around
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum ExtendedHash {
-    Hash32(TagHash),
-    Hash64(TagHash64),
-}
-
-impl ExtendedHash {
-    /// Key that is safe to use for caching/lookup tables
-    pub fn key(&self) -> u64 {
-        match self {
-            ExtendedHash::Hash32(v) => v.0 as u64,
-            ExtendedHash::Hash64(v) => v.0,
-        }
-    }
-
-    /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
-    pub fn hash32(&self) -> Option<TagHash> {
-        match self {
-            ExtendedHash::Hash32(v) => Some(*v),
-            ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
-        }
-    }
-
-    pub fn is_some(&self) -> bool {
-        match self {
-            ExtendedHash::Hash32(h) => h.is_some(),
-            // TODO(cohae): Double check this
-            ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
-        }
-    }
-}
-
-impl Debug for ExtendedHash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
-            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
-        }
-    }
-}
-
-impl Display for ExtendedHash {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("{:08X}", h.0.to_be())),
-            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("{:016X}", h.0.to_be())),
-        }
-    }
-}
-
-impl std::hash::Hash for ExtendedHash {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u64(self.key());
-    }
-}
-
-impl nohash_hasher::IsEnabled for ExtendedHash {}
-
-impl BinRead for ExtendedHash {
-    type Args<'a> = ();
-
-    fn read_options<R: std::io::Read + std::io::Seek>(
-        reader: &mut R,
-        endian: binrw::Endian,
-        _args: Self::Args<'_>,
-    ) -> binrw::BinResult<Self> {
-        let hash32: TagHash = reader.read_type(endian)?;
-        let is_hash32: u32 = reader.read_type(endian)?;
-        let hash64: TagHash64 = reader.read_type(endian)?;
-
-        if is_hash32 != 0 {
-            Ok(ExtendedHash::Hash32(hash32))
-        } else {
-            Ok(ExtendedHash::Hash64(hash64))
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct ExtendedTag<T: BinRead>(pub T, ExtendedHash);
-
-// impl<T: BinRead> ExtendedTag<T> {
-//     pub fn tag(&self) -> ExtendedHash {
-//         self.1
-//     }
-// }
-
-impl<'a, T: BinRead> BinRead for ExtendedTag<T>
-where
-    T::Args<'a>: Default + Clone,
-{
-    type Args<'b> = ();
-
-    fn read_options<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        _args: Self::Args<'_>,
-    ) -> BinResult<Self> {
-        let taghash: ExtendedHash = reader.read_type(endian)?;
-        Ok(ExtendedTag(
-            package_manager()
-                .read_tag_binrw(taghash.hash32().ok_or_else(|| binrw::Error::Custom {
-                    pos: reader.stream_position().unwrap(),
-                    err: Box::new(anyhow::Error::msg("Could not translate hash64")),
-                })?)
-                .map_err(|e| binrw::Error::Custom {
-                    pos: reader.stream_position().unwrap(),
-                    err: Box::new(e),
-                })?,
-            taghash,
-        ))
-    }
-}
-
-impl<T: BinRead> Deref for ExtendedTag<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T: BinRead + Debug> Debug for ExtendedTag<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }

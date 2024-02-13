@@ -4,6 +4,7 @@ use crossbeam::channel::{self as mpsc, Receiver};
 use destiny_pkg::TagHash;
 use std::sync::Arc;
 use std::time::Instant;
+use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::{
     Direct3D::{WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_BUFFER},
     Direct3D11::{
@@ -15,11 +16,12 @@ use windows::Win32::Graphics::{
     Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
 };
 
+use alkahest_data::ExtendedHash;
+
 use crate::{
     dxgi::DxgiFormat,
     entity::{IndexBufferHeader, VertexBufferHeader},
     packages::package_manager,
-    structure::ExtendedHash,
     texture::Texture,
 };
 
@@ -121,7 +123,7 @@ fn spawn_thread_buffers(
                                 match package_manager().read_tag(entry.reference) {
                                     Ok(vertex_data) => {
                                         let vertex_buffer_header = package_manager()
-                                            .read_tag_binrw::<VertexBufferHeader>(hash)
+                                            .read_tag_struct::<VertexBufferHeader>(hash)
                                             .unwrap();
 
                                         let vertex_buffer = unsafe {
@@ -212,7 +214,7 @@ fn spawn_thread_buffers(
                                 match package_manager().read_tag(entry.reference) {
                                     Ok(index_data) => {
                                         let index_buffer_header = package_manager()
-                                            .read_tag_binrw::<IndexBufferHeader>(hash)
+                                            .read_tag_struct::<IndexBufferHeader>(hash)
                                             .unwrap();
 
                                         let index_buffer = unsafe {

@@ -1,3 +1,4 @@
+use alkahest_data::tfx::TfxRenderStage;
 use bitflags::bitflags;
 use destiny_pkg::TagHash;
 use hecs::Entity;
@@ -147,6 +148,14 @@ impl ShadingMode {
             0 => Self::Deferred,
             1 => Self::Forward,
             _ => Self::Deferred,
+        }
+    }
+
+    pub fn from_tfx_render_stage(stage: TfxRenderStage) -> Self {
+        match stage {
+            TfxRenderStage::GenerateGbuffer => Self::Deferred,
+            TfxRenderStage::Decals => Self::Deferred,
+            _ => Self::Forward,
         }
     }
 }

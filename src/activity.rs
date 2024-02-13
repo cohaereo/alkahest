@@ -1,13 +1,14 @@
-use crate::structure::{
-    ExtendedHash, RelPointer, ResourcePointer, ResourcePointerWithClass, TablePointer, Tag,
+use alkahest_data::{ExtendedHash, Tag};
+use tiger_parse::{tiger_tag, NullString, Pointer};
+
+use crate::{
+    structure::{ResourcePointer, ResourcePointerWithClass},
+    types::ResourceHash,
 };
-
-use crate::types::{ResourceHash, Vector4};
-use binrw::{BinRead, NullString};
 use destiny_pkg::{TagHash, TagHash64};
-use std::io::SeekFrom;
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x80)]
 pub struct SActivity {
     pub file_size: u64,
     pub location_name: ResourceHash,
@@ -17,16 +18,17 @@ pub struct SActivity {
     pub unk18: ResourcePointer,
     pub unk20: TagHash64,
 
-    #[br(seek_before = SeekFrom::Start(0x40))]
-    pub unk40: TablePointer<Unk80808926>,
-    pub unk50: TablePointer<Unk80808924>,
+    #[tag(offset = 0x40)]
+    pub unk40: Vec<Unk80808926>,
+    pub unk50: Vec<Unk80808924>,
     pub unk60: [u32; 4],
     pub unk70: ResourceHash,
     pub unk74: TagHash,
     pub ambient_activity: ExtendedHash,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808e8b {
     pub file_size: u64,
     pub location_name: ResourceHash,
@@ -36,34 +38,37 @@ pub struct Unk80808e8b {
     pub patrols: TagHash,
     pub unk28: u32,
     pub unk2c: TagHash,
-    pub tagbags: TablePointer<TagHash>, // 0x30
+    pub tagbags: Vec<TagHash>, // 0x30
     pub unk40: u32,
     pub unk48: u32,
-    pub activities: TablePointer<Unk8080892e>,
-    pub destination_name: RelPointer<NullString>,
+    pub activities: Vec<Unk8080892e>,
+    pub destination_name: Pointer<NullString>,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk8080892e {
     pub short_activity_name: ResourceHash,
     pub unk4: u32,
     pub unk8: ResourceHash,
     pub unkc: ResourceHash,
-    pub activity_name: RelPointer<NullString>,
+    pub activity_name: Pointer<NullString>,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808924 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
     pub bubble_name: ResourceHash,
     pub unkc: u32,
     pub unk10: ResourcePointer,
-    pub unk18: TablePointer<Unk80808948>,
-    pub map_references: TablePointer<ExtendedHash>,
+    pub unk18: Vec<Unk80808948>,
+    pub map_references: Vec<ExtendedHash>,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808926 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -83,11 +88,12 @@ pub struct Unk80808926 {
     pub unk3c: u32,
     pub unk40: u32,
     pub unk44: u32,
-    pub unk48: TablePointer<Unk80808948>,
+    pub unk48: Vec<Unk80808948>,
     pub unk4c: [u32; 4],
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808948 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -97,7 +103,8 @@ pub struct Unk80808948 {
     pub unk_entity_reference: Tag<Unk80808e89>,
 }
 
-#[derive(Debug, BinRead, Clone)]
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808e89 {
     pub file_size: u64,
     pub unk8: u64,
@@ -107,48 +114,53 @@ pub struct Unk80808e89 {
     pub unk20: [u32; 4],
 }
 
-#[derive(Debug, BinRead, Clone)]
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808ebe {
     pub file_size: u64,
-    pub entity_resources: TablePointer<Tag<Unk80808943>>,
+    pub entity_resources: Vec<Tag<Unk80808943>>,
 }
 
-#[derive(Debug, BinRead, Clone)]
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0xffffffff, size = 0x24)]
 pub struct Unk80808943 {
     pub file_size: u64,
-    #[br(seek_before = SeekFrom::Start(0x20))]
+    #[tag(offset = 0x20)]
     pub entity_resource: TagHash,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x88)]
 pub struct SEntityResource {
     pub file_size: u64,
     pub unk8: ResourcePointer,
     pub unk10: ResourcePointerWithClass,
     pub unk18: ResourcePointerWithClass,
 
-    #[br(seek_before = SeekFrom::Start(0x40))]
-    pub resource_table1: TablePointer<()>,
+    #[tag(offset = 0x40)]
+    pub resource_table1: Vec<()>,
 
-    #[br(seek_before = SeekFrom::Start(0x60))]
-    pub resource_table2: TablePointer<()>,
+    #[tag(offset = 0x60)]
+    pub resource_table2: Vec<()>,
 
-    #[br(seek_before = SeekFrom::Start(0x80))]
+    #[tag(offset = 0x80)]
     pub unk80: TagHash,
     pub unk84: TagHash,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk808092d8 {
     pub unk0: [u32; 33],
     pub unk84: TagHash,
     pub unk88: u32,
     pub unk8c: u32,
-    pub rotation: Vector4,
-    pub translation: Vector4,
+    pub rotation: glam::Vec4,
+    pub translation: glam::Vec4,
 }
 
-#[derive(Debug, BinRead)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808cef {
     pub unk0: [u32; 22],
     pub unk58: TagHash,

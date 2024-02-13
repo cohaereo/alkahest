@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use alkahest_data::ExtendedHash;
 use egui::{vec2, Color32, ComboBox, ImageSource, RichText, Rounding, TextureId};
 use fs_err::File;
 use glam::Vec4;
@@ -19,7 +20,6 @@ use crate::{
         bytecode::externs::TfxShaderStage, dcs::DcsShared, drawcall::ShaderStages,
         gbuffer::RenderTarget, shader, ConstantBuffer,
     },
-    structure::ExtendedHash,
     texture::{STextureHeader, Texture},
     util::{self, dds, error::ErrorAlert},
 };

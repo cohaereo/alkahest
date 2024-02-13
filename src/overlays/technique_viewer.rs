@@ -1,3 +1,4 @@
+use alkahest_data::ExtendedHash;
 use egui::{vec2, Image, ImageSource, Sense, TextureId};
 use glam::Vec4;
 use nohash_hasher::IntMap;
@@ -11,7 +12,6 @@ use crate::{
         dcs::DcsShared,
         DeviceContextSwapchain,
     },
-    structure::ExtendedHash,
     technique::{STechnique, STechniqueShader},
     texture::{STextureHeader, Texture},
 };

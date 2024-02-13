@@ -6,13 +6,13 @@ pub mod transform;
 
 pub type Scene = hecs::World;
 
+use alkahest_data::occlusion::AABB;
 use glam::Vec3;
 use hecs::EntityRef;
 use itertools::Itertools;
 
 use crate::ecs::component_panels::ComponentPanel;
 use crate::ecs::components::*;
-use crate::types::AABB;
 use crate::util::text::split_pascal_case;
 
 use self::transform::Transform;

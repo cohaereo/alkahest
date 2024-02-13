@@ -1,14 +1,15 @@
 use crate::entity::VertexBufferHeader;
-use crate::map::SMeshInstanceOcclusionBounds;
 use crate::packages::package_manager;
 use crate::render::scopes::ScopeInstances;
 use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
 
-use crate::statics::Unk808071a3;
-use crate::types::AABB;
+use alkahest_data::occlusion::SMeshInstanceOcclusionBounds;
+use alkahest_data::occlusion::AABB;
+use alkahest_data::statics::Unk808071a3;
 
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
+use tiger_parse::PackageManagerExt;
 
 use std::sync::Arc;
 
@@ -32,16 +33,16 @@ impl InstancedRenderer {
         // The last vertex color index, used by the vertex shader to extend the last vertex color value
         let vertex_color_last: Option<usize> = (|| {
             let cbt = model.buffers.first()?.color_buffer;
-            let vheader: VertexBufferHeader = package_manager().read_tag_binrw(cbt).ok()?;
+            let vheader: VertexBufferHeader = package_manager().read_tag_struct(cbt).ok()?;
 
             Some((vheader.data_size as usize / vheader.stride as usize).saturating_sub(1))
         })();
 
         let mut instance_data: ScopeInstances = ScopeInstances {
-            mesh_offset: model.subheader.mesh_offset.into(),
+            mesh_offset: model.subheader.mesh_offset,
             mesh_scale: model.subheader.mesh_scale,
             uv_scale: model.subheader.texture_coordinate_scale,
-            uv_offset: model.subheader.texture_coordinate_offset.into(),
+            uv_offset: model.subheader.texture_coordinate_offset,
             max_color_index: vertex_color_last.unwrap_or_default() as u32,
 
             transforms: Vec::with_capacity(instances.len()),

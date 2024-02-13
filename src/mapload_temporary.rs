@@ -20,26 +20,31 @@ use crate::{
     entity::{Unk8080906b, Unk80809905},
     map::SMapDataTable,
     map::{
-        SMeshInstanceOcclusionBounds, SShadowingLight, SSlipSurfaceVolume, SimpleLight,
-        Unk808068d4, Unk80806ac2, Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604,
-        Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
+        SShadowingLight, SSlipSurfaceVolume, SimpleLight, Unk808068d4, Unk80806ac2, Unk80806c98,
+        Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b,
+        Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
     util::fnv1,
 };
+use alkahest_data::{
+    occlusion::{SMeshInstanceOcclusionBounds, AABB},
+    statics::SStaticMesh,
+    Tag,
+};
 use anyhow::Context;
-use binrw::{BinReaderExt, VecArgs};
+use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::{multizip, Itertools};
 use nohash_hasher::{IntMap, IntSet};
+use tiger_parse::{dpkg::PackageManagerExt, Endian, TigerReadable};
 use windows::Win32::Graphics::{
     Direct3D::WKPDID_D3DDebugObjectName,
     Direct3D11::{ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader},
 };
 
-use crate::structure::ExtendedHash;
 use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     entity::{SEntityModel, Unk808072c5, Unk80809c0f},
@@ -53,11 +58,9 @@ use crate::{
         scopes::ScopeRigidModel, vertex_layout::InputElement, DeviceContextSwapchain,
         EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
-    statics::SStaticMesh,
-    structure::{TablePointer, Tag},
     technique::Technique,
-    types::AABB,
 };
+use alkahest_data::ExtendedHash;
 
 pub async fn load_maps(
     dcs: Arc<DeviceContextSwapchain>,
@@ -83,7 +86,7 @@ pub async fn load_maps(
         Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)>,
     > = Default::default();
     if let Some(activity_hash) = activity_hash {
-        let activity: SActivity = package_manager().read_tag_binrw(activity_hash)?;
+        let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
         for u1 in &activity.unk50 {
             for map in &u1.map_references {
                 let map32 = match map.hash32() {
@@ -105,9 +108,9 @@ pub async fn load_maps(
         }
 
         if load_ambient_activity {
-            match package_manager()
-                .read_tag_binrw::<SActivity>(activity.ambient_activity.hash32().unwrap_or_default())
-            {
+            match package_manager().read_tag_struct::<SActivity>(
+                activity.ambient_activity.hash32().unwrap_or_default(),
+            ) {
                 Ok(activity) => {
                     for u1 in &activity.unk50 {
                         for map in &u1.map_references {
@@ -141,7 +144,7 @@ pub async fn load_maps(
 
     for hash in map_hashes {
         let _span = debug_span!("Load map", %hash).entered();
-        let Ok(think) = package_manager().read_tag_binrw::<SBubbleParent>(hash) else {
+        let Ok(think) = package_manager().read_tag_struct::<SBubbleParent>(hash) else {
             error!("Failed to load map {hash}");
             continue;
         };
@@ -163,12 +166,12 @@ pub async fn load_maps(
 
         for map_container in &think.child_map.map_resources {
             for table in &map_container.data_tables {
-                let table_data = package_manager().read_tag(table.tag()).unwrap();
+                let table_data = package_manager().read_tag(table.hash()).unwrap();
                 let mut cur = Cursor::new(&table_data);
 
                 load_datatable_into_scene(
                     table,
-                    table.tag(),
+                    table.hash(),
                     &mut cur,
                     &mut scene,
                     renderer_ch.clone(),
@@ -190,20 +193,23 @@ pub async fn load_maps(
                     if resource.entity_resource.is_some() {
                         let data = package_manager().read_tag(resource.entity_resource)?;
                         let mut cur = Cursor::new(&data);
-                        let res: SEntityResource = cur.read_le()?;
+                        let res: SEntityResource =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                         let mut data_tables = IntSet::default();
                         match res.unk18.resource_type {
                             0x808092d8 => {
                                 cur.seek(SeekFrom::Start(res.unk18.offset))?;
-                                let tag: Unk808092d8 = cur.read_le()?;
+                                let tag: Unk808092d8 =
+                                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
                                 if tag.unk84.is_some() {
                                     data_tables.insert(tag.unk84);
                                 }
                             }
                             0x80808cef => {
                                 cur.seek(SeekFrom::Start(res.unk18.offset))?;
-                                let tag: Unk80808cef = cur.read_le()?;
+                                let tag: Unk80808cef =
+                                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
                                 if tag.unk58.is_some() {
                                     data_tables.insert(tag.unk58);
                                 }
@@ -245,7 +251,8 @@ pub async fn load_maps(
                         for table_tag in data_tables {
                             let data = package_manager().read_tag(table_tag)?;
                             let mut cur = Cursor::new(&data);
-                            let table: SMapDataTable = cur.read_le()?;
+                            let table: SMapDataTable =
+                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                             load_datatable_into_scene(
                                 &table,
@@ -266,7 +273,8 @@ pub async fn load_maps(
                         for table_tag in data_tables2 {
                             let data = package_manager().read_tag(table_tag)?;
                             let mut cur = Cursor::new(&data);
-                            let table: SMapDataTable = cur.read_le()?;
+                            let table: SMapDataTable =
+                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                             load_datatable_into_scene(
                                 &table,
@@ -289,7 +297,7 @@ pub async fn load_maps(
                             )?;
                         }
                     } else {
-                        warn!("null entity resource tag in {}", resource.tag());
+                        warn!("null entity resource tag in {}", resource.hash());
                     }
                 }
             }
@@ -363,7 +371,7 @@ pub async fn load_maps(
         let renderer = renderer.read();
         if let Some(nh) = te.hash32() {
             let _span = debug_span!("Load entity", hash = %nh).entered();
-            let Ok(header) = package_manager().read_tag_binrw::<Unk80809c0f>(nh) else {
+            let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
                 error!("Could not load entity {nh} ({te:?})");
                 continue;
             };
@@ -376,13 +384,16 @@ pub async fn load_maps(
                             e.unk0.unk18.resource_type.to_be(),
                             e.unk0.unk10.resource_type.to_be(),
                         );
-                        let mut cur = Cursor::new(package_manager().read_tag(e.unk0.tag())?);
+                        let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-                        let model: Tag<SEntityModel> = cur.read_le()?;
+                        let model: Tag<SEntityModel> =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
-                        let entity_material_map: TablePointer<Unk808072c5> = cur.read_le()?;
+                        let entity_material_map: Vec<Unk808072c5> =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
                         cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                        let materials: TablePointer<TagHash> = cur.read_le()?;
+                        let materials: Vec<TagHash> =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                         for m in &materials {
                             if let Ok(mat) = package_manager().read_tag_binrw(*m) {
@@ -429,7 +440,7 @@ pub async fn load_maps(
                             "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
                             u.to_be(),
                             e.unk0.unk10.resource_type.to_be(),
-                            e.unk0.tag()
+                            e.unk0.hash()
                         )
                     }
                 }
@@ -441,7 +452,7 @@ pub async fn load_maps(
 
     for t in to_load_entitymodels {
         let renderer = renderer.read();
-        let model: SEntityModel = package_manager().read_tag_binrw(t)?;
+        let model: SEntityModel = package_manager().read_tag_struct(t)?;
 
         for m in &model.meshes {
             for p in &m.parts {
@@ -722,7 +733,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     for data in &table.data_entries {
         let transform = Transform {
             translation: Vec3::new(data.translation.x, data.translation.y, data.translation.z),
-            rotation: data.rotation.into(),
+            rotation: data.rotation,
             scale: Vec3::splat(data.translation.w),
             ..Default::default()
         };
@@ -751,13 +762,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .unwrap();
                     let preheader_tag: TagHash = table_data.read_le().unwrap();
                     let preheader: Unk80806ef4 =
-                        package_manager().read_tag_binrw(preheader_tag).unwrap();
+                        package_manager().read_tag_struct(preheader_tag).unwrap();
 
                     info_span!("Loading static instances").in_scope(|| {
                         'next_instance: for s in &preheader.instances.instance_groups {
                             let mesh_tag = preheader.instances.statics[s.static_index as usize];
                             let mheader: SStaticMesh = debug_span!("load tag Unk808071a7")
-                                .in_scope(|| package_manager().read_tag_binrw(mesh_tag).unwrap());
+                                .in_scope(|| package_manager().read_tag_struct(mesh_tag).unwrap());
                             for m in &mheader.materials {
                                 if m.is_some()
                                     && !material_map.contains_key(m)
@@ -847,9 +858,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let terrain_resource: Unk8080714b = table_data.read_le().unwrap();
+                    let terrain_resource: Unk8080714b = TigerReadable::read_ds(table_data).unwrap();
                     let terrain: STerrain = package_manager()
-                        .read_tag_binrw(terrain_resource.terrain)
+                        .read_tag_struct(terrain_resource.terrain)
                         .unwrap();
 
                     for p in &terrain.mesh_parts {
@@ -887,7 +898,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let cubemap_volume: Unk80806b7f = table_data.read_le().unwrap();
+                    let cubemap_volume: Unk80806b7f = TigerReadable::read_ds(table_data).unwrap();
                     let extents_center = Vec4::new(
                         data.translation.x,
                         data.translation.y,
@@ -955,7 +966,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80806e68 = package_manager().read_tag_binrw(tag).unwrap();
+                    let header: Unk80806e68 = package_manager().read_tag_struct(tag).unwrap();
 
                     for inst in &header.instances {
                         for i in inst.start..(inst.start + inst.count) {
@@ -987,7 +998,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     table_data
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
-                    let tag: ExtendedHash = table_data.read_le().unwrap();
+                    let tag: ExtendedHash = TigerReadable::read_ds(table_data).unwrap();
                     if !tag.is_some() || tag.hash32().is_none() {
                         // TODO: should be handled a bit more gracefully, shouldnt drop the whole node
                         // TODO: do the same for other resources ^
@@ -995,7 +1006,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     }
 
                     let header = package_manager()
-                        .read_tag_binrw::<Unk80809802>(tag.hash32().unwrap())
+                        .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
                         .ok();
 
                     ents.push(scene.spawn((
@@ -1011,12 +1022,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     table_data
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
-                    let tag: TagHash = table_data.read_le().unwrap();
+                    let tag: TagHash = TigerReadable::read_ds(table_data).unwrap();
                     if tag.is_none() {
                         continue;
                     }
 
-                    let header: Unk80806aa7 = package_manager().read_tag_binrw(tag).unwrap();
+                    let header: Unk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
 
                     for (unk8, unk18, _unk28) in itertools::multizip((
                         header.unk8.iter(),
@@ -1055,7 +1066,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: SLightCollection = package_manager().read_tag_binrw(tag).unwrap();
+                    let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
                     for (i, (transform, light, bounds)) in multizip((
                         &header.unk40,
@@ -1115,7 +1126,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80808cb7 = package_manager().read_tag_binrw(tag).unwrap();
+                    let header: Unk80808cb7 = package_manager().read_tag_struct(tag).unwrap();
 
                     for transform in header.unk8.iter() {
                         ents.push(scene.spawn((
@@ -1152,7 +1163,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk808085c2 = package_manager().read_tag_binrw(tag).unwrap();
+                    let header: Unk808085c2 = package_manager().read_tag_struct(tag).unwrap();
 
                     for transform in header.unk8.iter() {
                         ents.push(scene.spawn((
@@ -1190,7 +1201,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header: Unk80806d19 = package_manager().read_tag_binrw(tag).unwrap();
+                    let header: Unk80806d19 = package_manager().read_tag_struct(tag).unwrap();
 
                     for transform in header.unk50.iter() {
                         ents.push(scene.spawn((
@@ -1218,7 +1229,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
                     let header_tag: TagHash = table_data.read_le().unwrap();
-                    let header: Unk80806c98 = package_manager().read_tag_binrw(header_tag).unwrap();
+                    let header: Unk80806c98 =
+                        package_manager().read_tag_struct(header_tag).unwrap();
 
                     for b in &header.unk4c.bounds {
                         ents.push(scene.spawn((
@@ -1241,7 +1253,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
                         .unwrap();
                     let tag: TagHash = table_data.read_le().unwrap();
-                    let light: SShadowingLight = package_manager().read_tag_binrw(tag)?;
+                    let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
                     if light.technique_shading.is_some() {
                         material_map.insert(
@@ -1270,7 +1282,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk80809178 = table_data.read_le()?;
+                    let d: Unk80809178 = TigerReadable::read_ds(table_data)?;
                     let name = stringmap
                         .get(&d.area_name.0)
                         .cloned()
@@ -1323,7 +1335,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk8080917b = table_data.read_le()?;
+                    let d: Unk8080917b = TigerReadable::read_ds(table_data)?;
 
                     let havok_debugshape =
                         if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {
@@ -1385,7 +1397,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk80808604 = table_data.read_le()?;
+                    let d: Unk80808604 = TigerReadable::read_ds(table_data)?;
 
                     let (havok_debugshape, new_transform) = if let Ok(havok_data) =
                         package_manager().read_tag(d.unk10.havok_file)
@@ -1406,8 +1418,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     }
 
                                     let transform = Transform {
-                                        translation: Vec4::from(t.translation).truncate(),
-                                        rotation: Quat::from(t.rotation),
+                                        translation: t.translation.truncate(),
+                                        rotation: t.rotation,
                                         ..Default::default()
                                     };
 
@@ -1458,7 +1470,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk80808246 = table_data.read_le()?;
+                    let d: Unk80808246 = TigerReadable::read_ds(table_data)?;
 
                     match package_manager().read_tag(d.unk10.havok_file) {
                         Ok(havok_data) => {
@@ -1475,8 +1487,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         }
 
                                         let transform = Transform {
-                                            translation: Vec4::from(t.translation).truncate(),
-                                            rotation: Quat::from(t.rotation),
+                                            translation: t.translation.truncate(),
+                                            rotation: t.rotation,
                                             ..Default::default()
                                         };
 
@@ -1530,7 +1542,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk80806ac2 = table_data.read_le()?;
+                    let d: Unk80806ac2 = TigerReadable::read_ds(table_data)?;
 
                     match package_manager().read_tag(d.unk10.havok_file) {
                         Ok(havok_data) => {
@@ -1547,8 +1559,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         }
 
                                         let transform = Transform {
-                                            translation: Vec4::from(t.translation).truncate(),
-                                            rotation: Quat::from(t.rotation),
+                                            translation: t.translation.truncate(),
+                                            rotation: t.rotation,
                                             ..Default::default()
                                         };
 
@@ -1592,7 +1604,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: SSlipSurfaceVolume = table_data.read_le()?;
+                    let d: SSlipSurfaceVolume = TigerReadable::read_ds(table_data)?;
 
                     let (havok_debugshape, new_transform) =
                         if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
@@ -1644,7 +1656,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .seek(SeekFrom::Start(data.data_resource.offset))
                         .unwrap();
 
-                    let d: Unk808068d4 = table_data.read_le()?;
+                    let d: Unk808068d4 = TigerReadable::read_ds(table_data)?;
                     to_load_entitymodels.insert(d.entity_model);
 
                     ents.push(scene.spawn((
@@ -1793,7 +1805,7 @@ fn contains_havok_references(this_tag: TagHash, max_depth: usize) -> Option<TagH
 
 fn is_physics_entity(entity: ExtendedHash) -> bool {
     if let Some(nh) = entity.hash32() {
-        let Ok(header) = package_manager().read_tag_binrw::<Unk80809c0f>(nh) else {
+        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
             return false;
         };
 
@@ -1811,7 +1823,7 @@ fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
     let data: Vec<u8> = package_manager().read_tag(entity).ok()?;
     let mut cur = Cursor::new(&data);
 
-    let e = cur.read_le::<SEntityResource>().ok()?;
+    let e: SEntityResource = TigerReadable::read_ds(&mut cur).ok()?;
     let mut world_id_list: Vec<Unk80809905> = vec![];
     if e.unk80.is_none() {
         return None;
@@ -1824,15 +1836,13 @@ fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
 
         if hash == 0x80809905 {
             cur.seek(SeekFrom::Start(offset - 8)).ok()?;
-            let count: u64 = cur.read_le().ok()?;
+            let count: u64 = TigerReadable::read_ds(&mut cur).ok()?;
             cur.seek(SeekFrom::Start(offset + 8)).ok()?;
-            world_id_list = cur
-                .read_le_args(VecArgs {
-                    count: count as usize,
-                    inner: (),
-                })
-                .ok()?;
-            // let list: TablePointer<Unk80809905> = cur.read_le().ok()?;
+            for _ in 0..count {
+                let e: Unk80809905 = TigerReadable::read_ds(&mut cur).ok()?;
+                world_id_list.push(e);
+            }
+            // let list: TablePointer<Unk80809905> = TigerReadable::read_ds_endian(&mut cur, Endian::Little).ok()?;
             // world_id_list = list.take_data();
             break;
         }
@@ -1840,7 +1850,7 @@ fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
 
     // if matches!(e.unk18.resource_type, 0x80808cf8 | 0x808098fa) {
     //     cur.seek(SeekFrom::Start(e.unk18.offset + 0x50)).ok()?;
-    //     let list: TablePointer<Unk80809905> = cur.read_le().ok()?;
+    //     let list: TablePointer<Unk80809905> = TigerReadable::read_ds_endian(&mut cur, Endian::Little).ok()?;
     //     world_id_list = list.take_data();
     // }
 
@@ -1849,10 +1859,13 @@ fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
 
     let mut name_hash_map: IntMap<FnvHash, String> = IntMap::default();
 
-    let tablethingy: Unk8080906b = package_manager().read_tag_binrw(e.unk80).ok()?;
+    let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
     for v in tablethingy.unk0.into_iter() {
-        if let Some(name_ptr) = &v.unk0_name_pointer {
-            name_hash_map.insert(fnv1(&name_ptr.name), name_ptr.name.to_string());
+        if let Some(name_ptr) = v.unk0_name_pointer.as_ref() {
+            name_hash_map.insert(
+                fnv1(name_ptr.name.0 .0.as_bytes()),
+                name_ptr.name.to_string(),
+            );
         }
     }
 

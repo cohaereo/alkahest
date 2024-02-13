@@ -32,12 +32,12 @@ use crate::overlays::console::ConsoleOverlay;
 use crate::overlays::inspector::InspectorOverlay;
 use crate::overlays::menu::MenuBar;
 use crate::overlays::outliner::OutlinerOverlay;
-use crate::structure::ExtendedHash;
 use crate::texture::{Texture, LOW_RES};
 use crate::util::consts::print_banner;
 use crate::util::image::Png;
 use crate::util::text::{invert_color, keep_color_bright, prettify_distance};
 use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
+use alkahest_data::tag::ExtendedHash;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -60,6 +60,7 @@ use render::vertex_layout::InputElement;
 
 use render_globals::SRenderGlobals;
 use technique::Technique;
+use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, Layer};
@@ -122,7 +123,6 @@ mod panic_handler;
 mod render;
 mod render_globals;
 mod resources;
-mod statics;
 mod structure;
 mod technique;
 mod text;
@@ -342,7 +342,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     if args.map.is_none() {
         if let Some(activity_hash) = &activity_hash {
-            let activity: SActivity = package_manager().read_tag_binrw(*activity_hash)?;
+            let activity: SActivity = package_manager().read_tag_struct(*activity_hash)?;
             let mut maps: IntSet<TagHash> = Default::default();
 
             for u in &activity.unk50 {
@@ -1244,7 +1244,7 @@ fn load_render_globals(renderer: &Renderer) {
     let tag =
         get_named_tag::<0x8080978C>("render_globals").expect("Could not find render globals!");
     let globals: SRenderGlobals = package_manager()
-        .read_tag_binrw(tag)
+        .read_tag_struct(tag)
         .expect("Failed to read render globals");
 
     // println!("{globals:#?}");

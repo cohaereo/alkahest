@@ -4,6 +4,8 @@ use destiny_pkg::TagHash;
 use glam::Vec4;
 
 use hecs::Entity;
+use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::entity::Unk808072c5;
@@ -171,7 +173,14 @@ impl EntityRenderer {
                         index_count: p.index_count,
                         instance_start: None,
                         instance_count: None,
-                        primitive_type: p.primitive_type.to_dx(),
+                        primitive_type: match p.primitive_type {
+                            alkahest_data::geometry::EPrimitiveType::Triangles => {
+                                D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+                            }
+                            alkahest_data::geometry::EPrimitiveType::TriangleStrip => {
+                                D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
+                            }
+                        },
                         entity,
                     },
                 );

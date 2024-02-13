@@ -1,11 +1,16 @@
 use crate::render::vertex_buffers::load_vertex_buffers;
-use crate::statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay};
+use alkahest_data::statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay};
+use alkahest_data::tfx::TfxRenderStage;
 
 use anyhow::ensure;
 use destiny_pkg::TagHash;
 
 use hecs::Entity;
 use itertools::Itertools;
+use tiger_parse::PackageManagerExt;
+use windows::Win32::Graphics::Direct3D::{
+    D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+};
 
 use crate::packages::package_manager;
 
@@ -15,7 +20,6 @@ use super::drawcall::{
     ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
 };
 use super::renderer::Renderer;
-use super::tfx::TfxRenderStage;
 
 pub struct StaticModelBuffer {
     pub vertex_buffer1: TagHash,
@@ -39,7 +43,7 @@ pub struct StaticModel {
 impl StaticModel {
     pub fn load(model: SStaticMesh, renderer: &Renderer) -> anyhow::Result<StaticModel> {
         let pm = package_manager();
-        let header: SStaticMeshData = pm.read_tag_binrw(model.unk8).unwrap();
+        let header: SStaticMeshData = pm.read_tag_struct(model.unk8).unwrap();
 
         ensure!(header.mesh_groups.len() == model.materials.len());
 
@@ -184,7 +188,14 @@ impl StaticModel {
                             index_count: p.index_count,
                             instance_start: None,
                             instance_count: Some(instance_count as _),
-                            primitive_type: p.primitive_type.to_dx(),
+                            primitive_type: match p.primitive_type {
+                                alkahest_data::geometry::EPrimitiveType::Triangles => {
+                                    D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+                                }
+                                alkahest_data::geometry::EPrimitiveType::TriangleStrip => {
+                                    D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
+                                }
+                            },
                             entity,
                         },
                     );
@@ -246,7 +257,7 @@ impl StaticOverlayModel {
             return;
         }
 
-        let shading_mode = self.model.render_stage.shading_mode();
+        let shading_mode = ShadingMode::from_tfx_render_stage(self.model.render_stage);
 
         if !draw_decals && self.model.render_stage == TfxRenderStage::Decals {
             return;
@@ -280,7 +291,14 @@ impl StaticOverlayModel {
                 index_count: self.model.index_count,
                 instance_start: None,
                 instance_count: Some(instance_count as _),
-                primitive_type: self.model.primitive_type.to_dx(),
+                primitive_type: match self.model.primitive_type {
+                    alkahest_data::geometry::EPrimitiveType::Triangles => {
+                        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+                    }
+                    alkahest_data::geometry::EPrimitiveType::TriangleStrip => {
+                        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
+                    }
+                },
                 entity,
             },
         );

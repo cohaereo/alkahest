@@ -1,14 +1,16 @@
 use crate::ecs::Scene;
 
-use crate::statics::SStaticMeshInstances;
-use crate::structure::{ExtendedHash, ExtendedTag, RelPointer, ResourcePointer, TablePointer, Tag};
-use crate::types::{Matrix4, ResourceHash, Vector4, AABB};
-use binrw::{BinRead, NullString};
+use crate::structure::ResourcePointer;
+use crate::types::ResourceHash;
+use alkahest_data::occlusion::AABB;
+use alkahest_data::{statics::SStaticMeshInstances, Tag};
+use alkahest_data::{ExtendedHash, ExtendedTag};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
+use tiger_parse::tiger_tag;
+use tiger_parse::{NullString, Pointer};
 
 use std::fmt::Debug;
-use std::io::SeekFrom;
 
 pub struct MapData {
     pub hash: TagHash,
@@ -51,21 +53,23 @@ impl MapDataList {
     }
 }
 
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
     // 808091e0
-    pub child_map: Tag<SBubbleDefinition>,
+    pub child_map: alkahest_data::Tag<SBubbleDefinition>,
     pub unkc: u32,
 
     pub unk10: u64,
     pub map_name: ResourceHash,
 
-    #[br(seek_before(SeekFrom::Start(0x40)))]
-    pub unk40: TablePointer<Unk80809644>,
+    #[tag(offset = 0x40)]
+    pub unk40: Vec<Unk80809644>,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809644 {
     pub unk0: u32,
     pub unk4: u32,
@@ -74,33 +78,37 @@ pub struct Unk80809644 {
 }
 
 // D2Class_01878080
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x18)]
 pub struct SBubbleDefinition {
     pub file_size: u64,
-    pub map_resources: TablePointer<ExtendedTag<SMapContainer>>,
+    pub map_resources: Vec<ExtendedTag<SMapContainer>>,
 }
 
 // D2Class_07878080
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x38)]
 pub struct SMapContainer {
     pub file_size: u64,
-    #[br(seek_before(SeekFrom::Start(0x28)))]
-    pub data_tables: TablePointer<Tag<SMapDataTable>>,
+    #[tag(offset = 0x28)]
+    pub data_tables: Vec<Tag<SMapDataTable>>,
 }
 
 // D2Class_83988080
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SMapDataTable {
     pub file_size: u64,
-    pub data_entries: TablePointer<Unk808099d8>,
+    pub data_entries: Vec<Unk808099d8>,
 }
 
 // D2Class_85988080
-#[derive(BinRead, Clone, Debug)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk808099d8 {
-    pub rotation: Vector4,    // 0x0
-    pub translation: Vector4, // 0x10
-    pub entity_old: TagHash,  // 0x20
+    pub rotation: glam::Quat,    // 0x0
+    pub translation: glam::Vec4, // 0x10
+    pub entity_old: TagHash,     // 0x20
     pub unk24: u32,
     pub entity: ExtendedHash,
     pub unk38: [u32; 9], //
@@ -114,25 +122,27 @@ pub struct Unk808099d8 {
     pub unk80: [u32; 4],
 }
 
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806ef4 {
     pub unk0: u64,
-    pub instances: Tag<SStaticMeshInstances>,
+    pub instances: alkahest_data::Tag<SStaticMeshInstances>,
     pub unkc: [u32; 7],
 }
 
 /// Terrain
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x88)]
 pub struct STerrain {
     pub file_size: u64,
     pub unk8: u64,
 
-    pub unk10: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
+    pub unk10: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
 
-    #[br(seek_before(SeekFrom::Start(0x50)))]
-    pub mesh_groups: TablePointer<Unk80807154>,
+    #[tag(offset = 0x50)]
+    pub mesh_groups: Vec<Unk80807154>,
 
     pub vertex_buffer: TagHash,
     pub vertex_buffer2: TagHash,
@@ -140,18 +150,19 @@ pub struct STerrain {
     pub material1: TagHash,
     pub material2: TagHash,
 
-    #[br(seek_before(SeekFrom::Start(0x78)))]
-    pub mesh_parts: TablePointer<Unk80807152>,
+    #[tag(offset = 0x78)]
+    pub mesh_parts: Vec<Unk80807152>,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80807154 {
-    pub unk0: Vector4,
+    pub unk0: glam::Vec4,
     pub unk10: f32,
     pub unk14: f32,
     pub unk18: f32,
     pub unk1c: u32,
-    pub unk20: Vector4,
+    pub unk20: glam::Vec4,
     pub unk30: u32,
     pub unk34: u32,
     pub unk38: u32,
@@ -166,7 +177,8 @@ pub struct Unk80807154 {
     pub unk5c: u32,
 }
 
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80807152 {
     pub material: TagHash,
     pub index_start: u32,
@@ -176,9 +188,10 @@ pub struct Unk80807152 {
 }
 
 /// Terrain resource
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x20)]
 pub struct Unk8080714b {
-    #[br(seek_before(SeekFrom::Current(0x10)))]
+    #[tag(offset = 0x10)]
     pub unk10: u16,
     pub unk12: u16,
     pub unk14: ResourceHash,
@@ -187,26 +200,27 @@ pub struct Unk8080714b {
 }
 
 /// Cubemap volume resource
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff, size = 0x1e0)]
 pub struct Unk80806b7f {
-    #[br(seek_before(SeekFrom::Current(0x20)))]
-    pub cubemap_extents: Vector4,
+    #[tag(offset = 0x20)]
+    pub cubemap_extents: glam::Vec4,
     /// Represents the visual center of the cubemap
-    pub cubemap_center: Vector4,
+    pub cubemap_center: glam::Vec4,
     pub unk40: f32,
     pub unk44: [u32; 3],
-    pub unk50: Vector4,
-    pub unk60: Vector4,
+    pub unk50: glam::Vec4,
+    pub unk60: glam::Vec4,
 
     pub unk70: [u32; 20],
 
     // Transform matrices?
-    pub unkc0: [Vector4; 4],
-    pub unk100: [Vector4; 4],
+    pub unkc0: [glam::Vec4; 4],
+    pub unk100: [glam::Vec4; 4],
 
     pub unk140: [u32; 28],
 
-    pub cubemap_name: RelPointer<NullString>,
+    pub cubemap_name: Pointer<NullString>,
     pub cubemap_texture: TagHash,
     pub unk1bc: u32,
     pub unk1c0: TagHash,
@@ -214,34 +228,35 @@ pub struct Unk80806b7f {
 }
 
 /// Decal collection resource
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806e68 {
     pub file_size: u64,
-    pub instances: TablePointer<Unk80806e6c>,
-    pub transforms: TablePointer<Vector4>, // 80806e6d
+    pub instances: Vec<Unk80806e6c>,
+    pub transforms: Vec<glam::Vec4>, // 80806e6d
     pub instance_points: TagHash,
     pub unk_vertex_colors: TagHash,
 
     pub unk30: [u32; 2],
-    pub occlusion_bounds: Tag<SOcclusionBounds>,
+    pub occlusion_bounds: alkahest_data::Tag<SOcclusionBounds>,
     _pad3c: u32,
     pub bounds: AABB,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806e6c {
     pub material: TagHash,
     pub start: u16,
     pub count: u16,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806df3 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk80806dec>,
+    pub unk8: Vec<Unk80806dec>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806dec {
     pub material: TagHash,
     pub index_buffer: TagHash,
@@ -249,56 +264,57 @@ pub struct Unk80806dec {
     pub unkc: u32,
     pub unk10: [u32; 4],
 
-    pub translation: Vector4,
+    pub translation: glam::Vec4,
 
-    pub unk30: Vector4,
-    pub unk40: Vector4,
-    pub unk50: Vector4,
+    pub unk30: glam::Vec4,
+    pub unk40: glam::Vec4,
+    pub unk50: glam::Vec4,
 }
 
 // Unknown resource (some kind of octree?)
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80807268 {
     pub file_size: u64,
     /// Vertex buffer
     pub unk8: TagHash,
     pub unkc: u32,
-    pub unk10: TablePointer<Unk8080726a>,
+    pub unk10: Vec<Unk8080726a>,
     pub unk20: [u32; 6],
     /// Vertex buffer
     pub unk38: TagHash,
     pub unk3c: u32,
-    pub unk40: TablePointer<Unk8080726a>,
-    pub unk50: TablePointer<Unk8080726d>,
-    pub unk60: TablePointer<u16>,
+    pub unk40: Vec<Unk8080726a>,
+    pub unk50: Vec<Unk8080726d>,
+    pub unk60: Vec<u16>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk8080726a {
     pub unk0: [u32; 4],
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk8080726d {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: Vector4,
+    pub unk0: glam::Vec4,
+    pub unk10: glam::Vec4,
+    pub unk20: glam::Vec4,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809162 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk80809164>,
+    pub unk8: Vec<Unk80809164>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809164 {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
+    pub unk0: glam::Vec4,
+    pub unk10: glam::Vec4,
     pub unk20: [u32; 4],
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809802 {
     pub file_size: u64,
     pub unk8: TagHash,
@@ -307,18 +323,18 @@ pub struct Unk80809802 {
     pub unk14: TagHash,
     pub unk18: TagHash,
     pub unk1c: u32,
-    pub streams: TablePointer<TagHash>,
+    pub streams: Vec<TagHash>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806aa7 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk80806aa9>,
-    pub unk18: TablePointer<Unk808093b3>,
-    pub unk28: TablePointer<u32>,
+    pub unk8: Vec<Unk80806aa9>,
+    pub unk18: Vec<Unk808093b3>,
+    pub unk28: Vec<u32>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806aa9 {
     /// Transformation matrix
     pub transform: [f32; 16],
@@ -326,7 +342,7 @@ pub struct Unk80806aa9 {
     /// Same as the bounding box from the Unk808093b3 array
     pub bounds: AABB,
 
-    pub unk60: Tag<Unk80806aae>,
+    pub unk60: alkahest_data::Tag<Unk80806aae>,
     pub unk64: f32,
     pub unk68: f32,
     pub unk6c: i16,
@@ -341,41 +357,42 @@ pub struct Unk80806aa9 {
     pub unk88: u32,
     pub unk8c: u32,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806aae {
     pub file_size: u64,
     pub entity_model: TagHash,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk808093b3 {
     pub bb: AABB,
     pub unk20: [u32; 4],
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
     pub bounds: AABB,
-    pub unk30: TablePointer<SLight>,
-    pub unk40: TablePointer<Unk80809f4f>,
+    pub unk30: Vec<SLight>,
+    pub unk40: Vec<Unk80809f4f>,
     pub light_count: u32,
     pub unk54: u32,
-    pub occlusion_bounds: Tag<SOcclusionBounds>,
+    pub occlusion_bounds: alkahest_data::Tag<SOcclusionBounds>,
 }
 
 // 706C8080
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SLight {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
+    pub unk0: glam::Vec4,
+    pub unk10: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
     pub unk40: [u32; 4],
-    pub unk50: Vector4,
-    pub unk60: Matrix4,
+    pub unk50: glam::Vec4,
+    pub unk60: glam::Mat4,
     pub unka0: u32,
     pub unka4: u32,
     pub unka8: u32,
@@ -394,15 +411,16 @@ pub struct SLight {
 }
 
 // 716C8080
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SShadowingLight {
-    pub unk0: Vector4,
-    pub unk10: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
+    pub unk0: glam::Vec4,
+    pub unk10: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
     pub unk40: [u32; 4],
-    pub unk50: Vector4,
-    pub unk60: Matrix4,
+    pub unk50: glam::Vec4,
+    pub unk60: glam::Mat4,
     pub unka0: u32,
     pub unka4: u32,
     pub unka8: u32,
@@ -432,104 +450,115 @@ pub struct SShadowingLight {
     pub unkd0: [u32; 8],
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809f4f {
-    pub rotation: Vector4,
-    pub translation: Vector4,
+    pub rotation: glam::Vec4,
+    pub translation: glam::Vec4,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808cb7 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk80808cb9>,
+    pub unk8: Vec<Unk80808cb9>,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808cb9 {
-    pub rotation: Vector4,
-    pub translation: Vector4,
+    pub rotation: glam::Vec4,
+    pub translation: glam::Vec4,
     pub unk20: u32,
     // cohae: Probably padding
     pub unk24: [u32; 3],
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk808085c2 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk808085c4>,
+    pub unk8: Vec<Unk808085c4>,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk808085c4 {
     pub unk0: [u32; 4],
     pub unk10: [u32; 4],
-    pub translation: Vector4,
+    pub translation: glam::Vec4,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806d19 {
     pub file_size: u64,
     pub unk8: TagHash,
     pub unkc: u32, // Padding
-    pub unk10: TablePointer<()>,
+    pub unk10: Vec<()>,
     pub unk20: TagHash,
     pub unk24: u32, // Padding
-    pub unk28: TablePointer<()>,
+    pub unk28: Vec<()>,
     pub unk38: TagHash,
     pub unk3c: u32, // Padding
-    pub unk40: TablePointer<()>,
-    pub unk50: TablePointer<Unk80806d4f>,
-    pub unk60: TablePointer<()>,
+    pub unk40: Vec<()>,
+    pub unk50: Vec<Unk80806d4f>,
+    pub unk60: Vec<()>,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806d4f {
-    pub translation: Vector4,
+    pub translation: glam::Vec4,
     pub unk10: [u32; 4],
     pub unk20: [u32; 4],
 }
 
-// #[derive(BinRead, Debug, Clone)]
+//#[derive(Clone, Debug)]
+// #[tiger_tag(id = 0xffffffff)]
 // pub struct Unk808066a2 {
 //     pub file_size: u64,
-//     pub unk8: TablePointer<()>,
-//     pub unk18: TablePointer<()>,
+//     pub unk8: Vec<()>,
+//     pub unk18: Vec<()>,
 //     /// Havok file
 //     pub unk28: TagHash,
 // }
-
-#[derive(BinRead, Debug)]
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806c98 {
     pub file_size: u64,
-    pub unk8: TablePointer<TagHash>,
-    pub unk18: TablePointer<u32>,
-    pub unk28: TablePointer<u32>,
-    pub unk38: TablePointer<u32>,
+    pub unk8: Vec<TagHash>,
+    pub unk18: Vec<u32>,
+    pub unk28: Vec<u32>,
+    pub unk38: Vec<u32>,
     pub unk48: TagHash,
-    pub unk4c: Tag<SOcclusionBounds>,
-    pub unk50: TablePointer<u32>,
+    pub unk4c: alkahest_data::Tag<SOcclusionBounds>,
+    pub unk50: Vec<u32>,
     pub unk60: [u32; 4],
     pub bounds: AABB,
 }
 
 /// B1938080
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SOcclusionBounds {
     pub file_size: u64,
-    pub bounds: TablePointer<SMeshInstanceOcclusionBounds>,
+    pub bounds: Vec<SMeshInstanceOcclusionBounds>,
 }
 
 // B3938080
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SMeshInstanceOcclusionBounds {
     pub bb: AABB,
     pub unk20: [u32; 4],
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809178 {
     // Points to havok pre-tag
-    pub unk0: RelPointer<SSlipSurfaceVolume>,
+    pub unk0: Pointer<SSlipSurfaceVolume>,
 
     pub unk8: u32,
     pub unkc: u32,
@@ -541,17 +570,19 @@ pub struct Unk80809178 {
     pub unk1c: u64,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk8080917b {
     // Points to havok pre-tag
-    pub unk0: RelPointer<SSlipSurfaceVolume>,
+    pub unk0: Pointer<SSlipSurfaceVolume>,
     pub unk8: u32,
     pub unkc: u32,
     pub kind: u8,
     pub unk11: u8,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct SSlipSurfaceVolume {
     pub unk0: [u32; 4],
     pub havok_file: TagHash,
@@ -559,7 +590,8 @@ pub struct SSlipSurfaceVolume {
     pub shape_index: u32,
 }
 
-#[derive(BinRead, Clone)]
+#[derive(Clone)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk808068d4 {
     pub unk0: u32,
     pub unk4: u32,
@@ -568,18 +600,20 @@ pub struct Unk808068d4 {
     pub entity_model: TagHash,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808604 {
     pub unk0: [u32; 4],
-    pub unk10: Tag<Unk80808724>,
+    pub unk10: alkahest_data::Tag<Unk80808724>,
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808606 {
-    pub rotation: Vector4,
-    pub translation: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
+    pub rotation: glam::Quat,
+    pub translation: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
     pub unk40: u32,
     pub shape_index: u32,
     pub unk48: u32,
@@ -587,23 +621,24 @@ pub struct Unk80808606 {
     pub unk50: [u32; 4],
 }
 
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808724 {
     pub file_size: u64,
-    pub unk8: TablePointer<Unk80808606>,
+    pub unk8: Vec<Unk80808606>,
     pub havok_file: TagHash,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk8080824c {
-    pub rotation: Vector4,
-    pub translation: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
-    pub unk40: Vector4,
-    pub unk50: Vector4,
-    pub unk60: TablePointer<Vector4>,
-    pub unk70: TablePointer<()>,
+    pub rotation: glam::Quat,
+    pub translation: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
+    pub unk40: glam::Vec4,
+    pub unk50: glam::Vec4,
+    pub unk60: Vec<glam::Vec4>,
+    pub unk70: Vec<()>,
     pub unk80: f32,
     pub unk84: [u32; 3],
     pub unk90: [u32; 4],
@@ -611,54 +646,54 @@ pub struct Unk8080824c {
     pub shape_index: u32,
     pub unkb0: [u32; 4],
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808248 {
     pub file_size: u64,
     pub havok_file: TagHash,
     _pad: u32,
-    pub unk10: TablePointer<Unk8080824c>,
+    pub unk10: Vec<Unk8080824c>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80808246 {
     pub unk0: [u32; 4],
-    pub unk10: Tag<Unk80808248>,
+    pub unk10: alkahest_data::Tag<Unk80808248>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806ac2 {
     pub unk0: [u32; 4],
-    pub unk10: Tag<Unk80806ac4>,
+    pub unk10: alkahest_data::Tag<Unk80806ac4>,
     pub array_index: u32,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806ac4 {
     pub file_size: u64,
     pub havok_file: TagHash,
     _pad: u32,
-    pub unk10: TablePointer<Unk80806ed8>,
+    pub unk10: Vec<Unk80806ed8>,
 }
-
-#[derive(BinRead, Debug, Clone)]
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0xffffffff)]
 pub struct Unk80806ed8 {
-    pub rotation: Vector4,
-    pub translation: Vector4,
-    pub unk20: Vector4,
-    pub unk30: Vector4,
-    pub unk40: Vector4,
-    pub unk50: Vector4,
+    pub rotation: glam::Quat,
+    pub translation: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
+    pub unk40: glam::Vec4,
+    pub unk50: glam::Vec4,
 
-    pub unk60: TablePointer<Vector4>,
-    pub unk70: TablePointer<()>,
+    pub unk60: Vec<glam::Vec4>,
+    pub unk70: Vec<()>,
 
     pub unk80: f32,
     pub unk84: [u32; 3],
     pub unk90: [u32; 4],
     pub unka0: [u32; 3],
     pub shape_index: u32,
-    pub unkb0: TablePointer<()>,
+    pub unkb0: Vec<()>,
     pub unkc0: [u32; 4],
     pub unkd0: [u32; 4],
     pub unke0: [u32; 4],

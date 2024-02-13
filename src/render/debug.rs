@@ -11,7 +11,7 @@ use super::drawcall::ShaderStages;
 use super::renderer::DrawMode;
 use super::{color::Color, shader, ConstantBuffer, DeviceContextSwapchain};
 use crate::ecs::transform::Transform;
-use crate::types::AABB;
+use alkahest_data::occlusion::AABB;
 use anyhow::Context;
 use genmesh::generators::IndexedPolygon;
 use genmesh::generators::SharedVertex;

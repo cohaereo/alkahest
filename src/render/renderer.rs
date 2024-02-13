@@ -4,8 +4,8 @@ use crate::ecs::resources::SelectedEntity;
 use crate::ecs::transform::Transform;
 use crate::map::{MapDataList, SLight, SShadowingLight};
 use crate::overlays::camera_settings::CurrentCubemap;
-use crate::types::AABB;
 use crate::util::RwLock;
+use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, UVec2, Vec3, Vec4};
 use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
@@ -1293,7 +1293,7 @@ impl Renderer {
                     if let Some(bb) = bounds {
                         *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 4.0));
                     } else {
-                        *self.light_mat.write() = light.unk60.into();
+                        *self.light_mat.write() = light.unk60;
                     }
 
                     *self.light_transform.write() = *transform;

@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use alkahest_data::{occlusion::AABB, ExtendedHash};
 use destiny_pkg::TagHash;
 use glam::{Vec3, Vec4};
 
@@ -9,8 +10,6 @@ use crate::{
         cbuffer::ConstantBufferCached, scopes::ScopeRigidModel, EntityRenderer, InstancedRenderer,
         TerrainRenderer,
     },
-    structure::ExtendedHash,
-    types::AABB,
 };
 
 #[derive(Copy, Clone)]

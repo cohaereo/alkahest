@@ -6,9 +6,9 @@ use crate::icons::{
 };
 use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
 use crate::render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes};
-use crate::structure::ExtendedHash;
 use crate::structure::ResourcePointer;
-use crate::types::AABB;
+use alkahest_data::occlusion::AABB;
+use alkahest_data::ExtendedHash;
 use destiny_pkg::TagHash;
 use glam::Vec3;
 use itertools::Itertools;

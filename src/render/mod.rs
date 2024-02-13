@@ -18,7 +18,6 @@ pub mod shader;
 pub mod static_instanced;
 pub mod static_render;
 pub mod terrain;
-pub mod tfx;
 pub mod tween;
 mod vertex_buffers;
 pub mod vertex_layout;

@@ -1,10 +1,10 @@
+use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, Vec2, Vec3};
 use winit::event::VirtualKeyCode;
 
 use crate::{
     input::InputState,
     render::tween::{self, Tween},
-    types::AABB,
 };
 
 #[derive(Clone)]
