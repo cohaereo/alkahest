@@ -1,11 +1,7 @@
-use crate::structure::ResourcePointer;
-use crate::types::FnvHash;
-
-use alkahest_data::geometry::{ELodCategory, EPrimitiveType};
+use super::geometry::{ELodCategory, EPrimitiveType};
 
 use destiny_pkg::TagHash;
-use tiger_parse::pointer::Pointer;
-use tiger_parse::{tiger_tag, NullString, PointerOptional};
+use tiger_parse::{tiger_tag, FnvHash, NullString, Pointer, PointerOptional, ResourcePointer};
 
 #[derive(Debug, Clone)]
 #[tiger_tag(id = 0xffffffff)]
@@ -17,7 +13,7 @@ pub struct Unk80809c0f {
 #[derive(Debug, Clone)]
 #[tiger_tag(id = 0xffffffff)]
 pub struct Unk80809c04 {
-    pub unk0: alkahest_data::Tag<Unk80809b06>,
+    pub unk0: super::Tag<Unk80809b06>,
     pub unk4: u32,
     pub unk8: u32,
 }

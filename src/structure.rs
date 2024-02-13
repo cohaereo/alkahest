@@ -2,10 +2,12 @@ use binrw::{BinRead, BinReaderExt, BinResult, Endian};
 use destiny_pkg::TagHash;
 use tiger_parse::TigerReadable;
 
-use std::fmt::{Debug, Formatter, Write};
-use std::io::{Read, Seek, SeekFrom};
-use std::ops::Deref;
-use std::slice::Iter;
+use std::{
+    fmt::{Debug, Formatter, Write},
+    io::{Read, Seek, SeekFrom},
+    ops::Deref,
+    slice::Iter,
+};
 
 use crate::packages::package_manager;
 
@@ -211,6 +213,7 @@ impl Debug for DeadBeefMarker {
 }
 
 #[derive(Clone, Copy)]
+#[deprecated(note = "Use `tiger_parse::ResourcePointer` instead")]
 pub struct ResourcePointer {
     pub offset: u64,
     pub resource_type: u32,
@@ -296,6 +299,7 @@ impl Debug for ResourcePointer {
 }
 
 #[derive(Clone, Copy)]
+#[deprecated(note = "Use `tiger_parse::ResourcePointerWithClass` instead")]
 pub struct ResourcePointerWithClass {
     pub offset: u64,
     pub is_valid: bool,
@@ -401,6 +405,7 @@ impl Debug for ResourcePointerWithClass {
 }
 
 #[derive(Clone, Copy)]
+#[deprecated(note = "Use `alkahest_data::Tag` instead")]
 pub struct Tag<T: BinRead>(pub T, TagHash);
 
 impl<T: BinRead> Tag<T> {

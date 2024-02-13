@@ -1,26 +1,27 @@
-use crate::dxgi::DxgiFormat;
-use crate::packages::package_manager;
-use crate::render::drawcall::ShaderStages;
-use crate::render::DeviceContextSwapchain;
-use crate::structure::{CafeMarker, TablePointer};
-use crate::types::IVector2;
-use crate::util::image::Png;
-use crate::util::D3D11CalcSubresource;
+use crate::{
+    dxgi::DxgiFormat,
+    packages::package_manager,
+    render::{drawcall::ShaderStages, DeviceContextSwapchain},
+    structure::{CafeMarker, TablePointer},
+    types::IVector2,
+    util::{image::Png, D3D11CalcSubresource},
+};
 use alkahest_data::ExtendedHash;
 use anyhow::Context;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
-use std::io::SeekFrom;
-use std::sync::atomic::{AtomicBool, Ordering};
-use windows::Win32::Graphics::Direct3D::{
-    WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
-    D3D11_SRV_DIMENSION_TEXTURECUBE,
+use std::{
+    io::SeekFrom,
+    sync::atomic::{AtomicBool, Ordering},
 };
-use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11Texture3D,
+use windows::Win32::Graphics::{
+    Direct3D::{
+        WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
+        D3D11_SRV_DIMENSION_TEXTURECUBE,
+    },
+    Direct3D11::{ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11Texture3D, *},
+    Dxgi::Common::*,
 };
-use windows::Win32::Graphics::Dxgi::Common::*;
 
 pub static LOW_RES: AtomicBool = AtomicBool::new(false);
 

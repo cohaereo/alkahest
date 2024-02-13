@@ -1,11 +1,14 @@
-use crate::entity::VertexBufferHeader;
-use crate::packages::package_manager;
-use crate::render::renderer::Renderer;
-use crate::render::vertex_layout;
+use crate::{
+    packages::package_manager,
+    render::{renderer::Renderer, vertex_layout},
+};
+use alkahest_data::entity::VertexBufferHeader;
 use destiny_pkg::TagHash;
 use itertools::Itertools;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 use tiger_parse::PackageManagerExt;
 
 /// Returns the hash of the resulting input layout

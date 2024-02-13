@@ -1,11 +1,13 @@
-use crate::entity::VertexBufferHeader;
-use crate::packages::package_manager;
-use crate::render::scopes::ScopeInstances;
-use crate::render::{ConstantBuffer, DeviceContextSwapchain, StaticModel};
+use crate::{
+    packages::package_manager,
+    render::{scopes::ScopeInstances, ConstantBuffer, DeviceContextSwapchain, StaticModel},
+};
 
-use alkahest_data::occlusion::SMeshInstanceOcclusionBounds;
-use alkahest_data::occlusion::AABB;
-use alkahest_data::statics::Unk808071a3;
+use alkahest_data::{
+    entity::VertexBufferHeader,
+    occlusion::{SMeshInstanceOcclusionBounds, AABB},
+    statics::Unk808071a3,
+};
 
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;

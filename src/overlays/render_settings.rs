@@ -4,8 +4,7 @@ use hecs::Entity;
 use itertools::Itertools;
 use nohash_hasher::{IntMap, IntSet};
 use std::{
-    fmt::Display,
-    fmt::Formatter,
+    fmt::{Display, Formatter},
     mem::{swap, take, transmute},
     time::Instant,
 };
@@ -13,8 +12,10 @@ use winit::window::Window;
 
 use crate::{
     discord,
-    ecs::components::{ActivityGroup, Global},
-    ecs::resources::SelectedEntity,
+    ecs::{
+        components::{ActivityGroup, Global},
+        resources::SelectedEntity,
+    },
     map::MapDataList,
     render::{
         overrides::{EnabledShaderOverrides, ScopeOverrides},

@@ -2,27 +2,23 @@ use std::sync::Arc;
 
 use crate::map::{SLight, SShadowingLight};
 
-use super::drawcall::ShaderStages;
-use super::renderer::Renderer;
-use super::{shader, DeviceContextSwapchain};
+use super::{drawcall::ShaderStages, renderer::Renderer, shader, DeviceContextSwapchain};
 use anyhow::Context;
-use genmesh::generators::IndexedPolygon;
-use genmesh::generators::SharedVertex;
-use genmesh::Triangulate;
-use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11DepthStencilState, D3D11_COMPARISON_ALWAYS, D3D11_DEPTH_STENCILOP_DESC,
-    D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_STENCIL_OP_DECR,
-    D3D11_STENCIL_OP_INCR, D3D11_STENCIL_OP_KEEP,
+use genmesh::{
+    generators::{IndexedPolygon, SharedVertex},
+    Triangulate,
 };
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_R16_UINT;
 use windows::Win32::Graphics::{
+    Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
     Direct3D11::{
-        ID3D11Buffer, ID3D11InputLayout, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
-        D3D11_BUFFER_DESC, D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA,
-        D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
+        ID3D11Buffer, ID3D11DepthStencilState, ID3D11InputLayout, D3D11_BIND_INDEX_BUFFER,
+        D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_COMPARISON_ALWAYS,
+        D3D11_DEPTH_STENCILOP_DESC, D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO,
+        D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_STENCIL_OP_DECR,
+        D3D11_STENCIL_OP_INCR, D3D11_STENCIL_OP_KEEP, D3D11_SUBRESOURCE_DATA,
+        D3D11_USAGE_IMMUTABLE,
     },
-    Dxgi::Common::DXGI_FORMAT_R32G32B32A32_FLOAT,
+    Dxgi::Common::{DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT},
 };
 
 pub struct LightRenderer {

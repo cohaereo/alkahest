@@ -3,10 +3,12 @@ use egui::{Color32, RichText};
 
 use winit::window::Window;
 
-use crate::icons::{ICON_BUG, ICON_CLIPBOARD};
-use crate::map_resources::MapResource;
-use crate::resources::Resources;
-use crate::FpsCamera;
+use crate::{
+    icons::{ICON_BUG, ICON_CLIPBOARD},
+    map_resources::MapResource,
+    resources::Resources,
+    FpsCamera,
+};
 
 use super::gui::Overlay;
 

@@ -1,18 +1,18 @@
-use std::cell::RefCell;
-use std::mem::transmute;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::{cell::RefCell, mem::transmute, rc::Rc, sync::Arc};
 
-use crate::render::DeviceContextSwapchain;
-use crate::resources::Resources;
-use crate::util::exe_relative_path;
-use crate::util::image::{EguiPngLoader, Png};
+use crate::{
+    render::DeviceContextSwapchain,
+    resources::Resources,
+    util::{
+        exe_relative_path,
+        image::{EguiPngLoader, Png},
+    },
+};
 use egui::epaint::ahash::HashMap;
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
 use itertools::Itertools;
-use winit::event::WindowEvent;
-use winit::window::Window;
+use winit::{event::WindowEvent, window::Window};
 
 pub trait Overlay {
     fn draw(

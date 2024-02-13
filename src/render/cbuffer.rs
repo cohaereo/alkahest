@@ -1,9 +1,13 @@
 use crate::render::DeviceContextSwapchain;
 use anyhow::Context;
-use std::marker::PhantomData;
-use std::mem::transmute;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::{
+    marker::PhantomData,
+    mem::transmute,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 use windows::Win32::Graphics::Direct3D11::*;
 
 use super::bytecode::externs::TfxShaderStage;

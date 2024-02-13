@@ -1,3 +1,4 @@
+pub mod entity;
 pub mod geometry;
 pub mod occlusion;
 pub mod statics;

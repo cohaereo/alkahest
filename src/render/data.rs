@@ -1,25 +1,26 @@
 use std::sync::Arc;
 
-use crate::util::image::Png;
-use crate::util::RwLock;
+use crate::util::{image::Png, RwLock};
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
 
-use crate::dxgi::DxgiFormat;
-use crate::packages::package_manager;
-use crate::render::vertex_layout::InputElement;
-use crate::technique::Technique;
-use crate::texture::Texture;
+use crate::{
+    dxgi::DxgiFormat, packages::package_manager, render::vertex_layout::InputElement,
+    technique::Technique, texture::Texture,
+};
 use alkahest_data::ExtendedHash;
 
-use super::drawcall::ShadingMode;
-use super::renderer::Renderer;
-use super::shader::{load_pshader, load_vshader};
-use super::vertex_layout::OutputElement;
-use super::{resource_mt, DeviceContextSwapchain};
+use super::{
+    drawcall::ShadingMode,
+    renderer::Renderer,
+    resource_mt,
+    shader::{load_pshader, load_vshader},
+    vertex_layout::OutputElement,
+    DeviceContextSwapchain,
+};
 
 pub struct RenderData {
     pub techniques: IntMap<TagHash, Technique>,

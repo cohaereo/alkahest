@@ -9,45 +9,54 @@ extern crate windows;
 extern crate tracing;
 
 use crate::render::tween::ease_out_exponential;
-use std::cell::RefCell;
-use std::f32::consts::PI;
-use std::io::{Cursor, Read, Seek, SeekFrom};
-use std::mem::transmute;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::str::FromStr;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-
-use crate::activity::SActivity;
-use crate::ecs::components::{
-    ActivityGroup, Beacon, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances, Terrain,
-    Visible, Water,
+use std::{
+    cell::RefCell,
+    f32::consts::PI,
+    io::{Cursor, Read, Seek, SeekFrom},
+    mem::transmute,
+    path::PathBuf,
+    rc::Rc,
+    str::FromStr,
+    sync::{atomic::Ordering, Arc},
+    time::{Duration, Instant},
 };
-use crate::ecs::resolve_aabb;
-use crate::ecs::resources::SelectedEntity;
-use crate::hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE};
-use crate::overlays::console::ConsoleOverlay;
-use crate::overlays::inspector::InspectorOverlay;
-use crate::overlays::menu::MenuBar;
-use crate::overlays::outliner::OutlinerOverlay;
-use crate::texture::{Texture, LOW_RES};
-use crate::util::consts::print_banner;
-use crate::util::image::Png;
-use crate::util::text::{invert_color, keep_color_bright, prettify_distance};
-use crate::util::{exe_relative_path, FilterDebugLockTarget, RwLock};
+
+use crate::{
+    activity::SActivity,
+    ecs::{
+        components::{
+            ActivityGroup, Beacon, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances,
+            Terrain, Visible, Water,
+        },
+        resolve_aabb,
+        resources::SelectedEntity,
+    },
+    hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE},
+    overlays::{
+        console::ConsoleOverlay, inspector::InspectorOverlay, menu::MenuBar,
+        outliner::OutlinerOverlay,
+    },
+    texture::{Texture, LOW_RES},
+    util::{
+        consts::print_banner,
+        exe_relative_path,
+        image::Png,
+        text::{invert_color, keep_color_bright, prettify_distance},
+        FilterDebugLockTarget, RwLock,
+    },
+};
 use alkahest_data::tag::ExtendedHash;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
-use destiny_pkg::PackageVersion::{self};
-use destiny_pkg::{PackageManager, TagHash};
+use destiny_pkg::{
+    PackageManager,
+    PackageVersion::{self},
+    TagHash,
+};
 use dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
-use ecs::components::CubemapVolume;
-use ecs::transform::Transform;
-use egui::epaint::ahash::HashMap;
-use egui::epaint::Hsva;
+use ecs::{components::CubemapVolume, transform::Transform};
+use egui::epaint::{ahash::HashMap, Hsva};
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
 use itertools::Itertools;
@@ -55,50 +64,57 @@ use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
-use render::debug::DebugDrawFlags;
-use render::vertex_layout::InputElement;
+use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
 
 use render_globals::SRenderGlobals;
 use technique::Technique;
 use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{EnvFilter, Layer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
 use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
 
-use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL};
-use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::event::VirtualKeyCode;
-use winit::platform::windows::WindowBuilderExtWindows;
+use windows::Win32::Graphics::{
+    Direct3D11::*,
+    Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL},
+};
 use winit::{
-    event::{Event, WindowEvent},
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::{Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
+    platform::windows::WindowBuilderExtWindows,
 };
 
-use crate::camera::FpsCamera;
-use crate::config::{WindowConfig, CONFIGURATION};
-use crate::input::InputState;
-use crate::map::MapDataList;
-use crate::map_resources::MapResource;
-use crate::mapload_temporary::load_maps;
-use crate::overlays::camera_settings::CameraPositionOverlay;
-
-use crate::overlays::fps_display::FpsDisplayOverlay;
-use crate::overlays::gui::{GuiManager, ViewerWindows};
-use crate::overlays::load_indicator::LoadIndicatorOverlay;
-use crate::overlays::render_settings::{
-    ActivityGroupFilter, RenderSettings, RenderSettingsOverlay,
+use crate::{
+    camera::FpsCamera,
+    config::{WindowConfig, CONFIGURATION},
+    input::InputState,
+    map::MapDataList,
+    map_resources::MapResource,
+    mapload_temporary::load_maps,
+    overlays::camera_settings::CameraPositionOverlay,
 };
-use crate::overlays::resource_nametags::ResourceTypeOverlay;
-use crate::overlays::tag_dump::{BulkTextureDumper, TagDumper};
-use crate::packages::{package_manager, PACKAGE_MANAGER};
-use crate::render::debug::DebugShapes;
-use crate::render::overrides::{EnabledShaderOverrides, ScopeOverrides};
-use crate::render::renderer::{Renderer, RendererShared, ShadowMapsResource};
 
-use crate::render::{DeviceContextSwapchain, EntityRenderer};
-use crate::resources::Resources;
+use crate::{
+    overlays::{
+        fps_display::FpsDisplayOverlay,
+        gui::{GuiManager, ViewerWindows},
+        load_indicator::LoadIndicatorOverlay,
+        render_settings::{ActivityGroupFilter, RenderSettings, RenderSettingsOverlay},
+        resource_nametags::ResourceTypeOverlay,
+        tag_dump::{BulkTextureDumper, TagDumper},
+    },
+    packages::{package_manager, PACKAGE_MANAGER},
+    render::{
+        debug::DebugShapes,
+        overrides::{EnabledShaderOverrides, ScopeOverrides},
+        renderer::{Renderer, RendererShared, ShadowMapsResource},
+    },
+};
+
+use crate::{
+    render::{DeviceContextSwapchain, EntityRenderer},
+    resources::Resources,
+};
 
 use crate::text::{decode_text, StringContainer, StringData, StringPart};
 
@@ -110,7 +126,6 @@ mod discord;
 mod dxbc;
 mod dxgi;
 mod ecs;
-mod entity;
 mod hotkeys;
 mod icons;
 mod input;

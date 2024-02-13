@@ -1,13 +1,14 @@
 use crate::util::RwLock;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use std::mem::transmute;
-use std::sync::Arc;
-use std::thread::ThreadId;
-use windows::Win32::Foundation::{BOOL, HINSTANCE};
-use windows::Win32::Graphics::Direct3D::*;
-use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::*;
-use windows::Win32::Graphics::Dxgi::*;
+use std::{mem::transmute, sync::Arc, thread::ThreadId};
+use windows::Win32::{
+    Foundation::{BOOL, HINSTANCE},
+    Graphics::{
+        Direct3D::*,
+        Direct3D11::*,
+        Dxgi::{Common::*, *},
+    },
+};
 use winit::window::Window;
 
 pub type DcsShared = Arc<DeviceContextSwapchain>;

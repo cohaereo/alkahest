@@ -1,22 +1,32 @@
-use crate::camera::FpsCamera;
-use crate::ecs::components::{EntityModel, Visible};
-use crate::ecs::tags::{insert_tag, EntityTag};
-use crate::ecs::transform::{OriginalTransform, Transform};
-use crate::entity::{SEntityModel, Unk808072c5, Unk80809c0f};
-use crate::map::MapDataList;
-use crate::overlays::gui::Overlay;
-use crate::packages::package_manager;
-use crate::render::bytecode::opcodes::TfxBytecodeOp;
-use crate::render::cbuffer::ConstantBufferCached;
-use crate::render::dcs::DcsShared;
-use crate::render::EntityRenderer;
-use crate::technique::{STechnique, Technique};
+use crate::{
+    camera::FpsCamera,
+    ecs::{
+        components::{EntityModel, Visible},
+        tags::{insert_tag, EntityTag},
+        transform::{OriginalTransform, Transform},
+    },
+    map::MapDataList,
+    overlays::gui::Overlay,
+    packages::package_manager,
+    render::{
+        bytecode::opcodes::TfxBytecodeOp, cbuffer::ConstantBufferCached, dcs::DcsShared,
+        EntityRenderer,
+    },
+    technique::{STechnique, Technique},
+};
 
-use crate::render::renderer::{Renderer, RendererShared};
-use crate::render::scopes::ScopeRigidModel;
-use crate::resources::Resources;
+use crate::{
+    render::{
+        renderer::{Renderer, RendererShared},
+        scopes::ScopeRigidModel,
+    },
+    resources::Resources,
+};
 
-use alkahest_data::ExtendedHash;
+use alkahest_data::{
+    entity::{SEntityModel, Unk808072c5, Unk80809c0f},
+    ExtendedHash,
+};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
@@ -25,18 +35,20 @@ use glam::{Mat4, Vec2, Vec3, Vec4};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use std::fmt::Debug;
-use std::io::{Cursor, Seek, SeekFrom};
-use std::sync::Arc;
+use std::{
+    fmt::Debug,
+    io::{Cursor, Seek, SeekFrom},
+    sync::Arc,
+};
 use tiger_parse::{PackageManagerExt, TigerReadable};
-use tracing::field::{Field, Visit};
-use tracing::{Event, Level, Subscriber};
+use tracing::{
+    field::{Field, Visit},
+    Event, Level, Subscriber,
+};
 use tracing_subscriber::Layer;
 use winit::window::Window;
 
-use super::gui::ViewerWindows;
-use super::technique_viewer::TechniqueViewer;
-use super::texture_viewer::TextureViewer;
+use super::{gui::ViewerWindows, technique_viewer::TechniqueViewer, texture_viewer::TextureViewer};
 
 // ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
 lazy_static! {

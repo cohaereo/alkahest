@@ -1,14 +1,15 @@
-use crate::ecs::transform::Transform;
-use crate::icons::{
-    ICON_ACCOUNT_CONVERT, ICON_ALERT, ICON_CHESS_PAWN, ICON_DROPBOX, ICON_FLARE, ICON_HELP,
-    ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE,
-    ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
+use crate::{
+    ecs::transform::Transform,
+    icons::{
+        ICON_ACCOUNT_CONVERT, ICON_ALERT, ICON_CHESS_PAWN, ICON_DROPBOX, ICON_FLARE, ICON_HELP,
+        ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL,
+        ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
+    },
+    map::{Unk80806b7f, Unk80809178, Unk80809802},
+    render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes},
+    structure::ResourcePointer,
 };
-use crate::map::{Unk80806b7f, Unk80809178, Unk80809802};
-use crate::render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes};
-use crate::structure::ResourcePointer;
-use alkahest_data::occlusion::AABB;
-use alkahest_data::ExtendedHash;
+use alkahest_data::{occlusion::AABB, ExtendedHash};
 use destiny_pkg::TagHash;
 use glam::Vec3;
 use itertools::Itertools;

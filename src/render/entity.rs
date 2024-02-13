@@ -1,26 +1,23 @@
+use alkahest_data::entity::{SEntityModel, Unk808072c5, Unk8080737e};
 use anyhow::Context;
 use destiny_pkg::TagHash;
 
 use glam::Vec4;
 
 use hecs::Entity;
-use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-use windows::Win32::Graphics::Direct3D11::*;
+use windows::Win32::Graphics::{
+    Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP},
+    Direct3D11::*,
+};
 
-use crate::entity::Unk808072c5;
-use crate::entity::Unk8080737e;
-
-use crate::entity::SEntityModel;
 use crate::render::vertex_buffers::load_vertex_buffers;
 
-use super::drawcall::ConstantBufferBinding;
-use super::drawcall::DrawCall;
-use super::drawcall::GeometryType;
-use super::drawcall::ShadingMode;
-use super::drawcall::SortValue3d;
-use super::drawcall::Transparency;
-use super::renderer::Renderer;
+use super::{
+    drawcall::{
+        ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
+    },
+    renderer::Renderer,
+};
 
 #[derive(Clone)]
 pub struct EntityModelBuffer {

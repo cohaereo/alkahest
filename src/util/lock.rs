@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use std::sync::atomic::AtomicUsize;
-use std::time::Instant;
+use std::{sync::atomic::AtomicUsize, time::Instant};
 
 static LOCK_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 

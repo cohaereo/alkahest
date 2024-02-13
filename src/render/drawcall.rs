@@ -2,8 +2,7 @@ use alkahest_data::tfx::TfxRenderStage;
 use bitflags::bitflags;
 use destiny_pkg::TagHash;
 use hecs::Entity;
-use windows::Win32::Graphics::Direct3D::*;
-use windows::Win32::Graphics::Direct3D11::*;
+use windows::Win32::Graphics::{Direct3D::*, Direct3D11::*};
 
 // #[bitfield(u64)]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,37 +1,37 @@
 use std::{sync::Arc, time::Instant};
 
-use crate::ecs::resources::SelectedEntity;
-use crate::ecs::transform::Transform;
-use crate::map::{MapDataList, SLight, SShadowingLight};
-use crate::overlays::camera_settings::CurrentCubemap;
-use crate::util::RwLock;
+use crate::{
+    ecs::{resources::SelectedEntity, transform::Transform},
+    map::{MapDataList, SLight, SShadowingLight},
+    overlays::camera_settings::CurrentCubemap,
+    util::RwLock,
+};
 use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, UVec2, Vec3, Vec4};
 use hecs::Entity;
-use windows::Win32::Graphics::Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
+use windows::Win32::Graphics::{
+    Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, Direct3D11::*, Dxgi::Common::DXGI_FORMAT,
+};
 use winit::window::Window;
 
-use crate::overlays::render_settings::{CompositorOptions, PickbufferScope, RenderSettings};
-use crate::render::drawcall::ShaderStages;
-use crate::render::scopes::ScopeUnk3;
-use crate::render::shader;
-use crate::{camera::FpsCamera, resources::Resources};
+use crate::{
+    camera::FpsCamera,
+    overlays::render_settings::{CompositorOptions, PickbufferScope, RenderSettings},
+    render::{drawcall::ShaderStages, scopes::ScopeUnk3, shader},
+    resources::Resources,
+};
 
-use super::bytecode::externs::TfxShaderStage;
-use super::data::RenderDataManager;
-use super::debug::{DebugShapeRenderer, DebugShapes};
-use super::drawcall::{GeometryType, Transparency};
-use super::error::ErrorRenderer;
-use super::gbuffer::ShadowDepthMap;
-use super::light::LightRenderer;
-use super::outline::OutlineScreenEffect;
-use super::overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides};
-use super::scopes::{ScopeUnk2, ScopeUnk8};
 use super::{
-    drawcall::{DrawCall, ShadingMode, SortValue3d},
-    scopes::{ScopeFrame, ScopeView},
+    bytecode::externs::TfxShaderStage,
+    data::RenderDataManager,
+    debug::{DebugShapeRenderer, DebugShapes},
+    drawcall::{DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency},
+    error::ErrorRenderer,
+    gbuffer::ShadowDepthMap,
+    light::LightRenderer,
+    outline::OutlineScreenEffect,
+    overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides},
+    scopes::{ScopeFrame, ScopeUnk2, ScopeUnk8, ScopeView},
     ConstantBuffer, DeviceContextSwapchain, GBuffer,
 };
 

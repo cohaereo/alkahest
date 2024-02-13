@@ -1,14 +1,12 @@
 use crate::ecs::Scene;
 
-use crate::structure::ResourcePointer;
-use crate::types::ResourceHash;
-use alkahest_data::occlusion::AABB;
-use alkahest_data::{statics::SStaticMeshInstances, Tag};
-use alkahest_data::{ExtendedHash, ExtendedTag};
+use crate::{structure::ResourcePointer, types::ResourceHash};
+use alkahest_data::{
+    occlusion::AABB, statics::SStaticMeshInstances, ExtendedHash, ExtendedTag, Tag,
+};
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
-use tiger_parse::tiger_tag;
-use tiger_parse::{NullString, Pointer};
+use tiger_parse::{tiger_tag, NullString, Pointer};
 
 use std::fmt::Debug;
 

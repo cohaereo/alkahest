@@ -1,19 +1,19 @@
-use crate::dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType};
-use crate::render::vertex_layout::InputElement;
+use crate::{
+    dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
+    render::vertex_layout::InputElement,
+};
 use binrw::BinReaderExt;
 use itertools::Itertools;
 use std::io::Cursor;
-use windows::Win32::Graphics::Direct3D11::ID3D11GeometryShader;
 use windows::{
     core::PCSTR,
     Win32::Graphics::{
         Direct3D::Fxc::{D3DCompile, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION},
-        Direct3D11::{ID3D11PixelShader, ID3D11VertexShader},
+        Direct3D11::{ID3D11GeometryShader, ID3D11PixelShader, ID3D11VertexShader},
     },
 };
 
-use super::vertex_layout::OutputElement;
-use super::DeviceContextSwapchain;
+use super::{vertex_layout::OutputElement, DeviceContextSwapchain};
 
 pub fn compile_hlsl(
     source: &str,

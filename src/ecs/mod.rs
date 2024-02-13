@@ -11,9 +11,10 @@ use glam::Vec3;
 use hecs::EntityRef;
 use itertools::Itertools;
 
-use crate::ecs::component_panels::ComponentPanel;
-use crate::ecs::components::*;
-use crate::util::text::split_pascal_case;
+use crate::{
+    ecs::{component_panels::ComponentPanel, components::*},
+    util::text::split_pascal_case,
+};
 
 use self::transform::Transform;
 

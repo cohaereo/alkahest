@@ -1,5 +1,7 @@
-use crate::structure::{RelPointer, TablePointer};
-use crate::types::ResourceHash;
+use crate::{
+    structure::{RelPointer, TablePointer},
+    types::ResourceHash,
+};
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 

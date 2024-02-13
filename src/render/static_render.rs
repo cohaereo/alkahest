@@ -1,6 +1,8 @@
 use crate::render::vertex_buffers::load_vertex_buffers;
-use alkahest_data::statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay};
-use alkahest_data::tfx::TfxRenderStage;
+use alkahest_data::{
+    statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay},
+    tfx::TfxRenderStage,
+};
 
 use anyhow::ensure;
 use destiny_pkg::TagHash;
@@ -16,10 +18,12 @@ use crate::packages::package_manager;
 
 use windows::Win32::Graphics::Direct3D11::*;
 
-use super::drawcall::{
-    ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
+use super::{
+    drawcall::{
+        ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
+    },
+    renderer::Renderer,
 };
-use super::renderer::Renderer;
 
 pub struct StaticModelBuffer {
     pub vertex_buffer1: TagHash,

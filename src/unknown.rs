@@ -1,5 +1,4 @@
-use crate::structure::TablePointer;
-use crate::types::ResourceHash;
+use crate::{structure::TablePointer, types::ResourceHash};
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 

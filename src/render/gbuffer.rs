@@ -1,15 +1,18 @@
-use crate::dxgi::DxgiFormat;
-use crate::render::DeviceContextSwapchain;
-use crate::FpsCamera;
+use crate::{dxgi::DxgiFormat, render::DeviceContextSwapchain, FpsCamera};
 use anyhow::Context;
 use glam::Vec3;
-use std::mem::{size_of, transmute};
-use std::sync::Arc;
-use windows::Win32::Graphics::Direct3D::{
-    WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
+use std::{
+    mem::{size_of, transmute},
+    sync::Arc,
 };
-use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::*;
+use windows::Win32::Graphics::{
+    Direct3D::{
+        WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D,
+        D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
+    },
+    Direct3D11::*,
+    Dxgi::Common::*,
+};
 
 use super::cbuffer::BufferMapGuard;
 

@@ -1,16 +1,20 @@
 use std::ops::Deref;
 
-use crate::packages::package_manager;
-use crate::render::bytecode::externs::TfxShaderStage;
-use crate::render::bytecode::interpreter::TfxBytecodeInterpreter;
-use crate::render::bytecode::opcodes::TfxBytecodeOp;
-use crate::render::cbuffer::ConstantBufferCached;
-use crate::render::drawcall::ShaderStages;
-use crate::render::renderer::Renderer;
-use crate::render::{DeviceContextSwapchain, RenderData};
-use crate::structure::{RelPointer, TablePointer};
-use crate::types::Vector4;
-use crate::util::RwLock;
+use crate::{
+    packages::package_manager,
+    render::{
+        bytecode::{
+            externs::TfxShaderStage, interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp,
+        },
+        cbuffer::ConstantBufferCached,
+        drawcall::ShaderStages,
+        renderer::Renderer,
+        DeviceContextSwapchain, RenderData,
+    },
+    structure::{RelPointer, TablePointer},
+    types::Vector4,
+    util::RwLock,
+};
 use alkahest_data::ExtendedHash;
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;

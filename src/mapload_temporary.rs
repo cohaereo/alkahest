@@ -17,18 +17,17 @@ use crate::{
         transform::{OriginalTransform, Transform},
         Scene,
     },
-    entity::{Unk8080906b, Unk80809905},
-    map::SMapDataTable,
     map::{
-        SShadowingLight, SSlipSurfaceVolume, SimpleLight, Unk808068d4, Unk80806ac2, Unk80806c98,
-        Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b,
-        Unk80809802,
+        SMapDataTable, SShadowingLight, SSlipSurfaceVolume, SimpleLight, Unk808068d4, Unk80806ac2,
+        Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178,
+        Unk8080917b, Unk80809802,
     },
     render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
     types::{FnvHash, ResourceHash},
     util::fnv1,
 };
 use alkahest_data::{
+    entity::{SEntityModel, Unk808072c5, Unk8080906b, Unk80809905, Unk80809c0f},
     occlusion::{SMeshInstanceOcclusionBounds, AABB},
     statics::SStaticMesh,
     Tag,
@@ -47,7 +46,6 @@ use windows::Win32::Graphics::{
 
 use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
-    entity::{SEntityModel, Unk808072c5, Unk80809c0f},
     map::{
         MapData, SBubbleParent, SLightCollection, STerrain, Unk80806aa7, Unk80806b7f, Unk80806e68,
         Unk80806ef4, Unk8080714b,

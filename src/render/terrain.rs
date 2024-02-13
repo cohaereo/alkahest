@@ -8,12 +8,14 @@ use glam::{Mat4, Vec4};
 use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
-use super::drawcall::{
-    ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
+use super::{
+    drawcall::{
+        ConstantBufferBinding, DrawCall, GeometryType, ShadingMode, SortValue3d, Transparency,
+    },
+    renderer::Renderer,
+    vertex_buffers::load_vertex_buffers,
+    ConstantBuffer, DeviceContextSwapchain,
 };
-use super::renderer::Renderer;
-use super::vertex_buffers::load_vertex_buffers;
-use super::{ConstantBuffer, DeviceContextSwapchain};
 
 pub struct TerrainRenderer {
     terrain: STerrain,

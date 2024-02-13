@@ -1,11 +1,9 @@
-use crate::overlays::gui::Overlay;
-use crate::packages::package_manager;
-use crate::resources::Resources;
-use crate::texture::Texture;
-use crate::util::dds;
+use crate::{
+    overlays::gui::Overlay, packages::package_manager, resources::Resources, texture::Texture,
+    util::dds,
+};
 use alkahest_data::ExtendedHash;
-use destiny_pkg::package::UEntryHeader;
-use destiny_pkg::TagHash;
+use destiny_pkg::{package::UEntryHeader, TagHash};
 use fs_err::File;
 use std::io::Write;
 use tracing::error;
