@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use alkahest_data::ExtendedHash;
+use alkahest_data::{dxgi::DxgiFormat, ExtendedHash};
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
@@ -17,7 +17,6 @@ use super::{
     DeviceContextSwapchain,
 };
 use crate::{
-    dxgi::DxgiFormat,
     packages::package_manager,
     render::vertex_layout::InputElement,
     technique::Technique,

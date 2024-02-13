@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use alkahest_data::dxgi::DxgiFormat;
 use anyhow::Context;
 use glam::Vec3;
 use windows::Win32::Graphics::{
@@ -15,7 +16,7 @@ use windows::Win32::Graphics::{
 };
 
 use super::cbuffer::BufferMapGuard;
-use crate::{dxgi::DxgiFormat, render::DeviceContextSwapchain, FpsCamera};
+use crate::{render::DeviceContextSwapchain, FpsCamera};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,

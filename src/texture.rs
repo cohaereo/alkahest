@@ -1,12 +1,8 @@
-use std::{
-    io::SeekFrom,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use alkahest_data::ExtendedHash;
+use alkahest_data::{dxgi::DxgiFormat, texture::STextureHeader, ExtendedHash};
 use anyhow::Context;
-use binrw::BinRead;
-use destiny_pkg::TagHash;
+use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::{
     Direct3D::{
         WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
@@ -17,65 +13,12 @@ use windows::Win32::Graphics::{
 };
 
 use crate::{
-    dxgi::DxgiFormat,
     packages::package_manager,
     render::{drawcall::ShaderStages, DeviceContextSwapchain},
-    structure::{CafeMarker, TablePointer},
-    types::IVector2,
     util::{image::Png, D3D11CalcSubresource},
 };
 
 pub static LOW_RES: AtomicBool = AtomicBool::new(false);
-
-#[derive(BinRead, Debug)]
-pub struct STextureHeader {
-    pub data_size: u32,
-    pub format: DxgiFormat,
-    pub _unk8: u32,
-
-    #[br(seek_before = SeekFrom::Start(0x20))]
-    pub cafe: CafeMarker,
-
-    pub width: u16,
-    pub height: u16,
-    pub depth: u16,
-    pub array_size: u16,
-
-    pub unk2a: u16,
-    pub unk2c: u8,
-    pub mip_count: u8,
-    pub unk2e: [u8; 10],
-    pub unk38: u32,
-
-    #[br(seek_before = SeekFrom::Start(0x3c))]
-    #[br(map(|v: u32| (v != u32::MAX).then_some(TagHash(v))))]
-    pub large_buffer: Option<TagHash>,
-}
-
-/// Ref: 0x80809ebb
-#[derive(BinRead, Debug)]
-pub struct TexturePlate {
-    pub file_size: u64,
-    pub _unk: u64,
-    pub transforms: TablePointer<TexturePlateTransform>,
-}
-
-#[derive(BinRead, Debug)]
-pub struct TexturePlateTransform {
-    pub texture: TagHash,
-    pub translation: IVector2,
-    pub dimensions: IVector2,
-}
-
-/// Ref: 0x808072d2
-#[derive(BinRead, Debug)]
-pub struct TexturePlateSet {
-    pub file_size: u64,
-    pub _unk: [u32; 7],
-    pub diffuse: TagHash,
-    pub normal: TagHash,
-    pub gstack: TagHash,
-}
 
 pub enum TextureHandle {
     Texture2D(ID3D11Texture2D),
@@ -102,10 +45,10 @@ impl Texture {
             .context("Texture header entry not found")?
             .reference;
 
-        let texture: STextureHeader = package_manager().read_tag_binrw(hash.hash32().unwrap())?;
-        let mut texture_data = if let Some(t) = texture.large_buffer {
+        let texture: STextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;
+        let mut texture_data = if texture.large_buffer.is_some() {
             package_manager()
-                .read_tag(t)
+                .read_tag(texture.large_buffer)
                 .context("Failed to read texture data")?
         } else {
             package_manager()
@@ -150,7 +93,7 @@ impl Texture {
                             Height: texture.height as _,
                             Depth: texture.depth as _,
                             MipLevels: 1,
-                            Format: texture.format.into(),
+                            Format: dxgi_to_win(texture.format),
                             Usage: D3D11_USAGE_DEFAULT,
                             BindFlags: D3D11_BIND_SHADER_RESOURCE,
                             CPUAccessFlags: Default::default(),
@@ -171,7 +114,7 @@ impl Texture {
                 let view = dcs.device.CreateShaderResourceView(
                     &tex,
                     Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: texture.format.into(),
+                        Format: dxgi_to_win(texture.format),
                         ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
                         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                             Texture3D: D3D11_TEX3D_SRV {
@@ -220,7 +163,7 @@ impl Texture {
                             Height: texture.height as _,
                             MipLevels: mip_count as _,
                             ArraySize: texture.array_size as _,
-                            Format: texture.format.into(),
+                            Format: dxgi_to_win(texture.format),
                             SampleDesc: DXGI_SAMPLE_DESC {
                                 Count: 1,
                                 Quality: 0,
@@ -247,7 +190,7 @@ impl Texture {
                     .CreateShaderResourceView(
                         &tex,
                         Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                            Format: texture.format.into(),
+                            Format: dxgi_to_win(texture.format),
                             ViewDimension: D3D11_SRV_DIMENSION_TEXTURECUBE,
                             Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                                 TextureCube: D3D11_TEXCUBE_SRV {
@@ -327,7 +270,7 @@ impl Texture {
                             Height: (texture.height >> verylowres_mip) as _,
                             MipLevels: initial_data.len() as u32,
                             ArraySize: 1 as _,
-                            Format: texture.format.into(),
+                            Format: dxgi_to_win(texture.format),
                             SampleDesc: DXGI_SAMPLE_DESC {
                                 Count: 1,
                                 Quality: 0,
@@ -352,7 +295,7 @@ impl Texture {
                 let view = dcs.device.CreateShaderResourceView(
                     &tex,
                     Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: texture.format.into(),
+                        Format: dxgi_to_win(texture.format),
                         ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                             Texture2D: D3D11_TEX2D_SRV {
@@ -391,7 +334,7 @@ impl Texture {
                         Height: height,
                         MipLevels: 1,
                         ArraySize: 1 as _,
-                        Format: format.into(),
+                        Format: dxgi_to_win(format),
                         SampleDesc: DXGI_SAMPLE_DESC {
                             Count: 1,
                             Quality: 0,
@@ -422,7 +365,7 @@ impl Texture {
             let view = dcs.device.CreateShaderResourceView(
                 &tex,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: format.into(),
+                    Format: dxgi_to_win(format),
                     ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture2D: D3D11_TEX2D_SRV {
@@ -459,7 +402,7 @@ impl Texture {
                         Height: height,
                         Depth: depth,
                         MipLevels: 1,
-                        Format: format.into(),
+                        Format: dxgi_to_win(format),
                         Usage: D3D11_USAGE_DEFAULT,
                         BindFlags: D3D11_BIND_SHADER_RESOURCE,
                         CPUAccessFlags: Default::default(),
@@ -487,7 +430,7 @@ impl Texture {
             let view = dcs.device.CreateShaderResourceView(
                 &tex,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: format.into(),
+                    Format: dxgi_to_win(format),
                     ViewDimension: D3D11_SRV_DIMENSION_TEXTURE3D,
                     Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                         Texture3D: D3D11_TEX3D_SRV {
@@ -553,4 +496,8 @@ impl Texture {
             }
         }
     }
+}
+
+fn dxgi_to_win(v: DxgiFormat) -> DXGI_FORMAT {
+    unsafe { std::mem::transmute(v) }
 }

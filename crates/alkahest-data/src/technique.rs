@@ -1,5 +1,5 @@
 use destiny_pkg::TagHash;
-use tiger_parse::tiger_tag;
+use tiger_parse::{tiger_tag, NullString, Pointer};
 
 use crate::{tfx::TfxShaderStage, ExtendedHash};
 
@@ -76,4 +76,40 @@ pub struct SMaterialTextureAssignment {
     pub slot: u32,
     _pad: u32,
     pub texture: ExtendedHash,
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
+pub struct Unk80806cb1 {
+    pub file_size: u64,
+    pub unk8: TagHash,
+    pub unkc: u32,
+    pub unk10: Vec<Unk80806cb6>,
+    pub unk20: Vec<Unk80806cb5>,
+    pub unk30: TagHash,
+    pub unk34: TagHash,
+    pub unk38: TagHash,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0xffffffff)]
+pub struct Unk80806cb5 {
+    pub name: Pointer<NullString>,
+    pub unk8: u32,
+    pub unkc: TagHash,
+}
+
+pub type Unk80806cb6 = Unk80806cb5;
+
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0xffffffff)]
+pub struct Unk80806da1 {
+    pub file_size: u64,
+    pub unk8: u64,
+    pub unk10: [u32; 8],
+
+    pub bytecode: Vec<u8>,
+    pub bytecode_constants: Vec<glam::Vec4>,
+    pub unk50: [u32; 4],
+    pub unk60: Vec<glam::Vec4>,
 }

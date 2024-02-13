@@ -1,5 +1,6 @@
 use alkahest_data::{
     technique::{STechnique, STechniqueShader},
+    texture::STextureHeader,
     ExtendedHash,
 };
 use egui::{vec2, Image, ImageSource, Sense, TextureId};
@@ -20,7 +21,7 @@ use crate::{
         dcs::DcsShared,
         DeviceContextSwapchain,
     },
-    texture::{STextureHeader, Texture},
+    texture::Texture,
 };
 
 pub struct TechniqueViewer {
@@ -128,8 +129,8 @@ impl TechniqueShaderViewer {
 
         for assignment in &header.textures {
             let header: anyhow::Result<STextureHeader> = match assignment.texture {
-                ExtendedHash::Hash32(h) => package_manager().read_tag_binrw(h),
-                ExtendedHash::Hash64(h) => package_manager().read_tag64_binrw(h),
+                ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h),
+                ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h),
             };
             let Ok(header) = header else {
                 continue;

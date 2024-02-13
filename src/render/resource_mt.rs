@@ -1,6 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use alkahest_data::{
+    dxgi::DxgiFormat,
     entity::{IndexBufferHeader, VertexBufferHeader},
     ExtendedHash,
 };
@@ -20,7 +21,7 @@ use windows::Win32::Graphics::{
 };
 
 use super::{DeviceContextSwapchain, RenderData};
-use crate::{dxgi::DxgiFormat, packages::package_manager, texture::Texture, util::RwLock};
+use crate::{packages::package_manager, texture::Texture, util::RwLock};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum LoadingThreadState {

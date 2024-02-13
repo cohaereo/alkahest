@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use alkahest_data::technique::{STechnique, STechniqueShader};
-use binrw::{BinRead, NullString};
+use binrw::BinRead;
 use destiny_pkg::TagHash;
 use glam::Vec4;
 
@@ -16,8 +16,6 @@ use crate::{
         renderer::Renderer,
         DeviceContextSwapchain, RenderData,
     },
-    structure::{RelPointer, TablePointer},
-    types::Vector4,
     util::RwLock,
 };
 
@@ -283,37 +281,4 @@ impl TechniqueStage {
             self.stage.set_shader_resources(dcs, p.slot, Some(&[None]));
         }
     }
-}
-
-#[derive(BinRead, Debug)]
-pub struct Unk80806cb1 {
-    pub file_size: u64,
-    pub unk8: TagHash,
-    pub unkc: u32,
-    pub unk10: TablePointer<Unk80806cb6>,
-    pub unk20: TablePointer<Unk80806cb5>,
-    pub unk30: TagHash,
-    pub unk34: TagHash,
-    pub unk38: TagHash,
-}
-
-#[derive(BinRead, Debug)]
-pub struct Unk80806cb5 {
-    pub name: RelPointer<NullString>,
-    pub unk8: u32,
-    pub unkc: TagHash,
-}
-
-pub type Unk80806cb6 = Unk80806cb5;
-
-#[derive(BinRead, Debug, Clone)]
-pub struct Unk80806da1 {
-    pub file_size: u64,
-    pub unk8: u64,
-    pub unk10: [u32; 8],
-
-    pub bytecode: TablePointer<u8>,
-    pub bytecode_constants: TablePointer<Vector4>,
-    pub unk50: [u32; 4],
-    pub unk60: TablePointer<Vector4>,
 }

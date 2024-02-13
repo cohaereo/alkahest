@@ -1,9 +1,10 @@
 use std::io::Write;
 
-use alkahest_data::ExtendedHash;
+use alkahest_data::{dxgi::DxgiFormat, texture::STextureHeader, ExtendedHash};
 use egui::{vec2, Color32, ComboBox, ImageSource, RichText, Rounding, TextureId};
 use fs_err::File;
 use glam::Vec4;
+use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::{
     Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
     Direct3D11::{
@@ -15,13 +16,12 @@ use windows::Win32::Graphics::{
 
 use super::gui::{GuiContext, Overlay};
 use crate::{
-    dxgi::DxgiFormat,
     packages::package_manager,
     render::{
         bytecode::externs::TfxShaderStage, dcs::DcsShared, drawcall::ShaderStages,
         gbuffer::RenderTarget, shader, ConstantBuffer,
     },
-    texture::{STextureHeader, Texture},
+    texture::Texture,
     util::{self, dds, error::ErrorAlert},
 };
 
@@ -65,8 +65,8 @@ impl TextureViewer {
         gui: &mut GuiContext<'_>,
     ) -> anyhow::Result<Self> {
         let header: STextureHeader = match tag {
-            ExtendedHash::Hash32(h) => package_manager().read_tag_binrw(h)?,
-            ExtendedHash::Hash64(h) => package_manager().read_tag64_binrw(h)?,
+            ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h)?,
+            ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h)?,
         };
 
         let vshader_blob = shader::compile_hlsl(

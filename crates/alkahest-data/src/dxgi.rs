@@ -1,13 +1,10 @@
 use std::mem::transmute;
 
-use binrw::BinRead;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
-// use vulkano::format::Format as VkFormat;
+use tiger_parse::TigerReadable;
 
 #[allow(non_camel_case_types, dead_code, clippy::upper_case_acronyms)]
 #[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, Hash, BinRead)]
-#[br(repr(u32))]
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
 pub enum DxgiFormat {
     Unknown = 0,
     R32G32B32A32_TYPELESS = 1,
@@ -133,11 +130,22 @@ pub enum DxgiFormat {
     FORCE_UINT = 0xffffffff,
 }
 
-impl From<DxgiFormat> for DXGI_FORMAT {
-    fn from(val: DxgiFormat) -> Self {
-        DXGI_FORMAT(val.into())
+impl TigerReadable for DxgiFormat {
+    fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        endian: tiger_parse::Endian,
+    ) -> tiger_parse::Result<Self> {
+        Ok(unsafe { transmute(u32::read_ds_endian(reader, endian)?) })
     }
+
+    const SIZE: usize = 4;
 }
+
+// impl From<DxgiFormat> for DXGI_FORMAT {
+//     fn from(val: DxgiFormat) -> Self {
+//         DXGI_FORMAT(val.into())
+//     }
+// }
 
 impl From<DxgiFormat> for u32 {
     fn from(val: DxgiFormat) -> Self {
@@ -145,16 +153,16 @@ impl From<DxgiFormat> for u32 {
     }
 }
 
-impl TryFrom<u32> for DxgiFormat {
-    type Error = anyhow::Error;
+// impl TryFrom<u32> for DxgiFormat {
+//     type Error = anyhow::Error;
 
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0..=115 | 130..=132 => unsafe { transmute(value) },
-            e => return Err(anyhow::anyhow!("DXGI format is out of range ({e})")),
-        })
-    }
-}
+//     fn try_from(value: u32) -> Result<Self, Self::Error> {
+//         Ok(match value {
+//             0..=115 | 130..=132 => unsafe { transmute(value) },
+//             e => return Err(anyhow::anyhow!("DXGI format is out of range ({e})")),
+//         })
+//     }
+// }
 
 #[allow(unused)]
 impl DxgiFormat {

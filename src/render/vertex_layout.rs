@@ -1,12 +1,10 @@
+use alkahest_data::dxgi::DxgiFormat;
 use windows::Win32::Graphics::{
     Direct3D11::{D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA},
     Dxgi::Common::DXGI_FORMAT,
 };
 
-use crate::{
-    dxbc::{DxbcInputElement, DxbcInputType, DxbcSemanticType},
-    dxgi::DxgiFormat,
-};
+use crate::dxbc::{DxbcInputElement, DxbcInputType, DxbcSemanticType};
 
 #[derive(PartialEq, Clone, Debug, Hash)]
 pub struct InputElement {

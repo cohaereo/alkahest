@@ -112,7 +112,6 @@ mod config;
 #[cfg(feature = "discord_rpc")]
 mod discord;
 mod dxbc;
-mod dxgi;
 mod ecs;
 mod hotkeys;
 mod icons;
