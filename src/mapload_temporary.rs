@@ -7,7 +7,15 @@ use std::{
 };
 
 use alkahest_data::{
+    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
+    common::ResourceHash,
     entity::{SEntityModel, Unk808072c5, Unk8080906b, Unk80809905, Unk80809c0f},
+    map::{
+        SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
+        STerrain, Unk808068d4, Unk80806aa7, Unk80806ac2, Unk80806b7f, Unk80806c98, Unk80806d19,
+        Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7,
+        Unk80809178, Unk8080917b, Unk80809802,
+    },
     occlusion::{SMeshInstanceOcclusionBounds, AABB},
     statics::SStaticMesh,
     ExtendedHash, Tag,
@@ -18,14 +26,13 @@ use destiny_pkg::{TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::{multizip, Itertools};
 use nohash_hasher::{IntMap, IntSet};
-use tiger_parse::{dpkg::PackageManagerExt, Endian, TigerReadable};
+use tiger_parse::{dpkg::PackageManagerExt, Endian, FnvHash, TigerReadable};
 use windows::Win32::Graphics::{
     Direct3D::WKPDID_D3DDebugObjectName,
     Direct3D11::{ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader},
 };
 
 use crate::{
-    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     ecs::{
         components::{
@@ -36,12 +43,7 @@ use crate::{
         transform::{OriginalTransform, Transform},
         Scene,
     },
-    map::{
-        MapData, SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight,
-        SSlipSurfaceVolume, STerrain, SimpleLight, Unk808068d4, Unk80806aa7, Unk80806ac2,
-        Unk80806b7f, Unk80806c98, Unk80806d19, Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246,
-        Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
-    },
+    map::{MapData, SimpleLight},
     map_resources::MapResource,
     packages::package_manager,
     render::{
@@ -50,7 +52,6 @@ use crate::{
         EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
     technique::Technique,
-    types::{FnvHash, ResourceHash},
     util::fnv1,
 };
 
@@ -388,7 +389,7 @@ pub async fn load_maps(
                             TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                         for m in &materials {
-                            if let Ok(mat) = package_manager().read_tag_binrw(*m) {
+                            if let Ok(mat) = package_manager().read_tag_struct(*m) {
                                 material_map.insert(*m, Technique::load(&renderer, mat, *m, true));
                             }
                         }
@@ -400,7 +401,7 @@ pub async fn load_maps(
                                         p.material,
                                         Technique::load(
                                             &renderer,
-                                            package_manager().read_tag_binrw(p.material)?,
+                                            package_manager().read_tag_struct(p.material)?,
                                             p.material,
                                             true,
                                         ),
@@ -453,7 +454,7 @@ pub async fn load_maps(
                         p.material,
                         Technique::load(
                             &renderer,
-                            package_manager().read_tag_binrw(p.material)?,
+                            package_manager().read_tag_struct(p.material)?,
                             p.material,
                             true,
                         ),
@@ -770,7 +771,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         *m,
                                         Technique::load(
                                             &renderer,
-                                            package_manager().read_tag_binrw(*m).unwrap(),
+                                            package_manager().read_tag_struct(*m).unwrap(),
                                             *m,
                                             true,
                                         ),
@@ -787,7 +788,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         m,
                                         Technique::load(
                                             &renderer,
-                                            package_manager().read_tag_binrw(m).unwrap(),
+                                            package_manager().read_tag_struct(m).unwrap(),
                                             m,
                                             true,
                                         ),
@@ -861,7 +862,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 p.material,
                                 Technique::load(
                                     &renderer,
-                                    package_manager().read_tag_binrw(p.material)?,
+                                    package_manager().read_tag_struct(p.material)?,
                                     p.material,
                                     true,
                                 ),
@@ -1072,7 +1073,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 light.technique_shading,
                                 Technique::load(
                                     &renderer,
-                                    package_manager().read_tag_binrw(light.technique_shading)?,
+                                    package_manager().read_tag_struct(light.technique_shading)?,
                                     light.technique_shading,
                                     true,
                                 ),
@@ -1252,7 +1253,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             light.technique_shading,
                             Technique::load(
                                 &renderer,
-                                package_manager().read_tag_binrw(light.technique_shading)?,
+                                package_manager().read_tag_struct(light.technique_shading)?,
                                 light.technique_shading,
                                 true,
                             ),

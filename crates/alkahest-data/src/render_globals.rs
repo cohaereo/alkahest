@@ -1,6 +1,7 @@
-use alkahest_data::{ExtendedHash, Tag};
 use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, NullString, Pointer};
+
+use super::{ExtendedHash, Tag};
 
 #[derive(Debug)]
 #[tiger_tag(id = 0xffffffff)]

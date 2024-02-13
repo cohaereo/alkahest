@@ -7,7 +7,6 @@ use std::{
 
 use binrw::{BinRead, BinReaderExt, BinResult, Endian};
 use destiny_pkg::TagHash;
-use tiger_parse::TigerReadable;
 
 use crate::packages::package_manager;
 

@@ -9,8 +9,7 @@ pub mod text;
 use std::path::PathBuf;
 
 pub use lock::{FilterDebugLockTarget, RwLock};
-
-use crate::types::FnvHash;
+use tiger_parse::FnvHash;
 
 /// Enables ANSI color codes on older/weird command prompt versions
 pub fn fix_windows_command_prompt() {

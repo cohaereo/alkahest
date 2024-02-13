@@ -1,10 +1,9 @@
 use std::ops::Deref;
 
-use alkahest_data::ExtendedHash;
+use alkahest_data::technique::{STechnique, STechniqueShader};
 use binrw::{BinRead, NullString};
 use destiny_pkg::TagHash;
 use glam::Vec4;
-use itertools::Itertools;
 
 use crate::{
     packages::package_manager,
@@ -21,78 +20,6 @@ use crate::{
     types::Vector4,
     util::RwLock,
 };
-
-#[derive(BinRead, Debug, Clone)]
-pub struct STechnique {
-    pub file_size: u64,
-    /// 0 = ???
-    /// 1 = normal
-    /// 2 = depth prepass?
-    /// 6 = ????????
-    pub unk8: u32,
-    pub unkc: u32,
-    pub unk10: u32,
-    pub unk14: u32,
-    pub unk18: u32,
-    pub unk1c: u32,
-    pub unk20: u16,
-    pub unk22: u16,
-    pub unk24: u32,
-    pub unk28: u32,
-    pub unk2c: u32,
-    pub unk30: [u32; 16],
-
-    pub shader_vertex: STechniqueShader,
-    pub shader_unk1: STechniqueShader,
-    pub shader_unk2: STechniqueShader,
-    pub shader_unk3: STechniqueShader,
-    pub shader_pixel: STechniqueShader,
-    pub shader_compute: STechniqueShader,
-}
-
-impl STechnique {
-    pub fn all_shaders(&self) -> Vec<(TfxShaderStage, &STechniqueShader)> {
-        vec![
-            (TfxShaderStage::Vertex, &self.shader_vertex),
-            (TfxShaderStage::Pixel, &self.shader_pixel),
-            (TfxShaderStage::Compute, &self.shader_compute),
-        ]
-    }
-
-    pub fn all_valid_shaders(&self) -> Vec<(TfxShaderStage, &STechniqueShader)> {
-        self.all_shaders()
-            .into_iter()
-            .filter(|(_, s)| s.shader.is_some())
-            .collect_vec()
-    }
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct STechniqueShader {
-    pub shader: TagHash,
-    pub unk4: u32,
-    pub textures: TablePointer<SMaterialTextureAssignment>, // 0x8
-    pub unk18: u64,
-    pub bytecode: TablePointer<u8>,                // 0x20
-    pub bytecode_constants: TablePointer<Vector4>, // 0x30
-    pub samplers: TablePointer<ExtendedHash>,      // 0x40
-    pub unk50: TablePointer<Vector4>,              // 0x50
-
-    pub unk60: [u32; 4], // 0x60
-
-    pub constant_buffer_slot: u32, // 0x70
-    pub constant_buffer: TagHash,  // 0x74
-
-    pub unk78: [u32; 6],
-}
-
-#[derive(BinRead, Debug, Clone)]
-pub struct SMaterialTextureAssignment {
-    /// Material slot to assign to
-    pub slot: u32,
-    _pad: u32,
-    pub texture: ExtendedHash,
-}
 
 pub struct Technique {
     pub mat: STechnique,
@@ -243,7 +170,7 @@ impl TechniqueStage {
             Err(e) => {
                 debug!(
                     "Failed to parse VS TFX bytecode: {e} (data={})",
-                    hex::encode(shader.bytecode.data())
+                    hex::encode(&shader.bytecode)
                 );
                 None
             }

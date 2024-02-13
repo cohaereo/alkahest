@@ -86,3 +86,27 @@ impl TigerReadable for TfxFeatureType {
     const ZEROCOPY: bool = true;
     const SIZE: usize = 1;
 }
+
+// TODO(cohae): Duplicate struct, used in TFX bytecode in the renderer
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+pub enum TfxShaderStage {
+    Pixel = 1,
+    Vertex = 2,
+    Geometry = 3,
+    Hull = 4,
+    Compute = 5,
+    Domain = 6,
+}
+
+impl TigerReadable for TfxShaderStage {
+    fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        endian: tiger_parse::Endian,
+    ) -> tiger_parse::Result<Self> {
+        Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
+    }
+
+    const ZEROCOPY: bool = true;
+    const SIZE: usize = 1;
+}

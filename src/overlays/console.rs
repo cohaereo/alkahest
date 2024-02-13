@@ -6,6 +6,7 @@ use std::{
 
 use alkahest_data::{
     entity::{SEntityModel, Unk808072c5, Unk80809c0f},
+    technique::STechnique,
     ExtendedHash,
 };
 use anyhow::Context;
@@ -44,7 +45,7 @@ use crate::{
         EntityRenderer,
     },
     resources::Resources,
-    technique::{STechnique, Technique},
+    technique::Technique,
 };
 
 // ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
@@ -541,7 +542,7 @@ fn execute_command(
                 }
             };
 
-            let technique: STechnique = match package_manager().read_tag_binrw(tag) {
+            let technique: STechnique = match package_manager().read_tag_struct(tag) {
                 Ok(o) => o,
                 Err(e) => {
                     error!("Failed to read technique tag: {e}");
@@ -621,7 +622,7 @@ fn load_entity_model(
     for mat in materials.iter().chain(part_materials.iter()) {
         let technique = Technique::load(
             renderer,
-            package_manager().read_tag_binrw(*mat)?,
+            package_manager().read_tag_struct(*mat)?,
             *mat,
             true,
         );

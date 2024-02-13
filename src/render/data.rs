@@ -5,6 +5,7 @@ use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
+use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use super::{
@@ -324,7 +325,7 @@ impl RenderDataManager {
             .or_insert_with(|| {
                 Technique::load(
                     renderer,
-                    package_manager().read_tag_binrw(technique).unwrap(),
+                    package_manager().read_tag_struct(technique).unwrap(),
                     technique,
                     false,
                 )

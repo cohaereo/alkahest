@@ -1,7 +1,11 @@
-use alkahest_data::ExtendedHash;
+use alkahest_data::{
+    technique::{STechnique, STechniqueShader},
+    ExtendedHash,
+};
 use egui::{vec2, Image, ImageSource, Sense, TextureId};
 use glam::Vec4;
 use nohash_hasher::IntMap;
+use tiger_parse::PackageManagerExt;
 
 use super::{
     gui::{GuiContext, Overlay, ViewerWindows},
@@ -16,7 +20,6 @@ use crate::{
         dcs::DcsShared,
         DeviceContextSwapchain,
     },
-    technique::{STechnique, STechniqueShader},
     texture::{STextureHeader, Texture},
 };
 
@@ -36,8 +39,8 @@ impl TechniqueViewer {
         gui: &mut GuiContext<'_>,
     ) -> anyhow::Result<Self> {
         let header: STechnique = match tag {
-            ExtendedHash::Hash32(h) => package_manager().read_tag_binrw(h)?,
-            ExtendedHash::Hash64(h) => package_manager().read_tag64_binrw(h)?,
+            ExtendedHash::Hash32(h) => package_manager().read_tag_struct(h)?,
+            ExtendedHash::Hash64(h) => package_manager().read_tag64_struct(h)?,
         };
 
         // let shaders = header
@@ -48,7 +51,14 @@ impl TechniqueViewer {
         let mut shaders = vec![];
         for shader in header.all_valid_shaders() {
             shaders.push(TechniqueShaderViewer::new(
-                shader.0,
+                match shader.0 {
+                    alkahest_data::tfx::TfxShaderStage::Pixel => TfxShaderStage::Pixel,
+                    alkahest_data::tfx::TfxShaderStage::Vertex => TfxShaderStage::Vertex,
+                    alkahest_data::tfx::TfxShaderStage::Geometry => TfxShaderStage::Geometry,
+                    alkahest_data::tfx::TfxShaderStage::Hull => TfxShaderStage::Hull,
+                    alkahest_data::tfx::TfxShaderStage::Compute => TfxShaderStage::Compute,
+                    alkahest_data::tfx::TfxShaderStage::Domain => TfxShaderStage::Domain,
+                },
                 shader.1.clone(),
                 &dcs,
                 gui,

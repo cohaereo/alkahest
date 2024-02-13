@@ -1,8 +1,7 @@
-use alkahest_data::{ExtendedHash, Tag};
 use destiny_pkg::{TagHash, TagHash64};
 use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer, ResourcePointerWithClass};
 
-use crate::types::ResourceHash;
+use crate::{common::ResourceHash, ExtendedHash, Tag};
 
 #[derive(Debug)]
 #[tiger_tag(id = 0xffffffff, size = 0x80)]

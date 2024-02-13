@@ -1,10 +1,8 @@
+use alkahest_data::common::ResourceHash;
 use binrw::BinRead;
 use destiny_pkg::TagHash;
 
-use crate::{
-    structure::{RelPointer, TablePointer},
-    types::ResourceHash,
-};
+use crate::structure::{RelPointer, TablePointer};
 
 #[derive(BinRead, Debug)]
 pub struct StringContainer {

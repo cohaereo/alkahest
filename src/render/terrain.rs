@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use alkahest_data::map::STerrain;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use hecs::Entity;
@@ -13,7 +14,6 @@ use super::{
     vertex_buffers::load_vertex_buffers,
     ConstantBuffer, DeviceContextSwapchain,
 };
-use crate::map::STerrain;
 
 pub struct TerrainRenderer {
     terrain: STerrain,

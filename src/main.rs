@@ -20,7 +20,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use alkahest_data::tag::ExtendedHash;
+use alkahest_data::{activity::SActivity, render_globals::SRenderGlobals, tag::ExtendedHash};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -40,7 +40,6 @@ use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
-use render_globals::SRenderGlobals;
 use technique::Technique;
 use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
@@ -60,7 +59,6 @@ use winit::{
 };
 
 use crate::{
-    activity::SActivity,
     camera::FpsCamera,
     config::{WindowConfig, CONFIGURATION},
     ecs::{
@@ -109,7 +107,6 @@ use crate::{
     },
 };
 
-mod activity;
 mod camera;
 mod config;
 #[cfg(feature = "discord_rpc")]
@@ -127,14 +124,12 @@ mod overlays;
 mod packages;
 mod panic_handler;
 mod render;
-mod render_globals;
 mod resources;
 mod structure;
 mod technique;
 mod text;
 mod texture;
 mod types;
-mod unknown;
 mod util;
 
 #[derive(Parser, Debug)]
@@ -1309,7 +1304,7 @@ fn load_render_globals(renderer: &Renderer) {
     let technique_tag = techniques["deferred_shading_no_atm"];
     let technique = Technique::load(
         renderer,
-        package_manager().read_tag_binrw(technique_tag).unwrap(),
+        package_manager().read_tag_struct(technique_tag).unwrap(),
         technique_tag,
         true,
     );

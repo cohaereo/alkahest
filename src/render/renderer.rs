@@ -1,6 +1,9 @@
 use std::{sync::Arc, time::Instant};
 
-use alkahest_data::occlusion::AABB;
+use alkahest_data::{
+    map::{SLight, SShadowingLight},
+    occlusion::AABB,
+};
 use glam::{Mat4, Quat, UVec2, Vec3, Vec4};
 use hecs::Entity;
 use windows::Win32::Graphics::{
@@ -24,7 +27,7 @@ use super::{
 use crate::{
     camera::FpsCamera,
     ecs::{resources::SelectedEntity, transform::Transform},
-    map::{MapDataList, SLight, SShadowingLight},
+    map::MapDataList,
     overlays::{
         camera_settings::CurrentCubemap,
         render_settings::{CompositorOptions, PickbufferScope, RenderSettings},

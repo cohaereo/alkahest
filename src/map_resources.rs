@@ -1,4 +1,8 @@
-use alkahest_data::{occlusion::AABB, ExtendedHash};
+use alkahest_data::{
+    map::{Unk80806b7f, Unk80809178, Unk80809802},
+    occlusion::AABB,
+    ExtendedHash,
+};
 use destiny_pkg::TagHash;
 use glam::Vec3;
 use itertools::Itertools;
@@ -12,7 +16,6 @@ use crate::{
         ICON_HELP_BOX_OUTLINE, ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL,
         ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TAG, ICON_VOLUME_HIGH, ICON_WAVES,
     },
-    map::{Unk80806b7f, Unk80809178, Unk80809802},
     render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes},
 };
 
