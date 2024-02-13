@@ -1,14 +1,13 @@
-use crate::ecs::Scene;
+use std::fmt::Debug;
 
-use crate::{structure::ResourcePointer, types::ResourceHash};
 use alkahest_data::{
     occlusion::AABB, statics::SStaticMeshInstances, ExtendedHash, ExtendedTag, Tag,
 };
 use destiny_pkg::{TagHash, TagHash64};
 use glam::Vec4;
-use tiger_parse::{tiger_tag, NullString, Pointer};
+use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer};
 
-use std::fmt::Debug;
+use crate::{ecs::Scene, types::ResourceHash};
 
 pub struct MapData {
     pub hash: TagHash,

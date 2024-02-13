@@ -8,7 +8,6 @@ extern crate windows;
 #[macro_use]
 extern crate tracing;
 
-use crate::render::tween::ease_out_exponential;
 use std::{
     cell::RefCell,
     f32::consts::PI,
@@ -21,30 +20,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{
-    activity::SActivity,
-    ecs::{
-        components::{
-            ActivityGroup, Beacon, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances,
-            Terrain, Visible, Water,
-        },
-        resolve_aabb,
-        resources::SelectedEntity,
-    },
-    hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE},
-    overlays::{
-        console::ConsoleOverlay, inspector::InspectorOverlay, menu::MenuBar,
-        outliner::OutlinerOverlay,
-    },
-    texture::{Texture, LOW_RES},
-    util::{
-        consts::print_banner,
-        exe_relative_path,
-        image::Png,
-        text::{invert_color, keep_color_bright, prettify_distance},
-        FilterDebugLockTarget, RwLock,
-    },
-};
 use alkahest_data::tag::ExtendedHash;
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -65,17 +40,17 @@ use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
-
 use render_globals::SRenderGlobals;
 use technique::Technique;
 use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
-use windows::Win32::Foundation::DXGI_STATUS_OCCLUDED;
-
-use windows::Win32::Graphics::{
-    Direct3D11::*,
-    Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL},
+use windows::Win32::{
+    Foundation::DXGI_STATUS_OCCLUDED,
+    Graphics::{
+        Direct3D11::*,
+        Dxgi::{Common::*, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL},
+    },
 };
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -85,20 +60,31 @@ use winit::{
 };
 
 use crate::{
+    activity::SActivity,
     camera::FpsCamera,
     config::{WindowConfig, CONFIGURATION},
+    ecs::{
+        components::{
+            ActivityGroup, Beacon, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances,
+            Terrain, Visible, Water,
+        },
+        resolve_aabb,
+        resources::SelectedEntity,
+    },
+    hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE},
     input::InputState,
     map::MapDataList,
     map_resources::MapResource,
     mapload_temporary::load_maps,
-    overlays::camera_settings::CameraPositionOverlay,
-};
-
-use crate::{
     overlays::{
+        camera_settings::CameraPositionOverlay,
+        console::ConsoleOverlay,
         fps_display::FpsDisplayOverlay,
         gui::{GuiManager, ViewerWindows},
+        inspector::InspectorOverlay,
         load_indicator::LoadIndicatorOverlay,
+        menu::MenuBar,
+        outliner::OutlinerOverlay,
         render_settings::{ActivityGroupFilter, RenderSettings, RenderSettingsOverlay},
         resource_nametags::ResourceTypeOverlay,
         tag_dump::{BulkTextureDumper, TagDumper},
@@ -108,15 +94,20 @@ use crate::{
         debug::DebugShapes,
         overrides::{EnabledShaderOverrides, ScopeOverrides},
         renderer::{Renderer, RendererShared, ShadowMapsResource},
+        tween::ease_out_exponential,
+        DeviceContextSwapchain, EntityRenderer,
+    },
+    resources::Resources,
+    text::{decode_text, StringContainer, StringData, StringPart},
+    texture::{Texture, LOW_RES},
+    util::{
+        consts::print_banner,
+        exe_relative_path,
+        image::Png,
+        text::{invert_color, keep_color_bright, prettify_distance},
+        FilterDebugLockTarget, RwLock,
     },
 };
-
-use crate::{
-    render::{DeviceContextSwapchain, EntityRenderer},
-    resources::Resources,
-};
-
-use crate::text::{decode_text, StringContainer, StringData, StringPart};
 
 mod activity;
 mod camera;

@@ -1,10 +1,11 @@
-use anyhow::anyhow;
-use binrw::{BinRead, BinReaderExt, BinResult, Endian, FilePtr32, NullString};
-use bitflags::bitflags;
 use std::{
     fmt::Display,
     io::{Read, Seek, SeekFrom},
 };
+
+use anyhow::anyhow;
+use binrw::{BinRead, BinReaderExt, BinResult, Endian, FilePtr32, NullString};
+use bitflags::bitflags;
 use windows::core::PCSTR;
 
 #[derive(BinRead, Debug)]

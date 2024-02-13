@@ -7,12 +7,11 @@ use windows::Win32::Graphics::{
     Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, Direct3D11::*, Dxgi::Common::*,
 };
 
-use crate::{render::shader, texture::Texture, util::image::Png};
-
 use super::{
     bytecode::externs::TfxShaderStage, drawcall::ShaderStages, ConstantBuffer,
     DeviceContextSwapchain,
 };
+use crate::{render::shader, texture::Texture, util::image::Png};
 
 #[allow(unused)]
 pub struct ErrorRenderer {

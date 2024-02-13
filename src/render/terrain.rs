@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
-use crate::map::STerrain;
-
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
-
 use hecs::Entity;
 use windows::Win32::Graphics::Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
@@ -16,6 +13,7 @@ use super::{
     vertex_buffers::load_vertex_buffers,
     ConstantBuffer, DeviceContextSwapchain,
 };
+use crate::map::STerrain;
 
 pub struct TerrainRenderer {
     terrain: STerrain,

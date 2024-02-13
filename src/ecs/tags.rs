@@ -4,9 +4,8 @@ use egui::Color32;
 use hecs::Entity;
 use nohash_hasher::IntSet;
 
-use crate::{icons::ICON_WEB, overlays::UiExt, util::text::name_to_color};
-
 use super::Scene;
+use crate::{icons::ICON_WEB, overlays::UiExt, util::text::name_to_color};
 
 #[derive(strum::EnumIter, Hash, PartialEq, Eq)]
 pub enum EntityTag {

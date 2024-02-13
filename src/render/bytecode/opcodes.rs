@@ -3,9 +3,8 @@ use std::io::Cursor;
 use binrw::{binread, BinReaderExt, Endian};
 use glam::Vec4;
 
-use crate::render::bytecode::externs::TfxShaderStage;
-
 use super::externs::TfxExtern;
+use crate::render::bytecode::externs::TfxShaderStage;
 
 #[rustfmt::skip]
 #[binread]

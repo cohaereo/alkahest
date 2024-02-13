@@ -2,6 +2,16 @@ use egui::{Button, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
+use super::{
+    components::{
+        Beacon, EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Ruler, Sphere,
+        StaticInstances, Visible,
+    },
+    resolve_entity_icon, resolve_entity_name,
+    tags::{insert_tag, remove_tag, EntityTag, Tags},
+    transform::{OriginalTransform, Transform},
+    Scene,
+};
 use crate::{
     camera::FpsCamera,
     ecs::transform::TransformFlags,
@@ -20,17 +30,6 @@ use crate::{
         BoolExts as _,
     },
     RendererShared,
-};
-
-use super::{
-    components::{
-        Beacon, EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Ruler, Sphere,
-        StaticInstances, Visible,
-    },
-    resolve_entity_icon, resolve_entity_name,
-    tags::{insert_tag, remove_tag, EntityTag, Tags},
-    transform::{OriginalTransform, Transform},
-    Scene,
 };
 
 pub fn show_inspector_panel(

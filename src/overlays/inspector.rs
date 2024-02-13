@@ -1,11 +1,10 @@
 use egui::{Align2, Color32};
 
+use super::gui::Overlay;
 use crate::{
     ecs::{component_panels::show_inspector_panel, resources::SelectedEntity},
     map::MapDataList,
 };
-
-use super::gui::Overlay;
 
 pub struct InspectorOverlay;
 

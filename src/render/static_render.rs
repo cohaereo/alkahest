@@ -1,22 +1,16 @@
-use crate::render::vertex_buffers::load_vertex_buffers;
 use alkahest_data::{
     statics::{SStaticMesh, SStaticMeshData, SStaticMeshOverlay},
     tfx::TfxRenderStage,
 };
-
 use anyhow::ensure;
 use destiny_pkg::TagHash;
-
 use hecs::Entity;
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
-use windows::Win32::Graphics::Direct3D::{
-    D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+use windows::Win32::Graphics::{
+    Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP},
+    Direct3D11::*,
 };
-
-use crate::packages::package_manager;
-
-use windows::Win32::Graphics::Direct3D11::*;
 
 use super::{
     drawcall::{
@@ -24,6 +18,7 @@ use super::{
     },
     renderer::Renderer,
 };
+use crate::{packages::package_manager, render::vertex_buffers::load_vertex_buffers};
 
 pub struct StaticModelBuffer {
     pub vertex_buffer1: TagHash,

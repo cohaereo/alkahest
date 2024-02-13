@@ -1,12 +1,11 @@
 use egui::{Color32, RichText};
 use winit::window::Window;
 
+use super::gui::Overlay;
 use crate::{
     render::resource_mt::{self, LoadingThreadState},
     resources::Resources,
 };
-
-use super::gui::Overlay;
 
 pub struct LoadIndicatorOverlay {
     window_rect: egui::Rect,

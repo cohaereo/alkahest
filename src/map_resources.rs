@@ -1,3 +1,10 @@
+use alkahest_data::{occlusion::AABB, ExtendedHash};
+use destiny_pkg::TagHash;
+use glam::Vec3;
+use itertools::Itertools;
+use strum::{EnumCount, EnumIs, EnumVariantNames};
+use tiger_parse::ResourcePointer;
+
 use crate::{
     ecs::transform::Transform,
     icons::{
@@ -7,14 +14,7 @@ use crate::{
     },
     map::{Unk80806b7f, Unk80809178, Unk80809802},
     render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes},
-    structure::ResourcePointer,
 };
-use alkahest_data::{occlusion::AABB, ExtendedHash};
-use destiny_pkg::TagHash;
-use glam::Vec3;
-use itertools::Itertools;
-
-use strum::{EnumCount, EnumIs, EnumVariantNames};
 
 #[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
 #[repr(u8)]

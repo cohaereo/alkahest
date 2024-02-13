@@ -1,5 +1,11 @@
 use std::{cell::RefCell, mem::transmute, rc::Rc, sync::Arc};
 
+use egui::epaint::ahash::HashMap;
+use egui_directx11::DirectX11Renderer;
+use egui_winit::EventResponse;
+use itertools::Itertools;
+use winit::{event::WindowEvent, window::Window};
+
 use crate::{
     render::DeviceContextSwapchain,
     resources::Resources,
@@ -8,11 +14,6 @@ use crate::{
         image::{EguiPngLoader, Png},
     },
 };
-use egui::epaint::ahash::HashMap;
-use egui_directx11::DirectX11Renderer;
-use egui_winit::EventResponse;
-use itertools::Itertools;
-use winit::{event::WindowEvent, window::Window};
 
 pub trait Overlay {
     fn draw(

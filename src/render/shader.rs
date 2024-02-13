@@ -1,10 +1,7 @@
-use crate::{
-    dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
-    render::vertex_layout::InputElement,
-};
+use std::io::Cursor;
+
 use binrw::BinReaderExt;
 use itertools::Itertools;
-use std::io::Cursor;
 use windows::{
     core::PCSTR,
     Win32::Graphics::{
@@ -14,6 +11,10 @@ use windows::{
 };
 
 use super::{vertex_layout::OutputElement, DeviceContextSwapchain};
+use crate::{
+    dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
+    render::vertex_layout::InputElement,
+};
 
 pub fn compile_hlsl(
     source: &str,

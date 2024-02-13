@@ -1,3 +1,10 @@
+use std::{cell::RefCell, rc::Rc, time::Instant};
+
+use egui::{Color32, Pos2, Rect};
+use glam::Vec2;
+use winit::window::Window;
+
+use super::{camera_settings::CameraPositionOverlay, gui::Overlay};
 use crate::{
     camera::FpsCamera,
     ecs::{
@@ -11,13 +18,6 @@ use crate::{
     resources::Resources,
     util::text::text_color_for_background,
 };
-
-use egui::{Color32, Pos2, Rect};
-use glam::Vec2;
-use std::{cell::RefCell, rc::Rc, time::Instant};
-use winit::window::Window;
-
-use super::{camera_settings::CameraPositionOverlay, gui::Overlay};
 
 pub struct ResourceTypeOverlay {
     pub debug_overlay: Rc<RefCell<CameraPositionOverlay>>,

@@ -3,12 +3,11 @@ use std::{mem::transmute, ops::Neg};
 use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use tinyvec::ArrayVec;
 
-use crate::render::{cbuffer::ConstantBufferCached, renderer::Renderer, RenderData};
-
 use super::{
     externs::{TfxExtern, TfxShaderStage},
     opcodes::TfxBytecodeOp,
 };
+use crate::render::{cbuffer::ConstantBufferCached, renderer::Renderer, RenderData};
 
 pub struct TfxBytecodeInterpreter {
     opcodes: Vec<TfxBytecodeOp>,
@@ -696,8 +695,9 @@ impl TfxBytecodeInterpreter {
 
 #[allow(non_snake_case)]
 mod fast_impls {
-    use glam::Vec4;
     use std::arch::x86_64::*;
+
+    use glam::Vec4;
 
     pub fn byteop_0e([t1, t0]: [Vec4; 2]) -> Vec4 {
         unsafe {

@@ -1,5 +1,6 @@
-use binrw::BinRead;
 use std::mem::transmute;
+
+use binrw::BinRead;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 // use vulkano::format::Format as VkFormat;
 

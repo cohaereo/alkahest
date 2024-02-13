@@ -1,6 +1,7 @@
-use crate::{structure::TablePointer, types::ResourceHash};
 use binrw::BinRead;
 use destiny_pkg::TagHash;
+
+use crate::{structure::TablePointer, types::ResourceHash};
 
 #[derive(BinRead, Debug, Clone)]
 pub struct Unk80804f72 {

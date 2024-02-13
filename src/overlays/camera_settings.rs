@@ -1,16 +1,14 @@
 use alkahest_data::ExtendedHash;
 use egui::{Color32, RichText};
-
 use winit::window::Window;
 
+use super::gui::Overlay;
 use crate::{
     icons::{ICON_BUG, ICON_CLIPBOARD},
     map_resources::MapResource,
     resources::Resources,
     FpsCamera,
 };
-
-use super::gui::Overlay;
 
 pub struct CameraPositionOverlay {
     pub show_map_resources: bool,

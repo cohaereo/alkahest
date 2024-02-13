@@ -1,11 +1,5 @@
-use super::{
-    bytecode::externs::TfxShaderStage, color::Color, drawcall::ShaderStages, renderer::DrawMode,
-    shader, ConstantBuffer, DeviceContextSwapchain,
-};
-use crate::{
-    ecs::transform::Transform, overlays::render_settings::PickbufferScope, texture::Texture,
-    util::image::Png,
-};
+use std::{f32::consts::PI, sync::Arc};
+
 use alkahest_data::occlusion::AABB;
 use anyhow::Context;
 use bitflags::bitflags;
@@ -15,7 +9,6 @@ use genmesh::{
 };
 use glam::{Mat4, Quat, Vec3, Vec4};
 use hecs::Entity;
-use std::{f32::consts::PI, sync::Arc};
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST},
     Direct3D11::{
@@ -27,6 +20,15 @@ use windows::Win32::Graphics::{
     Dxgi::Common::{
         DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32_FLOAT,
     },
+};
+
+use super::{
+    bytecode::externs::TfxShaderStage, color::Color, drawcall::ShaderStages, renderer::DrawMode,
+    shader, ConstantBuffer, DeviceContextSwapchain,
+};
+use crate::{
+    ecs::transform::Transform, overlays::render_settings::PickbufferScope, texture::Texture,
+    util::image::Png,
 };
 
 #[derive(Clone)]

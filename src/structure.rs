@@ -1,13 +1,13 @@
-use binrw::{BinRead, BinReaderExt, BinResult, Endian};
-use destiny_pkg::TagHash;
-use tiger_parse::TigerReadable;
-
 use std::{
     fmt::{Debug, Formatter, Write},
     io::{Read, Seek, SeekFrom},
     ops::Deref,
     slice::Iter,
 };
+
+use binrw::{BinRead, BinReaderExt, BinResult, Endian};
+use destiny_pkg::TagHash;
+use tiger_parse::TigerReadable;
 
 use crate::packages::package_manager;
 
@@ -254,41 +254,6 @@ impl BinRead for ResourcePointer {
     }
 }
 
-impl TigerReadable for ResourcePointer {
-    fn read_ds_endian<R: Read + Seek>(
-        reader: &mut R,
-        endian: tiger_parse::Endian,
-    ) -> anyhow::Result<Self> {
-        let offset_base = reader.stream_position()?;
-        let offset: i64 = TigerReadable::read_ds_endian(reader, endian)?;
-        if offset == 0 || offset == i64::MAX {
-            return Ok(ResourcePointer {
-                offset: 0,
-                resource_type: u32::MAX,
-                is_valid: false,
-            });
-        }
-
-        let offset_save = reader.stream_position()?;
-
-        reader.seek(SeekFrom::Start(offset_base))?;
-        reader.seek(SeekFrom::Current(offset - 4))?;
-        let resource_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
-
-        reader.seek(SeekFrom::Start(offset_save))?;
-
-        Ok(ResourcePointer {
-            offset: offset_base.saturating_add_signed(offset),
-            resource_type,
-            is_valid: true,
-        })
-    }
-
-    const ID: Option<u32> = None;
-    const ZEROCOPY: bool = false;
-    const SIZE: usize = 8;
-}
-
 impl Debug for ResourcePointer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
@@ -349,48 +314,6 @@ impl BinRead for ResourcePointerWithClass {
             class_type,
         })
     }
-}
-
-impl TigerReadable for ResourcePointerWithClass {
-    fn read_ds_endian<R: Read + Seek>(
-        reader: &mut R,
-        endian: tiger_parse::Endian,
-    ) -> anyhow::Result<Self> {
-        let offset_base = reader.stream_position()?;
-        let offset: i64 = TigerReadable::read_ds_endian(reader, endian)?;
-        if offset == 0 || offset == i64::MAX {
-            return Ok(ResourcePointerWithClass {
-                offset: 0,
-                is_valid: false,
-                resource_type: u32::MAX,
-                parent_tag: TagHash::NONE,
-                class_type: u32::MAX,
-            });
-        }
-
-        let offset_save = reader.stream_position()?;
-
-        reader.seek(SeekFrom::Start(offset_base))?;
-        reader.seek(SeekFrom::Current(offset - 4))?;
-        let resource_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
-        let parent_tag: TagHash = TigerReadable::read_ds_endian(reader, endian)?;
-        let class_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
-
-        let true_offset = reader.stream_position()?;
-        reader.seek(SeekFrom::Start(offset_save))?;
-
-        Ok(ResourcePointerWithClass {
-            offset: true_offset,
-            is_valid: true,
-            resource_type,
-            parent_tag,
-            class_type,
-        })
-    }
-
-    const ID: Option<u32> = None;
-    const ZEROCOPY: bool = false;
-    const SIZE: usize = 8;
 }
 
 impl Debug for ResourcePointerWithClass {

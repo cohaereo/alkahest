@@ -1,8 +1,5 @@
 use std::sync::Arc;
 
-use crate::map::{SLight, SShadowingLight};
-
-use super::{drawcall::ShaderStages, renderer::Renderer, shader, DeviceContextSwapchain};
 use anyhow::Context;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
@@ -20,6 +17,9 @@ use windows::Win32::Graphics::{
     },
     Dxgi::Common::{DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT},
 };
+
+use super::{drawcall::ShaderStages, renderer::Renderer, shader, DeviceContextSwapchain};
+use crate::map::{SLight, SShadowingLight};
 
 pub struct LightRenderer {
     dcs: Arc<DeviceContextSwapchain>,

@@ -1,26 +1,7 @@
-use crate::{
-    camera::FpsCamera,
-    ecs::{
-        components::{EntityModel, Visible},
-        tags::{insert_tag, EntityTag},
-        transform::{OriginalTransform, Transform},
-    },
-    map::MapDataList,
-    overlays::gui::Overlay,
-    packages::package_manager,
-    render::{
-        bytecode::opcodes::TfxBytecodeOp, cbuffer::ConstantBufferCached, dcs::DcsShared,
-        EntityRenderer,
-    },
-    technique::{STechnique, Technique},
-};
-
-use crate::{
-    render::{
-        renderer::{Renderer, RendererShared},
-        scopes::ScopeRigidModel,
-    },
-    resources::Resources,
+use std::{
+    fmt::Debug,
+    io::{Cursor, Seek, SeekFrom},
+    sync::Arc,
 };
 
 use alkahest_data::{
@@ -35,11 +16,6 @@ use glam::{Mat4, Vec2, Vec3, Vec4};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use std::{
-    fmt::Debug,
-    io::{Cursor, Seek, SeekFrom},
-    sync::Arc,
-};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tracing::{
     field::{Field, Visit},
@@ -49,6 +25,27 @@ use tracing_subscriber::Layer;
 use winit::window::Window;
 
 use super::{gui::ViewerWindows, technique_viewer::TechniqueViewer, texture_viewer::TextureViewer};
+use crate::{
+    camera::FpsCamera,
+    ecs::{
+        components::{EntityModel, Visible},
+        tags::{insert_tag, EntityTag},
+        transform::{OriginalTransform, Transform},
+    },
+    map::MapDataList,
+    overlays::gui::Overlay,
+    packages::package_manager,
+    render::{
+        bytecode::opcodes::TfxBytecodeOp,
+        cbuffer::ConstantBufferCached,
+        dcs::DcsShared,
+        renderer::{Renderer, RendererShared},
+        scopes::ScopeRigidModel,
+        EntityRenderer,
+    },
+    resources::Resources,
+    technique::{STechnique, Technique},
+};
 
 // ! Do NOT swap this RwLock to our own implementation, as it will cause infinite recursion
 lazy_static! {

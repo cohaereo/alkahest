@@ -1,6 +1,6 @@
-use crate::util::RwLock;
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::{mem::transmute, sync::Arc, thread::ThreadId};
+
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use windows::Win32::{
     Foundation::{BOOL, HINSTANCE},
     Graphics::{
@@ -10,6 +10,8 @@ use windows::Win32::{
     },
 };
 use winit::window::Window;
+
+use crate::util::RwLock;
 
 pub type DcsShared = Arc<DeviceContextSwapchain>;
 pub struct DeviceContextSwapchain {

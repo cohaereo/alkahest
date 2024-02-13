@@ -1,8 +1,9 @@
+use std::fmt::{Debug, Formatter, Write};
+
 use alkahest_data::occlusion::AABB;
 use binrw::BinRead;
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
-use std::fmt::{Debug, Formatter, Write};
 use tiger_parse::TigerReadable;
 
 pub type FnvHash = u32;

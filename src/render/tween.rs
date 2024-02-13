@@ -1,5 +1,6 @@
-use glam::{Vec2, Vec3};
 use std::time::Instant;
+
+use glam::{Vec2, Vec3};
 
 #[derive(Clone)]
 pub struct Tween {

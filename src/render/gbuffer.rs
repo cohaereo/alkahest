@@ -1,10 +1,10 @@
-use crate::{dxgi::DxgiFormat, render::DeviceContextSwapchain, FpsCamera};
-use anyhow::Context;
-use glam::Vec3;
 use std::{
     mem::{size_of, transmute},
     sync::Arc,
 };
+
+use anyhow::Context;
+use glam::Vec3;
 use windows::Win32::Graphics::{
     Direct3D::{
         WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D,
@@ -15,6 +15,7 @@ use windows::Win32::Graphics::{
 };
 
 use super::cbuffer::BufferMapGuard;
+use crate::{dxgi::DxgiFormat, render::DeviceContextSwapchain, FpsCamera};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,

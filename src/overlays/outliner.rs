@@ -3,6 +3,7 @@ use itertools::Itertools;
 use nohash_hasher::IntMap;
 use strum::IntoEnumIterator;
 
+use super::gui::Overlay;
 use crate::{
     camera::FpsCamera,
     ecs::{
@@ -16,8 +17,6 @@ use crate::{
     map::MapDataList,
     util::text::{prettify_distance, text_color_for_background},
 };
-
-use super::gui::Overlay;
 
 pub struct OutlinerOverlay {
     sort_by_distance: bool,

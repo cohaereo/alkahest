@@ -1,15 +1,17 @@
-use const_format::concatcp;
-use glam::{Mat4, Vec2, Vec3, Vec4};
-use hecs::Entity;
-use itertools::Itertools;
-use nohash_hasher::{IntMap, IntSet};
 use std::{
     fmt::{Display, Formatter},
     mem::{swap, take, transmute},
     time::Instant,
 };
+
+use const_format::concatcp;
+use glam::{Mat4, Vec2, Vec3, Vec4};
+use hecs::Entity;
+use itertools::Itertools;
+use nohash_hasher::{IntMap, IntSet};
 use winit::window::Window;
 
+use super::gui::Overlay;
 use crate::{
     discord,
     ecs::{
@@ -23,8 +25,6 @@ use crate::{
     },
     resources::Resources,
 };
-
-use super::gui::Overlay;
 
 pub struct RenderSettingsOverlay {
     pub renderlayer_statics: bool,

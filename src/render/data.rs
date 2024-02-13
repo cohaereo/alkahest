@@ -1,17 +1,11 @@
 use std::sync::Arc;
 
-use crate::util::{image::Png, RwLock};
+use alkahest_data::ExtendedHash;
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
 use nohash_hasher::IntMap;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use windows::Win32::Graphics::Direct3D11::*;
-
-use crate::{
-    dxgi::DxgiFormat, packages::package_manager, render::vertex_layout::InputElement,
-    technique::Technique, texture::Texture,
-};
-use alkahest_data::ExtendedHash;
 
 use super::{
     drawcall::ShadingMode,
@@ -20,6 +14,14 @@ use super::{
     shader::{load_pshader, load_vshader},
     vertex_layout::OutputElement,
     DeviceContextSwapchain,
+};
+use crate::{
+    dxgi::DxgiFormat,
+    packages::package_manager,
+    render::vertex_layout::InputElement,
+    technique::Technique,
+    texture::Texture,
+    util::{image::Png, RwLock},
 };
 
 pub struct RenderData {

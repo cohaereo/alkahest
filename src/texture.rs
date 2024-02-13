@@ -1,19 +1,12 @@
-use crate::{
-    dxgi::DxgiFormat,
-    packages::package_manager,
-    render::{drawcall::ShaderStages, DeviceContextSwapchain},
-    structure::{CafeMarker, TablePointer},
-    types::IVector2,
-    util::{image::Png, D3D11CalcSubresource},
-};
-use alkahest_data::ExtendedHash;
-use anyhow::Context;
-use binrw::BinRead;
-use destiny_pkg::TagHash;
 use std::{
     io::SeekFrom,
     sync::atomic::{AtomicBool, Ordering},
 };
+
+use alkahest_data::ExtendedHash;
+use anyhow::Context;
+use binrw::BinRead;
+use destiny_pkg::TagHash;
 use windows::Win32::Graphics::{
     Direct3D::{
         WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
@@ -21,6 +14,15 @@ use windows::Win32::Graphics::{
     },
     Direct3D11::{ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11Texture3D, *},
     Dxgi::Common::*,
+};
+
+use crate::{
+    dxgi::DxgiFormat,
+    packages::package_manager,
+    render::{drawcall::ShaderStages, DeviceContextSwapchain},
+    structure::{CafeMarker, TablePointer},
+    types::IVector2,
+    util::{image::Png, D3D11CalcSubresource},
 };
 
 pub static LOW_RES: AtomicBool = AtomicBool::new(false);

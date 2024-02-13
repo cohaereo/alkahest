@@ -1,16 +1,12 @@
 use alkahest_data::entity::{SEntityModel, Unk808072c5, Unk8080737e};
 use anyhow::Context;
 use destiny_pkg::TagHash;
-
 use glam::Vec4;
-
 use hecs::Entity;
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP},
     Direct3D11::*,
 };
-
-use crate::render::vertex_buffers::load_vertex_buffers;
 
 use super::{
     drawcall::{
@@ -18,6 +14,7 @@ use super::{
     },
     renderer::Renderer,
 };
+use crate::render::vertex_buffers::load_vertex_buffers;
 
 #[derive(Clone)]
 pub struct EntityModelBuffer {

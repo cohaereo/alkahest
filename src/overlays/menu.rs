@@ -2,6 +2,7 @@ use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use glam::Vec3;
 
+use super::gui::Overlay;
 use crate::{
     camera::FpsCamera,
     ecs::{
@@ -15,8 +16,6 @@ use crate::{
     util::consts::{self, CHANGELOG_MD},
     RendererShared,
 };
-
-use super::gui::Overlay;
 
 #[derive(Default)]
 pub struct MenuBar {

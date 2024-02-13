@@ -1,11 +1,11 @@
+use std::time::Instant;
+
 use egui::Color32;
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
-use std::time::Instant;
 use winit::window::Window;
 
-use crate::resources::Resources;
-
 use super::gui::Overlay;
+use crate::resources::Resources;
 
 pub struct FpsDisplayOverlay {
     pub deltas: ConstGenericRingBuffer<f32, 25>,

@@ -1,21 +1,19 @@
-use crate::{
-    packages::package_manager,
-    render::{scopes::ScopeInstances, ConstantBuffer, DeviceContextSwapchain, StaticModel},
-};
+use std::sync::Arc;
 
 use alkahest_data::{
     entity::VertexBufferHeader,
     occlusion::{SMeshInstanceOcclusionBounds, AABB},
     statics::Unk808071a3,
 };
-
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
 use tiger_parse::PackageManagerExt;
 
-use std::sync::Arc;
-
 use super::renderer::Renderer;
+use crate::{
+    packages::package_manager,
+    render::{scopes::ScopeInstances, ConstantBuffer, DeviceContextSwapchain, StaticModel},
+};
 
 pub struct InstancedRenderer {
     renderer: Arc<StaticModel>,

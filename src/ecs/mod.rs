@@ -11,12 +11,11 @@ use glam::Vec3;
 use hecs::EntityRef;
 use itertools::Itertools;
 
+use self::transform::Transform;
 use crate::{
     ecs::{component_panels::ComponentPanel, components::*},
     util::text::split_pascal_case,
 };
-
-use self::transform::Transform;
 
 pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
     macro_rules! icon_from_component_panels {

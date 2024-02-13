@@ -3,6 +3,10 @@ use egui::{vec2, Image, ImageSource, Sense, TextureId};
 use glam::Vec4;
 use nohash_hasher::IntMap;
 
+use super::{
+    gui::{GuiContext, Overlay, ViewerWindows},
+    texture_viewer::TextureViewer,
+};
 use crate::{
     packages::package_manager,
     render::{
@@ -14,11 +18,6 @@ use crate::{
     },
     technique::{STechnique, STechniqueShader},
     texture::{STextureHeader, Texture},
-};
-
-use super::{
-    gui::{GuiContext, Overlay, ViewerWindows},
-    texture_viewer::TextureViewer,
 };
 
 pub struct TechniqueViewer {

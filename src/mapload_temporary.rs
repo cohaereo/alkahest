@@ -6,31 +6,11 @@ use std::{
     sync::Arc,
 };
 
-use crate::{
-    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
-    ecs::{
-        components::{
-            ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
-            ResourcePoint, StaticInstances, Terrain, Water,
-        },
-        tags::{insert_tag, EntityTag},
-        transform::{OriginalTransform, Transform},
-        Scene,
-    },
-    map::{
-        SMapDataTable, SShadowingLight, SSlipSurfaceVolume, SimpleLight, Unk808068d4, Unk80806ac2,
-        Unk80806c98, Unk80806d19, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178,
-        Unk8080917b, Unk80809802,
-    },
-    render::{cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared},
-    types::{FnvHash, ResourceHash},
-    util::fnv1,
-};
 use alkahest_data::{
     entity::{SEntityModel, Unk808072c5, Unk8080906b, Unk80809905, Unk80809c0f},
     occlusion::{SMeshInstanceOcclusionBounds, AABB},
     statics::SStaticMesh,
-    Tag,
+    ExtendedHash, Tag,
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -45,20 +25,34 @@ use windows::Win32::Graphics::{
 };
 
 use crate::{
+    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
+    ecs::{
+        components::{
+            ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
+            ResourcePoint, StaticInstances, Terrain, Water,
+        },
+        tags::{insert_tag, EntityTag},
+        transform::{OriginalTransform, Transform},
+        Scene,
+    },
     map::{
-        MapData, SBubbleParent, SLightCollection, STerrain, Unk80806aa7, Unk80806b7f, Unk80806e68,
-        Unk80806ef4, Unk8080714b,
+        MapData, SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight,
+        SSlipSurfaceVolume, STerrain, SimpleLight, Unk808068d4, Unk80806aa7, Unk80806ac2,
+        Unk80806b7f, Unk80806c98, Unk80806d19, Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246,
+        Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
     },
     map_resources::MapResource,
     packages::package_manager,
     render::{
+        cbuffer::ConstantBufferCached, debug::CustomDebugShape, renderer::RendererShared,
         scopes::ScopeRigidModel, vertex_layout::InputElement, DeviceContextSwapchain,
         EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
     technique::Technique,
+    types::{FnvHash, ResourceHash},
+    util::fnv1,
 };
-use alkahest_data::ExtendedHash;
 
 pub async fn load_maps(
     dcs: Arc<DeviceContextSwapchain>,

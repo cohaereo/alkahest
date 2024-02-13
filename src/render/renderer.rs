@@ -1,11 +1,5 @@
 use std::{sync::Arc, time::Instant};
 
-use crate::{
-    ecs::{resources::SelectedEntity, transform::Transform},
-    map::{MapDataList, SLight, SShadowingLight},
-    overlays::camera_settings::CurrentCubemap,
-    util::RwLock,
-};
 use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, UVec2, Vec3, Vec4};
 use hecs::Entity;
@@ -13,13 +7,6 @@ use windows::Win32::Graphics::{
     Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, Direct3D11::*, Dxgi::Common::DXGI_FORMAT,
 };
 use winit::window::Window;
-
-use crate::{
-    camera::FpsCamera,
-    overlays::render_settings::{CompositorOptions, PickbufferScope, RenderSettings},
-    render::{drawcall::ShaderStages, scopes::ScopeUnk3, shader},
-    resources::Resources,
-};
 
 use super::{
     bytecode::externs::TfxShaderStage,
@@ -33,6 +20,18 @@ use super::{
     overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides},
     scopes::{ScopeFrame, ScopeUnk2, ScopeUnk8, ScopeView},
     ConstantBuffer, DeviceContextSwapchain, GBuffer,
+};
+use crate::{
+    camera::FpsCamera,
+    ecs::{resources::SelectedEntity, transform::Transform},
+    map::{MapDataList, SLight, SShadowingLight},
+    overlays::{
+        camera_settings::CurrentCubemap,
+        render_settings::{CompositorOptions, PickbufferScope, RenderSettings},
+    },
+    render::{drawcall::ShaderStages, scopes::ScopeUnk3, shader},
+    resources::Resources,
+    util::RwLock,
 };
 
 #[derive(PartialEq, Eq)]

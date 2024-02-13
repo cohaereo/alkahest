@@ -1,5 +1,11 @@
 use std::ops::Deref;
 
+use alkahest_data::ExtendedHash;
+use binrw::{BinRead, NullString};
+use destiny_pkg::TagHash;
+use glam::Vec4;
+use itertools::Itertools;
+
 use crate::{
     packages::package_manager,
     render::{
@@ -15,11 +21,6 @@ use crate::{
     types::Vector4,
     util::RwLock,
 };
-use alkahest_data::ExtendedHash;
-use binrw::{BinRead, NullString};
-use destiny_pkg::TagHash;
-use glam::Vec4;
-use itertools::Itertools;
 
 #[derive(BinRead, Debug, Clone)]
 pub struct STechnique {

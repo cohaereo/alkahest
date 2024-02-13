@@ -13,6 +13,7 @@ use windows::Win32::Graphics::{
     },
 };
 
+use super::gui::{GuiContext, Overlay};
 use crate::{
     dxgi::DxgiFormat,
     packages::package_manager,
@@ -23,8 +24,6 @@ use crate::{
     texture::{STextureHeader, Texture},
     util::{self, dds, error::ErrorAlert},
 };
-
-use super::gui::{GuiContext, Overlay};
 
 #[repr(C)]
 pub struct TextureViewerScope {

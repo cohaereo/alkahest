@@ -1,13 +1,15 @@
+use std::io::Write;
+
+use alkahest_data::ExtendedHash;
+use destiny_pkg::{package::UEntryHeader, TagHash};
+use fs_err::File;
+use tracing::error;
+use winit::window::Window;
+
 use crate::{
     overlays::gui::Overlay, packages::package_manager, resources::Resources, texture::Texture,
     util::dds,
 };
-use alkahest_data::ExtendedHash;
-use destiny_pkg::{package::UEntryHeader, TagHash};
-use fs_err::File;
-use std::io::Write;
-use tracing::error;
-use winit::window::Window;
 
 pub struct TagDumper {
     package_id: String,

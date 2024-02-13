@@ -1,5 +1,3 @@
-use crate::render::DeviceContextSwapchain;
-use anyhow::Context;
 use std::{
     marker::PhantomData,
     mem::transmute,
@@ -8,9 +6,12 @@ use std::{
         Arc,
     },
 };
+
+use anyhow::Context;
 use windows::Win32::Graphics::Direct3D11::*;
 
 use super::bytecode::externs::TfxShaderStage;
+use crate::render::DeviceContextSwapchain;
 
 #[derive(Clone)]
 pub struct ConstantBuffer<T: Sized> {

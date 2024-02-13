@@ -1,8 +1,12 @@
-use crate::util::RwLock;
+use std::{sync::Arc, time::Instant};
+
+use alkahest_data::{
+    entity::{IndexBufferHeader, VertexBufferHeader},
+    ExtendedHash,
+};
 use anyhow::Context;
 use crossbeam::channel::{self as mpsc, Receiver};
 use destiny_pkg::TagHash;
-use std::{sync::Arc, time::Instant};
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::{
     Direct3D::{WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_BUFFER},
@@ -15,14 +19,8 @@ use windows::Win32::Graphics::{
     Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
 };
 
-use alkahest_data::{
-    entity::{IndexBufferHeader, VertexBufferHeader},
-    ExtendedHash,
-};
-
-use crate::{dxgi::DxgiFormat, packages::package_manager, texture::Texture};
-
 use super::{DeviceContextSwapchain, RenderData};
+use crate::{dxgi::DxgiFormat, packages::package_manager, texture::Texture, util::RwLock};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum LoadingThreadState {
