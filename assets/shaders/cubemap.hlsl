@@ -81,8 +81,8 @@ float4 PShader(VSOutput input) : SV_Target {
     float depth = DepthTarget.Sample(SampleType, input.uv).r;
 
     float3 normal = DecodeNormal(rt1.xyz);    
-    float smoothness = length(normal) * 4 - 3;
-    float roughness = 1.0 - saturate(smoothness);
+    float smoothness = saturate(length(normal) * 4 - 3);
+    float roughness = 1.0 - smoothness;
     float3 worldPos = WorldPosFromDepth(depth, input.position.xy);
 
     float3 N = normalize(normal);
@@ -91,6 +91,7 @@ float4 PShader(VSOutput input) : SV_Target {
     float cosLo = max(0.0, dot(N, V));
         
     float3 Lr = 2.0 * cosLo * N - V;
-    const uint specularTextureLevels = 8;
-    return float4(SpecularMap.SampleLevel(SampleType, Lr, roughness * specularTextureLevels).rgb, 1.0);
+    float width, height, mipLevels;
+    SpecularMap.GetDimensions(0, width, height, mipLevels);
+    return float4(SpecularMap.SampleLevel(SampleType, Lr, sqrt(roughness) * mipLevels).rgb, 1.0);
 }

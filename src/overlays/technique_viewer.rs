@@ -88,6 +88,10 @@ impl Overlay for TechniqueViewer {
         egui::Window::new(format!("Technique {}", self.tag))
             .open(&mut open)
             .show(ctx, |ui| {
+                if ui.button("Copy header").clicked() {
+                    ui.output_mut(|o| o.copied_text = self._header.debug_header_string());
+                }
+
                 for s in &self.shaders {
                     ui.label(format!("Stage: {:?}", s.stage));
                     s.draw(ui, window, resources, gui);

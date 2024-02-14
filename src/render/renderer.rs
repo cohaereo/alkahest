@@ -596,28 +596,8 @@ impl Renderer {
 
             self.render_data
                 .data()
-                .blend_texture
-                .bind(&self.dcs, 0, ShaderStages::PIXEL);
-            for i in 1..8 {
-                self.render_data.data().debug_textures[i].bind(
-                    &self.dcs,
-                    i as u32,
-                    ShaderStages::all(),
-                );
-            }
-
-            self.render_data
-                .data()
                 .blend_texture15
                 .bind(&self.dcs, 15, ShaderStages::all());
-
-            for (i, slot) in (16..24).filter(|&v| v != 14).enumerate() {
-                self.render_data.data().debug_textures[i].bind(
-                    &self.dcs,
-                    slot,
-                    ShaderStages::all(),
-                );
-            }
 
             self.render_data
                 .data()
@@ -1313,6 +1293,7 @@ impl Renderer {
             }
         }
 
+        let render_settings = resources.get::<RenderSettings>().unwrap();
         unsafe {
             self.dcs.context().OMSetBlendState(
                 &self.blend_state_none,
@@ -1328,47 +1309,50 @@ impl Renderer {
                 MaxDepth: 1.0,
             }]));
 
-            self.dcs.context().OMSetRenderTargets(
-                Some(&[Some(self.gbuffer.light_ibl_specular.render_target.clone())]),
-                None,
-            );
             self.dcs.context().ClearRenderTargetView(
                 &self.gbuffer.light_ibl_specular.render_target,
                 [0.0, 0.0, 0.0, 1.0].as_ptr() as _,
             );
 
-            self.dcs.context().PSSetShaderResources(
-                0,
-                Some(&[
-                    Some(self.gbuffer.rt0.view.clone()),
-                    Some(self.gbuffer.rt1.view.clone()),
-                    Some(self.gbuffer.rt2.view.clone()),
-                    Some(self.gbuffer.rt3.view.clone()),
-                    Some(self.gbuffer.depth.texture_view.clone()),
-                ]),
-            );
+            if render_settings.use_specular_map {
+                self.dcs.context().OMSetRenderTargets(
+                    Some(&[Some(self.gbuffer.light_ibl_specular.render_target.clone())]),
+                    None,
+                );
 
-            let render_data = self.render_data.data();
+                self.dcs.context().PSSetShaderResources(
+                    0,
+                    Some(&[
+                        Some(self.gbuffer.rt0.view.clone()),
+                        Some(self.gbuffer.rt1.view.clone()),
+                        Some(self.gbuffer.rt2.view.clone()),
+                        Some(self.gbuffer.rt3.view.clone()),
+                        Some(self.gbuffer.depth.texture_view.clone()),
+                    ]),
+                );
 
-            let cubemap_texture = resources
-                .get::<CurrentCubemap>()
-                .unwrap()
-                .1
-                .and_then(|t| render_data.textures.get(&t.key()).map(|t| t.view.clone()));
+                let render_data = self.render_data.data();
 
-            self.dcs
-                .context()
-                .PSSetShaderResources(9, Some(&[cubemap_texture]));
+                let cubemap_texture = resources
+                    .get::<CurrentCubemap>()
+                    .unwrap()
+                    .1
+                    .and_then(|t| render_data.textures.get(&t.key()).map(|t| t.view.clone()));
 
-            self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
-            self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
+                self.dcs
+                    .context()
+                    .PSSetShaderResources(9, Some(&[cubemap_texture]));
 
-            self.dcs.context().VSSetShader(&self.cubemap_vs, None);
-            self.dcs.context().PSSetShader(&self.cubemap_ps, None);
-            self.dcs
-                .context()
-                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-            self.dcs.context().Draw(4, 0);
+                self.scope_alk_composite.bind(0, TfxShaderStage::Vertex);
+                self.scope_alk_composite.bind(0, TfxShaderStage::Pixel);
+
+                self.dcs.context().VSSetShader(&self.cubemap_vs, None);
+                self.dcs.context().PSSetShader(&self.cubemap_ps, None);
+                self.dcs
+                    .context()
+                    .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                self.dcs.context().Draw(4, 0);
+            }
 
             self.dcs.context().OMSetRenderTargets(
                 Some(&[Some(self.gbuffer.staging.render_target.clone())]),

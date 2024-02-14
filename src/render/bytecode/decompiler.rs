@@ -186,7 +186,10 @@ impl TfxBytecodeDecompiler {
                     stack_push!(format!("frac({v})"));
                 }
                 // TfxBytecodeOp::Unk1b => todo!(),
-                // TfxBytecodeOp::Unk1c => todo!(),
+                TfxBytecodeOp::Unk1c => {
+                    let v = stack_pop!();
+                    stack_push!(format!("unk1c({v})"));
+                }
                 TfxBytecodeOp::Negate => {
                     let v = stack_pop!();
                     stack_push!(format!("-{v}"));

@@ -47,6 +47,37 @@ impl STechnique {
             .filter(|(_, s)| s.shader.is_some())
             .collect()
     }
+
+    pub fn debug_header_string(&self) -> String {
+        format!(
+            "STechnique {{
+    unk8: 0x{:x},
+    unkc: 0x{:x},
+    unk10: 0x{:x},
+    unk14: 0x{:x},
+    unk18: 0x{:x},
+    unk1c: 0x{:x},
+    unk20: 0x{:x},
+    unk22: 0x{:x},
+    unk24: 0x{:x},
+    unk28: 0x{:x},
+    unk2c: 0x{:x},
+    unk30: {:x?}
+}}",
+            self.unk8,
+            self.unkc,
+            self.unk10,
+            self.unk14,
+            self.unk18,
+            self.unk1c,
+            self.unk20,
+            self.unk22,
+            self.unk24,
+            self.unk28,
+            self.unk2c,
+            self.unk30
+        )
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -62,12 +62,12 @@ impl Overlay for RenderSettingsOverlay {
                         &mut render_settings.use_global_deferred_shading,
                         "deferred_shading_no_atm",
                     );
-                    ui.add_enabled_ui(!render_settings.use_global_deferred_shading, |ui| {
-                        ui.add(egui::Checkbox::new(
-                            &mut render_settings.use_specular_map,
-                            "Use Specular Maps",
-                        ));
+                    ui.add(egui::Checkbox::new(
+                        &mut render_settings.use_specular_map,
+                        "Use Specular Maps",
+                    ));
 
+                    ui.add_enabled_ui(!render_settings.use_global_deferred_shading, |ui| {
                         ui.add(egui::Checkbox::new(
                             &mut render_settings.render_shadows,
                             "Render shadows",

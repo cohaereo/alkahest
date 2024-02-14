@@ -1096,7 +1096,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 ..Default::default()
                             },
                             ResourcePoint {
-                                resource: MapResource::Light(bounds.bb, tag, i),
+                                resource: MapResource::Light(
+                                    bounds.bb,
+                                    tag,
+                                    i,
+                                    light.technique_shading,
+                                ),
 
                                 entity_cbuffer: ConstantBufferCached::create_empty(dcs.clone())?,
                                 ..base_rp

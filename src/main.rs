@@ -1249,7 +1249,7 @@ fn load_render_globals(renderer: &Renderer) {
 
     // println!("{globals:#?}");
     // for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
-    //     println!("scope #{i}: {}", *s.name);
+    //     println!("scope #{i}: {} ({})", *s.name, s.scope.hash());
     //     if s.scope.stage_vertex.constant_buffer.is_some() {
     //         println!(
     //             "\tVS cb{} ({} bytes)",
@@ -1322,6 +1322,11 @@ fn load_render_globals(renderer: &Renderer) {
 
     info!("Loaded deferred_shading_no_atm");
 }
+
+// fn buffer_size(tag: TagHash) -> usize {
+//     let eeee = package_manager().get_entry(tag).unwrap().reference;
+//     package_manager().read_tag(TagHash(eeee)).unwrap().len()
+// }
 
 // fn buffer_size(tag: TagHash) -> usize {
 //     let eeee = package_manager().get_entry(tag).unwrap().reference;

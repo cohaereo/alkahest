@@ -33,7 +33,7 @@ pub enum MapResource {
     CubemapVolume(Box<Unk80806b7f>, AABB),
     RespawnPoint(u32),
     AmbientSound(Option<Unk80809802>),
-    Light(AABB, TagHash, usize),
+    Light(AABB, TagHash, usize, TagHash),
     ShadowingLight(TagHash),
     NamedArea(Unk80809178, String, Option<CustomDebugShape>),
 
@@ -87,7 +87,9 @@ impl MapResource {
                 )
             }
             MapResource::Unk80806aa3(_, t) => format!("Unk80806aa3 (model {t})"),
-            MapResource::Light(_, t, i) => format!("Light ({t}+{i})"),
+            MapResource::Light(_, t, i, technique) => {
+                format!("Light ({t}+{i}, shading technique {technique})")
+            }
             MapResource::RespawnPoint(v) => format!("Respawn Point (0x{v:X})"),
             MapResource::Unk808085c0 => "Unk808085c0".to_string(),
             MapResource::Unk80806a40 => "Unk80806d19".to_string(),
@@ -210,7 +212,7 @@ impl MapResource {
                 2.5,
                 self.debug_color(),
             ),
-            MapResource::Light(_bounds, _, _) => {
+            MapResource::Light(_bounds, _, _, _) => {
                 debug_shapes.line_orientation(
                     transform.translation,
                     transform.rotation,
