@@ -26,7 +26,7 @@ use super::{
 };
 use crate::{
     camera::FpsCamera,
-    ecs::{resources::SelectedEntity, transform::Transform},
+    ecs::{components::Visible, resources::SelectedEntity, transform::Transform},
     map::MapDataList,
     overlays::{
         camera_settings::CurrentCubemap,
@@ -1267,11 +1267,15 @@ impl Renderer {
             }
 
             if let Some((_, _, map)) = maps.current_map() {
-                for (_, (transform, light, bounds)) in map
+                for (_, (visible, transform, light, bounds)) in map
                     .scene
-                    .query::<(&Transform, &SLight, Option<&AABB>)>()
+                    .query::<(Option<&Visible>, &Transform, &SLight, Option<&AABB>)>()
                     .iter()
                 {
+                    if !visible.map_or(true, |v| v.0) {
+                        continue;
+                    }
+
                     if let Some(bb) = bounds {
                         *self.light_mat.write() = Mat4::from_scale(-(bb.extents() * 4.0));
                     } else {
@@ -1282,9 +1286,15 @@ impl Renderer {
                     self.light_renderer.draw_normal(self, light);
                 }
 
-                for (_, (transform, light)) in
-                    map.scene.query::<(&Transform, &SShadowingLight)>().iter()
+                for (_, (visible, transform, light)) in map
+                    .scene
+                    .query::<(Option<&Visible>, &Transform, &SShadowingLight)>()
+                    .iter()
                 {
+                    if !visible.map_or(true, |v| v.0) {
+                        continue;
+                    }
+
                     // *self.light_mat.write() = light.unk64.into();
                     *self.light_mat.write() = Mat4::from_scale(Vec3::splat(-(3000.0 * 2.0)));
                     *self.light_transform.write() = *transform;
