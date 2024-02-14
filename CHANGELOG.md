@@ -29,10 +29,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
-## 0.3.0 - 2024-01-25
-
 ### Changed
-- Enable TFX bytecode by default by @cohaereo
+- Enable TFX bytecode evaluation by default by @cohaereo
+- Changed the parsing system from `binrw` to [tiger-parse](https://github.com/v4nguard/tiger-parse) by @cohaereo
+
+### Fixed
+- Fixed cubemap level selection that made surfaces too glossy by @cohaereo
+- Lights now obey the Visible component
+
+## 0.3.0 - 2024-01-25
 
 ### Added
 
