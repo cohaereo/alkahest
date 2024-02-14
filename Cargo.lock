@@ -2839,6 +2839,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse"
 version = "0.1.0"
+source = "git+https://github.com/v4nguard/tiger-parse#e9ca9b1ef5174fbbf9717ebb7fca4994e50949b1"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -2851,6 +2852,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
+source = "git+https://github.com/v4nguard/tiger-parse#e9ca9b1ef5174fbbf9717ebb7fca4994e50949b1"
 dependencies = [
  "darling",
  "proc-macro2",
