@@ -83,16 +83,16 @@ pub enum TfxBytecodeOp {
     /// Pushes an extern mat4 to the stack
     /// Offset is in vec4s (16 bytes)
     #[br(magic = 0x3e_u8)] PushExternInputMat4 { extern_: TfxExtern, offset: u8 },
-    /// Pushes an extern u64 to the stack, usually a shader resource
+    /// Pushes an extern texture to the stack as a u64
     /// Offset is in u64s (8 bytes)
-    #[br(magic = 0x3f_u8)] PushExternInputU64 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x3f_u8)] PushExternInputTexture { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern u32 to the stack as a u64
     /// Offset is in u32s (4 bytes)
     #[br(magic = 0x40_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
     // TODO(cohae): Carbon copy of 0x3f???
-    /// Pushes an extern u64 to the stack, purpose unknown
+    /// Pushes an extern UAV to the stack as a u64
     /// Offset is in u64s (8 bytes)
-    #[br(magic = 0x41_u8)] PushExternInputU64Unknown { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x41_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
 
     // TODO(cohae): Loads a value from the interpreter state + 0x44a0
     #[br(magic = 0x42_u8)] Unk42,
@@ -101,7 +101,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x45_u8)] PopOutputMat4 { element: u8 },
     #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
     #[br(magic = 0x47_u8)] PopTemp { slot: u8 },
-    #[br(magic = 0x48_u8)] SetShaderResource {
+    #[br(magic = 0x48_u8)] SetShaderTexture {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
@@ -116,7 +116,13 @@ pub enum TfxBytecodeOp {
         #[br(calc(value & 0x1f))]
         slot: u8 
     },
-    #[br(magic = 0x4b_u8)] Unk4b { unk1: u8 },
+    #[br(magic = 0x4b_u8)] SetShaderUav { 
+        value: u8,
+        #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
+        stage: TfxShaderStage,
+        #[br(calc(value & 0x1f))]
+        slot: u8
+    },
     #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
     #[br(magic = 0x4d_u8)] Unk4d { unk1: u8 }, // push_object_channel_vector? (push_object_channel_*??)
     #[br(magic = 0x4e_u8)] Unk4e { unk1: u8, unk2: u8, unk3: u8, unk4: u8 },
@@ -272,17 +278,14 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
                 format!("push_extern_input_mat4 ({extern_:?}+0x{:X})", offset * 16)
             }
-            TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
-                format!("push_extern_input_u64 ({extern_:?}+0x{:X})", offset * 8)
+            TfxBytecodeOp::PushExternInputTexture { extern_, offset } => {
+                format!("push_extern_input_tex ({extern_:?}+0x{:X})", offset * 8)
             }
             TfxBytecodeOp::PushExternInputU32 { extern_, offset } => {
                 format!("push_extern_input_u32 ({extern_:?}+0x{:X})", offset * 4)
             }
-            TfxBytecodeOp::PushExternInputU64Unknown { extern_, offset } => {
-                format!(
-                    "push_extern_input_u64_unknown ({extern_:?}+0x{:X})",
-                    offset * 8
-                )
+            TfxBytecodeOp::PushExternInputUav { extern_, offset } => {
+                format!("push_extern_input_uav ({extern_:?}+0x{:X})", offset * 8)
             }
             TfxBytecodeOp::Unk42 => "unk42".to_string(),
             TfxBytecodeOp::PushFromOutput { element } => {
@@ -300,8 +303,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PopTemp { slot } => {
                 format!("pop_temp({slot})")
             }
-            TfxBytecodeOp::SetShaderResource { stage, slot, .. } => {
-                format!("set_shader_resource stage={stage:?} slot={slot}")
+            TfxBytecodeOp::SetShaderTexture { stage, slot, .. } => {
+                format!("set_shader_texture stage={stage:?} slot={slot}")
             }
             TfxBytecodeOp::Unk49 { unk1 } => {
                 format!("unk49 unk1={unk1}")
@@ -309,8 +312,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::SetShaderSampler { stage, slot, .. } => {
                 format!("set_shader_sampler stage={stage:?} slot={slot}")
             }
-            TfxBytecodeOp::Unk4b { unk1 } => {
-                format!("unk4b unk1={unk1}")
+            TfxBytecodeOp::SetShaderUav { stage, slot, .. } => {
+                format!("set_shader_uav stage={stage:?} slot={slot}")
             }
             TfxBytecodeOp::Unk4c { unk1 } => {
                 format!("unk4c unk1={unk1}")

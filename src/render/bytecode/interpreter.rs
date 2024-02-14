@@ -190,13 +190,13 @@ impl TfxBytecodeInterpreter {
                     stack_push!(v.z_axis);
                     stack_push!(v.w_axis);
                 }
-                TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
+                TfxBytecodeOp::PushExternInputTexture { extern_, offset } => {
                     let handle =
-                        self.get_extern_u64(renderer, render_data, *extern_, *offset as usize)?;
+                        self.get_extern_tex(renderer, render_data, *extern_, *offset as usize)?;
                     let v: Vec4 = bytemuck::cast([handle, 0]);
                     stack_push!(v);
                 }
-                TfxBytecodeOp::PushExternInputU64Unknown { .. } => {
+                TfxBytecodeOp::PushExternInputUav { .. } => {
                     let v: Vec4 = bytemuck::cast([u64::MAX, 0]);
                     stack_push!(v);
                 }
@@ -208,7 +208,7 @@ impl TfxBytecodeInterpreter {
                     // Just pop for now to prevent the stack from overflowing
                     let [_] = stack_pop!(1);
                 }
-                TfxBytecodeOp::SetShaderResource { stage, slot, .. } => {
+                TfxBytecodeOp::SetShaderTexture { stage, slot, .. } => {
                     let [v] = stack_pop!(1);
                     let [handle, _] = bytemuck::cast(v);
                     self.set_shader_resource(renderer, *stage, *slot as _, handle)
@@ -544,7 +544,7 @@ impl TfxBytecodeInterpreter {
         })
     }
 
-    pub fn get_extern_u64(
+    pub fn get_extern_tex(
         &self,
         renderer: &Renderer,
         render_data: &RenderData,

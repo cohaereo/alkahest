@@ -5,8 +5,9 @@ use super::{externs::TfxShaderStage, opcodes::TfxBytecodeOp};
 
 #[derive(Default, Debug)]
 pub struct DecompilationResult {
-    pub resources: Vec<(usize, TfxShaderStage, String)>,
+    pub textures: Vec<(usize, TfxShaderStage, String)>,
     pub samplers: Vec<(usize, TfxShaderStage, String)>,
+    pub uavs: Vec<(usize, TfxShaderStage, String)>,
     pub cb_expressions: Vec<(usize, String)>,
 }
 
@@ -19,9 +20,14 @@ impl DecompilationResult {
             r.push_str(&format!("SamplerState s{slot} = {expr};\n"));
         }
 
-        r.push_str("\n// Resources\n");
-        for (slot, _stage, expr) in &self.resources {
+        r.push_str("\n// Textures\n");
+        for (slot, _stage, expr) in &self.textures {
             r.push_str(&format!("Texture<float4> t{slot} = {expr};\n"));
+        }
+
+        r.push_str("\n// UAVs\n");
+        for (slot, _stage, expr) in &self.uavs {
+            r.push_str(&format!("RWTexture<float4> t{slot} = {expr};\n"));
         }
 
         r.push_str("\n// Constant buffer\n");
@@ -333,7 +339,7 @@ impl TfxBytecodeDecompiler {
                         "extern<float4x4>({extern_:?}->_0x{offset_bytes:x})"
                     ));
                 }
-                TfxBytecodeOp::PushExternInputU64 { extern_, offset } => {
+                TfxBytecodeOp::PushExternInputTexture { extern_, offset } => {
                     let offset_bytes = offset as usize * 8;
                     stack_push!(format!("extern<u64>({extern_:?}->_0x{offset_bytes:x})"));
                 }
@@ -341,7 +347,7 @@ impl TfxBytecodeDecompiler {
                     let offset_bytes = offset as usize * 4;
                     stack_push!(format!("extern<u32>({extern_:?}->_0x{offset_bytes:x})"));
                 }
-                TfxBytecodeOp::PushExternInputU64Unknown { extern_, offset } => {
+                TfxBytecodeOp::PushExternInputUav { extern_, offset } => {
                     let offset_bytes = offset as usize * 8;
                     stack_push!(format!("extern<u64>({extern_:?}->_0x{offset_bytes:x})"));
                 }
@@ -370,9 +376,9 @@ impl TfxBytecodeDecompiler {
 
                     temp[slotu] = stack_pop!();
                 }
-                TfxBytecodeOp::SetShaderResource { stage, slot, .. } => {
+                TfxBytecodeOp::SetShaderTexture { stage, slot, .. } => {
                     let v = stack_pop!();
-                    r.resources.push((slot as usize, stage, v));
+                    r.textures.push((slot as usize, stage, v));
                 }
                 TfxBytecodeOp::Unk49 { unk1 } => {
                     let v = stack_pop!();
@@ -382,9 +388,9 @@ impl TfxBytecodeDecompiler {
                     let v = stack_pop!();
                     r.samplers.push((slot as usize, stage, v));
                 }
-                TfxBytecodeOp::Unk4b { unk1 } => {
+                TfxBytecodeOp::SetShaderUav { stage, slot, .. } => {
                     let v = stack_pop!();
-                    stack_push!(format!("unk4b({unk1}, {v})"));
+                    r.uavs.push((slot as usize, stage, v));
                 }
                 TfxBytecodeOp::Unk4c { unk1 } => {
                     stack_push!(format!("unk4c({unk1})"));
