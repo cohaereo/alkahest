@@ -45,7 +45,6 @@ impl StaticModel {
         let header: SStaticMeshData = pm.read_tag_struct(model.unk8).unwrap();
 
         ensure!(header.mesh_groups.len() == model.materials.len());
-
         let mut buffers = vec![];
         for (
             buffer_index,
@@ -154,7 +153,7 @@ impl StaticModel {
                 .mesh_groups
                 .iter()
                 .enumerate()
-                .filter(|(_, u)| u.unk2 == 0)
+                .filter(|(_, u)| u.unk2 == TfxRenderStage::GenerateGbuffer)
             {
                 let p = &self.subheader.parts[u.part_index as usize];
                 if !p.lod_category.is_highest_detail() {

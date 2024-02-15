@@ -18,8 +18,8 @@ pub struct SStaticMesh {
     pub unk20: Vec<SStaticMeshOverlay>, // Overlay/transparent meshes
     pub unk30: [u32; 2],
     pub unk38: [f32; 6],
-    pub unk50: glam::Vec3, // ? Similar to model_offset, but not quite right...
-    pub unk5c: f32,
+    pub unk50: glam::Vec4, // ? Similar to model_offset, but not quite right...
+    pub unk60: glam::Vec4,
 }
 
 #[derive(Debug)]
@@ -52,7 +52,7 @@ pub struct Unk8080719a {
 #[tiger_tag(id = 0x80806D38)]
 pub struct Unk8080719b {
     pub part_index: u16,
-    pub unk2: u8,
+    pub unk2: TfxRenderStage,
     pub unk3: u8,
     pub unk5: u16,
 }

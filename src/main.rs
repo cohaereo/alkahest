@@ -20,7 +20,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-use alkahest_data::{activity::SActivity, render_globals::SRenderGlobals, tag::ExtendedHash};
+use alkahest_data::{
+    activity::SActivity,
+    render_globals::{SRenderGlobals, SScopeStage},
+    tag::ExtendedHash,
+};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -39,7 +43,11 @@ use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
-use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
+use render::{
+    bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
+    debug::DebugDrawFlags,
+    vertex_layout::InputElement,
+};
 use technique::Technique;
 use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
@@ -1252,45 +1260,51 @@ fn load_render_globals(renderer: &Renderer) {
     //     println!("scope #{i}: {} ({})", *s.name, s.scope.hash());
     //     if s.scope.stage_vertex.constant_buffer.is_some() {
     //         println!(
-    //             "\tVS cb{} ({} bytes)",
+    //             "---- VS cb{} ({} bytes)",
     //             s.scope.stage_vertex.constant_buffer_slot,
     //             buffer_size(s.scope.stage_vertex.constant_buffer)
     //         );
+    //         decompile_tfx(&s.scope.stage_vertex);
     //     }
     //     if s.scope.stage_pixel.constant_buffer.is_some() {
     //         println!(
-    //             "\tPS cb{} ({} bytes)",
+    //             "---- PS cb{} ({} bytes)",
     //             s.scope.stage_pixel.constant_buffer_slot,
     //             buffer_size(s.scope.stage_pixel.constant_buffer)
     //         );
+    //         decompile_tfx(&s.scope.stage_pixel);
     //     }
     //     if s.scope.stage_geometry.constant_buffer.is_some() {
     //         println!(
-    //             "\tGS cb{} ({} bytes)",
+    //             "---- GS cb{} ({} bytes)",
     //             s.scope.stage_geometry.constant_buffer_slot,
     //             buffer_size(s.scope.stage_geometry.constant_buffer)
     //         );
+    //         decompile_tfx(&s.scope.stage_geometry);
     //     }
     //     if s.scope.stage_hull.constant_buffer.is_some() {
     //         println!(
-    //             "\tHS cb{} ({} bytes)",
+    //             "---- HS cb{} ({} bytes)",
     //             s.scope.stage_hull.constant_buffer_slot,
     //             buffer_size(s.scope.stage_hull.constant_buffer)
     //         );
+    //         decompile_tfx(&s.scope.stage_hull);
     //     }
     //     if s.scope.stage_compute.constant_buffer.is_some() {
     //         println!(
-    //             "\tCS cb{} ({} bytes)",
+    //             "---- CS cb{} ({} bytes)",
     //             s.scope.stage_compute.constant_buffer_slot,
     //             buffer_size(s.scope.stage_compute.constant_buffer)
     //         );
+    //         decompile_tfx(&s.scope.stage_compute);
     //     }
     //     if s.scope.stage_domain.constant_buffer.is_some() {
     //         println!(
-    //             "\tDS cb{} ({} bytes)",
+    //             "---- DS cb{} ({} bytes)",
     //             s.scope.stage_domain.constant_buffer_slot,
     //             buffer_size(s.scope.stage_domain.constant_buffer)
     //         );
+    //         decompile_tfx(&s.scope.stage_domain);
     //     }
     // }
 
@@ -1326,6 +1340,15 @@ fn load_render_globals(renderer: &Renderer) {
 // fn buffer_size(tag: TagHash) -> usize {
 //     let eeee = package_manager().get_entry(tag).unwrap().reference;
 //     package_manager().read_tag(TagHash(eeee)).unwrap().len()
+// }
+
+// fn decompile_tfx(s: &SScopeStage) {
+//     if let Ok(opcodes) = TfxBytecodeOp::parse_all(&s.bytecode, binrw::Endian::Little) {
+//         match TfxBytecodeDecompiler::decompile(opcodes, &s.bytecode_constants) {
+//             Ok(o) => println!("{}", o.pretty_print()),
+//             Err(e) => error!("Failed to decompile bytecode: {}", e),
+//         }
+//     }
 // }
 
 // fn buffer_size(tag: TagHash) -> usize {
