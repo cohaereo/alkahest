@@ -36,8 +36,8 @@ use crate::{
     dxbc::{get_input_signature, get_output_signature, DxbcHeader, DxbcInputType},
     ecs::{
         components::{
-            ActivityGroup, CubemapVolume, EntityWorldId, Label, PointLight, ResourceOriginType,
-            ResourcePoint, StaticInstances, Terrain, Water,
+            ActivityGroup, CubemapVolume, EntityWorldId, Label, Light, PointLight,
+            ResourceOriginType, ResourcePoint, StaticInstances, Terrain, Water,
         },
         tags::{insert_tag, EntityTag},
         transform::{OriginalTransform, Transform},
@@ -1112,6 +1112,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             light.clone(),
                             bounds.bb,
+                            Light,
                         )));
                     }
                 }
@@ -1273,6 +1274,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         },
                         EntityWorldId(data.world_id),
                         light,
+                        Light,
                     )));
                 }
                 0x80809178 => {

@@ -39,7 +39,8 @@ pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
         Ruler,
         Sphere,
         EntityModel,
-        StaticInstances
+        StaticInstances,
+        Light
     );
 
     None

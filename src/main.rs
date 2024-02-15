@@ -710,7 +710,16 @@ pub async fn main() -> anyhow::Result<()> {
                         {
                             let gb = gui_rendersettings.borrow();
 
-                            let camera = resources.get::<FpsCamera>().unwrap();
+                            let camera = resources.get_mut::<FpsCamera>().unwrap();
+                            if let Some(driving_ent) = camera.driving {
+                                if let Ok(mut transform) =
+                                    map.scene.get::<&mut Transform>(driving_ent)
+                                {
+                                    transform.translation = camera.position;
+                                    transform.rotation = camera.rotation;
+                                }
+                            }
+
                             for (e, (StaticInstances(instances, _), visible)) in map
                                 .scene
                                 .query::<(&StaticInstances, Option<&Visible>)>()

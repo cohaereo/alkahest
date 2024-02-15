@@ -1,5 +1,6 @@
 use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, Vec2, Vec3};
+use hecs::Entity;
 use winit::event::VirtualKeyCode;
 
 use crate::{
@@ -25,6 +26,7 @@ pub struct FpsCamera {
     pub projection_view_matrix_inv: Mat4,
 
     pub tween: Option<Tween>,
+    pub driving: Option<Entity>,
 }
 
 impl Default for FpsCamera {
@@ -43,6 +45,7 @@ impl Default for FpsCamera {
             projection_view_matrix: Mat4::IDENTITY,
             projection_view_matrix_inv: Mat4::IDENTITY,
             tween: None,
+            driving: None,
         }
     }
 }
@@ -62,10 +65,6 @@ impl FpsCamera {
         self.front = front.normalize();
         self.right = self.front.cross(Vec3::Z).normalize();
         self.up = self.right.cross(self.front).normalize();
-
-        self.rotation = Mat4::look_at_rh(self.position, self.position + self.front, Vec3::Z)
-            .to_scale_rotation_translation()
-            .1;
     }
 
     pub fn update_mouse(&mut self, mouse_delta: Vec2) {
@@ -176,6 +175,10 @@ impl FpsCamera {
         );
         self.projection_view_matrix = self.projection_matrix * self.view_matrix;
         self.projection_view_matrix_inv = self.projection_view_matrix.inverse();
+
+        self.rotation =
+            Quat::from_rotation_z(-self.orientation.y.to_radians() + std::f32::consts::FRAC_PI_2)
+                * Quat::from_rotation_y(self.orientation.x.to_radians());
     }
 
     fn calculate_matrix(&self) -> Mat4 {

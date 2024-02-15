@@ -29,6 +29,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### Added
+- Control lights as an FPS camera by @cohaereo
+
 ### Changed
 - Enable TFX bytecode evaluation by default by @cohaereo
 - Changed the parsing system from `binrw` to [tiger-parse](https://github.com/v4nguard/tiger-parse) by @cohaereo
@@ -36,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Fixed
 - Fixed cubemap level selection that made surfaces too glossy by @cohaereo
 - Lights now obey the Visible component
+- Fixed a TFX parameter that was causing some lights to not be visible by @cohaereo
 
 ## 0.3.0 - 2024-01-25
 

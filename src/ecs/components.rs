@@ -166,3 +166,6 @@ impl Default for Beacon {
 /// Marker component to indicate that the entity is allowed to be modified in potentially destructive ways
 /// (e.g. deleting it, changing it's name, etc.)
 pub struct Mutable;
+
+/// Marker component to indicate that the entity is a light
+pub struct Light;

@@ -10,7 +10,7 @@ use super::{
     resolve_entity_icon, resolve_entity_name,
     tags::{insert_tag, remove_tag, EntityTag, Tags},
     transform::{OriginalTransform, Transform},
-    Scene,
+    Light, Scene,
 };
 use crate::{
     camera::FpsCamera,
@@ -20,8 +20,9 @@ use crate::{
         ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA,
         ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
         ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF, ICON_EYE_OFF_OUTLINE, ICON_HELP,
-        ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT,
-        ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE, ICON_TAG,
+        ICON_IDENTIFIER, ICON_LIGHTBULB, ICON_MAP_MARKER, ICON_OCTAGON, ICON_RADIUS_OUTLINE,
+        ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
+        ICON_STEERING, ICON_TAG,
     },
     render::tween::Tween,
     resources::Resources,
@@ -173,7 +174,8 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
         EntityWorldId,
         Ruler,
         Sphere,
-        Beacon
+        Beacon,
+        Light
     );
 }
 
@@ -761,6 +763,49 @@ impl ComponentPanel for Beacon {
                 }
                 ui.label("Look at Beacon Location");
             });
+        }
+    }
+}
+
+impl ComponentPanel for Light {
+    fn inspector_name() -> &'static str {
+        "Light"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_LIGHTBULB
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+        if !e.has::<Transform>() {
+            ui.label(format!(
+                "{} This entity has no transform component",
+                ICON_ALERT
+            ));
+            return;
+        }
+
+        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+        let transform = e.get::<&Transform>().unwrap();
+
+        if camera.driving == Some(e.entity()) {
+            if ui
+                .button(format!("{} Stop driving", ICON_OCTAGON))
+                .clicked()
+            {
+                camera.driving = None;
+            }
+        } else {
+            if ui.button(format!("{} Drive", ICON_STEERING)).clicked() {
+                camera.driving = Some(e.entity());
+                camera.position = transform.translation;
+                camera.orientation =
+                    camera.get_look_angle(transform.translation + transform.rotation * Vec3::X);
+            }
         }
     }
 }
