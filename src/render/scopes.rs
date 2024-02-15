@@ -82,7 +82,7 @@ impl Default for ScopeFrame {
             random_seed_scales: Default::default(),
             overrides: Default::default(),
             unk4: Default::default(),
-            unk5: Vec4::new(0.0, 0.0, 1.0, 0.0),
+            unk5: Vec4::new(0.0, 0.0, 10.0, 0.0),
             unk6: Default::default(),
             unk7: Default::default(),
         }
