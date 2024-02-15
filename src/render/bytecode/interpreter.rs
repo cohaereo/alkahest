@@ -246,16 +246,17 @@ impl TfxBytecodeInterpreter {
                     stack_push!(mat.mul_vec4(value));
                 }
 
-                TfxBytecodeOp::Unk4c { .. }
-                | TfxBytecodeOp::Unk4d { .. }
-                | TfxBytecodeOp::Unk4e { .. }
-                | TfxBytecodeOp::Unk4f { .. }
-                | TfxBytecodeOp::Unk50 { .. }
-                | TfxBytecodeOp::Unk52 { .. }
-                | TfxBytecodeOp::Unk53 { .. }
-                | TfxBytecodeOp::Unk54 { .. } => {
-                    stack_push!(Vec4::ONE);
-                }
+                &TfxBytecodeOp::Unk4c { unk1, .. }
+                | &TfxBytecodeOp::Unk4d { unk1, .. }
+                | &TfxBytecodeOp::Unk4e { unk1, .. }
+                | &TfxBytecodeOp::Unk4f { unk1, .. }
+                | &TfxBytecodeOp::Unk50 { unk1, .. }
+                | &TfxBytecodeOp::Unk52 { unk1, .. }
+                | &TfxBytecodeOp::Unk53 { unk1, .. }
+                | &TfxBytecodeOp::Unk54 { unk1, .. } => match unk1 {
+                    97 => stack_push!(Vec4::ZERO),
+                    _ => stack_push!(Vec4::ONE),
+                },
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
                     *stack_top!() = constants[*constant_index as usize];
