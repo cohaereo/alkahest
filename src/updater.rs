@@ -144,7 +144,7 @@ pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
     struct ReleasePartial {
         pub tag_name: String,
         pub name: String,
-        pub url: String,
+        pub html_url: String,
 
         pub assets: Vec<AssetPartial>,
         pub body: String,
@@ -179,7 +179,7 @@ pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
     Ok(Some(AvailableUpdate {
         version: release.name,
         download_url,
-        url: release.url,
+        url: release.html_url,
         changelog: release.body,
     }))
 }

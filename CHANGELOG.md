@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### Fixed
+
+- Fixed the GitHub URL for stable releases
+
 ## 0.4.0 - 2024-02-18
 
 ### Added
