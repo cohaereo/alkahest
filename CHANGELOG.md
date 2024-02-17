@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Fixed
 
 - Fixed the GitHub URL for stable releases
+- Copy missing sections in nightly changelog diffs
 
 ## 0.4.0 - 2024-02-18
 

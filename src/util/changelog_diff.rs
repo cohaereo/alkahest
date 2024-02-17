@@ -26,8 +26,12 @@ impl VersionSection {
                 if !diff.is_empty() {
                     sections.insert(key.clone(), diff);
                 }
+            } else {
+                sections.insert(key.clone(), changes.clone());
             }
         }
+
+        sections.retain(|_, v| !v.is_empty());
 
         VersionSection {
             header: self.header.clone(),
