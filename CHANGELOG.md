@@ -41,6 +41,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Lights now obey the Visible component
 - Fixed a TFX parameter that was causing some lights to not be visible by @cohaereo
 
+### Removed
+- Removed pointless world ID component from static instances by @cohaereo
+
 ## 0.3.0 - 2024-01-25
 
 ### Added
