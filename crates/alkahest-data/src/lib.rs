@@ -9,6 +9,7 @@ pub mod render_globals;
 pub mod statics;
 pub mod tag;
 pub mod technique;
+pub mod text;
 pub mod texture;
 pub mod tfx;
 pub mod unknown;

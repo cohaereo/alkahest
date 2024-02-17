@@ -22,8 +22,9 @@ use std::{
 
 use alkahest_data::{
     activity::SActivity,
-    render_globals::{SRenderGlobals, SScopeStage},
+    render_globals::SRenderGlobals,
     tag::ExtendedHash,
+    text::{StringContainer, StringData, StringPart},
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -43,13 +44,9 @@ use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
 use packages::get_named_tag;
 use poll_promise::Promise;
-use render::{
-    bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
-    debug::DebugDrawFlags,
-    vertex_layout::InputElement,
-};
+use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
 use technique::Technique;
-use tiger_parse::PackageManagerExt;
+use tiger_parse::{PackageManagerExt, TigerReadable};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
 use windows::Win32::{
@@ -104,7 +101,7 @@ use crate::{
         DeviceContextSwapchain, EntityRenderer,
     },
     resources::Resources,
-    text::{decode_text, StringContainer, StringData, StringPart},
+    text::decode_text,
     texture::{Texture, LOW_RES},
     util::{
         consts::print_banner,
@@ -132,7 +129,6 @@ mod packages;
 mod panic_handler;
 mod render;
 mod resources;
-mod structure;
 mod technique;
 mod text;
 mod texture;
@@ -233,13 +229,13 @@ pub async fn main() -> anyhow::Result<()> {
             .into_iter()
             .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
         {
-            let textset_header: StringContainer = package_manager().read_tag_binrw(t)?;
+            let textset_header: StringContainer = package_manager().read_tag_struct(t)?;
 
             let data = package_manager()
                 .read_tag(textset_header.language_english)
                 .unwrap();
             let mut cur = Cursor::new(&data);
-            let text_data: StringData = cur.read_le()?;
+            let text_data: StringData = TigerReadable::read_ds(&mut cur)?;
 
             for (combination, hash) in text_data
                 .string_combinations
@@ -249,10 +245,10 @@ pub async fn main() -> anyhow::Result<()> {
                 let mut final_string = String::new();
 
                 for ip in 0..combination.part_count {
-                    cur.seek(combination.data.into())?;
+                    cur.seek(SeekFrom::Start(combination.data.offset()))?;
                     cur.seek(SeekFrom::Current(ip * 0x20))?;
-                    let part: StringPart = cur.read_le()?;
-                    cur.seek(part.data.into())?;
+                    let part: StringPart = TigerReadable::read_ds(&mut cur)?;
+                    cur.seek(SeekFrom::Start(part.data.offset()))?;
                     let mut data = vec![0u8; part.byte_length as usize];
                     cur.read_exact(&mut data)?;
                     final_string += &decode_text(&data, part.cipher_shift);

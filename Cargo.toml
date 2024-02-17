@@ -7,7 +7,7 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 [dependencies]
 alkahest-data = { path = "./crates/alkahest-data" }
 alkahest-pm = { path = "./crates/alkahest-pm" }
-tiger-parse = { version = "0.1.0", git = "https://github.com/v4nguard/tiger-parse", features = [
+tiger-parse = { version = "0.1.1", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
     "destiny_pkg",
     "check_types_debug",
