@@ -35,14 +35,14 @@ pub struct StringData {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808099F5)]
 pub struct StringCombination {
     pub data: Pointer<()>,
     pub part_count: i64,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808099F7)]
 pub struct StringPart {
     pub _unk0: u64,
     pub data: Pointer<()>,

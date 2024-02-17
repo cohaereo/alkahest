@@ -1,3 +1,4 @@
+pub mod changelog_diff;
 pub mod consts;
 pub mod dds;
 pub mod error;
@@ -65,5 +66,15 @@ impl BoolExts for bool {
         } else {
             "no"
         }
+    }
+}
+
+/// Fixes version/tag strings to be compatible with semver
+pub fn version_fixup(version: &str) -> String {
+    let v = version.replace('v', "");
+    if v.chars().filter(|c| *c == '.').count() == 1 {
+        format!("{}.0", v)
+    } else {
+        v
     }
 }

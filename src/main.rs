@@ -103,6 +103,7 @@ use crate::{
     resources::Resources,
     text::decode_text,
     texture::{Texture, LOW_RES},
+    updater::{check_nightly_release, UpdateChannel},
     util::{
         consts::print_banner,
         exe_relative_path,
@@ -133,6 +134,7 @@ mod technique;
 mod text;
 mod texture;
 mod types;
+mod updater;
 mod util;
 
 #[derive(Parser, Debug)]
@@ -161,6 +163,9 @@ pub async fn main() -> anyhow::Result<()> {
     panic_handler::install_hook();
 
     print_banner();
+
+    let release = UpdateChannel::Stable.check_for_updates();
+    println!("Release: {:#?}", release);
 
     // #[cfg(not(debug_assertions))]
     // std::env::set_var("RUST_BACKTRACE", "0");

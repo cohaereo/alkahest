@@ -31,6 +31,8 @@ fn main() {
 
     // Generate UTC BUILD_DATE using chrono
     let build_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let build_timestamp = chrono::Utc::now().to_rfc3339();
     println!("cargo:rustc-env=BUILD_DATE={build_date}");
+    println!("cargo:rustc-env=BUILD_TIMESTAMP={build_timestamp}");
     println!("cargo:rerun-if-changed=build.rs");
 }
