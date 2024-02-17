@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use anyhow::Context;
 use fs_err::File;
 
 use super::error::ErrorAlert;
@@ -14,7 +15,10 @@ pub fn save_dds_dialog(data: &[u8], filename: String) {
             .unwrap();
 
         if let Some(path) = dialog_result {
-            let mut f = File::create(path).err_alert().unwrap();
+            let mut f = File::create(path)
+                .context("Failed to create DDS file")
+                .err_alert()
+                .unwrap();
             f.write_all(&data).unwrap();
         }
     });

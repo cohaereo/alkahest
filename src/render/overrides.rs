@@ -3,7 +3,7 @@ use windows::Win32::Graphics::Direct3D11::{
 };
 
 use super::{
-    scopes::{ScopeFrame, ScopeTransparent, ScopeUnk3, ScopeUnk8, ScopeView},
+    scopes::{ScopeFrame, ScopeUnk3, ScopeUnk8, ScopeView},
     shader, DeviceContextSwapchain,
 };
 

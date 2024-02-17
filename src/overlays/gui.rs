@@ -33,6 +33,14 @@ pub trait Overlay {
     }
 }
 
+#[derive(PartialEq)]
+pub enum PreDrawResult {
+    /// Continue drawing the rest of the UI
+    Continue,
+    /// Don't draw the rest of the UI
+    Stop,
+}
+
 pub struct GuiManager {
     pub egui: egui::Context,
     pub integration: egui_winit::State,
@@ -111,8 +119,14 @@ impl GuiManager {
         self.integration.on_window_event(&self.egui, event)
     }
 
-    pub fn draw_frame<MF>(&mut self, window: Arc<Window>, resources: &mut Resources, misc_draw: MF)
-    where
+    pub fn draw_frame<PF, MF>(
+        &mut self,
+        window: Arc<Window>,
+        resources: &mut Resources,
+        pre_draw: PF,
+        misc_draw: MF,
+    ) where
+        PF: FnOnce(&egui::Context, &mut Resources) -> PreDrawResult,
         MF: FnOnce(&egui::Context, &mut Resources),
     {
         if self.egui.input_mut(|i| {
@@ -140,6 +154,10 @@ impl GuiManager {
                 &self.egui,
                 window.scale_factor() as f32,
                 |integration, ctx| {
+                    if pre_draw(ctx, resources) == PreDrawResult::Stop {
+                        return;
+                    }
+
                     if self.show_ui {
                         for overlay in self.overlays.iter() {
                             overlay.as_ref().borrow_mut().draw(

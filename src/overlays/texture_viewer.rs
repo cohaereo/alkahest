@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use alkahest_data::{dxgi::DxgiFormat, texture::STextureHeader, ExtendedHash};
+use anyhow::Context;
 use egui::{vec2, Color32, ComboBox, ImageSource, RichText, Rounding, TextureId};
 use fs_err::File;
 use glam::Vec4;
@@ -303,19 +304,7 @@ impl Overlay for TextureViewer {
                                     self.sampler_point.clone(),
                                     "Nearest",
                                 );
-                            })
-                        // .show_index(
-                        //     ui,
-                        //     &mut self.selected_mip,
-                        //     self.header.mip_count as usize,
-                        //     |i| {
-                        //         format!(
-                        //             "Point",
-                        //             self.header.width as usize >> i,
-                        //             self.header.height as usize >> i
-                        //         )
-                        //     },
-                        // );
+                            });
                     });
 
                     if self.header.depth > 1 {
@@ -334,8 +323,9 @@ impl Overlay for TextureViewer {
                         dds::dump_to_dds(&mut dds_data, &texture, &texture_data);
                         if ui.input(|i| i.modifiers.shift) {
                             std::fs::create_dir("./textures/").ok();
-                            if let Ok(mut f) =
-                                File::create(format!("./textures/{}.dds", self.tag)).err_alert()
+                            if let Ok(mut f) = File::create(format!("./textures/{}.dds", self.tag))
+                                .context("Failed to create DDS file")
+                                .err_alert()
                             {
                                 f.write_all(&dds_data).ok();
                             }

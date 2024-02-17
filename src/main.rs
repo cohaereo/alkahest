@@ -83,14 +83,15 @@ use crate::{
         camera_settings::CameraPositionOverlay,
         console::ConsoleOverlay,
         fps_display::FpsDisplayOverlay,
-        gui::{GuiManager, ViewerWindows},
+        gui::{GuiManager, PreDrawResult, ViewerWindows},
         inspector::InspectorOverlay,
-        load_indicator::LoadIndicatorOverlay,
+        load_indicator::{LoadIndicator, LoadIndicatorOverlay, LoadIndicators},
         menu::MenuBar,
         outliner::OutlinerOverlay,
         render_settings::{ActivityGroupFilter, RenderSettings, RenderSettingsOverlay},
         resource_nametags::ResourceTypeOverlay,
         tag_dump::{BulkTextureDumper, TagDumper},
+        updater::{ChannelSelector, UpdateDownload},
     },
     packages::{package_manager, PACKAGE_MANAGER},
     render::{
@@ -103,7 +104,7 @@ use crate::{
     resources::Resources,
     text::decode_text,
     texture::{Texture, LOW_RES},
-    updater::{check_nightly_release, UpdateChannel},
+    updater::UpdateCheck,
     util::{
         consts::print_banner,
         exe_relative_path,
@@ -163,9 +164,6 @@ pub async fn main() -> anyhow::Result<()> {
     panic_handler::install_hook();
 
     print_banner();
-
-    let release = UpdateChannel::Stable.check_for_updates();
-    println!("Release: {:#?}", release);
 
     // #[cfg(not(debug_assertions))]
     // std::env::set_var("RUST_BACKTRACE", "0");
@@ -416,6 +414,8 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(renderer.clone());
     resources.insert(renderer.read().dcs.clone());
     resources.insert(SelectedEntity(None, false, Instant::now()));
+    resources.insert(UpdateCheck::default());
+    resources.insert(LoadIndicators::default());
 
     let _blend_state = unsafe {
         dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
@@ -483,7 +483,7 @@ pub async fn main() -> anyhow::Result<()> {
     }));
 
     let gui_dump = Rc::new(RefCell::new(TagDumper::new()));
-    let gui_loading = Rc::new(RefCell::new(LoadIndicatorOverlay::default()));
+    let gui_loading = Rc::new(RefCell::new(LoadIndicatorOverlay));
 
     let mut gui = GuiManager::create(&window, dcs.clone());
     let gui_console = Rc::new(RefCell::new(ConsoleOverlay::default()));
@@ -499,6 +499,19 @@ pub async fn main() -> anyhow::Result<()> {
     gui.add_overlay(Rc::new(RefCell::new(OutlinerOverlay::default())));
     gui.add_overlay(Rc::new(RefCell::new(MenuBar::default())));
     gui.add_overlay(Rc::new(RefCell::new(BulkTextureDumper::default())));
+
+    let mut update_channel_gui = ChannelSelector {
+        open: config::with(|c| c.update_channel.is_none()),
+    };
+
+    let mut updater_gui: Option<UpdateDownload> = None;
+
+    if let Some(update_channel) = config::with(|c| c.update_channel) {
+        resources
+            .get_mut::<UpdateCheck>()
+            .unwrap()
+            .start(update_channel);
+    }
 
     let start_time = Instant::now();
     let mut last_frame = Instant::now();
@@ -932,22 +945,66 @@ pub async fn main() -> anyhow::Result<()> {
 
                     renderer.read().submit_frame(&resources);
 
-                    gui.draw_frame(window.clone(), &mut resources, |ctx, _resources| {
-                        if let Some(task) = map_load_task.as_ref() {
-                            if task.ready().is_none() {
-                                egui::Window::new("Loading...")
-                                    .title_bar(false)
-                                    .resizable(false)
-                                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-                                    .show(ctx, |ui| {
-                                        ui.horizontal(|ui| {
-                                            ui.spinner();
-                                            ui.heading("Loading maps")
-                                        })
-                                    });
+                    gui.draw_frame(
+                        window.clone(),
+                        &mut resources,
+                        |ctx, resources| {
+                            update_channel_gui.open = config::with(|c| c.update_channel.is_none());
+                            update_channel_gui.show(ctx, resources);
+                            if update_channel_gui.open {
+                                return PreDrawResult::Stop;
                             }
-                        }
-                    });
+
+                            {
+                                let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
+                                let mut update_check = resources.get_mut::<UpdateCheck>().unwrap();
+                                loads
+                                    .entry("update_check".to_string())
+                                    .or_insert_with(|| LoadIndicator::new("Checking for updates"))
+                                    .active = update_check
+                                    .0
+                                    .as_ref()
+                                    .map_or(false, |v| v.poll().is_pending());
+
+                                if update_check
+                                    .0
+                                    .as_ref()
+                                    .map_or(false, |v| v.poll().is_ready())
+                                {
+                                    let update = update_check.0.take().unwrap().block_and_take();
+                                    if let Some(update) = update {
+                                        updater_gui = Some(UpdateDownload::new(update));
+                                    }
+                                }
+                            }
+
+                            if let Some(updater_gui_) = updater_gui.as_mut() {
+                                if !updater_gui_.show(ctx, resources) {
+                                    updater_gui = None;
+                                }
+
+                                return PreDrawResult::Stop;
+                            }
+
+                            PreDrawResult::Continue
+                        },
+                        |ctx, _resources| {
+                            if let Some(task) = map_load_task.as_ref() {
+                                if task.ready().is_none() {
+                                    egui::Window::new("Loading...")
+                                        .title_bar(false)
+                                        .resizable(false)
+                                        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                                        .show(ctx, |ui| {
+                                            ui.horizontal(|ui| {
+                                                ui.spinner();
+                                                ui.heading("Loading maps")
+                                            })
+                                        });
+                                }
+                            }
+                        },
+                    );
 
                     // TODO(cohae): This triggers when dragging as well, which is super annoying. Don't know if we can fix this without a proper egui response object though.
                     if gui.egui.input(|i| i.pointer.secondary_clicked())

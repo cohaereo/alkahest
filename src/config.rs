@@ -2,7 +2,10 @@ use egui::epaint::ahash::HashMap;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
-use crate::util::{exe_relative_path, RwLock};
+use crate::{
+    updater::UpdateChannel,
+    util::{exe_relative_path, RwLock},
+};
 
 lazy_static! {
     pub static ref CONFIGURATION: RwLock<Config> = RwLock::new(Config::default());
@@ -45,6 +48,8 @@ macro_rules! config {
 pub struct Config {
     pub window: WindowConfig,
     pub resources: ResourceConfig,
+
+    pub update_channel: Option<UpdateChannel>,
 }
 
 #[derive(Serialize, Deserialize)]

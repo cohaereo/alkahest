@@ -1,4 +1,6 @@
-use egui::{Color32, RichText};
+use std::time::Instant;
+
+use egui::{ahash::HashMap, Color32, RichText};
 use winit::window::Window;
 
 use super::gui::Overlay;
@@ -7,19 +9,9 @@ use crate::{
     resources::Resources,
 };
 
-pub struct LoadIndicatorOverlay {
-    window_rect: egui::Rect,
-}
+pub struct LoadIndicatorOverlay;
 
-impl Default for LoadIndicatorOverlay {
-    fn default() -> Self {
-        Self {
-            window_rect: egui::Rect::NOTHING,
-        }
-    }
-}
-
-const SPINNER_FRAMES: &[&str] = &[
+pub const SPINNER_FRAMES: &[&str] = &[
     "\u{F144B}", // ICON_CLOCK_TIME_ONE_OUTLINE
     "\u{F144C}", // ICON_CLOCK_TIME_TWO_OUTLINE
     "\u{F144D}", // ICON_CLOCK_TIME_THREE_OUTLINE
@@ -33,18 +25,21 @@ const SPINNER_FRAMES: &[&str] = &[
     "\u{F1455}", // ICON_CLOCK_TIME_ELEVEN_OUTLINE
     "\u{F1456}", // ICON_CLOCK_TIME_TWELVE_OUTLINE
 ];
-const SPINNER_INTERVAL: usize = 50;
+pub const SPINNER_INTERVAL: usize = 50;
 impl Overlay for LoadIndicatorOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        _resources: &mut Resources,
+        resources: &mut Resources,
         _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
-        let open = *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
+        let mut open = *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle
             || *resource_mt::STATUS_BUFFERS.read() != LoadingThreadState::Idle;
         // || *resource_mt::STATUS_TEXTURES.read() != LoadingThreadState::Idle;
+
+        let indicators = resources.get::<LoadIndicators>();
+        open |= indicators.map_or(false, |i| !i.is_empty());
 
         if open {
             egui::Window::new("Loading")
@@ -56,17 +51,10 @@ impl Overlay for LoadIndicatorOverlay {
                         remaining,
                     } = *resource_mt::STATUS_TEXTURES.read()
                     {
-                        let time_millis = start_time.elapsed().as_millis() as usize;
-                        ui.label(
-                            RichText::new(format!(
-                                "{} Loading {} textures ({:.1}s)",
-                                SPINNER_FRAMES
-                                    [(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
-                                remaining,
-                                start_time.elapsed().as_secs_f32()
-                            ))
-                            .size(18.0)
-                            .color(Color32::WHITE),
+                        self.show_indicator(
+                            ui,
+                            format!("Loading {remaining} textures"),
+                            start_time,
                         );
                     }
 
@@ -75,24 +63,53 @@ impl Overlay for LoadIndicatorOverlay {
                         remaining,
                     } = *resource_mt::STATUS_BUFFERS.read()
                     {
-                        let time_millis = start_time.elapsed().as_millis() as usize;
-                        ui.label(
-                            RichText::new(format!(
-                                "{} Loading {} buffers ({:.1}s)",
-                                SPINNER_FRAMES
-                                    [(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
-                                remaining,
-                                start_time.elapsed().as_secs_f32()
-                            ))
-                            .size(18.0)
-                            .color(Color32::WHITE),
-                        );
+                        self.show_indicator(ui, format!("Loading {remaining} buffers"), start_time);
                     }
 
-                    self.window_rect = ctx.used_rect();
+                    if let Some(indicators) = resources.get::<LoadIndicators>() {
+                        for i in indicators.values() {
+                            if i.active {
+                                self.show_indicator(ui, &i.label, i.start_time);
+                            }
+                        }
+                    }
                 });
         }
 
         true
+    }
+}
+
+impl LoadIndicatorOverlay {
+    fn show_indicator<L: AsRef<str>>(&self, ui: &mut egui::Ui, label: L, start_time: Instant) {
+        let time_millis = start_time.elapsed().as_millis() as usize;
+        ui.label(
+            RichText::new(format!(
+                "{} {} ({:.1}s)",
+                SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
+                label.as_ref(),
+                start_time.elapsed().as_secs_f32()
+            ))
+            .size(18.0)
+            .color(Color32::WHITE),
+        );
+    }
+}
+
+pub type LoadIndicators = HashMap<String, LoadIndicator>;
+
+pub struct LoadIndicator {
+    pub start_time: Instant,
+    pub label: String,
+    pub active: bool,
+}
+
+impl LoadIndicator {
+    pub fn new(label: impl Into<String>) -> Self {
+        Self {
+            start_time: Instant::now(),
+            label: label.into(),
+            active: true,
+        }
     }
 }

@@ -5,6 +5,7 @@ use glam::Vec3;
 use super::gui::Overlay;
 use crate::{
     camera::FpsCamera,
+    config,
     ecs::{
         components::{Beacon, Mutable, Ruler, Sphere},
         resources::SelectedEntity,
@@ -13,6 +14,7 @@ use crate::{
     },
     icons::{ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     map::MapDataList,
+    updater::UpdateChannel,
     util::consts::{self, CHANGELOG_MD},
     RendererShared,
 };
@@ -142,6 +144,39 @@ impl Overlay for MenuBar {
                 });
 
                 ui.menu_button("Help", |ui| {
+                    let update_channel = config::with(|c| c.update_channel);
+                    if ui
+                        .add_enabled(
+                            update_channel.is_some()
+                                && update_channel != Some(UpdateChannel::Disabled),
+                            egui::Button::new("Check for updates"),
+                        )
+                        .clicked()
+                    {
+                        if let Some(update_channel) = update_channel {
+                            resources
+                                .get_mut::<crate::updater::UpdateCheck>()
+                                .unwrap()
+                                .start(update_channel);
+                        }
+                        ui.close_menu();
+                    }
+
+                    if ui.button("Change update channel").clicked() {
+                        config::with_mut(|c| c.update_channel = None);
+                        ui.close_menu();
+                    }
+
+                    if let Some(update_channel) = update_channel {
+                        ui.label(format!(
+                            "Updates: {} {:?}",
+                            update_channel.icon(),
+                            update_channel
+                        ));
+                    }
+
+                    ui.separator();
+
                     if ui.button("Changelog").clicked() {
                         self.changelog_open = true;
                         ui.close_menu();

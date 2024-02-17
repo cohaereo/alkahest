@@ -7,7 +7,7 @@ pub trait ErrorAlert<T, E> {
 
 impl<T, E> ErrorAlert<T, E> for Result<T, E>
 where
-    E: Display + Send + Sync + 'static,
+    E: Display + Send + Sync + AsRef<dyn std::error::Error> + 'static,
 {
     fn err_alert(self) -> Result<T, E> {
         match self {
@@ -15,15 +15,23 @@ where
             Err(e) => {
                 error!("{e}");
 
-                native_dialog::MessageDialog::new()
-                    .set_title("Oh fiddlesticks, what now")
-                    .set_text(&e.to_string())
-                    .set_type(native_dialog::MessageType::Error)
-                    .show_alert()
-                    .ok();
+                show_error_alert(&e);
 
                 Err(e)
             }
         }
     }
+}
+
+pub fn show_error_alert<E: AsRef<dyn std::error::Error> + Display>(e: E) {
+    native_dialog::MessageDialog::new()
+        .set_title("Oh fiddlesticks, what now")
+        .set_text(&if let Some(source) = e.as_ref().source() {
+            format!("{e}\n\nCaused by: {source}")
+        } else {
+            format!("{e}")
+        })
+        .set_type(native_dialog::MessageType::Error)
+        .show_alert()
+        .ok();
 }
