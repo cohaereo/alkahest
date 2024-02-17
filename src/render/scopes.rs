@@ -140,14 +140,14 @@ pub struct ScopeRigidModel {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ScopeUnk2 {
-    pub unk0: Vec4,
+pub struct ScopeTransparent {
+    pub transparent_scope_depth_constants: Vec4,
 }
 
-impl Default for ScopeUnk2 {
+impl Default for ScopeTransparent {
     fn default() -> Self {
-        ScopeUnk2 {
-            unk0: Vec4::new(0.0, 1.0, 1.0, 1.0),
+        ScopeTransparent {
+            transparent_scope_depth_constants: Vec4::new(0.0, 1.0, 1.0, 1.0),
         }
     }
 }

@@ -68,6 +68,13 @@ float3 GammaCorrect(float3 c) {
     return pow(abs(c), (1.0/2.2).xxx);
 }
 
+#define NEAR_PLANE 0.0001
+
+// Linearize infinite reverse-Z right handed depth buffer
+float LinearizeDepth(float depth) {
+    return NEAR_PLANE / depth;
+}
+
 // Pixel Shader
 float4 PShader(VSOutput input) : SV_Target {
     float4 albedo = float4(0, 0, 0, 1);
@@ -85,7 +92,7 @@ float4 PShader(VSOutput input) : SV_Target {
         u0.xy = (int2)u0.xy;
 
         float r0 = RenderTargetDepth.Load(u0.xyz).x;
-        float v = r0.x * 64 * 2048;
+        float v = LinearizeDepth(r0.x) / 64;
         finalColor = float4(frac(v.xxx), 1);
     }
     else

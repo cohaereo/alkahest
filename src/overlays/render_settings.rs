@@ -259,10 +259,6 @@ impl Overlay for RenderSettingsOverlay {
                     input_float4!(ui, "unk7", overrides.frame.unk7);
                 });
 
-                ui.collapsing("unk2", |ui| {
-                    input_float4!(ui, "unk0", overrides.unk2.unk0);
-                });
-
                 ui.collapsing("unk3", |ui| {
                     input_float4!(ui, "unk0", overrides.unk3.unk0);
                     input_float4!(ui, "unk1", overrides.unk3.unk1);

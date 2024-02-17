@@ -3,7 +3,7 @@ use windows::Win32::Graphics::Direct3D11::{
 };
 
 use super::{
-    scopes::{ScopeFrame, ScopeUnk2, ScopeUnk3, ScopeUnk8, ScopeView},
+    scopes::{ScopeFrame, ScopeTransparent, ScopeUnk3, ScopeUnk8, ScopeView},
     shader, DeviceContextSwapchain,
 };
 
@@ -108,7 +108,6 @@ impl ShaderOverrides {
 pub struct ScopeOverrides {
     pub view: ScopeView,
     pub frame: ScopeFrame,
-    pub unk2: ScopeUnk2,
     pub unk3: ScopeUnk3,
     pub unk8: ScopeUnk8,
 }

@@ -21,7 +21,7 @@ use super::{
     light::LightRenderer,
     outline::OutlineScreenEffect,
     overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides},
-    scopes::{ScopeFrame, ScopeUnk2, ScopeUnk8, ScopeView},
+    scopes::{ScopeFrame, ScopeTransparent, ScopeUnk8, ScopeView},
     ConstantBuffer, DeviceContextSwapchain, GBuffer,
 };
 use crate::{
@@ -60,7 +60,7 @@ pub struct Renderer {
 
     scope_view_csm: ConstantBuffer<ScopeView>,
     scope_frame: ConstantBuffer<ScopeFrame>,
-    scope_unk2: ConstantBuffer<ScopeUnk2>,
+    scope_transparent: ConstantBuffer<ScopeTransparent>,
     scope_unk3: ConstantBuffer<ScopeUnk3>,
     scope_unk8: ConstantBuffer<ScopeUnk8>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
@@ -372,7 +372,7 @@ impl Renderer {
             scope_view: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view_pixel: ConstantBuffer::create(dcs.clone(), None)?,
             scope_view_csm: ConstantBuffer::create(dcs.clone(), None)?,
-            scope_unk2: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_transparent: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
@@ -449,8 +449,8 @@ impl Renderer {
 
         let render_settings = resources.get::<RenderSettings>().unwrap();
 
-        self.scope_unk2.bind(2, TfxShaderStage::Vertex);
-        self.scope_unk2.bind(2, TfxShaderStage::Pixel);
+        self.scope_transparent.bind(2, TfxShaderStage::Vertex);
+        self.scope_transparent.bind(2, TfxShaderStage::Pixel);
         self.scope_unk3.bind(3, TfxShaderStage::Vertex);
         self.scope_unk3.bind(3, TfxShaderStage::Pixel);
         self.scope_unk8.bind(8, TfxShaderStage::Vertex);
@@ -1748,7 +1748,9 @@ impl Renderer {
         self.scope_view_pixel.write(&scope_view_pixel_data)?;
         *self.scope_view_backup.write() = scope_view_data;
 
-        self.scope_unk2.write(&overrides.unk2)?;
+        self.scope_transparent.write(&ScopeTransparent {
+            transparent_scope_depth_constants: Vec4::new(camera.near, 1.0 / camera.near, 0.0, 0.0),
+        })?;
         self.scope_unk3.write(&overrides.unk3)?;
         self.scope_unk8.write(&overrides.unk8)?;
 

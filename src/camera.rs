@@ -19,6 +19,7 @@ pub struct FpsCamera {
     pub position: Vec3,
     pub speed_mul: f32,
     pub fov: f32,
+    pub near: f32,
 
     pub view_matrix: Mat4,
     pub projection_matrix: Mat4,
@@ -40,6 +41,7 @@ impl Default for FpsCamera {
             orientation: Vec2::ZERO,
             speed_mul: 1.0,
             fov: 90.0,
+            near: 0.0001,
             view_matrix: Mat4::IDENTITY,
             projection_matrix: Mat4::IDENTITY,
             projection_view_matrix: Mat4::IDENTITY,
@@ -171,7 +173,7 @@ impl FpsCamera {
         self.projection_matrix = Mat4::perspective_infinite_reverse_rh(
             self.fov.to_radians(),
             window_size.0 as f32 / window_size.1 as f32,
-            0.0001,
+            self.near,
         );
         self.projection_view_matrix = self.projection_matrix * self.view_matrix;
         self.projection_view_matrix_inv = self.projection_view_matrix.inverse();
