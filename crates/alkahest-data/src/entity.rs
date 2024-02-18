@@ -82,7 +82,7 @@ pub struct Unk8080737e {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806D97)]
 pub struct Unk808072c5 {
     pub material_count: u32,
     pub material_start: u32,
@@ -129,7 +129,7 @@ pub struct Unk8080906b {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80809D02)]
 pub struct Unk80809d02 {
     pub unk0_name_pointer: PointerOptional<Unk8080894d>,
     pub unk8: PointerOptional<()>,

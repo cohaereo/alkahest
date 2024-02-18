@@ -107,7 +107,7 @@ pub struct STerrain {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806C86)]
 pub struct Unk80807154 {
     pub unk0: glam::Vec4,
     pub unk10: f32,
@@ -130,7 +130,7 @@ pub struct Unk80807154 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806C84)]
 pub struct Unk80807152 {
     pub material: TagHash,
     pub index_start: u32,
@@ -195,7 +195,7 @@ pub struct Unk80806e68 {
     pub bounds: AABB,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806963)]
 pub struct Unk80806e6c {
     pub material: TagHash,
     pub start: u16,
@@ -428,7 +428,7 @@ pub struct Unk808085c2 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808085C4)]
 pub struct Unk808085c4 {
     pub unk0: [u32; 4],
     pub unk10: [u32; 4],
@@ -559,7 +559,7 @@ pub struct Unk80808724 {
     pub havok_file: TagHash,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x8080824C)]
 pub struct Unk8080824c {
     pub rotation: glam::Quat,
     pub translation: glam::Vec4,
@@ -606,7 +606,7 @@ pub struct Unk80806ac4 {
     pub unk10: Vec<Unk80806ed8>,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806ED8)]
 pub struct Unk80806ed8 {
     pub rotation: glam::Quat,
     pub translation: glam::Vec4,

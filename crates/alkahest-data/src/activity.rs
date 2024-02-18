@@ -52,7 +52,7 @@ pub struct Unk8080892e {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808924)]
 pub struct Unk80808924 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -89,7 +89,7 @@ pub struct Unk80808926 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808948)]
 pub struct Unk80808948 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,

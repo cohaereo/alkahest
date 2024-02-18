@@ -144,7 +144,7 @@ pub async fn load_maps(
 
         let mut scene = Scene::new();
 
-        let mut unknown_root_resources: IntMap<u32, usize> = Default::default();
+        let mut unknown_root_resources: IntMap<u32, Vec<TagHash>> = Default::default();
 
         let mut entity_worldid_name_map: IntMap<u64, String> = Default::default();
         if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
@@ -296,8 +296,8 @@ pub async fn load_maps(
             }
         }
 
-        for (rtype, count) in unknown_root_resources.into_iter() {
-            warn!("World origin resource {} is not parsed! Resource points might be missing ({} instances)", TagHash(rtype), count);
+        for (rtype, tables) in unknown_root_resources.into_iter() {
+            warn!("World origin resource {} is not parsed! Resource points might be missing (found in these tables [{}])", TagHash(rtype), tables.iter().map(|v| v.to_string()).join(", "));
         }
 
         let map_name = stringmap
@@ -717,7 +717,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
     material_map: &mut IntMap<TagHash, Technique>,
     to_load_entitymodels: &mut IntSet<TagHash>,
-    unknown_root_resources: &mut IntMap<u32, usize>,
+    unknown_root_resources: &mut IntMap<u32, Vec<TagHash>>,
 ) -> anyhow::Result<()> {
     let renderer = renderer.read();
     let dcs = renderer.dcs.clone();
@@ -1551,9 +1551,10 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     if let Some(t) = d.unk10.unk10.get(d.array_index as usize) {
                                         if t.shape_index as usize >= shapes.len() {
                                             error!(
-                                            "Shape index out of bounds for Unk80808246 (table {}, {} shapes, index {})",
-                                            table_hash, shapes.len(), t.shape_index
-                                        );
+                                                "Shape index out of bounds for Unk80808246 (table {}, {} shapes, index {})",
+                                                table_hash, shapes.len(), t.shape_index
+                                            );
+
                                             continue;
                                         }
 
@@ -1674,14 +1675,10 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         && data.translation.y == 0.0
                         && data.translation.z == 0.0
                     {
-                        match unknown_root_resources.entry(u) {
-                            std::collections::hash_map::Entry::Occupied(mut o) => {
-                                *o.get_mut() += 1;
-                            }
-                            std::collections::hash_map::Entry::Vacant(v) => {
-                                v.insert(1);
-                            }
-                        }
+                        unknown_root_resources
+                            .entry(u)
+                            .or_default()
+                            .push(table_hash);
                         debug!("World origin resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table_hash);
                     }
 
@@ -1704,7 +1701,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         warn!("\t- Havok file found in unknown resource type {u:x} {:?} (table file {}, found havok file {})", data.translation, table_hash, tag);
                                     } else {
                                         // We need to go deeper
-                                        if let Some(htag) = contains_havok_references(tag, 3) {
+                                        if let Some(htag) = contains_havok_references(tag, 4) {
                                             warn!("\t- Havok file found in unknown resource type {u:x} {:?} (table file {table_hash}, found in subtag {tag}=>{htag})", data.translation);
                                         }
                                     }

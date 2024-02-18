@@ -215,8 +215,6 @@ impl StaticOverlayModel {
         model: SStaticMeshOverlay,
         renderer: &Renderer,
     ) -> anyhow::Result<StaticOverlayModel> {
-        let _pm = package_manager();
-
         renderer.render_data.load_buffer(model.index_buffer, false);
         renderer.render_data.load_buffer(model.vertex_buffer, false);
         renderer
