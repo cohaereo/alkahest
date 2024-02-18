@@ -87,6 +87,7 @@ fs-err = "2.11.0"
 num = "0.4.1"
 rustc_version = "0.4.0"
 zip-extract = "0.1.3"
+build-time = "0.1.3"
 
 [features]
 default = ["discord_rpc"]
@@ -110,7 +111,6 @@ targets = ["x86_64-pc-windows-gnu"]
 opt-level = 3
 
 [build-dependencies]
-chrono = "0.4.31"
 winres = "0.1.12"
 
 [profile.dev]
