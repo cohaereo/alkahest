@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### Added
+
+- Added the ability to load maps from packages by name (eg. `throneworld` or `dungeon_prophecy`) through the `-p` argument by @cohaereo
+
 ### Fixed
 
 - Fixed the GitHub URL for stable releases

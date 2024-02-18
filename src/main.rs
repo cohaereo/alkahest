@@ -144,7 +144,12 @@ struct Args {
     /// Package to use
     package: String,
 
-    /// Map hash to load. Ignores package argument
+    /// Package prefix to load maps from, ignores package argument.
+    /// For example: `throneworld`, `edz`
+    #[arg(short, long)]
+    package_name: Option<String>,
+
+    /// Map hash to load. Ignores package argument(s)
     #[arg(short, long)]
     map: Option<String>,
 
@@ -331,6 +336,18 @@ pub async fn main() -> anyhow::Result<()> {
         }
 
         vec![hash]
+    } else if let Some(package_name) = &args.package_name {
+        let filter = format!("w64_{package_name}_");
+        package_manager()
+            .get_all_by_reference(u32::from_be(0x1E898080))
+            .into_iter()
+            .filter(|(tag, _)| {
+                package_manager().package_paths[&tag.pkg_id()]
+                    .to_lowercase()
+                    .contains(&filter)
+            })
+            .map(|(tag, _entry)| tag)
+            .collect_vec()
     } else {
         package
             .get_all_by_reference(u32::from_be(0x1E898080))
