@@ -112,4 +112,9 @@ impl LoadIndicator {
             active: true,
         }
     }
+
+    pub fn restart(&mut self) {
+        self.start_time = Instant::now();
+        self.active = true;
+    }
 }

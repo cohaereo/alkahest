@@ -975,13 +975,23 @@ pub async fn main() -> anyhow::Result<()> {
                             {
                                 let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
                                 let mut update_check = resources.get_mut::<UpdateCheck>().unwrap();
-                                loads
-                                    .entry("update_check".to_string())
-                                    .or_insert_with(|| LoadIndicator::new("Checking for updates"))
-                                    .active = update_check
-                                    .0
-                                    .as_ref()
-                                    .map_or(false, |v| v.poll().is_pending());
+                                {
+                                    let check_running = update_check
+                                        .0
+                                        .as_ref()
+                                        .map_or(false, |v| v.poll().is_pending());
+
+                                    let mut indicator =
+                                        loads.entry("update_check".to_string()).or_insert_with(
+                                            || LoadIndicator::new("Checking for updates"),
+                                        );
+
+                                    if indicator.active != check_running {
+                                        indicator.restart();
+                                    }
+
+                                    indicator.active = check_running;
+                                }
 
                                 if update_check
                                     .0
