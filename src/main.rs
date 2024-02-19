@@ -170,6 +170,31 @@ pub async fn main() -> anyhow::Result<()> {
 
     print_banner();
 
+    config::load();
+
+    let icon_data = Png::from_bytes(include_bytes!("../assets/icon.png"))?;
+    let icon = winit::window::Icon::from_rgba(
+        icon_data.data.to_vec(),
+        icon_data.dimensions[0] as u32,
+        icon_data.dimensions[1] as u32,
+    )
+    .unwrap();
+
+    let event_loop = EventLoop::new();
+    let window = winit::window::WindowBuilder::new()
+        .with_title("Alkahest")
+        .with_inner_size(config::with(|c| {
+            PhysicalSize::new(c.window.width, c.window.height)
+        }))
+        .with_position(config::with(|c| {
+            PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
+        }))
+        .with_maximized(config!().window.maximised)
+        .with_window_icon(Some(icon.clone()))
+        .with_taskbar_icon(Some(icon))
+        .build(&event_loop)?;
+    let window = Arc::new(window);
+
     // #[cfg(not(debug_assertions))]
     // std::env::set_var("RUST_BACKTRACE", "0");
 
@@ -181,14 +206,6 @@ pub async fn main() -> anyhow::Result<()> {
         .thread_name(|i| format!("rayon-worker-{i}"))
         .build_global()
         .unwrap();
-
-    if let Ok(c) = std::fs::read_to_string(exe_relative_path("config.yml")) {
-        let config = serde_yaml::from_str(&c).context("Failed to parse config")?;
-        config::with_mut(|c| *c = config);
-    } else {
-        info!("No config found, creating a new one");
-        config::persist();
-    }
 
     let tracy_layer = if cfg!(feature = "tracy") {
         Some(tracing_tracy::TracyLayer::new())
@@ -289,29 +306,6 @@ pub async fn main() -> anyhow::Result<()> {
     // return Ok(());
 
     info!("Loaded {} global strings", stringmap.len());
-
-    let icon_data = Png::from_bytes(include_bytes!("../assets/icon.png"))?;
-    let icon = winit::window::Icon::from_rgba(
-        icon_data.data.to_vec(),
-        icon_data.dimensions[0] as u32,
-        icon_data.dimensions[1] as u32,
-    )
-    .unwrap();
-
-    let event_loop = EventLoop::new();
-    let window = winit::window::WindowBuilder::new()
-        .with_title("Alkahest")
-        .with_inner_size(config::with(|c| {
-            PhysicalSize::new(c.window.width, c.window.height)
-        }))
-        .with_position(config::with(|c| {
-            PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
-        }))
-        .with_maximized(config!().window.maximised)
-        .with_window_icon(Some(icon.clone()))
-        .with_taskbar_icon(Some(icon))
-        .build(&event_loop)?;
-    let window = Arc::new(window);
 
     let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
 

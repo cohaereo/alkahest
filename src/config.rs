@@ -22,6 +22,22 @@ pub fn persist() {
     }
 }
 
+pub fn load() {
+    if let Ok(c) = std::fs::read_to_string(exe_relative_path("config.yml")) {
+        match serde_yaml::from_str(&c) {
+            Ok(config) => {
+                with_mut(|c| *c = config);
+            }
+            Err(e) => {
+                error!("Failed to parse config: {e}");
+            }
+        }
+    } else {
+        info!("No config found, creating a new one");
+        persist();
+    }
+}
+
 pub fn with<F, T>(f: F) -> T
 where
     F: FnOnce(&Config) -> T,
