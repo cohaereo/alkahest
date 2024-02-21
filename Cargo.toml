@@ -6,6 +6,7 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 
 [dependencies]
 alkahest-data = { path = "./crates/alkahest-data" }
+alkahest-panic-handler = { path = "./crates/alkahest-panic-handler" }
 alkahest-pm = { path = "./crates/alkahest-pm" }
 tiger-parse = { version = "0.1.1", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
@@ -45,7 +46,6 @@ bitfield-struct = "0.5.3"
 bitflags = "2.3.3"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.4.4", features = ["derive"] }
-color-eyre = "0.6.2"
 const_format = "0.2.31"
 crossbeam = "0.8.2"
 egui = { version = "0.24.1", features = ["persistence"] }
@@ -62,7 +62,6 @@ parking_lot = "0.12.1"
 png = "0.17.10"
 poll-promise = { version = "0.3.0", features = ["tokio"] }
 rayon = "1.7.0"
-regex = "1.9.5"
 ringbuffer = "0.14.2"
 ron = "0.8.1"
 reqwest = { version = "0.11.24", features = ["json"] }

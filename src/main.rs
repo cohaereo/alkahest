@@ -107,7 +107,6 @@ use crate::{
     updater::UpdateCheck,
     util::{
         consts::print_banner,
-        exe_relative_path,
         image::Png,
         text::{invert_color, keep_color_bright, prettify_distance},
         FilterDebugLockTarget, RwLock,
@@ -128,7 +127,6 @@ mod map_resources;
 mod mapload_temporary;
 mod overlays;
 mod packages;
-mod panic_handler;
 mod render;
 mod resources;
 mod technique;
@@ -166,7 +164,7 @@ struct Args {
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()> {
     util::fix_windows_command_prompt();
-    panic_handler::install_hook();
+    alkahest_panic_handler::install_hook();
 
     print_banner();
 
