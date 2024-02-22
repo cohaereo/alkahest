@@ -333,13 +333,18 @@ impl Overlay for RenderSettingsOverlay {
             let mut maps = resources.get_mut::<MapDataList>().unwrap();
             if !maps.maps.is_empty() {
                 let mut current_map = maps.current_map;
-                let old_map_index = current_map;
-                let map_changed = egui::ComboBox::from_label("Map")
-                    .width(192.0)
-                    .show_index(ui, &mut current_map, maps.maps.len(), |i| {
-                        &maps.maps[i].2.name
-                    })
-                    .changed();
+                let old_map_index = if maps.updated {
+                    maps.previous_map
+                } else {
+                    current_map
+                };
+                let map_changed = maps.updated
+                    || egui::ComboBox::from_label("Map")
+                        .width(192.0)
+                        .show_index(ui, &mut current_map, maps.maps.len(), |i| {
+                            &maps.maps[i].2.name
+                        })
+                        .changed();
                 ui.label(format!("Map hash: {}", maps.maps[maps.current_map].0));
                 ui.label(format!(
                     "Map hash64: {}",
@@ -350,6 +355,7 @@ impl Overlay for RenderSettingsOverlay {
 
                 // Move the Globals from the old scene to the new scene
                 if map_changed {
+                    maps.previous_map = old_map_index;
                     // We have learned the power to Take worlds
                     let mut old_scene = take(&mut maps.map_mut(old_map_index).unwrap().scene);
 
@@ -380,6 +386,8 @@ impl Overlay for RenderSettingsOverlay {
                 if map_changed {
                     discord::set_status_from_mapdata(&maps.maps[maps.current_map].2);
                 }
+
+                maps.updated = false;
 
                 let groups_in_current_scene: IntSet<u32> = maps
                     .current_map()

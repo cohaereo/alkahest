@@ -64,6 +64,7 @@ macro_rules! config {
 pub struct Config {
     pub window: WindowConfig,
     pub resources: ResourceConfig,
+    pub render_settings: RenderConfig,
 
     pub update_channel: Option<UpdateChannel>,
 }
@@ -86,6 +87,12 @@ impl Default for ResourceConfig {
             filters: Default::default(),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct RenderConfig {
+    pub draw_crosshair: bool,
 }
 
 #[derive(Serialize, Deserialize)]
