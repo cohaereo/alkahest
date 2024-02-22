@@ -91,7 +91,7 @@ impl GBuffer {
             .context("Light_Specular")?,
             light_ibl_specular: RenderTarget::create(
                 size,
-                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                DxgiFormat::R16G16B16A16_FLOAT,
                 dcs.clone(),
                 "Specular_IBL",
             )
@@ -225,6 +225,13 @@ impl RenderTarget {
         dcs: Arc<DeviceContextSwapchain>,
         name: &str,
     ) -> anyhow::Result<Self> {
+        let size = if size.0 == 0 || size.1 == 0 {
+            warn!("Zero size render target requested for {name}, using 1x1");
+            (1, 1)
+        } else {
+            size
+        };
+
         unsafe {
             let texture = dcs
                 .device
@@ -404,6 +411,13 @@ pub struct DepthState {
 
 impl DepthState {
     pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
+        let size = if size.0 == 0 || size.1 == 0 {
+            warn!("Zero size depth state requested, using 1x1");
+            (1, 1)
+        } else {
+            size
+        };
+
         let texture = unsafe {
             dcs.device
                 .CreateTexture2D(

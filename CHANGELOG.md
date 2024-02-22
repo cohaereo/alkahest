@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Copy missing sections in nightly changelog diffs by @cohaereo
 - Fixed build date/timestamp generation by @cohaereo
 - Reset update check indicator timer when starting a new check by @cohaereo
+- Fixed a crash when creating render targets with a zero size by @cohaereo
 
 ## 0.4.0 - 2024-02-18
 

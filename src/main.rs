@@ -973,7 +973,7 @@ pub async fn main() -> anyhow::Result<()> {
                                         .as_ref()
                                         .map_or(false, |v| v.poll().is_pending());
 
-                                    let mut indicator =
+                                    let indicator =
                                         loads.entry("update_check".to_string()).or_insert_with(
                                             || LoadIndicator::new("Checking for updates"),
                                         );
