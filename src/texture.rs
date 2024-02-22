@@ -38,14 +38,11 @@ impl Texture {
         load_full_mip: bool,
     ) -> anyhow::Result<(STextureHeader, Vec<u8>)> {
         let texture_header_ref = package_manager()
-            .get_entry(
-                hash.hash32()
-                    .ok_or_else(|| anyhow::anyhow!("Could not find hash {hash:?}"))?,
-            )
+            .get_entry(hash)
             .context("Texture header entry not found")?
             .reference;
 
-        let texture: STextureHeader = package_manager().read_tag_struct(hash.hash32().unwrap())?;
+        let texture: STextureHeader = package_manager().read_tag_struct(hash)?;
         let mut texture_data = if texture.large_buffer.is_some() {
             package_manager()
                 .read_tag(texture.large_buffer)

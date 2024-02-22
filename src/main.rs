@@ -284,25 +284,6 @@ pub async fn main() -> anyhow::Result<()> {
 
     let stringmap = Arc::new(stringmap);
 
-    // for (tag, _) in package_manager().get_all_by_reference(0x8080891e) {
-    //     if let Ok(m) = package_manager().read_tag_binrw::<SBubbleParent>(tag) {
-    //         let map_name = stringmap
-    //             .get(&m.map_name.0)
-    //             .cloned()
-    //             .unwrap_or(format!("[MissingString_{:08x}]", m.map_name.0));
-
-    //         let pkg_name = PathBuf::from_str(&package_manager().package_paths[&tag.pkg_id()])?
-    //             .file_stem()
-    //             .unwrap()
-    //             .to_string_lossy()
-    //             .to_string();
-
-    //         println!("{pkg_name} - {tag} ('{map_name}')");
-    //     }
-    // }
-
-    // return Ok(());
-
     info!("Loaded {} global strings", stringmap.len());
 
     let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
@@ -363,7 +344,7 @@ pub async fn main() -> anyhow::Result<()> {
 
             for u in &activity.unk50 {
                 for m in &u.map_references {
-                    match m.hash32() {
+                    match m.hash32_checked() {
                         Some(m) => {
                             maps.insert(m);
                         }

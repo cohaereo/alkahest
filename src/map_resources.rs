@@ -56,7 +56,7 @@ impl MapResource {
     pub fn debug_string(&self) -> String {
         match self {
             MapResource::Entity(hash, world_id) => {
-                let hash32 = if let Some(h32) = hash.hash32() {
+                let hash32 = if let Some(h32) = hash.hash32_checked() {
                     format!(" ({h32})")
                 } else {
                     String::new()
@@ -67,7 +67,7 @@ impl MapResource {
                 format!("Decal (mat {material})")
             }
             MapResource::Unknown(u, world_id, entity, res_ptr, table_tag) => {
-                let hash32 = if let Some(h32) = entity.hash32() {
+                let hash32 = if let Some(h32) = entity.hash32_checked() {
                     format!("\nEntity {h32}")
                 } else {
                     String::new()

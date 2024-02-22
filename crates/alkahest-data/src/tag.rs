@@ -60,7 +60,13 @@ impl ExtendedHash {
     }
 
     /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
-    pub fn hash32(&self) -> Option<TagHash> {
+    /// Falls back to TagHash::NONE if not found
+    pub fn hash32(&self) -> TagHash {
+        self.hash32_checked().unwrap_or(TagHash::NONE)
+    }
+
+    /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
+    pub fn hash32_checked(&self) -> Option<TagHash> {
         match self {
             ExtendedHash::Hash32(v) => Some(*v),
             ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
@@ -97,6 +103,12 @@ impl Display for ExtendedHash {
 impl std::hash::Hash for ExtendedHash {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.key());
+    }
+}
+
+impl Into<TagHash> for ExtendedHash {
+    fn into(self) -> TagHash {
+        self.hash32()
     }
 }
 

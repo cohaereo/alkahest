@@ -82,7 +82,7 @@ pub async fn load_maps(
         let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
         for u1 in &activity.unk50 {
             for map in &u1.map_references {
-                let map32 = match map.hash32() {
+                let map32 = match map.hash32_checked() {
                     Some(m) => m,
                     None => {
                         error!("Couldn't translate map hash64 {map:?}");
@@ -101,13 +101,11 @@ pub async fn load_maps(
         }
 
         if load_ambient_activity {
-            match package_manager().read_tag_struct::<SActivity>(
-                activity.ambient_activity.hash32().unwrap_or_default(),
-            ) {
+            match package_manager().read_tag_struct::<SActivity>(activity.ambient_activity) {
                 Ok(activity) => {
                     for u1 in &activity.unk50 {
                         for map in &u1.map_references {
-                            let map32 = match map.hash32() {
+                            let map32 = match map.hash32_checked() {
                                 Some(m) => m,
                                 None => {
                                     error!("Couldn't translate map hash64 {map:?}");
@@ -362,80 +360,79 @@ pub async fn load_maps(
     let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
     for te in &to_load_entities {
         let renderer = renderer.read();
-        if let Some(nh) = te.hash32() {
-            let _span = debug_span!("Load entity", hash = %nh).entered();
-            let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
-                error!("Could not load entity {nh} ({te:?})");
-                continue;
-            };
-            debug!("Loading entity {nh}");
-            for e in &header.entity_resources {
-                match e.unk0.unk10.resource_type {
-                    0x80806d8a => {
-                        debug!(
-                            "\t- EntityModel {:08x}/{}",
-                            e.unk0.unk18.resource_type.to_be(),
-                            e.unk0.unk10.resource_type.to_be(),
-                        );
-                        let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
-                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-                        let model: Tag<SEntityModel> =
-                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
-                        let entity_material_map: Vec<Unk808072c5> =
-                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-                        cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                        let materials: Vec<TagHash> =
-                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+        let nh = te.hash32();
+        let _span = debug_span!("Load entity", hash = %nh).entered();
+        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+            error!("Could not load entity {nh} ({te:?})");
+            continue;
+        };
+        debug!("Loading entity {nh}");
+        for e in &header.entity_resources {
+            match e.unk0.unk10.resource_type {
+                0x80806d8a => {
+                    debug!(
+                        "\t- EntityModel {:08x}/{}",
+                        e.unk0.unk18.resource_type.to_be(),
+                        e.unk0.unk10.resource_type.to_be(),
+                    );
+                    let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
+                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
+                    let model: Tag<SEntityModel> =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
+                    let entity_material_map: Vec<Unk808072c5> =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                    cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
+                    let materials: Vec<TagHash> =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                        for m in &materials {
-                            if let Ok(mat) = package_manager().read_tag_struct(*m) {
-                                material_map.insert(*m, Technique::load(&renderer, mat, *m, true));
-                            }
+                    for m in &materials {
+                        if let Ok(mat) = package_manager().read_tag_struct(*m) {
+                            material_map.insert(*m, Technique::load(&renderer, mat, *m, true));
                         }
+                    }
 
-                        for m in &model.meshes {
-                            for p in &m.parts {
-                                if p.material.is_some() {
-                                    material_map.insert(
+                    for m in &model.meshes {
+                        for p in &m.parts {
+                            if p.material.is_some() {
+                                material_map.insert(
+                                    p.material,
+                                    Technique::load(
+                                        &renderer,
+                                        package_manager().read_tag_struct(p.material)?,
                                         p.material,
-                                        Technique::load(
-                                            &renderer,
-                                            package_manager().read_tag_struct(p.material)?,
-                                            p.material,
-                                            true,
-                                        ),
-                                    );
-                                }
+                                        true,
+                                    ),
+                                );
                             }
                         }
-
-                        match debug_span!("load EntityRenderer").in_scope(|| {
-                            EntityRenderer::load(
-                                model.0,
-                                entity_material_map.to_vec(),
-                                materials.to_vec(),
-                                &renderer,
-                            )
-                        }) {
-                            Ok(er) => {
-                                entity_renderers.insert(te.key(), er);
-                            }
-                            Err(e) => {
-                                error!("Failed to load entity {te:?}: {e}");
-                            }
-                        }
-
-                        // println!(" - EntityModel {model:?}");
                     }
-                    u => {
-                        debug!(
-                            "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-                            u.to_be(),
-                            e.unk0.unk10.resource_type.to_be(),
-                            e.unk0.hash()
+
+                    match debug_span!("load EntityRenderer").in_scope(|| {
+                        EntityRenderer::load(
+                            model.0,
+                            entity_material_map.to_vec(),
+                            materials.to_vec(),
+                            &renderer,
                         )
+                    }) {
+                        Ok(er) => {
+                            entity_renderers.insert(te.key(), er);
+                        }
+                        Err(e) => {
+                            error!("Failed to load entity {te:?}: {e}");
+                        }
                     }
+
+                    // println!(" - EntityModel {model:?}");
+                }
+                u => {
+                    debug!(
+                        "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                        u.to_be(),
+                        e.unk0.unk10.resource_type.to_be(),
+                        e.unk0.hash()
+                    )
                 }
             }
         }
@@ -664,10 +661,7 @@ pub async fn load_maps(
     }
 
     for s in to_load_samplers {
-        let sampler_header_ref = package_manager()
-            .get_entry(s.hash32().unwrap())
-            .unwrap()
-            .reference;
+        let sampler_header_ref = package_manager().get_entry(s).unwrap().reference;
         let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
 
         let sampler = unsafe { dcs.device.CreateSamplerState(sampler_data.as_ptr() as _) };
@@ -997,9 +991,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
-                    let header = package_manager()
-                        .read_tag_struct::<Unk80809802>(tag.hash32().unwrap())
-                        .ok();
+                    let header = package_manager().read_tag_struct::<Unk80809802>(tag).ok();
 
                     ents.push(scene.spawn((
                         transform,
@@ -1800,15 +1792,13 @@ fn contains_havok_references(this_tag: TagHash, max_depth: usize) -> Option<TagH
 }
 
 fn is_physics_entity(entity: ExtendedHash) -> bool {
-    if let Some(nh) = entity.hash32() {
-        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
-            return false;
-        };
+    let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(entity) else {
+        return false;
+    };
 
-        for e in &header.entity_resources {
-            if e.unk0.unk10.resource_type == 0x8080916a {
-                return true;
-            }
+    for e in &header.entity_resources {
+        if e.unk0.unk10.resource_type == 0x8080916a {
+            return true;
         }
     }
 

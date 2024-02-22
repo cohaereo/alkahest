@@ -9,7 +9,6 @@ use alkahest_data::{
     technique::STechnique,
     ExtendedHash,
 };
-use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
@@ -414,8 +413,7 @@ fn execute_command(
                         )
                         .unwrap();
 
-                        let e =
-                            scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
+                        let e = scene.spawn((transform, EntityModel(er, scope, tag.hash32())));
                         insert_tag(scene, e, EntityTag::User);
 
                         info!("Entity spawned");
@@ -482,8 +480,7 @@ fn execute_command(
                         )
                         .unwrap();
 
-                        let e =
-                            scene.spawn((transform, EntityModel(er, scope, tag.hash32().unwrap())));
+                        let e = scene.spawn((transform, EntityModel(er, scope, tag.hash32())));
                         insert_tag(scene, e, EntityTag::User);
 
                         info!("Entity spawned");
@@ -528,14 +525,7 @@ fn execute_command(
             }
 
             let tag = match parse_extended_hash(args[0]) {
-                Ok(o) => {
-                    if let Some(hash32) = o.hash32() {
-                        hash32
-                    } else {
-                        error!("Invalid tag");
-                        return;
-                    }
-                }
+                Ok(o) => o.hash32(),
                 Err(e) => {
                     error!("Failed to parse tag: {e}");
                     return;
@@ -607,8 +597,7 @@ fn load_entity_model(
     material_map: Vec<Unk808072c5>,
     materials: Vec<TagHash>,
 ) -> anyhow::Result<EntityRenderer> {
-    let model: SEntityModel =
-        package_manager().read_tag_struct(t.hash32().context("Couldnt lookup hash64")?)?;
+    let model: SEntityModel = package_manager().read_tag_struct(t)?;
 
     let mut part_materials = vec![];
     for m in &model.meshes {
@@ -629,10 +618,7 @@ fn load_entity_model(
 
         for stage in technique.all_stages() {
             for s in stage.shader.samplers.iter() {
-                let sampler_header_ref = package_manager()
-                    .get_entry(s.hash32().unwrap())
-                    .unwrap()
-                    .reference;
+                let sampler_header_ref = package_manager().get_entry(s.hash32()).unwrap().reference;
                 let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
 
                 let sampler = unsafe {
@@ -667,36 +653,35 @@ fn load_entity_model(
 }
 
 fn load_entity(t: ExtendedHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
-    if let Some(nh) = t.hash32() {
-        let _span = debug_span!("Load entity", hash = %nh).entered();
-        let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
-            anyhow::bail!("Could not load entity {nh} ({t:?})");
-        };
-        debug!("Loading entity {nh}");
-        for e in &header.entity_resources {
-            if e.unk0.unk10.resource_type == 0x80806d8a {
-                debug!(
-                    "\t- EntityModel {:08x}/{}",
-                    e.unk0.unk18.resource_type.to_be(),
-                    e.unk0.unk10.resource_type.to_be(),
-                );
-                let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
-                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-                let model: TagHash = cur.read_le()?;
-                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
-                let entity_material_map: Vec<Unk808072c5> =
-                    TigerReadable::read_ds_endian(&mut cur, tiger_parse::Endian::Little)?;
-                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                let materials: Vec<TagHash> =
-                    TigerReadable::read_ds_endian(&mut cur, tiger_parse::Endian::Little)?;
+    let nh = t.hash32();
+    let _span = debug_span!("Load entity", hash = %nh).entered();
+    let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
+        anyhow::bail!("Could not load entity {nh} ({t:?})");
+    };
+    debug!("Loading entity {nh}");
+    for e in &header.entity_resources {
+        if e.unk0.unk10.resource_type == 0x80806d8a {
+            debug!(
+                "\t- EntityModel {:08x}/{}",
+                e.unk0.unk18.resource_type.to_be(),
+                e.unk0.unk10.resource_type.to_be(),
+            );
+            let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
+            cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
+            let model: TagHash = cur.read_le()?;
+            cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
+            let entity_material_map: Vec<Unk808072c5> =
+                TigerReadable::read_ds_endian(&mut cur, tiger_parse::Endian::Little)?;
+            cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
+            let materials: Vec<TagHash> =
+                TigerReadable::read_ds_endian(&mut cur, tiger_parse::Endian::Little)?;
 
-                return load_entity_model(
-                    ExtendedHash::Hash32(model),
-                    renderer,
-                    entity_material_map.to_vec(),
-                    materials.to_vec(),
-                );
-            }
+            return load_entity_model(
+                ExtendedHash::Hash32(model),
+                renderer,
+                entity_material_map.to_vec(),
+                materials.to_vec(),
+            );
         }
     }
 
