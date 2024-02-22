@@ -418,12 +418,16 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(InputState::default());
     resources.insert(MapDataList {
         current_map: 0,
+        previous_map: 0,
+        updated: false,
         maps: vec![],
     });
     resources.insert(ScopeOverrides::default());
     resources.insert(DebugShapes::default());
     resources.insert(EnabledShaderOverrides::default());
-    resources.insert(RenderSettings::default());
+    let mut render_settings = RenderSettings::default();
+    render_settings.draw_crosshair = config::with(|cfg| cfg.render_settings.draw_crosshair);
+    resources.insert(render_settings);
     resources.insert(ShadowMapsResource::create(dcs.clone()));
     resources.insert(CurrentCubemap(None, None));
     resources.insert(ActivityGroupFilter::default());
@@ -1098,6 +1102,9 @@ pub async fn main() -> anyhow::Result<()> {
                     c.resources.map_resource_label_background = gdb.map_resource_label_background;
                     c.resources.resource_distance_limit = gdb.map_resource_distance_limit_enabled;
                     c.resources.filters = resource_filters;
+
+                    let render_settings = resources.get_mut::<RenderSettings>().unwrap();
+                    c.render_settings.draw_crosshair = render_settings.draw_crosshair;
                 });
                 config::persist();
             }
