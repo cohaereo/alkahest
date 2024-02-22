@@ -22,6 +22,9 @@ pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
 pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::G);
 
+pub const SHORTCUT_MAP_SWAP: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::I);
+
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);

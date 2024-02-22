@@ -74,7 +74,7 @@ use crate::{
         resolve_aabb,
         resources::SelectedEntity,
     },
-    hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE},
+    hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE, SHORTCUT_MAP_SWAP},
     input::InputState,
     map::MapDataList,
     map_resources::MapResource,
@@ -702,6 +702,15 @@ pub async fn main() -> anyhow::Result<()> {
                         if d.is_finite() {
                             camera.focus(pos, 10.0);
                         }
+                    } else if gui
+                        .egui
+                        .input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_SWAP))
+                    {
+                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+
+                        (maps.current_map, maps.previous_map) =
+                            (maps.previous_map, maps.current_map);
+                        maps.updated = maps.previous_map != maps.current_map;
                     }
                 }
                 last_frame = Instant::now();

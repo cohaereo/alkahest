@@ -17,7 +17,9 @@ pub struct SimpleLight {
 }
 
 pub struct MapDataList {
-    pub current_map: usize, // TODO(cohae): Shouldn't be here
+    pub current_map: usize,  // TODO(cohae): Shouldn't be here
+    pub previous_map: usize, // TODO(froggy): I guess this too then
+    pub updated: bool,
     pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
 }
 
