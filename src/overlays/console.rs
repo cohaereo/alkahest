@@ -144,7 +144,7 @@ impl Overlay for ConsoleOverlay {
                         .stick_to_bottom(true)
                         .show_rows(ui, row_height, c.len(), |ui, row_range| {
                             for row in row_range {
-                                let event = &c[row as isize];
+                                let event = &c[row];
                                 let level_color = match event.level {
                                     Level::TRACE => [0.8, 0.4, 0.8],
                                     Level::DEBUG => [0.35, 0.35, 1.0],

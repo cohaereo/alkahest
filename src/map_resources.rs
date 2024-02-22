@@ -6,7 +6,7 @@ use alkahest_data::{
 use destiny_pkg::TagHash;
 use glam::Vec3;
 use itertools::Itertools;
-use strum::{EnumCount, EnumIs, EnumVariantNames};
+use strum::{EnumCount, EnumIs, VariantNames};
 use tiger_parse::ResourcePointer;
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
     render::debug::{CustomDebugShape, DebugDrawFlags, DebugShapes},
 };
 
-#[derive(Clone, EnumVariantNames, EnumCount, EnumIs)]
+#[derive(Clone, VariantNames, EnumCount, EnumIs)]
 #[repr(u8)]
 #[strum(serialize_all = "snake_case")]
 pub enum MapResource {
