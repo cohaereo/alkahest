@@ -405,10 +405,11 @@ impl TfxBytecodeInterpreter {
                 7 => Ok(*renderer.light_mul.read()),
 
                 _ => {
-                    anyhow::bail!(
-                        "get_extern_float: Unsupported extern {extern_:?}+{offset} (0x{:0X})",
-                        offset * 4
-                    )
+                    Ok(1.0)
+                    // anyhow::bail!(
+                    //     "get_extern_float: Unsupported extern {extern_:?}+{offset} (0x{:0X})",
+                    //     offset * 4
+                    // )
                 }
             },
             TfxExtern::DeferredLight => match offset {
@@ -416,18 +417,20 @@ impl TfxBytecodeInterpreter {
                 8 => Ok(1.0),
                 68 => Ok(1.0),
                 72 => Ok(1.0),
-                u => {
-                    anyhow::bail!(
-                        "get_extern_float: Unsupported deferred light extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Ok(1.0)
+                    // anyhow::bail!(
+                    //     "get_extern_float: Unsupported deferred light extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
-            u => {
-                anyhow::bail!(
-                    "get_extern_float: Unsupported extern {u:?}+{offset} (0x{:0X})",
-                    offset * 4
-                )
+            _u => {
+                Ok(1.0)
+                // anyhow::bail!(
+                //     "get_extern_float: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                //     offset * 4
+                // )
             }
         }
     }
@@ -443,29 +446,32 @@ impl TfxBytecodeInterpreter {
                 // 26.x is something to do with alpha clipping. We keep it disabled, as enabling it causes a fuzzy alpha clip pattern where we dont want it
                 26 => Vec4::ZERO,
                 27 => Vec4::ONE,
-                u => {
-                    anyhow::bail!(
-                        "get_extern_vec4: Unsupported frame extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Vec4::ZERO
+                    // anyhow::bail!(
+                    //     "get_extern_vec4: Unsupported frame extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
             TfxExtern::Deferred => match offset {
                 0 => Vec4::splat(1.0),
-                u => {
-                    anyhow::bail!(
-                        "get_extern_vec4: Unsupported deferred extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Vec4::ZERO
+                    // anyhow::bail!(
+                    //     "get_extern_vec4: Unsupported deferred extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
             TfxExtern::Atmosphere => match offset {
                 7 => Vec4::splat(1.0),
-                u => {
-                    anyhow::bail!(
-                        "get_extern_vec4: Unsupported atmosphere extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Vec4::ZERO
+                    // anyhow::bail!(
+                    //     "get_extern_vec4: Unsupported atmosphere extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
             TfxExtern::DeferredLight => match offset {
@@ -475,18 +481,20 @@ impl TfxBytecodeInterpreter {
                 14 => Vec4::splat(1.0),
                 15 => Vec4::splat(1.0),
                 16 => Vec4::splat(1.0),
-                u => {
-                    anyhow::bail!(
-                        "get_extern_vec4: Unsupported deferred light extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Vec4::ZERO
+                    // anyhow::bail!(
+                    //     "get_extern_vec4: Unsupported deferred light extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
-            u => {
-                anyhow::bail!(
-                    "get_extern_vec4: Unsupported extern {u:?}+{offset} (0x{:0X})",
-                    offset * 16
-                )
+            _u => {
+                Vec4::ZERO
+                // anyhow::bail!(
+                //     "get_extern_vec4: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                //     offset * 16
+                // )
             }
         })
     }
@@ -507,40 +515,44 @@ impl TfxBytecodeInterpreter {
 
                     viewproj * (light_transform.to_mat4() * slight_scale)
                 }
-                u => {
-                    anyhow::bail!(
-                        "get_extern_mat4: Unsupported simple geometry extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Mat4::IDENTITY
+                    // anyhow::bail!(
+                    //     "get_extern_mat4: Unsupported simple geometry extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
             TfxExtern::DeferredLight => match offset {
                 // TODO(cohae): Used for transforming projective textures
                 4 => Mat4::from_scale(Vec3::splat(0.15)),
                 8 => renderer.light_transform.read().to_mat4(),
-                u => {
-                    anyhow::bail!(
-                        "get_extern_mat4: Unsupported deferred light extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Mat4::IDENTITY
+                    // anyhow::bail!(
+                    //     "get_extern_mat4: Unsupported deferred light extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
             TfxExtern::View => match offset {
                 0 => Mat4::IDENTITY,
                 16 => Mat4::IDENTITY,
                 40 => *renderer.camera_svp_inv.read(),
-                u => {
-                    anyhow::bail!(
-                        "get_extern_mat4: Unsupported view extern offset {u} (0x{:0X})",
-                        u * 16
-                    )
+                _u => {
+                    Mat4::IDENTITY
+                    // anyhow::bail!(
+                    //     "get_extern_mat4: Unsupported view extern offset {u} (0x{:0X})",
+                    //     u * 16
+                    // )
                 }
             },
-            u => {
-                anyhow::bail!(
-                    "get_extern_mat4: Unsupported extern {u:?}+{offset} (0x{:0X})",
-                    offset * 16
-                )
+            _u => {
+                Mat4::IDENTITY
+                // anyhow::bail!(
+                //     "get_extern_mat4: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                //     offset * 16
+                // )
             }
         })
     }
@@ -563,11 +575,12 @@ impl TfxBytecodeInterpreter {
                         }
                     }
 
-                    u => {
-                        anyhow::bail!(
-                            "get_extern_u64: Unsupported frame extern offset {u} (0x{:0X})",
-                            u * 8
-                        )
+                    _u => {
+                        0
+                        // anyhow::bail!(
+                        //     "get_extern_u64: Unsupported frame extern offset {u} (0x{:0X})",
+                        //     u * 8
+                        // )
                     }
                 },
                 TfxExtern::Deferred => match offset {
@@ -579,57 +592,63 @@ impl TfxBytecodeInterpreter {
                     13 => transmute(renderer.gbuffer.light_specular.view.clone()),
                     14 => transmute(renderer.gbuffer.light_ibl_specular.view.clone()),
 
-                    u => {
-                        anyhow::bail!(
-                            "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
-                            u * 8
-                        )
+                    _u => {
+                        0
+                        // anyhow::bail!(
+                        //     "get_extern_u64: Unsupported deferred extern offset {u} (0x{:0X})",
+                        //     u * 8
+                        // )
                     }
                 },
                 TfxExtern::Decal => match offset {
                     1 => transmute(renderer.gbuffer.rt1_clone.view.clone()),
-                    u => {
-                        anyhow::bail!(
-                            "get_extern_u64: Unsupported decal extern offset {u} (0x{:0X})",
-                            u * 8
-                        )
+                    _u => {
+                        0
+                        // anyhow::bail!(
+                        //     "get_extern_u64: Unsupported decal extern offset {u} (0x{:0X})",
+                        //     u * 8
+                        // )
                     }
                 },
                 TfxExtern::Atmosphere => match offset {
                     11 => transmute(render_data.debug_textures[1].view.clone()),
                     28 => transmute(render_data.blend_texture.view.clone()),
                     // 28 => transmute(render_data.debug_textures[2].view.clone()),
-                    u => {
-                        anyhow::bail!(
-                            "get_extern_u64: Unsupported atmosphere extern offset {u} (0x{:0X})",
-                            u * 8
-                        )
+                    _u => {
+                        0
+                        // anyhow::bail!(
+                        //     "get_extern_u64: Unsupported atmosphere extern offset {u} (0x{:0X})",
+                        //     u * 8
+                        // )
                     }
                 },
                 TfxExtern::WaterDisplacement => match offset {
                     0 => transmute(render_data.debug_textures[0].view.clone()),
-                    u => {
-                        anyhow::bail!(
-                            "get_extern_u64: Unsupported water displacement extern offset {u} (0x{:0X})",
-                            u * 8
-                        )
+                    _u => {
+                        0
+                        // anyhow::bail!(
+                        //     "get_extern_u64: Unsupported water displacement extern offset {u} (0x{:0X})",
+                        //     u * 8
+                        // )
                     }
                 },
                 TfxExtern::ShadowMask => match offset {
                     // 1 => transmute(render_data.debug_textures[7].view.clone()),
                     1 => transmute(render_data.black.view.clone()),
-                    u => {
-                        anyhow::bail!(
-                            "get_extern_u64: Unsupported shadow mask extern offset {u} (0x{:0X})",
-                            u * 8
-                        )
+                    _u => {
+                        0
+                        // anyhow::bail!(
+                        //     "get_extern_u64: Unsupported shadow mask extern offset {u} (0x{:0X})",
+                        //     u * 8
+                        // )
                     }
                 },
-                u => {
-                    anyhow::bail!(
-                        "get_extern_u64: Unsupported extern {u:?}+{offset} (0x{:0X})",
-                        offset * 8
-                    )
+                _u => {
+                    0
+                    // anyhow::bail!(
+                    //     "get_extern_u64: Unsupported extern {u:?}+{offset} (0x{:0X})",
+                    //     offset * 8
+                    // )
                 }
             })
         }

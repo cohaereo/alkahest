@@ -804,7 +804,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                             ..(s.instance_start + s.instance_count) as usize]
                                             .to_vec()
                                     } else {
-                                        warn!("Instance group doesn't have enough occlusion bounds, need range {}..{}, but there are only {} bounds", s.instance_start, s.instance_start + s.instance_count, preheader.instances.occlusion_bounds.bounds.len());
+                                        warn!("Instance group {preheader_tag} doesn't have enough occlusion bounds, need range {}..{}, but there are only {} bounds", s.instance_start, s.instance_start + s.instance_count, preheader.instances.occlusion_bounds.bounds.len());
                                         vec![
                                             SObjectOcclusionBounds {
                                                 bb: AABB::INFINITE,
