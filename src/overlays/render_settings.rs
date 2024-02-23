@@ -8,7 +8,7 @@ use const_format::concatcp;
 use glam::{Mat4, Vec2, Vec3, Vec4};
 use hecs::Entity;
 use itertools::Itertools;
-use nohash_hasher::{IntMap, IntSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 use winit::window::Window;
 
 use super::gui::Overlay;
@@ -389,7 +389,7 @@ impl Overlay for RenderSettingsOverlay {
 
                 maps.updated = false;
 
-                let groups_in_current_scene: IntSet<u32> = maps
+                let groups_in_current_scene: FxHashSet<u32> = maps
                     .current_map()
                     .unwrap()
                     .2
@@ -583,5 +583,5 @@ impl Default for RenderSettings {
 
 #[derive(Default)]
 pub struct ActivityGroupFilter {
-    pub filters: IntMap<u32, bool>,
+    pub filters: FxHashMap<u32, bool>,
 }

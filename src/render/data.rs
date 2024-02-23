@@ -3,8 +3,8 @@ use std::sync::Arc;
 use alkahest_data::{dxgi::DxgiFormat, ExtendedHash};
 use crossbeam::channel::Sender;
 use destiny_pkg::TagHash;
-use nohash_hasher::IntMap;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
+use rustc_hash::FxHashMap;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Direct3D11::*;
 
@@ -25,15 +25,15 @@ use crate::{
 };
 
 pub struct RenderData {
-    pub techniques: IntMap<TagHash, Technique>,
-    pub vshaders: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
-    pub pshaders: IntMap<TagHash, (ID3D11PixelShader, Vec<OutputElement>)>,
-    pub textures: IntMap<u64, Texture>,
-    pub samplers: IntMap<u64, ID3D11SamplerState>,
+    pub techniques: FxHashMap<TagHash, Technique>,
+    pub vshaders: FxHashMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)>,
+    pub pshaders: FxHashMap<TagHash, (ID3D11PixelShader, Vec<OutputElement>)>,
+    pub textures: FxHashMap<u64, Texture>,
+    pub samplers: FxHashMap<u64, ID3D11SamplerState>,
 
-    pub vertex_buffers: IntMap<TagHash, (ID3D11Buffer, u32, Option<ID3D11ShaderResourceView>)>,
-    pub index_buffers: IntMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
-    pub input_layouts: IntMap<u64, ID3D11InputLayout>,
+    pub vertex_buffers: FxHashMap<TagHash, (ID3D11Buffer, u32, Option<ID3D11ShaderResourceView>)>,
+    pub index_buffers: FxHashMap<TagHash, (ID3D11Buffer, DxgiFormat)>,
+    pub input_layouts: FxHashMap<u64, ID3D11InputLayout>,
 
     pub fallback_texture: Texture,
     /// All the colors you need

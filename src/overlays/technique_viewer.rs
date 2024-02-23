@@ -5,7 +5,7 @@ use alkahest_data::{
 };
 use egui::{vec2, Image, ImageSource, Sense, TextureId};
 use glam::Vec4;
-use nohash_hasher::IntMap;
+use rustc_hash::FxHashMap;
 use tiger_parse::PackageManagerExt;
 
 use super::{
@@ -119,7 +119,7 @@ pub struct TechniqueShaderViewer {
     stage: TfxShaderStage,
     header: STechniqueShader,
 
-    textures: IntMap<ExtendedHash, (STextureHeader, Texture, TextureId)>,
+    textures: FxHashMap<ExtendedHash, (STextureHeader, Texture, TextureId)>,
 }
 
 impl TechniqueShaderViewer {
@@ -129,7 +129,7 @@ impl TechniqueShaderViewer {
         dcs: &DeviceContextSwapchain,
         gui: &mut GuiContext<'_>,
     ) -> Self {
-        let mut textures = IntMap::default();
+        let mut textures = FxHashMap::default();
 
         for assignment in &header.textures {
             let header: anyhow::Result<STextureHeader> = match assignment.texture {

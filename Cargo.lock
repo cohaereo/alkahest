@@ -134,7 +134,6 @@ dependencies = [
  "itertools 0.12.1",
  "lazy_static",
  "native-dialog",
- "nohash-hasher",
  "num",
  "num-derive",
  "num-traits 0.2.18",
@@ -148,6 +147,7 @@ dependencies = [
  "reqwest",
  "ringbuffer",
  "ron",
+ "rustc-hash",
  "rustc_version",
  "semver",
  "serde",
@@ -1006,8 +1006,8 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.8.0"
-source = "git+https://github.com/v4nguard/destiny-pkg#d178df48fab86df5c544bd7c233c528c37862020"
+version = "0.9.0"
+source = "git+https://github.com/v4nguard/destiny-pkg#6fa3d5453590f64e9b80aa3abfe30f781c399bd2"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -1016,13 +1016,13 @@ dependencies = [
  "clap",
  "clap-num",
  "ddsfile",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "json",
  "lazy_static",
  "libloading",
- "nohash-hasher",
  "parking_lot",
  "rayon",
+ "rustc-hash",
  "serde",
  "serde_json",
  "tracing",
@@ -3333,13 +3333,12 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.1"
-source = "git+https://github.com/v4nguard/tiger-parse#907d808651795805e39c2da5ea68a85264dc0597"
+version = "0.1.2"
+source = "git+https://github.com/v4nguard/tiger-parse#8f03c59ceb93ebfa4b8da3ae49167eddb844e361"
 dependencies = [
  "anyhow",
  "destiny-pkg",
  "glam",
- "thiserror",
  "tiger-parse-derive",
  "tracing",
 ]
@@ -3347,7 +3346,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#907d808651795805e39c2da5ea68a85264dc0597"
+source = "git+https://github.com/v4nguard/tiger-parse#8f03c59ceb93ebfa4b8da3ae49167eddb844e361"
 dependencies = [
  "darling",
  "proc-macro2",

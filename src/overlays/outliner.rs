@@ -1,6 +1,6 @@
 use egui::RichText;
 use itertools::Itertools;
-use nohash_hasher::IntMap;
+use rustc_hash::FxHashMap;
 use strum::IntoEnumIterator;
 
 use super::gui::Overlay;
@@ -21,7 +21,7 @@ use crate::{
 pub struct OutlinerOverlay {
     sort_by_distance: bool,
 
-    filters: IntMap<EntityTag, bool>,
+    filters: FxHashMap<EntityTag, bool>,
 }
 
 impl Default for OutlinerOverlay {
@@ -30,7 +30,7 @@ impl Default for OutlinerOverlay {
             sort_by_distance: false,
             filters: EntityTag::iter()
                 .map(|tag| (tag, false))
-                .collect::<IntMap<_, _>>(),
+                .collect::<FxHashMap<_, _>>(),
         }
     }
 }

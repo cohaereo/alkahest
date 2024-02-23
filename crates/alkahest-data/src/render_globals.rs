@@ -4,7 +4,7 @@ use tiger_parse::{tiger_tag, NullString, Pointer};
 use super::{ExtendedHash, Tag};
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x8080978C)]
 pub struct SRenderGlobals {
     pub file_size: u64,
     pub unk8: Vec<Unk8080870f>,

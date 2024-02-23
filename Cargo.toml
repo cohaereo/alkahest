@@ -8,14 +8,14 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 alkahest-data = { path = "./crates/alkahest-data" }
 alkahest-panic-handler = { path = "./crates/alkahest-panic-handler" }
 alkahest-pm = { path = "./crates/alkahest-pm" }
-tiger-parse = { version = "0.1.1", git = "https://github.com/v4nguard/tiger-parse", features = [
+tiger-parse = { version = "0.1.2", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
     "destiny_pkg",
     "check_types_debug",
 ] }
 
 destiny-havok = { path = "./crates/destiny-havok" }
-destiny-pkg = { version = "0.8", git = "https://github.com/v4nguard/destiny-pkg" }
+destiny-pkg = { version = "0.9", git = "https://github.com/v4nguard/destiny-pkg" }
 
 anyhow = { version = "1.0.71" }
 winit = { version = "0.28" }
@@ -39,7 +39,6 @@ windows = { version = "0.43.0", features = [
 raw-window-handle = "0.5.2"
 # u16cstr = "0.4.0"
 glam = { version = "0.25", features = ["bytemuck", "mint"] }
-nohash-hasher = "0.2.0"
 fastrand = "2.0.0"
 
 bitflags = "2.3.3"
@@ -86,6 +85,7 @@ num = "0.4.1"
 rustc_version = "0.4.0"
 zip-extract = "0.1.3"
 build-time = "0.1.3"
+rustc-hash = "1.1.0"
 
 [features]
 default = ["discord_rpc"]

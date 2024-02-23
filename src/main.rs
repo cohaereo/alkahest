@@ -40,11 +40,10 @@ use egui::epaint::{ahash::HashMap, Hsva};
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
 use itertools::Itertools;
-use nohash_hasher::{IntMap, IntSet};
 use overlays::camera_settings::CurrentCubemap;
-use packages::get_named_tag;
 use poll_promise::Promise;
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
+use rustc_hash::{FxHashMap, FxHashSet};
 use technique::Technique;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tracing::level_filters::LevelFilter;
@@ -240,7 +239,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
-    let mut stringmap: IntMap<u32, String> = Default::default();
+    let mut stringmap: FxHashMap<u32, String> = Default::default();
     let all_global_packages = [
         0x012d, 0x0195, 0x0196, 0x0197, 0x0198, 0x0199, 0x019a, 0x019b, 0x019c, 0x019d, 0x019e,
         0x03dd,
@@ -310,14 +309,14 @@ pub async fn main() -> anyhow::Result<()> {
 
         vec![hash]
     } else if let Some(package_name) = &args.package_name {
-        let filter = format!("w64_{package_name}_");
         package_manager()
             .get_all_by_reference(u32::from_be(0x1E898080))
             .into_iter()
             .filter(|(tag, _)| {
                 package_manager().package_paths[&tag.pkg_id()]
+                    .name
                     .to_lowercase()
-                    .contains(&filter)
+                    .contains(package_name.as_str())
             })
             .map(|(tag, _entry)| tag)
             .collect_vec()
@@ -340,7 +339,7 @@ pub async fn main() -> anyhow::Result<()> {
     if args.map.is_none() {
         if let Some(activity_hash) = &activity_hash {
             let activity: SActivity = package_manager().read_tag_struct(*activity_hash)?;
-            let mut maps: IntSet<TagHash> = Default::default();
+            let mut maps: FxHashSet<TagHash> = Default::default();
 
             for u in &activity.unk50 {
                 for m in &u.map_references {
@@ -367,7 +366,7 @@ pub async fn main() -> anyhow::Result<()> {
         activity_hash,
         !args.no_ambient,
     )));
-    let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
+    let mut entity_renderers: FxHashMap<u64, EntityRenderer> = Default::default();
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -1332,10 +1331,8 @@ fn draw_beacon(
 }
 
 fn load_render_globals(renderer: &Renderer) {
-    let tag =
-        get_named_tag::<0x8080978C>("render_globals").expect("Could not find render globals!");
-    let globals: SRenderGlobals = package_manager()
-        .read_tag_struct(tag)
+    let globals = package_manager()
+        .read_named_tag_struct::<SRenderGlobals>("render_globals")
         .expect("Failed to read render globals");
 
     // println!("{globals:#?}");

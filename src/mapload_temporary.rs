@@ -25,7 +25,7 @@ use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::{multizip, Itertools};
-use nohash_hasher::{IntMap, IntSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{dpkg::PackageManagerExt, Endian, FnvHash, TigerReadable};
 use windows::Win32::Graphics::{
     Direct3D::WKPDID_D3DDebugObjectName,
@@ -59,22 +59,22 @@ pub async fn load_maps(
     dcs: Arc<DeviceContextSwapchain>,
     renderer: RendererShared,
     map_hashes: Vec<TagHash>,
-    stringmap: Arc<IntMap<u32, String>>,
+    stringmap: Arc<FxHashMap<u32, String>>,
     activity_hash: Option<TagHash>,
     load_ambient_activity: bool,
 ) -> anyhow::Result<LoadMapsData> {
-    let mut vshader_map: IntMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> =
+    let mut vshader_map: FxHashMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> =
         Default::default();
-    let mut pshader_map: IntMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
+    let mut pshader_map: FxHashMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
         Default::default();
-    let mut sampler_map: IntMap<u64, ID3D11SamplerState> = Default::default();
+    let mut sampler_map: FxHashMap<u64, ID3D11SamplerState> = Default::default();
 
     let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
-    let mut material_map: IntMap<TagHash, Technique> = Default::default();
-    let mut to_load_entitymodels: IntSet<TagHash> = Default::default();
+    let mut material_map: FxHashMap<TagHash, Technique> = Default::default();
+    let mut to_load_entitymodels: FxHashSet<TagHash> = Default::default();
     let renderer_ch = renderer.clone();
 
-    let mut activity_entref_tables: IntMap<
+    let mut activity_entref_tables: FxHashMap<
         TagHash,
         Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)>,
     > = Default::default();
@@ -142,9 +142,9 @@ pub async fn load_maps(
 
         let mut scene = Scene::new();
 
-        let mut unknown_root_resources: IntMap<u32, Vec<TagHash>> = Default::default();
+        let mut unknown_root_resources: FxHashMap<u32, Vec<TagHash>> = Default::default();
 
-        let mut entity_worldid_name_map: IntMap<u64, String> = Default::default();
+        let mut entity_worldid_name_map: FxHashMap<u64, String> = Default::default();
         if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
             for (e, _, _) in activity_entrefs {
                 for resource in &e.unk18.entity_resources {
@@ -178,7 +178,7 @@ pub async fn load_maps(
         }
 
         if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
-            let mut unknown_res_types: IntSet<u32> = Default::default();
+            let mut unknown_res_types: FxHashSet<u32> = Default::default();
             for (e, phase_name2, origin) in activity_entrefs {
                 for resource in &e.unk18.entity_resources {
                     if resource.entity_resource.is_some() {
@@ -187,7 +187,7 @@ pub async fn load_maps(
                         let res: SEntityResource =
                             TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                        let mut data_tables = IntSet::default();
+                        let mut data_tables = FxHashSet::default();
                         match res.unk18.resource_type {
                             0x808092d8 => {
                                 cur.seek(SeekFrom::Start(res.unk18.offset))?;
@@ -216,7 +216,7 @@ pub async fn load_maps(
                             }
                         }
 
-                        let mut data_tables2 = IntSet::default();
+                        let mut data_tables2 = FxHashSet::default();
                         // TODO(cohae): This is a very dirty hack to find every other data table in the entityresource. We need to fully flesh out the EntityResource format first.
                         // TODO(cohae): PS: gets assigned as Activity2 to keep them separate from known tables
                         for b in data.chunks_exact(4) {
@@ -357,7 +357,7 @@ pub async fn load_maps(
         .filter(|v| v.is_some())
         .collect();
 
-    let mut entity_renderers: IntMap<u64, EntityRenderer> = Default::default();
+    let mut entity_renderers: FxHashMap<u64, EntityRenderer> = Default::default();
     for te in &to_load_entities {
         let renderer = renderer.read();
         let nh = te.hash32();
@@ -693,7 +693,7 @@ pub async fn load_maps(
 
 pub struct LoadMapsData {
     pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
-    pub entity_renderers: IntMap<u64, EntityRenderer>,
+    pub entity_renderers: FxHashMap<u64, EntityRenderer>,
 }
 
 // clippy: asset system will fix this lint on it's own (i hope)
@@ -706,12 +706,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
     renderer: RendererShared,
     resource_origin: ResourceOriginType,
     group_id: u32,
-    stringmap: Arc<IntMap<u32, String>>,
-    entity_worldid_name_map: &IntMap<u64, String>,
+    stringmap: Arc<FxHashMap<u32, String>>,
+    entity_worldid_name_map: &FxHashMap<u64, String>,
 
-    material_map: &mut IntMap<TagHash, Technique>,
-    to_load_entitymodels: &mut IntSet<TagHash>,
-    unknown_root_resources: &mut IntMap<u32, Vec<TagHash>>,
+    material_map: &mut FxHashMap<TagHash, Technique>,
+    to_load_entitymodels: &mut FxHashSet<TagHash>,
+    unknown_root_resources: &mut FxHashMap<u32, Vec<TagHash>>,
 ) -> anyhow::Result<()> {
     let renderer = renderer.read();
     let dcs = renderer.dcs.clone();
@@ -1805,7 +1805,7 @@ fn is_physics_entity(entity: ExtendedHash) -> bool {
     false
 }
 
-fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
+fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
     let data: Vec<u8> = package_manager().read_tag(entity).ok()?;
     let mut cur = Cursor::new(&data);
 
@@ -1843,7 +1843,7 @@ fn get_entity_labels(entity: TagHash) -> Option<IntMap<u64, String>> {
     // TODO(cohae): There's volumes and stuff without a world ID that still have a name
     world_id_list.retain(|w| w.world_id != u64::MAX);
 
-    let mut name_hash_map: IntMap<FnvHash, String> = IntMap::default();
+    let mut name_hash_map: FxHashMap<FnvHash, String> = FxHashMap::default();
 
     let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
     for v in tablethingy.unk0.into_iter() {

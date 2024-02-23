@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use egui::Color32;
 use hecs::Entity;
-use nohash_hasher::IntSet;
+use rustc_hash::FxHashSet;
 
 use super::Scene;
 use crate::{icons::ICON_WEB, overlays::UiExt, util::text::name_to_color};
@@ -16,8 +16,6 @@ pub enum EntityTag {
     Utility,
     User,
 }
-
-impl nohash_hasher::IsEnabled for EntityTag {}
 
 impl EntityTag {
     pub fn color(&self) -> Color32 {
@@ -42,7 +40,7 @@ impl Display for EntityTag {
 }
 
 #[derive(Default)]
-pub struct Tags(pub IntSet<EntityTag>);
+pub struct Tags(pub FxHashSet<EntityTag>);
 
 impl Tags {
     pub fn from_iter(arr: impl IntoIterator<Item = EntityTag>) -> Self {

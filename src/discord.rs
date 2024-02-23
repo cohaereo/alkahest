@@ -1,7 +1,4 @@
-use std::{
-    path::PathBuf,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use lazy_static::lazy_static;
 
@@ -35,11 +32,11 @@ pub async fn set_status(details: String, state: String) {
 
 pub fn set_status_from_mapdata(map: &MapData) {
     let details = format!("Viewing a map ({})", map.hash);
-    let pkg_stem = PathBuf::from(&package_manager().package_paths[&map.hash.pkg_id()])
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let state = format!("'{}' ({})", map.name, pkg_stem);
+    let state = format!(
+        "'{}' ({})",
+        map.name,
+        package_manager().package_paths[&map.hash.pkg_id()].name
+    );
 
     tokio::spawn(set_status(details, state));
 }
