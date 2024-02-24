@@ -247,7 +247,7 @@ impl TfxBytecodeInterpreter {
                 }
 
                 &TfxBytecodeOp::Unk4c { unk1, .. }
-                | &TfxBytecodeOp::Unk4d { unk1, .. }
+                | &TfxBytecodeOp::PushSampler { index: unk1, .. }
                 | &TfxBytecodeOp::Unk4e { unk1, .. }
                 | &TfxBytecodeOp::Unk4f { unk1, .. }
                 | &TfxBytecodeOp::Unk50 { unk1, .. }

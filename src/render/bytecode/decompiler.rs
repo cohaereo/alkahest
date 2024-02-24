@@ -406,8 +406,8 @@ impl TfxBytecodeDecompiler {
                 TfxBytecodeOp::Unk4c { unk1 } => {
                     stack_push!(format!("unk4c({unk1})"));
                 }
-                TfxBytecodeOp::Unk4d { unk1 } => {
-                    stack_push!(format!("unk4d({unk1})"));
+                TfxBytecodeOp::PushSampler { index } => {
+                    stack_push!(format!("get_sampler({index})"));
                 }
                 TfxBytecodeOp::Unk4e {
                     unk1,
