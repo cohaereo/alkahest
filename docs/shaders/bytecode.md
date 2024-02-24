@@ -1,4 +1,7 @@
 ## Lightfall Bytecode
+> [!IMPORTANT]  
+> There is another bytecode format used in Destiny that looks a lot like this one, but is mostly unrelated to TFX bytecode
+
 | Opcode | Name                          | Arguments              | Pop count | Operation                                                                          | Notes                                                                                             |
 | ------ | ----------------------------- | ---------------------- | --------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `0x01` | add                           |                        | 2         | push(`t1 + t0`)                                                                    |                                                                                                   |
