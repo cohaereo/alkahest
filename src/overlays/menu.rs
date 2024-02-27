@@ -12,7 +12,15 @@ use crate::{
         tags::{EntityTag, Tags},
         transform::{Transform, TransformFlags},
     },
-    icons::{ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    icons::{
+        ICON_ALPHA_A_BOX_OUTLINE, ICON_ALPHA_D_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
+        ICON_ALPHA_F_BOX_OUTLINE, ICON_ALPHA_G_BOX_OUTLINE, ICON_ALPHA_H_BOX_OUTLINE,
+        ICON_ALPHA_I_BOX_OUTLINE, ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE,
+        ICON_ALPHA_W_BOX_OUTLINE, ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL,
+        ICON_ARROW_DOWN_BOLD_BOX_OUTLINE, ICON_ARROW_UP_BOLD_BOX_OUTLINE, ICON_KEYBOARD_SPACE,
+        ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_RULER_SQUARE,
+        ICON_SIGN_POLE, ICON_SPHERE,
+    },
     map::MapDataList,
     updater::UpdateChannel,
     util::consts::{self, CHANGELOG_MD},
@@ -21,9 +29,30 @@ use crate::{
 
 #[derive(Default)]
 pub struct MenuBar {
+    controls_open: bool,
     changelog_open: bool,
     about_open: bool,
     markdown_cache: CommonMarkCache,
+}
+
+macro_rules! control_section_title {
+    ($ui:expr, $title:expr) => {{
+        $ui.separator();
+        $ui.label(RichText::new($title).size(20.0).strong());
+
+        $ui.end_row();
+    }};
+}
+
+macro_rules! control_description {
+    ($ui:expr, $control:expr, $description:expr) => {{
+        $ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+            ui.label(RichText::new($control).size(24.0).strong());
+        });
+
+        $ui.label($description);
+        $ui.end_row();
+    }};
 }
 
 impl Overlay for MenuBar {
@@ -144,6 +173,11 @@ impl Overlay for MenuBar {
                 });
 
                 ui.menu_button("Help", |ui| {
+                    if ui.button("Controls").clicked() {
+                        self.controls_open = true;
+                        ui.close_menu()
+                    }
+                    ui.separator();
                     let update_channel = config::with(|c| c.update_channel);
                     if ui
                         .add_enabled(
@@ -191,6 +225,7 @@ impl Overlay for MenuBar {
 
         self.change_log(ctx);
         self.about(ctx);
+        self.controls(ctx);
 
         true
     }
@@ -241,6 +276,159 @@ impl MenuBar {
                             })
                         });
                     })
+            });
+    }
+
+    pub fn controls(&mut self, ctx: &egui::Context) {
+        egui::Window::new("Controls")
+            .open(&mut self.controls_open)
+            .auto_sized()
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui::Grid::new("controls")
+                        .min_row_height(30.0)
+                        .min_col_width(200.0)
+                        .show(ui, |ui| {
+                            control_section_title!(ui, "Movement");
+
+                            control_description!(
+                                ui,
+                                format!("{}+{}", ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_ARROW_ALL),
+                                "Adjust Camera Direction"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "{}/{}/{}/{}",
+                                    ICON_ALPHA_W_BOX_OUTLINE,
+                                    ICON_ALPHA_S_BOX_OUTLINE,
+                                    ICON_ALPHA_A_BOX_OUTLINE,
+                                    ICON_ALPHA_D_BOX_OUTLINE
+                                ),
+                                "Move Camera Forwards/Backwards/Left/Right"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "{}/{}",
+                                    ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
+                                ),
+                                "Move Camera Down/Up"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "Alt + {}/{}/{}/{}",
+                                    ICON_ALPHA_W_BOX_OUTLINE,
+                                    ICON_ALPHA_S_BOX_OUTLINE,
+                                    ICON_ALPHA_A_BOX_OUTLINE,
+                                    ICON_ALPHA_D_BOX_OUTLINE
+                                ),
+                                "Move Camera in Horizontal Plain"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "Alt + {}/{}",
+                                    ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
+                                ),
+                                "Move Camera Down/Up in Absolute Coordinates"
+                            );
+
+                            control_description!(ui, "Ctrl", "Decrease Movement speed");
+
+                            control_description!(
+                                ui,
+                                format!("{} Shift", ICON_APPLE_KEYBOARD_SHIFT),
+                                "Increase Movement speed"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_KEYBOARD_SPACE,
+                                "Increase Movement speed a lot"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "{} Shift + {}",
+                                    ICON_APPLE_KEYBOARD_SHIFT, ICON_KEYBOARD_SPACE
+                                ),
+                                "We're gonna have to go right to... LUDICROUS SPEED"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ALPHA_G_BOX_OUTLINE,
+                                "Move Camera to Position of Gaze"
+                            );
+
+                            control_section_title!(ui, "Object Interactions");
+
+                            control_description!(
+                                ui,
+                                ICON_MOUSE_RIGHT_CLICK_OUTLINE,
+                                "Select Object"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ALPHA_F_BOX_OUTLINE,
+                                "Focus on Selected Object"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ALPHA_H_BOX_OUTLINE,
+                                "Toggle Hide Selected Object"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!("Alt + {}", ICON_ALPHA_H_BOX_OUTLINE),
+                                "Unhide All Objects"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "{} Shift + {}",
+                                    ICON_APPLE_KEYBOARD_SHIFT, ICON_ALPHA_H_BOX_OUTLINE
+                                ),
+                                "Hide All Unselected Objects"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!("{} Shift + Delete", ICON_APPLE_KEYBOARD_SHIFT),
+                                "Delete Selected Object (if allowed)"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ARROW_DOWN_BOLD_BOX_OUTLINE,
+                                "Select 'Next' Object"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ARROW_UP_BOLD_BOX_OUTLINE,
+                                "Select 'Previous' Object"
+                            );
+                            control_section_title!(ui, "Miscellaneous");
+
+                            control_description!(
+                                ui,
+                                ICON_ALPHA_I_BOX_OUTLINE,
+                                "Swap to Previous Map"
+                            );
+                        });
+                });
             });
     }
 }

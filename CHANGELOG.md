@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added the ability to load maps from packages by name (eg. `throneworld` or `dungeon_prophecy`) through the `-p` argument by @cohaereo
 - Added draw_crosshair to the config by @Froggy618157725 in [#21](https://github.com/cohaereo/alkahest/pull/21)
 - Added 'I' Key shortcut to swap to previous map by @Froggy618157725 in [#21](https://github.com/cohaereo/alkahest/pull/21)
+- Added Controls under Help Menu @Froggy618157725 in [#22](https://github.com/cohaereo/alkahest/pull/22)
 
 ### Changed
 
