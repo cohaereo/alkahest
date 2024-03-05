@@ -6,6 +6,7 @@ use std::{
 
 use alkahest_data::{
     entity::{SEntityModel, Unk808072c5, Unk80809c0f},
+    statics::{SStaticMesh, SStaticMeshData},
     technique::STechnique,
     ExtendedHash,
 };
@@ -585,6 +586,46 @@ fn execute_command(
                         vis.0 = true;
                     }
                 }
+            }
+        }
+        "checkmesh" => {
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o.hash32(),
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let mesh: SStaticMesh = match package_manager().read_tag_struct(tag) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to read mesh tag: {e}");
+                    return;
+                }
+            };
+
+            let ss: SStaticMeshData = match package_manager().read_tag_struct(mesh.unk8) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to read mesh data tag: {e}");
+                    return;
+                }
+            };
+
+            println!("Solid");
+            for (i, (m, material)) in ss.mesh_groups.iter().zip(mesh.materials.iter()).enumerate() {
+                println!("\t#{i}: stage={:?} mat={}", m.render_stage, material);
+            }
+            println!();
+            println!("Overlays");
+            for (i, o) in mesh.unk20.iter().enumerate() {
+                println!("\t#{i}: stage={:?} mat={}", o.render_stage, o.material);
             }
         }
         _ => error!("Unknown command '{command}'"),

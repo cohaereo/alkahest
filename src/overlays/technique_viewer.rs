@@ -89,7 +89,21 @@ impl Overlay for TechniqueViewer {
             .open(&mut open)
             .show(ctx, |ui| {
                 if ui.button("Copy header").clicked() {
-                    ui.output_mut(|o| o.copied_text = self._header.debug_header_string());
+                    let ps = &self._header.shader_pixel;
+                    let pixel_stuff = format!(
+                        "PixelStage {{
+    unk4: 0x{:X},
+    unk18: 0x{:X},
+    unk60: {:x?},
+    unk78: {:x?},
+}}",
+                        ps.unk4, ps.unk18, ps.unk60, ps.unk78
+                    );
+
+                    ui.output_mut(|o| {
+                        o.copied_text =
+                            format!("{}\n{pixel_stuff}", self._header.debug_header_string())
+                    });
                 }
 
                 for s in &self.shaders {

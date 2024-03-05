@@ -21,7 +21,7 @@ use super::{
     light::LightRenderer,
     outline::OutlineScreenEffect,
     overrides::{EnabledShaderOverrides, ScopeOverrides, ShaderOverrides},
-    scopes::{ScopeFrame, ScopeTransparent, ScopeUnk8, ScopeView},
+    scopes::{ScopeFrame, ScopeTransparent, ScopeTransparentAdvanced, ScopeView},
     ConstantBuffer, DeviceContextSwapchain, GBuffer,
 };
 use crate::{
@@ -62,7 +62,7 @@ pub struct Renderer {
     scope_frame: ConstantBuffer<ScopeFrame>,
     scope_transparent: ConstantBuffer<ScopeTransparent>,
     scope_unk3: ConstantBuffer<ScopeUnk3>,
-    scope_unk8: ConstantBuffer<ScopeUnk8>,
+    scope_transparent_advanced: ConstantBuffer<ScopeTransparentAdvanced>,
     scope_alk_composite: ConstantBuffer<CompositorOptions>,
     scope_alk_cascade_transforms: ConstantBuffer<[Mat4; Self::CAMERA_CASCADE_LEVEL_COUNT]>,
 
@@ -374,7 +374,7 @@ impl Renderer {
             scope_view_csm: ConstantBuffer::create(dcs.clone(), None)?,
             scope_transparent: ConstantBuffer::create(dcs.clone(), None)?,
             scope_unk3: ConstantBuffer::create(dcs.clone(), None)?,
-            scope_unk8: ConstantBuffer::create(dcs.clone(), None)?,
+            scope_transparent_advanced: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_composite: ConstantBuffer::create(dcs.clone(), None)?,
             scope_alk_cascade_transforms: ConstantBuffer::create(dcs.clone(), None)?,
             render_data: RenderDataManager::new(dcs.clone()),
@@ -453,8 +453,10 @@ impl Renderer {
         self.scope_transparent.bind(2, TfxShaderStage::Pixel);
         self.scope_unk3.bind(3, TfxShaderStage::Vertex);
         self.scope_unk3.bind(3, TfxShaderStage::Pixel);
-        self.scope_unk8.bind(8, TfxShaderStage::Vertex);
-        self.scope_unk8.bind(8, TfxShaderStage::Pixel);
+        self.scope_transparent_advanced
+            .bind(8, TfxShaderStage::Vertex);
+        self.scope_transparent_advanced
+            .bind(8, TfxShaderStage::Pixel);
         self.scope_frame.bind(13, TfxShaderStage::Vertex);
         self.scope_frame.bind(13, TfxShaderStage::Pixel);
 
@@ -1024,7 +1026,7 @@ impl Renderer {
         }
 
         if let Some(mat) = render_data.techniques.get(&sort.material().into()) {
-            if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
+            if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 || (mat.unkc & 0x80) != 0 {
                 return;
             }
 
@@ -1041,6 +1043,23 @@ impl Renderer {
                         self.dcs.context().RSSetState(&self.rasterizer_state);
                     }
                 }
+
+                // if !sort.transparency().writes_depth() {
+                //     // Additive blending
+                //     if (mat.unk20 & 0x4) != 0 {
+                //         self.dcs.context().OMSetBlendState(
+                //             &self.blend_state_blend,
+                //             Some(&[1f32, 1., 1., 1.] as _),
+                //             0xffffffff,
+                //         );
+                //     } else {
+                //         self.dcs.context().OMSetBlendState(
+                //             &self.blend_state_additive,
+                //             Some(&[1f32, 1., 1., 1.] as _),
+                //             0xffffffff,
+                //         );
+                //     }
+                // }
             }
 
             // TODO(cohae): How can we handle these errors?
@@ -1053,7 +1072,7 @@ impl Renderer {
 
         if let Some(variant_material) = drawcall.variant_material {
             if let Some(mat) = render_data.techniques.get(&variant_material) {
-                if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 {
+                if mat.unk8 != 1 || (mat.unk20 & 0x8000) != 0 || (mat.unkc & 0x80) != 0 {
                     return;
                 }
 
@@ -1748,11 +1767,14 @@ impl Renderer {
         self.scope_view_pixel.write(&scope_view_pixel_data)?;
         *self.scope_view_backup.write() = scope_view_data;
 
-        self.scope_transparent.write(&ScopeTransparent {
-            transparent_scope_depth_constants: Vec4::new(camera.near, 1.0 / camera.near, 0.0, 0.0),
-        })?;
+        // self.scope_transparent.write(&ScopeTransparent {
+        //     // transparent_scope_depth_constants: Vec4::new(camera.near, 1.0 / camera.near, 0.0, 0.0),
+        //     ..Default::default()
+        // })?;
+        self.scope_transparent.write(&overrides.transparent)?;
         self.scope_unk3.write(&overrides.unk3)?;
-        self.scope_unk8.write(&overrides.unk8)?;
+        self.scope_transparent_advanced
+            .write(&overrides.transparent_advanced)?;
 
         Ok(())
     }

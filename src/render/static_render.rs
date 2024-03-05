@@ -153,7 +153,7 @@ impl StaticModel {
                 .mesh_groups
                 .iter()
                 .enumerate()
-                .filter(|(_, u)| u.unk2 == TfxRenderStage::GenerateGbuffer)
+                .filter(|(_, u)| u.render_stage == TfxRenderStage::GenerateGbuffer)
             {
                 let p = &self.subheader.parts[u.part_index as usize];
                 if !p.lod_category.is_highest_detail() {
@@ -256,6 +256,10 @@ impl StaticOverlayModel {
         let shading_mode = ShadingMode::from_tfx_render_stage(self.model.render_stage);
 
         if !draw_decals && self.model.render_stage == TfxRenderStage::Decals {
+            return;
+        }
+
+        if self.model.render_stage == TfxRenderStage::LightShaftOcclusion {
             return;
         }
 

@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Changed
 
 - Create window before initializing the package manager by @cohaereo
+- Rework transparent(_advanced) scopes by @cohaereo
 
 ### Fixed
 

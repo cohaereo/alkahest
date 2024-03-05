@@ -1335,57 +1335,65 @@ fn load_render_globals(renderer: &Renderer) {
         .read_named_tag_struct::<SRenderGlobals>("render_globals")
         .expect("Failed to read render globals");
 
-    // println!("{globals:#?}");
-    // for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
-    //     println!("scope #{i}: {} ({})", *s.name, s.scope.hash());
-    //     if s.scope.stage_vertex.constant_buffer.is_some() {
+    //     println!("{globals:#?}");
+    //     for (i, s) in globals.unk8[0].unk8.scopes.iter().enumerate() {
     //         println!(
-    //             "---- VS cb{} ({} bytes)",
-    //             s.scope.stage_vertex.constant_buffer_slot,
-    //             buffer_size(s.scope.stage_vertex.constant_buffer)
+    //             "scope #{i}: {} cb{}",
+    //             *s.name,
+    //             s.scope
+    //                 .iter_stages()
+    //                 .find(|v| v.constant_buffer.is_some())
+    //                 .map_or(u32::MAX, |v| v.constant_buffer_slot)
     //         );
-    //         decompile_tfx(&s.scope.stage_vertex);
-    //     }
-    //     if s.scope.stage_pixel.constant_buffer.is_some() {
-    //         println!(
-    //             "---- PS cb{} ({} bytes)",
-    //             s.scope.stage_pixel.constant_buffer_slot,
-    //             buffer_size(s.scope.stage_pixel.constant_buffer)
-    //         );
-    //         decompile_tfx(&s.scope.stage_pixel);
-    //     }
-    //     if s.scope.stage_geometry.constant_buffer.is_some() {
-    //         println!(
-    //             "---- GS cb{} ({} bytes)",
-    //             s.scope.stage_geometry.constant_buffer_slot,
-    //             buffer_size(s.scope.stage_geometry.constant_buffer)
-    //         );
-    //         decompile_tfx(&s.scope.stage_geometry);
-    //     }
-    //     if s.scope.stage_hull.constant_buffer.is_some() {
-    //         println!(
-    //             "---- HS cb{} ({} bytes)",
-    //             s.scope.stage_hull.constant_buffer_slot,
-    //             buffer_size(s.scope.stage_hull.constant_buffer)
-    //         );
-    //         decompile_tfx(&s.scope.stage_hull);
-    //     }
-    //     if s.scope.stage_compute.constant_buffer.is_some() {
-    //         println!(
-    //             "---- CS cb{} ({} bytes)",
-    //             s.scope.stage_compute.constant_buffer_slot,
-    //             buffer_size(s.scope.stage_compute.constant_buffer)
-    //         );
-    //         decompile_tfx(&s.scope.stage_compute);
-    //     }
-    //     if s.scope.stage_domain.constant_buffer.is_some() {
-    //         println!(
-    //             "---- DS cb{} ({} bytes)",
-    //             s.scope.stage_domain.constant_buffer_slot,
-    //             buffer_size(s.scope.stage_domain.constant_buffer)
-    //         );
-    //         decompile_tfx(&s.scope.stage_domain);
-    //     }
+    //         // println!("scope #{i}: {} ({})", *s.name, s.scope.hash());
+    //         // if s.scope.stage_vertex.constant_buffer.is_some() {
+    //         //     println!(
+    //         //         "---- VS cb{} ({} bytes)",
+    //         //         s.scope.stage_vertex.constant_buffer_slot,
+    //         //         buffer_size(s.scope.stage_vertex.constant_buffer)
+    //         //     );
+    //         //     decompile_tfx(&s.scope.stage_vertex);
+    //         // }
+    //         // if s.scope.stage_pixel.constant_buffer.is_some() {
+    //         //     println!(
+    //         //         "---- PS cb{} ({} bytes)",
+    //         //         s.scope.stage_pixel.constant_buffer_slot,
+    //         //         buffer_size(s.scope.stage_pixel.constant_buffer)
+    //         //     );
+    //         //     decompile_tfx(&s.scope.stage_pixel);
+    //         // }
+    //         // if s.scope.stage_geometry.constant_buffer.is_some() {
+    //         //     println!(
+    //         //         "---- GS cb{} ({} bytes)",
+    //         //         s.scope.stage_geometry.constant_buffer_slot,
+    //         //         buffer_size(s.scope.stage_geometry.constant_buffer)
+    //         //     );
+    //         //     decompile_tfx(&s.scope.stage_geometry);
+    //         // }
+    //         // if s.scope.stage_hull.constant_buffer.is_some() {
+    //         //     println!(
+    //         //         "---- HS cb{} ({} bytes)",
+    //         //         s.scope.stage_hull.constant_buffer_slot,
+    //         //         buffer_size(s.scope.stage_hull.constant_buffer)
+    //         //     );
+    //         //     decompile_tfx(&s.scope.stage_hull);
+    //         // }
+    //         // if s.scope.stage_compute.constant_buffer.is_some() {
+    //         //     println!(
+    //         //         "---- CS cb{} ({} bytes)",
+    //         //         s.scope.stage_compute.constant_buffer_slot,
+    //         //         buffer_size(s.scope.stage_compute.constant_buffer)
+    //         //     );
+    //         //     decompile_tfx(&s.scope.stage_compute);
+    //         // }
+    //         // if s.scope.stage_domain.constant_buffer.is_some() {
+    //         //     println!(
+    //         //         "---- DS cb{} ({} bytes)",
+    //         //         s.scope.stage_domain.constant_buffer_slot,
+    //         //         buffer_size(s.scope.stage_domain.constant_buffer)
+    //         //     );
+    //         //     decompile_tfx(&s.scope.stage_domain);
+    //         // }
     // }
 
     let mut techniques: HashMap<String, TagHash> = HashMap::default();

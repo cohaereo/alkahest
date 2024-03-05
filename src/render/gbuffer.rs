@@ -43,7 +43,7 @@ pub struct GBuffer {
 impl GBuffer {
     pub fn create(size: (u32, u32), dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         Ok(Self {
-            rt0: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM_SRGB, dcs.clone(), "RT0")
+            rt0: RenderTarget::create(size, DxgiFormat::R11G11B10_FLOAT, dcs.clone(), "RT0")
                 .context("RT0")?,
             rt1: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, dcs.clone(), "RT1")
                 .context("RT1")?,

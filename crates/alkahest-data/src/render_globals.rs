@@ -77,6 +77,20 @@ pub struct SScope {
     pub stage_domain: SScopeStage,
 }
 
+impl SScope {
+    pub fn iter_stages(&self) -> impl Iterator<Item = &SScopeStage> {
+        vec![
+            &self.stage_pixel,
+            &self.stage_vertex,
+            &self.stage_geometry,
+            &self.stage_hull,
+            &self.stage_compute,
+            &self.stage_domain,
+        ]
+        .into_iter()
+    }
+}
+
 #[derive(Debug)]
 #[tiger_tag(id = 0xffffffff)]
 pub struct SScopeStage {

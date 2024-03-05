@@ -52,7 +52,7 @@ pub struct Unk8080719a {
 #[tiger_tag(id = 0x80806D38)]
 pub struct Unk8080719b {
     pub part_index: u16,
-    pub unk2: TfxRenderStage,
+    pub render_stage: TfxRenderStage,
     pub unk3: u8,
     pub unk5: u16,
 }
