@@ -2,7 +2,7 @@ use std::{
     backtrace::{Backtrace, BacktraceStatus},
     io::Write,
     panic::PanicInfo,
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use lazy_static::lazy_static;
@@ -11,9 +11,10 @@ use parking_lot::Mutex;
 lazy_static! {
     static ref PANIC_FILE: Arc<Mutex<Option<fs_err::File>>> = Arc::new(Mutex::new(None));
     static ref PANIC_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+    static ref PANIC_HEADER: OnceLock<String> = OnceLock::new();
 }
 
-pub fn install_hook() {
+pub fn install_hook(header: Option<String>) {
     std::panic::set_hook(Box::new(|info| {
         let _guard = PANIC_LOCK.lock();
         let this_thread = std::thread::current();
@@ -56,7 +57,11 @@ pub fn install_hook() {
 
         // Make sure the application exits
         std::process::exit(-1);
-    }))
+    }));
+
+    if let Some(header) = header {
+        PANIC_HEADER.set(header).expect("Panic header already set");
+    }
 }
 
 fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
@@ -67,12 +72,18 @@ fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<(
 
     let f = file_lock.as_mut().unwrap();
 
+    // Write panic header
+    if let Some(header) = PANIC_HEADER.get() {
+        writeln!(f, "{}", header)?;
+    }
+
     writeln!(f, "{}", info)?;
     if bt.status() == BacktraceStatus::Captured {
         writeln!(f)?;
         writeln!(f, "Backtrace:")?;
         writeln!(f, "{}", bt)?;
     }
+
     Ok(())
 }
 

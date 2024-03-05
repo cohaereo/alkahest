@@ -11,6 +11,7 @@ extern crate tracing;
 use std::{
     cell::RefCell,
     f32::consts::PI,
+    fmt::Write,
     io::{Cursor, Read, Seek, SeekFrom},
     mem::transmute,
     path::PathBuf,
@@ -105,7 +106,7 @@ use crate::{
     texture::{Texture, LOW_RES},
     updater::UpdateCheck,
     util::{
-        consts::print_banner,
+        consts::{self, print_banner},
         image::Png,
         text::{invert_color, keep_color_bright, prettify_distance},
         FilterDebugLockTarget, RwLock,
@@ -163,7 +164,13 @@ struct Args {
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()> {
     util::fix_windows_command_prompt();
-    alkahest_panic_handler::install_hook();
+
+    let mut panic_header = String::new();
+    writeln!(&mut panic_header, "Alkahest v{}", consts::VERSION).unwrap();
+    writeln!(&mut panic_header, "Built from commit {}", consts::GIT_HASH).unwrap();
+    writeln!(&mut panic_header, "Built on {}", consts::BUILD_TIMESTAMP).unwrap();
+
+    alkahest_panic_handler::install_hook(Some(panic_header));
 
     print_banner();
 
