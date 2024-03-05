@@ -442,32 +442,32 @@ pub async fn load_maps(
 
     for t in to_load_entitymodels {
         let renderer = renderer.read();
-        let model: SEntityModel = package_manager().read_tag_struct(t)?;
-
-        for m in &model.meshes {
-            for p in &m.parts {
-                if p.material.is_some() {
-                    material_map.insert(
-                        p.material,
-                        Technique::load(
-                            &renderer,
-                            package_manager().read_tag_struct(p.material)?,
+        if let Ok(model) = package_manager().read_tag_struct::<SEntityModel>(t) {
+            for m in &model.meshes {
+                for p in &m.parts {
+                    if p.material.is_some() {
+                        material_map.insert(
                             p.material,
-                            true,
-                        ),
-                    );
+                            Technique::load(
+                                &renderer,
+                                package_manager().read_tag_struct(p.material)?,
+                                p.material,
+                                true,
+                            ),
+                        );
+                    }
                 }
             }
-        }
 
-        match debug_span!("load EntityRenderer")
-            .in_scope(|| EntityRenderer::load(model, vec![], vec![], &renderer))
-        {
-            Ok(er) => {
-                entity_renderers.insert(t.0 as u64, er);
-            }
-            Err(e) => {
-                error!("Failed to load entity {t}: {e}");
+            match debug_span!("load EntityRenderer")
+                .in_scope(|| EntityRenderer::load(model, vec![], vec![], &renderer))
+            {
+                Ok(er) => {
+                    entity_renderers.insert(t.0 as u64, er);
+                }
+                Err(e) => {
+                    error!("Failed to load entity {t}: {e}");
+                }
             }
         }
     }
