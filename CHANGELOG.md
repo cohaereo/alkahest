@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - Create window before initializing the package manager by @cohaereo
 - Rework transparent(_advanced) scopes by @cohaereo
+- Change allocator to [mimalloc](https://github.com/microsoft/mimalloc) by @cohaereo
 
 ### Fixed
 

@@ -41,6 +41,7 @@ use egui::epaint::{ahash::HashMap, Hsva};
 use glam::{Mat4, Quat, Vec3};
 use hecs::Entity;
 use itertools::Itertools;
+use mimalloc::MiMalloc;
 use overlays::camera_settings::CurrentCubemap;
 use poll_promise::Promise;
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
@@ -135,6 +136,9 @@ mod texture;
 mod types;
 mod updater;
 mod util;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None, disable_version_flag(true))]
