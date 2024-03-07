@@ -17,24 +17,18 @@ jobs:
       fail-fast: true
       matrix:
         platform: [windows-latest]
+        toolchain: [nightly]
     steps:
       - uses: actions/checkout@v4
+      
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
 
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "rust-build"
 
-      - name: Cargo fetch
-        run: cargo fetch
-
       - name: Build
         run: cargo build --verbose --release
-
-    #   - name: Determine commit hash
-    #     shell: bash
-    #     run: |
-    #       export GITHUB_SHA_SHORT=$(git rev-parse --short "$GITHUB_SHA")
-    #       echo "GITHUB_SHA_SHORT=$GITHUB_SHA_SHORT" >> $GITHUB_ENV
 
       - name: Publish artifact
         if: matrix.platform == 'windows-latest'
