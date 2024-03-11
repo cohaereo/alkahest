@@ -1,3 +1,59 @@
+use std::{
+    io::{Cursor, Read, Seek, SeekFrom},
+    ops::Deref,
+};
+
+use alkahest_data::text::{SLocalizedStrings, SStringData, SStringPart};
+use alkahest_pm::package_manager;
+use destiny_pkg::TagHash;
+use rustc_hash::FxHashMap;
+use tiger_parse::{PackageManagerExt, TigerReadable};
+
+pub struct StringContainer(pub FxHashMap<u32, String>);
+
+impl StringContainer {
+    pub fn load(tag: TagHash) -> anyhow::Result<Self> {
+        let mut stringmap = FxHashMap::default();
+        let textset_header: SLocalizedStrings = package_manager().read_tag_struct(tag)?;
+
+        let data = package_manager()
+            .read_tag(textset_header.language_english)
+            .unwrap();
+        let mut cur = Cursor::new(&data);
+        let text_data: SStringData = TigerReadable::read_ds(&mut cur)?;
+
+        for (combination, hash) in text_data
+            .string_combinations
+            .iter()
+            .zip(textset_header.string_hashes.iter())
+        {
+            let mut final_string = String::new();
+
+            for ip in 0..combination.part_count {
+                cur.seek(SeekFrom::Start(combination.data.offset()))?;
+                cur.seek(SeekFrom::Current(ip * 0x20))?;
+                let part: SStringPart = TigerReadable::read_ds(&mut cur)?;
+                cur.seek(SeekFrom::Start(part.data.offset()))?;
+                let mut data = vec![0u8; part.byte_length as usize];
+                cur.read_exact(&mut data)?;
+                final_string += &decode_text(&data, part.cipher_shift);
+            }
+
+            stringmap.insert(hash.0, final_string);
+        }
+
+        Ok(Self(stringmap))
+    }
+}
+
+impl Deref for StringContainer {
+    type Target = FxHashMap<u32, String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// Expects raw un-shifted data as input
 /// Currently very incomplete
 // TODO(cohae): Support for wide characters

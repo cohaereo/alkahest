@@ -4,8 +4,8 @@ use tiger_parse::{tiger_tag, Pointer};
 use crate::common::ResourceHash;
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct StringContainer {
+#[tiger_tag(id = 0x808099EF)]
+pub struct SLocalizedStrings {
     pub file_size: u64,
     pub string_hashes: Vec<ResourceHash>,
     pub language_english: TagHash,
@@ -25,25 +25,25 @@ pub struct StringContainer {
 
 #[derive(Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct StringData {
+pub struct SStringData {
     pub file_size: u64,
-    pub string_parts: Vec<StringPart>,
+    pub string_parts: Vec<SStringPart>,
     // pub _unk1: (u64, u64),
     pub _unk2: Vec<()>,
     pub string_data: Vec<u8>,
-    pub string_combinations: Vec<StringCombination>,
+    pub string_combinations: Vec<SStringCombination>,
 }
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x808099F5)]
-pub struct StringCombination {
+pub struct SStringCombination {
     pub data: Pointer<()>,
     pub part_count: i64,
 }
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x808099F7)]
-pub struct StringPart {
+pub struct SStringPart {
     pub _unk0: u64,
     pub data: Pointer<()>,
     pub _unk1: u32,

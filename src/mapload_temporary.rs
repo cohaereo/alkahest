@@ -1862,3 +1862,94 @@ fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
             .collect(),
     )
 }
+
+// pub fn create_map_stringmap() -> FxHashMap<TagHash, String> {
+//     let stringmap: FxHashMap<TagHash, String> = package_manager()
+//         .get_named_tags_by_class(SDestination::ID.unwrap())
+//         .par_iter()
+//         .flat_map(|(name, tag)| {
+//             let _span = info_span!("Read destination", destination = name).entered();
+//             let destination: SDestination = package_manager().read_tag_struct(*tag).unwrap();
+
+//             let mut destination_strings: FxHashMap<u32, String> = FxHashMap::default();
+//             {
+//                 let _span = info_span!("Read destination strings").entered();
+//                 let Ok(textset_header) = package_manager()
+//                     .read_tag_struct::<StringContainer>(destination.string_container.hash32())
+//                 else {
+//                     return vec![];
+//                 };
+
+//                 let data = package_manager()
+//                     .read_tag(textset_header.language_english)
+//                     .unwrap();
+//                 let mut cur = Cursor::new(&data);
+//                 let text_data: StringData = TigerReadable::read_ds(&mut cur).unwrap();
+
+//                 for (combination, hash) in text_data
+//                     .string_combinations
+//                     .iter()
+//                     .zip(textset_header.string_hashes.iter())
+//                 {
+//                     let mut final_string = String::new();
+
+//                     for ip in 0..combination.part_count {
+//                         cur.seek(SeekFrom::Start(combination.data.offset()))
+//                             .unwrap();
+//                         cur.seek(SeekFrom::Current(ip * 0x20)).unwrap();
+//                         let part: StringPart = TigerReadable::read_ds(&mut cur).unwrap();
+//                         cur.seek(SeekFrom::Start(part.data.offset())).unwrap();
+//                         let mut data = vec![0u8; part.byte_length as usize];
+//                         cur.read_exact(&mut data).unwrap();
+//                         final_string += &text::decode_text(&data, part.cipher_shift);
+//                     }
+
+//                     destination_strings.insert(hash.0, final_string);
+//                 }
+//             }
+
+//             let mut strings = vec![];
+//             for activity_desc in &destination.activities {
+//                 let _span = info_span!(
+//                     "Read activity",
+//                     activity = activity_desc.activity_name.0.to_string()
+//                 )
+//                 .entered();
+//                 let Ok(activity) = package_manager()
+//                     .read_named_tag_struct::<SActivity>(activity_desc.activity_name.0.to_string())
+//                 else {
+//                     continue;
+//                 };
+
+//                 for u1 in &activity.unk50 {
+//                     for map in &u1.map_references {
+//                         let map32 = match map.hash32_checked() {
+//                             Some(m) => m,
+//                             None => {
+//                                 // error!("Couldn't translate map hash64 {map:?}");
+//                                 continue;
+//                             }
+//                         };
+
+//                         if let Ok(bubble) =
+//                             package_manager().read_tag_struct::<SBubbleParent>(map32)
+//                         {
+//                             let name = destination_strings
+//                                 .get(&bubble.map_name.0)
+//                                 .cloned()
+//                                 .unwrap_or_else(|| {
+//                                     format!("[MissingString_{:08x}]", bubble.map_name.0)
+//                                 });
+
+//                             strings.push((map32, name));
+//                         }
+//                     }
+//                 }
+//             }
+
+//             strings
+//         })
+//         .collect();
+
+//     stringmap
+// }

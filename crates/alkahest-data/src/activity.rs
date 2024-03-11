@@ -1,10 +1,10 @@
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer, ResourcePointerWithClass};
 
 use crate::{common::ResourceHash, ExtendedHash, Tag};
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x80)]
+#[tiger_tag(id = 0x80808E8E, size = 0x80)]
 pub struct SActivity {
     pub file_size: u64,
     pub location_name: ResourceHash,
@@ -12,7 +12,7 @@ pub struct SActivity {
     pub unk10: ResourceHash,
     pub unk14: ResourceHash,
     pub unk18: ResourcePointer,
-    pub unk20: TagHash64,
+    pub destination: ExtendedHash,
 
     #[tag(offset = 0x40)]
     pub unk40: Vec<Unk80808926>,
@@ -24,8 +24,8 @@ pub struct SActivity {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct Unk80808e8b {
+#[tiger_tag(id = 0x80808E8B)]
+pub struct SDestination {
     pub file_size: u64,
     pub location_name: ResourceHash,
     pub unkc: u32,
@@ -42,7 +42,7 @@ pub struct Unk80808e8b {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x8080892E)]
 pub struct Unk8080892e {
     pub short_activity_name: ResourceHash,
     pub unk4: u32,
@@ -64,7 +64,7 @@ pub struct Unk80808924 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808926)]
 pub struct Unk80808926 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,

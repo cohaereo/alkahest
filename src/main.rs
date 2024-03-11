@@ -12,7 +12,7 @@ use std::{
     cell::RefCell,
     f32::consts::PI,
     fmt::Write,
-    io::{Cursor, Read, Seek, SeekFrom},
+    io::{Cursor, Read},
     mem::transmute,
     path::PathBuf,
     rc::Rc,
@@ -22,10 +22,7 @@ use std::{
 };
 
 use alkahest_data::{
-    activity::SActivity,
-    render_globals::SRenderGlobals,
-    tag::ExtendedHash,
-    text::{StringContainer, StringData, StringPart},
+    activity::SActivity, render_globals::SRenderGlobals, tag::ExtendedHash, text::SLocalizedStrings,
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -44,6 +41,7 @@ use itertools::Itertools;
 use mimalloc::MiMalloc;
 use overlays::camera_settings::CurrentCubemap;
 use poll_promise::Promise;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
 use rustc_hash::{FxHashMap, FxHashSet};
 use technique::Technique;
@@ -103,7 +101,7 @@ use crate::{
         DeviceContextSwapchain, EntityRenderer,
     },
     resources::Resources,
-    text::decode_text,
+    text::StringContainer,
     texture::{Texture, LOW_RES},
     updater::UpdateCheck,
     util::{
@@ -250,47 +248,36 @@ pub async fn main() -> anyhow::Result<()> {
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
-    let mut stringmap: FxHashMap<u32, String> = Default::default();
-    let all_global_packages = [
-        0x012d, 0x0195, 0x0196, 0x0197, 0x0198, 0x0199, 0x019a, 0x019b, 0x019c, 0x019d, 0x019e,
-        0x03dd,
-    ];
-    {
+    // {
+    //     let ls = Instant::now();
+    //     println!("{:#?}", create_map_stringmap());
+    //     println!("Took {}ms to create stringmap", ls.elapsed().as_millis());
+    // }
+
+    let stringmap: FxHashMap<u32, String> = {
         let _span = info_span!("Loading global strings").entered();
-        for (t, _) in package_manager()
-            .get_all_by_reference(u32::from_be(0xEF998080))
+        let stringcontainers = package_manager()
+            .get_all_by_reference(SLocalizedStrings::ID.unwrap())
             .into_iter()
-            .filter(|(t, _)| all_global_packages.contains(&t.pkg_id()))
-        {
-            let textset_header: StringContainer = package_manager().read_tag_struct(t)?;
+            .filter(|(t, _)| {
+                package_manager().package_paths[&t.pkg_id()]
+                    .name
+                    .contains("global")
+            })
+            .map(|(t, _)| t)
+            .collect_vec();
 
-            let data = package_manager()
-                .read_tag(textset_header.language_english)
-                .unwrap();
-            let mut cur = Cursor::new(&data);
-            let text_data: StringData = TigerReadable::read_ds(&mut cur)?;
-
-            for (combination, hash) in text_data
-                .string_combinations
-                .iter()
-                .zip(textset_header.string_hashes.iter())
-            {
-                let mut final_string = String::new();
-
-                for ip in 0..combination.part_count {
-                    cur.seek(SeekFrom::Start(combination.data.offset()))?;
-                    cur.seek(SeekFrom::Current(ip * 0x20))?;
-                    let part: StringPart = TigerReadable::read_ds(&mut cur)?;
-                    cur.seek(SeekFrom::Start(part.data.offset()))?;
-                    let mut data = vec![0u8; part.byte_length as usize];
-                    cur.read_exact(&mut data)?;
-                    final_string += &decode_text(&data, part.cipher_shift);
+        stringcontainers
+            .par_iter()
+            .flat_map(|t| {
+                if let Ok(strings) = StringContainer::load(*t) {
+                    strings.0.into_iter().collect_vec()
+                } else {
+                    vec![]
                 }
-
-                stringmap.insert(hash.0, final_string);
-            }
-        }
-    }
+            })
+            .collect()
+    };
 
     let stringmap = Arc::new(stringmap);
 
