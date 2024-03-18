@@ -110,7 +110,7 @@ fn main() -> anyhow::Result<()> {
                                 0xac => println!("hkcdStaticTreeCodec3Axis4"),
                                 0xaf => println!("hkpStaticCompoundShape"),
                                 0xb3 => println!("hkpStaticCompoundShapeInstance"),
-                                0xb9 => println!("ushort"),
+                                0xb9 => println!("unkb9"),
                                 u => eprintln!("{}", format!("Unknown type 0x{u:x}").red()),
                             }
 

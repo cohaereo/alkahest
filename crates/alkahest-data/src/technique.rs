@@ -4,7 +4,7 @@ use tiger_parse::{tiger_tag, NullString, Pointer};
 use crate::{tfx::TfxShaderStage, ExtendedHash};
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806DAA)]
 pub struct STechnique {
     pub file_size: u64,
     /// 0 = ???

@@ -208,7 +208,7 @@ pub async fn load_maps(
                             u => {
                                 if !unknown_res_types.contains(&u) {
                                     warn!(
-                                        "Unknown activity entref resource table resource type 0x{u:x}"
+                                        "Unknown activity entref resource table resource type 0x{u:x} in resource table {}", resource.entity_resource
                                     );
 
                                     unknown_res_types.insert(u);
@@ -218,7 +218,7 @@ pub async fn load_maps(
 
                         let mut data_tables2 = FxHashSet::default();
                         // TODO(cohae): This is a very dirty hack to find every other data table in the entityresource. We need to fully flesh out the EntityResource format first.
-                        // TODO(cohae): PS: gets assigned as Activity2 to keep them separate from known tables
+                        // TODO(cohae): PS: gets assigned as Activity2 (A2) to keep them separate from known tables
                         for b in data.chunks_exact(4) {
                             let v: [u8; 4] = b.try_into().unwrap();
                             let hash = TagHash(u32::from_le_bytes(v));

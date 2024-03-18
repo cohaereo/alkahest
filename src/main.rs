@@ -22,7 +22,7 @@ use std::{
 };
 
 use alkahest_data::{
-    activity::SActivity, render_globals::SRenderGlobals, tag::ExtendedHash, text::SLocalizedStrings,
+    activity::SActivity, render_globals::SRenderGlobals, tag::ExtendedHash, text::SLocalizedStrings
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -561,9 +561,7 @@ pub async fn main() -> anyhow::Result<()> {
                         if let Some(ref mut p) = last_cursor_pos {
                             let delta = (position.x - p.x, position.y - p.y);
                             let input = resources.get::<InputState>().unwrap();
-                            if (input.mouse_left() | input.mouse_right() | input.mouse_middle())
-                                && !gui_event_captured
-                            {
+                            if (input.mouse_left() | input.mouse_middle()) && !gui_event_captured {
                                 let mut camera = resources.get_mut::<FpsCamera>().unwrap();
                                 camera.update_mouse((delta.0 as f32, delta.1 as f32).into());
 
