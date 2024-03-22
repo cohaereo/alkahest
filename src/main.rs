@@ -1159,7 +1159,7 @@ fn draw_ruler(
 
     debugshapes.cross(ruler.start, ruler.scale, color);
     debugshapes.cross(ruler.end, ruler.scale, color);
-    debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale);
+    debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale, 0.5);
 
     let ruler_center = (ruler.start + ruler.end) / 2.0;
     debugshapes.text(

@@ -22,6 +22,7 @@ cbuffer DebugShapeOptions : register(b10) {
     float4 color;
     float width;
     float dotScale;
+    float lineRatio;
 }
 
 struct VSOutput {
@@ -96,7 +97,7 @@ float4 PShaderDotted(VSOutput input) : SV_Target {
     float progress = input.normalizedPositionOnLine * lineLength;
     progress += dotScale * time * SCROLL_SPEED;
 
-    if((progress % (dotScale * LINE_LENGTH)) < (dotScale * LINE_LENGTH_HALF))
+    if((progress % (dotScale * LINE_LENGTH)) < (dotScale * LINE_LENGTH * lineRatio))
         return color;
     else
         discard;
