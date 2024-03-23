@@ -48,6 +48,7 @@ pub enum DebugShape {
         dotted: bool,
         dot_scale: f32,
         line_ratio: f32,
+        scroll_speed: f32,
     },
     Circle {
         center: Vec3,
@@ -147,6 +148,7 @@ impl DebugShapes {
                 dotted: false,
                 dot_scale: 1.0,
                 line_ratio: 1.0,
+                scroll_speed: 0.5,
             },
             color.into(),
             DebugDrawFlags::DRAW_NORMAL,
@@ -174,6 +176,7 @@ impl DebugShapes {
         color: C,
         dot_scale: f32,
         line_ratio: f32,
+        scroll_speed: f32,
     ) {
         self.shapes.push((
             DebugShape::Line {
@@ -182,6 +185,7 @@ impl DebugShapes {
                 dotted: true,
                 dot_scale,
                 line_ratio,
+                scroll_speed,
             },
             color.into(),
             DebugDrawFlags::DRAW_NORMAL,
@@ -834,8 +838,18 @@ impl DebugShapeRenderer {
                     dotted,
                     dot_scale,
                     line_ratio,
+                    scroll_speed,
                 } => {
-                    self.draw_line(start, end, color, 2.0, dotted, dot_scale, line_ratio);
+                    self.draw_line(
+                        start,
+                        end,
+                        color,
+                        2.0,
+                        dotted,
+                        dot_scale,
+                        line_ratio,
+                        scroll_speed,
+                    );
                 }
                 DebugShape::Circle {
                     center,
@@ -863,14 +877,25 @@ impl DebugShapeRenderer {
                             false,
                             0.0,
                             0.0,
+                            0.5,
                         );
                     }
-                    self.draw_line(center + r * next, center + r * va, color, 2.0, false, 0.0, 0.0);
+                    self.draw_line(
+                        center + r * next,
+                        center + r * va,
+                        color,
+                        2.0,
+                        false,
+                        0.0,
+                        0.0,
+                        0.0,
+                    );
                 }
             }
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_line(
         &self,
         start: Vec3,
@@ -880,6 +905,7 @@ impl DebugShapeRenderer {
         dotted: bool,
         dot_scale: f32,
         line_ratio: f32,
+        scroll_speed: f32,
     ) {
         self.scope_line
             .write(&ScopeAlkDebugShapeLine {
@@ -889,6 +915,7 @@ impl DebugShapeRenderer {
                 width,
                 dot_scale,
                 line_ratio,
+                scroll_speed,
             })
             .unwrap();
 
@@ -931,6 +958,7 @@ pub struct ScopeAlkDebugShapeLine {
     pub width: f32,
     pub dot_scale: f32,
     pub line_ratio: f32,
+    pub scroll_speed: f32,
 }
 
 #[derive(Clone)]
