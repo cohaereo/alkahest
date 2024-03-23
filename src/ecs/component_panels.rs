@@ -856,102 +856,104 @@ impl ComponentPanel for Route {
         };
         let mut new_node: Option<(usize, RouteNode)> = None;
         let mut del_node: Option<usize> = None;
-        for (i, node) in self.path.iter_mut().enumerate() {
-            ui.horizontal(|ui| {
-                if ui
-                    .button(format!("{}", ICON_MAP_MARKER_PLUS))
-                    .on_hover_text("Insert Node")
-                    .clicked()
-                {
-                    new_node = Some((
-                        i,
-                        RouteNode {
-                            pos: camera.position,
-                            map_hash: Some(current_hash),
-                            is_teleport: false,
-                            label: None,
-                        },
-                    ));
-                };
-                ui.add(egui::Separator::default().horizontal());
-            });
-
-            egui::Grid::new(format!("route_name_{}", i))
-                .num_columns(2)
-                .spacing([40.0, 4.0])
-                .striped(true)
-                .show(ui, |ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for (i, node) in self.path.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
                     if ui
-                        .button(format!("{}", ICON_DELETE))
-                        .on_hover_text("Delete Node")
+                        .button(format!("{}", ICON_MAP_MARKER_PLUS))
+                        .on_hover_text("Insert Node")
                         .clicked()
                     {
-                        del_node = Some(i);
+                        new_node = Some((
+                            i,
+                            RouteNode {
+                                pos: camera.position,
+                                map_hash: Some(current_hash),
+                                is_teleport: false,
+                                label: None,
+                            },
+                        ));
                     };
-                    ui.horizontal(|ui| {
+                    ui.add(egui::Separator::default().horizontal());
+                });
+
+                egui::Grid::new(format!("route_name_{}", i))
+                    .num_columns(2)
+                    .spacing([40.0, 4.0])
+                    .striped(true)
+                    .show(ui, |ui| {
                         if ui
-                            .button(ICON_MAP_MARKER.to_string())
-                            .on_hover_text("Go to Node Location")
+                            .button(format!("{}", ICON_DELETE))
+                            .on_hover_text("Delete Node")
                             .clicked()
                         {
-                            camera.tween = Some(Tween::new(
-                                |x| x,
-                                Some((camera.position, node.pos - camera.front * 0.5)),
-                                None,
-                                0.7,
-                            ));
-                        }
-                        if let Some(label) = node.label.as_mut() {
-                            egui::TextEdit::singleline(label).ui(ui);
-                        } else {
-                            ui.label(format!("Node {}", i + 1));
+                            del_node = Some(i);
+                        };
+                        ui.horizontal(|ui| {
                             if ui
-                                .button(ICON_TAG.to_string())
-                                .on_hover_text("Add label")
+                                .button(ICON_MAP_MARKER.to_string())
+                                .on_hover_text("Go to Node Location")
                                 .clicked()
                             {
-                                node.label = Some(format!("Node {}", i + 1));
+                                camera.tween = Some(Tween::new(
+                                    |x| x,
+                                    Some((camera.position, node.pos - camera.front * 0.5)),
+                                    None,
+                                    0.7,
+                                ));
                             }
-                        }
+                            if let Some(label) = node.label.as_mut() {
+                                egui::TextEdit::singleline(label).ui(ui);
+                            } else {
+                                ui.label(format!("Node {}", i + 1));
+                                if ui
+                                    .button(ICON_TAG.to_string())
+                                    .on_hover_text("Add label")
+                                    .clicked()
+                                {
+                                    node.label = Some(format!("Node {}", i + 1));
+                                }
+                            }
+                        });
                     });
-                });
-            egui::Grid::new(format!("route_position_{}", i))
-                .num_columns(2)
-                .spacing([40.0, 4.0])
-                .striped(true)
-                .show(ui, |ui| {
-                    input_float3!(ui, "Position", &mut node.pos);
+                egui::Grid::new(format!("route_position_{}", i))
+                    .num_columns(2)
+                    .spacing([40.0, 4.0])
+                    .striped(true)
+                    .show(ui, |ui| {
+                        input_float3!(ui, "Position", &mut node.pos);
 
-                    ui.horizontal(|ui| {
-                        if ui
-                            .button(ICON_CAMERA_CONTROL.to_string())
-                            .on_hover_text("Set position to camera")
-                            .clicked()
-                        {
-                            node.pos = camera.position;
-                            node.map_hash = Some(current_hash);
-                        }
+                        ui.horizontal(|ui| {
+                            if ui
+                                .button(ICON_CAMERA_CONTROL.to_string())
+                                .on_hover_text("Set position to camera")
+                                .clicked()
+                            {
+                                node.pos = camera.position;
+                                node.map_hash = Some(current_hash);
+                            }
 
-                        if ui
-                            .add_enabled(
-                                d.is_finite(),
-                                Button::new(if d.is_finite() {
-                                    ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
-                                } else {
-                                    ICON_EYE_OFF_OUTLINE.to_string()
-                                }),
-                            )
-                            .on_hover_text("Set position to gaze")
-                            .clicked()
-                        {
-                            node.pos = pos;
-                            node.map_hash = Some(current_hash);
-                        }
-                        ui.label(prettify_distance(d));
+                            if ui
+                                .add_enabled(
+                                    d.is_finite(),
+                                    Button::new(if d.is_finite() {
+                                        ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                                    } else {
+                                        ICON_EYE_OFF_OUTLINE.to_string()
+                                    }),
+                                )
+                                .on_hover_text("Set position to gaze")
+                                .clicked()
+                            {
+                                node.pos = pos;
+                                node.map_hash = Some(current_hash);
+                            }
+                            ui.label(prettify_distance(d));
+                        });
                     });
-                });
-            ui.checkbox(&mut node.is_teleport, "This node is teleported to");
-        }
+                ui.checkbox(&mut node.is_teleport, "This node is teleported to");
+            }
+        });
         ui.horizontal(|ui| {
             if ui
                 .button(format!("{}", ICON_MAP_MARKER_PLUS))
