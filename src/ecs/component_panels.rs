@@ -1,3 +1,4 @@
+use destiny_pkg::TagHash;
 use egui::{Button, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
@@ -36,6 +37,7 @@ use crate::{
 pub fn show_inspector_panel(
     ui: &mut egui::Ui,
     scene: &mut Scene,
+    current_hash: TagHash,
     cmd: &mut hecs::CommandBuffer,
     ent: Entity,
     resources: &Resources,
@@ -124,7 +126,7 @@ pub fn show_inspector_panel(
         };
         ui.separator();
     }
-    show_inspector_components(ui, e, resources);
+    show_inspector_components(ui, e, resources, current_hash);
 
     if global_changed {
         if global {
@@ -135,10 +137,15 @@ pub fn show_inspector_panel(
     }
 }
 
-fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
+fn show_inspector_components(
+    ui: &mut egui::Ui,
+    e: EntityRef<'_>,
+    resources: &Resources,
+    current_hash: TagHash,
+) {
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(e, ui, resources);
+            t.show_inspector_ui(e, ui, resources, current_hash);
             if let Some(ot) = e.get::<&OriginalTransform>() {
                 // Has the entity moved from it's original position?
                 let has_moved = *t != ot.0;
@@ -163,7 +170,7 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
 			$(
 				if let Some(mut component) = e.get::<&mut $component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(e, ui, resources);
+						component.show_inspector_ui(e, ui, resources, current_hash);
 					});
 				}
 			)*
@@ -244,7 +251,8 @@ pub(super) trait ComponentPanel {
         false
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, _: &mut egui::Ui, _: &Resources) {}
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, _: &mut egui::Ui, _: &Resources, _: TagHash) {
+    }
 }
 
 impl ComponentPanel for Transform {
@@ -260,7 +268,13 @@ impl ComponentPanel for Transform {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
         rotation_euler.y = rotation_euler.y.to_degrees();
@@ -375,7 +389,13 @@ impl ComponentPanel for EntityWorldId {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.label(format!("World ID: 0x{:016X}", self.0));
     }
 }
@@ -393,7 +413,13 @@ impl ComponentPanel for ResourcePoint {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Entity:");
             ui.label(self.entity.to_string());
@@ -438,7 +464,13 @@ impl ComponentPanel for EntityModel {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Tag:");
             ui.label(format!("{}", self.2));
@@ -459,7 +491,13 @@ impl ComponentPanel for StaticInstances {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Mesh tag:");
             ui.label(self.1.to_string());
@@ -509,7 +547,13 @@ impl ComponentPanel for Ruler {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         let camera = resources.get::<FpsCamera>().unwrap();
         egui::Grid::new("transform_input_grid")
             .num_columns(2)
@@ -642,7 +686,13 @@ impl ComponentPanel for Sphere {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, _resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _resources: &Resources,
+        _: TagHash,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
@@ -683,7 +733,13 @@ impl ComponentPanel for Beacon {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
@@ -784,7 +840,13 @@ impl ComponentPanel for Light {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
