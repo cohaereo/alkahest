@@ -856,7 +856,7 @@ impl ComponentPanel for Route {
         };
         let mut new_node: Option<(usize, RouteNode)> = None;
         let mut del_node: Option<usize> = None;
-        egui::ScrollArea::vertical().show(ui, |ui| {
+        egui::ScrollArea::vertical().max_height(ui.available_height() - ui.spacing().interact_size.y * 15.0).show(ui, |ui| {
             for (i, node) in self.path.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
                     if ui
