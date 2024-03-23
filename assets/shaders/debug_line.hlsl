@@ -22,6 +22,8 @@ cbuffer DebugShapeOptions : register(b10) {
     float4 color;
     float width;
     float dotScale;
+    float lineRatio;
+    float scrollSpeed;
 }
 
 struct VSOutput {
@@ -86,7 +88,6 @@ void GShader(line VSOutput input[2], inout TriangleStream<VSOutput> OutputStream
 float4 PShader(VSOutput input) : SV_Target {
     return color;
 }
-#define SCROLL_SPEED 0.50f
 #define LINE_LENGTH 0.30f
 #define LINE_LENGTH_HALF (LINE_LENGTH / 2.0f)
 
@@ -94,9 +95,9 @@ float4 PShader(VSOutput input) : SV_Target {
 float4 PShaderDotted(VSOutput input) : SV_Target {
     float lineLength = length(lineEnd - lineStart);
     float progress = input.normalizedPositionOnLine * lineLength;
-    progress += dotScale * time * SCROLL_SPEED;
+    progress += dotScale * time * scrollSpeed;
 
-    if((progress % (dotScale * LINE_LENGTH)) < (dotScale * LINE_LENGTH_HALF))
+    if((progress % (dotScale * LINE_LENGTH)) < (dotScale * LINE_LENGTH * lineRatio))
         return color;
     else
         discard;

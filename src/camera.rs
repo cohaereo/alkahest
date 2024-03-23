@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, Vec2, Vec3};
 use hecs::Entity;
@@ -27,6 +29,7 @@ pub struct FpsCamera {
     pub projection_view_matrix_inv: Mat4,
 
     pub tween: Option<Tween>,
+    pub tween_queue: VecDeque<Tween>,
     pub driving: Option<Entity>,
 }
 
@@ -47,6 +50,7 @@ impl Default for FpsCamera {
             projection_view_matrix: Mat4::IDENTITY,
             projection_view_matrix_inv: Mat4::IDENTITY,
             tween: None,
+            tween_queue: VecDeque::new(),
             driving: None,
         }
     }
@@ -151,6 +155,7 @@ impl FpsCamera {
         // Cancel tween if the user moves the camera
         if self.tween.is_some() && direction.length() > 0.0 {
             self.tween = None;
+            self.tween_queue.clear();
         }
 
         if let Some(tween) = &mut self.tween {
@@ -161,7 +166,10 @@ impl FpsCamera {
         }
 
         if self.tween.as_ref().is_some_and(Tween::is_finished) {
-            self.tween = None;
+            self.tween = self.tween_queue.pop_front();
+            if let Some(t) = self.tween.as_mut() {
+                t.reset()
+            }
         }
 
         self.orientation.x = self.orientation.x.clamp(-89.9, 89.9);
@@ -327,20 +335,24 @@ impl FpsCamera {
     // Calculate angle to point camera at pos.
     // The angle has a minimal diff to current camera angle.
     pub fn get_look_angle(&self, pos: Vec3) -> Vec2 {
-        let dir = pos - self.position;
-        let inv_r = dir.length_recip();
-        if inv_r.is_infinite() {
-            self.orientation
-        } else {
-            let theta = dir.x.atan2(dir.y).to_degrees();
-            let mut diff = (theta - self.orientation.y).rem_euclid(360.0);
-            if diff > 180.0 {
-                diff -= 360.0;
-            }
-            Vec2::new(
-                (dir.z * inv_r).acos().to_degrees() - 90.0,
-                self.orientation.y + diff,
-            )
+        get_look_angle(self.orientation, self.position, pos)
+    }
+}
+
+pub fn get_look_angle(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> Vec2 {
+    let dir = pos2 - pos1;
+    let inv_r = dir.length_recip();
+    if inv_r.is_infinite() {
+        start_angle
+    } else {
+        let theta = dir.x.atan2(dir.y).to_degrees();
+        let mut diff = (theta - start_angle.y).rem_euclid(360.0);
+        if diff > 180.0 {
+            diff -= 360.0;
         }
+        Vec2::new(
+            (dir.z * inv_r).acos().to_degrees() - 90.0,
+            start_angle.y + diff,
+        )
     }
 }

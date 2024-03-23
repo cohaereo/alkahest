@@ -41,6 +41,15 @@ impl MapDataList {
         }
     }
 
+    pub fn current_map_hash(&self) -> Option<TagHash> {
+        if self.maps.is_empty() {
+            None
+        } else {
+            let map_index = self.current_map % self.maps.len();
+            self.maps.get(map_index).map(|v| v.0)
+        }
+    }
+
     pub fn map_mut(&mut self, i: usize) -> Option<&mut MapData> {
         self.maps.get_mut(i).map(|v| &mut v.2)
     }
