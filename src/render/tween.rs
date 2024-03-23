@@ -31,6 +31,10 @@ impl Tween {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.start_time = Instant::now();
+    }
+
     pub fn update_pos(&mut self) -> Option<Vec3> {
         let time = self.start_time.elapsed().as_secs_f32();
         let t = (time / self.duration).clamp(0., 1.);

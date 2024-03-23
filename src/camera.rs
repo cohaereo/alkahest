@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use alkahest_data::occlusion::AABB;
 use glam::{Mat4, Quat, Vec2, Vec3};
 use hecs::Entity;
@@ -27,6 +29,7 @@ pub struct FpsCamera {
     pub projection_view_matrix_inv: Mat4,
 
     pub tween: Option<Tween>,
+    pub tween_queue: VecDeque<Tween>,
     pub driving: Option<Entity>,
 }
 
@@ -47,6 +50,7 @@ impl Default for FpsCamera {
             projection_view_matrix: Mat4::IDENTITY,
             projection_view_matrix_inv: Mat4::IDENTITY,
             tween: None,
+            tween_queue: VecDeque::new(),
             driving: None,
         }
     }
@@ -151,6 +155,7 @@ impl FpsCamera {
         // Cancel tween if the user moves the camera
         if self.tween.is_some() && direction.length() > 0.0 {
             self.tween = None;
+            self.tween_queue.clear();
         }
 
         if let Some(tween) = &mut self.tween {
@@ -161,7 +166,10 @@ impl FpsCamera {
         }
 
         if self.tween.as_ref().is_some_and(Tween::is_finished) {
-            self.tween = None;
+            self.tween = self.tween_queue.pop_front();
+            if let Some(t) = self.tween.as_mut() {
+                t.reset()
+            }
         }
 
         self.orientation.x = self.orientation.x.clamp(-89.9, 89.9);
