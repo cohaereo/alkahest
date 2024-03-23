@@ -24,6 +24,7 @@ impl Overlay for InspectorOverlay {
                     show_inspector_panel(
                         ui,
                         &mut map.scene,
+                        map.hash,
                         &mut map.command_buffer,
                         ent,
                         resources,
