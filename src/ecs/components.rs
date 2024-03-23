@@ -163,8 +163,49 @@ impl Default for Beacon {
         }
     }
 }
-/// Marker component to indicate that the entity is allowed to be modified in
-/// potentially destructive ways (e.g. deleting it, changing it's name, etc.)
+
+pub struct RouteNode {
+    pub pos: Vec3,
+    pub map_hash: Option<TagHash>,
+    pub is_teleport: bool,
+    pub label: Option<String>,
+}
+
+impl Default for RouteNode {
+    fn default() -> Self {
+        Self {
+            pos: Vec3::ZERO,
+            map_hash: None,
+            is_teleport: false,
+            label: None,
+        }
+    }
+}
+
+pub struct Route {
+    pub path: Vec<RouteNode>,
+    pub color: [u8; 3],
+    pub rainbow: bool,
+    pub scale: f32,
+    pub marker_interval: f32,
+    pub show_all: bool,
+    pub activity_hash: Option<TagHash>,
+}
+
+impl Default for Route {
+    fn default() -> Self {
+        Self {
+            path: vec![],
+            color: [255, 255, 255],
+            rainbow: false,
+            scale: 1.0,
+            marker_interval: 0.0,
+            show_all: false,
+            activity_hash: None,
+        }
+    }
+}
+
 pub struct Mutable;
 
 /// Marker component to indicate that the entity is a light

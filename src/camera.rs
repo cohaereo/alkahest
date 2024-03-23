@@ -329,20 +329,24 @@ impl FpsCamera {
     // Calculate angle to point camera at pos.
     // The angle has a minimal diff to current camera angle.
     pub fn get_look_angle(&self, pos: Vec3) -> Vec2 {
-        let dir = pos - self.position;
-        let inv_r = dir.length_recip();
-        if inv_r.is_infinite() {
-            self.orientation
-        } else {
-            let theta = dir.x.atan2(dir.y).to_degrees();
-            let mut diff = (theta - self.orientation.y).rem_euclid(360.0);
-            if diff > 180.0 {
-                diff -= 360.0;
-            }
-            Vec2::new(
-                (dir.z * inv_r).acos().to_degrees() - 90.0,
-                self.orientation.y + diff,
-            )
+        get_look_angle(self.orientation, self.position, pos)
+    }
+}
+
+pub fn get_look_angle(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> Vec2 {
+    let dir = pos2 - pos1;
+    let inv_r = dir.length_recip();
+    if inv_r.is_infinite() {
+        start_angle
+    } else {
+        let theta = dir.x.atan2(dir.y).to_degrees();
+        let mut diff = (theta - start_angle.y).rem_euclid(360.0);
+        if diff > 180.0 {
+            diff -= 360.0;
         }
+        Vec2::new(
+            (dir.z * inv_r).acos().to_degrees() - 90.0,
+            start_angle.y + diff,
+        )
     }
 }

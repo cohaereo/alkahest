@@ -2,12 +2,15 @@ use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use glam::Vec3;
 
-use super::gui::{HiddenWindows, Overlay};
+use super::{
+    activity_select::get_activity_hash,
+    gui::{HiddenWindows, Overlay},
+};
 use crate::{
     camera::FpsCamera,
     config,
     ecs::{
-        components::{Beacon, Mutable, Ruler, Sphere},
+        components::{Beacon, Global, Mutable, Route, RouteNode, Ruler, Sphere},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::{Transform, TransformFlags},
@@ -18,8 +21,8 @@ use crate::{
         ICON_ALPHA_I_BOX_OUTLINE, ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE,
         ICON_ALPHA_W_BOX_OUTLINE, ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL,
         ICON_ARROW_DOWN_BOLD_BOX_OUTLINE, ICON_ARROW_UP_BOLD_BOX_OUTLINE, ICON_KEYBOARD_SPACE,
-        ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_RULER_SQUARE,
-        ICON_SIGN_POLE, ICON_SPHERE,
+        ICON_MAP_MARKER_PATH, ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE,
+        ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
     },
     map::MapList,
     updater::UpdateChannel,
@@ -161,6 +164,38 @@ impl Overlay for MenuBar {
                                 },
                                 Tags::from_iter([EntityTag::Utility]),
                                 Mutable,
+                            ));
+
+                            if let Some(mut se) = resources.get_mut::<SelectedEntity>() {
+                                se.0 = Some(e);
+                            }
+
+                            ui.close_menu();
+                        }
+                    }
+                    if ui
+                        .button(format!("{} Route", ICON_MAP_MARKER_PATH))
+                        .clicked()
+                    {
+                        let mut maps = resources.get_mut::<MapList>().unwrap();
+                        let map_hash = maps.current_map_hash();
+                        let camera = resources.get::<FpsCamera>().unwrap();
+
+                        if let Some(map) = maps.current_map_mut() {
+                            let e = map.scene.spawn((
+                                Route {
+                                    path: vec![RouteNode {
+                                        pos: camera.position,
+                                        map_hash,
+                                        is_teleport: false,
+                                        label: None,
+                                    }],
+                                    activity_hash: get_activity_hash(resources),
+                                    ..Default::default()
+                                },
+                                Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                                Mutable,
+                                Global(true),
                             ));
 
                             if let Some(mut se) = resources.get_mut::<SelectedEntity>() {

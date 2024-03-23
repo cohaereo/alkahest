@@ -37,6 +37,7 @@ pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
         // HavokShape,
         Beacon,
         Ruler,
+        Route,
         Sphere,
         EntityModel,
         StaticInstances,
@@ -68,7 +69,7 @@ pub fn resolve_entity_name(e: EntityRef<'_>, append_ent: bool) -> String {
             };
         }
 
-        name_from_component_panels!(Beacon, Ruler, Sphere, EntityModel, StaticInstances);
+        name_from_component_panels!(Beacon, Route, Ruler, Sphere, EntityModel, StaticInstances);
 
         format!("ent {}", e.entity().id())
     }
