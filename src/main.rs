@@ -60,6 +60,7 @@ use winit::{
 };
 
 use crate::{
+    action::ActionList,
     camera::FpsCamera,
     config::{WindowConfig, CONFIGURATION},
     ecs::{
@@ -108,6 +109,7 @@ use crate::{
     },
 };
 
+mod action;
 mod camera;
 mod config;
 #[cfg(feature = "discord_rpc")]
@@ -362,6 +364,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(args.clone());
     resources.insert(Arc::clone(&stringmap));
     resources.insert(HiddenWindows::default());
+    resources.insert(ActionList::default());
 
     let mut activity_browser = ActivityBrowser::new(&stringmap);
 
@@ -592,6 +595,11 @@ pub async fn main() -> anyhow::Result<()> {
                 }
             }
             Event::RedrawRequested(..) => {
+                {
+                    let mut action_list = resources.get_mut::<ActionList>().unwrap();
+                    action_list.process(&resources);
+                }
+
                 resources.get_mut::<SelectedEntity>().unwrap().1 = false;
 
                 {

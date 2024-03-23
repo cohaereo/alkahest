@@ -149,8 +149,10 @@ impl FpsCamera {
         speed *= self.speed_mul;
 
         // Cancel tween if the user moves the camera
-        if self.tween.is_some() && direction.length() > 0.0 {
-            self.tween = None;
+        if direction.length() > 0.0 {
+            if let Some(t) = self.tween.as_mut() {
+                t.abort()
+            }
         }
 
         if let Some(tween) = &mut self.tween {
