@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     discord,
-    ecs::Scene,
+    ecs::{components::Global, Scene},
     mapload_temporary::{self, LoadMapData},
     render::{dcs::DcsShared, renderer::RendererShared, EntityRenderer},
     resources::Resources,
@@ -40,8 +40,21 @@ impl Map {
         if let Some(promise) = self.promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
-                    Ok(map) => {
-                        self.scene = map.scene;
+                    Ok(mut map) => {
+                        let mut ent_list = vec![];
+
+                        // Get all non-global entities
+                        for (entity, global) in map.scene.query::<Option<&Global>>().iter() {
+                            if !global.map_or(false, |g| g.0) {
+                                ent_list.push(entity);
+                            }
+                        }
+
+                        // Insert all entities from the loaded map into the current scene
+                        for entity in ent_list {
+                            self.scene.spawn(map.scene.take(entity).ok().unwrap());
+                        }
+
                         self.entity_renderers = map.entity_renderers;
                         self.load_state = MapLoadState::Loaded;
                     }
