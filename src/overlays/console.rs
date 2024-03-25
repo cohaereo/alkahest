@@ -33,7 +33,7 @@ use crate::{
         tags::{insert_tag, EntityTag},
         transform::{OriginalTransform, Transform},
     },
-    map::MapDataList,
+    map::MapList,
     overlays::gui::Overlay,
     packages::package_manager,
     render::{
@@ -350,14 +350,14 @@ fn execute_command(
             }
         }
         "clear_map" => {
-            if let Some(mut maps) = resources.get_mut::<MapDataList>() {
-                let current_map = maps.current_map;
-                let scene = &mut maps.maps[current_map].2.scene;
-                scene.clear();
+            if let Some(mut maps) = resources.get_mut::<MapList>() {
+                if let Some(map) = maps.current_map_mut() {
+                    map.scene.clear();
+                }
             }
         }
         "sem" | "spawn_entity_model" => {
-            if let Some(mut maps) = resources.get_mut::<MapDataList>() {
+            if let Some(mut maps) = resources.get_mut::<MapList>() {
                 if args.len() != 1 {
                     error!("Missing tag argument, expected 32/64-bit tag");
                     return;
@@ -371,8 +371,10 @@ fn execute_command(
                     }
                 };
 
-                let current_map = maps.current_map;
-                let scene = &mut maps.maps[current_map].2.scene;
+                let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                    return;
+                };
+
                 let camera = resources.get::<FpsCamera>().unwrap();
 
                 let renderer = resources.get_mut::<RendererShared>().unwrap();
@@ -424,7 +426,7 @@ fn execute_command(
             }
         }
         "se" | "spawn_entity" => {
-            if let Some(mut maps) = resources.get_mut::<MapDataList>() {
+            if let Some(mut maps) = resources.get_mut::<MapList>() {
                 if args.len() != 1 {
                     error!("Missing tag argument, expected 32/64-bit tag");
                     return;
@@ -438,8 +440,10 @@ fn execute_command(
                     }
                 };
 
-                let current_map = maps.current_map;
-                let scene = &mut maps.maps[current_map].2.scene;
+                let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                    return;
+                };
+
                 let camera = resources.get::<FpsCamera>().unwrap();
 
                 let renderer = resources.get_mut::<RendererShared>().unwrap();
@@ -567,8 +571,8 @@ fn execute_command(
             // 3C0100340003293401340212232200350334050E44043C01003406032934073408122322003509340B0E440D
         }
         "reset_all_to_original_pos" => {
-            if let Some(maps) = resources.get::<MapDataList>() {
-                if let Some((_, _, map)) = maps.current_map() {
+            if let Some(maps) = resources.get::<MapList>() {
+                if let Some(map) = maps.current_map() {
                     for (_, (t, ot)) in map
                         .scene
                         .query::<(&mut Transform, &OriginalTransform)>()
@@ -580,8 +584,8 @@ fn execute_command(
             }
         }
         "unhide_all" | "show_all" => {
-            if let Some(maps) = resources.get::<MapDataList>() {
-                if let Some((_, _, map)) = maps.current_map() {
+            if let Some(maps) = resources.get::<MapList>() {
+                if let Some(map) = maps.current_map() {
                     for (_, vis) in map.scene.query::<&mut Visible>().iter() {
                         vis.0 = true;
                     }

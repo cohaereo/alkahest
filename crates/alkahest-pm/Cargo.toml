@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.79"
-destiny-pkg = "0.9.2"
+destiny-pkg = "0.9.8"
 
 lazy_static = "1.4.0"
 parking_lot = "0.12.1"

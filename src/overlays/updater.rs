@@ -3,10 +3,7 @@ use egui::{Align2, Color32, Id, RichText, Rounding, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use poll_promise::Promise;
 
-use super::{
-    load_indicator::{SPINNER_FRAMES, SPINNER_INTERVAL},
-    UiExt,
-};
+use super::{load_indicator::LoadingIcon, UiExt};
 use crate::{
     config,
     icons::{ICON_CANCEL, ICON_DOWNLOAD, ICON_LIGHTNING_BOLT, ICON_SHIELD_HALF_FULL},
@@ -161,12 +158,10 @@ impl UpdateDownload {
                 .order(egui::Order::Foreground)
                 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
                 .show(ctx, |ui| {
-                    let time = ui.input(|i| i.time);
-                    let time_millis = (time * 1000.0) as usize;
                     ui.label(
                         RichText::new(format!(
                             "{} Updating Alkahest",
-                            SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
+                            LoadingIcon::Clock.get_frame()
                         ))
                         .size(36.0)
                         .color(Color32::WHITE),

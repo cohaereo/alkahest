@@ -7,14 +7,14 @@ use std::{
 };
 
 use alkahest_data::{
-    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
+    activity::{SActivity, SDestination, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     common::ResourceHash,
     entity::{SEntityModel, Unk808072c5, Unk8080906b, Unk80809905, Unk80809c0f},
     map::{
-        SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
-        STerrain, Unk808068d4, Unk80806aa7, Unk80806ac2, Unk80806b7f, Unk80806c98, Unk80806d19,
-        Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246, Unk808085c2, Unk80808604, Unk80808cb7,
-        Unk80809178, Unk8080917b, Unk80809802,
+        SBubbleParent, SBubbleParentShallow, SLightCollection, SMapDataTable, SShadowingLight,
+        SSlipSurfaceVolume, STerrain, Unk808068d4, Unk80806aa7, Unk80806ac2, Unk80806b7f,
+        Unk80806c98, Unk80806d19, Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246, Unk808085c2,
+        Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
     },
     occlusion::{SObjectOcclusionBounds, AABB},
     statics::SStaticMesh,
@@ -22,9 +22,10 @@ use alkahest_data::{
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
-use destiny_pkg::{TagHash, TagHash64};
+use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::{multizip, Itertools};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{dpkg::PackageManagerExt, Endian, FnvHash, TigerReadable};
 use windows::Win32::Graphics::{
@@ -43,7 +44,6 @@ use crate::{
         transform::{OriginalTransform, Transform},
         Scene,
     },
-    map::{MapData, SimpleLight},
     map_resources::MapResource,
     packages::package_manager,
     render::{
@@ -52,46 +52,106 @@ use crate::{
         EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
     technique::Technique,
+    text::StringContainer,
     util::fnv1,
 };
 
-pub async fn load_maps(
+pub fn get_map_name(
+    map_hash: TagHash,
+    stringmap: &FxHashMap<u32, String>,
+) -> anyhow::Result<String> {
+    let _span = info_span!("Get map name", %map_hash).entered();
+    let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(map_hash) {
+        Ok(m) => m.map_name,
+        Err(e) => {
+            anyhow::bail!("Failed to load map {map_hash}: {e}");
+        }
+    };
+
+    Ok(stringmap
+        .get(&map_name.0)
+        .cloned()
+        .unwrap_or(format!("[MissingString_{:08x}]", map_name.0)))
+}
+
+pub fn query_activity_maps(
+    activity_hash: TagHash,
+    stringmap: &FxHashMap<u32, String>,
+) -> anyhow::Result<Vec<(TagHash, String)>> {
+    let _span = info_span!("Query activity maps").entered();
+    let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
+    let mut string_container = StringContainer::default();
+    if let Ok(destination) = package_manager().read_tag_struct::<SDestination>(activity.destination)
+    {
+        if let Ok(sc) = StringContainer::load(destination.string_container) {
+            string_container = sc;
+        }
+    }
+
+    let mut maps = vec![];
+    for u1 in &activity.unk50 {
+        for map in &u1.map_references {
+            let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(*map) {
+                Ok(m) => m.map_name,
+                Err(e) => {
+                    error!("Failed to load map {map}: {e}");
+                    continue;
+                }
+            };
+
+            let map_name = string_container
+                .get(&map_name.0)
+                .cloned()
+                .unwrap_or_else(|| {
+                    // Fall back to global stringmap
+                    stringmap
+                        .get(&map_name.0)
+                        .cloned()
+                        .unwrap_or(format!("[MissingString_{:08x}]", map_name.0))
+                });
+
+            maps.push((map.hash32(), map_name));
+        }
+    }
+
+    Ok(maps)
+}
+
+pub async fn load_map_scene(
     dcs: Arc<DeviceContextSwapchain>,
     renderer: RendererShared,
-    map_hashes: Vec<TagHash>,
+    map_hash: TagHash,
     stringmap: Arc<FxHashMap<u32, String>>,
     activity_hash: Option<TagHash>,
     load_ambient_activity: bool,
-) -> anyhow::Result<LoadMapsData> {
+) -> anyhow::Result<LoadMapData> {
     let mut vshader_map: FxHashMap<TagHash, (ID3D11VertexShader, Vec<InputElement>, Vec<u8>)> =
         Default::default();
     let mut pshader_map: FxHashMap<TagHash, (ID3D11PixelShader, Vec<InputElement>)> =
         Default::default();
     let mut sampler_map: FxHashMap<u64, ID3D11SamplerState> = Default::default();
 
-    let mut maps: Vec<(TagHash, Option<TagHash64>, MapData)> = vec![];
     let mut material_map: FxHashMap<TagHash, Technique> = Default::default();
     let mut to_load_entitymodels: FxHashSet<TagHash> = Default::default();
     let renderer_ch = renderer.clone();
 
-    let mut activity_entref_tables: FxHashMap<
-        TagHash,
-        Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)>,
-    > = Default::default();
+    let _span = debug_span!("Load map", %map_hash).entered();
+    let Ok(bubble_parent) = package_manager().read_tag_struct::<SBubbleParent>(map_hash) else {
+        anyhow::bail!("Failed to load map {map_hash}");
+    };
+
+    let mut activity_entrefs: Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)> =
+        Default::default();
     if let Some(activity_hash) = activity_hash {
         let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
         for u1 in &activity.unk50 {
             for map in &u1.map_references {
-                let map32 = match map.hash32_checked() {
-                    Some(m) => m,
-                    None => {
-                        error!("Couldn't translate map hash64 {map:?}");
-                        continue;
-                    }
-                };
+                if map.hash32() != map_hash {
+                    continue;
+                }
 
                 for u2 in &u1.unk18 {
-                    activity_entref_tables.entry(map32).or_default().push((
+                    activity_entrefs.push((
                         u2.unk_entity_reference.clone(),
                         u2.activity_phase_name2,
                         ResourceOriginType::Activity,
@@ -105,16 +165,12 @@ pub async fn load_maps(
                 Ok(activity) => {
                     for u1 in &activity.unk50 {
                         for map in &u1.map_references {
-                            let map32 = match map.hash32_checked() {
-                                Some(m) => m,
-                                None => {
-                                    error!("Couldn't translate map hash64 {map:?}");
-                                    continue;
-                                }
-                            };
+                            if map.hash32() != map_hash {
+                                continue;
+                            }
 
                             for u2 in &u1.unk18 {
-                                activity_entref_tables.entry(map32).or_default().push((
+                                activity_entrefs.push((
                                     u2.unk_entity_reference.clone(),
                                     u2.activity_phase_name2,
                                     ResourceOriginType::Ambient,
@@ -133,227 +189,178 @@ pub async fn load_maps(
         }
     }
 
-    for hash in map_hashes {
-        let _span = debug_span!("Load map", %hash).entered();
-        let Ok(think) = package_manager().read_tag_struct::<SBubbleParent>(hash) else {
-            error!("Failed to load map {hash}");
-            continue;
-        };
+    let mut scene = Scene::new();
 
-        let mut scene = Scene::new();
+    let mut unknown_root_resources: FxHashMap<u32, Vec<TagHash>> = Default::default();
 
-        let mut unknown_root_resources: FxHashMap<u32, Vec<TagHash>> = Default::default();
-
-        let mut entity_worldid_name_map: FxHashMap<u64, String> = Default::default();
-        if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
-            for (e, _, _) in activity_entrefs {
-                for resource in &e.unk18.entity_resources {
-                    if let Some(strings) = get_entity_labels(resource.entity_resource) {
-                        entity_worldid_name_map.extend(strings);
-                    }
-                }
+    let mut entity_worldid_name_map: FxHashMap<u64, String> = Default::default();
+    for (e, _, _) in &activity_entrefs {
+        for resource in &e.unk18.entity_resources {
+            if let Some(strings) = get_entity_labels(resource.entity_resource) {
+                entity_worldid_name_map.extend(strings);
             }
         }
+    }
 
-        for map_container in &think.child_map.map_resources {
-            for table in &map_container.data_tables {
-                let table_data = package_manager().read_tag(table.hash()).unwrap();
-                let mut cur = Cursor::new(&table_data);
+    for map_container in &bubble_parent.child_map.map_resources {
+        for table in &map_container.data_tables {
+            let table_data = package_manager().read_tag(table.hash()).unwrap();
+            let mut cur = Cursor::new(&table_data);
 
-                load_datatable_into_scene(
-                    table,
-                    table.hash(),
-                    &mut cur,
-                    &mut scene,
-                    renderer_ch.clone(),
-                    ResourceOriginType::Map,
-                    0,
-                    stringmap.clone(),
-                    &entity_worldid_name_map,
-                    &mut material_map,
-                    &mut to_load_entitymodels,
-                    &mut unknown_root_resources,
-                )?;
-            }
+            load_datatable_into_scene(
+                table,
+                table.hash(),
+                &mut cur,
+                &mut scene,
+                renderer_ch.clone(),
+                ResourceOriginType::Map,
+                0,
+                stringmap.clone(),
+                &entity_worldid_name_map,
+                &mut material_map,
+                &mut to_load_entitymodels,
+                &mut unknown_root_resources,
+            )?;
         }
+    }
 
-        if let Some(activity_entrefs) = activity_entref_tables.get(&hash) {
-            let mut unknown_res_types: FxHashSet<u32> = Default::default();
-            for (e, phase_name2, origin) in activity_entrefs {
-                for resource in &e.unk18.entity_resources {
-                    if resource.entity_resource.is_some() {
-                        let data = package_manager().read_tag(resource.entity_resource)?;
-                        let mut cur = Cursor::new(&data);
-                        let res: SEntityResource =
+    let mut unknown_res_types: FxHashSet<u32> = Default::default();
+    for (e, phase_name2, origin) in activity_entrefs {
+        for resource in &e.unk18.entity_resources {
+            if resource.entity_resource.is_some() {
+                let data = package_manager().read_tag(resource.entity_resource)?;
+                let mut cur = Cursor::new(&data);
+                let res: SEntityResource = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                let mut data_tables = FxHashSet::default();
+                match res.unk18.resource_type {
+                    0x808092d8 => {
+                        cur.seek(SeekFrom::Start(res.unk18.offset))?;
+                        let tag: Unk808092d8 =
                             TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                        let mut data_tables = FxHashSet::default();
-                        match res.unk18.resource_type {
-                            0x808092d8 => {
-                                cur.seek(SeekFrom::Start(res.unk18.offset))?;
-                                let tag: Unk808092d8 =
-                                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-                                if tag.unk84.is_some() {
-                                    data_tables.insert(tag.unk84);
-                                }
-                            }
-                            0x80808cef => {
-                                cur.seek(SeekFrom::Start(res.unk18.offset))?;
-                                let tag: Unk80808cef =
-                                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-                                if tag.unk58.is_some() {
-                                    data_tables.insert(tag.unk58);
-                                }
-                            }
-                            u => {
-                                if !unknown_res_types.contains(&u) {
-                                    warn!(
+                        if tag.unk84.is_some() {
+                            data_tables.insert(tag.unk84);
+                        }
+                    }
+                    0x80808cef => {
+                        cur.seek(SeekFrom::Start(res.unk18.offset))?;
+                        let tag: Unk80808cef =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                        if tag.unk58.is_some() {
+                            data_tables.insert(tag.unk58);
+                        }
+                    }
+                    u => {
+                        if !unknown_res_types.contains(&u) {
+                            warn!(
                                         "Unknown activity entref resource table resource type 0x{u:x} in resource table {}", resource.entity_resource
                                     );
 
-                                    unknown_res_types.insert(u);
-                                }
-                            }
+                            unknown_res_types.insert(u);
                         }
-
-                        let mut data_tables2 = FxHashSet::default();
-                        // TODO(cohae): This is a very dirty hack to find every other data table in the entityresource. We need to fully flesh out the EntityResource format first.
-                        // TODO(cohae): PS: gets assigned as Activity2 (A2) to keep them separate from known tables
-                        for b in data.chunks_exact(4) {
-                            let v: [u8; 4] = b.try_into().unwrap();
-                            let hash = TagHash(u32::from_le_bytes(v));
-
-                            if hash.is_pkg_file()
-                                && package_manager()
-                                    .get_entry(hash)
-                                    .map(|v| v.reference == 0x80809883)
-                                    .unwrap_or_default()
-                                && !data_tables.contains(&hash)
-                            {
-                                data_tables2.insert(hash);
-                            }
-                        }
-
-                        if !data_tables2.is_empty() {
-                            let tstr = data_tables2.iter().map(|v| v.to_string()).join(", ");
-                            warn!("TODO: Found {} map data tables ({}) EntityResource by brute force ({} found normally)", data_tables2.len(), tstr, data_tables.len());
-                        }
-
-                        for table_tag in data_tables {
-                            let data = package_manager().read_tag(table_tag)?;
-                            let mut cur = Cursor::new(&data);
-                            let table: SMapDataTable =
-                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                            load_datatable_into_scene(
-                                &table,
-                                table_tag,
-                                &mut cur,
-                                &mut scene,
-                                renderer_ch.clone(),
-                                *origin,
-                                phase_name2.0,
-                                stringmap.clone(),
-                                &entity_worldid_name_map,
-                                &mut material_map,
-                                &mut to_load_entitymodels,
-                                &mut unknown_root_resources,
-                            )?;
-                        }
-
-                        for table_tag in data_tables2 {
-                            let data = package_manager().read_tag(table_tag)?;
-                            let mut cur = Cursor::new(&data);
-                            let table: SMapDataTable =
-                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                            load_datatable_into_scene(
-                                &table,
-                                table_tag,
-                                &mut cur,
-                                &mut scene,
-                                renderer_ch.clone(),
-                                // cohae: yes, this means bruteforced ambient data tables will always be shown as ambient, but i don't think it matters once we fix the normal bruteforced activity tables
-                                if *origin == ResourceOriginType::Ambient {
-                                    *origin
-                                } else {
-                                    ResourceOriginType::ActivityBruteforce
-                                },
-                                phase_name2.0,
-                                stringmap.clone(),
-                                &entity_worldid_name_map,
-                                &mut material_map,
-                                &mut to_load_entitymodels,
-                                &mut unknown_root_resources,
-                            )?;
-                        }
-                    } else {
-                        warn!("null entity resource tag in {}", resource.hash());
                     }
                 }
+
+                let mut data_tables2 = FxHashSet::default();
+                // TODO(cohae): This is a very dirty hack to find every other data table in the entityresource. We need to fully flesh out the EntityResource format first.
+                // TODO(cohae): PS: gets assigned as Activity2 (A2) to keep them separate from known tables
+                for b in data.chunks_exact(4) {
+                    let v: [u8; 4] = b.try_into().unwrap();
+                    let hash = TagHash(u32::from_le_bytes(v));
+
+                    if hash.is_pkg_file()
+                        && package_manager()
+                            .get_entry(hash)
+                            .map(|v| v.reference == 0x80809883)
+                            .unwrap_or_default()
+                        && !data_tables.contains(&hash)
+                    {
+                        data_tables2.insert(hash);
+                    }
+                }
+
+                if !data_tables2.is_empty() {
+                    let tstr = data_tables2.iter().map(|v| v.to_string()).join(", ");
+                    warn!("TODO: Found {} map data tables ({}) EntityResource by brute force ({} found normally)", data_tables2.len(), tstr, data_tables.len());
+                }
+
+                for table_tag in data_tables {
+                    let data = package_manager().read_tag(table_tag)?;
+                    let mut cur = Cursor::new(&data);
+                    let table: SMapDataTable =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                    load_datatable_into_scene(
+                        &table,
+                        table_tag,
+                        &mut cur,
+                        &mut scene,
+                        renderer_ch.clone(),
+                        origin,
+                        phase_name2.0,
+                        stringmap.clone(),
+                        &entity_worldid_name_map,
+                        &mut material_map,
+                        &mut to_load_entitymodels,
+                        &mut unknown_root_resources,
+                    )?;
+                }
+
+                for table_tag in data_tables2 {
+                    let data = package_manager().read_tag(table_tag)?;
+                    let mut cur = Cursor::new(&data);
+                    let table: SMapDataTable =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                    load_datatable_into_scene(
+                        &table,
+                        table_tag,
+                        &mut cur,
+                        &mut scene,
+                        renderer_ch.clone(),
+                        // cohae: yes, this means bruteforced ambient data tables will always be shown as ambient, but i don't think it matters once we fix the normal bruteforced activity tables
+                        if origin == ResourceOriginType::Ambient {
+                            origin
+                        } else {
+                            ResourceOriginType::ActivityBruteforce
+                        },
+                        phase_name2.0,
+                        stringmap.clone(),
+                        &entity_worldid_name_map,
+                        &mut material_map,
+                        &mut to_load_entitymodels,
+                        &mut unknown_root_resources,
+                    )?;
+                }
+            } else {
+                warn!("null entity resource tag in {}", resource.hash());
             }
         }
-
-        for (rtype, tables) in unknown_root_resources.into_iter() {
-            warn!("World origin resource {} is not parsed! Resource points might be missing (found in these tables [{}])", TagHash(rtype), tables.iter().map(|v| v.to_string()).join(", "));
-        }
-
-        let map_name = stringmap
-            .get(&think.map_name.0)
-            .cloned()
-            .unwrap_or(format!("[MissingString_{:08x}]", think.map_name.0));
-        let hash64 = package_manager()
-            .hash64_table
-            .iter()
-            .find(|v| v.1.hash32 == hash)
-            .map(|v| TagHash64(*v.0));
-
-        info!(
-            "Map {:x?} '{map_name}' - {} instance groups, {} decals",
-            think.map_name,
-            scene.query::<&StaticInstances>().iter().count(),
-            scene
-                .query::<&ResourcePoint>()
-                .iter()
-                .filter(|(_, r)| r.resource.is_decal())
-                .count()
-        );
-
-        let mut point_lights = vec![
-            SimpleLight {
-                pos: Vec4::ZERO,
-                attenuation: Vec4::ONE,
-            };
-            2
-        ];
-        for (_, (transform, light)) in scene.query::<(&Transform, &PointLight)>().iter() {
-            point_lights.push(SimpleLight {
-                pos: transform.translation.extend(1.0),
-                attenuation: light.attenuation,
-            });
-        }
-
-        maps.push((
-            hash,
-            hash64,
-            MapData {
-                hash,
-                name: map_name,
-                scene,
-                command_buffer: hecs::CommandBuffer::new(),
-            },
-        ));
     }
 
-    let to_load_entities: HashSet<ExtendedHash> = maps
-        .iter_mut()
-        .flat_map(|(_, _, v)| {
-            v.scene
-                .query::<&ResourcePoint>()
-                .iter()
-                .map(|(_, r)| r.entity)
-                .collect_vec()
-        })
+    for (rtype, tables) in unknown_root_resources.into_iter() {
+        warn!("World origin resource {} is not parsed! Resource points might be missing (found in these tables [{}])", TagHash(rtype), tables.iter().map(|v| v.to_string()).join(", "));
+    }
+
+    info!(
+        "Map {:x?} '{}' - {} instance groups, {} decals",
+        bubble_parent.map_name,
+        stringmap
+            .get(&bubble_parent.map_name.0)
+            .cloned()
+            .unwrap_or_else(|| format!("[MissingString_{:08x}]", bubble_parent.map_name.0)),
+        scene.query::<&StaticInstances>().iter().count(),
+        scene
+            .query::<&ResourcePoint>()
+            .iter()
+            .filter(|(_, r)| r.resource.is_decal())
+            .count()
+    );
+
+    let to_load_entities: HashSet<ExtendedHash> = scene
+        .query::<&ResourcePoint>()
+        .iter()
+        .map(|(_, r)| r.entity)
         .filter(|v| v.is_some())
         .collect();
 
@@ -480,38 +487,36 @@ pub async fn load_maps(
 
     // TODO(cohae): Maybe not the best idea?
     info!("Updating resource constant buffers");
-    for (_, _, m) in &mut maps {
-        for (_, (transform, rp)) in m.scene.query_mut::<(&Transform, &mut ResourcePoint)>() {
-            if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
-                let mm = transform.to_mat4();
+    for (_, (transform, rp)) in scene.query_mut::<(&Transform, &mut ResourcePoint)>() {
+        if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
+            let mm = transform.to_mat4();
 
-                let model_matrix = Mat4::from_cols(
-                    mm.x_axis.truncate().extend(mm.w_axis.x),
-                    mm.y_axis.truncate().extend(mm.w_axis.y),
-                    mm.z_axis.truncate().extend(mm.w_axis.z),
-                    mm.w_axis,
-                );
+            let model_matrix = Mat4::from_cols(
+                mm.x_axis.truncate().extend(mm.w_axis.x),
+                mm.y_axis.truncate().extend(mm.w_axis.y),
+                mm.z_axis.truncate().extend(mm.w_axis.z),
+                mm.w_axis,
+            );
 
-                let alt_matrix = Mat4::from_cols(
-                    Vec3::ONE.extend(mm.w_axis.x),
-                    Vec3::ONE.extend(mm.w_axis.y),
-                    Vec3::ONE.extend(mm.w_axis.z),
-                    Vec4::W,
-                );
+            let alt_matrix = Mat4::from_cols(
+                Vec3::ONE.extend(mm.w_axis.x),
+                Vec3::ONE.extend(mm.w_axis.y),
+                Vec3::ONE.extend(mm.w_axis.z),
+                Vec4::W,
+            );
 
-                rp.entity_cbuffer = ConstantBufferCached::create_init(
-                    dcs.clone(),
-                    &ScopeRigidModel {
-                        mesh_to_world: model_matrix,
-                        position_scale: ent.mesh_scale(),
-                        position_offset: ent.mesh_offset(),
-                        texcoord0_scale_offset: ent.texcoord_transform(),
-                        dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                        unk8: [alt_matrix; 8],
-                    },
-                )
-                .unwrap();
-            }
+            rp.entity_cbuffer = ConstantBufferCached::create_init(
+                dcs.clone(),
+                &ScopeRigidModel {
+                    mesh_to_world: model_matrix,
+                    position_scale: ent.mesh_scale(),
+                    position_offset: ent.mesh_offset(),
+                    texcoord0_scale_offset: ent.texcoord_transform(),
+                    dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+                    unk8: [alt_matrix; 8],
+                },
+            )
+            .unwrap();
         }
     }
 
@@ -565,26 +570,6 @@ pub async fn load_maps(
                                 Some(name.as_ptr() as _),
                             )
                             .expect("Failed to set VS name");
-
-                            // let input_layout = dcs.device.CreateInputLayout(&layout, &vs_data).unwrap();
-                            // let layout_string = layout_converted
-                            //     .iter()
-                            //     .enumerate()
-                            //     .map(|(i, e)| {
-                            //         format!(
-                            //             "\t{}{} v{i} : {}{}",
-                            //             e.component_type,
-                            //             e.component_count,
-                            //             e.semantic_type.to_pcstr().display(),
-                            //             e.semantic_index
-                            //         )
-                            //     })
-                            //     .join("\n");
-
-                            // error!(
-                            //     "Failed to load vertex layout for VS {:?}, layout:\n{}\n",
-                            //     m.vertex_shader, layout_string
-                            // );
 
                             (v, layout_converted, vs_data)
                         }
@@ -682,17 +667,14 @@ pub async fn load_maps(
         data.samplers.extend(sampler_map);
     };
 
-    #[cfg(not(feature = "keep_map_order"))]
-    maps.sort_by_key(|m| m.2.name.clone());
-
-    Ok(LoadMapsData {
-        maps,
+    Ok(LoadMapData {
+        scene,
         entity_renderers,
     })
 }
 
-pub struct LoadMapsData {
-    pub maps: Vec<(TagHash, Option<TagHash64>, MapData)>,
+pub struct LoadMapData {
+    pub scene: Scene,
     pub entity_renderers: FxHashMap<u64, EntityRenderer>,
 }
 
@@ -936,7 +918,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ents.push(scene.spawn((
                         transform,
                         ResourcePoint {
-                            resource: MapResource::Unk808067b5(tag),
+                            resource: MapResource::LensFlare(tag),
                             ..base_rp
                         },
                         EntityWorldId(data.world_id),
@@ -1175,13 +1157,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         )));
                     }
                 }
-                // 0x8080684d => {
-                //     // TODO(cohae): Collection of havok files
-                //     info!(
-                //         "TODO: Unk8080684d (file {} @ 0x{:x})",
-                //         table_hash, data.data_resource.offset
-                //     );
-                // }
                 0x80806a40 => {
                     table_data
                         .seek(SeekFrom::Start(data.data_resource.offset + 16))
@@ -1863,93 +1838,67 @@ fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
     )
 }
 
-// pub fn create_map_stringmap() -> FxHashMap<TagHash, String> {
-//     let stringmap: FxHashMap<TagHash, String> = package_manager()
-//         .get_named_tags_by_class(SDestination::ID.unwrap())
-//         .par_iter()
-//         .flat_map(|(name, tag)| {
-//             let _span = info_span!("Read destination", destination = name).entered();
-//             let destination: SDestination = package_manager().read_tag_struct(*tag).unwrap();
+pub fn create_map_stringmap() -> FxHashMap<TagHash, String> {
+    let stringmap: FxHashMap<TagHash, String> = package_manager()
+        .get_named_tags_by_class(SDestination::ID.unwrap())
+        .par_iter()
+        .flat_map(|(name, tag)| {
+            let _span = info_span!("Read destination", destination = name).entered();
+            let destination: SDestination = package_manager().read_tag_struct(*tag).unwrap();
 
-//             let mut destination_strings: FxHashMap<u32, String> = FxHashMap::default();
-//             {
-//                 let _span = info_span!("Read destination strings").entered();
-//                 let Ok(textset_header) = package_manager()
-//                     .read_tag_struct::<StringContainer>(destination.string_container.hash32())
-//                 else {
-//                     return vec![];
-//                 };
+            let destination_strings: FxHashMap<u32, String> = {
+                let _span = info_span!("Read destination strings").entered();
+                match StringContainer::load(destination.string_container.hash32()) {
+                    Ok(sc) => sc.0,
+                    Err(e) => {
+                        error!("Failed to load string container: {e}");
+                        FxHashMap::default()
+                    }
+                }
+            };
 
-//                 let data = package_manager()
-//                     .read_tag(textset_header.language_english)
-//                     .unwrap();
-//                 let mut cur = Cursor::new(&data);
-//                 let text_data: StringData = TigerReadable::read_ds(&mut cur).unwrap();
+            let mut strings = vec![];
+            for activity_desc in &destination.activities {
+                let _span = info_span!(
+                    "Read activity",
+                    activity = activity_desc.activity_name.0.to_string()
+                )
+                .entered();
+                let Ok(activity) = package_manager()
+                    .read_named_tag_struct::<SActivity>(activity_desc.activity_name.0.to_string())
+                else {
+                    continue;
+                };
 
-//                 for (combination, hash) in text_data
-//                     .string_combinations
-//                     .iter()
-//                     .zip(textset_header.string_hashes.iter())
-//                 {
-//                     let mut final_string = String::new();
+                for u1 in &activity.unk50 {
+                    for map in &u1.map_references {
+                        let map32 = match map.hash32_checked() {
+                            Some(m) => m,
+                            None => {
+                                // error!("Couldn't translate map hash64 {map:?}");
+                                continue;
+                            }
+                        };
 
-//                     for ip in 0..combination.part_count {
-//                         cur.seek(SeekFrom::Start(combination.data.offset()))
-//                             .unwrap();
-//                         cur.seek(SeekFrom::Current(ip * 0x20)).unwrap();
-//                         let part: StringPart = TigerReadable::read_ds(&mut cur).unwrap();
-//                         cur.seek(SeekFrom::Start(part.data.offset())).unwrap();
-//                         let mut data = vec![0u8; part.byte_length as usize];
-//                         cur.read_exact(&mut data).unwrap();
-//                         final_string += &text::decode_text(&data, part.cipher_shift);
-//                     }
+                        if let Ok(bubble) =
+                            package_manager().read_tag_struct::<SBubbleParentShallow>(map32)
+                        {
+                            let name = destination_strings
+                                .get(&bubble.map_name.0)
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    format!("[MissingString_{:08x}]", bubble.map_name.0)
+                                });
 
-//                     destination_strings.insert(hash.0, final_string);
-//                 }
-//             }
+                            strings.push((map32, name));
+                        }
+                    }
+                }
+            }
 
-//             let mut strings = vec![];
-//             for activity_desc in &destination.activities {
-//                 let _span = info_span!(
-//                     "Read activity",
-//                     activity = activity_desc.activity_name.0.to_string()
-//                 )
-//                 .entered();
-//                 let Ok(activity) = package_manager()
-//                     .read_named_tag_struct::<SActivity>(activity_desc.activity_name.0.to_string())
-//                 else {
-//                     continue;
-//                 };
+            strings
+        })
+        .collect();
 
-//                 for u1 in &activity.unk50 {
-//                     for map in &u1.map_references {
-//                         let map32 = match map.hash32_checked() {
-//                             Some(m) => m,
-//                             None => {
-//                                 // error!("Couldn't translate map hash64 {map:?}");
-//                                 continue;
-//                             }
-//                         };
-
-//                         if let Ok(bubble) =
-//                             package_manager().read_tag_struct::<SBubbleParent>(map32)
-//                         {
-//                             let name = destination_strings
-//                                 .get(&bubble.map_name.0)
-//                                 .cloned()
-//                                 .unwrap_or_else(|| {
-//                                     format!("[MissingString_{:08x}]", bubble.map_name.0)
-//                                 });
-
-//                             strings.push((map32, name));
-//                         }
-//                     }
-//                 }
-//             }
-
-//             strings
-//         })
-//         .collect();
-
-//     stringmap
-// }
+    stringmap
+}

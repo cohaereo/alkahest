@@ -14,6 +14,7 @@ You can add additional user facing information if it's a major breaking change. 
 ```
 
 Change types:
+    - `✨ Major Features` for version-defining changes.
     - `Added` for new features.
     - `Changed` for changes in existing functionality.
     - `Deprecated` for soon-to-be removed features.
@@ -28,6 +29,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
+
+### ✨ Major Features
+- Reworked the map loading mechanism to allow for maps to be loaded individually by @cohaereo
 
 ### Added
 

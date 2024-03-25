@@ -9,10 +9,11 @@ use destiny_pkg::TagHash;
 use rustc_hash::FxHashMap;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 
+#[derive(Default)]
 pub struct StringContainer(pub FxHashMap<u32, String>);
 
 impl StringContainer {
-    pub fn load(tag: TagHash) -> anyhow::Result<Self> {
+    pub fn load(tag: impl Into<TagHash>) -> anyhow::Result<Self> {
         let mut stringmap = FxHashMap::default();
         let textset_header: SLocalizedStrings = package_manager().read_tag_struct(tag)?;
 

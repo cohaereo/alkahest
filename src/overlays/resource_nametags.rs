@@ -12,7 +12,7 @@ use crate::{
         resources::SelectedEntity,
         transform::Transform,
     },
-    map::MapDataList,
+    map::MapList,
     map_resources::MapResource,
     render::debug::DebugShapes,
     resources::Resources,
@@ -68,8 +68,8 @@ impl Overlay for ResourceTypeOverlay {
             let SelectedEntity(selected_entity, block_entity_selection, _) =
                 *resources.get::<SelectedEntity>().unwrap();
 
-            let maps = resources.get::<MapDataList>().unwrap();
-            if let Some((_, _, m)) = maps.current_map() {
+            let maps = resources.get::<MapList>().unwrap();
+            if let Some(map) = maps.current_map() {
                 struct StrippedResourcePoint {
                     resource: MapResource,
                     has_havok_data: bool,
@@ -79,7 +79,7 @@ impl Overlay for ResourceTypeOverlay {
 
                 let mut rp_list = vec![];
 
-                for (e, (transform, res, label, visible)) in m
+                for (e, (transform, res, label, visible)) in map
                     .scene
                     .query::<(&Transform, &ResourcePoint, Option<&Label>, Option<&Visible>)>()
                     .iter()

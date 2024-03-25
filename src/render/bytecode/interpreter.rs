@@ -455,7 +455,7 @@ impl TfxBytecodeInterpreter {
                 }
             },
             TfxExtern::Deferred => match offset {
-                0 => Vec4::splat(1.0),
+                0 => Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0),
                 _u => {
                     Vec4::ZERO
                     // anyhow::bail!(
@@ -584,7 +584,7 @@ impl TfxBytecodeInterpreter {
                     }
                 },
                 TfxExtern::Deferred => match offset {
-                    7 => transmute(renderer.gbuffer.depth.texture_view.clone()),
+                    7 => transmute(renderer.gbuffer.depth.texture_copy_view.clone()),
                     9 => transmute(renderer.gbuffer.rt0.view.clone()),
                     10 => transmute(renderer.gbuffer.rt1.view.clone()),
                     11 => transmute(renderer.gbuffer.rt2.view.clone()),

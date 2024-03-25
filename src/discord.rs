@@ -2,7 +2,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use lazy_static::lazy_static;
 
-use crate::{map::MapData, packages::package_manager, util::RwLock};
+use crate::{map::Map, packages::package_manager, util::RwLock};
 
 lazy_static! {
     static ref DISCORD_RPC_CLIENT: RwLock<discord_rpc_client::Client> = RwLock::new({
@@ -30,7 +30,7 @@ pub async fn set_status(details: String, state: String) {
     }
 }
 
-pub fn set_status_from_mapdata(map: &MapData) {
+pub fn set_status_from_mapdata(map: &Map) {
     let details = format!("Viewing a map ({})", map.hash);
     let state = format!(
         "'{}' ({})",

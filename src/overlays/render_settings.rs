@@ -5,20 +5,22 @@ use std::{
 };
 
 use const_format::concatcp;
+use egui::{Color32, RichText};
 use glam::{Mat4, Vec2, Vec3, Vec4};
 use hecs::Entity;
 use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
 use winit::window::Window;
 
-use super::gui::Overlay;
+use super::{gui::Overlay, load_indicator::LoadingIcon};
 use crate::{
     discord,
     ecs::{
         components::{ActivityGroup, Global},
         resources::SelectedEntity,
     },
-    map::MapDataList,
+    icons::{ICON_ALERT_CIRCLE_OUTLINE, ICON_CHECK_CIRCLE, ICON_CIRCLE, ICON_CIRCLE_OUTLINE},
+    map::{MapList, MapLoadState},
     render::{
         overrides::{EnabledShaderOverrides, ScopeOverrides},
         renderer::ShadowMapsResource,
@@ -334,34 +336,57 @@ impl Overlay for RenderSettingsOverlay {
                     |i| COMPOSITOR_MODES[i].to_string(),
                 );
 
-            let mut maps = resources.get_mut::<MapDataList>().unwrap();
-            if !maps.maps.is_empty() {
-                let mut current_map = maps.current_map;
-                let old_map_index = if maps.updated {
-                    maps.previous_map
+            let mut maplist = resources.get_mut::<MapList>().unwrap();
+            if !maplist.maps.is_empty() {
+                let mut current_map = maplist.current_map;
+                let old_map_index = if maplist.updated {
+                    maplist.previous_map
                 } else {
                     current_map
                 };
-                let map_changed = maps.updated
+                let map_changed = maplist.updated
                     || egui::ComboBox::from_label("Map")
                         .width(192.0)
-                        .show_index(ui, &mut current_map, maps.maps.len(), |i| {
-                            &maps.maps[i].2.name
+                        .show_index(ui, &mut current_map, maplist.maps.len(), |i| {
+                            let map = &maplist.maps[i];
+                            let (mut icon, color) = match map.load_state {
+                                MapLoadState::Unloaded => (ICON_CIRCLE_OUTLINE, Color32::GRAY),
+                                MapLoadState::Loading => {
+                                    (LoadingIcon::Circle.get_frame(), Color32::WHITE)
+                                }
+                                MapLoadState::Loaded => (ICON_CIRCLE, Color32::WHITE),
+                                MapLoadState::Error(_) => (ICON_ALERT_CIRCLE_OUTLINE, Color32::RED),
+                            };
+
+                            if maplist.current_map == i
+                                && map.load_state == crate::map::MapLoadState::Loaded
+                            {
+                                icon = ICON_CHECK_CIRCLE;
+                            }
+
+                            RichText::new(format!("{icon} {}", maplist.maps[i].name)).color(color)
                         })
                         .changed();
-                ui.label(format!("Map hash: {}", maps.maps[maps.current_map].0));
+                ui.checkbox(&mut maplist.load_all_maps, "Load all maps");
                 ui.label(format!(
-                    "Map hash64: {}",
-                    maps.maps[maps.current_map].1.unwrap_or_default()
+                    "Map hash: {}",
+                    maplist.maps[maplist.current_map].hash
                 ));
 
-                maps.current_map = current_map;
+                maplist.current_map = current_map;
 
                 // Move the Globals from the old scene to the new scene
                 if map_changed {
-                    maps.previous_map = old_map_index;
+                    if let Some(map) = maplist.current_map_mut() {
+                        if map.load_state == MapLoadState::Unloaded {
+                            map.start_load(resources);
+                        }
+                    }
+
+                    maplist.previous_map = old_map_index;
                     // We have learned the power to Take worlds
-                    let mut old_scene = take(&mut maps.map_mut(old_map_index).unwrap().scene);
+                    let mut old_scene =
+                        take(&mut maplist.get_map_mut(old_map_index).unwrap().scene);
 
                     let mut ent_list = vec![];
 
@@ -372,7 +397,7 @@ impl Overlay for RenderSettingsOverlay {
                     }
 
                     let mut selected = resources.get_mut::<SelectedEntity>().unwrap();
-                    if let Some(map) = maps.current_map_mut() {
+                    if let Some(map) = maplist.current_map_mut() {
                         for entity in ent_list {
                             let new_ent = map.scene.spawn(old_scene.take(entity).ok().unwrap());
                             if selected.0 == Some(entity) {
@@ -382,21 +407,20 @@ impl Overlay for RenderSettingsOverlay {
                     }
                     swap(
                         &mut old_scene,
-                        &mut maps.map_mut(old_map_index).unwrap().scene,
+                        &mut maplist.get_map_mut(old_map_index).unwrap().scene,
                     );
                 }
 
                 #[cfg(feature = "discord_rpc")]
                 if map_changed {
-                    discord::set_status_from_mapdata(&maps.maps[maps.current_map].2);
+                    discord::set_status_from_mapdata(&maplist.maps[maplist.current_map]);
                 }
 
-                maps.updated = false;
+                maplist.updated = false;
 
-                let groups_in_current_scene: FxHashSet<u32> = maps
+                let groups_in_current_scene: FxHashSet<u32> = maplist
                     .current_map()
                     .unwrap()
-                    .2
                     .scene
                     .query::<&ActivityGroup>()
                     .iter()

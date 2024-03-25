@@ -1,6 +1,6 @@
 use crate::{
     ecs::{components::Visible, resources::SelectedEntity},
-    map::MapDataList,
+    map::MapList,
     resources::Resources,
 };
 
@@ -37,7 +37,7 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
 
 fn hide_unselected(resources: &mut Resources) {
     let selected_entity = resources.get::<SelectedEntity>().unwrap().0;
-    if let Some(mut maps) = resources.get_mut::<MapDataList>() {
+    if let Some(mut maps) = resources.get_mut::<MapList>() {
         if let Some(map) = maps.current_map_mut() {
             for (entity, vis) in map.scene.query::<Option<&mut Visible>>().iter() {
                 if Some(entity) != selected_entity {
@@ -53,8 +53,8 @@ fn hide_unselected(resources: &mut Resources) {
 }
 
 fn unhide_all(resources: &mut Resources) {
-    if let Some(maps) = resources.get::<MapDataList>() {
-        if let Some((_, _, map)) = maps.current_map() {
+    if let Some(maps) = resources.get::<MapList>() {
+        if let Some(map) = maps.current_map() {
             for (_, vis) in map.scene.query::<&mut Visible>().iter() {
                 vis.0 = true;
             }

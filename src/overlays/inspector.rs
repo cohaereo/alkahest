@@ -3,7 +3,7 @@ use egui::{Align2, Color32};
 use super::gui::Overlay;
 use crate::{
     ecs::{component_panels::show_inspector_panel, resources::SelectedEntity},
-    map::MapDataList,
+    map::MapList,
 };
 
 pub struct InspectorOverlay;
@@ -16,7 +16,7 @@ impl Overlay for InspectorOverlay {
         resources: &mut crate::resources::Resources,
         _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
-        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+        let mut maps = resources.get_mut::<MapList>().unwrap();
 
         if let Some(map) = maps.current_map_mut() {
             egui::Window::new("Inspector").show(ctx, |ui| {

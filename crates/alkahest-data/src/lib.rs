@@ -6,6 +6,7 @@ pub mod geometry;
 pub mod map;
 pub mod occlusion;
 pub mod render_globals;
+pub mod sound;
 pub mod statics;
 pub mod tag;
 pub mod technique;

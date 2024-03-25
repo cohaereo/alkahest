@@ -27,7 +27,7 @@ use super::{
 use crate::{
     camera::FpsCamera,
     ecs::{components::Visible, resources::SelectedEntity, transform::Transform},
-    map::MapDataList,
+    map::MapList,
     overlays::{
         camera_settings::CurrentCubemap,
         render_settings::{CompositorOptions, PickbufferScope, RenderSettings},
@@ -1259,7 +1259,7 @@ impl Renderer {
         use_global_deferred_shading: bool,
         compositor_mode: usize,
     ) {
-        let maps = resources.get::<MapDataList>().unwrap();
+        let maps = resources.get::<MapList>().unwrap();
 
         unsafe {
             let ambient_light = resources.get::<RenderSettings>().unwrap().ambient_light;
@@ -1285,7 +1285,7 @@ impl Renderer {
                 );
             }
 
-            if let Some((_, _, map)) = maps.current_map() {
+            if let Some(map) = maps.current_map() {
                 for (_, (visible, transform, light, bounds)) in map
                     .scene
                     .query::<(Option<&Visible>, &Transform, &SLight, Option<&AABB>)>()

@@ -1,31 +1,18 @@
 use std::time::Instant;
 
 use egui::{ahash::HashMap, Color32, RichText};
+use once_cell::sync::Lazy;
 use winit::window::Window;
 
 use super::gui::Overlay;
 use crate::{
+    icons,
     render::resource_mt::{self, LoadingThreadState},
     resources::Resources,
 };
 
 pub struct LoadIndicatorOverlay;
 
-pub const SPINNER_FRAMES: &[&str] = &[
-    "\u{F144B}", // ICON_CLOCK_TIME_ONE_OUTLINE
-    "\u{F144C}", // ICON_CLOCK_TIME_TWO_OUTLINE
-    "\u{F144D}", // ICON_CLOCK_TIME_THREE_OUTLINE
-    "\u{F144E}", // ICON_CLOCK_TIME_FOUR_OUTLINE
-    "\u{F144F}", // ICON_CLOCK_TIME_FIVE_OUTLINE
-    "\u{F1450}", // ICON_CLOCK_TIME_SIX_OUTLINE
-    "\u{F1451}", // ICON_CLOCK_TIME_SEVEN_OUTLINE
-    "\u{F1452}", // ICON_CLOCK_TIME_EIGHT_OUTLINE
-    "\u{F1453}", // ICON_CLOCK_TIME_NINE_OUTLINE
-    "\u{F1454}", // ICON_CLOCK_TIME_TEN_OUTLINE
-    "\u{F1455}", // ICON_CLOCK_TIME_ELEVEN_OUTLINE
-    "\u{F1456}", // ICON_CLOCK_TIME_TWELVE_OUTLINE
-];
-pub const SPINNER_INTERVAL: usize = 50;
 impl Overlay for LoadIndicatorOverlay {
     fn draw(
         &mut self,
@@ -82,11 +69,10 @@ impl Overlay for LoadIndicatorOverlay {
 
 impl LoadIndicatorOverlay {
     fn show_indicator<L: AsRef<str>>(&self, ui: &mut egui::Ui, label: L, start_time: Instant) {
-        let time_millis = start_time.elapsed().as_millis() as usize;
         ui.label(
             RichText::new(format!(
                 "{} {} ({:.1}s)",
-                SPINNER_FRAMES[(time_millis / SPINNER_INTERVAL) % SPINNER_FRAMES.len()],
+                LoadingIcon::Clock.get_frame(),
                 label.as_ref(),
                 start_time.elapsed().as_secs_f32()
             ))
@@ -116,5 +102,62 @@ impl LoadIndicator {
     pub fn restart(&mut self) {
         self.start_time = Instant::now();
         self.active = true;
+    }
+}
+
+pub enum LoadingIcon {
+    /// A simple, indeterminate spinning clock
+    Clock,
+    // Indeterminate circle slice animation
+    Circle,
+}
+
+pub static START_TIME: Lazy<Instant> = Lazy::new(Instant::now);
+
+impl LoadingIcon {
+    pub const CLOCK_FRAMES: [char; 12] = [
+        icons::ICON_CLOCK_TIME_ONE_OUTLINE,
+        icons::ICON_CLOCK_TIME_TWO_OUTLINE,
+        icons::ICON_CLOCK_TIME_THREE_OUTLINE,
+        icons::ICON_CLOCK_TIME_FOUR_OUTLINE,
+        icons::ICON_CLOCK_TIME_FIVE_OUTLINE,
+        icons::ICON_CLOCK_TIME_SIX_OUTLINE,
+        icons::ICON_CLOCK_TIME_SEVEN_OUTLINE,
+        icons::ICON_CLOCK_TIME_EIGHT_OUTLINE,
+        icons::ICON_CLOCK_TIME_NINE_OUTLINE,
+        icons::ICON_CLOCK_TIME_TEN_OUTLINE,
+        icons::ICON_CLOCK_TIME_ELEVEN_OUTLINE,
+        icons::ICON_CLOCK_TIME_TWELVE_OUTLINE,
+    ];
+
+    pub const CIRCLE_FRAMES: [char; 8] = [
+        icons::ICON_CIRCLE_SLICE_1,
+        icons::ICON_CIRCLE_SLICE_2,
+        icons::ICON_CIRCLE_SLICE_3,
+        icons::ICON_CIRCLE_SLICE_4,
+        icons::ICON_CIRCLE_SLICE_5,
+        icons::ICON_CIRCLE_SLICE_6,
+        icons::ICON_CIRCLE_SLICE_7,
+        icons::ICON_CIRCLE_SLICE_8,
+    ];
+
+    pub const CLOCK_INTERVAL: usize = 50;
+    pub const CIRCLE_INTERVAL: usize = 100;
+
+    pub fn get_frame(&self) -> char {
+        self.get_frame_with_time(*START_TIME)
+    }
+
+    pub fn get_frame_with_time(&self, time: Instant) -> char {
+        let time_millis = time.elapsed().as_millis() as usize;
+        match self {
+            LoadingIcon::Clock => {
+                Self::CLOCK_FRAMES[(time_millis / Self::CLOCK_INTERVAL) % Self::CLOCK_FRAMES.len()]
+            }
+            LoadingIcon::Circle => {
+                Self::CIRCLE_FRAMES
+                    [(time_millis / Self::CIRCLE_INTERVAL) % Self::CIRCLE_FRAMES.len()]
+            }
+        }
     }
 }

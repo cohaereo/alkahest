@@ -38,7 +38,7 @@ pub enum MapResource {
     NamedArea(Unk80809178, String, Option<CustomDebugShape>),
 
     Unknown(u32, u64, ExtendedHash, ResourcePointer, TagHash),
-    Unk808067b5(TagHash),
+    LensFlare(TagHash),
     Unk80806aa3(AABB, TagHash),
     Unk808085c0,
     Unk80806a40,
@@ -79,7 +79,7 @@ impl MapResource {
                     res_ptr.offset,
                 )
             }
-            MapResource::Unk808067b5 { .. } => "Unk808067b5 (light flare)".to_string(),
+            MapResource::LensFlare(taghash) => format!("Lens flare ({taghash})"),
             MapResource::CubemapVolume(c, _aabb) => {
                 format!(
                     "Cubemap Volume\n'{}' (cube={}, volume={})",
@@ -368,7 +368,7 @@ mapresource_info!(
     4, ShadowingLight, [255, 255, 0], ICON_SPOTLIGHT_BEAM
     5, Light, [255, 255, 0], ICON_LIGHTBULB_ON
     6, Unknown, [255, 255, 255], ICON_HELP
-    7, Unk808067b5, [220, 220, 20], ICON_FLARE
+    7, LensFlare, [220, 220, 20], ICON_FLARE
     8, Unk80806aa3, [96, 96, 255], ICON_HELP
     9, Unk808085c0, [255, 96, 96], ICON_HELP
     10, Unk80806a40, [255, 44, 44], ICON_HELP

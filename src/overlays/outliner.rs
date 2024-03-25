@@ -14,7 +14,7 @@ use crate::{
         transform::Transform,
     },
     icons::{ICON_CHESS_PAWN, ICON_DELETE},
-    map::MapDataList,
+    map::MapList,
     util::text::{prettify_distance, text_color_for_background},
 };
 
@@ -43,7 +43,7 @@ impl Overlay for OutlinerOverlay {
         resources: &mut crate::resources::Resources,
         _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
-        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+        let mut maps = resources.get_mut::<MapList>().unwrap();
         if let Some(map) = maps.current_map_mut() {
             let scene = &mut map.scene;
 

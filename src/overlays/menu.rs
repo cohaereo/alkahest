@@ -21,7 +21,7 @@ use crate::{
         ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_RULER_SQUARE,
         ICON_SIGN_POLE, ICON_SPHERE,
     },
-    map::MapDataList,
+    map::MapList,
     updater::UpdateChannel,
     util::consts::{self, CHANGELOG_MD},
     RendererShared,
@@ -67,7 +67,7 @@ impl Overlay for MenuBar {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Utility", |ui| {
                     if ui.button(format!("{} Ruler", ICON_RULER_SQUARE)).clicked() {
-                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                        let mut maps = resources.get_mut::<MapList>().unwrap();
                         let renderer = resources.get::<RendererShared>().unwrap();
                         let camera = resources.get::<FpsCamera>().unwrap();
                         let (_, pos) = renderer
@@ -103,7 +103,7 @@ impl Overlay for MenuBar {
                         }
                     }
                     if ui.button(format!("{} Sphere", ICON_SPHERE)).clicked() {
-                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                        let mut maps = resources.get_mut::<MapList>().unwrap();
                         let renderer = resources.get::<RendererShared>().unwrap();
                         let camera = resources.get::<FpsCamera>().unwrap();
                         let (distance, pos) = renderer
@@ -134,8 +134,8 @@ impl Overlay for MenuBar {
                         }
                     }
                     if ui.button(format!("{} Beacon", ICON_SIGN_POLE)).clicked() {
-                        let mut maps: std::cell::RefMut<'_, MapDataList> =
-                            resources.get_mut::<MapDataList>().unwrap();
+                        let mut maps: std::cell::RefMut<'_, MapList> =
+                            resources.get_mut::<MapList>().unwrap();
                         let renderer = resources.get::<RendererShared>().unwrap();
                         let camera = resources.get::<FpsCamera>().unwrap();
                         let (distance, pos) = renderer

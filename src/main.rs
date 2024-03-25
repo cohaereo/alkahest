@@ -12,7 +12,7 @@ use std::{
     cell::RefCell,
     f32::consts::PI,
     fmt::Write,
-    io::{Cursor, Read},
+    io::Cursor,
     mem::transmute,
     path::PathBuf,
     rc::Rc,
@@ -21,9 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use alkahest_data::{
-    activity::SActivity, render_globals::SRenderGlobals, tag::ExtendedHash, text::SLocalizedStrings
-};
+use alkahest_data::{render_globals::SRenderGlobals, tag::ExtendedHash, text::SLocalizedStrings};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -40,10 +38,9 @@ use hecs::Entity;
 use itertools::Itertools;
 use mimalloc::MiMalloc;
 use overlays::camera_settings::CurrentCubemap;
-use poll_promise::Promise;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use technique::Technique;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tracing::level_filters::LevelFilter;
@@ -75,9 +72,9 @@ use crate::{
     },
     hotkeys::{SHORTCUT_FOCUS, SHORTCUT_GAZE, SHORTCUT_MAP_SWAP},
     input::InputState,
-    map::MapDataList,
+    map::{MapList, MapLoadState},
     map_resources::MapResource,
-    mapload_temporary::load_maps,
+    mapload_temporary::create_map_stringmap,
     overlays::{
         camera_settings::CameraPositionOverlay,
         console::ConsoleOverlay,
@@ -98,7 +95,7 @@ use crate::{
         overrides::{EnabledShaderOverrides, ScopeOverrides},
         renderer::{Renderer, RendererShared, ShadowMapsResource},
         tween::ease_out_exponential,
-        DeviceContextSwapchain, EntityRenderer,
+        DeviceContextSwapchain,
     },
     resources::Resources,
     text::StringContainer,
@@ -138,7 +135,9 @@ mod util;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-#[derive(Parser, Debug)]
+pub type StringMapShared = Arc<FxHashMap<u32, String>>;
+
+#[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None, disable_version_flag(true))]
 struct Args {
     /// Package to use
@@ -214,7 +213,7 @@ pub async fn main() -> anyhow::Result<()> {
         .unwrap();
 
     let tracy_layer = if cfg!(feature = "tracy") {
-        Some(tracing_tracy::TracyLayer::new())
+        Some(tracing_tracy::TracyLayer::default())
     } else {
         None
     };
@@ -248,11 +247,11 @@ pub async fn main() -> anyhow::Result<()> {
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
-    // {
-    //     let ls = Instant::now();
-    //     println!("{:#?}", create_map_stringmap());
-    //     println!("Took {}ms to create stringmap", ls.elapsed().as_millis());
-    // }
+    {
+        let ls = Instant::now();
+        println!("{:#?}", create_map_stringmap());
+        println!("Took {}ms to create stringmap", ls.elapsed().as_millis());
+    }
 
     let stringmap: FxHashMap<u32, String> = {
         let _span = info_span!("Loading global strings").entered();
@@ -290,7 +289,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     load_render_globals(&renderer.read());
 
-    let mut map_hashes = if let Some(map_hash) = &args.map {
+    let map_hashes = if let Some(map_hash) = &args.map {
         let hash = match u32::from_str_radix(map_hash, 16) {
             Ok(v) => TagHash(u32::from_be(v)),
             Err(_e) => anyhow::bail!("The given map '{map_hash}' is not a valid hash!"),
@@ -326,45 +325,13 @@ pub async fn main() -> anyhow::Result<()> {
             .collect_vec()
     };
 
-    let activity_hash = args.activity.map(|a| {
+    let activity_hash = args.activity.as_ref().map(|a| {
         TagHash(u32::from_be(
-            u32::from_str_radix(&a, 16)
+            u32::from_str_radix(a, 16)
                 .context("Invalid activity hash format")
                 .unwrap(),
         ))
     });
-
-    if args.map.is_none() {
-        if let Some(activity_hash) = &activity_hash {
-            let activity: SActivity = package_manager().read_tag_struct(*activity_hash)?;
-            let mut maps: FxHashSet<TagHash> = Default::default();
-
-            for u in &activity.unk50 {
-                for m in &u.map_references {
-                    match m.hash32_checked() {
-                        Some(m) => {
-                            maps.insert(m);
-                        }
-                        None => {
-                            error!("Couldn't translate map reference hash64 {m:?}");
-                        }
-                    }
-                }
-            }
-
-            map_hashes = maps.into_iter().collect_vec();
-        }
-    }
-
-    let mut map_load_task = Some(Promise::spawn_async(load_maps(
-        dcs.clone(),
-        renderer.clone(),
-        map_hashes,
-        stringmap.clone(),
-        activity_hash,
-        !args.no_ambient,
-    )));
-    let mut entity_renderers: FxHashMap<u64, EntityRenderer> = Default::default();
 
     let rasterizer_state = unsafe {
         dcs.device
@@ -386,12 +353,7 @@ pub async fn main() -> anyhow::Result<()> {
     let mut resources: Resources = Resources::default();
     resources.insert(FpsCamera::default());
     resources.insert(InputState::default());
-    resources.insert(MapDataList {
-        current_map: 0,
-        previous_map: 0,
-        updated: false,
-        maps: vec![],
-    });
+    resources.insert(MapList::default());
     resources.insert(ScopeOverrides::default());
     resources.insert(DebugShapes::default());
     resources.insert(EnabledShaderOverrides::default());
@@ -407,25 +369,35 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(SelectedEntity(None, false, Instant::now()));
     resources.insert(UpdateCheck::default());
     resources.insert(LoadIndicators::default());
+    resources.insert(args.clone());
+    resources.insert(Arc::clone(&stringmap));
 
-    let _blend_state = unsafe {
-        dcs.device.CreateBlendState(&D3D11_BLEND_DESC {
-            RenderTarget: [D3D11_RENDER_TARGET_BLEND_DESC {
-                BlendEnable: false.into(),
-                SrcBlend: D3D11_BLEND_ONE,
-                DestBlend: D3D11_BLEND_ZERO,
-                BlendOp: D3D11_BLEND_OP_ADD,
-                SrcBlendAlpha: D3D11_BLEND_ONE,
-                DestBlendAlpha: D3D11_BLEND_ZERO,
-                BlendOpAlpha: D3D11_BLEND_OP_ADD,
-                RenderTargetWriteMask: (D3D11_COLOR_WRITE_ENABLE_RED.0
-                    | D3D11_COLOR_WRITE_ENABLE_BLUE.0
-                    | D3D11_COLOR_WRITE_ENABLE_GREEN.0)
-                    as u8,
-            }; 8],
-            ..Default::default()
-        })?
-    };
+    if let Some(activity_hash) = &activity_hash {
+        let mut maps = mapload_temporary::query_activity_maps(*activity_hash, &stringmap)?;
+        if args.map.is_some() {
+            maps.retain(|(hash, _)| map_hashes.contains(hash));
+        }
+
+        let mut map_list = resources.get_mut::<MapList>().unwrap();
+        map_list.populate(&maps);
+        if let Some(map) = map_list.current_map_mut() {
+            map.start_load(&resources);
+        }
+    } else {
+        let mut maps = vec![];
+
+        for hash in map_hashes {
+            let name = mapload_temporary::get_map_name(hash, &stringmap)?;
+            maps.push((hash, name));
+        }
+
+        let mut map_list = resources.get_mut::<MapList>().unwrap();
+        map_list.populate(&maps);
+        if let Some(map) = map_list.current_map_mut() {
+            map.start_load(&resources);
+        }
+    }
+    // resources.get_mut::<MapList>().unwrap().load_all(&resources);
 
     let gui_fps = Rc::new(RefCell::new(FpsDisplayOverlay::default()));
     let gui_rendersettings = Rc::new(RefCell::new(RenderSettingsOverlay {
@@ -635,6 +607,11 @@ pub async fn main() -> anyhow::Result<()> {
             Event::RedrawRequested(..) => {
                 resources.get_mut::<SelectedEntity>().unwrap().1 = false;
 
+                {
+                    let mut maps = resources.get_mut::<MapList>().unwrap();
+                    maps.update_maps(&resources);
+                }
+
                 // if !gui_event_captured
                 {
                     let mut camera = resources.get_mut::<FpsCamera>().unwrap();
@@ -647,9 +624,9 @@ pub async fn main() -> anyhow::Result<()> {
 
                     if gui.egui.input_mut(|i| i.consume_shortcut(&SHORTCUT_FOCUS)) {
                         if let Some(selected_entity) = resources.get::<SelectedEntity>() {
-                            let maps = resources.get::<MapDataList>().unwrap();
+                            let maps = resources.get::<MapList>().unwrap();
 
-                            if let Some((_, _, map)) = maps.current_map() {
+                            if let Some(map) = maps.current_map() {
                                 if let Ok(e) = map
                                     .scene
                                     .entity(selected_entity.0.unwrap_or(Entity::DANGLING))
@@ -674,7 +651,7 @@ pub async fn main() -> anyhow::Result<()> {
                         .egui
                         .input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_SWAP))
                     {
-                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                        let mut maps = resources.get_mut::<MapList>().unwrap();
 
                         (maps.current_map, maps.previous_map) =
                             (maps.previous_map, maps.current_map);
@@ -684,21 +661,6 @@ pub async fn main() -> anyhow::Result<()> {
                 last_frame = Instant::now();
 
                 let window_dims = window.inner_size();
-
-                if map_load_task.as_ref().and_then(|v| v.ready()).is_some() {
-                    if let Some(Ok(map_res)) = map_load_task.take().map(|v| v.try_take()) {
-                        let map_res = map_res.expect("Failed to load map(s)");
-                        entity_renderers.extend(map_res.entity_renderers);
-                        let mut maps = resources.get_mut::<MapDataList>().unwrap();
-                        maps.maps = map_res.maps;
-                        map_load_task = None;
-
-                        #[cfg(feature = "discord_rpc")]
-                        if let Some((_, _, map)) = maps.current_map() {
-                            discord::set_status_from_mapdata(map);
-                        }
-                    }
-                }
 
                 unsafe {
                     renderer.read().clear_render_targets();
@@ -716,9 +678,9 @@ pub async fn main() -> anyhow::Result<()> {
 
                     renderer.read().begin_frame();
 
-                    let mut maps = resources.get_mut::<MapDataList>().unwrap();
+                    let mut maps = resources.get_mut::<MapList>().unwrap();
 
-                    if let Some((_, _, map)) = maps.current_map() {
+                    if let Some(map) = maps.current_map() {
                         {
                             let gb = gui_rendersettings.borrow();
 
@@ -810,7 +772,7 @@ pub async fn main() -> anyhow::Result<()> {
                                     }
                                 }
 
-                                if let Some(ent) = entity_renderers.get(&rp.entity_key()) {
+                                if let Some(ent) = map.entity_renderers.get(&rp.entity_key()) {
                                     let mm = transform.to_mat4();
 
                                     // let mesh_to_world = Mat4::from_cols(
@@ -996,9 +958,10 @@ pub async fn main() -> anyhow::Result<()> {
 
                             PreDrawResult::Continue
                         },
-                        |ctx, _resources| {
-                            if let Some(task) = map_load_task.as_ref() {
-                                if task.ready().is_none() {
+                        |ctx, resources| {
+                            let maplist = resources.get::<MapList>().unwrap();
+                            if let Some(map) = maplist.current_map() {
+                                if map.load_state == MapLoadState::Loading {
                                     egui::Window::new("Loading...")
                                         .title_bar(false)
                                         .resizable(false)
@@ -1006,7 +969,7 @@ pub async fn main() -> anyhow::Result<()> {
                                         .show(ctx, |ui| {
                                             ui.horizontal(|ui| {
                                                 ui.spinner();
-                                                ui.heading("Loading maps")
+                                                ui.heading(format!("Loading map '{}'", map.name));
                                             })
                                         });
                                 }
@@ -1024,9 +987,9 @@ pub async fn main() -> anyhow::Result<()> {
                                 (mouse_pos.x as f64 * window.scale_factor()).round() as usize,
                                 (mouse_pos.y as f64 * window.scale_factor()).round() as usize,
                             );
-                            let maps = resources.get::<MapDataList>().unwrap();
+                            let maps = resources.get::<MapList>().unwrap();
 
-                            if let Some((_, _, map)) = maps.current_map() {
+                            if let Some(map) = maps.current_map() {
                                 if id != u32::MAX {
                                     *resources.get_mut::<SelectedEntity>().unwrap() =
                                         SelectedEntity(
