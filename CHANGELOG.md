@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### ✨ Major Features
 - Reworked the map loading mechanism to allow for maps to be loaded individually by @cohaereo
 - Added a map and activity browser by @cohaereo
+- Added a game installation detector by @cohaereo
 
 ### Added
 

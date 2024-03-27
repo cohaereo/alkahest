@@ -89,6 +89,7 @@ build-time = "0.1.3"
 rustc-hash = "1.1.0"
 once_cell = "1.19.0"
 directories = "5.0.1"
+game-detector = "0.1.1"
 
 [features]
 default = ["discord_rpc"]

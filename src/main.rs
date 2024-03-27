@@ -113,6 +113,7 @@ mod config;
 mod discord;
 mod dxbc;
 mod ecs;
+mod game_selector;
 mod hotkeys;
 mod icons;
 mod input;
@@ -210,6 +211,7 @@ pub async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to set up the tracing subscriber");
 
+    let mut event_loop = EventLoop::new();
     let package_dir = if let Some(p) = &args.package_dir {
         if p.ends_with(".pkg") {
             warn!("Please specify the directory containing the packages, not the package itself! Support for this will be removed in the future!");
@@ -224,8 +226,24 @@ pub async fn main() -> anyhow::Result<()> {
     } else if let Some(p) = config::with(|c| c.packages_directory.clone()) {
         PathBuf::from_str(&p).context("Invalid package directory")?
     } else {
-        panic!("No package directory specified")
+        let path = PathBuf::from_str(
+            &game_selector::select_game_installation(&mut event_loop)
+                .context("No game installation selected")?,
+        )
+        .unwrap();
+
+        path.join("packages")
     };
+
+    if !package_dir.exists() {
+        config::with_mut(|c| c.packages_directory = None);
+        config::persist();
+
+        panic!(
+            "The specified package directory does not exist! ({})\nRelaunch alkahest with a valid package directory.",
+            package_dir.display()
+        );
+    }
 
     let pm = info_span!("Initializing package manager")
         .in_scope(|| PackageManager::new(package_dir, PackageVersion::Destiny2Lightfall).unwrap());
@@ -235,7 +253,6 @@ pub async fn main() -> anyhow::Result<()> {
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
-    let event_loop = EventLoop::new();
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
         .with_inner_size(config::with(|c| {
