@@ -41,6 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added 'I' Key shortcut to swap to previous map by @Froggy618157725 in [#21](https://github.com/cohaereo/alkahest/pull/21)
 - Added Controls under Help Menu @Froggy618157725 in [#22](https://github.com/cohaereo/alkahest/pull/22)
 - Added version information to panic log by @cohaereo
+- Package directory is now persisted in the config by @cohaereo
+
+### Deprecated
+- Passing a package file is deprecated in favor of the `-p` switch. In the future, Alkahest will only accept package directory paths
 
 ### Changed
 

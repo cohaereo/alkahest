@@ -136,8 +136,8 @@ static GLOBAL: MiMalloc = MiMalloc;
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None, disable_version_flag(true))]
 struct Args {
-    /// Package to use
-    package: String,
+    /// Packages directory
+    package_dir: Option<String>,
 
     /// Package prefix to load maps from, ignores package argument.
     /// For example: `throneworld`, `edz`
@@ -181,24 +181,6 @@ pub async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let event_loop = EventLoop::new();
-    let window = winit::window::WindowBuilder::new()
-        .with_title("Alkahest")
-        .with_inner_size(config::with(|c| {
-            PhysicalSize::new(c.window.width, c.window.height)
-        }))
-        .with_position(config::with(|c| {
-            PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
-        }))
-        .with_maximized(config!().window.maximised)
-        .with_window_icon(Some(icon.clone()))
-        .with_taskbar_icon(Some(icon))
-        .build(&event_loop)?;
-    let window = Arc::new(window);
-
-    // #[cfg(not(debug_assertions))]
-    // std::env::set_var("RUST_BACKTRACE", "0");
-
     let args = Args::parse();
 
     LOW_RES.store(args.lowres, Ordering::Relaxed);
@@ -228,20 +210,48 @@ pub async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to set up the tracing subscriber");
 
-    let (package, pm) = info_span!("Initializing package manager").in_scope(|| {
-        (
-            PackageVersion::Destiny2Lightfall
-                .open(&args.package)
-                .expect("Failed to open package"),
-            PackageManager::new(
-                PathBuf::from_str(&args.package).unwrap().parent().unwrap(),
-                PackageVersion::Destiny2Lightfall,
-            )
-            .unwrap(),
-        )
-    });
+    let package_dir = if let Some(p) = &args.package_dir {
+        if p.ends_with(".pkg") {
+            warn!("Please specify the directory containing the packages, not the package itself! Support for this will be removed in the future!");
+            PathBuf::from_str(p)
+                .context("Invalid package directory")?
+                .parent()
+                .unwrap()
+                .to_path_buf()
+        } else {
+            PathBuf::from_str(p).context("Invalid package directory")?
+        }
+    } else if let Some(p) = config::with(|c| c.packages_directory.clone()) {
+        PathBuf::from_str(&p).context("Invalid package directory")?
+    } else {
+        panic!("No package directory specified")
+    };
+
+    let pm = info_span!("Initializing package manager")
+        .in_scope(|| PackageManager::new(package_dir, PackageVersion::Destiny2Lightfall).unwrap());
+
+    config::with_mut(|c| c.packages_directory = Some(pm.package_dir.to_string_lossy().to_string()));
+    config::persist();
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
+
+    let event_loop = EventLoop::new();
+    let window = winit::window::WindowBuilder::new()
+        .with_title("Alkahest")
+        .with_inner_size(config::with(|c| {
+            PhysicalSize::new(c.window.width, c.window.height)
+        }))
+        .with_position(config::with(|c| {
+            PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
+        }))
+        .with_maximized(config!().window.maximised)
+        .with_window_icon(Some(icon.clone()))
+        .with_taskbar_icon(Some(icon))
+        .build(&event_loop)?;
+    let window = Arc::new(window);
+
+    // #[cfg(not(debug_assertions))]
+    // std::env::set_var("RUST_BACKTRACE", "0");
 
     let stringmap = Arc::new(GlobalStringmap::load().context("Failed to load global strings")?);
 
@@ -283,11 +293,7 @@ pub async fn main() -> anyhow::Result<()> {
             .map(|(tag, _entry)| tag)
             .collect_vec()
     } else {
-        package
-            .get_all_by_reference(u32::from_be(0x1E898080))
-            .into_iter()
-            .map(|(index, _entry)| TagHash::new(package.pkg_id(), index as u16))
-            .collect_vec()
+        vec![]
     };
 
     let activity_hash = args.activity.as_ref().map(|a| {

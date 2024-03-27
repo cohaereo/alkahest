@@ -74,6 +74,7 @@ pub struct Config {
     pub render_settings: RenderConfig,
 
     pub update_channel: Option<UpdateChannel>,
+    pub packages_directory: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
