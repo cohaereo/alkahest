@@ -7,8 +7,6 @@ pub mod image;
 pub mod lock;
 pub mod text;
 
-use std::path::PathBuf;
-
 pub use lock::{FilterDebugLockTarget, RwLock};
 use tiger_parse::FnvHash;
 
@@ -27,18 +25,6 @@ pub fn fix_windows_command_prompt() {
             );
         }
     }
-}
-
-pub fn exe_directory() -> PathBuf {
-    std::env::current_exe()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf()
-}
-
-pub fn exe_relative_path(path: &str) -> PathBuf {
-    exe_directory().join(path)
 }
 
 #[allow(non_snake_case)]

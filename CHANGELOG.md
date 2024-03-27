@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Create window before initializing the package manager by @cohaereo
 - Rework transparent(_advanced) scopes by @cohaereo
 - Change allocator to [mimalloc](https://github.com/microsoft/mimalloc) by @cohaereo
+- Configuration files are now stored in the system config directories (see [directories API](https://docs.rs/directories/5.0.1/directories/struct.ProjectDirs.html#method.config_dir)) by @cohaereo
 
 ### Fixed
 

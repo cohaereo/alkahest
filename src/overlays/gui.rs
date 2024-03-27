@@ -7,12 +7,10 @@ use itertools::Itertools;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::{
+    config::APP_DIRS,
     render::DeviceContextSwapchain,
     resources::Resources,
-    util::{
-        exe_relative_path,
-        image::{EguiPngLoader, Png},
-    },
+    util::image::{EguiPngLoader, Png},
 };
 
 pub trait Overlay {
@@ -58,7 +56,7 @@ impl GuiManager {
 
         egui.add_image_loader(Arc::new(EguiPngLoader::default()));
 
-        if let Ok(Ok(data)) = std::fs::read_to_string(exe_relative_path("egui.ron"))
+        if let Ok(Ok(data)) = std::fs::read_to_string(APP_DIRS.config_dir().join("egui.ron"))
             .map(|s| ron::from_str::<egui::Memory>(&s))
         {
             info!("Loaded egui state from egui.ron");
@@ -227,7 +225,7 @@ impl Drop for GuiManager {
     fn drop(&mut self) {
         match self.egui.memory(ron::to_string) {
             Ok(memory) => {
-                if let Err(e) = std::fs::write(exe_relative_path("egui.ron"), memory) {
+                if let Err(e) = std::fs::write(APP_DIRS.config_dir().join("egui.ron"), memory) {
                     error!("Failed to write egui state: {e}");
                 }
             }
