@@ -184,6 +184,9 @@ impl MapList {
             })
             .collect();
 
+        #[cfg(not(feature = "keep_map_order"))]
+        self.maps.sort_by_key(|m| m.name.clone());
+
         self.updated = true;
         self.current_map = 0;
         self.previous_map = 0;

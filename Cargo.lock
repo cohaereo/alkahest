@@ -163,6 +163,7 @@ dependencies = [
  "tinyvec",
  "tokio",
  "tracing",
+ "tracing-log",
  "tracing-subscriber",
  "tracing-tracy",
  "tracy-client",
@@ -986,9 +987,9 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.9.8"
+version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "325086ced08442c398b1708245cc1e0fc7cde6045b50f988ba982b007ca141fa"
+checksum = "50e81d877c30e1b8e853e2bcf2c69d4dbdbd8a18ad8293333066c3e256ba700d"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -1446,9 +1447,9 @@ dependencies = [
 
 [[package]]
 name = "game-detector"
-version = "0.1.1"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc2534893dec99b0aaa5750e267e1ce422127f278766ab0aa8ad7b9bb6513828"
+checksum = "da20c531faaf4aa01cfe14f3afdddcc4fd29076b7e7d8de910b03e924377823b"
 dependencies = [
  "anyhow",
  "fs-err",

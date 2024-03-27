@@ -14,11 +14,11 @@ use winit::{
     dpi::PhysicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    platform::run_return::EventLoopExtRunReturn,
+    platform::{run_return::EventLoopExtRunReturn, windows::WindowBuilderExtWindows},
 };
 
 use crate::{
-    icons::{ICON_CONTROLLER, ICON_MICROSOFT, ICON_STEAM},
+    icons::{ICON_CONTROLLER, ICON_FOLDER_OPEN, ICON_MICROSOFT, ICON_STEAM},
     overlays::{
         big_button::BigButton,
         gui::{GuiManager, PreDrawResult},
@@ -29,11 +29,16 @@ use crate::{
 
 /// Creates a temporary window with egui to select a game installation
 /// This function should not be called in another render loop, as it will hang until this function completes
-pub fn select_game_installation(event_loop: &mut EventLoop<()>) -> anyhow::Result<String> {
+pub fn select_game_installation(
+    event_loop: &mut EventLoop<()>,
+    icon: &winit::window::Icon,
+) -> anyhow::Result<String> {
     let window = winit::window::WindowBuilder::new()
         .with_title("Alkahest")
         .with_inner_size(PhysicalSize::new(320, 320))
         .with_min_inner_size(PhysicalSize::new(320, 480))
+        .with_window_icon(Some(icon.clone()))
+        .with_taskbar_icon(Some(icon.clone()))
         .build(event_loop)?;
 
     let window = Arc::new(window);
@@ -124,15 +129,29 @@ pub fn select_game_installation(event_loop: &mut EventLoop<()>) -> anyhow::Resul
                             }
                         }
 
-                        // if BigButton::new(ICON_FOLDER_OPEN, "Browse")
-                        //     .full_width()
-                        //     .ui(ui)
-                        //     .clicked()
-                        // {
-                        //     let dialog = native_dialog::FileDialog::new()
-                        //         .set_title("Select Destiny 2 packages directory")
-                        //         .show_open_single_dir()?;
-                        // }
+                        if BigButton::new(ICON_FOLDER_OPEN, "Browse")
+                            .full_width()
+                            .ui(ui)
+                            .clicked()
+                        {
+                            if let Ok(Some(path)) = native_dialog::FileDialog::new()
+                                .set_title("Select Destiny 2 packages directory")
+                                .show_open_single_dir() {
+                                    if path.ends_with("packages") {
+                                        selected_path = Ok(path.parent().unwrap().to_string_lossy().to_string());
+                                        *control_flow = ControlFlow::Exit;
+                                    } else if path.ends_with("Destiny 2") {
+                                        // cohae: Idiot-proofing this a bit
+                                        selected_path = Ok(path.to_string_lossy().to_string());
+                                        *control_flow = ControlFlow::Exit;
+                                    } else {
+                                        native_dialog::MessageDialog::new()
+                                            .set_title("Invalid directory")
+                                            .set_text("The selected directory is not a packages directory. Please select the packages directory of your game installation.")
+                                            .show_alert().ok();
+                                    }
+                                }
+                        }
                     });
 
                     PreDrawResult::Continue

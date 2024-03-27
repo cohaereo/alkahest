@@ -14,7 +14,7 @@ You can add additional user facing information if it's a major breaking change. 
 ```
 
 Change types:
-    - `✨ Major Features` for version-defining changes.
+    - `✨ Major Changes` for version-defining changes.
     - `Added` for new features.
     - `Changed` for changes in existing functionality.
     - `Deprecated` for soon-to-be removed features.
@@ -30,7 +30,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
-### ✨ Major Features
+## 0.4.1 - 2024-03-27
+
+### ✨ Major Changes
+- ⚠ Alkahest is no longer compatible with Avvy's Alkgui. The features provided by Alkgui are now available in Alkahest itself. 
 - Reworked the map loading mechanism to allow for maps to be loaded individually by @cohaereo
 - Added a map and activity browser by @cohaereo
 - Added a game installation detector by @cohaereo

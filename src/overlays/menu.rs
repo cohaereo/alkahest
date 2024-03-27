@@ -222,6 +222,23 @@ impl Overlay for MenuBar {
 
                     ui.separator();
 
+                    if ui
+                        .button("Change package directory")
+                        .on_hover_text("Will restart Alkahest")
+                        .clicked()
+                    {
+                        config::with_mut(|c| c.packages_directory = None);
+                        config::persist();
+
+                        // Spawn the new process
+                        std::process::Command::new(std::env::current_exe().unwrap())
+                            .args(std::env::args().skip(1))
+                            .spawn()
+                            .expect("Failed to spawn the new alkahest process");
+
+                        std::process::exit(0);
+                    }
+
                     if ui.button("Changelog").clicked() {
                         self.changelog_open = true;
                         ui.close_menu();

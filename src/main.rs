@@ -43,6 +43,7 @@ use technique::Technique;
 use text::GlobalStringmap;
 use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
+use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
 use windows::Win32::{
     Foundation::DXGI_STATUS_OCCLUDED,
@@ -197,6 +198,7 @@ pub async fn main() -> anyhow::Result<()> {
         None
     };
 
+    LogTracer::init()?;
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(tracy_layer)
@@ -227,7 +229,7 @@ pub async fn main() -> anyhow::Result<()> {
         PathBuf::from_str(&p).context("Invalid package directory")?
     } else {
         let path = PathBuf::from_str(
-            &game_selector::select_game_installation(&mut event_loop)
+            &game_selector::select_game_installation(&mut event_loop, &icon)
                 .context("No game installation selected")?,
         )
         .unwrap();
