@@ -12,8 +12,8 @@ use crate::{
     map::MapList,
     mapload_temporary::{get_map_name, query_activity_maps},
     resources::Resources,
-    text::StringContainer,
-    Args, StringMapShared,
+    text::{GlobalStringmap, StringContainer, StringMapShared},
+    Args,
 };
 
 #[derive(Debug)]
@@ -38,7 +38,7 @@ pub struct ActivityBrowser {
 }
 
 impl ActivityBrowser {
-    pub fn new(stringmap_global: StringMapShared) -> Self {
+    pub fn new(stringmap_global: &GlobalStringmap) -> Self {
         let destination_hashes = package_manager().get_all_by_reference(SDestination::ID.unwrap());
         // let mut destinations = vec![];
         let mut activity_buckets: FxHashMap<String, Vec<ActivitiesForDestination>> =
@@ -57,7 +57,7 @@ impl ActivityBrowser {
                     };
 
                     let stringmap = if destination_strings.is_empty() {
-                        &stringmap_global
+                        &stringmap_global.0
                     } else {
                         &destination_strings
                     };
@@ -133,7 +133,7 @@ impl ActivityBrowser {
 
         for (m, _) in package_manager().get_all_by_reference(SBubbleParent::ID.unwrap()) {
             let package_name = package_manager().package_paths[&m.pkg_id()].name.clone();
-            let Ok(map_name) = get_map_name(m, &stringmap_global) else {
+            let Ok(map_name) = get_map_name(m, stringmap_global) else {
                 error!("Failed to get map name for {m}");
                 continue;
             };

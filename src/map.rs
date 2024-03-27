@@ -11,7 +11,8 @@ use crate::{
     mapload_temporary::{self, LoadMapData},
     render::{dcs::DcsShared, renderer::RendererShared, EntityRenderer},
     resources::Resources,
-    Args, StringMapShared,
+    text::StringMapShared,
+    Args,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

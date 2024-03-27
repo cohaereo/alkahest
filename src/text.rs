@@ -1,11 +1,14 @@
 use std::{
     io::{Cursor, Read, Seek, SeekFrom},
     ops::Deref,
+    sync::Arc,
 };
 
 use alkahest_data::text::{SLocalizedStrings, SStringData, SStringPart};
 use alkahest_pm::package_manager;
 use destiny_pkg::TagHash;
+use itertools::Itertools;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 
@@ -91,4 +94,44 @@ pub fn decode_text(data: &[u8], cipher: u16) -> String {
     }
 
     result
+}
+
+pub type StringMapShared = Arc<GlobalStringmap>;
+pub struct GlobalStringmap(pub FxHashMap<u32, String>);
+
+impl GlobalStringmap {
+    pub fn load() -> anyhow::Result<Self> {
+        let _span = info_span!("Loading global strings").entered();
+        let stringcontainers = package_manager()
+            .get_all_by_reference(SLocalizedStrings::ID.unwrap())
+            .into_iter()
+            .filter(|(t, _)| {
+                package_manager().package_paths[&t.pkg_id()]
+                    .name
+                    .contains("global")
+            })
+            .map(|(t, _)| t)
+            .collect_vec();
+
+        Ok(Self(
+            stringcontainers
+                .par_iter()
+                .flat_map(|t| {
+                    if let Ok(strings) = StringContainer::load(*t) {
+                        strings.0.into_iter().collect_vec()
+                    } else {
+                        vec![]
+                    }
+                })
+                .collect(),
+        ))
+    }
+
+    pub fn get(&self, hash: impl Into<u32>) -> String {
+        let hash = hash.into();
+        self.0
+            .get(&hash)
+            .cloned()
+            .unwrap_or_else(|| format!("[MISSING STRING: 0x{hash:08X}]"))
+    }
 }

@@ -52,14 +52,11 @@ use crate::{
         EntityRenderer, InstancedRenderer, StaticModel, TerrainRenderer,
     },
     technique::Technique,
-    text::StringContainer,
+    text::{GlobalStringmap, StringContainer, StringMapShared},
     util::fnv1,
 };
 
-pub fn get_map_name(
-    map_hash: TagHash,
-    stringmap: &FxHashMap<u32, String>,
-) -> anyhow::Result<String> {
+pub fn get_map_name(map_hash: TagHash, stringmap: &GlobalStringmap) -> anyhow::Result<String> {
     let _span = info_span!("Get map name", %map_hash).entered();
     let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(map_hash) {
         Ok(m) => m.map_name,
@@ -68,15 +65,12 @@ pub fn get_map_name(
         }
     };
 
-    Ok(stringmap
-        .get(&map_name.0)
-        .cloned()
-        .unwrap_or(format!("[MissingString_{:08x}]", map_name.0)))
+    Ok(stringmap.get(map_name))
 }
 
 pub fn query_activity_maps(
     activity_hash: TagHash,
-    stringmap: &FxHashMap<u32, String>,
+    stringmap: &GlobalStringmap,
 ) -> anyhow::Result<Vec<(TagHash, String)>> {
     let _span = info_span!("Query activity maps").entered();
     let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
@@ -104,10 +98,7 @@ pub fn query_activity_maps(
                 .cloned()
                 .unwrap_or_else(|| {
                     // Fall back to global stringmap
-                    stringmap
-                        .get(&map_name.0)
-                        .cloned()
-                        .unwrap_or(format!("[MissingString_{:08x}]", map_name.0))
+                    stringmap.get(map_name)
                 });
 
             maps.push((map.hash32(), map_name));
@@ -121,7 +112,7 @@ pub async fn load_map_scene(
     dcs: Arc<DeviceContextSwapchain>,
     renderer: RendererShared,
     map_hash: TagHash,
-    stringmap: Arc<FxHashMap<u32, String>>,
+    stringmap: StringMapShared,
     activity_hash: Option<TagHash>,
     load_ambient_activity: bool,
 ) -> anyhow::Result<LoadMapData> {
@@ -360,10 +351,7 @@ pub async fn load_map_scene(
     info!(
         "Map {:x?} '{}' - {} instance groups, {} decals",
         bubble_parent.map_name,
-        stringmap
-            .get(&bubble_parent.map_name.0)
-            .cloned()
-            .unwrap_or_else(|| format!("[MissingString_{:08x}]", bubble_parent.map_name.0)),
+        stringmap.get(bubble_parent.map_name),
         scene.query::<&StaticInstances>().iter().count(),
         scene
             .query::<&ResourcePoint>()
@@ -703,7 +691,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     renderer: RendererShared,
     resource_origin: ResourceOriginType,
     group_id: u32,
-    stringmap: Arc<FxHashMap<u32, String>>,
+    stringmap: StringMapShared,
     entity_worldid_name_map: &FxHashMap<u64, String>,
 
     material_map: &mut FxHashMap<TagHash, Technique>,
@@ -1274,10 +1262,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .unwrap();
 
                     let d: Unk80809178 = TigerReadable::read_ds(table_data)?;
-                    let name = stringmap
-                        .get(&d.area_name.0)
-                        .cloned()
-                        .unwrap_or_else(|| format!("[MissingString_{:08x}]", d.area_name.0));
+                    let name = stringmap.get(d.area_name);
 
                     let (havok_debugshape, new_transform) =
                         if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {

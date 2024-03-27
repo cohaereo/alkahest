@@ -21,7 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use alkahest_data::{render_globals::SRenderGlobals, tag::ExtendedHash, text::SLocalizedStrings};
+use alkahest_data::{render_globals::SRenderGlobals, tag::ExtendedHash};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -38,11 +38,10 @@ use hecs::Entity;
 use itertools::Itertools;
 use mimalloc::MiMalloc;
 use overlays::camera_settings::CurrentCubemap;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
-use rustc_hash::FxHashMap;
 use technique::Technique;
-use tiger_parse::{PackageManagerExt, TigerReadable};
+use text::GlobalStringmap;
+use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
 use windows::Win32::{
@@ -98,7 +97,6 @@ use crate::{
         DeviceContextSwapchain,
     },
     resources::Resources,
-    text::StringContainer,
     texture::{Texture, LOW_RES},
     updater::UpdateCheck,
     util::{
@@ -134,8 +132,6 @@ mod util;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-
-pub type StringMapShared = Arc<FxHashMap<u32, String>>;
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None, disable_version_flag(true))]
@@ -247,34 +243,9 @@ pub async fn main() -> anyhow::Result<()> {
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
-    let stringmap: FxHashMap<u32, String> = {
-        let _span = info_span!("Loading global strings").entered();
-        let stringcontainers = package_manager()
-            .get_all_by_reference(SLocalizedStrings::ID.unwrap())
-            .into_iter()
-            .filter(|(t, _)| {
-                package_manager().package_paths[&t.pkg_id()]
-                    .name
-                    .contains("global")
-            })
-            .map(|(t, _)| t)
-            .collect_vec();
+    let stringmap = Arc::new(GlobalStringmap::load().context("Failed to load global strings")?);
 
-        stringcontainers
-            .par_iter()
-            .flat_map(|t| {
-                if let Ok(strings) = StringContainer::load(*t) {
-                    strings.0.into_iter().collect_vec()
-                } else {
-                    vec![]
-                }
-            })
-            .collect()
-    };
-
-    let stringmap = Arc::new(stringmap);
-
-    info!("Loaded {} global strings", stringmap.len());
+    info!("Loaded {} global strings", stringmap.0.len());
 
     let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
 
@@ -366,7 +337,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(args.clone());
     resources.insert(Arc::clone(&stringmap));
 
-    let mut activity_browser = ActivityBrowser::new(Arc::clone(&stringmap));
+    let mut activity_browser = ActivityBrowser::new(&stringmap);
 
     if let Some(activity_hash) = &activity_hash {
         let mut maps = mapload_temporary::query_activity_maps(*activity_hash, &stringmap)?;
