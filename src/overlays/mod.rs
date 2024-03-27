@@ -1,5 +1,6 @@
 use egui::Response;
 
+pub mod activity_select;
 pub mod camera_settings;
 pub mod console;
 pub mod fps_display;

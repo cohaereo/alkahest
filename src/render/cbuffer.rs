@@ -132,7 +132,8 @@ impl<T> ConstantBuffer<T> {
 
     //         memory
     //             .pData
-    //             .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
+    //             .copy_from_nonoverlapping(data.as_ptr() as _,
+    // std::mem::size_of_val(data));
 
     //         self.dcs.context().Unmap(&self.buffer, 0);
     //     }
@@ -256,7 +257,8 @@ impl<T: Sized + Clone> ConstantBufferCached<T> {
 
     pub fn bind(&self, slot: u32, stage: TfxShaderStage) {
         // Make sure the buffer is written before we bind it
-        // Its fine to call this multiple times per draw, as we keep track of whether the buffer has been acquired before we write
+        // Its fine to call this multiple times per draw, as we keep track of whether
+        // the buffer has been acquired before we write
         self.write().ok();
         self.cbuffer.bind(slot, stage)
     }

@@ -35,10 +35,11 @@ pub struct LightRenderer {
 impl LightRenderer {
     pub fn new(dcs: Arc<DeviceContextSwapchain>) -> anyhow::Result<Self> {
         let input_sig_vs = shader::compile_hlsl(
-            "struct s_vs_in { float3 v0 : POSITION; };  float4 vs(s_vs_in input) : SV_POSITION { return float4(0, 0, 0, 0); }",
+            "struct s_vs_in { float3 v0 : POSITION; };  float4 vs(s_vs_in input) : SV_POSITION { \
+             return float4(0, 0, 0, 0); }",
             "vs",
             "vs_5_0",
-            "(internal) light renderer input signature"
+            "(internal) light renderer input signature",
         )
         .unwrap();
 

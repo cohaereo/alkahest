@@ -108,7 +108,8 @@ impl MapResource {
                     format!("TurnbackKillBarrier (havok {h}:{i})")
                 } else {
                     format!(
-                        "TurnbackKillBarrier (havok {h}:{i})\n{} Shape visualization failed to load",
+                        "TurnbackKillBarrier (havok {h}:{i})\n{} Shape visualization failed to \
+                         load",
                         ICON_ALERT
                     )
                 }
@@ -118,7 +119,8 @@ impl MapResource {
                     format!("Slippey Surface Volume (havok {t})")
                 } else {
                     format!(
-                        "Slippey Surface Volume (havok {t})\n{} Havok shape visualization failed to load",
+                        "Slippey Surface Volume (havok {t})\n{} Havok shape visualization failed \
+                         to load",
                         ICON_ALERT
                     )
                 }

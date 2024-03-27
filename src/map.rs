@@ -14,14 +14,16 @@ use crate::{
     Args, StringMapShared,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum MapLoadState {
+    #[default]
     Unloaded,
     Loading,
     Loaded,
     Error(String),
 }
 
+#[derive(Default)]
 pub struct Map {
     pub hash: TagHash,
     pub name: String,
@@ -72,7 +74,7 @@ impl Map {
         // }
     }
 
-    pub fn start_load(&mut self, resources: &crate::Resources) {
+    fn start_load(&mut self, resources: &crate::Resources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
                 "Attempted to load map {}, but it is already loading or loaded",
@@ -141,8 +143,11 @@ impl MapList {
 
 impl MapList {
     pub fn update_maps(&mut self, resources: &Resources) {
-        for map in self.maps.iter_mut() {
+        for (i, map) in self.maps.iter_mut().enumerate() {
             map.update();
+            if i == self.current_map && map.load_state == MapLoadState::Unloaded {
+                map.start_load(resources);
+            }
         }
 
         if self.load_all_maps {
@@ -167,17 +172,14 @@ impl MapList {
     }
 
     /// Populates the map list and begins loading the first map
-    pub fn populate(&mut self, map_hashes: &[(TagHash, String)]) {
+    /// Overwrites the current map list
+    pub fn set_maps(&mut self, map_hashes: &[(TagHash, String)]) {
         self.maps = map_hashes
             .iter()
             .map(|(hash, name)| Map {
                 hash: *hash,
                 name: name.clone(),
-                scene: Scene::new(),
-                entity_renderers: FxHashMap::default(),
-                promise: None,
-                load_state: MapLoadState::Unloaded,
-                command_buffer: hecs::CommandBuffer::new(),
+                ..Default::default()
             })
             .collect();
 
@@ -186,8 +188,20 @@ impl MapList {
         self.previous_map = 0;
 
         #[cfg(feature = "discord_rpc")]
-        if let Some(map) = self.current_map() {
+        if let Some(map) = self.current_map_mut() {
             discord::set_status_from_mapdata(map);
+        }
+    }
+
+    pub fn add_map(&mut self, map_name: String, map_hash: TagHash) {
+        if self.maps.is_empty() {
+            self.set_maps(&[(map_hash, map_name.clone())])
+        } else {
+            self.maps.push(Map {
+                hash: map_hash,
+                name: map_name,
+                ..Default::default()
+            });
         }
     }
 

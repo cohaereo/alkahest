@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x18)]
+#[tiger_tag(id = 0x8080891E, size = 0x18)]
 // cohae: Shallow read to avoid too many package calls
 // TODO(cohae): Implement shallow reading in tiger-parse itself
 pub struct SBubbleParentShallow {
@@ -23,7 +23,7 @@ pub struct SBubbleParentShallow {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x50)]
+#[tiger_tag(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
     // 808091e0

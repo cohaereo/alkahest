@@ -34,29 +34,48 @@ impl ChannelSelector {
                 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
                 .show(ctx, |ui| {
                     egui::Frame::window(&ctx.style()).show(ui, |ui| {
-                        ui.label("Select the update channel you want to use.\nThis determines the frequency and stability of updates.");
+                        ui.label(
+                            "Select the update channel you want to use.\nThis determines the \
+                             frequency and stability of updates.",
+                        );
                         let mut persist_and_close = false;
                         if ui
-                        .big_button_with_icon_color(ICON_SHIELD_HALF_FULL, "Stable", Color32::from_rgb(34, 143, 237))
-                        .on_hover_text(
-                            "Stable releases are well-tested and recommended for most users.",
-                        )
-                        .clicked()
+                            .big_button_with_icon_color(
+                                ICON_SHIELD_HALF_FULL,
+                                "Stable",
+                                Color32::from_rgb(34, 143, 237),
+                            )
+                            .on_hover_text(
+                                "Stable releases are well-tested and recommended for most users.",
+                            )
+                            .clicked()
                         {
                             config::with_mut(|c| c.update_channel = Some(UpdateChannel::Stable));
                             persist_and_close = true;
                         }
                         if ui
-                        .big_button_with_icon_color(ICON_LIGHTNING_BOLT, "Nightly", Color32::from_rgb(255, 210, 40))
-                        .on_hover_text(
-                            "Nightly releases are built from the latest code and may be unstable.",
-                        )
-                        .clicked()
+                            .big_button_with_icon_color(
+                                ICON_LIGHTNING_BOLT,
+                                "Nightly",
+                                Color32::from_rgb(255, 210, 40),
+                            )
+                            .on_hover_text(
+                                "Nightly releases are built from the latest code and may be \
+                                 unstable.",
+                            )
+                            .clicked()
                         {
                             config::with_mut(|c| c.update_channel = Some(UpdateChannel::Nightly));
                             persist_and_close = true;
                         }
-                        if ui.big_button_with_icon_color(ICON_CANCEL, "Disable Updates", Color32::from_rgb(213, 86, 86)).clicked() {
+                        if ui
+                            .big_button_with_icon_color(
+                                ICON_CANCEL,
+                                "Disable Updates",
+                                Color32::from_rgb(213, 86, 86),
+                            )
+                            .clicked()
+                        {
                             config::with_mut(|c| c.update_channel = Some(UpdateChannel::Disabled));
                             persist_and_close = true;
                         }
@@ -67,7 +86,9 @@ impl ChannelSelector {
                             resources
                                 .get_mut::<UpdateCheck>()
                                 .unwrap()
-                                .start(config::with(|c| c.update_channel.unwrap_or(UpdateChannel::Stable)));
+                                .start(config::with(|c| {
+                                    c.update_channel.unwrap_or(UpdateChannel::Stable)
+                                }));
                         }
                     });
                 });

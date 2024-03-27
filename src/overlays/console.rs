@@ -632,6 +632,10 @@ fn execute_command(
                 println!("\t#{i}: stage={:?} mat={}", o.render_stage, o.material);
             }
         }
+        "clear_maplist" => {
+            let mut maps = resources.get_mut::<MapList>().unwrap();
+            maps.set_maps(&[]);
+        }
         _ => error!("Unknown command '{command}'"),
     }
 }

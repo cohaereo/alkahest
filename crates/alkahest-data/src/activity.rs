@@ -44,11 +44,12 @@ pub struct SDestination {
 #[derive(Debug)]
 #[tiger_tag(id = 0x8080892E)]
 pub struct Unk8080892e {
-    pub short_activity_name: ResourceHash,
+    /// Doesn't always map to a string
+    pub activity_name: ResourceHash,
     pub unk4: u32,
     pub unk8: ResourceHash,
     pub unkc: ResourceHash,
-    pub activity_name: Pointer<NullString>,
+    pub activity_code: Pointer<NullString>,
 }
 
 #[derive(Debug)]

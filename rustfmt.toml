@@ -1,2 +1,7 @@
 group_imports = "StdExternalCrate"
 imports_granularity = "Crate"
+format_strings = true
+format_code_in_doc_comments = true
+
+use_try_shorthand = true
+newline_style = "Unix"

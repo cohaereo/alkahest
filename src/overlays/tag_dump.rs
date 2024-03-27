@@ -110,7 +110,8 @@ impl Overlay for TagDumper {
                 match result {
                     Ok((tag, entry)) => {
                         let msg = format!(
-                            "Dumped {tag} / {:04X}_{:04X}\nReference: {:08X}\nType: {}, Subtype: {}",
+                            "Dumped {tag} / {:04X}_{:04X}\nReference: {:08X}\nType: {}, Subtype: \
+                             {}",
                             tag.pkg_id(),
                             tag.entry_index(),
                             entry.reference.to_be(),

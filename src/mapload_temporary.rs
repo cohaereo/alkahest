@@ -1,4 +1,5 @@
-// ! Temporary file to mitigate performance issues in some IDEs while I figure out loading routines
+// ! Temporary file to mitigate performance issues in some IDEs while I figure
+// out loading routines
 
 use std::{
     collections::HashSet,
@@ -25,7 +26,6 @@ use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::{multizip, Itertools};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{dpkg::PackageManagerExt, Endian, FnvHash, TigerReadable};
 use windows::Win32::Graphics::{
@@ -253,8 +253,10 @@ pub async fn load_map_scene(
                     u => {
                         if !unknown_res_types.contains(&u) {
                             warn!(
-                                        "Unknown activity entref resource table resource type 0x{u:x} in resource table {}", resource.entity_resource
-                                    );
+                                "Unknown activity entref resource table resource type 0x{u:x} in \
+                                 resource table {}",
+                                resource.entity_resource
+                            );
 
                             unknown_res_types.insert(u);
                         }
@@ -281,7 +283,13 @@ pub async fn load_map_scene(
 
                 if !data_tables2.is_empty() {
                     let tstr = data_tables2.iter().map(|v| v.to_string()).join(", ");
-                    warn!("TODO: Found {} map data tables ({}) EntityResource by brute force ({} found normally)", data_tables2.len(), tstr, data_tables.len());
+                    warn!(
+                        "TODO: Found {} map data tables ({}) EntityResource by brute force ({} \
+                         found normally)",
+                        data_tables2.len(),
+                        tstr,
+                        data_tables.len()
+                    );
                 }
 
                 for table_tag in data_tables {
@@ -318,7 +326,9 @@ pub async fn load_map_scene(
                         &mut cur,
                         &mut scene,
                         renderer_ch.clone(),
-                        // cohae: yes, this means bruteforced ambient data tables will always be shown as ambient, but i don't think it matters once we fix the normal bruteforced activity tables
+                        // cohae: yes, this means bruteforced ambient data tables will always be
+                        // shown as ambient, but i don't think it matters once we fix the normal
+                        // bruteforced activity tables
                         if origin == ResourceOriginType::Ambient {
                             origin
                         } else {
@@ -339,7 +349,12 @@ pub async fn load_map_scene(
     }
 
     for (rtype, tables) in unknown_root_resources.into_iter() {
-        warn!("World origin resource {} is not parsed! Resource points might be missing (found in these tables [{}])", TagHash(rtype), tables.iter().map(|v| v.to_string()).join(", "));
+        warn!(
+            "World origin resource {} is not parsed! Resource points might be missing (found in \
+             these tables [{}])",
+            TagHash(rtype),
+            tables.iter().map(|v| v.to_string()).join(", ")
+        );
     }
 
     info!(
@@ -786,7 +801,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                             ..(s.instance_start + s.instance_count) as usize]
                                             .to_vec()
                                     } else {
-                                        warn!("Instance group {preheader_tag} doesn't have enough occlusion bounds, need range {}..{}, but there are only {} bounds", s.instance_start, s.instance_start + s.instance_count, preheader.instances.occlusion_bounds.bounds.len());
+                                        warn!(
+                                            "Instance group {preheader_tag} doesn't have enough \
+                                             occlusion bounds, need range {}..{}, but there are \
+                                             only {} bounds",
+                                            s.instance_start,
+                                            s.instance_start + s.instance_count,
+                                            preheader.instances.occlusion_bounds.bounds.len()
+                                        );
                                         vec![
                                             SObjectOcclusionBounds {
                                                 bb: AABB::INFINITE,
@@ -809,9 +831,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         }
                                     };
 
-                                    ents.push(scene.spawn((
-                                        StaticInstances(instanced_renderer, mesh_tag),
-                                    )));
+                                    ents.push(
+                                        scene
+                                            .spawn(
+                                                (StaticInstances(instanced_renderer, mesh_tag),),
+                                            ),
+                                    );
                                 }
                                 Err(e) => {
                                     error!(model = ?mesh_tag, "Failed to load model: {e}");
@@ -1365,58 +1390,60 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let d: Unk80808604 = TigerReadable::read_ds(table_data)?;
 
-                    let (havok_debugshape, new_transform) = if let Ok(havok_data) =
-                        package_manager().read_tag(d.unk10.havok_file)
-                    {
-                        let mut cur = Cursor::new(&havok_data);
-                        match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
-                            Ok(shapes) => {
-                                let mut final_shape =
-                                    destiny_havok::shape_collection::Shape::default();
+                    let (havok_debugshape, new_transform) =
+                        if let Ok(havok_data) = package_manager().read_tag(d.unk10.havok_file) {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(shapes) => {
+                                    let mut final_shape =
+                                        destiny_havok::shape_collection::Shape::default();
 
-                                for t in &d.unk10.unk8 {
-                                    if t.shape_index as usize >= shapes.len() {
-                                        error!(
-                                            "Shape index out of bounds for Unk80808604 (table {}, {} shapes, index {})",
-                                            table_hash, shapes.len(), t.shape_index
-                                        );
-                                        continue;
+                                    for t in &d.unk10.unk8 {
+                                        if t.shape_index as usize >= shapes.len() {
+                                            error!(
+                                                "Shape index out of bounds for Unk80808604 (table \
+                                                 {}, {} shapes, index {})",
+                                                table_hash,
+                                                shapes.len(),
+                                                t.shape_index
+                                            );
+                                            continue;
+                                        }
+
+                                        let transform = Transform {
+                                            translation: t.translation.truncate(),
+                                            rotation: t.rotation,
+                                            ..Default::default()
+                                        };
+
+                                        let mut shape = shapes[t.shape_index as usize].clone();
+                                        shape.apply_transform(transform.to_mat4());
+
+                                        final_shape.combine(&shape);
                                     }
 
-                                    let transform = Transform {
-                                        translation: t.translation.truncate(),
-                                        rotation: t.rotation,
+                                    // Re-center the shape
+                                    let center = final_shape.center();
+                                    final_shape.apply_transform(Mat4::from_translation(-center));
+
+                                    let new_transform = Transform {
+                                        translation: center,
                                         ..Default::default()
                                     };
 
-                                    let mut shape = shapes[t.shape_index as usize].clone();
-                                    shape.apply_transform(transform.to_mat4());
-
-                                    final_shape.combine(&shape);
+                                    (
+                                        CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok(),
+                                        Some(new_transform),
+                                    )
                                 }
-
-                                // Re-center the shape
-                                let center = final_shape.center();
-                                final_shape.apply_transform(Mat4::from_translation(-center));
-
-                                let new_transform = Transform {
-                                    translation: center,
-                                    ..Default::default()
-                                };
-
-                                (
-                                    CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok(),
-                                    Some(new_transform),
-                                )
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                    (None, None)
+                                }
                             }
-                            Err(e) => {
-                                error!("Failed to read shapes: {e}");
-                                (None, None)
-                            }
-                        }
-                    } else {
-                        (None, None)
-                    };
+                        } else {
+                            (None, None)
+                        };
 
                     ents.push(scene.spawn((
                         new_transform.unwrap_or(transform),
@@ -1446,9 +1473,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     for t in &d.unk10.unk10 {
                                         if t.shape_index as usize >= shapes.len() {
                                             error!(
-                                            "Shape index out of bounds for Unk80808246 (table {}, {} shapes, index {})",
-                                            table_hash, shapes.len(), t.shape_index
-                                        );
+                                                "Shape index out of bounds for Unk80808246 (table \
+                                                 {}, {} shapes, index {})",
+                                                table_hash,
+                                                shapes.len(),
+                                                t.shape_index
+                                            );
                                             continue;
                                         }
 
@@ -1518,8 +1548,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     if let Some(t) = d.unk10.unk10.get(d.array_index as usize) {
                                         if t.shape_index as usize >= shapes.len() {
                                             error!(
-                                                "Shape index out of bounds for Unk80808246 (table {}, {} shapes, index {})",
-                                                table_hash, shapes.len(), t.shape_index
+                                                "Shape index out of bounds for Unk80808246 (table \
+                                                 {}, {} shapes, index {})",
+                                                table_hash,
+                                                shapes.len(),
+                                                t.shape_index
                                             );
 
                                             continue;
@@ -1646,7 +1679,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             .entry(u)
                             .or_default()
                             .push(table_hash);
-                        debug!("World origin resource {} is not parsed! Resource points might be missing (table {})", TagHash(u), table_hash);
+                        debug!(
+                            "World origin resource {} is not parsed! Resource points might be \
+                             missing (table {})",
+                            TagHash(u),
+                            table_hash
+                        );
                     }
 
                     debug!(
@@ -1665,11 +1703,20 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             if tag.is_some() {
                                 if let Some(entry) = package_manager().get_entry(tag) {
                                     if entry.file_type == 27 && entry.file_subtype == 0 {
-                                        warn!("\t- Havok file found in unknown resource type {u:x} {:?} (table file {}, found havok file {})", data.translation, table_hash, tag);
+                                        warn!(
+                                            "\t- Havok file found in unknown resource type {u:x} \
+                                             {:?} (table file {}, found havok file {})",
+                                            data.translation, table_hash, tag
+                                        );
                                     } else {
                                         // We need to go deeper
                                         if let Some(htag) = contains_havok_references(tag, 4) {
-                                            warn!("\t- Havok file found in unknown resource type {u:x} {:?} (table file {table_hash}, found in subtag {tag}=>{htag})", data.translation);
+                                            warn!(
+                                                "\t- Havok file found in unknown resource type \
+                                                 {u:x} {:?} (table file {table_hash}, found in \
+                                                 subtag {tag}=>{htag})",
+                                                data.translation
+                                            );
                                         }
                                     }
                                 }
@@ -1683,8 +1730,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     }
                     // warn!(
                     //     "- 0x{:08x}: {}",
-                    //     data.data_resource.resource_type, data.data_resource.is_valid
-                    // );
+                    //     data.data_resource.resource_type,
+                    // data.data_resource.is_valid );
                 }
             };
         } else {
@@ -1838,67 +1885,67 @@ fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
     )
 }
 
-pub fn create_map_stringmap() -> FxHashMap<TagHash, String> {
-    let stringmap: FxHashMap<TagHash, String> = package_manager()
-        .get_named_tags_by_class(SDestination::ID.unwrap())
-        .par_iter()
-        .flat_map(|(name, tag)| {
-            let _span = info_span!("Read destination", destination = name).entered();
-            let destination: SDestination = package_manager().read_tag_struct(*tag).unwrap();
+// pub fn create_map_stringmap() -> FxHashMap<TagHash, String> {
+//     let stringmap: FxHashMap<TagHash, String> = package_manager()
+//         .get_named_tags_by_class(SDestination::ID.unwrap())
+//         .par_iter()
+//         .flat_map(|(name, tag)| {
+//             let _span = info_span!("Read destination", destination = name).entered();
+//             let destination: SDestination = package_manager().read_tag_struct(*tag).unwrap();
 
-            let destination_strings: FxHashMap<u32, String> = {
-                let _span = info_span!("Read destination strings").entered();
-                match StringContainer::load(destination.string_container.hash32()) {
-                    Ok(sc) => sc.0,
-                    Err(e) => {
-                        error!("Failed to load string container: {e}");
-                        FxHashMap::default()
-                    }
-                }
-            };
+//             let destination_strings: FxHashMap<u32, String> = {
+//                 let _span = info_span!("Read destination strings").entered();
+//                 match StringContainer::load(destination.string_container.hash32()) {
+//                     Ok(sc) => sc.0,
+//                     Err(e) => {
+//                         error!("Failed to load string container: {e}");
+//                         FxHashMap::default()
+//                     }
+//                 }
+//             };
 
-            let mut strings = vec![];
-            for activity_desc in &destination.activities {
-                let _span = info_span!(
-                    "Read activity",
-                    activity = activity_desc.activity_name.0.to_string()
-                )
-                .entered();
-                let Ok(activity) = package_manager()
-                    .read_named_tag_struct::<SActivity>(activity_desc.activity_name.0.to_string())
-                else {
-                    continue;
-                };
+//             let mut strings = vec![];
+//             for activity_desc in &destination.activities {
+//                 let _span = info_span!(
+//                     "Read activity",
+//                     activity = activity_desc.activity_code.0.to_string()
+//                 )
+//                 .entered();
+//                 let Ok(activity) = package_manager()
+//                     .read_named_tag_struct::<SActivity>(activity_desc.activity_code.0.to_string())
+//                 else {
+//                     continue;
+//                 };
 
-                for u1 in &activity.unk50 {
-                    for map in &u1.map_references {
-                        let map32 = match map.hash32_checked() {
-                            Some(m) => m,
-                            None => {
-                                // error!("Couldn't translate map hash64 {map:?}");
-                                continue;
-                            }
-                        };
+//                 for u1 in &activity.unk50 {
+//                     for map in &u1.map_references {
+//                         let map32 = match map.hash32_checked() {
+//                             Some(m) => m,
+//                             None => {
+//                                 // error!("Couldn't translate map hash64 {map:?}");
+//                                 continue;
+//                             }
+//                         };
 
-                        if let Ok(bubble) =
-                            package_manager().read_tag_struct::<SBubbleParentShallow>(map32)
-                        {
-                            let name = destination_strings
-                                .get(&bubble.map_name.0)
-                                .cloned()
-                                .unwrap_or_else(|| {
-                                    format!("[MissingString_{:08x}]", bubble.map_name.0)
-                                });
+//                         if let Ok(bubble) =
+//                             package_manager().read_tag_struct::<SBubbleParentShallow>(map32)
+//                         {
+//                             let name = destination_strings
+//                                 .get(&bubble.map_name.0)
+//                                 .cloned()
+//                                 .unwrap_or_else(|| {
+//                                     format!("[MissingString_{:08x}]", bubble.map_name.0)
+//                                 });
 
-                            strings.push((map32, name));
-                        }
-                    }
-                }
-            }
+//                             strings.push((map32, name));
+//                         }
+//                     }
+//                 }
+//             }
 
-            strings
-        })
-        .collect();
+//             strings
+//         })
+//         .collect();
 
-    stringmap
-}
+//     stringmap
+// }

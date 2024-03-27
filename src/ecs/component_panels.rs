@@ -143,13 +143,17 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
                 // Has the entity moved from it's original position?
                 let has_moved = *t != ot.0;
                 ui.add_enabled_ui(has_moved, |ui: &mut egui::Ui| {
-					if ui.button("Reset to original")
-						.on_hover_text("This object has an original transform defined.\nClicking this button will reset the current transform back  to the original")
-						.clicked()
-					{
-						*t = ot.0;
-					}
-				});
+                    if ui
+                        .button("Reset to original")
+                        .on_hover_text(
+                            "This object has an original transform defined.\nClicking this button \
+                             will reset the current transform back  to the original",
+                        )
+                        .clicked()
+                    {
+                        *t = ot.0;
+                    }
+                });
             }
         });
     }

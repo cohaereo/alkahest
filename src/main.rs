@@ -74,8 +74,8 @@ use crate::{
     input::InputState,
     map::{MapList, MapLoadState},
     map_resources::MapResource,
-    mapload_temporary::create_map_stringmap,
     overlays::{
+        activity_select::ActivityBrowser,
         camera_settings::CameraPositionOverlay,
         console::ConsoleOverlay,
         fps_display::FpsDisplayOverlay,
@@ -247,12 +247,6 @@ pub async fn main() -> anyhow::Result<()> {
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
-    {
-        let ls = Instant::now();
-        println!("{:#?}", create_map_stringmap());
-        println!("Took {}ms to create stringmap", ls.elapsed().as_millis());
-    }
-
     let stringmap: FxHashMap<u32, String> = {
         let _span = info_span!("Loading global strings").entered();
         let stringcontainers = package_manager()
@@ -372,6 +366,8 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(args.clone());
     resources.insert(Arc::clone(&stringmap));
 
+    let mut activity_browser = ActivityBrowser::new(Arc::clone(&stringmap));
+
     if let Some(activity_hash) = &activity_hash {
         let mut maps = mapload_temporary::query_activity_maps(*activity_hash, &stringmap)?;
         if args.map.is_some() {
@@ -379,10 +375,7 @@ pub async fn main() -> anyhow::Result<()> {
         }
 
         let mut map_list = resources.get_mut::<MapList>().unwrap();
-        map_list.populate(&maps);
-        if let Some(map) = map_list.current_map_mut() {
-            map.start_load(&resources);
-        }
+        map_list.set_maps(&maps);
     } else {
         let mut maps = vec![];
 
@@ -392,10 +385,7 @@ pub async fn main() -> anyhow::Result<()> {
         }
 
         let mut map_list = resources.get_mut::<MapList>().unwrap();
-        map_list.populate(&maps);
-        if let Some(map) = map_list.current_map_mut() {
-            map.start_load(&resources);
-        }
+        map_list.set_maps(&maps);
     }
     // resources.get_mut::<MapList>().unwrap().load_all(&resources);
 
@@ -959,6 +949,8 @@ pub async fn main() -> anyhow::Result<()> {
                             PreDrawResult::Continue
                         },
                         |ctx, resources| {
+                            activity_browser.show(ctx, resources);
+
                             let maplist = resources.get::<MapList>().unwrap();
                             if let Some(map) = maplist.current_map() {
                                 if map.load_state == MapLoadState::Loading {

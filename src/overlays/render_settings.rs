@@ -377,11 +377,11 @@ impl Overlay for RenderSettingsOverlay {
 
                 // Move the Globals from the old scene to the new scene
                 if map_changed {
-                    if let Some(map) = maplist.current_map_mut() {
-                        if map.load_state == MapLoadState::Unloaded {
-                            map.start_load(resources);
-                        }
-                    }
+                    // if let Some(map) = maplist.current_map_mut() {
+                    //     if map.load_state == MapLoadState::Unloaded {
+                    //         map.start_load(resources);
+                    //     }
+                    // }
 
                     maplist.previous_map = old_map_index;
                     // We have learned the power to Take worlds

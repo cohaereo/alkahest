@@ -176,7 +176,8 @@ impl GuiManager {
                             .map(|v| v.0.keys().cloned().collect_vec())
                             .unwrap_or_default();
 
-                        // Extract each viewer window individually so that we can pass resources into it, adding it back in if the viewer returns true
+                        // Extract each viewer window individually so that we can pass resources
+                        // into it, adding it back in if the viewer returns true
                         for k in viewer_keys {
                             let mut viewer = resources
                                 .get_mut::<ViewerWindows>()
