@@ -78,7 +78,7 @@ use crate::{
         camera_settings::CameraPositionOverlay,
         console::ConsoleOverlay,
         fps_display::FpsDisplayOverlay,
-        gui::{GuiManager, PreDrawResult, ViewerWindows},
+        gui::{GuiManager, HiddenWindows, PreDrawResult, ViewerWindows},
         inspector::InspectorOverlay,
         load_indicator::{LoadIndicator, LoadIndicatorOverlay, LoadIndicators},
         menu::MenuBar,
@@ -342,6 +342,7 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(LoadIndicators::default());
     resources.insert(args.clone());
     resources.insert(Arc::clone(&stringmap));
+    resources.insert(HiddenWindows::default());
 
     let mut activity_browser = ActivityBrowser::new(&stringmap);
 

@@ -11,6 +11,8 @@ use crate::{
     util::dds,
 };
 
+use super::gui::HiddenWindows;
+
 pub struct TagDumper {
     package_id: String,
     entry_index: String,
@@ -61,55 +63,58 @@ impl Overlay for TagDumper {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        _resources: &mut Resources,
+        resources: &mut Resources,
         _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
-        egui::Window::new("Tag Dumper").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut self.use_full_hash, true, "Full hash");
-                ui.radio_value(&mut self.use_full_hash, false, "Split hash");
-            });
+        let mut windows = resources.get_mut::<HiddenWindows>().unwrap();
+        egui::Window::new("Tag Dumper")
+            .open(&mut windows.tag_dumper)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut self.use_full_hash, true, "Full hash");
+                    ui.radio_value(&mut self.use_full_hash, false, "Split hash");
+                });
 
-            let pressed_enter = if self.use_full_hash {
-                ui.label("Tag");
-                ui.text_edit_singleline(&mut self.tag_string).lost_focus()
-                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
-            } else {
-                ui.label("Package ID");
-                ui.text_edit_singleline(&mut self.package_id);
-
-                ui.label("Entry Index");
-                ui.text_edit_singleline(&mut self.entry_index).lost_focus()
-                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
-            };
-
-            if ui.button("Dump!").clicked() || pressed_enter {
-                if self.use_full_hash {
-                    let tag = u32::from_str_radix(&self.tag_string, 16);
-
-                    if let Ok(tag) = tag {
-                        let tag = TagHash(u32::from_be(tag));
-                        self.message = Some(self.dump_entry(tag).map(|v| (tag, v)));
-                    } else {
-                        self.message = Some(Err("Malformed input tag.".to_string()));
-                    }
+                let pressed_enter = if self.use_full_hash {
+                    ui.label("Tag");
+                    ui.text_edit_singleline(&mut self.tag_string).lost_focus()
+                        && ui.input(|i| i.key_pressed(egui::Key::Enter))
                 } else {
-                    let pkg = u16::from_str_radix(&self.package_id, 16);
-                    let entry = self.entry_index.parse();
+                    ui.label("Package ID");
+                    ui.text_edit_singleline(&mut self.package_id);
 
-                    if let (Ok(pkg), Ok(entry)) = (pkg, entry) {
-                        let tag = TagHash::new(pkg, entry);
-                        self.message = Some(self.dump_entry(tag).map(|v| (tag, v)));
+                    ui.label("Entry Index");
+                    ui.text_edit_singleline(&mut self.entry_index).lost_focus()
+                        && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                };
+
+                if ui.button("Dump!").clicked() || pressed_enter {
+                    if self.use_full_hash {
+                        let tag = u32::from_str_radix(&self.tag_string, 16);
+
+                        if let Ok(tag) = tag {
+                            let tag = TagHash(u32::from_be(tag));
+                            self.message = Some(self.dump_entry(tag).map(|v| (tag, v)));
+                        } else {
+                            self.message = Some(Err("Malformed input tag.".to_string()));
+                        }
                     } else {
-                        self.message = Some(Err("Malformed input tag.".to_string()));
+                        let pkg = u16::from_str_radix(&self.package_id, 16);
+                        let entry = self.entry_index.parse();
+
+                        if let (Ok(pkg), Ok(entry)) = (pkg, entry) {
+                            let tag = TagHash::new(pkg, entry);
+                            self.message = Some(self.dump_entry(tag).map(|v| (tag, v)));
+                        } else {
+                            self.message = Some(Err("Malformed input tag.".to_string()));
+                        }
                     }
                 }
-            }
 
-            if let Some(result) = self.message.as_ref() {
-                match result {
-                    Ok((tag, entry)) => {
-                        let msg = format!(
+                if let Some(result) = self.message.as_ref() {
+                    match result {
+                        Ok((tag, entry)) => {
+                            let msg = format!(
                             "Dumped {tag} / {:04X}_{:04X}\nReference: {:08X}\nType: {}, Subtype: \
                              {}",
                             tag.pkg_id(),
@@ -118,12 +123,12 @@ impl Overlay for TagDumper {
                             entry.file_type,
                             entry.file_subtype
                         );
-                        ui.label(egui::RichText::new(msg).color(egui::Color32::GREEN))
-                    }
-                    Err(msg) => ui.label(egui::RichText::new(msg).color(egui::Color32::RED)),
-                };
-            }
-        });
+                            ui.label(egui::RichText::new(msg).color(egui::Color32::GREEN))
+                        }
+                        Err(msg) => ui.label(egui::RichText::new(msg).color(egui::Color32::RED)),
+                    };
+                }
+            });
 
         true
     }
@@ -140,35 +145,38 @@ impl Overlay for BulkTextureDumper {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        _resources: &mut Resources,
+        resources: &mut Resources,
         _gui: &mut super::gui::GuiContext<'_>,
     ) -> bool {
-        egui::Window::new("Bulk Texture Dumper").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut self.bake_png, false, "DDS");
-                ui.set_enabled(false);
-                ui.radio_value(&mut self.bake_png, true, "PNG");
-            });
+        let mut windows = resources.get_mut::<HiddenWindows>().unwrap();
+        egui::Window::new("Bulk Texture Dumper")
+            .open(&mut windows.texture_dumper)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut self.bake_png, false, "DDS");
+                    ui.set_enabled(false);
+                    ui.radio_value(&mut self.bake_png, true, "PNG");
+                });
 
-            if ui.button("Dump!").clicked() {
-                for i in self.input.lines() {
-                    if let Ok(itag) = u32::from_str_radix(i, 16) {
-                        let tag = TagHash(itag.to_be());
-                        let mut dds_data: Vec<u8> = vec![];
-                        let (texture, texture_data) =
-                            Texture::load_data(ExtendedHash::Hash32(tag), true).unwrap();
+                if ui.button("Dump!").clicked() {
+                    for i in self.input.lines() {
+                        if let Ok(itag) = u32::from_str_radix(i, 16) {
+                            let tag = TagHash(itag.to_be());
+                            let mut dds_data: Vec<u8> = vec![];
+                            let (texture, texture_data) =
+                                Texture::load_data(ExtendedHash::Hash32(tag), true).unwrap();
 
-                        dds::dump_to_dds(&mut dds_data, &texture, &texture_data);
-                        std::fs::create_dir("./textures/").ok();
-                        if let Ok(mut f) = File::create(format!("./textures/{}.dds", tag)) {
-                            f.write_all(&dds_data).ok();
+                            dds::dump_to_dds(&mut dds_data, &texture, &texture_data);
+                            std::fs::create_dir("./textures/").ok();
+                            if let Ok(mut f) = File::create(format!("./textures/{}.dds", tag)) {
+                                f.write_all(&dds_data).ok();
+                            }
                         }
                     }
                 }
-            }
 
-            ui.text_edit_multiline(&mut self.input);
-        });
+                ui.text_edit_multiline(&mut self.input);
+            });
 
         true
     }

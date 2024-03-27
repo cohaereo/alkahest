@@ -2,7 +2,7 @@ use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use glam::Vec3;
 
-use super::gui::Overlay;
+use super::gui::{HiddenWindows, Overlay};
 use crate::{
     camera::FpsCamera,
     config,
@@ -170,6 +170,17 @@ impl Overlay for MenuBar {
                             ui.close_menu();
                         }
                     }
+                });
+
+                ui.menu_button("View", |ui| {
+                    let mut windows = resources.get_mut::<HiddenWindows>().unwrap();
+                    windows.texture_dumper ^= ui
+                        .selectable_label(windows.texture_dumper, "Texture Dumper")
+                        .clicked();
+
+                    windows.tag_dumper ^= ui
+                        .selectable_label(windows.tag_dumper, "Tag Dumper")
+                        .clicked();
                 });
 
                 ui.menu_button("Help", |ui| {

@@ -265,3 +265,9 @@ impl GuiResources {
 
 #[derive(Default)]
 pub struct ViewerWindows(pub HashMap<String, Box<dyn Overlay>>);
+
+#[derive(Default)]
+pub struct HiddenWindows {
+    pub texture_dumper: bool,
+    pub tag_dumper: bool,
+}
