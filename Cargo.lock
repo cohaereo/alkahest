@@ -125,8 +125,6 @@ dependencies = [
  "egui-directx11",
  "egui-winit",
  "egui_commonmark",
- "fastrand",
- "frustum_query",
  "fs-err",
  "game-detector",
  "genmesh",
@@ -1451,12 +1449,6 @@ checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
 ]
-
-[[package]]
-name = "frustum_query"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1771c26abed26b2527d888742fffd27dab86d205bf4846748abf29c06ef5a05"
 
 [[package]]
 name = "fs-err"
