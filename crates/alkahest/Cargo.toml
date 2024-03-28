@@ -1,0 +1,102 @@
+[package]
+name = "alkahest"
+version = "0.4.1"
+edition = "2021"
+authors = ["cohaereo <cohaereo@protonmail.com>"]
+default-run = "alkahest"
+
+[dependencies]
+alkahest-data = { path = "../alkahest-data" }
+alkahest-panic-handler = { path = "../alkahest-panic-handler" }
+alkahest-pm = { path = "../alkahest-pm" }
+destiny-havok = { path = "../destiny-havok" }
+
+# (De)serialization
+binrw.workspace = true
+destiny-pkg.workspace = true
+ron = "0.8.1"
+serde_json.workspace = true
+serde_yaml.workspace = true
+serde.workspace = true
+tiger-parse.workspace = true
+zip-extract = "0.1.3"
+
+# Graphics/GUI
+ddsfile = "0.5.1"
+egui.workspace = true
+egui_commonmark = "0.10.2"
+egui-directx11 = { path = "../egui-directx11" }
+egui-winit = "0.24.1"
+frustum_query = "0.1.2"
+glam.workspace = true
+genmesh = "0.6.2"
+obj = "0.10.2"
+png = "0.17.10"
+raw-window-handle = "0.5.2"
+windows.workspace = true
+winit = { version = "0.28" }
+
+# Parallelism
+crossbeam = "0.8.2"
+lazy_static.workspace = true
+parking_lot.workspace = true
+poll-promise = { version = "0.3.0", features = ["tokio"] }
+rayon = "1.7.0"
+ringbuffer = "0.15"
+tokio = { version = "1.32.0", features = ["rt", "macros"] }
+
+# Misc
+anyhow.workspace = true
+bitflags = "2.3.3"
+build-time = "0.1.3"
+bytemuck = { version = "1.13.1", features = ["derive"] }
+chrono = { version = "0.4.31", features = ["serde"] }
+clap = { version = "4.4.4", features = ["derive"] }
+const_format = "0.2.31"
+directories = "5.0.1"
+discord-rpc-client = { version = "0.4.0", optional = true }
+fastrand = "2.0.0"
+fs-err = "2.11.0"
+game-detector = "0.1.3"
+hecs = "0.10.3"
+hex = "0.4.3"
+itertools.workspace = true
+mimalloc = { version = "0.1", default-features = false }
+native-dialog = "0.7.0"
+num = "0.4.1"
+num-derive = "0.4.0"
+num-traits = "0.2.16"
+once_cell = "1.19.0"
+paste = "1.0.14"
+reqwest = { version = "0.11.24", features = ["json"] }
+rustc_version = "0.4.0"
+rustc-hash.workspace = true
+semver = "1.0.21"
+strum = { version = "0.26.1", features = ["derive"] }
+thiserror.workspace = true
+tinyvec = "1.6.0"
+tracing = "0.1.37"
+tracing-log = "0.2.0"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing-tracy = "0.11.0"
+tracy-client = "0.17.0"
+
+[features]
+default = ["discord_rpc"]
+tracy = []
+# Disable sorting the map list
+keep_map_order = []
+# TODO(cohae): This should be a runtime configuration setting?
+discord_rpc = ["dep:discord-rpc-client"]
+
+debug_lock = []
+tfx_strict_interpreter = []
+
+[package.metadata.imgui-dx11-renderer]
+targets = ["x86_64-pc-windows-gnu"]
+
+[package.metadata.alkahest]
+targets = ["x86_64-pc-windows-gnu"]
+
+[build-dependencies]
+winres = "0.1.12"

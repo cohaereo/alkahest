@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 color-eyre = "0.6.2"
 fs-err = "2.11.0"
-lazy_static = "1.4.0"
+lazy_static.workspace = true
 native-dialog = "0.7.0"
-parking_lot = "0.12.1"
+parking_lot.workspace = true
 regex = "1.10.3"

@@ -6,14 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1"
-binrw = "0.13.3"
+anyhow.workspace = true
+binrw.workspace = true
 bitflags = "2.4.1"
-glam = "0.25"
+glam.workspace = true
 parry3d = "0.13.5"
 
 [dev-dependencies]
-anyhow = "1.0.75"
-itertools = "0.12.0"
+anyhow.workspace = true
+itertools.workspace = true
 chull = "0.2"
 colored = "2.0.4"
