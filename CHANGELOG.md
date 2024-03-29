@@ -30,6 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### Added
+- Added Routes debug object. Routes can be traversed, exported, and shared(manually). They can swap to the correct activity, but currently must be reloaded afterwards. This will be fixed in a future version. in [#23](https://github.com/cohaereo/alkahest/pull/23)
+
 ## 0.4.1 - 2024-03-27
 
 ### ✨ Major Changes
