@@ -149,13 +149,19 @@ impl FpsCamera {
         speed *= self.speed_mul;
 
         // Cancel tween if the user moves the camera
-        if self.tween.is_some() && direction.length() > 0.0 {
-            self.tween = None;
+        if direction.length() > 0.0 {
+            if let Some(t) = self.tween.as_mut() {
+                t.abort()
+            }
         }
 
         if let Some(tween) = &mut self.tween {
-            self.position = tween.update_pos().unwrap_or(self.position);
-            self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            if tween.is_aborted() {
+                self.position += direction * speed;
+            } else {
+                self.position = tween.update_pos().unwrap_or(self.position);
+                self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            }
         } else {
             self.position += direction * speed;
         }
@@ -327,20 +333,37 @@ impl FpsCamera {
     // Calculate angle to point camera at pos.
     // The angle has a minimal diff to current camera angle.
     pub fn get_look_angle(&self, pos: Vec3) -> Vec2 {
-        let dir = pos - self.position;
-        let inv_r = dir.length_recip();
-        if inv_r.is_infinite() {
-            self.orientation
-        } else {
-            let theta = dir.x.atan2(dir.y).to_degrees();
-            let mut diff = (theta - self.orientation.y).rem_euclid(360.0);
-            if diff > 180.0 {
-                diff -= 360.0;
-            }
-            Vec2::new(
-                (dir.z * inv_r).acos().to_degrees() - 90.0,
-                self.orientation.y + diff,
-            )
-        }
+        get_look_angle(self.orientation, self.position, pos)
     }
 }
+
+pub fn get_look_angle(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> Vec2 {
+    let dir = pos2 - pos1;
+    let inv_r = dir.length_recip();
+    if inv_r.is_infinite() {
+        start_angle
+    } else {
+        let theta = dir.x.atan2(dir.y).to_degrees();
+        let mut diff = (theta - start_angle.y).rem_euclid(360.0);
+        if diff > 180.0 {
+            diff -= 360.0;
+        }
+        Vec2::new(
+            (dir.z * inv_r).acos().to_degrees() - 90.0,
+            start_angle.y + diff,
+        )
+    }
+}
+/* TODO: This seems to be acurate, but it's giving funky results for turning speeds
+pub fn get_look_angle_difference(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> f32 {
+    let dir = pos2 - pos1;
+    let theta = start_angle.y.to_radians();
+    let phi =  start_angle.x.to_radians();
+    let old_dir = Vec3::new(
+        phi.cos() * theta.cos(),
+        phi.cos() * theta.sin(),
+        -phi.sin(),
+    );
+    dir.angle_between(old_dir).to_degrees()
+}
+*/

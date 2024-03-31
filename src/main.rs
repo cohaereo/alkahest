@@ -38,7 +38,7 @@ use hecs::Entity;
 use itertools::Itertools;
 use mimalloc::MiMalloc;
 use overlays::camera_settings::CurrentCubemap;
-use render::{debug::DebugDrawFlags, vertex_layout::InputElement};
+use render::{color::Color, debug::DebugDrawFlags, vertex_layout::InputElement};
 use technique::Technique;
 use text::GlobalStringmap;
 use tiger_parse::PackageManagerExt;
@@ -60,12 +60,13 @@ use winit::{
 };
 
 use crate::{
+    action::ActionList,
     camera::FpsCamera,
     config::{WindowConfig, CONFIGURATION},
     ecs::{
         components::{
-            ActivityGroup, Beacon, EntityModel, ResourcePoint, Ruler, Sphere, StaticInstances,
-            Terrain, Visible, Water,
+            ActivityGroup, Beacon, EntityModel, ResourcePoint, Route, Ruler, Sphere,
+            StaticInstances, Terrain, Visible, Water,
         },
         resolve_aabb,
         resources::SelectedEntity,
@@ -75,7 +76,7 @@ use crate::{
     map::{MapList, MapLoadState},
     map_resources::MapResource,
     overlays::{
-        activity_select::ActivityBrowser,
+        activity_select::{ActivityBrowser, CurrentActivity},
         camera_settings::CameraPositionOverlay,
         console::ConsoleOverlay,
         fps_display::FpsDisplayOverlay,
@@ -108,6 +109,7 @@ use crate::{
     },
 };
 
+mod action;
 mod camera;
 mod config;
 #[cfg(feature = "discord_rpc")]
@@ -362,6 +364,8 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(args.clone());
     resources.insert(Arc::clone(&stringmap));
     resources.insert(HiddenWindows::default());
+    resources.insert(ActionList::default());
+    resources.insert(CurrentActivity::default());
 
     let mut activity_browser = ActivityBrowser::new(&stringmap);
 
@@ -592,6 +596,11 @@ pub async fn main() -> anyhow::Result<()> {
                 }
             }
             Event::RedrawRequested(..) => {
+                {
+                    let mut action_list = resources.get_mut::<ActionList>().unwrap();
+                    action_list.process(&resources);
+                }
+
                 resources.get_mut::<SelectedEntity>().unwrap().1 = false;
 
                 {
@@ -882,6 +891,21 @@ pub async fn main() -> anyhow::Result<()> {
                                 &selected,
                             );
                         }
+                        for (e, (route, visible)) in
+                            map.scene.query::<(&Route, Option<&Visible>)>().iter()
+                        {
+                            if !visible.map_or(true, |v| v.0) {
+                                continue;
+                            }
+                            draw_route(
+                                &mut debugshapes,
+                                route,
+                                map.hash,
+                                start_time,
+                                Some(e),
+                                &selected,
+                            );
+                        }
                     }
 
                     if let Some(map) = maps.current_map_mut() {
@@ -1096,7 +1120,7 @@ fn draw_ruler(
 
     debugshapes.cross(ruler.start, ruler.scale, color);
     debugshapes.cross(ruler.end, ruler.scale, color);
-    debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale);
+    debugshapes.line_dotted(ruler.start, ruler.end, color, ruler.scale, 0.5, 0.5);
 
     let ruler_center = (ruler.start + ruler.end) / 2.0;
     debugshapes.text(
@@ -1177,6 +1201,28 @@ fn draw_ruler(
     )
 }
 
+fn draw_sphere_skeleton<C: Into<Color> + Copy>(
+    debugshapes: &mut DebugShapes,
+    pos: Vec3,
+    radius: f32,
+    detail: u8,
+    color: C,
+) {
+    for t in 0..detail {
+        debugshapes.circle(
+            pos,
+            Vec3::new(
+                radius * (t as f32 * PI / detail as f32).sin(),
+                radius * (t as f32 * PI / detail as f32).cos(),
+                0.0,
+            ),
+            4 * detail,
+            color,
+        );
+    }
+    debugshapes.circle(pos, Vec3::new(0.0, 0.0, radius), 4 * detail, color);
+}
+
 fn draw_sphere(
     debugshapes: &mut DebugShapes,
     transform: &Transform,
@@ -1200,22 +1246,11 @@ fn draw_sphere(
         cross_color,
     );
 
-    for t in 0..sphere.detail {
-        debugshapes.circle(
-            transform.translation,
-            Vec3::new(
-                transform.radius() * (t as f32 * PI / sphere.detail as f32).sin(),
-                transform.radius() * (t as f32 * PI / sphere.detail as f32).cos(),
-                0.0,
-            ),
-            4 * sphere.detail,
-            color,
-        );
-    }
-    debugshapes.circle(
+    draw_sphere_skeleton(
+        debugshapes,
         transform.translation,
-        Vec3::new(0.0, 0.0, transform.radius()),
-        4 * sphere.detail,
+        transform.radius(),
+        sphere.detail,
         color,
     );
 
@@ -1276,6 +1311,123 @@ fn draw_beacon(
         DebugDrawFlags::DRAW_PICK,
         entity,
     );
+}
+
+fn draw_route(
+    debugshapes: &mut DebugShapes,
+    route: &Route,
+    current_hash: TagHash,
+    start_time: Instant,
+    entity: Option<Entity>,
+    selected: &SelectedEntity,
+) {
+    let color = if route.rainbow {
+        get_selected_color::<3>(selected, entity, get_rainbow_color(start_time))
+    } else {
+        get_selected_color::<3>(selected, entity, route.color)
+    };
+
+    const BASE_RADIUS: f32 = 0.1;
+    let mut prev_is_local = false;
+    for i in 0..route.path.len() {
+        if let Some(node) = route.path.get(i) {
+            let node_is_local = node.map_hash.map_or(true, |h| h == current_hash);
+            let next_node = route.path.get(i + 1);
+            let next_is_local = next_node.map_or(false, |node| {
+                node.map_hash.map_or(false, |h| h == current_hash)
+            });
+
+            if !node_is_local {
+                if prev_is_local || next_is_local || route.show_all {
+                    draw_sphere_skeleton(
+                        debugshapes,
+                        node.pos,
+                        BASE_RADIUS * route.scale,
+                        2,
+                        color,
+                    );
+                }
+            } else {
+                debugshapes.sphere(
+                    node.pos,
+                    BASE_RADIUS * route.scale,
+                    color,
+                    DebugDrawFlags::DRAW_NORMAL,
+                    None,
+                );
+            }
+
+            if node_is_local || prev_is_local || next_is_local {
+                if let Some(label) = node.label.as_ref() {
+                    debugshapes.text(
+                        label.to_string(),
+                        node.pos + route.scale / 2.0 * Vec3::Z,
+                        egui::Align2::CENTER_BOTTOM,
+                        [255, 255, 255],
+                    );
+                }
+            }
+            prev_is_local = node_is_local;
+
+            if next_node.is_some() {
+                let next_node = next_node.unwrap();
+                let segment_length = (next_node.pos - node.pos).length();
+
+                if !(route.show_all || node_is_local || next_is_local) {
+                    continue;
+                }
+
+                debugshapes.line_dotted(
+                    next_node.pos,
+                    node.pos,
+                    color,
+                    route.scale,
+                    if next_node.is_teleport { 0.10 } else { 0.75 },
+                    if next_node.is_teleport { 1.5 } else { 0.5 },
+                );
+                if route.marker_interval > 0.0 {
+                    let sphere_color = keep_color_bright(invert_color(color));
+                    let sphere_color = [sphere_color[0], sphere_color[1], sphere_color[2], 192];
+
+                    let mut current = 0.0;
+                    while current < segment_length {
+                        if current > 0.0 {
+                            let pos = node.pos + (next_node.pos - node.pos).normalize() * current;
+
+                            debugshapes.sphere(
+                                pos,
+                                route.scale * 0.20,
+                                sphere_color,
+                                DebugDrawFlags::DRAW_NORMAL,
+                                None,
+                            );
+                        }
+
+                        current += route.marker_interval;
+                    }
+                }
+                debugshapes.cube_extents(
+                    (node.pos + next_node.pos) / 2.0,
+                    Vec3::new(segment_length / 2.0, route.scale / 2.0, route.scale / 2.0),
+                    Quat::from_rotation_arc(Vec3::X, (next_node.pos - node.pos).normalize()),
+                    color,
+                    true,
+                    DebugDrawFlags::DRAW_PICK,
+                    entity,
+                )
+            } else {
+                debugshapes.cube_extents(
+                    node.pos,
+                    Vec3::new(route.scale / 2.0, route.scale / 2.0, route.scale / 2.0),
+                    Quat::IDENTITY,
+                    color,
+                    true,
+                    DebugDrawFlags::DRAW_PICK,
+                    entity,
+                )
+            }
+        }
+    }
 }
 
 fn load_render_globals(renderer: &Renderer) {

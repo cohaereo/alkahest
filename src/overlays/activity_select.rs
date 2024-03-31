@@ -13,7 +13,6 @@ use crate::{
     mapload_temporary::{get_map_name, query_activity_maps},
     resources::Resources,
     text::{GlobalStringmap, StringContainer, StringMapShared},
-    Args,
 };
 
 #[derive(Debug)]
@@ -209,26 +208,14 @@ impl ActivityBrowser {
                                         if activity_name.contains("_ls_") {
                                             activity_name.insert_text(" ", 0);
                                         }
-                                        if ui.selectable_label(false, &activity_name).clicked() {
-                                            let mut maplist =
-                                                resources.get_mut::<MapList>().unwrap();
-                                            let stringmap =
-                                                resources.get::<StringMapShared>().unwrap();
-                                            let Ok(maps) =
-                                                query_activity_maps(*activity_hash, &stringmap)
-                                            else {
-                                                error!(
-                                                    "Failed to query activity maps for \
+                                        if ui.selectable_label(false, &activity_name).clicked()
+                                            && set_activity(resources, *activity_hash).is_err()
+                                        {
+                                            error!(
+                                                "Failed to query activity maps for \
                                                      {activity_name}"
-                                                );
-                                                continue;
-                                            };
-
-                                            // TODO(cohae): very hacky way to set the activity
-                                            resources.get_mut::<Args>().unwrap().activity =
-                                                Some(activity_hash.to_string());
-
-                                            maplist.set_maps(&maps);
+                                            );
+                                            continue;
                                         }
                                     }
                                 },
@@ -262,4 +249,20 @@ impl ActivityBrowser {
                 }
             });
     }
+}
+#[derive(Default)]
+pub struct CurrentActivity(pub Option<TagHash>);
+
+pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Result<()> {
+    let mut maplist = resources.get_mut::<MapList>().unwrap();
+    let stringmap = resources.get::<StringMapShared>().unwrap();
+    let maps = query_activity_maps(activity_hash, &stringmap)?;
+
+    resources.get_mut::<CurrentActivity>().unwrap().0 = Some(activity_hash);
+    maplist.set_maps(&maps);
+    Ok(())
+}
+
+pub fn get_activity_hash(resources: &Resources) -> Option<TagHash> {
+    resources.get::<CurrentActivity>().unwrap().0
 }

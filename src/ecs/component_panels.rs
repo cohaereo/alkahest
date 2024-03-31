@@ -1,11 +1,12 @@
+use destiny_pkg::TagHash;
 use egui::{Button, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 
 use super::{
     components::{
-        Beacon, EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Ruler, Sphere,
-        StaticInstances, Visible,
+        Beacon, EntityModel, EntityWorldId, Global, Label, Mutable, ResourcePoint, Route,
+        RouteNode, Ruler, Sphere, StaticInstances, Visible,
     },
     resolve_entity_icon, resolve_entity_name,
     tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -13,16 +14,17 @@ use super::{
     Light, Scene,
 };
 use crate::{
-    camera::FpsCamera,
+    action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},
+    camera::{get_look_angle, FpsCamera},
     ecs::transform::TransformFlags,
     hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
     icons::{
         ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA,
-        ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
+        ICON_CAMERA_CONTROL, ICON_CLIPBOARD, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
         ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF, ICON_EYE_OFF_OUTLINE, ICON_HELP,
-        ICON_IDENTIFIER, ICON_LIGHTBULB, ICON_MAP_MARKER, ICON_OCTAGON, ICON_RADIUS_OUTLINE,
-        ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
-        ICON_STEERING, ICON_TAG,
+        ICON_IDENTIFIER, ICON_LIGHTBULB, ICON_MAP_MARKER, ICON_MAP_MARKER_PATH,
+        ICON_MAP_MARKER_PLUS, ICON_OCTAGON, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT,
+        ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE, ICON_STEERING, ICON_TAG,
     },
     render::tween::Tween,
     resources::Resources,
@@ -36,6 +38,7 @@ use crate::{
 pub fn show_inspector_panel(
     ui: &mut egui::Ui,
     scene: &mut Scene,
+    current_hash: TagHash,
     cmd: &mut hecs::CommandBuffer,
     ent: Entity,
     resources: &Resources,
@@ -113,7 +116,7 @@ pub fn show_inspector_panel(
 
     let mut global = e.get::<&Global>().map_or(false, |g| g.0);
     let mut global_changed = false;
-    if e.has::<Mutable>() {
+    if e.has::<Mutable>() && !e.has::<Route>() {
         if ui.checkbox(&mut global, "Show in all Maps").clicked() {
             global_changed = true;
             if let Some(mut g) = e.get::<&mut Global>() {
@@ -124,7 +127,7 @@ pub fn show_inspector_panel(
         };
         ui.separator();
     }
-    show_inspector_components(ui, e, resources);
+    show_inspector_components(ui, e, resources, current_hash);
 
     if global_changed {
         if global {
@@ -135,10 +138,15 @@ pub fn show_inspector_panel(
     }
 }
 
-fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
+fn show_inspector_components(
+    ui: &mut egui::Ui,
+    e: EntityRef<'_>,
+    resources: &Resources,
+    current_hash: TagHash,
+) {
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(e, ui, resources);
+            t.show_inspector_ui(e, ui, resources, current_hash);
             if let Some(ot) = e.get::<&OriginalTransform>() {
                 // Has the entity moved from it's original position?
                 let has_moved = *t != ot.0;
@@ -163,7 +171,7 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
 			$(
 				if let Some(mut component) = e.get::<&mut $component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(e, ui, resources);
+						component.show_inspector_ui(e, ui, resources, current_hash);
 					});
 				}
 			)*
@@ -179,6 +187,7 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
         Ruler,
         Sphere,
         Beacon,
+        Route,
         Light
     );
 }
@@ -244,7 +253,8 @@ pub(super) trait ComponentPanel {
         false
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, _: &mut egui::Ui, _: &Resources) {}
+    fn show_inspector_ui(&mut self, _: EntityRef<'_>, _: &mut egui::Ui, _: &Resources, _: TagHash) {
+    }
 }
 
 impl ComponentPanel for Transform {
@@ -260,7 +270,13 @@ impl ComponentPanel for Transform {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
         rotation_euler.y = rotation_euler.y.to_degrees();
@@ -375,7 +391,13 @@ impl ComponentPanel for EntityWorldId {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.label(format!("World ID: 0x{:016X}", self.0));
     }
 }
@@ -393,7 +415,13 @@ impl ComponentPanel for ResourcePoint {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Entity:");
             ui.label(self.entity.to_string());
@@ -438,7 +466,13 @@ impl ComponentPanel for EntityModel {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Tag:");
             ui.label(format!("{}", self.2));
@@ -459,7 +493,13 @@ impl ComponentPanel for StaticInstances {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+        _: TagHash,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Mesh tag:");
             ui.label(self.1.to_string());
@@ -509,7 +549,13 @@ impl ComponentPanel for Ruler {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         let camera = resources.get::<FpsCamera>().unwrap();
         egui::Grid::new("transform_input_grid")
             .num_columns(2)
@@ -642,7 +688,13 @@ impl ComponentPanel for Sphere {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, _resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _resources: &Resources,
+        _: TagHash,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
@@ -683,7 +735,13 @@ impl ComponentPanel for Beacon {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
@@ -771,6 +829,307 @@ impl ComponentPanel for Beacon {
     }
 }
 
+impl ComponentPanel for Route {
+    fn inspector_name() -> &'static str {
+        "Route"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_MAP_MARKER_PATH
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(
+        &mut self,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        current_hash: TagHash,
+    ) {
+        let mut camera = resources.get_mut::<FpsCamera>().unwrap();
+
+        let (d, pos) = if let Some(renderer) = resources.get::<RendererShared>() {
+            renderer
+                .read()
+                .gbuffer
+                .depth_buffer_distance_pos_center(&camera)
+        } else {
+            (0.0, camera.position)
+        };
+        let mut new_node: Option<(usize, RouteNode)> = None;
+        let mut del_node: Option<usize> = None;
+        let mut traverse_from: Option<usize> = None;
+        egui::ScrollArea::vertical()
+            .max_height(ui.available_height() - ui.spacing().interact_size.y * 15.0)
+            .show(ui, |ui| {
+                for (i, node) in self.path.iter_mut().enumerate() {
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button(format!("{}", ICON_MAP_MARKER_PLUS))
+                            .on_hover_text("Insert Node")
+                            .clicked()
+                        {
+                            new_node = Some((
+                                i,
+                                RouteNode {
+                                    pos: camera.position,
+                                    map_hash: Some(current_hash),
+                                    is_teleport: false,
+                                    label: None,
+                                },
+                            ));
+                        };
+                        ui.add(egui::Separator::default().horizontal());
+                    });
+
+                    egui::Grid::new(format!("route_name_{}", i))
+                        .num_columns(2)
+                        .spacing([40.0, 4.0])
+                        .striped(true)
+                        .show(ui, |ui| {
+                            if ui
+                                .button(format!("{}", ICON_DELETE))
+                                .on_hover_text("Delete Node")
+                                .clicked()
+                            {
+                                del_node = Some(i);
+                            };
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button(ICON_MAP_MARKER.to_string())
+                                    .on_hover_text("Go to Node Location")
+                                    .clicked()
+                                {
+                                    camera.tween = Some(Tween::new(
+                                        |x| x,
+                                        Some((camera.position, node.pos - camera.front * 0.5)),
+                                        None,
+                                        0.7,
+                                    ));
+                                }
+                                if let Some(label) = node.label.as_mut() {
+                                    egui::TextEdit::singleline(label).ui(ui);
+                                } else {
+                                    ui.label(format!("Node {}", i + 1));
+                                    if ui
+                                        .button(ICON_TAG.to_string())
+                                        .on_hover_text("Add label")
+                                        .clicked()
+                                    {
+                                        node.label = Some(format!("Node {}", i + 1));
+                                    }
+                                }
+                                if ui
+                                    .button(format!("{}", ICON_MAP_MARKER_PATH))
+                                    .on_hover_text("Traverse Path from this node")
+                                    .clicked()
+                                {
+                                    traverse_from = Some(i)
+                                }
+                            });
+                        });
+                    egui::Grid::new(format!("route_position_{}", i))
+                        .num_columns(2)
+                        .spacing([40.0, 4.0])
+                        .striped(true)
+                        .show(ui, |ui| {
+                            input_float3!(ui, "Position", &mut node.pos);
+
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button(ICON_CAMERA_CONTROL.to_string())
+                                    .on_hover_text("Set position to camera")
+                                    .clicked()
+                                {
+                                    node.pos = camera.position;
+                                    node.map_hash = Some(current_hash);
+                                }
+
+                                if ui
+                                    .add_enabled(
+                                        d.is_finite(),
+                                        Button::new(if d.is_finite() {
+                                            ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                                        } else {
+                                            ICON_EYE_OFF_OUTLINE.to_string()
+                                        }),
+                                    )
+                                    .on_hover_text("Set position to gaze")
+                                    .clicked()
+                                {
+                                    node.pos = pos;
+                                    node.map_hash = Some(current_hash);
+                                }
+                                ui.label(prettify_distance(d));
+                            });
+                        });
+                    ui.checkbox(&mut node.is_teleport, "This node is teleported to");
+                }
+            });
+        ui.horizontal(|ui| {
+            if ui
+                .button(format!("{}", ICON_MAP_MARKER_PLUS))
+                .on_hover_text("Add Node")
+                .clicked()
+            {
+                self.path.push(RouteNode {
+                    pos: camera.position,
+                    map_hash: Some(current_hash),
+                    is_teleport: false,
+                    label: None,
+                });
+            };
+            ui.add(egui::Separator::default().horizontal());
+        });
+
+        del_node.map(|pos| self.path.remove(pos));
+        if let Some((pos, node)) = new_node {
+            self.path.insert(pos, node)
+        }
+        ui.separator();
+
+        if ui
+            .button(format!("{} Traverse Path", ICON_MAP_MARKER_PATH))
+            .clicked()
+        {
+            traverse_from = Some(0)
+        }
+        ui.horizontal(|ui| {
+            ui.strong("Speed Multiplier");
+            ui.add(
+                egui::DragValue::new(&mut self.speed_multiplier)
+                    .speed(0.1)
+                    .clamp_range(0.01f32..=30f32)
+                    .min_decimals(2)
+                    .max_decimals(2),
+            )
+        });
+        if let Some(start_index) = traverse_from {
+            let camera_offset = Vec3::Z;
+            let mut action_list = resources.get_mut::<ActionList>().unwrap();
+            const DEGREES_PER_SEC: f32 = 360.0;
+            const METERS_PER_SEC: f32 = 18.0;
+            action_list.clear_actions();
+
+            if let Some(hash) = self.activity_hash {
+                action_list.add_action(ActivitySwapAction::new(hash));
+            };
+
+            if let Some(start_pos) = self.path.get(start_index) {
+                let mut old_pos = start_pos.pos + camera_offset;
+                let mut old_orient = camera.get_look_angle(old_pos);
+                action_list.add_action(TweenAction::new(
+                    |x| x,
+                    Some((camera.position, old_pos)),
+                    Some((camera.orientation, old_orient)),
+                    1.0,
+                ));
+
+                if let Some(hash) = start_pos.map_hash {
+                    action_list.add_action(MapSwapAction::new(hash));
+                }
+
+                for node in self.path.iter().skip(start_index + 1) {
+                    let new_pos = node.pos + camera_offset;
+                    let new_orient = get_look_angle(old_orient, old_pos, new_pos);
+                    //TODO Not sure why this isn't working right
+                    // let angle_dif = get_look_angle_difference(old_orient, old_pos, new_pos);
+                    // Using a silly approximation to look ok.
+                    let angle_delta = (old_orient - new_orient).abs();
+                    let angle_dif = (angle_delta.x % 360.0).max(angle_delta.y % 360.0);
+                    action_list.add_action(TweenAction::new(
+                        |x| x,
+                        None,
+                        Some((old_orient, new_orient)),
+                        angle_dif / (DEGREES_PER_SEC * self.speed_multiplier),
+                    ));
+                    old_orient = new_orient;
+                    action_list.add_action(TweenAction::new(
+                        |x| x,
+                        Some((old_pos, new_pos)),
+                        None,
+                        if node.is_teleport {
+                            self.scale * 0.1
+                        } else {
+                            self.scale * old_pos.distance(new_pos)
+                                / (METERS_PER_SEC * self.speed_multiplier)
+                        },
+                    ));
+                    if let Some(hash) = node.map_hash {
+                        action_list.add_action(MapSwapAction::new(hash));
+                    }
+                    old_pos = new_pos;
+                }
+            }
+        }
+        ui.checkbox(&mut self.show_all, "Show nodes in all maps");
+
+        if ui
+            .button(format!("{} Copy route command", ICON_CLIPBOARD,))
+            .clicked()
+        {
+            let mut command = String::from("route");
+            if let Some(hash) = self.activity_hash.as_ref() {
+                command = format!("{} hash {}", command, hash.0);
+            }
+            for node in self.path.iter() {
+                command = format!(
+                    "{} node {} {} {}{}{}{}",
+                    command,
+                    node.pos[0],
+                    node.pos[1],
+                    node.pos[2],
+                    if node.is_teleport { " tp" } else { "" },
+                    node.map_hash
+                        .map_or(String::new(), |h| { format!(" hash {}", h.0) }),
+                    node.label.as_ref().map_or(String::new(), |s| {
+                        format!(" label {}", s.replace('\\', r"\\").replace(' ', r"\s"))
+                    })
+                );
+            }
+
+            ui.output_mut(|o| o.copied_text = command);
+        }
+
+        ui.horizontal(|ui| {
+            ui.strong("Scale");
+            ui.add(
+                egui::DragValue::new(&mut self.scale)
+                    .speed(0.1)
+                    .clamp_range(0f32..=100f32)
+                    .min_decimals(2)
+                    .max_decimals(2),
+            )
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Marker Interval");
+            ui.add(
+                egui::DragValue::new(&mut self.marker_interval)
+                    .speed(0.1)
+                    .clamp_range(0f32..=f32::INFINITY)
+                    .min_decimals(2)
+                    .max_decimals(2)
+                    .suffix(" m"),
+            )
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgb(&mut self.color)
+                .context_menu(|ui| {
+                    ui.checkbox(&mut self.rainbow, "Rainbow mode");
+                });
+
+            ui.label("Color");
+        });
+    }
+}
+
 impl ComponentPanel for Light {
     fn inspector_name() -> &'static str {
         "Light"
@@ -784,7 +1143,13 @@ impl ComponentPanel for Light {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        _: TagHash,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
