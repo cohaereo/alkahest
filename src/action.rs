@@ -152,7 +152,7 @@ impl Action for ActivitySwapAction {
         if get_activity_hash(resources).is_some_and(|f|{f.0 == self.hash.0}){
             return
         }
-        self.aborted = set_activity(resources, self.hash);
+        self.aborted = set_activity(resources, self.hash).is_err();
     }
 
     fn is_done(&self, _: &Resources) -> bool {
