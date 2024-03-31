@@ -1339,12 +1339,18 @@ fn draw_route(
 
             if !node_is_local {
                 if prev_is_local || next_is_local || route.show_all {
-                    draw_sphere_skeleton(debugshapes, node.pos, BASE_RADIUS, 2, color);
+                    draw_sphere_skeleton(
+                        debugshapes,
+                        node.pos,
+                        BASE_RADIUS * route.scale,
+                        2,
+                        color,
+                    );
                 }
             } else {
                 debugshapes.sphere(
                     node.pos,
-                    BASE_RADIUS,
+                    BASE_RADIUS * route.scale,
                     color,
                     DebugDrawFlags::DRAW_NORMAL,
                     None,

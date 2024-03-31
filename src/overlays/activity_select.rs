@@ -208,14 +208,14 @@ impl ActivityBrowser {
                                         if activity_name.contains("_ls_") {
                                             activity_name.insert_text(" ", 0);
                                         }
-                                        if ui.selectable_label(false, &activity_name).clicked() {
-                                            if set_activity(resources, *activity_hash).is_err() {
-                                                error!(
-                                                    "Failed to query activity maps for \
+                                        if ui.selectable_label(false, &activity_name).clicked()
+                                            && set_activity(resources, *activity_hash).is_err()
+                                        {
+                                            error!(
+                                                "Failed to query activity maps for \
                                                      {activity_name}"
-                                                );
-                                                continue;
-                                            }
+                                            );
+                                            continue;
                                         }
                                     }
                                 },

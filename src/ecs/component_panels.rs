@@ -997,19 +997,30 @@ impl ComponentPanel for Route {
         {
             traverse_from = Some(0)
         }
+        ui.horizontal(|ui| {
+            ui.strong("Speed Multiplier");
+            ui.add(
+                egui::DragValue::new(&mut self.speed_multiplier)
+                    .speed(0.1)
+                    .clamp_range(0.01f32..=30f32)
+                    .min_decimals(2)
+                    .max_decimals(2),
+            )
+        });
         if let Some(start_index) = traverse_from {
             let camera_offset = Vec3::Z;
             let mut action_list = resources.get_mut::<ActionList>().unwrap();
+            const DEGREES_PER_SEC: f32 = 360.0;
+            const METERS_PER_SEC: f32 = 18.0;
             action_list.clear_actions();
 
             if let Some(hash) = self.activity_hash {
-                println!("Should swap to activity {}", hash.0);
                 action_list.add_action(ActivitySwapAction::new(hash));
             };
 
             if let Some(start_pos) = self.path.get(start_index) {
-                let mut old_pos = start_pos.pos;
-                let mut old_orient = camera.get_look_angle(start_pos.pos);
+                let mut old_pos = start_pos.pos + camera_offset;
+                let mut old_orient = camera.get_look_angle(old_pos);
                 action_list.add_action(TweenAction::new(
                     |x| x,
                     Some((camera.position, old_pos)),
@@ -1024,19 +1035,28 @@ impl ComponentPanel for Route {
                 for node in self.path.iter().skip(start_index + 1) {
                     let new_pos = node.pos + camera_offset;
                     let new_orient = get_look_angle(old_orient, old_pos, new_pos);
-
+                    //TODO Not sure why this isn't working right
+                    // let angle_dif = get_look_angle_difference(old_orient, old_pos, new_pos);
+                    // Using a silly approximation to look ok.
+                    let angle_delta = (old_orient - new_orient).abs();
+                    let angle_dif = (angle_delta.x % 360.0).max(angle_delta.y % 360.0);
                     action_list.add_action(TweenAction::new(
                         |x| x,
                         None,
                         Some((old_orient, new_orient)),
-                        1.0,
+                        angle_dif / (DEGREES_PER_SEC * self.speed_multiplier),
                     ));
                     old_orient = new_orient;
                     action_list.add_action(TweenAction::new(
                         |x| x,
                         Some((old_pos, new_pos)),
                         None,
-                        if node.is_teleport { 0.1 } else { 1.0 },
+                        if node.is_teleport {
+                            self.scale * 0.1
+                        } else {
+                            self.scale * old_pos.distance(new_pos)
+                                / (METERS_PER_SEC * self.speed_multiplier)
+                        },
                     ));
                     if let Some(hash) = node.map_hash {
                         action_list.add_action(MapSwapAction::new(hash));

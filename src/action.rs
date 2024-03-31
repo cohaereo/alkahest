@@ -30,18 +30,15 @@ impl ActionList {
     }
 
     pub fn process(&mut self, resources: &Resources) {
-        let mut clear_current = false;
-        let mut clear_all = false;
-        if let Some(action) = self.current_action.as_ref() {
-            clear_current = action.is_done(resources);
-            clear_all = action.is_aborted(resources);
-        }
-        if clear_current {
-            self.current_action = None;
-        }
-        if clear_all {
-            self.current_action = None;
-            self.action_queue.clear();
+        if let Some(action) = self.current_action.take() {
+            if action.is_aborted(resources) {
+                self.current_action = None;
+                self.action_queue.clear();
+            } else if action.is_done(resources) {
+                self.current_action = None;
+            } else {
+                self.current_action = Some(action);
+            }
         }
 
         if self.current_action.as_ref().is_none() {
@@ -149,8 +146,8 @@ impl ActivitySwapAction {
 
 impl Action for ActivitySwapAction {
     fn start(&mut self, resources: &Resources) {
-        if get_activity_hash(resources).is_some_and(|f|{f.0 == self.hash.0}){
-            return
+        if get_activity_hash(resources).is_some_and(|f| f.0 == self.hash.0) {
+            return;
         }
         self.aborted = set_activity(resources, self.hash).is_err();
     }

@@ -156,8 +156,12 @@ impl FpsCamera {
         }
 
         if let Some(tween) = &mut self.tween {
-            self.position = tween.update_pos().unwrap_or(self.position);
-            self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            if tween.is_aborted() {
+                self.position += direction * speed;
+            } else {
+                self.position = tween.update_pos().unwrap_or(self.position);
+                self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            }
         } else {
             self.position += direction * speed;
         }
@@ -350,3 +354,16 @@ pub fn get_look_angle(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> Vec2 {
         )
     }
 }
+/* TODO: This seems to be acurate, but it's giving funky results for turning speeds
+pub fn get_look_angle_difference(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> f32 {
+    let dir = pos2 - pos1;
+    let theta = start_angle.y.to_radians();
+    let phi =  start_angle.x.to_radians();
+    let old_dir = Vec3::new(
+        phi.cos() * theta.cos(),
+        phi.cos() * theta.sin(),
+        -phi.sin(),
+    );
+    dir.angle_between(old_dir).to_degrees()
+}
+*/

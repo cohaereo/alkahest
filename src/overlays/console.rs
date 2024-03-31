@@ -640,30 +640,30 @@ fn execute_command(
         "route" => {
             let mut route = Route::default();
             let mut i: usize = 0;
+            if args[i].to_lowercase().as_str() == "hash" {
+                i += 1;
+                if args.len() < i {
+                    error!("missing hash value");
+                    return;
+                }
+                let parsed_hash: anyhow::Result<TagHash> = (|| {
+                    let hash = str::parse(args[i])?;
+                    i += 1;
+                    Ok(TagHash(hash))
+                })();
+                match parsed_hash {
+                    Ok(new_hash) => {
+                        route.activity_hash = Some(new_hash);
+                    }
+                    Err(e) => {
+                        error!("Invalid hash: {e}");
+                        return;
+                    }
+                }
+            }
             while i < args.len() {
                 let mut node = RouteNode::default();
                 match args[i].to_lowercase().as_str() {
-                    "hash" => {
-                        i += 1;
-                        if args.len() < i {
-                            error!("missing hash value");
-                            return;
-                        }
-                        let parsed_hash: anyhow::Result<TagHash> = (|| {
-                            let hash = str::parse(args[i])?;
-                            i += 1;
-                            Ok(TagHash(hash))
-                        })();
-                        match parsed_hash {
-                            Ok(new_hash) => {
-                                route.activity_hash = Some(new_hash);
-                            }
-                            Err(e) => {
-                                error!("Invalid hash: {e}");
-                                return;
-                            }
-                        }
-                    }
                     "node" => 'node: {
                         i += 1;
                         if args.len() < 3 + i {
