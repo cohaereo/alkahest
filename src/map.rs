@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use destiny_pkg::TagHash;
 use poll_promise::Promise;
 use rustc_hash::FxHashMap;
@@ -9,6 +8,7 @@ use crate::{
     discord,
     ecs::{components::Global, Scene},
     mapload_temporary::{self, LoadMapData},
+    overlays::activity_select::get_activity_hash,
     render::{dcs::DcsShared, renderer::RendererShared, EntityRenderer},
     resources::Resources,
     text::StringMapShared,
@@ -87,14 +87,7 @@ impl Map {
         let renderer = Arc::clone(&resources.get::<RendererShared>().unwrap());
         let cli_args = resources.get::<Args>().unwrap();
         let stringmap = Arc::clone(&resources.get::<StringMapShared>().unwrap());
-
-        let activity_hash = cli_args.activity.as_ref().map(|a| {
-            TagHash(u32::from_be(
-                u32::from_str_radix(a, 16)
-                    .context("Invalid activity hash format")
-                    .unwrap(),
-            ))
-        });
+        let activity_hash = get_activity_hash(resources);
 
         info!("Loading map {} '{}'", self.hash, self.name);
         self.promise = Some(Box::new(Promise::spawn_async(

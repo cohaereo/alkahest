@@ -3,6 +3,7 @@ use alkahest_data::{
     map::SBubbleParent,
 };
 use alkahest_pm::package_manager;
+use anyhow::Context;
 use destiny_pkg::TagHash;
 use egui::{ahash::HashMapExt, TextBuffer};
 use rustc_hash::FxHashMap;
@@ -253,11 +254,22 @@ impl ActivityBrowser {
 #[derive(Default)]
 pub struct CurrentActivity(pub Option<TagHash>);
 
+impl CurrentActivity {
+    pub fn new(arg: &Option<String>) -> Self {
+        Self(arg.as_ref().map(|a| {
+            TagHash(u32::from_be(
+                u32::from_str_radix(a, 16)
+                    .context("Invalid activity hash format")
+                    .unwrap(),
+            ))
+        }))
+    }
+}
+
 pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Result<()> {
     let mut maplist = resources.get_mut::<MapList>().unwrap();
     let stringmap = resources.get::<StringMapShared>().unwrap();
     let maps = query_activity_maps(activity_hash, &stringmap)?;
-
     resources.get_mut::<CurrentActivity>().unwrap().0 = Some(activity_hash);
     maplist.set_maps(&maps);
     Ok(())
