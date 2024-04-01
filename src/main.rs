@@ -76,7 +76,7 @@ use crate::{
     map::{MapList, MapLoadState},
     map_resources::MapResource,
     overlays::{
-        activity_select::{ActivityBrowser, CurrentActivity},
+        activity_select::{get_activity_hash, ActivityBrowser, CurrentActivity},
         camera_settings::CameraPositionOverlay,
         console::ConsoleOverlay,
         fps_display::FpsDisplayOverlay,
@@ -186,6 +186,7 @@ pub async fn main() -> anyhow::Result<()> {
     .unwrap();
 
     let args = Args::parse();
+    let current_activity = CurrentActivity::new(&args.activity);
 
     LOW_RES.store(args.lowres, Ordering::Relaxed);
 
@@ -317,14 +318,6 @@ pub async fn main() -> anyhow::Result<()> {
         vec![]
     };
 
-    let activity_hash = args.activity.as_ref().map(|a| {
-        TagHash(u32::from_be(
-            u32::from_str_radix(a, 16)
-                .context("Invalid activity hash format")
-                .unwrap(),
-        ))
-    });
-
     let rasterizer_state = unsafe {
         dcs.device
             .CreateRasterizerState(&D3D11_RASTERIZER_DESC {
@@ -365,12 +358,12 @@ pub async fn main() -> anyhow::Result<()> {
     resources.insert(Arc::clone(&stringmap));
     resources.insert(HiddenWindows::default());
     resources.insert(ActionList::default());
-    resources.insert(CurrentActivity::default());
+    resources.insert(current_activity);
 
     let mut activity_browser = ActivityBrowser::new(&stringmap);
 
-    if let Some(activity_hash) = &activity_hash {
-        let mut maps = mapload_temporary::query_activity_maps(*activity_hash, &stringmap)?;
+    if let Some(activity_hash) = get_activity_hash(&resources) {
+        let mut maps = mapload_temporary::query_activity_maps(activity_hash, &stringmap)?;
         if args.map.is_some() {
             maps.retain(|(hash, _)| map_hashes.contains(hash));
         }
