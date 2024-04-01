@@ -107,10 +107,7 @@ impl ActivityBrowser {
                             } else {
                                 activity_code
                             };
-                        let freeroam = "_freeroam";
-                        if activity_name.ends_with(freeroam) {
-                            let mut base_name = activity_name.clone();
-                            _ = base_name.drain((activity_name.len() - freeroam.len())..);
+                        if let Some(base_name) = activity_name.strip_suffix("_freeroam") {
                             activity_patrols
                                 .push((format!("{bucket_name} ({base_name})"), activity_hash));
                         }
