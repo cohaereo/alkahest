@@ -26,12 +26,14 @@ pub struct ActivitiesForDestination {
 #[derive(PartialEq)]
 pub enum ActivitySelectPanel {
     Activities,
+    Patrols,
     Maps,
 }
 
 pub struct ActivityBrowser {
     // pub destinations: Vec<ActivitiesForDestination>,
     pub activity_buckets: Vec<(String, Vec<ActivitiesForDestination>)>,
+    pub activity_patrols: Vec<(String, TagHash)>,
     pub maps: Vec<(String, Vec<(String, TagHash)>)>,
     show_ambient: bool,
     panel: ActivitySelectPanel,
@@ -43,6 +45,8 @@ impl ActivityBrowser {
         // let mut destinations = vec![];
         let mut activity_buckets: FxHashMap<String, Vec<ActivitiesForDestination>> =
             FxHashMap::new();
+
+        let mut activity_patrols = vec![];
         for (hash, _) in destination_hashes {
             match package_manager().read_tag_struct::<SDestination>(hash) {
                 Ok(destination) => {
@@ -65,6 +69,21 @@ impl ActivityBrowser {
                     let mut activities = vec![];
 
                     let destination_name = stringmap.get(&destination.location_name.0).cloned();
+                    let destination_code = destination.destination_name.to_string();
+                    let bucket_name =
+                        if let Some(name) = stringmap.get(&destination.location_name.0) {
+                            name.clone()
+                        } else {
+                            destination_code.clone()
+                        };
+
+                    let bucket_name = if destination_code.starts_with("gambit_") {
+                        "Gambit".to_string()
+                    } else if destination_code.starts_with("crucible_") {
+                        "Crucible".to_string()
+                    } else {
+                        bucket_name
+                    };
 
                     for activity in &destination.activities {
                         let activity_code = activity.activity_code.to_string();
@@ -88,25 +107,12 @@ impl ActivityBrowser {
                             } else {
                                 activity_code
                             };
-
+                        if let Some(base_name) = activity_name.strip_suffix("_freeroam") {
+                            activity_patrols
+                                .push((format!("{bucket_name} ({base_name})"), activity_hash));
+                        }
                         activities.push((activity_name, activity_hash));
                     }
-
-                    let destination_code = destination.destination_name.to_string();
-                    let bucket_name =
-                        if let Some(name) = stringmap.get(&destination.location_name.0) {
-                            name.clone()
-                        } else {
-                            destination_code.clone()
-                        };
-
-                    let bucket_name = if destination_code.starts_with("gambit_") {
-                        "Gambit".to_string()
-                    } else if destination_code.starts_with("crucible_") {
-                        "Crucible".to_string()
-                    } else {
-                        bucket_name
-                    };
 
                     activity_buckets.entry(bucket_name).or_default().push(
                         ActivitiesForDestination {
@@ -150,6 +156,7 @@ impl ActivityBrowser {
         Self {
             // destinations,
             activity_buckets,
+            activity_patrols,
             maps,
             show_ambient: false,
             panel: ActivitySelectPanel::Activities,
@@ -164,12 +171,14 @@ impl ActivityBrowser {
                     ActivitySelectPanel::Activities,
                     "Activities",
                 );
+                ui.selectable_value(&mut self.panel, ActivitySelectPanel::Patrols, "Free Roam");
                 ui.selectable_value(&mut self.panel, ActivitySelectPanel::Maps, "Maps");
             });
             ui.separator();
 
             match self.panel {
                 ActivitySelectPanel::Activities => self.activities_panel(ctx, ui, resources),
+                ActivitySelectPanel::Patrols => self.patrols_panel(ctx, ui, resources),
                 ActivitySelectPanel::Maps => self.maps_panel(ctx, ui, resources),
             }
         });
@@ -223,6 +232,25 @@ impl ActivityBrowser {
                             );
                         }
                     });
+                }
+            });
+    }
+
+    fn patrols_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &Resources) {
+        egui::ScrollArea::vertical()
+            .max_height(ctx.available_rect().height() * 0.9)
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                for (patrol_name, activity_hash) in &self.activity_patrols {
+                    if ui.selectable_label(false, patrol_name).clicked()
+                        && set_activity(resources, *activity_hash).is_err()
+                    {
+                        error!(
+                            "Failed to query activity maps for \
+                                 {patrol_name}"
+                        );
+                        continue;
+                    }
                 }
             });
     }
