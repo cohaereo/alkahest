@@ -5,6 +5,7 @@ use crate::{
     common::ResourceHash,
     occlusion::{SObjectOcclusionBounds, SOcclusionBounds, AABB},
     statics::SStaticMeshInstances,
+    tfx::TfxRenderStage,
     ExtendedHash, ExtendedTag, Tag,
 };
 
@@ -654,7 +655,7 @@ pub struct Unk80806abd {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806BB2)]
+#[tiger_tag(id = 0x80806BB2, size = 0xc0)]
 pub struct Unk80806bb2 {
     pub rotation: glam::Quat,
     pub translation: glam::Vec4,
@@ -671,4 +672,5 @@ pub struct Unk80806bb2 {
     pub unk90: [u32; 4],
     pub unka0: [u32; 3],
     pub shape_index: u32,
+    pub unkb0: [u32; 4],
 }

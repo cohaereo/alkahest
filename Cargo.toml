@@ -8,7 +8,7 @@ authors = ["cohaereo <cohaereo@protonmail.com>"]
 alkahest-data = { path = "./crates/alkahest-data" }
 alkahest-panic-handler = { path = "./crates/alkahest-panic-handler" }
 alkahest-pm = { path = "./crates/alkahest-pm" }
-tiger-parse = { version = "0.1.3", git = "https://github.com/v4nguard/tiger-parse", features = [
+tiger-parse = { version = "0.1.5", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
     "destiny_pkg",
     "check_types_debug",
@@ -38,7 +38,7 @@ windows = { version = "0.43.0", features = [
 ] }
 raw-window-handle = "0.5.2"
 # u16cstr = "0.4.0"
-glam = { version = "0.25", features = ["bytemuck", "mint"] }
+glam = { version = "0.27", features = ["bytemuck", "mint"] }
 fastrand = "2.0.0"
 
 bitflags = "2.3.3"

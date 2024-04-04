@@ -1533,9 +1533,9 @@ checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "glam"
-version = "0.25.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "151665d9be52f9bb40fc7966565d39666f2d1e69233571b71b87791c7e0528b3"
+checksum = "9e05e7e6723e3455f4818c7b26e855439f7546cf617ef669d1adedb8669e5cb9"
 dependencies = [
  "bytemuck",
  "mint",
@@ -3437,8 +3437,8 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.3"
-source = "git+https://github.com/v4nguard/tiger-parse#432ae593a66aabe5a8eb9312b345920d1602283a"
+version = "0.1.5"
+source = "git+https://github.com/v4nguard/tiger-parse#db7430e3653d2c021a1ccb33d2ee2722075f70eb"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -3450,7 +3450,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#432ae593a66aabe5a8eb9312b345920d1602283a"
+source = "git+https://github.com/v4nguard/tiger-parse#db7430e3653d2c021a1ccb33d2ee2722075f70eb"
 dependencies = [
  "darling",
  "proc-macro2",

@@ -9,8 +9,8 @@ edition = "2021"
 alkahest-pm = { path = "../alkahest-pm" }
 binrw = "0.13.3"
 destiny-pkg = "0.9.9"
-glam = { version = "0.25" }
-tiger-parse = { version = "0.1.3", git = "https://github.com/v4nguard/tiger-parse", features = [
+glam = { version = "0.27" }
+tiger-parse = { version = "0.1.5", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
     "destiny_pkg",
     "check_types_debug",

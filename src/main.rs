@@ -21,7 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use alkahest_data::{render_globals::SRenderGlobals, tag::ExtendedHash};
+use alkahest_data::{map::SBubbleParentShallow, render_globals::SRenderGlobals, tag::ExtendedHash};
 use anyhow::Context;
 use binrw::BinReaderExt;
 use clap::Parser;
@@ -41,7 +41,7 @@ use overlays::camera_settings::CurrentCubemap;
 use render::{color::Color, debug::DebugDrawFlags, vertex_layout::InputElement};
 use technique::Technique;
 use text::GlobalStringmap;
-use tiger_parse::PackageManagerExt;
+use tiger_parse::{PackageManagerExt, TigerReadable};
 use tracing::level_filters::LevelFilter;
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
@@ -219,7 +219,10 @@ pub async fn main() -> anyhow::Result<()> {
     let mut event_loop = EventLoop::new();
     let package_dir = if let Some(p) = &args.package_dir {
         if p.ends_with(".pkg") {
-            warn!("Please specify the directory containing the packages, not the package itself! Support for this will be removed in the future!");
+            warn!(
+                "Please specify the directory containing the packages, not the package itself! \
+                 Support for this will be removed in the future!"
+            );
             PathBuf::from_str(p)
                 .context("Invalid package directory")?
                 .parent()
@@ -245,7 +248,8 @@ pub async fn main() -> anyhow::Result<()> {
         config::persist();
 
         panic!(
-            "The specified package directory does not exist! ({})\nRelaunch alkahest with a valid package directory.",
+            "The specified package directory does not exist! ({})\nRelaunch alkahest with a valid \
+             package directory.",
             package_dir.display()
         );
     }
@@ -276,6 +280,14 @@ pub async fn main() -> anyhow::Result<()> {
     // std::env::set_var("RUST_BACKTRACE", "0");
 
     let stringmap = Arc::new(GlobalStringmap::load().context("Failed to load global strings")?);
+
+    for (mt, _) in package_manager().get_all_by_reference(SBubbleParentShallow::ID.unwrap()) {
+        if let Ok(bub) = package_manager().read_tag_struct::<SBubbleParentShallow>(mt) {
+            if bub.child_map.is_none() {
+                println!("Potential lynx map: {}", stringmap.get(bub.map_name));
+            }
+        }
+    }
 
     info!("Loaded {} global strings", stringmap.0.len());
 

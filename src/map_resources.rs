@@ -266,6 +266,9 @@ impl MapResource {
             MapResource::Unk80806ac2(_, _, Some(shape)) => {
                 debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
             }
+            MapResource::Unk80806abb(_, _, Some(shape)) => {
+                debug_shapes.custom_shape(*transform, shape.clone(), self.debug_color(), true);
+            }
             _ => {}
         }
     }

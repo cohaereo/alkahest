@@ -90,8 +90,11 @@ impl TerrainRenderer {
     }
 
     pub fn draw(&self, renderer: &Renderer, entity: Entity) -> anyhow::Result<()> {
-        for part in self.terrain.mesh_parts.iter()
-        // .filter(|u| u.detail_level == 0)
+        for part in self
+            .terrain
+            .mesh_parts
+            .iter()
+            .filter(|u| u.detail_level == 0)
         {
             if let Some(group) = self.terrain.mesh_groups.get(part.group_index as usize) {
                 let cb11 = &self.group_cbuffers[part.group_index as usize];

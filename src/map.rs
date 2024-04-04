@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use destiny_pkg::TagHash;
 use poll_promise::Promise;
@@ -15,13 +15,25 @@ use crate::{
     Args,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Default)]
 pub enum MapLoadState {
     #[default]
     Unloaded,
     Loading,
     Loaded,
-    Error(String),
+    Error(anyhow::Error),
+}
+
+impl PartialEq for MapLoadState {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::Unloaded, Self::Unloaded)
+                | (Self::Loading, Self::Loading)
+                | (Self::Loaded, Self::Loaded)
+                | (Self::Error(_), Self::Error(_))
+        )
+    }
 }
 
 #[derive(Default)]
@@ -62,7 +74,8 @@ impl Map {
                         self.load_state = MapLoadState::Loaded;
                     }
                     Err(e) => {
-                        self.load_state = MapLoadState::Error(format!("{:?}", e));
+                        error!("Failed to load map {}: {e:?}", self.hash);
+                        self.load_state = MapLoadState::Error(e);
                     }
                 }
             } else {

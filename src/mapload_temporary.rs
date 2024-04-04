@@ -88,7 +88,7 @@ pub fn query_activity_maps(
             let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(*map) {
                 Ok(m) => m.map_name,
                 Err(e) => {
-                    error!("Failed to load map {map}: {e}");
+                    error!("Failed to load map {map}: {e:?}");
                     continue;
                 }
             };
@@ -127,8 +127,9 @@ pub async fn load_map_scene(
     let renderer_ch = renderer.clone();
 
     let _span = debug_span!("Load map", %map_hash).entered();
-    let Ok(bubble_parent) = package_manager().read_tag_struct::<SBubbleParent>(map_hash) else {
-        anyhow::bail!("Failed to load map {map_hash}");
+    let bubble_parent = match package_manager().read_tag_struct::<SBubbleParent>(map_hash) {
+        Ok(o) => o,
+        Err(e) => return Err(e.context("Failed to read SBubbleParent")),
     };
 
     let mut activity_entrefs: Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOriginType)> =
@@ -1313,6 +1314,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let (shape_ptr, shape_index): (TagHash, u32) =
                         TigerReadable::read_ds(table_data)?;
+
+                    println!("Shape: {}: {}", shape_ptr, shape_index);
 
                     let shapelist: Unk80806abd = package_manager().read_tag_struct(shape_ptr)?;
 
