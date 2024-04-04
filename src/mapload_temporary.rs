@@ -13,9 +13,9 @@ use alkahest_data::{
     entity::{SEntityModel, Unk808072c5, Unk8080906b, Unk80809905, Unk80809c0f},
     map::{
         SBubbleParent, SBubbleParentShallow, SLightCollection, SMapDataTable, SShadowingLight,
-        SSlipSurfaceVolume, STerrain, Unk808068d4, Unk80806aa7, Unk80806ac2, Unk80806b7f,
-        Unk80806c98, Unk80806d19, Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246, Unk808085c2,
-        Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
+        SSlipSurfaceVolume, STerrain, Unk808068d4, Unk80806aa7, Unk80806abd, Unk80806ac2,
+        Unk80806b7f, Unk80806c98, Unk80806d19, Unk80806e68, Unk80806ef4, Unk8080714b, Unk80808246,
+        Unk808085c2, Unk80808604, Unk80808cb7, Unk80809178, Unk8080917b, Unk80809802,
     },
     occlusion::{SObjectOcclusionBounds, AABB},
     statics::SStaticMesh,
@@ -1300,6 +1300,62 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         new_transform.unwrap_or(transform),
                         ResourcePoint {
                             resource: MapResource::NamedArea(d, name, havok_debugshape),
+                            has_havok_data: true,
+                            ..base_rp
+                        },
+                        EntityWorldId(data.world_id),
+                    )));
+                }
+                0x80806abb => {
+                    table_data
+                        .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                        .unwrap();
+
+                    let (shape_ptr, shape_index): (TagHash, u32) =
+                        TigerReadable::read_ds(table_data)?;
+
+                    let shapelist: Unk80806abd = package_manager().read_tag_struct(shape_ptr)?;
+
+                    let (havok_debugshape, new_transform) =
+                        if let Ok(havok_data) = package_manager().read_tag(shapelist.havok_file) {
+                            let mut cur = Cursor::new(&havok_data);
+                            match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                                Ok(o) => {
+                                    if (shape_index as usize) < o.len() {
+                                        let mut shape = o[shape_index as usize].clone();
+
+                                        let center = shape.center();
+                                        shape.apply_transform(Mat4::from_translation(-center));
+
+                                        let new_transform = Transform::from_mat4(
+                                            transform.to_mat4() * Mat4::from_translation(center),
+                                        );
+
+                                        (
+                                            CustomDebugShape::from_havok_shape(&dcs, &shape).ok(),
+                                            Some(new_transform),
+                                        )
+                                    } else {
+                                        (None, None)
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to read shapes: {e}");
+                                    (None, None)
+                                }
+                            }
+                        } else {
+                            (None, None)
+                        };
+
+                    ents.push(scene.spawn((
+                        new_transform.unwrap_or(transform),
+                        ResourcePoint {
+                            resource: MapResource::Unk80806abb(
+                                shape_ptr,
+                                shape_index,
+                                havok_debugshape,
+                            ),
                             has_havok_data: true,
                             ..base_rp
                         },

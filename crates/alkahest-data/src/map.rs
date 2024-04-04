@@ -643,3 +643,32 @@ pub struct Unk80806ed8 {
     pub unkd0: [u32; 4],
     pub unke0: [u32; 4],
 }
+
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0x80806ABD)]
+pub struct Unk80806abd {
+    pub file_size: u64,
+    pub havok_file: TagHash,
+    _pad: u32,
+    pub unk10: Vec<Unk80806bb2>,
+}
+
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0x80806BB2)]
+pub struct Unk80806bb2 {
+    pub rotation: glam::Quat,
+    pub translation: glam::Vec4,
+    pub unk20: glam::Vec4,
+    pub unk30: glam::Vec4,
+    pub unk40: glam::Vec4,
+    pub unk50: glam::Vec4,
+
+    pub unk60: Vec<()>,
+    pub unk70: Vec<()>,
+
+    pub unk80: f32,
+    pub unk84: [u32; 3],
+    pub unk90: [u32; 4],
+    pub unka0: [u32; 3],
+    pub shape_index: u32,
+}
