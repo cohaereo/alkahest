@@ -7,7 +7,7 @@ pub mod image;
 pub mod lock;
 pub mod text;
 
-pub use lock::{FilterDebugLockTarget, RwLock};
+pub use lock::RwLock;
 use tiger_parse::FnvHash;
 
 /// Enables ANSI color codes on older/weird command prompt versions
@@ -22,7 +22,8 @@ pub fn fix_windows_command_prompt() {
             SetConsoleMode(
                 stdout,
                 ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-            );
+            )
+            .ok();
         }
     }
 }

@@ -97,7 +97,7 @@ impl InnerState {
         self.raster_state = ctx.RSGetState().ok();
         ctx.OMGetBlendState(
             Some(&mut self.blend_state),
-            Some(self.blend_factor.as_mut_ptr()),
+            Some(&mut self.blend_factor),
             Some(&mut self.blend_mask),
         );
         ctx.OMGetDepthStencilState(
@@ -154,7 +154,7 @@ impl InnerState {
         ctx.RSSetState(self.raster_state.take().as_ref());
         ctx.OMSetBlendState(
             self.blend_state.take().as_ref(),
-            Some(self.blend_factor.as_ptr()),
+            Some(&self.blend_factor),
             self.blend_mask,
         );
         ctx.OMSetDepthStencilState(self.depth_stencil_state.take().as_ref(), self.stencil_ref);

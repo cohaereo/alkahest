@@ -106,9 +106,15 @@ impl std::hash::Hash for ExtendedHash {
     }
 }
 
-impl Into<TagHash> for ExtendedHash {
-    fn into(self) -> TagHash {
-        self.hash32()
+impl From<ExtendedHash> for TagHash {
+    fn from(val: ExtendedHash) -> Self {
+        val.hash32()
+    }
+}
+
+impl Into<ExtendedHash> for TagHash {
+    fn into(self) -> ExtendedHash {
+        ExtendedHash::Hash32(self)
     }
 }
 

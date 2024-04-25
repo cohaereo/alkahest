@@ -1,15 +1,8 @@
-use crate::{
-    backup::BackupState,
-    mesh::{create_index_buffer, create_vertex_buffer, GpuMesh, GpuVertex},
-    shader::CompiledShaders,
-    texture::TextureAllocator,
-    RenderError,
-};
-use egui::{epaint::Primitive, Context};
 use std::mem::size_of;
+
+use egui::{epaint::Primitive, Context};
 use windows::{
-    core::HRESULT,
-    s,
+    core::{s, HRESULT},
     Win32::{
         Foundation::{HWND, RECT},
         Graphics::{
@@ -33,6 +26,14 @@ use windows::{
         },
         UI::WindowsAndMessaging::GetClientRect,
     },
+};
+
+use crate::{
+    backup::BackupState,
+    mesh::{create_index_buffer, create_vertex_buffer, GpuMesh, GpuVertex},
+    shader::CompiledShaders,
+    texture::TextureAllocator,
+    RenderError,
 };
 
 /// Heart and soul of this integration.
@@ -161,7 +162,7 @@ impl DirectX11Renderer {
 
 impl DirectX11Renderer {
     /// Present call. Should be called once per original present call, before or inside of hook.
-    #[allow(clippy::cast_ref_to_mut)]
+    #[allow(invalid_reference_casting)]
     pub fn paint<PaintFn>(
         &mut self,
         swap_chain: &IDXGISwapChain,
@@ -287,8 +288,9 @@ impl DirectX11Renderer {
     fn get_screen_size(&self) -> (f32, f32) {
         let mut rect = RECT::default();
         unsafe {
-            GetClientRect(self.hwnd, &mut rect);
+            GetClientRect(self.hwnd, &mut rect).ok();
         }
+
         (
             (rect.right - rect.left) as f32,
             (rect.bottom - rect.top) as f32,
@@ -334,7 +336,7 @@ impl DirectX11Renderer {
             dev.CreateBlendState(&blend_desc, Some(&mut blend_state))?;
             let blend_state =
                 blend_state.ok_or(RenderError::General("Unable to set blend state"))?;
-            ctx.OMSetBlendState(&blend_state, Some([0., 0., 0., 0.].as_ptr()), 0xffffffff);
+            ctx.OMSetBlendState(&blend_state, Some(&[0., 0., 0., 0.]), 0xffffffff);
         }
 
         Ok(())

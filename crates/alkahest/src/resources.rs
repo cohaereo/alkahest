@@ -16,8 +16,8 @@ impl Resources {
             .insert(TypeId::of::<T>(), RefCell::new(Box::new(v)));
     }
 
-    pub fn get<T: Any>(&self) -> Option<Ref<'_, T>> {
-        self.resources.get(&TypeId::of::<T>()).map(|resource| {
+    pub fn get<T: Any>(&self) -> Ref<'_, T> {
+        match self.resources.get(&TypeId::of::<T>()).map(|resource| {
             Ref::map(
                 match resource.try_borrow() {
                     Ok(r) => r,
@@ -28,11 +28,14 @@ impl Resources {
                 },
                 |r| r.downcast_ref::<T>().unwrap(),
             )
-        })
+        }) {
+            Some(r) => r,
+            None => panic!("Resource not found: {}", std::any::type_name::<T>()),
+        }
     }
 
-    pub fn get_mut<T: Any>(&self) -> Option<RefMut<'_, T>> {
-        self.resources.get(&TypeId::of::<T>()).map(|resource| {
+    pub fn get_mut<T: Any>(&self) -> RefMut<'_, T> {
+        match self.resources.get(&TypeId::of::<T>()).map(|resource| {
             RefMut::map(
                 match resource.try_borrow_mut() {
                     Ok(r) => r,
@@ -43,6 +46,9 @@ impl Resources {
                 },
                 |r| r.downcast_mut::<T>().unwrap(),
             )
-        })
+        }) {
+            Some(r) => r,
+            None => panic!("Resource not found: {}", std::any::type_name::<T>()),
+        }
     }
 }

@@ -21,15 +21,6 @@ impl TigerReadable for EPrimitiveType {
     const SIZE: usize = 1;
 }
 
-// impl EPrimitiveType {
-//     pub fn to_dx(self) -> D3D_PRIMITIVE_TOPOLOGY {
-//         match self {
-//             EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-//             EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-//         }
-//     }
-// }
-
 #[allow(non_camel_case_types, clippy::derive_ord_xor_partial_ord)]
 #[derive(Debug, PartialEq, Eq, Ord, Copy, Clone)]
 #[repr(u8)]

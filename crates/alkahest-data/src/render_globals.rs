@@ -21,7 +21,7 @@ pub struct Unk8080870f {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x808067a8)]
 pub struct Unk808067a8 {
     pub file_size: u64,
     pub unk8: TagHash,
@@ -38,9 +38,9 @@ pub struct Unk808067a8 {
 #[tiger_tag(id = 0x808066ae)]
 pub struct Unk808066ae {
     pub file_size: u64,
-    pub unk8_tex2d: TagHash,
-    pub unkc_tex2d: TagHash,
-    pub unk10_tex3d: TagHash,
+    pub specular_tint_lookup_texture: TagHash,
+    pub specular_lobe_lookup_texture: TagHash,
+    pub specular_lobe_3d_lookup_texture: TagHash,
     pub iridescence_lookup_texture: TagHash,
 }
 
@@ -60,8 +60,8 @@ pub struct Unk808067ac {
     pub technique: TagHash,
 }
 
-#[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x400)]
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0x80806DBA, size = 0x400)]
 
 pub struct SScope {
     pub file_size: u64,
@@ -91,7 +91,7 @@ impl SScope {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[tiger_tag(id = 0xffffffff)]
 pub struct SScopeStage {
     pub unk0: u64,
@@ -101,7 +101,7 @@ pub struct SScopeStage {
     pub unk38: Vec<glam::Vec4>,
     pub unk48: [u32; 4],
 
-    pub constant_buffer_slot: u32,
+    pub constant_buffer_slot: i32,
     pub constant_buffer: TagHash,
 
     pub unksomething: [u32; 10],

@@ -1,30 +1,30 @@
 use std::{mem::transmute, sync::Arc, time::Duration};
 
+use alkahest_renderer::gpu::GpuContext;
 use game_detector::InstalledGame;
-use windows::Win32::{
-    Foundation::DXGI_STATUS_OCCLUDED,
-    Graphics::{
-        Direct3D11::ID3D11Texture2D,
-        Dxgi::{
-            Common::DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL,
+use windows::{
+    core::HRESULT,
+    Win32::{
+        Foundation::{DXGI_STATUS_OCCLUDED, S_OK},
+        Graphics::{
+            Direct3D11::ID3D11Texture2D,
+            Dxgi::{
+                Common::DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL,
+            },
         },
     },
 };
 use winit::{
     dpi::PhysicalSize,
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    platform::{run_return::EventLoopExtRunReturn, windows::WindowBuilderExtWindows},
+    event_loop::EventLoop,
+    platform::{run_on_demand::EventLoopExtRunOnDemand, windows::WindowBuilderExtWindows},
 };
 
-use crate::{
+use crate::gui::{
+    big_button::BigButton,
+    context::GuiContext,
     icons::{ICON_CONTROLLER, ICON_FOLDER_OPEN, ICON_MICROSOFT, ICON_STEAM},
-    overlays::{
-        big_button::BigButton,
-        gui::{GuiManager, PreDrawResult},
-    },
-    render::DeviceContextSwapchain,
-    resources::Resources,
 };
 
 /// Creates a temporary window with egui to select a game installation
@@ -38,18 +38,126 @@ pub fn select_game_installation(
         .with_inner_size(PhysicalSize::new(320, 320))
         .with_min_inner_size(PhysicalSize::new(320, 480))
         .with_window_icon(Some(icon.clone()))
-        .with_taskbar_icon(Some(icon.clone()))
         .build(event_loop)?;
 
-    let window = Arc::new(window);
-
-    let dcs = Arc::new(DeviceContextSwapchain::create(&window)?);
-    let mut gui = GuiManager::create(&window, dcs.clone());
-    let mut empty_resources = Resources::default();
+    let dcs = Arc::new(GpuContext::create(&window)?);
+    let mut gui = GuiContext::create(&window, dcs.clone());
 
     let mut present_parameters = 0;
     let mut selected_path = Err(anyhow::anyhow!("No game installation selected"));
 
+    let mut installations = find_all_installations();
+
+    #[allow(clippy::single_match)]
+    event_loop.run_on_demand(|event, window_target| match &event {
+        Event::WindowEvent { event, .. } => {
+            let _ = gui.handle_event(&window, event);
+
+            match event {
+                WindowEvent::Resized(new_dims) => unsafe {
+                    let _ = gui
+                        .renderer
+                        .resize_buffers(transmute(&dcs.swap_chain), || {
+                            dcs.resize_swapchain(new_dims.width, new_dims.height);
+
+                            S_OK
+                        })
+                        .unwrap();
+                },
+                WindowEvent::RedrawRequested => {
+                    gui.draw_frame(&window, |_, ctx| {
+                        if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
+                            installations = find_all_installations();
+                        }
+
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            ui.heading("Select Destiny 2 installation");
+                            for i in &installations {
+                                let (icon, store_name, path) = match i {
+                                    InstalledGame::Steam(a) => {
+                                        (ICON_STEAM, "Steam", a.game_path.clone())
+                                    }
+                                    InstalledGame::EpicGames(e) => {
+                                        (ICON_CONTROLLER, "Epic Games", e.install_location.clone())
+                                    }
+                                    InstalledGame::MicrosoftStore(p) => {
+                                        (ICON_MICROSOFT, "Microsoft Store", p.path.clone())
+                                    }
+                                    _ => continue,
+                                };
+
+                                if BigButton::new(icon, store_name)
+                                    .with_subtext(&path)
+                                    .full_width()
+                                    .ui(ui)
+                                    .clicked()
+                                {
+                                    selected_path = Ok(path.clone());
+                                    window_target.exit();
+                                }
+                            }
+
+                            if BigButton::new(ICON_FOLDER_OPEN, "Browse")
+                                .full_width()
+                                .ui(ui)
+                                .clicked()
+                            {
+                                if let Ok(Some(path)) = native_dialog::FileDialog::new()
+                                    .set_title("Select Destiny 2 packages directory")
+                                    .show_open_single_dir()
+                                {
+                                    if path.ends_with("packages") {
+                                        selected_path = Ok(path
+                                            .parent()
+                                            .unwrap()
+                                            .to_string_lossy()
+                                            .to_string());
+                                        window_target.exit();
+                                    } else if path.ends_with("Destiny 2") {
+                                        // cohae: Idiot-proofing this a bit
+                                        selected_path = Ok(path.to_string_lossy().to_string());
+                                        window_target.exit();
+                                    } else {
+                                        native_dialog::MessageDialog::new()
+                                            .set_title("Invalid directory")
+                                            .set_text(
+                                                "The selected directory is not a packages \
+                                                 directory. Please select the packages directory \
+                                                 of your game installation.",
+                                            )
+                                            .show_alert()
+                                            .ok();
+                                    }
+                                }
+                            }
+                        });
+                    });
+
+                    unsafe {
+                        if dcs
+                            .swap_chain
+                            .Present(DXGI_SWAP_EFFECT_SEQUENTIAL.0 as _, present_parameters)
+                            == DXGI_STATUS_OCCLUDED
+                        {
+                            present_parameters = DXGI_PRESENT_TEST;
+                            std::thread::sleep(Duration::from_millis(50));
+                        } else {
+                            present_parameters = 0;
+                        }
+                    }
+
+                    window.request_redraw();
+                }
+                _ => {}
+            }
+        }
+        _ => (),
+    })?;
+
+    selected_path
+}
+
+fn find_all_installations() -> Vec<InstalledGame> {
     let mut installations = game_detector::find_all_games();
     installations.retain(|i| match i {
         InstalledGame::Steam(a) => a.appid == 1085660,
@@ -58,125 +166,5 @@ pub fn select_game_installation(
         _ => false,
     });
 
-    event_loop.run_return(|event, _, control_flow| match &event {
-        Event::WindowEvent { event, .. } => {
-            let _ = gui.handle_event(event);
-
-            match event {
-                WindowEvent::Resized(new_dims) => unsafe {
-                    let _ = gui
-                        .renderer
-                        .resize_buffers(transmute(&dcs.swap_chain), || {
-                            *dcs.swapchain_target.write() = None;
-                            dcs.swap_chain
-                                .ResizeBuffers(
-                                    1,
-                                    new_dims.width,
-                                    new_dims.height,
-                                    DXGI_FORMAT_B8G8R8A8_UNORM,
-                                    0,
-                                )
-                                .expect("Failed to resize swapchain");
-
-                            let bb: ID3D11Texture2D = dcs.swap_chain.GetBuffer(0).unwrap();
-
-                            let new_rtv = dcs.device.CreateRenderTargetView(&bb, None).unwrap();
-
-                            dcs.context()
-                                .OMSetRenderTargets(Some(&[Some(new_rtv.clone())]), None);
-
-                            *dcs.swapchain_target.write() = Some(new_rtv);
-
-                            transmute(0i32)
-                        })
-                        .unwrap();
-                },
-                WindowEvent::CloseRequested => {
-                    *control_flow = ControlFlow::Exit;
-                }
-                _ => (),
-            }
-        }
-        Event::RedrawRequested(..) => {
-            gui.draw_frame(
-                window.clone(),
-                &mut empty_resources,
-                |ctx, _resources| {
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        ui.heading("Select Destiny 2 installation");
-                        for i in &installations {
-                            let (icon, store_name, path) = match i {
-                                InstalledGame::Steam(a) => {
-                                    (ICON_STEAM, "Steam", a.game_path.clone())
-                                }
-                                InstalledGame::EpicGames(e) => {
-                                    (ICON_CONTROLLER, "Epic Games", e.install_location.clone())
-                                }
-                                InstalledGame::MicrosoftStore(p) => {
-                                    (ICON_MICROSOFT, "Microsoft Store", p.path.clone())
-                                }
-                                _ => continue,
-                            };
-
-                            if BigButton::new(icon, store_name)
-                                .with_subtext(&path)
-                                .full_width()
-                                .ui(ui)
-                                .clicked()
-                            {
-                                selected_path = Ok(path.clone());
-                                *control_flow = ControlFlow::Exit;
-                            }
-                        }
-
-                        if BigButton::new(ICON_FOLDER_OPEN, "Browse")
-                            .full_width()
-                            .ui(ui)
-                            .clicked()
-                        {
-                            if let Ok(Some(path)) = native_dialog::FileDialog::new()
-                                .set_title("Select Destiny 2 packages directory")
-                                .show_open_single_dir() {
-                                    if path.ends_with("packages") {
-                                        selected_path = Ok(path.parent().unwrap().to_string_lossy().to_string());
-                                        *control_flow = ControlFlow::Exit;
-                                    } else if path.ends_with("Destiny 2") {
-                                        // cohae: Idiot-proofing this a bit
-                                        selected_path = Ok(path.to_string_lossy().to_string());
-                                        *control_flow = ControlFlow::Exit;
-                                    } else {
-                                        native_dialog::MessageDialog::new()
-                                            .set_title("Invalid directory")
-                                            .set_text("The selected directory is not a packages directory. Please select the packages directory of your game installation.")
-                                            .show_alert().ok();
-                                    }
-                                }
-                        }
-                    });
-
-                    PreDrawResult::Continue
-                },
-                |_, _| {},
-            );
-
-            unsafe {
-                if dcs
-                    .swap_chain
-                    .Present(DXGI_SWAP_EFFECT_SEQUENTIAL.0 as _, present_parameters)
-                    == DXGI_STATUS_OCCLUDED
-                {
-                    present_parameters = DXGI_PRESENT_TEST;
-                    std::thread::sleep(Duration::from_millis(50));
-                } else {
-                    present_parameters = 0;
-                }
-            }
-        }
-        Event::MainEventsCleared => {
-            window.request_redraw();
-        }
-        _ => (),
-    });
-
-    selected_path
+    installations
 }

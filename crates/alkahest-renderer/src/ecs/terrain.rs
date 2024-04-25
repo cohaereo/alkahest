@@ -1,0 +1,144 @@
+use alkahest_data::{geometry::EPrimitiveType, map::STerrain, tfx::TfxShaderStage};
+use alkahest_pm::package_manager;
+use destiny_pkg::TagHash;
+use glam::{Mat4, Vec4};
+use tiger_parse::PackageManagerExt;
+use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
+
+use crate::{
+    gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext, SharedGpuContext},
+    handle::Handle,
+    loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
+    tfx::{externs::ExternStorage, technique::Technique},
+};
+
+pub struct TerrainPatches {
+    terrain: STerrain,
+    techniques: Vec<Handle<Technique>>,
+    dyemaps: Vec<Handle<Texture>>,
+    group_cbuffers: Vec<ConstantBuffer<Mat4>>,
+
+    pub vertex0_buffer: Handle<VertexBuffer>,
+    pub vertex1_buffer: Handle<VertexBuffer>,
+    pub index_buffer: Handle<IndexBuffer>,
+}
+
+impl TerrainPatches {
+    pub fn load(
+        gctx: SharedGpuContext,
+        asset_manager: &mut AssetManager,
+        hash: TagHash,
+    ) -> anyhow::Result<Self> {
+        let terrain: STerrain = package_manager().read_tag_struct(hash)?;
+
+        let dyemaps = terrain
+            .mesh_groups
+            .iter()
+            .map(|group| asset_manager.get_or_load_texture(group.dyemap))
+            .collect();
+        let techniques = terrain
+            .mesh_parts
+            .iter()
+            .map(|part| asset_manager.get_or_load_technique(part.technique))
+            .collect();
+
+        let mut group_cbuffers = vec![];
+        for group in &terrain.mesh_groups {
+            let offset = Vec4::new(
+                terrain.unk30.x,
+                terrain.unk30.y,
+                terrain.unk30.z,
+                terrain.unk30.w,
+            );
+
+            let texcoord_transform =
+                Vec4::new(group.unk20.x, group.unk20.y, group.unk20.z, group.unk20.w);
+
+            let scope_terrain = Mat4::from_cols(offset, texcoord_transform, Vec4::ZERO, Vec4::ZERO);
+
+            let cb = ConstantBuffer::create(gctx.clone(), Some(&scope_terrain))?;
+            group_cbuffers.push(cb);
+        }
+
+        Ok(Self {
+            vertex0_buffer: asset_manager.get_or_load_vertex_buffer(terrain.vertex0_buffer),
+            vertex1_buffer: asset_manager.get_or_load_vertex_buffer(terrain.vertex1_buffer),
+            index_buffer: asset_manager.get_or_load_index_buffer(terrain.index_buffer),
+            terrain,
+            techniques,
+            dyemaps,
+            group_cbuffers,
+        })
+    }
+
+    pub fn draw(&self, gctx: &GpuContext, externs: &ExternStorage, asset_manager: &AssetManager) {
+        // Layout 22
+        //  - int4 v0 : POSITION0, // Format DXGI_FORMAT_R16G16B16A16_SINT size 8
+        //  - float4 v1 : NORMAL0, // Format DXGI_FORMAT_R16G16B16A16_SNORM size 8
+        //  - float2 v2 : TEXCOORD1, // Format DXGI_FORMAT_R16G16_FLOAT size 4
+        gctx.set_input_layout(22);
+        gctx.set_input_topology(EPrimitiveType::TriangleStrip);
+
+        let vertex0 = asset_manager.vertex_buffers.get(&self.vertex0_buffer);
+        let vertex1 = asset_manager.vertex_buffers.get(&self.vertex1_buffer);
+        let index = asset_manager.index_buffers.get(&self.index_buffer);
+
+        if let (Some(vertex0), Some(vertex1), Some(index)) = (vertex0, vertex1, index) {
+            unsafe {
+                let ctx = gctx.context();
+                ctx.IASetIndexBuffer(&index.buffer, DXGI_FORMAT(index.format as _), 0);
+                ctx.IASetVertexBuffers(
+                    0,
+                    2,
+                    Some([Some(vertex0.buffer.clone()), Some(vertex1.buffer.clone())].as_ptr()),
+                    Some([vertex0.stride as _, vertex1.stride as _].as_ptr()),
+                    Some([0, 0].as_ptr()),
+                );
+            }
+        } else {
+            return;
+        }
+
+        for (i, part) in self
+            .terrain
+            .mesh_parts
+            .iter()
+            .enumerate()
+            .filter(|(_, u)| u.detail_level == 0)
+        {
+            let cb11 = &self.group_cbuffers[part.group_index as usize];
+
+            if let Some(technique) = asset_manager.techniques.get(&self.techniques[i]) {
+                technique
+                    .bind(gctx, externs, asset_manager)
+                    .expect("Failed to bind technique");
+            } else {
+                continue;
+            }
+
+            cb11.bind(11, TfxShaderStage::Vertex);
+            if let Some(dyemap) = asset_manager
+                .textures
+                .get(&self.dyemaps[part.group_index as usize])
+            {
+                dyemap.bind(gctx, 14, TfxShaderStage::Pixel);
+            }
+
+            unsafe {
+                gctx.context()
+                    .DrawIndexed(part.index_count as _, part.index_start as _, 0);
+            }
+        }
+    }
+}
+
+pub fn draw_terrain_patches_system(
+    gctx: &GpuContext,
+    scene: &hecs::World,
+    asset_manager: &AssetManager,
+    externs: &ExternStorage,
+) {
+    for (_, (terrain,)) in scene.query::<(&TerrainPatches,)>().iter() {
+        terrain.draw(gctx, externs, asset_manager);
+    }
+}

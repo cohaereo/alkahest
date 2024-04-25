@@ -62,7 +62,7 @@ where
 #[macro_export]
 macro_rules! config {
     () => {
-        (CONFIGURATION.read())
+        (crate::config::CONFIGURATION.read())
     };
 }
 
@@ -111,6 +111,7 @@ pub struct WindowConfig {
     pub pos_x: i32,
     pub pos_y: i32,
     pub maximised: bool,
+    pub fullscreen: bool,
 }
 
 impl Default for WindowConfig {
@@ -121,6 +122,7 @@ impl Default for WindowConfig {
             pos_x: 0,
             pos_y: 0,
             maximised: false,
+            fullscreen: false,
         }
     }
 }

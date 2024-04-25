@@ -4,7 +4,7 @@ use tiger_parse::tiger_tag;
 use crate::dxgi::DxgiFormat;
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x40)]
+#[tiger_tag(etype = 32, size = 0x40)]
 pub struct STextureHeader {
     pub data_size: u32,
     pub format: DxgiFormat,

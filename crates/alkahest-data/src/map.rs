@@ -48,7 +48,7 @@ pub struct Unk80809644 {
 
 // D2Class_01878080
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x18)]
+#[tiger_tag(id = 0x80808701, size = 0x18)]
 pub struct SBubbleDefinition {
     pub file_size: u64,
     pub map_resources: Vec<ExtendedTag<SMapContainer>>,
@@ -59,7 +59,7 @@ pub struct SBubbleDefinition {
 pub struct SMapContainer {
     pub file_size: u64,
     #[tag(offset = 0x28)]
-    pub data_tables: Vec<Tag<SMapDataTable>>,
+    pub data_tables: Vec<TagHash>,
 }
 
 #[derive(Debug)]
@@ -89,7 +89,7 @@ pub struct SUnk80809885 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806A0D)]
 pub struct Unk80806ef4 {
     pub unk0: u64,
     pub instances: Tag<SStaticMeshInstances>,
@@ -98,7 +98,7 @@ pub struct Unk80806ef4 {
 
 /// Terrain
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x88)]
+#[tiger_tag(id = 0x80806C81, size = 0x88)]
 pub struct STerrain {
     pub file_size: u64,
     pub unk8: u64,
@@ -110,11 +110,11 @@ pub struct STerrain {
     #[tag(offset = 0x50)]
     pub mesh_groups: Vec<Unk80807154>,
 
-    pub vertex_buffer: TagHash,
-    pub vertex_buffer2: TagHash,
-    pub indices: TagHash,
-    pub material1: TagHash,
-    pub material2: TagHash,
+    pub vertex0_buffer: TagHash,
+    pub vertex1_buffer: TagHash,
+    pub index_buffer: TagHash,
+    pub unk_technique1: TagHash,
+    pub unk_technique2: TagHash,
 
     #[tag(offset = 0x78)]
     pub mesh_parts: Vec<Unk80807152>,
@@ -146,7 +146,7 @@ pub struct Unk80807154 {
 #[derive(Debug)]
 #[tiger_tag(id = 0x80806C84)]
 pub struct Unk80807152 {
-    pub material: TagHash,
+    pub technique: TagHash,
     pub index_start: u32,
     pub index_count: u16,
     pub group_index: u8,
@@ -324,13 +324,13 @@ pub struct Unk80806aa9 {
     pub unk8c: u32,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806AAE)]
 pub struct Unk80806aae {
     pub file_size: u64,
     pub entity_model: TagHash,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806C65)]
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
@@ -342,7 +342,6 @@ pub struct SLightCollection {
     pub occlusion_bounds: Tag<SOcclusionBounds>,
 }
 
-// 706C8080
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806C70)]
 pub struct SLight {
@@ -370,9 +369,8 @@ pub struct SLight {
     pub unkd4: [u32; 7],
 }
 
-// 716C8080
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80806C71)]
 pub struct SShadowingLight {
     pub unk0: glam::Vec4,
     pub unk10: glam::Vec4,
@@ -398,11 +396,11 @@ pub struct SShadowingLight {
     pub unkcc: f32,
 
     pub technique_shading: TagHash,
-    pub technique_shading_shadow: TagHash,
+    pub technique_shading_shadowing: TagHash,
     pub technique_volumetrics: TagHash,
-    pub technique_volumetrics_shadow: TagHash,
+    pub technique_volumetrics_shadowing: TagHash,
     pub technique_compute_lightprobe: TagHash,
-    pub technique_compute_lightprobe_shadow: TagHash,
+    pub technique_compute_lightprobe_shadowing: TagHash,
 
     pub unke8: TagHash, // Unk80806da1
     pub unkec: TagHash, // Unk80806da1

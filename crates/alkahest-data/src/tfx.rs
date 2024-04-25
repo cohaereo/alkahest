@@ -99,6 +99,21 @@ pub enum TfxShaderStage {
     Domain = 6,
 }
 
+impl TfxShaderStage {
+    pub fn from_tfx_value(value: u8) -> Result<TfxShaderStage, String> {
+        match (value >> 5) {
+            1 => Ok(TfxShaderStage::Pixel),
+            2 => Ok(TfxShaderStage::Vertex),
+            3 => Ok(TfxShaderStage::Geometry),
+            4 => Ok(TfxShaderStage::Hull),
+            5 => Ok(TfxShaderStage::Compute),
+            6 => Ok(TfxShaderStage::Domain),
+            _ => Err(format!("Invalid TFX shader stage: {}", value)),
+        
+        }
+    }
+}
+
 impl TigerReadable for TfxShaderStage {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,

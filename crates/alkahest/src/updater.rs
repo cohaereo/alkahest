@@ -5,7 +5,7 @@ use poll_promise::Promise;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    icons::{ICON_CANCEL, ICON_LIGHTNING_BOLT, ICON_SHIELD_HALF_FULL},
+    gui::icons::{ICON_CANCEL, ICON_LIGHTNING_BOLT, ICON_SHIELD_HALF_FULL},
     util::{changelog_diff::parse_changelog, consts, version_fixup},
 };
 

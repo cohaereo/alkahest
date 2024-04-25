@@ -80,7 +80,7 @@ pub fn create_vertex_buffer(
     let desc = D3D11_BUFFER_DESC {
         ByteWidth: (mesh.vertices.len() * size_of::<GpuVertex>()) as u32,
         Usage: D3D11_USAGE_DEFAULT,
-        BindFlags: D3D11_BIND_VERTEX_BUFFER,
+        BindFlags: D3D11_BIND_VERTEX_BUFFER.0 as u32,
         ..Default::default()
     };
 
@@ -103,7 +103,7 @@ pub fn create_index_buffer(
     let desc = D3D11_BUFFER_DESC {
         ByteWidth: (mesh.indices.len() * size_of::<u32>()) as u32,
         Usage: D3D11_USAGE_DEFAULT,
-        BindFlags: D3D11_BIND_INDEX_BUFFER,
+        BindFlags: D3D11_BIND_INDEX_BUFFER.0 as u32,
         ..Default::default()
     };
 

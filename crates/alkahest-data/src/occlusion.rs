@@ -2,7 +2,7 @@ use glam::{Mat4, Quat, Vec3};
 use tiger_parse::{tiger_tag, TigerReadable};
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff, size = 0x18)]
+#[tiger_tag(id = 0x808093B1, size = 0x18)]
 pub struct SOcclusionBounds {
     pub file_size: u64,
     pub bounds: Vec<SObjectOcclusionBounds>,
