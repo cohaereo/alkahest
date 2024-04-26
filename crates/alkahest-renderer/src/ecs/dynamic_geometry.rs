@@ -68,7 +68,7 @@ impl DynamicModel {
             .iter()
             .map(|m| RenderStageSubscriptions::from_partrange_list(&m.part_range_per_render_stage))
             .collect();
-        
+
         let part_techniques = model
             .meshes
             .iter()
@@ -121,8 +121,7 @@ impl DynamicModel {
 
         let mesh = &self.model.meshes[mesh_index];
         let stages = &self.mesh_stages[mesh_index];
-        if !stages.is_subscribed(render_stage)
-        {
+        if !stages.is_subscribed(render_stage) {
             return Ok(());
         }
 
@@ -143,8 +142,8 @@ impl DynamicModel {
                 technique
                     .bind(gctx, externs, asset_manager)
                     .expect("Failed to bind technique");
-            // } else {
-            //     continue;
+                // } else {
+                //     continue;
             }
 
             if let Some(technique) = variant_material.and_then(|t| asset_manager.techniques.get(&t))
@@ -153,10 +152,11 @@ impl DynamicModel {
                     .bind(gctx, externs, asset_manager)
                     .expect("Failed to bind variant technique");
             }
-            
+
             if stages.contains(RenderStageSubscriptions::COMPUTE_SKINNING) {
                 unsafe {
-                    gctx.context().VSSetShader(&gctx.util_resources.entity_vs_override, None);
+                    gctx.context()
+                        .VSSetShader(&gctx.util_resources.entity_vs_override, None);
                 }
             }
 

@@ -194,7 +194,6 @@ impl LightRenderer {
             //  - float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12
             gctx.set_input_layout(1);
             gctx.set_blend_state(8);
-            gctx.set_rasterizer_state(0);
             gctx.context().IASetVertexBuffers(
                 0,
                 1,

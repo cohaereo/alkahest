@@ -109,7 +109,6 @@ impl TfxShaderStage {
             5 => Ok(TfxShaderStage::Compute),
             6 => Ok(TfxShaderStage::Domain),
             _ => Err(format!("Invalid TFX shader stage: {}", value)),
-        
         }
     }
 }

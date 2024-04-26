@@ -51,7 +51,9 @@ pub struct GpuContext {
 
     pub fallback_texture: Texture,
     pub white_texture: Texture,
+    pub light_grey_texture: Texture,
     pub grey_texture: Texture,
+    pub dark_grey_texture: Texture,
     pub black_texture: Texture,
 
     pub states: RenderStates,
@@ -146,11 +148,29 @@ impl GpuContext {
             Some("White Texture"),
         )?;
 
-        let grey_texture = Texture::load_2d_raw(
+        let light_grey_texture = Texture::load_2d_raw(
             &device,
             1,
             1,
             &[196, 196, 196, 255],
+            DxgiFormat::R8G8B8A8_UNORM_SRGB,
+            Some("Grey Texture"),
+        )?;
+
+        let grey_texture = Texture::load_2d_raw(
+            &device,
+            1,
+            1,
+            &[80, 80, 80, 80],
+            DxgiFormat::R8G8B8A8_UNORM_SRGB,
+            Some("Grey Texture"),
+        )?;
+
+        let dark_grey_texture = Texture::load_2d_raw(
+            &device,
+            1,
+            1,
+            &[40, 40, 40, 127],
             DxgiFormat::R8G8B8A8_UNORM_SRGB,
             Some("Grey Texture"),
         )?;
@@ -177,7 +197,9 @@ impl GpuContext {
 
             fallback_texture,
             white_texture,
+            light_grey_texture,
             grey_texture,
+            dark_grey_texture,
             black_texture,
 
             states,
@@ -229,16 +251,20 @@ impl GpuContext {
                 MinDepth: 0.0,
                 MaxDepth: 1.0,
             }]));
-
-            // Reset current states
-            self.current_blend_state
-                .store(usize::MAX, Ordering::Relaxed);
-            self.current_input_layout
-                .store(usize::MAX, Ordering::Relaxed);
-            self.current_rasterizer_state
-                .store(usize::MAX, Ordering::Relaxed);
-            self.current_depth_bias.store(usize::MAX, Ordering::Relaxed);
         }
+
+        self.reset_states();
+    }
+
+    pub fn reset_states(&self) {
+        // Reset current states
+        self.current_blend_state
+            .store(usize::MAX, Ordering::Relaxed);
+        self.current_input_layout
+            .store(usize::MAX, Ordering::Relaxed);
+        self.current_rasterizer_state
+            .store(usize::MAX, Ordering::Relaxed);
+        self.current_depth_bias.store(usize::MAX, Ordering::Relaxed);
     }
 
     pub fn present(&self) {

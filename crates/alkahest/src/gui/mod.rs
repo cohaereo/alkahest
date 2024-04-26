@@ -10,6 +10,7 @@ pub mod inspector;
 pub mod big_button;
 pub mod chip;
 mod tfx;
+mod input;
 
 pub trait UiExt {
     fn chip(&mut self, label: impl AsRef<str>) -> Response;
@@ -31,6 +32,8 @@ pub trait UiExt {
     //     label: impl AsRef<str>,
     //     subtext: impl AsRef<str>,
     // ) -> Response;
+    
+    fn vec4_input(&mut self, value: &mut glam::Vec4) -> Response;
 }
 
 impl UiExt for egui::Ui {
@@ -67,4 +70,8 @@ impl UiExt for egui::Ui {
     //         .with_subtext(subtext)
     //         .ui(self)
     // }
+    
+    fn vec4_input(&mut self, value: &mut glam::Vec4) -> Response {
+        input::Vec4Input::new(value).ui(self)
+    }
 }

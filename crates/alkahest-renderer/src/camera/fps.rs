@@ -134,7 +134,7 @@ impl CameraController for FpsCamera {
         if smooth_movement {
             self.position = self
                 .position
-                .lerp(self.target_position, (delta_time * 20.0).min(1.0));
+                .lerp(self.target_position, (delta_time * 15.0).min(1.0));
         } else {
             self.position = self.target_position;
         }

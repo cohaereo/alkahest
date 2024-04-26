@@ -9,7 +9,10 @@ use smallvec::SmallVec;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::{
-    config::APP_DIRS, gui::tfx::TfxErrorViewer, resources::Resources, util::image::EguiPngLoader,
+    config::APP_DIRS,
+    gui::tfx::{TfxErrorViewer, TfxExternEditor},
+    resources::Resources,
+    util::image::EguiPngLoader,
 };
 
 pub struct GuiContext {
@@ -176,6 +179,7 @@ impl GuiViewManager {
         let mut views = Self::default();
 
         views.insert(TfxErrorViewer::default());
+        views.insert(TfxExternEditor);
 
         views
     }

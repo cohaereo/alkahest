@@ -129,6 +129,7 @@ dependencies = [
  "egui_commonmark",
  "egui_dock",
  "egui_extras",
+ "field_access",
  "fs-err",
  "game-detector",
  "genmesh",

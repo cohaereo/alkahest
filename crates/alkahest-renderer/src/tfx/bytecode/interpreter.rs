@@ -281,6 +281,7 @@ impl TfxBytecodeInterpreter {
                 | &TfxBytecodeOp::Unk52 { unk1, .. }
                 | &TfxBytecodeOp::Unk53 { unk1, .. }
                 | &TfxBytecodeOp::Unk54 { unk1, .. } => match unk1 {
+                    10 => stack_push!(Vec4::ZERO),
                     97 => stack_push!(Vec4::ZERO),
                     _ => stack_push!(Vec4::ONE),
                 },

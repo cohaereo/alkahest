@@ -17,10 +17,10 @@ use alkahest_renderer::{
     loaders::{map_tmp::load_map, AssetManager},
     tfx::{
         externs,
-        externs::{ExternStorage, Frame},
+        externs::{ExternDefault, ExternStorage, Frame},
         gbuffer::GBuffer,
         globals::RenderGlobals,
-        scope::{ScopeFrame, ScopeInstances},
+        scope::{ScopeFrame, ScopeInstances, ScopeTransparentAdvanced},
         view::View,
     },
 };
@@ -58,6 +58,7 @@ pub struct AlkahestApp {
     rglobals: RenderGlobals,
     camera: Camera,
     frame_cbuffer: ConstantBuffer<ScopeFrame>,
+    transparent_advanced_cbuffer: ConstantBuffer<ScopeTransparentAdvanced>,
     time: Instant,
     delta_time: Instant,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
@@ -87,7 +88,7 @@ impl AlkahestApp {
             .build(&event_loop)
             .unwrap();
 
-        puffin::set_scopes_on(true);
+        puffin::set_scopes_on(false);
 
         let gctx = Arc::new(GpuContext::create(&window).unwrap());
         let gui = GuiContext::create(&window, gctx.clone());
@@ -107,6 +108,7 @@ impl AlkahestApp {
         });
 
         let frame_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
+        let transparent_advanced_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
 
         let map = load_map(
             gctx.clone(),
@@ -128,6 +130,7 @@ impl AlkahestApp {
             )
             .unwrap(),
             frame_cbuffer,
+            transparent_advanced_cbuffer,
             map,
 
             window,
@@ -159,6 +162,7 @@ impl AlkahestApp {
             delta_time,
             last_cursor_pos,
             frame_cbuffer,
+            transparent_advanced_cbuffer,
             map,
             ..
         } = self;
@@ -305,15 +309,22 @@ impl AlkahestApp {
                                     ..Default::default()
                                 })
                                 .unwrap();
+
+                            transparent_advanced_cbuffer
+                                .write(&ScopeTransparentAdvanced::default())
+                                .unwrap();
                         }
 
                         {
                             let mut externs = resources.get_mut::<ExternStorage>();
+                            let frame_existing = externs
+                                .frame
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or(ExternDefault::extern_default());
                             externs.frame = Some(Frame {
                                 unk00: time.elapsed().as_secs_f32(),
                                 unk04: time.elapsed().as_secs_f32(),
-                                // Light mul (exposure related)
-                                unk1c: 1.0,
                                 specular_lobe_3d_lookup: rglobals
                                     .textures
                                     .specular_lobe_3d_lookup
@@ -338,10 +349,8 @@ impl AlkahestApp {
                                     .view
                                     .clone()
                                     .into(),
-
-                                unk1a0: Vec4::ZERO,
-                                unk1b0: Vec4::ONE,
-                                ..Default::default()
+                                
+                                ..frame_existing
                             });
                             externs.view = Some({
                                 let mut view = externs::View::default();
@@ -352,19 +361,19 @@ impl AlkahestApp {
 
                             externs.transparent = Some(externs::Transparent {
                                 unk00: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk08: gctx.grey_texture.view.clone().into(),
+                                unk08: gctx.light_grey_texture.view.clone().into(),
                                 unk10: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk18: gctx.grey_texture.view.clone().into(),
-                                unk20: gctx.grey_texture.view.clone().into(),
-                                unk28: gctx.grey_texture.view.clone().into(),
-                                unk30: gctx.grey_texture.view.clone().into(),
-                                unk38: gctx.grey_texture.view.clone().into(),
-                                unk40: gctx.grey_texture.view.clone().into(),
-                                unk48: gctx.grey_texture.view.clone().into(),
-                                unk50: gctx.grey_texture.view.clone().into(),
-                                unk58: gctx.grey_texture.view.clone().into(),
-                                unk60: gctx.grey_texture.view.clone().into(),
-                                ..Default::default()
+                                unk18: gctx.light_grey_texture.view.clone().into(),
+                                unk20: gctx.light_grey_texture.view.clone().into(),
+                                unk28: gctx.light_grey_texture.view.clone().into(),
+                                unk30: gctx.light_grey_texture.view.clone().into(),
+                                unk38: gctx.light_grey_texture.view.clone().into(),
+                                unk40: gctx.light_grey_texture.view.clone().into(),
+                                unk48: gctx.light_grey_texture.view.clone().into(),
+                                unk50: gctx.dark_grey_texture.view.clone().into(),
+                                unk58: gctx.light_grey_texture.view.clone().into(),
+                                unk60: gctx.light_grey_texture.view.clone().into(),
+                                ..ExternDefault::extern_default()
                             });
                             externs.deferred = Some(externs::Deferred {
                                 unk00: Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0),
@@ -379,7 +388,18 @@ impl AlkahestApp {
                                     .view
                                     .clone()
                                     .into(),
-                                ..Default::default()
+                                ..ExternDefault::extern_default()
+                            });
+
+                            let atmos_existing = externs
+                                .atmosphere
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or(ExternDefault::extern_default());
+                            externs.atmosphere = Some(externs::Atmosphere {
+                                unke0: gctx.dark_grey_texture.view.clone().into(),
+
+                                ..atmos_existing
                             });
 
                             rglobals
@@ -481,9 +501,20 @@ impl AlkahestApp {
                             gctx.current_states.store(StateSelection::new(
                                 Some(8),
                                 Some(0),
-                                Some(0),
+                                Some(2),
                                 Some(0),
                             ));
+
+                            unsafe {
+                                gctx.context().VSSetConstantBuffers(
+                                    8,
+                                    Some(&[Some(transparent_advanced_cbuffer.buffer().clone())]),
+                                );
+                                gctx.context().PSSetConstantBuffers(
+                                    8,
+                                    Some(&[Some(transparent_advanced_cbuffer.buffer().clone())]),
+                                );
+                            }
 
                             draw_light_system(&gctx, &map, asset_manager, camera, &mut externs);
 
@@ -503,6 +534,8 @@ impl AlkahestApp {
 
                                 gctx.set_input_topology(EPrimitiveType::TriangleStrip);
                                 gctx.context().Draw(6, 0);
+
+                                tmp_gbuffers.staging.copy_to(&tmp_gbuffers.staging_clone);
                             }
                             unsafe {
                                 gctx.context().OMSetRenderTargets(

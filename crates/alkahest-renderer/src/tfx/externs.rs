@@ -3,9 +3,11 @@ use std::{fmt::Debug, mem::transmute};
 use anyhow::Context;
 use binrw::binread;
 use destiny_pkg::TagHash;
+use field_access::FieldAccess;
 use glam::{Mat4, Vec4};
 use parking_lot::RwLock;
 use rustc_hash::{FxHashMap, FxHashSet};
+use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
 use crate::{gpu::texture::Texture, handle::Handle, loaders::AssetManager, util::short_type_name};
@@ -67,6 +69,7 @@ pub struct ExternStorage {
     pub rigid_model: Option<RigidModel>,
     pub decal: Option<Decal>,
     pub simple_geometry: Option<SimpleGeometry>,
+    pub atmosphere: Option<Atmosphere>,
 
     pub errors: RwLock<FxHashMap<String, TfxExpressionError>>,
 }
@@ -87,7 +90,7 @@ impl ExternStorage {
     ) -> anyhow::Result<T> {
         match self.get_value_inner::<T>(ext, offset) {
             ExternValue::Value(v) => Ok(v),
-            ExternValue::Unimplemented => {
+            ExternValue::Unimplemented(v) => {
                 self.errors
                     .write()
                     .entry(format!(
@@ -103,7 +106,7 @@ impl ExternStorage {
                     })
                     .repeat_count += 1;
 
-                Err(anyhow::anyhow!("Unimplemented field: {ext:?}@0x{offset:X}"))
+                Ok(v)
             }
 
             ExternValue::InvalidType(t) => {
@@ -194,6 +197,7 @@ impl ExternStorage {
             RigidModel => self.rigid_model,
             Decal => self.decal,
             SimpleGeometry => self.simple_geometry,
+            Atmosphere => self.atmosphere,
         }
     }
 
@@ -221,7 +225,35 @@ impl ExternStorage {
             Transparent,
             RigidModel,
             Decal,
-            SimpleGeometry
+            SimpleGeometry,
+            Atmosphere
+        }
+    }
+
+    pub fn get_extern_editable(&mut self, ext: TfxExtern) -> Option<&mut dyn FieldAccess> {
+        macro_rules! extern_lookup {
+            ($(
+                $ext:ident => $field:expr,
+            )*) => {
+                match ext {
+                    $(
+                        TfxExtern::$ext => $field.as_mut().map(|f| f as &mut dyn FieldAccess),
+                    )*
+                    _ => None,
+                }
+            };
+        }
+
+        extern_lookup! {
+            Frame => self.frame,
+            View => self.view,
+            Deferred => self.deferred,
+            DeferredLight => self.deferred_light,
+            Transparent => self.transparent,
+            RigidModel => self.rigid_model,
+            Decal => self.decal,
+            SimpleGeometry => self.simple_geometry,
+            Atmosphere => self.atmosphere,
         }
     }
 }
@@ -229,7 +261,7 @@ impl ExternStorage {
 #[derive(Debug, PartialEq)]
 pub enum ExternValue<T> {
     Value(T),
-    Unimplemented,
+    Unimplemented(T),
     InvalidType(&'static str),
     FieldNotFound,
 
@@ -259,9 +291,9 @@ struct Name("internal_name") {
 */
 
 macro_rules! extern_struct {
-    (struct $name:ident ($name_c:literal) { $($field_offset:expr => $field:ident: $field_type:ty  $(> unimplemented($unimp:expr))? ,)* }) => {
+    (struct $name:ident ($name_c:literal) { $($field_offset:expr => $field:ident: $field_type:ty  $(> unimplemented($unimp:expr))? $(> default($default_value:expr))? ,)* }) => {
         #[repr(C)]
-        #[derive(Debug, Default, Clone)]
+        #[derive(Debug, Default, Clone, FieldAccess)]
         pub struct $name {
             $(pub $field: $field_type,)*
         }
@@ -276,15 +308,15 @@ macro_rules! extern_struct {
 
                 match offset {
                     $($field_offset => {
-                        $(
-                            if $unimp {
-                                return ExternValue::Unimplemented;
-                            }
-                        )*
                         if std::any::TypeId::of::<T>() == std::any::TypeId::of::<$field_type>() {
                             unsafe {
                                 let ptr = ptr.add(std::mem::offset_of!(Self, $field)) as *const T;
-                                ExternValue::Value(ptr.read())
+
+                                if false $(|| $unimp)* {
+                                    return ExternValue::Unimplemented(ptr.read());
+                                } else {
+                                    ExternValue::Value(ptr.read())
+                                }
                             }
                         } else {
                             ExternValue::InvalidType(concat!(stringify!($field), ": ", stringify!($field_type)))
@@ -301,6 +333,16 @@ macro_rules! extern_struct {
                 }
             }
         }
+
+        impl ExternDefault for $name {
+            fn extern_default() -> Self {
+                Self {
+                    $($field: $(if true { $default_value } else )* {
+                        <$field_type as ExternDefault>::extern_default()
+                    },)*
+                }
+            }
+        }
     };
 
 }
@@ -312,19 +354,19 @@ extern_struct! {
         0x0c => unk0c: f32 > unimplemented(true),
         0x10 => unk10: f32 > unimplemented(true),
         0x14 => unk14: f32 > unimplemented(true),
-        0x1c => unk1c: f32 > unimplemented(false),
+        0x1c => light_mul: f32 > unimplemented(false),
         0x20 => unk20: f32 > unimplemented(true),
         0x24 => unk24: f32 > unimplemented(true),
         0x28 => unk28: f32 > unimplemented(true),
         0x2c => unk2c: f32 > unimplemented(true),
         0x40 => unk40: f32 > unimplemented(true),
         0x70 => unk70: f32 > unimplemented(true),
-        0x78 => unk78: u64 > unimplemented(true),
-        0x80 => unk80: u64 > unimplemented(true),
-        0x88 => unk88: u64 > unimplemented(true),
-        0x90 => unk90: u64 > unimplemented(true),
-        0x98 => unk98: u64 > unimplemented(true),
-        0xa0 => unka0: u64 > unimplemented(true),
+        0x78 => unk78: TextureView > unimplemented(true),
+        0x80 => unk80: TextureView > unimplemented(true),
+        0x88 => unk88: TextureView > unimplemented(true),
+        0x90 => unk90: TextureView > unimplemented(true),
+        0x98 => unk98: TextureView > unimplemented(true),
+        0xa0 => unka0: TextureView > unimplemented(true),
         0xa8 => specular_lobe_lookup: TextureView,
         0xb0 => specular_lobe_3d_lookup: TextureView,
         0xb8 => specular_tint_lookup: TextureView,
@@ -336,11 +378,11 @@ extern_struct! {
         0x180 => unk180: Vec4 > unimplemented(true),
         0x190 => unk190: f32 > unimplemented(true),
         0x194 => unk194: f32 > unimplemented(true),
-        0x1a0 => unk1a0: Vec4 > unimplemented(false),
+        0x1a0 => unk1a0: Vec4 > unimplemented(false) > default(Vec4::ZERO),
         0x1b0 => unk1b0: Vec4 > unimplemented(false),
-        0x1e0 => unk1e0: u64 > unimplemented(true),
-        0x1e8 => unk1e8: u64 > unimplemented(true),
-        0x1f0 => unk1f0: u64 > unimplemented(true),
+        0x1e0 => unk1e0: TextureView > unimplemented(true),
+        0x1e8 => unk1e8: TextureView > unimplemented(true),
+        0x1f0 => unk1f0: TextureView > unimplemented(true),
     }
 }
 
@@ -428,6 +470,54 @@ extern_struct! {
 }
 
 extern_struct! {
+    struct Atmosphere("atmosphere") {
+        0x00 => unk00: TextureView > unimplemented(true),
+        0x08 => unk08: TextureView > unimplemented(true),
+        0x10 => unk10: TextureView > unimplemented(true),
+        0x18 => unk18: TextureView > unimplemented(true),
+        0x20 => unk20: TextureView > unimplemented(true),
+        0x38 => unk38: TextureView > unimplemented(true),
+        0x50 => unk50: f32 > unimplemented(true),
+        0x58 => unk58: TextureView > unimplemented(true),
+        0x60 => unk60: TextureView > unimplemented(true),
+        0x70 => unk70: Vec4 > unimplemented(true),
+        0x80 => unk80: TextureView > unimplemented(true),
+        0xa0 => unka0: TextureView > unimplemented(true),
+        0xb0 => unkb0: Vec4 > unimplemented(true),
+        0xc0 => unkc0: TextureView > unimplemented(true),
+        0xd0 => unkd0: TextureView > unimplemented(true),
+        0xe0 => unke0: TextureView > unimplemented(true),
+        0xf0 => unkf0: Vec4 > unimplemented(true),
+        0x120 => unk120: Vec4 > unimplemented(true),
+        0x130 => unk130: f32 > unimplemented(true),
+        0x134 => unk134: f32 > unimplemented(true),
+        0x140 => unk140: f32 > unimplemented(true),
+        0x144 => unk144: f32 > unimplemented(true),
+        0x148 => unk148: f32 > unimplemented(true),
+        0x14c => unk14c: f32 > unimplemented(true),
+        0x150 => unk150: f32 > unimplemented(true),
+        0x160 => unk160: Vec4 > unimplemented(true),
+        0x170 => unk170: f32 > unimplemented(true),
+        0x174 => unk174: f32 > unimplemented(true),
+        0x178 => unk178: f32 > unimplemented(true),
+        0x194 => unk194: f32 > unimplemented(true),
+        0x198 => unk198: f32 > unimplemented(true),
+        0x19c => unk19c: f32 > unimplemented(true),
+        0x1a0 => unk1a0: f32 > unimplemented(true),
+        0x1a4 => unk1a4: f32 > unimplemented(true),
+        0x1b0 => unk1b0: Vec4 > unimplemented(true),
+        0x1c0 => unk1c0: f32 > unimplemented(true),
+        0x1c4 => unk1c4: f32 > unimplemented(true),
+        0x1c8 => unk1c8: f32 > unimplemented(true),
+        0x1cc => unk1cc: f32 > unimplemented(true),
+        0x1d8 => unk1d8: f32 > unimplemented(true),
+        0x1dc => unk1dc: f32 > unimplemented(true),
+        0x1e0 => unk1e0: f32 > unimplemented(true),
+        0x1f0 => unk1f0: Vec4 > unimplemented(true),
+    }
+}
+
+extern_struct! {
     struct SimpleGeometry("simple_geometry") {
         0x00 => transform: Mat4,
     }
@@ -459,7 +549,10 @@ fn test_externs() {
         ..Default::default()
     };
 
-    assert_eq!(deferred.get_field::<Vec4>(0x00), ExternValue::Unimplemented);
+    assert_eq!(
+        deferred.get_field::<Vec4>(0x20),
+        ExternValue::Unimplemented(Vec4::default())
+    );
 
     let view = View {
         resolution_width: 1920.0,
@@ -471,7 +564,7 @@ fn test_externs() {
     assert_eq!(view.get_field::<f32>(0x04), ExternValue::Value(1080.0));
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, EnumIter)]
 #[binread]
 #[br(repr(u8))]
 pub enum TfxExtern {
@@ -584,4 +677,32 @@ pub enum TfxExpressionErrorType {
     Unimplemented { field_offset: usize },
     InvalidType(&'static str),
     ExternNotSet(&'static str),
+}
+
+pub trait ExternDefault {
+    fn extern_default() -> Self;
+}
+
+impl ExternDefault for TextureView {
+    fn extern_default() -> Self {
+        TextureView::Null
+    }
+}
+
+impl ExternDefault for Vec4 {
+    fn extern_default() -> Self {
+        Vec4::ONE
+    }
+}
+
+impl ExternDefault for Mat4 {
+    fn extern_default() -> Self {
+        Mat4::IDENTITY
+    }
+}
+
+impl ExternDefault for f32 {
+    fn extern_default() -> Self {
+        1.0
+    }
 }

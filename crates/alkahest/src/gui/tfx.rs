@@ -1,11 +1,20 @@
-use alkahest_renderer::tfx::externs::{ExternStorage, TfxExpressionError, TfxExpressionErrorType};
+use alkahest_renderer::tfx::externs::{
+    ExternStorage, TextureView, TfxExpressionError, TfxExpressionErrorType, TfxExtern,
+};
 use destiny_pkg::TagHash;
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
+use field_access::{Field, FieldAccess};
+use glam::{Mat4, Vec4};
+use itertools::Itertools;
+use strum::IntoEnumIterator;
 use winit::window::Window;
 
 use crate::{
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::{
+        context::{GuiCtx, GuiView, ViewResult},
+        UiExt,
+    },
     resources::Resources,
     util::text::text_color_for_background,
 };
@@ -91,6 +100,94 @@ impl GuiView for TfxErrorViewer {
         if self.clear_each_frame {
             externs.errors.write().clear();
         }
+
+        (!open).then_some(ViewResult::Close)
+    }
+}
+
+pub struct TfxExternEditor;
+
+impl GuiView for TfxExternEditor {
+    fn draw(
+        &mut self,
+        ctx: &Context,
+        _window: &Window,
+        resources: &Resources,
+        _gui: &GuiCtx<'_>,
+    ) -> Option<ViewResult> {
+        // cohae: When adding externs to this list, make sure the static values don't get reset each frame
+        // Additionally, object-specific externs (such as RigidModel or SimpleGeometry) are not editable
+        const SHOWN_EXTERNS: &[TfxExtern] = &[
+            TfxExtern::Frame,
+            // TfxExtern::View,
+            // TfxExtern::Deferred,
+            TfxExtern::Atmosphere,
+            // TfxExtern::Mlaa,
+            // TfxExtern::Msaa,
+            // TfxExtern::Hdao,
+            // TfxExtern::Ssao,
+            // TfxExtern::Postprocess,
+            // TfxExtern::Transparent,
+            // TfxExtern::Vignette,
+            // TfxExtern::GlobalLighting,
+            // TfxExtern::ShadowMask,
+            // TfxExtern::Fxaa,
+            // TfxExtern::Smaa,
+            // TfxExtern::DepthOfField,
+            // TfxExtern::MinmaxDepth,
+            // TfxExtern::Water,
+            // TfxExtern::GammaControl,
+            // TfxExtern::Distortion,
+            // TfxExtern::VolumetricsPass,
+            // TfxExtern::TemporalReprojection,
+            // TfxExtern::Ssao3d,
+            // TfxExtern::WaterDisplacement,
+            // TfxExtern::PatternBlending,
+        ];
+
+        let mut externs = resources.get_mut::<ExternStorage>();
+
+        let mut open = true;
+        egui::Window::new("TFX Extern Editor")
+            .default_size([640., 720.])
+            .open(&mut open)
+            .show(ctx, |ui| {
+                egui::ScrollArea::new([false, true]).show(ui, |ui| {
+                    for &ext in SHOWN_EXTERNS {
+                        let x = externs.get_extern_editable(ext);
+                        ui.add_enabled_ui(x.is_some(), |ui| {
+                            let suffix = if x.is_some() { "" } else { " (not set)" };
+                            ui.collapsing(format!("{ext:?}{suffix}"), |ui| {
+                                if let Some(x) = x {
+                                    let fields = x.field_names();
+                                    for &field in fields {
+                                        let mut f = x.field_mut(field).unwrap();
+                                        ui.horizontal(|ui| {
+                                            ui.strong(format!("{field}: "));
+
+                                            if let Some(v) = f.get_mut::<Vec4>() {
+                                                ui.vec4_input(v);
+                                            }
+
+                                            if let Some(v) = f.get::<Mat4>() {
+                                                ui.label(format!("{:#?}", v));
+                                            }
+
+                                            if let Some(v) = f.get_mut::<f32>() {
+                                                ui.add(egui::DragValue::new(v).speed(0.01));
+                                            }
+
+                                            if let Some(v) = f.get::<TextureView>() {
+                                                ui.label(format!("{:?}", v));
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        });
+                    }
+                });
+            });
 
         (!open).then_some(ViewResult::Close)
     }

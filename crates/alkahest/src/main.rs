@@ -92,19 +92,10 @@ fn main() -> anyhow::Result<()> {
         .build_global()
         .unwrap();
 
-    // let tracy_layer = if cfg!(feature = "tracy") {
-    //     Some(tracing_tracy::TracyLayer::default())
-    // } else {
-    //     None
-    // };
-
     LogTracer::init()?;
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
-            // .with(tracy_layer)
-            // .with(overlays::console::ConsoleLogLayer.with_filter(FilterDebugLockTarget))
-            .with(tracing_subscriber::fmt::layer()) //.with_filter(FilterDebugLockTarget))
-            // .with(FilterDebugLockTarget)
+            .with(tracing_subscriber::fmt::layer())
             .with(
                 EnvFilter::builder()
                     .with_default_directive(LevelFilter::INFO.into())
