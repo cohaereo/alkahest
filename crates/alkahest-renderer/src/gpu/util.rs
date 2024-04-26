@@ -1,9 +1,8 @@
 use alkahest_data::geometry::EPrimitiveType;
 use windows::Win32::Graphics::{
-    Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
     Direct3D11::{
         ID3D11ComputeShader, ID3D11Device, ID3D11PixelShader, ID3D11RenderTargetView,
-        ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11VertexShader,
+        ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11VertexShader,
         D3D11_COMPARISON_NEVER, D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_SAMPLER_DESC,
         D3D11_TEXTURE_ADDRESS_CLAMP,
     },

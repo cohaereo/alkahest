@@ -77,8 +77,8 @@ pub fn print_banner() {
         )
     );
     println!(
-        "                     {}v{} ({} built on {}){}",
-        "\x1b[4m", VERSION, GIT_HASH, BUILD_DATE, "\x1b[0m"
+        "                     \x1b[4mv{} ({} built on {})\x1b[0m",
+        VERSION, GIT_HASH, BUILD_DATE
     );
     println!();
     println!("{}", QUOTE);

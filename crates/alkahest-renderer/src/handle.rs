@@ -1,11 +1,11 @@
 use std::{
-    fmt::{Debug, Display, Formatter},
+    fmt::{Debug, Formatter},
     hash::BuildHasherDefault,
     sync::{Arc, Weak},
 };
 
-use alkahest_data::buffers::VertexBufferHeader;
-use arc_swap::{ArcSwap, ArcSwapWeak};
+
+
 use destiny_pkg::TagHash;
 use indexmap::IndexMap;
 use rustc_hash::FxHasher;
@@ -256,15 +256,11 @@ impl<T: Asset> AssetRegistry<T> {
     pub fn get_existing_handle_tiger(&self, taghash: TagHash) -> Option<Handle<T>> {
         let id = AssetId::new_tiger(taghash);
 
-        if let Some(h) = self.handle_map.get(&id).and_then(|h| h.refcount.upgrade()) {
-            Some(Handle {
+        self.handle_map.get(&id).and_then(|h| h.refcount.upgrade()).map(|h| Handle {
                 refcount: h,
                 id,
                 _phantom: std::marker::PhantomData,
             })
-        } else {
-            None
-        }
     }
 
     pub fn exists(&self, asset_id: AssetId) -> bool {

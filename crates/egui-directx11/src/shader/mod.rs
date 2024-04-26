@@ -1,8 +1,7 @@
 use std::{io::Write, slice::from_raw_parts};
 
 use windows::{
-    core::s,
-    core::PCSTR,
+    core::{s, PCSTR},
     Win32::Graphics::{
         Direct3D::{
             Fxc::{D3DCompile, D3DCOMPILE_DEBUG, D3DCOMPILE_ENABLE_STRICTNESS},

@@ -1,11 +1,11 @@
 use std::ops::Deref;
 
 use alkahest_data::{
-    technique::{STechnique, STechniqueShader, StateSelection},
+    technique::{STechnique, STechniqueShader},
     tfx::TfxShaderStage,
 };
 use alkahest_pm::package_manager;
-use anyhow::{anyhow, ensure, Context};
+use anyhow::{ensure, Context};
 use destiny_pkg::TagHash;
 use glam::Vec4;
 use windows::Win32::Graphics::Direct3D11::{

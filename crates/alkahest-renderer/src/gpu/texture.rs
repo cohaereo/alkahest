@@ -7,7 +7,7 @@ use tiger_parse::PackageManagerExt;
 use tracing::{debug_span, error};
 use windows::Win32::Graphics::{
     Direct3D::{
-        WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
+        D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE3D,
         D3D11_SRV_DIMENSION_TEXTURECUBE,
     },
     Direct3D11::{ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11Texture3D, *},

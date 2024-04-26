@@ -1,12 +1,10 @@
 use alkahest_renderer::tfx::externs::{
-    ExternStorage, TextureView, TfxExpressionError, TfxExpressionErrorType, TfxExtern,
+    ExternStorage, TextureView, TfxExpressionErrorType, TfxExtern,
 };
-use destiny_pkg::TagHash;
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
-use field_access::{Field, FieldAccess};
+use field_access::FieldAccess;
 use glam::{Mat4, Vec4};
-use itertools::Itertools;
 use strum::IntoEnumIterator;
 use winit::window::Window;
 

@@ -1,13 +1,12 @@
 use std::{
-    mem::{forget, transmute, transmute_copy, ManuallyDrop},
+    mem::{forget, transmute, transmute_copy},
     ops::Neg,
 };
 
 use alkahest_data::tfx::TfxShaderStage;
-use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec4, Vec4Swizzles};
 use smallvec::SmallVec;
 use windows::{
-    core::{IUnknown, Interface},
     Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResourceView},
 };
 
@@ -95,7 +94,7 @@ impl TfxBytecodeInterpreter {
                     // Decompiled and simplified: value == 0.0 ? 1.0 : 0.0 (for each element in the vector)
                     let v = stack_top!();
                     let c: [bool; 4] = v.cmpeq(Vec4::ZERO).into();
-                    let v = Vec4::new(c[0].into(), c[1].into(), c[2].into(), c[3].into());
+                    let _v = Vec4::new(c[0].into(), c[1].into(), c[2].into(), c[3].into());
                 }
                 TfxBytecodeOp::LessThan => {
                     let [t1, t0] = stack_pop!(2);

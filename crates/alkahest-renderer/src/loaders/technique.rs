@@ -1,9 +1,8 @@
-use std::fmt::format;
+
 
 use alkahest_data::{
     technique::{STechnique, STechniqueShader},
     tfx::TfxShaderStage,
-    ExtendedHash,
 };
 use alkahest_pm::package_manager;
 use anyhow::{ensure, Context};
@@ -105,7 +104,9 @@ fn load_technique_stage(
     };
 
     for sampler in shader.samplers.iter() {
-        stage.samplers.push(load_sampler(&gctx, sampler.hash32()).ok());
+        stage
+            .samplers
+            .push(load_sampler(&gctx, sampler.hash32()).ok());
     }
 
     Ok(Some(stage))

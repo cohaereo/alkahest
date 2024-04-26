@@ -17,15 +17,15 @@ use alkahest_data::{
     dxgi::DxgiFormat,
     geometry::EPrimitiveType,
     technique::StateSelection,
-    tfx::{TfxRenderStage, TfxShaderStage},
+    tfx::{TfxShaderStage},
 };
 use crossbeam::atomic::AtomicCell;
 use parking_lot::RwLock;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::{
-    core::{IUnknown, Interface},
+    core::{Interface},
     Win32::{
-        Foundation::{BOOL, DXGI_STATUS_OCCLUDED, HINSTANCE},
+        Foundation::{DXGI_STATUS_OCCLUDED, HINSTANCE},
         Graphics::{
             Direct3D::*,
             Direct3D11::*,

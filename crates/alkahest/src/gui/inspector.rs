@@ -17,19 +17,15 @@ use crate::{
         chip::EcsTagsExt,
         hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
         icons::{
-            ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA,
-            ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
-            ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF, ICON_EYE_OFF_OUTLINE, ICON_HELP,
-            ICON_IDENTIFIER, ICON_LIGHTBULB, ICON_MAP_MARKER, ICON_OCTAGON, ICON_RADIUS_OUTLINE,
+            ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
+            ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF,
+            ICON_EYE_OFF_OUTLINE, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RADIUS_OUTLINE,
             ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
-            ICON_STEERING, ICON_TAG,
+            ICON_TAG,
         },
     },
     resources::Resources,
-    util::{
-        text::{prettify_distance, split_pascal_case},
-        BoolExts as _,
-    },
+    util::text::prettify_distance,
 };
 
 pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {

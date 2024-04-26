@@ -1,7 +1,5 @@
 use std::{
     io::{Cursor, Read, Seek},
-    mem::size_of,
-    path::Path,
     sync::Arc,
 };
 

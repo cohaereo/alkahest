@@ -1,4 +1,5 @@
 use std::{cell::RefCell, mem::zeroed};
+
 use windows::Win32::{
     Foundation::RECT,
     Graphics::{

@@ -9,9 +9,9 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use alkahest_pm::package_manager;
-use destiny_pkg::TagHash;
+
 use glam::{Mat4, Vec2, Vec3, Vec4};
-use tiger_parse::PackageManagerExt;
+
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{
@@ -20,7 +20,6 @@ use crate::{
     tfx::{
         bytecode::{interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp},
         externs::ExternStorage,
-        technique::ShaderModule,
     },
 };
 

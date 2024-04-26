@@ -1,14 +1,12 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection, tfx::TfxRenderStage};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
-        dynamic_geometry::{draw_dynamic_model_system, update_dynamic_model_system, DynamicModel},
+        dynamic_geometry::{draw_dynamic_model_system, update_dynamic_model_system},
         light::draw_light_system,
-        static_geometry::{
-            draw_static_instances_system, update_static_instances_system, StaticModel,
-        },
+        static_geometry::{draw_static_instances_system, update_static_instances_system},
         terrain::draw_terrain_patches_system,
         Scene,
     },
@@ -20,15 +18,14 @@ use alkahest_renderer::{
         externs::{ExternDefault, ExternStorage, Frame},
         gbuffer::GBuffer,
         globals::RenderGlobals,
-        scope::{ScopeFrame, ScopeInstances, ScopeTransparentAdvanced},
+        scope::{ScopeFrame, ScopeTransparentAdvanced},
         view::View,
     },
 };
 use anyhow::Context;
 use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers};
-use glam::{Mat4, Vec3, Vec4};
-use tokio::time::Instant;
+use glam::Vec4;
 use windows::{core::HRESULT, Win32::Graphics::Direct3D11::D3D11_CLEAR_DEPTH};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -102,7 +99,7 @@ impl AlkahestApp {
         let rglobals = RenderGlobals::load(gctx.clone()).expect("Failed to load render globals");
         asset_manager.block_until_idle();
 
-        let mut camera = Camera::new_fps(Viewport {
+        let camera = Camera::new_fps(Viewport {
             size: glam::UVec2::new(1920, 1080),
             origin: glam::UVec2::new(0, 0),
         });
@@ -256,11 +253,11 @@ impl AlkahestApp {
                             i.consume_shortcut(&KeyboardShortcut::new(Modifiers::ALT, Key::Enter))
                         }) {
                             if window.fullscreen().is_some() {
-                                let _ = window.set_fullscreen(None);
+                                window.set_fullscreen(None);
                             } else {
-                                let _ = window.set_fullscreen(Some(
-                                    winit::window::Fullscreen::Borderless(window.current_monitor()),
-                                ));
+                                window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(
+                                    window.current_monitor(),
+                                )));
                             }
 
                             config::with_mut(|c| {
@@ -349,7 +346,7 @@ impl AlkahestApp {
                                     .view
                                     .clone()
                                     .into(),
-                                
+
                                 ..frame_existing
                             });
                             externs.view = Some({
@@ -405,12 +402,12 @@ impl AlkahestApp {
                             rglobals
                                 .scopes
                                 .frame
-                                .bind(gctx, &asset_manager, &externs)
+                                .bind(gctx, asset_manager, &externs)
                                 .unwrap();
                             rglobals
                                 .scopes
                                 .view
-                                .bind(gctx, &asset_manager, &externs)
+                                .bind(gctx, asset_manager, &externs)
                                 .unwrap();
 
                             unsafe {
@@ -431,19 +428,19 @@ impl AlkahestApp {
                                 Some(0),
                             ));
 
-                            draw_terrain_patches_system(&gctx, &map, asset_manager, &externs);
+                            draw_terrain_patches_system(gctx, map, asset_manager, &externs);
 
                             draw_static_instances_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::GenerateGbuffer,
                             );
 
                             draw_dynamic_model_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::GenerateGbuffer,
@@ -458,16 +455,16 @@ impl AlkahestApp {
                             });
 
                             draw_static_instances_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::Decals,
                             );
 
                             draw_dynamic_model_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::Decals,
@@ -516,7 +513,7 @@ impl AlkahestApp {
                                 );
                             }
 
-                            draw_light_system(&gctx, &map, asset_manager, camera, &mut externs);
+                            draw_light_system(gctx, map, asset_manager, camera, &mut externs);
 
                             unsafe {
                                 gctx.context().OMSetRenderTargets(
@@ -549,7 +546,7 @@ impl AlkahestApp {
                             rglobals
                                 .scopes
                                 .transparent
-                                .bind(gctx, &asset_manager, &externs)
+                                .bind(gctx, asset_manager, &externs)
                                 .unwrap();
 
                             gctx.current_states.store(StateSelection::new(
@@ -560,32 +557,32 @@ impl AlkahestApp {
                             ));
 
                             draw_static_instances_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::DecalsAdditive,
                             );
 
                             draw_dynamic_model_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::DecalsAdditive,
                             );
 
                             draw_static_instances_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::Transparents,
                             );
 
                             draw_dynamic_model_system(
-                                &gctx,
-                                &map,
+                                gctx,
+                                map,
                                 asset_manager,
                                 &externs,
                                 TfxRenderStage::Transparents,

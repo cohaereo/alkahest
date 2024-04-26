@@ -1,28 +1,22 @@
-use colored::Colorize;
 use std::{
     fs::File,
-    io::{BufWriter, Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, SeekFrom},
     path::PathBuf,
     str::FromStr,
 };
 
 use binrw::{BinReaderExt, Endian, VecArgs};
+use colored::Colorize;
 use destiny_havok::{
     index::IndexItem,
     section::{TagSection, TagSectionSignature},
-    shape_collection::{UnkShapeArrayEntry, UnkShapeArrayParent},
-    types::{
-        compound_shape::{hkpStaticCompoundShape, hkpStaticCompoundShapeInstance},
-        convex_vertices::{hkFourTransposedPoints, hkpConvexVerticesShape},
-    },
+    types::convex_vertices::hkFourTransposedPoints,
 };
-use glam::{Mat4, Quat, Vec3, Vec4};
-use itertools::Itertools;
 
 fn main() -> anyhow::Result<()> {
     let mut f = File::open(std::env::args().nth(1).unwrap())?;
     let path = PathBuf::from_str(&std::env::args().nth(1).unwrap())?;
-    let filename = path.file_stem().unwrap().to_string_lossy().to_string();
+    let _filename = path.file_stem().unwrap().to_string_lossy().to_string();
 
     // Destiny's havok files have 16 bytes of padding (?) at the start
     if f.read_be::<u32>()? == 0 {
@@ -45,7 +39,7 @@ fn main() -> anyhow::Result<()> {
     while f.stream_position()? < tag0.end() {
         match f.read_be::<TagSection>() {
             Ok(section) => {
-                let endian = if section.is_le {
+                let _endian = if section.is_le {
                     Endian::Little
                 } else {
                     Endian::Big
@@ -86,7 +80,7 @@ fn main() -> anyhow::Result<()> {
                                     println!("hkFourTransposedPoints");
 
                                     f.seek(SeekFrom::Start(data_offset + item.offset as u64))?;
-                                    let verts: Vec<hkFourTransposedPoints> = f.read_type_args(
+                                    let _verts: Vec<hkFourTransposedPoints> = f.read_type_args(
                                         endian,
                                         VecArgs {
                                             count: item.count as _,

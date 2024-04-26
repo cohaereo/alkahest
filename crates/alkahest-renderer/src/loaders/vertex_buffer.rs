@@ -1,6 +1,6 @@
 use alkahest_data::buffers::VertexBufferHeader;
 use alkahest_pm::package_manager;
-use anyhow::{ensure, Context};
+use anyhow::{Context};
 use destiny_pkg::TagHash;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::{

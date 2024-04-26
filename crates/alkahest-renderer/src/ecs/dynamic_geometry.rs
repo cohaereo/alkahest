@@ -1,28 +1,27 @@
 use alkahest_data::{
-    entity::{SDynamicMeshPart, SDynamicModel, Unk808072c5},
-    statics::{SStaticMesh, SStaticSpecialMesh},
+    entity::{SDynamicModel, Unk808072c5},
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
 use anyhow::ensure;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3, Vec4};
-use hecs::Entity;
+
 use tiger_parse::PackageManagerExt;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
+
 
 use crate::{
     ecs::{
-        static_geometry::{ModelBuffers, StaticInstances},
+        static_geometry::{ModelBuffers},
         transform::Transform,
         Scene,
     },
     gpu::{buffer::ConstantBuffer, GpuContext},
     handle::Handle,
-    loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
+    loaders::{AssetManager},
     tfx::{
         externs::ExternStorage,
-        scope::{ScopeInstances, ScopeRigidModel},
+        scope::{ScopeRigidModel},
         technique::Technique,
         view::RenderStageSubscriptions,
     },

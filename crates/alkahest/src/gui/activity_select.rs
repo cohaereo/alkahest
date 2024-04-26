@@ -12,7 +12,6 @@ use crate::{
     data::text::{GlobalStringmap, StringContainer, StringMapShared},
     maplist::MapList,
     resources::Resources,
-    ApplicationArgs,
 };
 
 #[derive(Debug)]
@@ -128,10 +127,10 @@ impl ActivityBrowser {
             }
         }
 
-        let mut maps: FxHashMap<String, Vec<(String, TagHash)>> = FxHashMap::default();
+        let maps: FxHashMap<String, Vec<(String, TagHash)>> = FxHashMap::default();
 
         for (m, _) in package_manager().get_all_by_reference(SBubbleParent::ID.unwrap()) {
-            let package_name = package_manager().package_paths[&m.pkg_id()].name.clone();
+            let _package_name = package_manager().package_paths[&m.pkg_id()].name.clone();
             todo!()
             // let Ok(map_name) = get_map_name(m, stringmap_global) else {
             //     error!("Failed to get map name for {m}");
@@ -200,7 +199,7 @@ impl ActivityBrowser {
                                 //     destination.destination_code.clone()
                                 // },
                                 |ui| {
-                                    for (activity_name, activity_hash) in &destination.activities {
+                                    for (activity_name, _activity_hash) in &destination.activities {
                                         if !self.show_ambient && activity_name.ends_with("_ambient")
                                         {
                                             continue;
@@ -210,8 +209,8 @@ impl ActivityBrowser {
                                             activity_name.insert_text(" ", 0);
                                         }
                                         if ui.selectable_label(false, &activity_name).clicked() {
-                                            let mut maplist = resources.get_mut::<MapList>();
-                                            let stringmap = resources.get::<StringMapShared>();
+                                            let _maplist = resources.get_mut::<MapList>();
+                                            let _stringmap = resources.get::<StringMapShared>();
                                             todo!();
                                             // let Ok(maps) =
                                             //     query_activity_maps(*activity_hash, &stringmap)

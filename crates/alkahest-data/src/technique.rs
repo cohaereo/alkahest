@@ -198,7 +198,7 @@ impl StateSelection {
     /// Creates a new selection, filling unset states in `other` with the default state in `self`
     pub fn select(&self, other: &StateSelection) -> StateSelection {
         let new_states =
-            (other.raw() >> 7 & 0x1010101) * 0xff & (self.raw() ^ other.raw()) ^ self.raw();
+            ((other.raw() >> 7 & 0x1010101) * 0xff) & (self.raw() ^ other.raw()) ^ self.raw();
 
         StateSelection::from_raw(new_states)
     }

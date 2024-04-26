@@ -1,6 +1,5 @@
 use std::{
-    mem::{size_of, transmute},
-    sync::Arc,
+    mem::{size_of},
 };
 
 use alkahest_data::dxgi::DxgiFormat;
@@ -8,14 +7,14 @@ use anyhow::Context;
 use glam::Vec3;
 use windows::Win32::Graphics::{
     Direct3D::{
-        WKPDID_D3DDebugObjectName, D3D11_SRV_DIMENSION_TEXTURE2D,
+        D3D11_SRV_DIMENSION_TEXTURE2D,
         D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
     },
     Direct3D11::*,
     Dxgi::Common::*,
 };
 
-use crate::{camera::Camera, gpu::SharedGpuContext, tfx::view::View, util::d3d::D3dResource};
+use crate::{camera::Camera, gpu::SharedGpuContext, util::d3d::D3dResource};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,

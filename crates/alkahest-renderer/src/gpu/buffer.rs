@@ -1,7 +1,6 @@
 use std::{
     fmt::Debug,
     marker::PhantomData,
-    mem::transmute,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -56,7 +55,7 @@ impl<T> ConstantBuffer<T> {
     }
 
     pub fn write(&self, data: &T) -> anyhow::Result<()> {
-        self.map(D3D11_MAP_WRITE_DISCARD, |mut map| unsafe {
+        self.map(D3D11_MAP_WRITE_DISCARD, |map| unsafe {
             map.pData
                 .copy_from_nonoverlapping(data as *const T as _, std::mem::size_of::<T>());
         })
@@ -64,7 +63,7 @@ impl<T> ConstantBuffer<T> {
 
     /// This function is unsafe because, unlike `write`, it doesn't check the size of the data
     pub unsafe fn write_array(&self, data: &[T]) -> anyhow::Result<()> {
-        self.map(D3D11_MAP_WRITE_DISCARD, |mut map| {
+        self.map(D3D11_MAP_WRITE_DISCARD, |map| {
             map.pData
                 .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
         })

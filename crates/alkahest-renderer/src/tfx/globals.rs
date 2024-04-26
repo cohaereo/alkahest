@@ -1,8 +1,7 @@
 use std::mem::MaybeUninit;
 
 use alkahest_data::{
-    render_globals::{SRenderGlobals, Unk808066ae, Unk808067a8, Unk808067ac},
-    technique::STechnique,
+    render_globals::{SRenderGlobals, Unk808066ae, Unk808067a8},
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
@@ -12,9 +11,8 @@ use tiger_parse::PackageManagerExt;
 
 use crate::{
     gpu::{texture::Texture, GpuContext, SharedGpuContext},
-    handle::Handle,
-    loaders::{technique::load_technique, AssetManager},
-    tfx::{bytecode::decompiler::TfxBytecodeDecompiler, scope::TfxScope, technique::Technique},
+    loaders::{technique::load_technique},
+    tfx::{scope::TfxScope, technique::Technique},
 };
 
 pub struct RenderGlobals {
@@ -27,11 +25,11 @@ pub struct RenderGlobals {
 impl RenderGlobals {
     pub fn load(gctx: SharedGpuContext) -> anyhow::Result<Self> {
         let data: SRenderGlobals = package_manager().read_named_tag_struct("render_globals")?;
-        let globs = &data.unk8.get(0).context("No render globals found")?.unk8.0;
+        let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
 
         Ok(Self {
-            scopes: GlobalScopes::load(gctx.clone(), &globs),
-            pipelines: GlobalPipelines::load(gctx.clone(), &globs),
+            scopes: GlobalScopes::load(gctx.clone(), globs),
+            pipelines: GlobalPipelines::load(gctx.clone(), globs),
             textures: GlobalTextures::load(&gctx, &globs.unk30),
         })
     }
@@ -423,6 +421,6 @@ impl GlobalPipelines {
         let probes_index = if probes { 1 } else { 0 };
         let relighting_index = if relighting { 1 } else { 0 };
 
-        &pipeline_list[shape_index * 8 + alpha_index * 4 + probes_index * 2 + relighting_index]
+        pipeline_list[shape_index * 8 + alpha_index * 4 + probes_index * 2 + relighting_index]
     }
 }

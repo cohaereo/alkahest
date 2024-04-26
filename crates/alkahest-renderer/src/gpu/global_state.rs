@@ -1,9 +1,9 @@
 use std::{ffi::CStr, fmt::Write};
 
 use alkahest_data::dxgi::DxgiFormat;
-use anyhow::{ensure, Context};
-use smallvec::{smallvec_inline, SmallVec};
-use tiger_parse::tiger_tag;
+use anyhow::{Context};
+
+
 use windows::{
     core::{s, PCSTR},
     Win32::{
@@ -20,7 +20,7 @@ use windows::{
                 D3D11_BLEND_SRC1_COLOR, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_SRC_COLOR,
                 D3D11_BLEND_ZERO, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CULL_BACK, D3D11_CULL_FRONT,
                 D3D11_CULL_MODE, D3D11_CULL_NONE, D3D11_FILL_MODE, D3D11_FILL_SOLID,
-                D3D11_FILL_WIREFRAME, D3D11_INPUT_CLASSIFICATION, D3D11_INPUT_ELEMENT_DESC,
+                D3D11_FILL_WIREFRAME, D3D11_INPUT_ELEMENT_DESC,
                 D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
             },
             Dxgi::Common::DXGI_FORMAT,
@@ -43,10 +43,10 @@ impl RenderStates {
             unsafe {
                 let mut render_targets = desc.RenderTarget.to_vec();
                 render_targets.extend([
-                    desc.RenderTarget[3].clone(),
-                    desc.RenderTarget[3].clone(),
-                    desc.RenderTarget[3].clone(),
-                    desc.RenderTarget[3].clone(),
+                    desc.RenderTarget[3],
+                    desc.RenderTarget[3],
+                    desc.RenderTarget[3],
+                    desc.RenderTarget[3],
                 ]);
 
                 device.CreateBlendState(
@@ -143,7 +143,7 @@ impl RenderStates {
             let mut shader_blob = None;
             D3DCompile(
                 shader_input.as_ptr() as _,
-                shader_input.len() as usize,
+                shader_input.len(),
                 PCSTR::from_raw(c"create_vertex_declaration_inline".as_ptr() as _),
                 None,
                 None,

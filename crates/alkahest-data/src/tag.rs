@@ -112,9 +112,9 @@ impl From<ExtendedHash> for TagHash {
     }
 }
 
-impl Into<ExtendedHash> for TagHash {
-    fn into(self) -> ExtendedHash {
-        ExtendedHash::Hash32(self)
+impl From<TagHash> for ExtendedHash {
+    fn from(val: TagHash) -> Self {
+        ExtendedHash::Hash32(val)
     }
 }
 

@@ -2,23 +2,15 @@ use std::{mem::transmute, sync::Arc, time::Duration};
 
 use alkahest_renderer::gpu::GpuContext;
 use game_detector::InstalledGame;
-use windows::{
-    core::HRESULT,
-    Win32::{
-        Foundation::{DXGI_STATUS_OCCLUDED, S_OK},
-        Graphics::{
-            Direct3D11::ID3D11Texture2D,
-            Dxgi::{
-                Common::DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL,
-            },
-        },
-    },
+use windows::Win32::{
+    Foundation::{DXGI_STATUS_OCCLUDED, S_OK},
+    Graphics::Dxgi::{DXGI_PRESENT_TEST, DXGI_SWAP_EFFECT_SEQUENTIAL},
 };
 use winit::{
     dpi::PhysicalSize,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
-    platform::{run_on_demand::EventLoopExtRunOnDemand, windows::WindowBuilderExtWindows},
+    platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 
 use crate::gui::{

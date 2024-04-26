@@ -1,5 +1,6 @@
-use egui::{epaint::ahash::HashMap, Color32, ImageData, TextureId, TexturesDelta};
 use std::{mem::size_of, slice::from_raw_parts_mut};
+
+use egui::{epaint::ahash::HashMap, Color32, ImageData, TextureId, TexturesDelta};
 use windows::Win32::Graphics::{
     Direct3D::D3D11_SRV_DIMENSION_TEXTURE2D,
     Direct3D11::{

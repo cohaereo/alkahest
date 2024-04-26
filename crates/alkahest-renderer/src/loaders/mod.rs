@@ -1,8 +1,8 @@
 use crossbeam::channel::{Receiver, Sender};
 use destiny_pkg::TagHash;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::{FxHashSet};
 use strum::AsRefStr;
-use windows::Win32::Graphics::Direct3D11::{ID3D11Buffer, ID3D11SamplerState};
+
 
 use crate::{
     gpu::{texture::Texture, SharedGpuContext},

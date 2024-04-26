@@ -7,7 +7,7 @@ use super::error::ErrorAlert;
 
 pub fn save_dds_dialog(data: &[u8], filename: String) {
     let data = data.to_vec();
-    tokio::spawn(async move {
+    std::thread::spawn(move || {
         let dialog_result = native_dialog::FileDialog::new()
             .add_filter("DirectX Texture", &["dds"])
             .set_filename(&format!("{filename}.dds"))

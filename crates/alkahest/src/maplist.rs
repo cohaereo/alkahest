@@ -1,10 +1,6 @@
-use std::sync::Arc;
-
-use alkahest_renderer::ecs::{components::Global, Scene};
-use anyhow::Context;
+use alkahest_renderer::ecs::Scene;
 use destiny_pkg::TagHash;
 use poll_promise::Promise;
-use rustc_hash::FxHashMap;
 
 use crate::resources::Resources;
 
@@ -34,7 +30,7 @@ impl Map {
         if let Some(promise) = self.promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
-                    Ok(mut map) => {
+                    Ok(_map) => {
                         // let mut ent_list = vec![];
 
                         // // Get all non-global entities
@@ -65,7 +61,7 @@ impl Map {
         // }
     }
 
-    fn start_load(&mut self, resources: &Resources) {
+    fn start_load(&mut self, _resources: &Resources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
                 "Attempted to load map {}, but it is already loading or loaded",

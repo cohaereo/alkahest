@@ -62,7 +62,7 @@ where
 #[macro_export]
 macro_rules! config {
     () => {
-        (crate::config::CONFIGURATION.read())
+        ($crate::config::CONFIGURATION.read())
     };
 }
 

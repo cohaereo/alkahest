@@ -1,6 +1,6 @@
 use winit::{
     event::{KeyEvent, WindowEvent},
-    keyboard::{KeyCode, ModifiersKeyState, PhysicalKey},
+    keyboard::{KeyCode, PhysicalKey},
 };
 
 pub type Key = KeyCode;

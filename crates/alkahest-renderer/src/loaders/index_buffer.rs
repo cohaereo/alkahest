@@ -1,9 +1,12 @@
 use alkahest_data::{buffers::IndexBufferHeader, dxgi::DxgiFormat};
 use alkahest_pm::package_manager;
-use anyhow::{ensure, Context};
+use anyhow::{Context};
 use destiny_pkg::TagHash;
 use tiger_parse::PackageManagerExt;
-use windows::Win32::Graphics::Direct3D11::{ID3D11Buffer, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA, D3D11_USAGE_DEFAULT, D3D11_USAGE_IMMUTABLE, D3D11_BIND_INDEX_BUFFER};
+use windows::Win32::Graphics::Direct3D11::{
+    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BUFFER_DESC,
+    D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
+};
 
 use crate::gpu::SharedGpuContext;
 

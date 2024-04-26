@@ -6,7 +6,7 @@ use std::{
 use alkahest_data::{
     entity::{SEntity, Unk808072c5},
     map::{
-        SBubbleParent, SLightCollection, SMapContainer, SMapDataTable, SShadowingLight, STerrain,
+        SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight,
         Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b,
     },
 };
@@ -16,7 +16,7 @@ use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
 use itertools::multizip;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::{FxHashSet};
 use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 
 use crate::{
@@ -76,13 +76,13 @@ pub fn load_map(
 #[allow(clippy::too_many_arguments)]
 fn load_datatable_into_scene<R: Read + Seek>(
     table: &SMapDataTable,
-    table_hash: TagHash,
+    _table_hash: TagHash,
     table_data: &mut R,
     scene: &mut Scene,
     gctx: SharedGpuContext,
     asset_manager: &mut AssetManager,
-    resource_origin: ResourceOriginType,
-    group_id: u32,
+    _resource_origin: ResourceOriginType,
+    _group_id: u32,
     // stringmap: StringMapShared,
     // entity_worldid_name_map: &FxHashMap<u64, String>,
 ) -> anyhow::Result<()> {
@@ -220,7 +220,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
-                for (i, (transform, light, bounds)) in
+                for (_i, (transform, light, bounds)) in
                     multizip((header.unk40, header.unk30, &header.occlusion_bounds.bounds))
                         .enumerate()
                 {

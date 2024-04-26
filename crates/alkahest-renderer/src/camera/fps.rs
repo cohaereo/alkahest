@@ -1,4 +1,4 @@
-use glam::{Mat4, Quat, Vec2, Vec3, Vec3Swizzles};
+use glam::{Mat4, Quat, Vec2, Vec3};
 
 use super::{tween::Tween, CameraController};
 use crate::{input::Key, util::Vec3Ext};

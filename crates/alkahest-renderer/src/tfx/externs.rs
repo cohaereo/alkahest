@@ -1,16 +1,16 @@
 use std::{fmt::Debug, mem::transmute};
 
-use anyhow::Context;
+
 use binrw::binread;
-use destiny_pkg::TagHash;
+
 use field_access::FieldAccess;
 use glam::{Mat4, Vec4};
 use parking_lot::RwLock;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::{FxHashMap};
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
-use crate::{gpu::texture::Texture, handle::Handle, loaders::AssetManager, util::short_type_name};
+use crate::{loaders::AssetManager, util::short_type_name};
 
 #[derive(Default, Clone)]
 pub enum TextureView {
@@ -22,7 +22,7 @@ pub enum TextureView {
 }
 
 impl TextureView {
-    pub fn view(&self, am: &AssetManager) -> Option<ID3D11ShaderResourceView> {
+    pub fn view(&self, _am: &AssetManager) -> Option<ID3D11ShaderResourceView> {
         match self {
             TextureView::Null => None,
             TextureView::RawSRV(v) => Some(v.clone()),

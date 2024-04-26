@@ -10,7 +10,7 @@ use destiny_havok::{
     index::IndexItem,
     section::{TagSection, TagSectionSignature},
 };
-use glam::{Mat4, Quat, Vec3, Vec4};
+use glam::{Mat4, Vec3, Vec4};
 use itertools::Itertools;
 
 fn main() -> anyhow::Result<()> {
@@ -39,7 +39,7 @@ fn main() -> anyhow::Result<()> {
     while f.stream_position()? < tag0.end() {
         match f.read_be::<TagSection>() {
             Ok(section) => {
-                let endian = if section.is_le {
+                let _endian = if section.is_le {
                     Endian::Little
                 } else {
                     Endian::Big
@@ -66,7 +66,7 @@ fn main() -> anyhow::Result<()> {
 
                         let mut points: Vec<Vec3> = vec![];
                         // let mut base_transform = Mat4::IDENTITY;
-                        let mut current_transform = Mat4::IDENTITY;
+                        let current_transform = Mat4::IDENTITY;
                         for it in &items {
                             println!("{it:x?} 0x{:x}", data_offset + it.offset as u64);
 
@@ -76,8 +76,8 @@ fn main() -> anyhow::Result<()> {
                                         f.seek(SeekFrom::Start(
                                             data_offset + it.offset as u64 + 0x50,
                                         ))?;
-                                        let scale: [f32; 4] = f.read_type(endian)?;
-                                        let translation: [f32; 4] = f.read_type(endian)?;
+                                        let _scale: [f32; 4] = f.read_type(endian)?;
+                                        let _translation: [f32; 4] = f.read_type(endian)?;
                                         // dbg!(&scale);
                                         // dbg!(&translation);
 

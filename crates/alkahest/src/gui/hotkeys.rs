@@ -1,5 +1,3 @@
-use alkahest_renderer::ecs::{components::Hidden, resources::SelectedEntity};
-
 use crate::resources::Resources;
 
 pub const SHORTCUT_DELETE: egui::KeyboardShortcut =
@@ -33,7 +31,7 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     }
 }
 
-fn hide_unselected(resources: &mut Resources) {
+fn hide_unselected(_resources: &mut Resources) {
     // TODO(cohae): Reimplement once we have maps again
     // let selected_entity = resources.get::<SelectedEntity>().select;
     // let mut maps = resources.get_mut::<MapList>();
@@ -50,7 +48,7 @@ fn hide_unselected(resources: &mut Resources) {
     // }
 }
 
-fn unhide_all(resources: &mut Resources) {
+fn unhide_all(_resources: &mut Resources) {
     // TODO(cohae): Reimplement once we have maps again
     // let maps = resources.get::<MapList>();
     // if let Some(map) = maps.current_map() {

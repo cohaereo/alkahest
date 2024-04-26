@@ -101,7 +101,7 @@ pub enum TfxShaderStage {
 
 impl TfxShaderStage {
     pub fn from_tfx_value(value: u8) -> Result<TfxShaderStage, String> {
-        match (value >> 5) {
+        match value >> 5 {
             1 => Ok(TfxShaderStage::Pixel),
             2 => Ok(TfxShaderStage::Vertex),
             3 => Ok(TfxShaderStage::Geometry),

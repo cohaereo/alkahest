@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use alkahest_data::tfx::TfxShaderStage;
-use anyhow::Context;
+
 use binrw::{binread, BinReaderExt, Endian};
 use glam::Vec4;
 
