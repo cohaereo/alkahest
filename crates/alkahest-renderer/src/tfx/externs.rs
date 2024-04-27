@@ -1,12 +1,10 @@
 use std::{fmt::Debug, mem::transmute};
 
-
 use binrw::binread;
-
 use field_access::FieldAccess;
 use glam::{Mat4, Vec4};
 use parking_lot::RwLock;
-use rustc_hash::{FxHashMap};
+use rustc_hash::FxHashMap;
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
@@ -437,7 +435,7 @@ extern_struct! {
         0xd0 => unkd0: Vec4 > unimplemented(false),
         0xe0 => unke0: Vec4 > unimplemented(false),
         0xf0 => unkf0: Vec4 > unimplemented(false),
-        0x100 => unk100: Vec4 > unimplemented(false),
+        0x100 => unk100: Vec4,
         0x110 => unk110: f32 > unimplemented(false),
         0x114 => unk114: f32 > unimplemented(false),
         0x118 => unk118: f32 > unimplemented(false),

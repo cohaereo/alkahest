@@ -6,8 +6,12 @@ use alkahest_renderer::{
     ecs::{
         dynamic_geometry::{draw_dynamic_model_system, update_dynamic_model_system},
         light::draw_light_system,
-        static_geometry::{draw_static_instances_system, update_static_instances_system},
+        static_geometry::{
+            draw_static_instances_system, update_static_instances_system, StaticModel,
+            StaticModelSingle,
+        },
         terrain::draw_terrain_patches_system,
+        transform::Transform,
         Scene,
     },
     gpu::{buffer::ConstantBuffer, GpuContext},
@@ -107,15 +111,23 @@ impl AlkahestApp {
         let frame_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
         let transparent_advanced_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
 
-        let map = load_map(
-            gctx.clone(),
-            &mut asset_manager,
-            resources
-                .get::<ApplicationArgs>()
-                .map
-                .unwrap_or(TagHash(u32::from_be(0x217EBB80))),
-        )
-        .unwrap();
+        let map = if let Some(map_hash) = resources.get::<ApplicationArgs>().map {
+            load_map(gctx.clone(), &mut asset_manager, map_hash).unwrap()
+        } else {
+            let mut scene = Scene::new();
+
+            scene.spawn((
+                Transform::default(),
+                StaticModelSingle::load(
+                    gctx.clone(),
+                    &mut asset_manager,
+                    TagHash(u32::from_be(0x8c3bd580)),
+                )
+                .unwrap(),
+            ));
+
+            scene
+        };
 
         update_static_instances_system(&map);
         update_dynamic_model_system(&map);
@@ -499,7 +511,7 @@ impl AlkahestApp {
                                 Some(8),
                                 Some(0),
                                 Some(2),
-                                Some(0),
+                                Some(2),
                             ));
 
                             unsafe {

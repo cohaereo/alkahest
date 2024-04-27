@@ -405,7 +405,8 @@ pub struct SShadowingLight {
     pub unke8: TagHash, // Unk80806da1
     pub unkec: TagHash, // Unk80806da1
 
-    pub unkd0: [u32; 8],
+    pub unkf0: [f32; 5],
+    pub unk104: [u8; 12],
 }
 
 #[derive(Clone, Debug)]

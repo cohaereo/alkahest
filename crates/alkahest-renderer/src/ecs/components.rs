@@ -1,11 +1,9 @@
-
-
 /// Tiger entity world ID
 #[derive(Copy, Clone)]
 pub struct EntityWorldId(pub u64);
 
 #[derive(strum::Display, Copy, Clone, PartialEq, Eq)]
-pub enum ResourceOriginType {
+pub enum ResourceOrigin {
     Map,
 
     Activity,

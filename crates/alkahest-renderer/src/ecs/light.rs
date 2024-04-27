@@ -1,12 +1,9 @@
-
-
 use alkahest_data::{
     geometry::EPrimitiveType,
     map::{SLight, SShadowingLight},
     occlusion::AABB,
 };
 use anyhow::Context;
-
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -14,13 +11,13 @@ use genmesh::{
 use glam::{Mat4, Vec3};
 use windows::Win32::Graphics::{
     Direct3D11::{
-        ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER,
-        D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_COMPARISON_ALWAYS,
-        D3D11_DEPTH_STENCILOP_DESC, D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_STENCIL_OP_DECR,
+        ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
+        D3D11_BUFFER_DESC, D3D11_COMPARISON_ALWAYS, D3D11_DEPTH_STENCILOP_DESC,
+        D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_STENCIL_OP_DECR,
         D3D11_STENCIL_OP_INCR, D3D11_STENCIL_OP_KEEP, D3D11_SUBRESOURCE_DATA,
         D3D11_USAGE_IMMUTABLE,
     },
-    Dxgi::Common::{DXGI_FORMAT_R16_UINT},
+    Dxgi::Common::DXGI_FORMAT_R16_UINT,
 };
 
 use crate::{
@@ -235,7 +232,6 @@ pub fn draw_light_system(
             light.unk60
         };
 
-        // let unk_camera_reversal = camera.world_to_camera; // Mat4::from_translation(camera.position()).inverse();
         let transform_mat = transform.to_mat4();
         externs.simple_geometry = Some(externs::SimpleGeometry {
             transform: camera.world_to_projective * (transform_mat * light_scale),
@@ -246,6 +242,7 @@ pub fn draw_light_system(
             unk40: Mat4::from_scale(Vec3::splat(0.15)),
             unk80: transform_mat,
             unkc0: transform.translation.extend(1.0),
+            unk100: light.unk50,
             unk110: 1.0,
             unk114: 1.0,
             unk118: 1.0,
@@ -258,7 +255,7 @@ pub fn draw_light_system(
         light_renderer.draw(gctx, asset_manager, externs);
     }
 
-    for (_, (transform, light_renderer, _light)) in scene
+    for (_, (transform, light_renderer, light)) in scene
         .query::<(&Transform, &LightRenderer, &SShadowingLight)>()
         .iter()
     {
@@ -274,6 +271,7 @@ pub fn draw_light_system(
             unk40: Mat4::from_scale(Vec3::splat(0.15)),
             unk80: transform_mat,
             unkc0: transform.translation.extend(1.0),
+            unk100: light.unk50,
             unk110: 1.0,
             unk114: 1.0,
             unk118: 1.0,

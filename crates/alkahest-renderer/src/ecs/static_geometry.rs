@@ -11,7 +11,7 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
     ecs::{transform::Transform, Scene},
-    gpu::{buffer::ConstantBuffer, GpuContext},
+    gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
     tfx::{externs::ExternStorage, scope::ScopeInstances, technique::Technique},
@@ -60,13 +60,14 @@ struct SpecialMesh {
 pub struct StaticModel {
     pub model: SStaticMesh,
     pub materials: Vec<Handle<Technique>>,
+    pub hash: TagHash,
     buffers: Vec<ModelBuffers>,
     special_meshes: Vec<SpecialMesh>,
 }
 
 impl StaticModel {
-    pub fn load(am: &mut AssetManager, tag: TagHash) -> anyhow::Result<Self> {
-        let model = package_manager().read_tag_struct::<SStaticMesh>(tag)?;
+    pub fn load(am: &mut AssetManager, hash: TagHash) -> anyhow::Result<Self> {
+        let model = package_manager().read_tag_struct::<SStaticMesh>(hash)?;
         let materials = model
             .techniques
             .iter()
@@ -103,6 +104,7 @@ impl StaticModel {
             .collect();
 
         Ok(Self {
+            hash,
             model,
             materials,
             buffers,
@@ -162,7 +164,7 @@ impl StaticModel {
             }
         }
 
-        self.draw_special_meshes(asset_manager, externs, gctx, render_stage);
+        self.draw_special_meshes(asset_manager, externs, gctx, render_stage, instances_count);
     }
 
     fn draw_special_meshes(
@@ -171,6 +173,7 @@ impl StaticModel {
         externs: &ExternStorage,
         gctx: &GpuContext,
         render_stage: TfxRenderStage,
+        instances_count: u32,
     ) {
         profiling::scope!("StaticModel::draw_special_meshes");
         for mesh in self
@@ -194,9 +197,61 @@ impl StaticModel {
             gctx.set_input_topology(mesh.mesh.primitive_type);
 
             unsafe {
-                gctx.context()
-                    .DrawIndexed(mesh.mesh.index_count, mesh.mesh.index_start, 0);
+                gctx.context().DrawIndexedInstanced(
+                    mesh.mesh.index_count,
+                    instances_count,
+                    mesh.mesh.index_start,
+                    0,
+                    0,
+                );
             }
+        }
+    }
+}
+
+/// Singular static model
+pub struct StaticModelSingle {
+    pub model: StaticModel,
+    pub cbuffer: ConstantBuffer<u8>,
+}
+
+impl StaticModelSingle {
+    pub fn load(
+        gctx: SharedGpuContext,
+        am: &mut AssetManager,
+        tag: TagHash,
+    ) -> anyhow::Result<Self> {
+        let model = StaticModel::load(am, tag)?;
+        let cbuffer = ConstantBuffer::create_array_init(gctx, &vec![0u8; 32 + 64])?;
+        Ok(Self { model, cbuffer })
+    }
+
+    pub fn update_cbuffer(&self, transform: &Transform) {
+        profiling::scope!("StaticInstances::update_cbuffer");
+        let mat = transform.to_mat4().transpose();
+        let mat = Mat4::from_cols(
+            mat.x_axis.truncate().extend(transform.translation.x),
+            mat.y_axis.truncate().extend(transform.translation.y),
+            mat.z_axis.truncate().extend(transform.translation.z),
+            mat.w_axis,
+        );
+
+        unsafe {
+            let mesh_data = &self.model.model.opaque_meshes;
+            self.cbuffer
+                .write_array(
+                    ScopeInstances {
+                        mesh_offset: mesh_data.mesh_offset,
+                        mesh_scale: mesh_data.mesh_scale,
+                        uv_scale: mesh_data.texture_coordinate_scale,
+                        uv_offset: mesh_data.texture_coordinate_offset,
+                        max_color_index: mesh_data.max_color_index,
+                        transforms: vec![mat],
+                    }
+                    .write()
+                    .as_slice(),
+                )
+                .unwrap()
         }
     }
 }
@@ -272,11 +327,21 @@ pub fn draw_static_instances_system(
             instances.instances.len() as u32,
         );
     }
+    for (_, instances) in scene.query::<&StaticModelSingle>().iter() {
+        // TODO(cohae): We want to pull the slot number from the `instances` scope
+        instances.cbuffer.bind(1, TfxShaderStage::Vertex);
+        instances
+            .model
+            .draw(asset_manager, externs, gctx, render_stage, 1);
+    }
 }
 
 pub fn update_static_instances_system(scene: &Scene) {
     profiling::scope!("update_static_instances_system");
     for (_, instances) in scene.query::<&StaticInstances>().iter() {
         instances.update_cbuffer(scene);
+    }
+    for (_, (transform, model)) in scene.query::<(&Transform, &StaticModelSingle)>().iter() {
+        model.update_cbuffer(transform);
     }
 }

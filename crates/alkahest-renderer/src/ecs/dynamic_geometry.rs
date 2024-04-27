@@ -6,23 +6,15 @@ use alkahest_pm::package_manager;
 use anyhow::ensure;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3, Vec4};
-
 use tiger_parse::PackageManagerExt;
 
-
 use crate::{
-    ecs::{
-        static_geometry::{ModelBuffers},
-        transform::Transform,
-        Scene,
-    },
+    ecs::{static_geometry::ModelBuffers, transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, GpuContext},
     handle::Handle,
-    loaders::{AssetManager},
+    loaders::AssetManager,
     tfx::{
-        externs::ExternStorage,
-        scope::{ScopeRigidModel},
-        technique::Technique,
+        externs::ExternStorage, scope::ScopeRigidModel, technique::Technique,
         view::RenderStageSubscriptions,
     },
 };

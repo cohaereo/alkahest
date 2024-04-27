@@ -6,8 +6,8 @@ use std::{
 use alkahest_data::{
     entity::{SEntity, Unk808072c5},
     map::{
-        SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight,
-        Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b,
+        SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight, Unk808068d4, Unk80806aa7,
+        Unk80806ef4, Unk8080714b,
     },
 };
 use alkahest_pm::package_manager;
@@ -16,12 +16,12 @@ use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
 use itertools::multizip;
-use rustc_hash::{FxHashSet};
+use rustc_hash::FxHashSet;
 use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 
 use crate::{
     ecs::{
-        components::ResourceOriginType,
+        components::ResourceOrigin,
         dynamic_geometry::{DynamicModel, DynamicModelComponent},
         light::LightRenderer,
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
@@ -63,7 +63,7 @@ pub fn load_map(
             &mut scene,
             gctx.clone(),
             asset_manager,
-            ResourceOriginType::Map,
+            ResourceOrigin::Map,
             0,
         )
         .context("Failed to load datatable")?;
@@ -81,10 +81,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
     scene: &mut Scene,
     gctx: SharedGpuContext,
     asset_manager: &mut AssetManager,
-    _resource_origin: ResourceOriginType,
+    _resource_origin: ResourceOrigin,
     _group_id: u32,
-    // stringmap: StringMapShared,
-    // entity_worldid_name_map: &FxHashMap<u64, String>,
 ) -> anyhow::Result<()> {
     for data in &table.data_entries {
         let transform = Transform {
@@ -251,7 +249,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
                 let tag: TagHash = table_data.read_le().unwrap();
+                println!("light {tag}");
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
+                println!("{light:#X?}");
 
                 scene.spawn((
                     transform,
