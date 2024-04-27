@@ -399,6 +399,16 @@ impl AlkahestApp {
                                     .into(),
                                 ..ExternDefault::extern_default()
                             });
+                            
+                            let water_existing = externs
+                                .water
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or(ExternDefault::extern_default());
+                            
+                            externs.water = Some(externs::Water {
+                                ..water_existing
+                            });
 
                             let atmos_existing = externs
                                 .atmosphere

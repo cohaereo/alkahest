@@ -1,0 +1,7 @@
+{
+    "hlsl.preprocessorDefinitions": {},
+    "hlsl.additionalIncludeDirectories": [
+        "./crates/alkahest-renderer/assets/shaders",
+        "."
+    ]
+}

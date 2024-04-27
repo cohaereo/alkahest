@@ -249,9 +249,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
                 let tag: TagHash = table_data.read_le().unwrap();
-                println!("light {tag}");
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
-                println!("{light:#X?}");
 
                 scene.spawn((
                     transform,

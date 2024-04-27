@@ -68,6 +68,7 @@ pub struct ExternStorage {
     pub decal: Option<Decal>,
     pub simple_geometry: Option<SimpleGeometry>,
     pub atmosphere: Option<Atmosphere>,
+    pub water: Option<Water>,
 
     pub errors: RwLock<FxHashMap<String, TfxExpressionError>>,
 }
@@ -92,7 +93,7 @@ impl ExternStorage {
                 self.errors
                     .write()
                     .entry(format!(
-                        "Extern field @ 0x{offset:X} for {ext:?} is unimplemented (type {})",
+                        "Extern field {ext:?}@0x{offset:X} is unimplemented (type {})",
                         short_type_name::<T>()
                     ))
                     .or_insert_with(|| TfxExpressionError {
@@ -111,7 +112,7 @@ impl ExternStorage {
                 self.errors
                     .write()
                     .entry(format!(
-                        "Extern field @ 0x{offset:X} for {ext:?} has invalid type (expected {})",
+                        "Extern field {ext:?}@0x{offset:X} has invalid type (expected {})",
                         short_type_name::<T>()
                     ))
                     .or_insert_with(|| TfxExpressionError {
@@ -196,6 +197,7 @@ impl ExternStorage {
             Decal => self.decal,
             SimpleGeometry => self.simple_geometry,
             Atmosphere => self.atmosphere,
+            Water => self.water,
         }
     }
 
@@ -224,7 +226,8 @@ impl ExternStorage {
             RigidModel,
             Decal,
             SimpleGeometry,
-            Atmosphere
+            Atmosphere,
+            Water
         }
     }
 
@@ -252,6 +255,7 @@ impl ExternStorage {
             Decal => self.decal,
             SimpleGeometry => self.simple_geometry,
             Atmosphere => self.atmosphere,
+            Water => self.water,
         }
     }
 }
@@ -376,6 +380,7 @@ extern_struct! {
         0x180 => unk180: Vec4 > unimplemented(true),
         0x190 => unk190: f32 > unimplemented(true),
         0x194 => unk194: f32 > unimplemented(true),
+        // When not zero, causes a weird noise pattern on cutout textures
         0x1a0 => unk1a0: Vec4 > unimplemented(false) > default(Vec4::ZERO),
         0x1b0 => unk1b0: Vec4 > unimplemented(false),
         0x1e0 => unk1e0: TextureView > unimplemented(true),
@@ -512,6 +517,19 @@ extern_struct! {
         0x1dc => unk1dc: f32 > unimplemented(true),
         0x1e0 => unk1e0: f32 > unimplemented(true),
         0x1f0 => unk1f0: Vec4 > unimplemented(true),
+    }
+}
+
+extern_struct! {
+    struct Water("water") {
+        0x00 => unk00: TextureView > unimplemented(true),
+        0x08 => unk08: TextureView > unimplemented(true),
+        0x18 => unk18: TextureView > unimplemented(true),
+        0x28 => unk28: TextureView > unimplemented(true),
+        0x30 => unk30: TextureView > unimplemented(true),
+        0x40 => unk40: Vec4 > unimplemented(true),
+        0x50 => unk50: Vec4 > unimplemented(true),
+        0x70 => unk70: f32 > unimplemented(true),
     }
 }
 

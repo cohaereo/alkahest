@@ -5,6 +5,7 @@ use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
 use field_access::FieldAccess;
 use glam::{Mat4, Vec4};
+use itertools::Itertools;
 use strum::IntoEnumIterator;
 use winit::window::Window;
 
@@ -59,7 +60,11 @@ impl GuiView for TfxErrorViewer {
                             });
                         })
                         .body(|mut body| {
-                            for (message, error) in externs.errors.read().iter() {
+                            let errors = externs.errors.read();
+                            let mut errors = errors.iter().collect_vec();
+                            errors.sort_by_key(|(msg, _)| *msg);
+
+                            for (message, error) in errors {
                                 body.row(20.0, |mut row| {
                                     row.col(|ui| {
                                         let (label, background_color) = match error.error_type {
@@ -133,7 +138,7 @@ impl GuiView for TfxExternEditor {
             // TfxExtern::Smaa,
             // TfxExtern::DepthOfField,
             // TfxExtern::MinmaxDepth,
-            // TfxExtern::Water,
+            TfxExtern::Water,
             // TfxExtern::GammaControl,
             // TfxExtern::Distortion,
             // TfxExtern::VolumetricsPass,
