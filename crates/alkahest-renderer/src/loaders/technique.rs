@@ -1,5 +1,3 @@
-
-
 use alkahest_data::{
     technique::{STechnique, STechniqueShader},
     tfx::TfxShaderStage,
@@ -25,21 +23,25 @@ pub fn load_technique(gctx: SharedGpuContext, hash: TagHash) -> anyhow::Result<T
         stage_vertex: load_technique_stage(
             gctx.clone(),
             &stech.shader_vertex,
+            hash,
             TfxShaderStage::Vertex,
         )?,
         stage_geometry: load_technique_stage(
             gctx.clone(),
             &stech.shader_geometry,
+            hash,
             TfxShaderStage::Geometry,
         )?,
         stage_pixel: load_technique_stage(
             gctx.clone(),
             &stech.shader_pixel,
+            hash,
             TfxShaderStage::Pixel,
         )?,
         stage_compute: load_technique_stage(
             gctx.clone(),
             &stech.shader_compute,
+            hash,
             TfxShaderStage::Compute,
         )?,
         tech: stech,
@@ -49,6 +51,7 @@ pub fn load_technique(gctx: SharedGpuContext, hash: TagHash) -> anyhow::Result<T
 fn load_technique_stage(
     gctx: SharedGpuContext,
     shader: &STechniqueShader,
+    technique_hash: TagHash,
     stage: TfxShaderStage,
 ) -> anyhow::Result<Option<TechniqueStage>> {
     if shader.shader.is_none() {
@@ -97,7 +100,13 @@ fn load_technique_stage(
         samplers: vec![],
         textures: vec![],
         shader_module: ShaderModule::load(&gctx, shader.shader)
-            .with_context(|| format!("Failed to load shader module {}", shader.shader))?,
+            .with_context(|| format!("Failed to load shader module {}", shader.shader))?
+            .with_name(&format!(
+                "{} {} (Technique {})",
+                stage.short_name(),
+                shader.shader,
+                technique_hash
+            )),
 
         cbuffer,
         bytecode,

@@ -111,6 +111,17 @@ impl TfxShaderStage {
             _ => Err(format!("Invalid TFX shader stage: {}", value)),
         }
     }
+    
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            TfxShaderStage::Pixel => "PS",
+            TfxShaderStage::Vertex => "VS",
+            TfxShaderStage::Geometry => "GS",
+            TfxShaderStage::Hull => "HS",
+            TfxShaderStage::Compute => "CS",
+            TfxShaderStage::Domain => "DS",
+        }
+    }
 }
 
 impl TigerReadable for TfxShaderStage {

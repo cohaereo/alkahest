@@ -8,9 +8,12 @@ use alkahest_pm::package_manager;
 use anyhow::{ensure, Context};
 use destiny_pkg::TagHash;
 use glam::Vec4;
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
-    ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
+use windows::{
+    core::GUID,
+    Win32::Graphics::Direct3D11::{
+        ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
+        ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
+    },
 };
 
 use crate::{
@@ -18,6 +21,7 @@ use crate::{
     handle::Handle,
     loaders::AssetManager,
     tfx::{bytecode::interpreter::TfxBytecodeInterpreter, externs::ExternStorage},
+    util::d3d::D3dResource,
 };
 
 pub struct Technique {
@@ -223,6 +227,22 @@ impl ShaderModule {
                 ShaderModule::Domain(shader) => gctx.context().DSSetShader(shader, None),
                 ShaderModule::Compute(shader) => gctx.context().CSSetShader(shader, None),
             }
+        }
+    }
+    
+    pub fn with_name(self, name: &str) -> Self {
+        self.set_name(name);
+        self
+    }
+
+    pub fn set_name(&self, name: &str) {
+        match self {
+            ShaderModule::Vertex(shader) => shader.set_debug_name(name),
+            ShaderModule::Pixel(shader) => shader.set_debug_name(name),
+            ShaderModule::Geometry(shader) => shader.set_debug_name(name),
+            ShaderModule::Hull(shader) => shader.set_debug_name(name),
+            ShaderModule::Domain(shader) => shader.set_debug_name(name),
+            ShaderModule::Compute(shader) => shader.set_debug_name(name),
         }
     }
 

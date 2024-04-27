@@ -456,11 +456,11 @@ extern_struct! {
         0x10 => unk10: TextureView > unimplemented(false), // atmos_ss_near_lookup(_low_res)
         0x18 => unk18: TextureView > unimplemented(false), // atmos_ss_near_lookup_downsampled
         0x20 => unk20: TextureView > unimplemented(false),
-        0x28 => unk28: TextureView > unimplemented(false),
-        0x30 => unk30: TextureView > unimplemented(false),
-        0x38 => unk38: TextureView > unimplemented(false),
-        0x40 => unk40: TextureView > unimplemented(false),
-        0x48 => unk48: TextureView > unimplemented(false),
+        0x28 => unk28: TextureView > unimplemented(false), // Texture3D
+        0x30 => unk30: TextureView > unimplemented(false), // Texture3D
+        0x38 => unk38: TextureView > unimplemented(false), // Texture3D
+        0x40 => unk40: TextureView > unimplemented(false), // Texture3D
+        0x48 => unk48: TextureView > unimplemented(false), // Texture2D
         0x50 => unk50: TextureView > unimplemented(false),
         0x58 => unk58: TextureView > unimplemented(false),
         0x60 => unk60: TextureView > unimplemented(false),

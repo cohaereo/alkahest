@@ -378,7 +378,8 @@ impl AlkahestApp {
                                 unk30: gctx.light_grey_texture.view.clone().into(),
                                 unk38: gctx.light_grey_texture.view.clone().into(),
                                 unk40: gctx.light_grey_texture.view.clone().into(),
-                                unk48: gctx.light_grey_texture.view.clone().into(),
+                                // unk48: gctx.light_grey_texture.view.clone().into(),
+                                unk48: tmp_gbuffers.staging_clone.view.clone().into(),
                                 unk50: gctx.dark_grey_texture.view.clone().into(),
                                 unk58: gctx.light_grey_texture.view.clone().into(),
                                 unk60: gctx.light_grey_texture.view.clone().into(),
@@ -397,16 +398,19 @@ impl AlkahestApp {
                                     .view
                                     .clone()
                                     .into(),
+                                // unk98: gctx.light_grey_texture.view.clone().into(),
+                                unk98: tmp_gbuffers.staging_clone.view.clone().into(),
                                 ..ExternDefault::extern_default()
                             });
-                            
+
                             let water_existing = externs
                                 .water
                                 .as_ref()
                                 .cloned()
                                 .unwrap_or(ExternDefault::extern_default());
-                            
+
                             externs.water = Some(externs::Water {
+                                unk08: tmp_gbuffers.staging_clone.view.clone().into(),
                                 ..water_existing
                             });
 
