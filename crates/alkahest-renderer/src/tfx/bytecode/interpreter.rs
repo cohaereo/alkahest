@@ -35,7 +35,6 @@ impl TfxBytecodeInterpreter {
         gctx: &GpuContext,
         externs: &ExternStorage,
         buffer: &ConstantBufferCached<Vec4>,
-        asset_manager: &AssetManager,
         constants: &[Vec4],
         samplers: &[Option<ID3D11SamplerState>],
     ) -> anyhow::Result<()> {
@@ -194,7 +193,7 @@ impl TfxBytecodeInterpreter {
                 &TfxBytecodeOp::PushExternInputTextureView { extern_, offset } => {
                     let texture =
                         externs.get_value_or_default::<TextureView>(extern_, offset as usize * 8);
-                    let v: Vec4 = if let Some(view) = texture.view(asset_manager) {
+                    let v: Vec4 = if let Some(view) = texture.view() {
                         let handle: u64 = unsafe { transmute_copy(&view) };
                         forget(view);
                         bytemuck::cast([handle, HANDLE_SAFEGUARD])

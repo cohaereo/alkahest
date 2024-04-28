@@ -4,10 +4,9 @@ pub mod dds;
 pub mod error;
 pub mod export;
 pub mod image;
-pub mod lock;
 pub mod text;
 
-pub use lock::RwLock;
+pub use parking_lot::RwLock;
 use tiger_parse::FnvHash;
 
 /// Enables ANSI color codes on older/weird command prompt versions

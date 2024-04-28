@@ -9,9 +9,7 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use alkahest_pm::package_manager;
-
 use glam::{Mat4, Vec2, Vec3, Vec4};
-
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{
@@ -76,23 +74,22 @@ impl TfxScope {
     pub fn bind(
         &self,
         gctx: &GpuContext,
-        asset_manager: &AssetManager,
         externs: &ExternStorage,
     ) -> anyhow::Result<()> {
         if let Some(stage) = &self.stage_vertex {
-            stage.bind(gctx, asset_manager, externs)?;
+            stage.bind(gctx, externs)?;
         }
 
         if let Some(stage) = &self.stage_pixel {
-            stage.bind(gctx, asset_manager, externs)?;
+            stage.bind(gctx, externs)?;
         }
 
         if let Some(stage) = &self.stage_geometry {
-            stage.bind(gctx, asset_manager, externs)?;
+            stage.bind(gctx, externs)?;
         }
 
         if let Some(stage) = &self.stage_compute {
-            stage.bind(gctx, asset_manager, externs)?;
+            stage.bind(gctx, externs)?;
         }
 
         Ok(())
@@ -164,18 +161,12 @@ impl TfxScopeStage {
         }))
     }
 
-    pub fn bind(
-        &self,
-        gctx: &GpuContext,
-        asset_manager: &AssetManager,
-        externs: &ExternStorage,
-    ) -> anyhow::Result<()> {
+    pub fn bind(&self, gctx: &GpuContext, externs: &ExternStorage) -> anyhow::Result<()> {
         if let (Some(cbuffer), Some(bytecode)) = (&self.cbuffer, &self.bytecode) {
             bytecode.evaluate(
                 gctx,
                 externs,
                 cbuffer,
-                asset_manager,
                 &self.stage.bytecode_constants,
                 &self.samplers,
             )?;

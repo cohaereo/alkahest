@@ -30,6 +30,9 @@ pub struct GBuffer {
     pub staging_clone: RenderTarget,
     pub depth: DepthState,
     pub depth_staging: CpuStagingBuffer,
+
+    pub ssao_intermediate: RenderTarget,
+
     size: (u32, u32),
 }
 
@@ -114,6 +117,12 @@ impl GBuffer {
                 "Depth_Buffer_Staging",
             )
             .context("Depth_Buffer_Staging")?,
+            ssao_intermediate: RenderTarget::create(
+                size,
+                DxgiFormat::R8_UNORM,
+                gctx.clone(),
+                "SSAO_Intermediate",
+            ).context("SSAO_Intermediate")?,
             size,
         })
     }

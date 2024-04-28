@@ -67,7 +67,7 @@ impl ShaderStage {
     }
 }
 
-fn compile_blob(source: &str, stage: ShaderStage) -> ID3DBlob {
+fn compile_blob(filename: &str, source: &str, stage: ShaderStage) -> ID3DBlob {
     let mut shader_blob: Option<ID3DBlob> = None;
     let mut errors = None;
 
@@ -112,7 +112,7 @@ fn compile_blob(source: &str, stage: ShaderStage) -> ID3DBlob {
     }
 
     if result.is_err() {
-        panic!("Failed to compile shader: {error_string}");
+        panic!("Failed to compile shader '{filename}': {error_string}");
     }
 
     if !error_string.is_empty() {
@@ -128,7 +128,7 @@ fn build_stage(out_dir: &Path, filename: &Path, stage: ShaderStage) {
         return;
     }
 
-    let blob = compile_blob(&source, stage);
+    let blob = compile_blob(filename.to_string_lossy().as_ref(), &source, stage);
 
     let output = out_dir.join(filename.with_extension(format!("hlsl.{}.dxbc", stage.short())));
     let vs_blob = unsafe {

@@ -9,7 +9,6 @@ struct VSOutput {
 VSOutput VSMain(uint vertex_i : SV_VertexID) {
     VSOutput output;
 
-
     output.uv = float2(0, 0);
     output.uv.x = vertex_i == 1 ? 2 : 0;
     output.uv.y = vertex_i == 2 ? 2 : 0;

@@ -20,7 +20,7 @@ pub enum TextureView {
 }
 
 impl TextureView {
-    pub fn view(&self, _am: &AssetManager) -> Option<ID3D11ShaderResourceView> {
+    pub fn view(&self) -> Option<ID3D11ShaderResourceView> {
         match self {
             TextureView::Null => None,
             TextureView::RawSRV(v) => Some(v.clone()),
@@ -30,8 +30,8 @@ impl TextureView {
         }
     }
 
-    pub fn view_unchecked(&self, am: &AssetManager) -> ID3D11ShaderResourceView {
-        self.view(am).unwrap_or_else(|| unsafe { transmute(0u64) })
+    pub fn view_unchecked(&self) -> ID3D11ShaderResourceView {
+        self.view().unwrap_or_else(|| unsafe { transmute(0u64) })
     }
 }
 
@@ -59,7 +59,7 @@ impl From<ID3D11ShaderResourceView> for TextureView {
 
 #[derive(Default)]
 pub struct ExternStorage {
-    pub frame: Option<Frame>,
+    frame: Frame,
     pub view: Option<View>,
     pub deferred: Option<Deferred>,
     pub deferred_light: Option<DeferredLight>,
@@ -178,6 +178,7 @@ impl ExternStorage {
                 $ext:ident => $field:expr,
             )*) => {
                 match ext {
+                    TfxExtern::Frame => self.frame.get_field(offset),
                     $(
                         TfxExtern::$ext => $field.as_ref().map(|v| v.get_field(offset)).unwrap_or_else(|| ExternValue::ExternNotSet),
                     )*
@@ -189,7 +190,6 @@ impl ExternStorage {
         }
 
         extern_lookup! {
-            Frame => self.frame,
             View => self.view,
             Deferred => self.deferred,
             DeferredLight => self.deferred_light,
@@ -240,6 +240,7 @@ impl ExternStorage {
                 $ext:ident => $field:expr,
             )*) => {
                 match ext {
+                    TfxExtern::Frame => Some(&mut self.frame as &mut dyn FieldAccess),
                     $(
                         TfxExtern::$ext => $field.as_mut().map(|f| f as &mut dyn FieldAccess),
                     )*
@@ -249,7 +250,6 @@ impl ExternStorage {
         }
 
         extern_lookup! {
-            Frame => self.frame,
             View => self.view,
             Deferred => self.deferred,
             DeferredLight => self.deferred_light,

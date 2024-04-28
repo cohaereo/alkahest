@@ -33,6 +33,7 @@ windows.workspace = true
 winit.workspace = true
 strum = { version = "0.26.2", features = ["derive"] }
 hex = "0.4.3"
+fastrand = "2.1.0"
 
 [build-dependencies]
 glob = "0.3.1"

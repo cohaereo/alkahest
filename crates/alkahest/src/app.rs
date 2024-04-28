@@ -17,6 +17,7 @@ use alkahest_renderer::{
     gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext},
     input::InputState,
     loaders::{map_tmp::load_map, texture::load_texture, AssetManager},
+    postprocess::ssao::SsaoRenderer,
     tfx::{
         externs,
         externs::{ExternDefault, ExternStorage, Frame, TextureView},
@@ -28,7 +29,7 @@ use alkahest_renderer::{
 };
 use anyhow::Context;
 use destiny_pkg::TagHash;
-use egui::{Key, KeyboardShortcut, Modifiers};
+use egui::{Key, KeyboardShortcut, Modifiers, Widget};
 use glam::Vec4;
 use windows::{core::HRESULT, Win32::Graphics::Direct3D11::D3D11_CLEAR_DEPTH};
 use winit::{
@@ -64,6 +65,8 @@ pub struct AlkahestApp {
     delta_time: Instant,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
     tex_atm: [Texture; 4],
+
+    ssao: SsaoRenderer,
 }
 
 impl AlkahestApp {
@@ -149,6 +152,7 @@ impl AlkahestApp {
         update_dynamic_model_system(&map);
 
         Self {
+            ssao: SsaoRenderer::new(gctx.clone()).unwrap(),
             tmp_gbuffers: GBuffer::create(
                 (window.inner_size().width, window.inner_size().height),
                 gctx.clone(),
@@ -196,6 +200,7 @@ impl AlkahestApp {
             transparent_advanced_cbuffer,
             map,
             tex_atm,
+            ssao,
             ..
         } = self;
 
@@ -470,16 +475,8 @@ impl AlkahestApp {
                                 atmos
                             });
 
-                            rglobals
-                                .scopes
-                                .frame
-                                .bind(gctx, asset_manager, &externs)
-                                .unwrap();
-                            rglobals
-                                .scopes
-                                .view
-                                .bind(gctx, asset_manager, &externs)
-                                .unwrap();
+                            rglobals.scopes.frame.bind(gctx, &externs).unwrap();
+                            rglobals.scopes.view.bind(gctx, &externs).unwrap();
 
                             unsafe {
                                 gctx.context().VSSetConstantBuffers(
@@ -586,6 +583,8 @@ impl AlkahestApp {
 
                             draw_light_system(gctx, map, asset_manager, camera, &mut externs);
 
+                            ssao.draw(gctx, &externs, &tmp_gbuffers.ssao_intermediate);
+
                             // unsafe {
                             //     let existing_hdao = externs
                             //         .hdao
@@ -624,6 +623,13 @@ impl AlkahestApp {
                                     None,
                                 );
 
+                                gctx.current_states.store(StateSelection::new(
+                                    Some(0),
+                                    Some(0),
+                                    Some(0),
+                                    Some(0),
+                                ));
+
                                 gctx.context().OMSetDepthStencilState(None, 0);
 
                                 let pipeline = &rglobals.pipelines.deferred_shading_no_atm;
@@ -647,11 +653,7 @@ impl AlkahestApp {
                                     .OMSetDepthStencilState(&tmp_gbuffers.depth.state_readonly, 0);
                             }
 
-                            rglobals
-                                .scopes
-                                .transparent
-                                .bind(gctx, asset_manager, &externs)
-                                .unwrap();
+                            rglobals.scopes.transparent.bind(gctx, &externs).unwrap();
 
                             gctx.current_states.store(StateSelection::new(
                                 Some(2),
@@ -835,6 +837,27 @@ impl AlkahestApp {
                             let mut gui_views = resources.get_mut::<GuiViewManager>();
                             gui_views.draw(ectx, window, resources, ctx);
                             puffin_egui::profiler_window(ectx);
+
+                            egui::Window::new("SSAO Settings").show(ectx, |ui| {
+                                let mut ssao_data = ssao.scope.data();
+                                ui.horizontal(|ui| {
+                                    ui.label("Radius");
+                                    egui::DragValue::new(&mut ssao_data.radius)
+                                        .speed(0.01)
+                                        .clamp_range(0.0..=10.0)
+                                        .suffix("m")
+                                        .ui(ui);
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Bias");
+                                    egui::DragValue::new(&mut ssao_data.bias)
+                                        .speed(0.01)
+                                        .clamp_range(0.0..=10.0)
+                                        .suffix("m")
+                                        .ui(ui);
+                                });
+                            });
                         });
 
                         window.pre_present_notify();

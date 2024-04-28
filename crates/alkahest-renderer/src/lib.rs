@@ -6,6 +6,8 @@ pub mod gpu;
 pub mod handle;
 pub mod input;
 pub mod loaders;
+pub mod postprocess;
+pub mod renderer;
 pub mod shader;
 pub mod tfx;
 pub mod util;

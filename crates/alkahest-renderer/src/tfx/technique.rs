@@ -211,7 +211,6 @@ impl TechniqueStage {
                 gctx,
                 externs,
                 cbuffer,
-                asset_manager,
                 &self.shader.bytecode_constants,
                 &self.samplers,
             )?;

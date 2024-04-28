@@ -156,7 +156,7 @@ pub struct ConstantBufferCached<T: Sized> {
     updated: AtomicBool,
 }
 
-impl<T: Sized + Clone + Debug> ConstantBufferCached<T> {
+impl<T: Sized + Clone> ConstantBufferCached<T> {
     pub fn create_empty(gctx: Arc<GpuContext>) -> anyhow::Result<Self> {
         Ok(Self {
             cbuffer: ConstantBuffer::create(gctx, None)?,
