@@ -235,6 +235,7 @@ dependencies = [
  "profiling",
  "raw-window-handle 0.6.0",
  "rustc-hash",
+ "serde",
  "smallvec",
  "strum",
  "tiger-parse",

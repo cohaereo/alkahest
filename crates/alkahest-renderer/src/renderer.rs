@@ -1,4 +1,5 @@
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     gpu::SharedGpuContext,
@@ -27,5 +28,24 @@ impl Renderer {
             }),
             gpu,
         })
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RendererSettings {
+    pub vsync: bool,
+    pub ssao: bool,
+    pub atmosphere: bool,
+    pub matcap: bool,
+}
+
+impl Default for RendererSettings {
+    fn default() -> Self {
+        Self {
+            vsync: true,
+            ssao: true,
+            atmosphere: true,
+            matcap: true,
+        }
     }
 }

@@ -19,6 +19,7 @@ use alkahest_renderer::{
     input::InputState,
     loaders::{map_tmp::load_map, texture::load_texture, AssetManager},
     postprocess::ssao::SsaoRenderer,
+    renderer::RendererSettings,
     shader::matcap::MatcapRenderer,
     tfx::{
         externs,
@@ -104,6 +105,7 @@ impl AlkahestApp {
         resources.insert(ExternStorage::default());
         resources.insert(InputState::default());
         resources.insert(args);
+        resources.insert(config!().renderer.clone());
 
         let mut asset_manager = AssetManager::new(gctx.clone());
         let rglobals = RenderGlobals::load(gctx.clone()).expect("Failed to load render globals");
@@ -284,6 +286,7 @@ impl AlkahestApp {
                         let delta_f32 = delta_time.elapsed().as_secs_f32();
                         *delta_time = Instant::now();
                         asset_manager.poll();
+                        let render_settings = resources.get::<RendererSettings>();
 
                         if gui.input_mut(|i| {
                             i.consume_shortcut(&KeyboardShortcut::new(Modifiers::ALT, Key::Enter))
@@ -570,6 +573,7 @@ impl AlkahestApp {
                                 Some(2),
                                 Some(2),
                             ));
+                            gctx.flush_states();
 
                             unsafe {
                                 gctx.context().VSSetConstantBuffers(
@@ -582,10 +586,15 @@ impl AlkahestApp {
                                 );
                             }
 
-                            matcap.draw(gctx, &externs, &tmp_gbuffers);
-                            // draw_light_system(gctx, map, asset_manager, camera, &mut externs);
+                            if render_settings.matcap {
+                                matcap.draw(gctx, &externs, &tmp_gbuffers);
+                            } else {
+                                draw_light_system(gctx, map, asset_manager, camera, &mut externs);
+                            }
 
-                            ssao.draw(gctx, &externs, &tmp_gbuffers.ssao_intermediate);
+                            if render_settings.ssao {
+                                ssao.draw(gctx, &externs, &tmp_gbuffers.ssao_intermediate);
+                            }
 
                             // unsafe {
                             //     let existing_hdao = externs
@@ -631,7 +640,7 @@ impl AlkahestApp {
                                 gctx.context().OMSetDepthStencilState(None, 0);
 
                                 let use_atmos =
-                                    if map.query::<&MapAtmosphere>().iter().next().is_some() {
+                                    if render_settings.atmosphere && map.query::<&MapAtmosphere>().iter().next().is_some() {
                                         gctx.context().OMSetRenderTargets(
                                             Some(&[
                                                 Some(
@@ -755,133 +764,6 @@ impl AlkahestApp {
                                 .OMSetRenderTargets(Some(&[None, None, None]), None);
                         }
 
-                        // Experimental atmosphere rendering
-                        // {
-                        //     let mut externs = resources.get_mut::<ExternStorage>();
-                        //     let frame_existing = externs
-                        //         .frame
-                        //         .as_ref()
-                        //         .cloned()
-                        //         .unwrap_or(ExternDefault::extern_default());
-                        //     externs.frame = Some(Frame {
-                        //         unk00: time.elapsed().as_secs_f32(),
-                        //         unk04: time.elapsed().as_secs_f32(),
-                        //         specular_lobe_3d_lookup: rglobals
-                        //             .textures
-                        //             .specular_lobe_3d_lookup
-                        //             .view
-                        //             .clone()
-                        //             .into(),
-                        //         specular_lobe_lookup: rglobals
-                        //             .textures
-                        //             .specular_lobe_lookup
-                        //             .view
-                        //             .clone()
-                        //             .into(),
-                        //         specular_tint_lookup: rglobals
-                        //             .textures
-                        //             .specular_tint_lookup
-                        //             .view
-                        //             .clone()
-                        //             .into(),
-                        //         iridescence_lookup: rglobals
-                        //             .textures
-                        //             .iridescence_lookup
-                        //             .view
-                        //             .clone()
-                        //             .into(),
-                        //
-                        //         ..frame_existing
-                        //     });
-                        //
-                        //     externs.view = Some({
-                        //         let mut view = externs::View::default();
-                        //         camera.update(&resources.get::<InputState>(), delta_f32, true);
-                        //         camera.update_extern(&mut view);
-                        //         view
-                        //     });
-                        //
-                        //     gctx.current_states.store(StateSelection::new(
-                        //         Some(0),
-                        //         Some(0),
-                        //         Some(0),
-                        //         Some(0),
-                        //     ));
-                        //
-                        //     rglobals
-                        //         .scopes
-                        //         .frame
-                        //         .bind(gctx, asset_manager, &externs)
-                        //         .unwrap();
-                        //     rglobals
-                        //         .scopes
-                        //         .view
-                        //         .bind(gctx, asset_manager, &externs)
-                        //         .unwrap();
-                        //
-                        //     frame_cbuffer
-                        //         .write(&ScopeFrame {
-                        //             game_time: time.elapsed().as_secs_f32(),
-                        //             render_time: time.elapsed().as_secs_f32(),
-                        //             delta_game_time: delta_f32,
-                        //             ..Default::default()
-                        //         })
-                        //         .unwrap();
-                        //
-                        //     unsafe {
-                        //         gctx.context().VSSetConstantBuffers(
-                        //             13,
-                        //             Some(&[Some(frame_cbuffer.buffer().clone())]),
-                        //         );
-                        //         gctx.context().PSSetConstantBuffers(
-                        //             13,
-                        //             Some(&[Some(frame_cbuffer.buffer().clone())]),
-                        //         );
-                        //     }
-                        //
-                        //     let atmos_existing = externs
-                        //         .atmosphere
-                        //         .as_ref()
-                        //         .cloned()
-                        //         .unwrap_or(ExternDefault::extern_default());
-                        //     externs.atmosphere = Some({
-                        //         let mut atmos = externs::Atmosphere {
-                        //             unk30: tex_atm[0].view.clone().into(),
-                        //             unk40: tex_atm[1].view.clone().into(),
-                        //             unk48: tex_atm[2].view.clone().into(),
-                        //             unk58: tex_atm[3].view.clone().into(),
-                        //             unke0: gctx.dark_grey_texture.view.clone().into(),
-                        //
-                        //             ..atmos_existing
-                        //         };
-                        //
-                        //         atmos.unk20 = atmos.unk30.clone();
-                        //         atmos.unk38 = atmos.unk48.clone();
-                        //
-                        //         atmos
-                        //     });
-                        //
-                        //     unsafe {
-                        //         gctx.context().OMSetRenderTargets(
-                        //             Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
-                        //             None,
-                        //         );
-                        //
-                        //         gctx.context().OMSetDepthStencilState(None, 0);
-                        //
-                        //         let pipeline = &rglobals.pipelines.sky_lookup_generate_far;
-                        //         if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
-                        //             error!("Failed to run sky_lookup_generate_far: {e}");
-                        //             return;
-                        //         }
-                        //
-                        //         gctx.set_input_topology(EPrimitiveType::TriangleStrip);
-                        //         gctx.context().Draw(4, 0);
-                        //
-                        //         tmp_gbuffers.staging.copy_to(&tmp_gbuffers.staging_clone);
-                        //     }
-                        // }
-
                         gctx.blit_texture(
                             &tmp_gbuffers.staging.view,
                             // &tmp_gbuffers.light_diffuse.view,
@@ -889,13 +771,14 @@ impl AlkahestApp {
                             gctx.swapchain_target.read().as_ref().unwrap(),
                         );
 
+                        drop(render_settings);
                         gui.draw_frame(window, |ctx, ectx| {
                             let mut gui_views = resources.get_mut::<GuiViewManager>();
                             gui_views.draw(ectx, window, resources, ctx);
                             puffin_egui::profiler_window(ectx);
 
                             egui::Window::new("SSAO Settings").show(ectx, |ui| {
-                                let mut ssao_data = ssao.scope.data();
+                                let ssao_data = ssao.scope.data();
                                 ui.horizontal(|ui| {
                                     ui.label("Radius");
                                     egui::DragValue::new(&mut ssao_data.radius)
@@ -917,7 +800,7 @@ impl AlkahestApp {
                         });
 
                         window.pre_present_notify();
-                        gctx.present();
+                        gctx.present(resources.get::<RendererSettings>().vsync);
 
                         window.request_redraw();
                         profiling::finish_frame!();

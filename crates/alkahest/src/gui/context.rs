@@ -10,7 +10,10 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::{
     config::APP_DIRS,
-    gui::tfx::{TfxErrorViewer, TfxExternEditor},
+    gui::{
+        configuration::RenderSettingsPanel,
+        tfx::{TfxErrorViewer, TfxExternEditor},
+    },
     resources::Resources,
     util::image::EguiPngLoader,
 };
@@ -180,6 +183,7 @@ impl GuiViewManager {
 
         views.insert(TfxErrorViewer::default());
         views.insert(TfxExternEditor);
+        views.insert(RenderSettingsPanel);
 
         views
     }

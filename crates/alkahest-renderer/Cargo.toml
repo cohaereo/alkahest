@@ -26,6 +26,7 @@ png.workspace = true
 profiling.workspace = true
 raw-window-handle.workspace = true
 rustc-hash.workspace = true
+serde.workspace = true
 smallvec.workspace = true
 tiger-parse.workspace = true
 tracing.workspace = true

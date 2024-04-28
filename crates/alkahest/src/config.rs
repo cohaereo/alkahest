@@ -1,3 +1,4 @@
+use alkahest_renderer::renderer::RendererSettings;
 use directories::ProjectDirs;
 use egui::epaint::ahash::HashMap;
 use lazy_static::lazy_static;
@@ -71,8 +72,8 @@ macro_rules! config {
 pub struct Config {
     pub window: WindowConfig,
     pub resources: ResourceConfig,
-    pub render_settings: RenderConfig,
-
+    pub renderer: RendererSettings,
+    // pub render_settings: RenderConfig,
     pub update_channel: Option<UpdateChannel>,
     pub packages_directory: Option<String>,
 }
@@ -97,11 +98,11 @@ impl Default for ResourceConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct RenderConfig {
-    pub draw_crosshair: bool,
-}
+// #[derive(Serialize, Deserialize, Default)]
+// #[serde(default)]
+// pub struct RenderConfig {
+//     pub draw_crosshair: bool,
+// }
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]

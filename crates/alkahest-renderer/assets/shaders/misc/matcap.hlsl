@@ -34,8 +34,10 @@ void PSMain(
     float3 viewNormal = mul((float3x3)world_to_camera, normal);
 
     float2 uv = MatcapUV(camera_forward, viewNormal);
-    light_diffuse = MatcapDiffuse.Sample(def_point_clamp, uv);
-    light_specular = MatcapSpecular.Sample(def_point_clamp, uv) * smoothness;
+    float4 diffuse = MatcapDiffuse.Sample(def_point_clamp, uv);
+    float4 specular = MatcapSpecular.Sample(def_point_clamp, uv);
+    light_diffuse = diffuse;
+    light_specular = max(1 - smoothness, specular);
     light_diffuse.w = 1;
     light_specular.w = 1;
 }

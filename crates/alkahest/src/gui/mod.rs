@@ -1,16 +1,17 @@
 use egui::Response;
 
 pub mod activity_select;
+mod configuration;
 pub mod context;
 pub mod hotkeys;
 pub mod icons;
+mod input;
 pub mod inspector;
+mod tfx;
 
 // Custom widgets
 pub mod big_button;
 pub mod chip;
-mod input;
-mod tfx;
 
 pub trait UiExt {
     fn chip(&mut self, label: impl AsRef<str>) -> Response;

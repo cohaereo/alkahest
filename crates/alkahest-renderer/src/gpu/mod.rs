@@ -57,7 +57,6 @@ pub struct GpuContext {
     pub states: RenderStates,
 
     present_parameters: AtomicU32,
-    vsync: AtomicBool,
 
     current_blend_state: AtomicUsize,
     current_input_layout: AtomicUsize,
@@ -210,7 +209,6 @@ impl GpuContext {
             black_texture,
 
             states,
-            vsync: AtomicBool::new(false),
 
             current_blend_state: AtomicUsize::new(usize::MAX),
             current_input_layout: AtomicUsize::new(usize::MAX),
@@ -274,10 +272,27 @@ impl GpuContext {
         self.current_depth_bias.store(usize::MAX, Ordering::Relaxed);
     }
 
-    pub fn present(&self) {
+    pub fn flush_states(&self) {
+        self.reset_states();
+        let states = self.current_states.load();
+        if let Some(blend) = states.blend_state() {
+            self.set_blend_state(blend);
+        }
+        // if let Some(depth_stencil) = states.depth_stencil_state() {
+        //     self.set_depth_stencil_state(depth_stencil);
+        // }
+        if let Some(rasterizer) = states.rasterizer_state() {
+            self.set_rasterizer_state(rasterizer);
+        }
+        if let Some(depth_bias) = states.depth_bias_state() {
+            self.set_depth_bias(depth_bias);
+        }
+    }
+
+    pub fn present(&self, vsync: bool) {
         unsafe {
             if self.swap_chain.Present(
-                self.vsync.load(Ordering::Relaxed) as u32,
+                vsync as u32,
                 self.present_parameters.load(Ordering::Relaxed),
             ) == DXGI_STATUS_OCCLUDED
             {
