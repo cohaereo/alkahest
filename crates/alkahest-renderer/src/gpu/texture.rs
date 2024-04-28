@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use alkahest_data::{dxgi::DxgiFormat, texture::STextureHeader, tfx::TfxShaderStage, ExtendedHash};
+use alkahest_data::{dxgi::DxgiFormat, texture::STextureHeader, tfx::TfxShaderStage, WideHash};
 use alkahest_pm::package_manager;
 use anyhow::Context;
 use tiger_parse::PackageManagerExt;
@@ -38,7 +38,7 @@ pub struct Texture {
 
 impl Texture {
     pub fn load_data(
-        hash: ExtendedHash,
+        hash: WideHash,
         load_full_mip: bool,
     ) -> anyhow::Result<(STextureHeader, Vec<u8>)> {
         let texture_header_ref = package_manager()
@@ -70,7 +70,7 @@ impl Texture {
         Ok((texture, texture_data))
     }
 
-    pub fn load(device: &ID3D11Device, hash: ExtendedHash) -> anyhow::Result<Texture> {
+    pub fn load(device: &ID3D11Device, hash: WideHash) -> anyhow::Result<Texture> {
         let _span = debug_span!("Load texture", ?hash).entered();
         let (texture, texture_data) = Self::load_data(hash, true)?;
 

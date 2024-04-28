@@ -6,8 +6,8 @@ use std::{
 use alkahest_data::{
     entity::{SEntity, Unk808072c5},
     map::{
-        SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight, Unk808068d4, Unk80806aa7,
-        Unk80806ef4, Unk8080714b,
+        SBubbleParent, SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight,
+        Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b,
     },
     tfx::TfxFeatureRenderer,
 };
@@ -22,9 +22,10 @@ use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 
 use crate::{
     ecs::{
-        components::{ResourceOrigin, Water},
+        common::{ResourceOrigin, Water},
         dynamic_geometry::{DynamicModel, DynamicModelComponent},
         light::LightRenderer,
+        map::MapAtmosphere,
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
         terrain::TerrainPatches,
         transform::{Transform, TransformFlags},
@@ -167,11 +168,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let header: Unk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
 
-                for (unk8, unk18, _unk28) in itertools::multizip((
-                    header.unk8.iter(),
-                    header.unk18.iter(),
-                    header.unk28.iter(),
-                )) {
+                for (unk8, unk18, _unk28) in
+                    multizip((header.unk8.iter(), header.unk18.iter(), header.unk28.iter()))
+                {
                     if unk8.bounds != unk18.bb {
                         warn!(
                             "Bounds mismatch in Unk80806aa3: {:?} != {:?}",
@@ -265,6 +264,16 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     TfxFeatureRenderer::DeferredLights,
                 ));
             }
+            0x80806BC1 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+
+                let atmos: SMapAtmosphere = TigerReadable::read_ds(table_data)?;
+                scene
+                    .spawn((MapAtmosphere::load(&gctx, atmos)
+                        .context("Failed to load map atmosphere")?,));
+            }
             u => {
                 if u != u32::MAX {
                     warn!("Unknown resource type {u:08X}");
@@ -277,6 +286,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let header = package_manager()
                     .read_tag_struct::<SEntity>(entity_hash)
                     .context("Failed to read SEntity")?;
+                debug!("Loading entity {entity_hash}");
                 for e in &header.entity_resources {
                     match e.unk0.unk10.resource_type {
                         0x80806d8a => {
@@ -288,6 +298,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
                             let entity_material_map: Vec<Unk808072c5> =
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
                             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
                             let materials: Vec<TagHash> =
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;

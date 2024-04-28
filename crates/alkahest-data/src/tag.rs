@@ -45,17 +45,17 @@ impl<T: TigerReadable + Debug> Debug for Tag<T> {
 
 // TODO(cohae): Custom reader once new tag parser comes around
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub enum ExtendedHash {
+pub enum WideHash {
     Hash32(TagHash),
     Hash64(TagHash64),
 }
 
-impl ExtendedHash {
+impl WideHash {
     /// Key that is safe to use for caching/lookup tables
     pub fn key(&self) -> u64 {
         match self {
-            ExtendedHash::Hash32(v) => v.0 as u64,
-            ExtendedHash::Hash64(v) => v.0,
+            WideHash::Hash32(v) => v.0 as u64,
+            WideHash::Hash64(v) => v.0,
         }
     }
 
@@ -66,61 +66,68 @@ impl ExtendedHash {
     }
 
     /// Will lookup hash64 in package managers's h64 table in the case of a 64 bit hash
+    /// Returns None if the hash is not found or null in case of a 32 bit hash
     pub fn hash32_checked(&self) -> Option<TagHash> {
         match self {
-            ExtendedHash::Hash32(v) => Some(*v),
-            ExtendedHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
+            WideHash::Hash32(v) => {
+                if v.is_some() {
+                    Some(*v)
+                } else {
+                    None
+                }
+            }
+            WideHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
         }
     }
 
     pub fn is_some(&self) -> bool {
         match self {
-            ExtendedHash::Hash32(h) => h.is_some(),
+            WideHash::Hash32(h) => h.is_some(),
             // TODO(cohae): Double check this
-            ExtendedHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
+            WideHash::Hash64(h) => h.0 != 0 && h.0 != u64::MAX,
         }
     }
 }
 
-impl Debug for ExtendedHash {
+impl Debug for WideHash {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
-            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
+            WideHash::Hash32(h) => f.write_fmt(format_args!("Hash32({:08X})", h.0.to_be())),
+            WideHash::Hash64(h) => f.write_fmt(format_args!("Hash64({:016X})", h.0.to_be())),
         }
     }
 }
 
-impl Display for ExtendedHash {
+impl Display for WideHash {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExtendedHash::Hash32(h) => f.write_fmt(format_args!("{:08X}", h.0.to_be())),
-            ExtendedHash::Hash64(h) => f.write_fmt(format_args!("{:016X}", h.0.to_be())),
+            WideHash::Hash32(h) => f.write_fmt(format_args!("{:08X}", h.0.to_be())),
+            WideHash::Hash64(h) => f.write_fmt(format_args!("{:016X}", h.0.to_be())),
         }
     }
 }
 
-impl std::hash::Hash for ExtendedHash {
+impl std::hash::Hash for WideHash {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.key());
     }
 }
 
-impl From<ExtendedHash> for TagHash {
-    fn from(val: ExtendedHash) -> Self {
+impl From<WideHash> for TagHash {
+    fn from(val: WideHash) -> Self {
         val.hash32()
     }
 }
 
-impl From<TagHash> for ExtendedHash {
+impl From<TagHash> for WideHash {
     fn from(val: TagHash) -> Self {
-        ExtendedHash::Hash32(val)
+        WideHash::Hash32(val)
     }
 }
 
-impl nohash_hasher::IsEnabled for ExtendedHash {}
+impl nohash_hasher::IsEnabled for WideHash {}
 
-impl BinRead for ExtendedHash {
+impl BinRead for WideHash {
     type Args<'a> = ();
 
     fn read_options<R: std::io::Read + std::io::Seek>(
@@ -133,14 +140,14 @@ impl BinRead for ExtendedHash {
         let hash64: TagHash64 = reader.read_type(endian)?;
 
         if is_hash32 != 0 {
-            Ok(ExtendedHash::Hash32(hash32))
+            Ok(WideHash::Hash32(hash32))
         } else {
-            Ok(ExtendedHash::Hash64(hash64))
+            Ok(WideHash::Hash64(hash64))
         }
     }
 }
 
-impl TigerReadable for ExtendedHash {
+impl TigerReadable for WideHash {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
         endian: tiger_parse::Endian,
@@ -150,9 +157,9 @@ impl TigerReadable for ExtendedHash {
         let hash64: TagHash64 = TigerReadable::read_ds_endian(reader, endian)?;
 
         if is_hash32 != 0 {
-            Ok(ExtendedHash::Hash32(hash32))
+            Ok(WideHash::Hash32(hash32))
         } else {
-            Ok(ExtendedHash::Hash64(hash64))
+            Ok(WideHash::Hash64(hash64))
         }
     }
 
@@ -168,10 +175,10 @@ impl<T: TigerReadable> TigerReadable for ExtendedTag<T> {
         reader: &mut R,
         endian: tiger_parse::Endian,
     ) -> tiger_parse::Result<Self> {
-        let tag = ExtendedHash::read_ds_endian(reader, endian)?;
+        let tag = WideHash::read_ds_endian(reader, endian)?;
         match tag {
-            ExtendedHash::Hash32(h) => Ok(ExtendedTag(package_manager().read_tag_struct(h)?)),
-            ExtendedHash::Hash64(h) => Ok(ExtendedTag(package_manager().read_tag64_struct(h)?)),
+            WideHash::Hash32(h) => Ok(ExtendedTag(package_manager().read_tag_struct(h)?)),
+            WideHash::Hash64(h) => Ok(ExtendedTag(package_manager().read_tag64_struct(h)?)),
         }
     }
 

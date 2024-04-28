@@ -59,7 +59,7 @@ impl From<ID3D11ShaderResourceView> for TextureView {
 
 #[derive(Default)]
 pub struct ExternStorage {
-    frame: Frame,
+    pub frame: Frame,
     pub view: Option<View>,
     pub deferred: Option<Deferred>,
     pub deferred_light: Option<DeferredLight>,
@@ -299,7 +299,7 @@ struct Name("internal_name") {
 macro_rules! extern_struct {
     (struct $name:ident ($name_c:literal) { $($field_offset:expr => $field:ident: $field_type:ty  $(> unimplemented($unimp:expr))? $(> default($default_value:expr))? ,)* }) => {
         #[repr(C)]
-        #[derive(Debug, Default, Clone, FieldAccess)]
+        #[derive(Debug, Clone, FieldAccess)]
         pub struct $name {
             $(pub $field: $field_type,)*
         }
@@ -347,6 +347,12 @@ macro_rules! extern_struct {
                         <$field_type as ExternDefault>::extern_default()
                     },)*
                 }
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self::extern_default()
             }
         }
     };
@@ -482,24 +488,24 @@ extern_struct! {
         0x08 => unk08: TextureView > unimplemented(true),
         0x10 => unk10: TextureView > unimplemented(true),
         0x18 => unk18: TextureView > unimplemented(true),
-        0x20 => unk20: TextureView > unimplemented(true),
-        0x30 => unk30: TextureView > unimplemented(true),
-        0x38 => unk38: TextureView > unimplemented(true),
-        0x40 => unk40: TextureView > unimplemented(true),
-        0x48 => unk48: TextureView > unimplemented(true),
+        0x20 => unk20: TextureView,
+        0x30 => unk30: TextureView,
+        0x38 => unk38: TextureView,
+        0x40 => unk40: TextureView,
+        0x48 => unk48: TextureView,
         // Normalized time of day value, where 0 is midnight, 0.5 is midday, and 1 is midnight again
         0x50 => time_of_day_normalized: f32 > default(0.5),
         0x58 => unk58: TextureView > unimplemented(true),
         0x60 => unk60: TextureView > unimplemented(true),
-        0x70 => unk70: Vec4 > unimplemented(true),
+        0x70 => unk70: Vec4 > unimplemented(true) > default(Vec4::ZERO),
         0x80 => light_shaft_optical_depth: TextureView > unimplemented(true),
         0xa0 => unka0: TextureView > unimplemented(true),
         0xb0 => unkb0: Vec4 > unimplemented(true),
         // Result of sky_lookup_generate_far
-        0xc0 => atmos_ss_far_lookup: TextureView > unimplemented(true),
+        0xc0 => atmos_ss_far_lookup: TextureView,
         0xc8 => atmos_ss_far_lookup_downsampled: TextureView > unimplemented(true),
         // Result of sky_lookup_generate_near
-        0xd0 => atmos_ss_near_lookup: TextureView > unimplemented(true),
+        0xd0 => atmos_ss_near_lookup: TextureView,
         0xd8 => atmos_ss_near_lookup_downsampled: TextureView > unimplemented(true),
         0xe0 => unke0: TextureView > unimplemented(true),
         0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),

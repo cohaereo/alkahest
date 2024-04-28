@@ -9,7 +9,7 @@ use glam::{Mat4, Vec3, Vec4};
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    ecs::{components::Water, static_geometry::ModelBuffers, transform::Transform, Scene},
+    ecs::{common::Water, static_geometry::ModelBuffers, transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, GpuContext},
     handle::Handle,
     loaders::AssetManager,
@@ -28,6 +28,10 @@ pub struct DynamicModel {
     pub model: SDynamicModel,
     pub mesh_stages: Vec<RenderStageSubscriptions>,
     part_techniques: Vec<Vec<Handle<Technique>>>,
+
+    pub selected_mesh: usize,
+    // TODO(cohae): How can we find the variant count?
+    pub selected_variant: usize,
 }
 
 impl DynamicModel {
@@ -72,6 +76,8 @@ impl DynamicModel {
             .collect();
 
         Ok(Self {
+            selected_variant: 0,
+            selected_mesh: 0,
             mesh_buffers,
             technique_map,
             techniques,
@@ -105,30 +111,34 @@ impl DynamicModel {
         externs: &ExternStorage,
         gctx: &GpuContext,
         render_stage: TfxRenderStage,
-        mesh_index: usize,
     ) -> anyhow::Result<()> {
-        profiling::scope!("DynamicModel::draw", format!("mesh={mesh_index}"));
-        ensure!(mesh_index < self.mesh_count(), "Invalid mesh index");
+        profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
+        ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
+        // ensure!(
+        //     self.selected_variant < self.variant_count(),
+        //     "Material variant out of range"
+        // );
 
-        let mesh = &self.model.meshes[mesh_index];
-        let stages = &self.mesh_stages[mesh_index];
+        let mesh = &self.model.meshes[self.selected_mesh];
+        let stages = &self.mesh_stages[self.selected_mesh];
         if !stages.is_subscribed(render_stage) {
             return Ok(());
         }
 
         gctx.set_input_layout(mesh.get_input_layout_for_stage(render_stage) as usize);
-        self.mesh_buffers[mesh_index].bind(asset_manager, gctx);
+        self.mesh_buffers[self.selected_mesh].bind(asset_manager, gctx);
         for part_index in mesh.get_range_for_stage(render_stage) {
             let part = &mesh.parts[part_index];
             if !part.lod_category.is_highest_detail() {
                 continue;
             }
 
-            let variant_material = self.get_variant_technique(part.variant_shader_index, 0);
+            let variant_material =
+                self.get_variant_technique(part.variant_shader_index, self.selected_variant);
 
             if let Some(technique) = asset_manager
                 .techniques
-                .get(&self.part_techniques[mesh_index][part_index])
+                .get(&self.part_techniques[self.selected_mesh][part_index])
             {
                 technique
                     .bind(gctx, externs, asset_manager)
@@ -185,7 +195,7 @@ pub fn draw_dynamic_model_system(
         // TODO(cohae): Error reporting
         dynamic
             .model
-            .draw(asset_manager, externs, gctx, render_stage, 0)
+            .draw(asset_manager, externs, gctx, render_stage)
             .unwrap();
     }
 }

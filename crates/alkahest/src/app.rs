@@ -6,6 +6,7 @@ use alkahest_renderer::{
     ecs::{
         dynamic_geometry::{draw_dynamic_model_system, update_dynamic_model_system},
         light::draw_light_system,
+        map::MapAtmosphere,
         static_geometry::{
             draw_static_instances_system, update_static_instances_system, StaticModel,
             StaticModelSingle,
@@ -64,7 +65,6 @@ pub struct AlkahestApp {
     time: Instant,
     delta_time: Instant,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
-    tex_atm: [Texture; 4],
 
     ssao: SsaoRenderer,
 }
@@ -161,13 +161,6 @@ impl AlkahestApp {
             frame_cbuffer,
             transparent_advanced_cbuffer,
             map,
-            tex_atm: [
-                load_texture(&gctx, TagHash(u32::from_be(0x3F9EE780))).unwrap(),
-                load_texture(&gctx, TagHash(u32::from_be(0x419EE780))).unwrap(),
-                load_texture(&gctx, TagHash(u32::from_be(0x419EE780))).unwrap(),
-                load_texture(&gctx, TagHash(u32::from_be(0x419EE780))).unwrap(),
-            ],
-
             window,
             event_loop,
             gctx,
@@ -199,7 +192,6 @@ impl AlkahestApp {
             frame_cbuffer,
             transparent_advanced_cbuffer,
             map,
-            tex_atm,
             ssao,
             ..
         } = self;
@@ -353,12 +345,7 @@ impl AlkahestApp {
 
                         {
                             let mut externs = resources.get_mut::<ExternStorage>();
-                            let frame_existing = externs
-                                .frame
-                                .as_ref()
-                                .cloned()
-                                .unwrap_or(ExternDefault::extern_default());
-                            externs.frame = Some(Frame {
+                            externs.frame = Frame {
                                 unk00: time.elapsed().as_secs_f32(),
                                 unk04: time.elapsed().as_secs_f32(),
                                 specular_lobe_3d_lookup: rglobals
@@ -386,8 +373,8 @@ impl AlkahestApp {
                                     .clone()
                                     .into(),
 
-                                ..frame_existing
-                            });
+                                ..externs.frame.clone()
+                            };
                             externs.view = Some({
                                 let mut view = externs::View::default();
                                 camera.update(&resources.get::<InputState>(), delta_f32, true);
@@ -402,10 +389,11 @@ impl AlkahestApp {
                                 .unwrap_or(ExternDefault::extern_default());
 
                             externs.transparent = Some(externs::Transparent {
-                                unk00: TextureView::Null,
-                                unk08: TextureView::Null,
-                                unk10: TextureView::Null,
-                                unk18: TextureView::Null,
+                                unk00: tmp_gbuffers.atmos_ss_far_lookup.view.clone().into(),
+                                // TODO(cohae): unk08 and unk18 are actually the downsampling of their respective lookup
+                                unk08: tmp_gbuffers.atmos_ss_far_lookup.view.clone().into(),
+                                unk10: tmp_gbuffers.atmos_ss_near_lookup.view.clone().into(),
+                                unk18: tmp_gbuffers.atmos_ss_near_lookup.view.clone().into(),
                                 unk20: gctx.light_grey_texture.view.clone().into(),
                                 unk28: gctx.light_grey_texture.view.clone().into(),
                                 unk30: gctx.light_grey_texture.view.clone().into(),
@@ -460,17 +448,26 @@ impl AlkahestApp {
 
                             externs.atmosphere = Some({
                                 let mut atmos = externs::Atmosphere {
-                                    unk30: tex_atm[0].view.clone().into(),
-                                    unk40: tex_atm[1].view.clone().into(),
-                                    unk48: tex_atm[2].view.clone().into(),
-                                    unk58: tex_atm[3].view.clone().into(),
+                                    atmos_ss_far_lookup: tmp_gbuffers
+                                        .atmos_ss_far_lookup
+                                        .view
+                                        .clone()
+                                        .into(),
+                                    atmos_ss_near_lookup: tmp_gbuffers
+                                        .atmos_ss_near_lookup
+                                        .view
+                                        .clone()
+                                        .into(),
                                     unke0: gctx.dark_grey_texture.view.clone().into(),
 
                                     ..atmos_existing
                                 };
 
-                                atmos.unk20 = atmos.unk30.clone();
-                                atmos.unk38 = atmos.unk48.clone();
+                                if let Some((_, map_atmos)) =
+                                    map.query::<&MapAtmosphere>().iter().next()
+                                {
+                                    map_atmos.update_extern(&mut atmos);
+                                }
 
                                 atmos
                             });
@@ -618,28 +615,81 @@ impl AlkahestApp {
                             // }
 
                             unsafe {
-                                gctx.context().OMSetRenderTargets(
-                                    Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
-                                    None,
-                                );
-
                                 gctx.current_states.store(StateSelection::new(
                                     Some(0),
                                     Some(0),
                                     Some(0),
                                     Some(0),
                                 ));
+                                gctx.set_input_topology(EPrimitiveType::TriangleStrip);
 
                                 gctx.context().OMSetDepthStencilState(None, 0);
 
-                                let pipeline = &rglobals.pipelines.deferred_shading_no_atm;
+                                let use_atmos =
+                                    if map.query::<&MapAtmosphere>().iter().next().is_some() {
+                                        gctx.context().OMSetRenderTargets(
+                                            Some(&[
+                                                Some(
+                                                    tmp_gbuffers
+                                                        .atmos_ss_far_lookup
+                                                        .render_target
+                                                        .clone(),
+                                                ),
+                                                None,
+                                            ]),
+                                            None,
+                                        );
+
+                                        rglobals
+                                            .pipelines
+                                            .sky_lookup_generate_far
+                                            .bind(gctx, &externs, asset_manager)
+                                            .unwrap();
+
+                                        gctx.context().Draw(6, 0);
+
+                                        gctx.context().OMSetRenderTargets(
+                                            Some(&[
+                                                Some(
+                                                    tmp_gbuffers
+                                                        .atmos_ss_near_lookup
+                                                        .render_target
+                                                        .clone(),
+                                                ),
+                                                None,
+                                            ]),
+                                            None,
+                                        );
+
+                                        rglobals
+                                            .pipelines
+                                            .sky_lookup_generate_near
+                                            .bind(gctx, &externs, asset_manager)
+                                            .unwrap();
+
+                                        gctx.context().Draw(6, 0);
+
+                                        true
+                                    } else {
+                                        false
+                                    };
+
+                                gctx.context().OMSetRenderTargets(
+                                    Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
+                                    None,
+                                );
+
+                                let pipeline = if use_atmos {
+                                    &rglobals.pipelines.deferred_shading
+                                } else {
+                                    &rglobals.pipelines.deferred_shading_no_atm
+                                };
                                 if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
                                     error!("Failed to run deferred_shading: {e}");
                                     return;
                                 }
 
                                 // TODO(cohae): 4 vertices doesn't work...
-                                gctx.set_input_topology(EPrimitiveType::TriangleStrip);
                                 gctx.context().Draw(6, 0);
 
                                 tmp_gbuffers.staging.copy_to(&tmp_gbuffers.staging_clone);
@@ -830,6 +880,7 @@ impl AlkahestApp {
                         gctx.blit_texture(
                             &tmp_gbuffers.staging.view,
                             // &tmp_gbuffers.light_diffuse.view,
+                            // &tmp_gbuffers.atmos_ss_near_lookup.view,
                             gctx.swapchain_target.read().as_ref().unwrap(),
                         );
 

@@ -5,7 +5,7 @@ use crate::{
     common::ResourceHash,
     occlusion::{SObjectOcclusionBounds, SOcclusionBounds, AABB},
     statics::SStaticMeshInstances,
-    ExtendedHash, ExtendedTag, Tag,
+    ExtendedTag, Tag, WideHash,
 };
 
 #[derive(Debug)]
@@ -76,7 +76,7 @@ pub struct SUnk80809885 {
     pub translation: glam::Vec4, // 0x10
     pub entity_old: TagHash,     // 0x20
     pub unk24: u32,
-    pub entity: ExtendedHash,
+    pub entity: WideHash,
     pub unk38: [u32; 9], //
     pub unk5c: f32,
     pub unk60: f32,
@@ -641,4 +641,14 @@ pub struct Unk80806ed8 {
     pub unkc8: [u32; 2],
     pub unkd0: [u32; 4],
     pub unke0: [u32; 4],
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0x80806BC1)]
+pub struct SMapAtmosphere {
+    pub unk0: [u32; 32],
+    pub lookup_texture_0: WideHash,
+    pub lookup_texture_1: WideHash,
+    pub lookup_texture_2: WideHash,
+    pub lookup_texture_3: WideHash,
 }

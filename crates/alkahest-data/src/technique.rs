@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, NullString, Pointer};
 
-use crate::{tfx::TfxShaderStage, ExtendedHash};
+use crate::{tfx::TfxShaderStage, WideHash};
 
 #[derive(Debug, Clone)]
 #[tiger_tag(id = 0x80806DAA)]
@@ -99,7 +99,7 @@ pub struct STechniqueShader {
     pub unk18: u64,
     pub bytecode: Vec<u8>,                   // 0x20
     pub bytecode_constants: Vec<glam::Vec4>, // 0x30
-    pub samplers: Vec<ExtendedHash>,         // 0x40
+    pub samplers: Vec<WideHash>,             // 0x40
     pub unk50: Vec<glam::Vec4>,              // 0x50
 
     pub unk60: [u32; 4], // 0x60
@@ -116,7 +116,7 @@ pub struct SMaterialTextureAssignment {
     /// Material slot to assign to
     pub slot: u32,
     _pad: u32,
-    pub texture: ExtendedHash,
+    pub texture: WideHash,
 }
 
 #[derive(Debug)]

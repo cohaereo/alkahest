@@ -1,7 +1,7 @@
 use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, NullString, Pointer};
 
-use super::{ExtendedHash, Tag};
+use super::{Tag, WideHash};
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x8080978C)]
@@ -97,7 +97,7 @@ pub struct SScopeStage {
     pub unk0: u64,
     pub bytecode: Vec<u8>,
     pub bytecode_constants: Vec<glam::Vec4>,
-    pub samplers: Vec<ExtendedHash>,
+    pub samplers: Vec<WideHash>,
     pub unk38: Vec<glam::Vec4>,
     pub unk48: [u32; 4],
 

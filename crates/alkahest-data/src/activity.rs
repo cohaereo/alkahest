@@ -1,7 +1,7 @@
 use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer, ResourcePointerWithClass};
 
-use crate::{common::ResourceHash, ExtendedHash, Tag};
+use crate::{common::ResourceHash, Tag, WideHash};
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x80808E8E, size = 0x80)]
@@ -12,7 +12,7 @@ pub struct SActivity {
     pub unk10: ResourceHash,
     pub unk14: ResourceHash,
     pub unk18: ResourcePointer,
-    pub destination: ExtendedHash,
+    pub destination: WideHash,
 
     #[tag(offset = 0x40)]
     pub unk40: Vec<Unk80808926>,
@@ -20,7 +20,7 @@ pub struct SActivity {
     pub unk60: [u32; 4],
     pub unk70: ResourceHash,
     pub unk74: TagHash,
-    pub ambient_activity: ExtendedHash,
+    pub ambient_activity: WideHash,
 }
 
 #[derive(Debug)]
@@ -29,7 +29,7 @@ pub struct SDestination {
     pub file_size: u64,
     pub location_name: ResourceHash,
     pub unkc: u32,
-    pub string_container: ExtendedHash,
+    pub string_container: WideHash,
     pub events: TagHash,
     pub patrols: TagHash,
     pub unk28: u32,
@@ -61,7 +61,7 @@ pub struct Unk80808924 {
     pub unkc: u32,
     pub unk10: ResourcePointer,
     pub unk18: Vec<Unk80808948>,
-    pub map_references: Vec<ExtendedHash>,
+    pub map_references: Vec<WideHash>,
 }
 
 #[derive(Debug)]

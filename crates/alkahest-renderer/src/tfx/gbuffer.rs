@@ -32,6 +32,8 @@ pub struct GBuffer {
     pub depth_staging: CpuStagingBuffer,
 
     pub ssao_intermediate: RenderTarget,
+    pub atmos_ss_far_lookup: RenderTarget,
+    pub atmos_ss_near_lookup: RenderTarget,
 
     size: (u32, u32),
 }
@@ -122,7 +124,24 @@ impl GBuffer {
                 DxgiFormat::R8_UNORM,
                 gctx.clone(),
                 "SSAO_Intermediate",
-            ).context("SSAO_Intermediate")?,
+            )
+            .context("SSAO_Intermediate")?,
+
+            atmos_ss_far_lookup: RenderTarget::create(
+                size,
+                DxgiFormat::R8G8B8A8_UNORM_SRGB,
+                gctx.clone(),
+                "atmos_ss_far_lookup",
+            )
+            .context("atmos_ss_far_lookup")?,
+            atmos_ss_near_lookup: RenderTarget::create(
+                size,
+                DxgiFormat::R8G8B8A8_UNORM_SRGB,
+                gctx.clone(),
+                "atmos_ss_near_lookup",
+            )
+            .context("atmos_ss_near_lookup")?,
+
             size,
         })
     }

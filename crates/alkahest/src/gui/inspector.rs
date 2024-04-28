@@ -1,7 +1,7 @@
 use alkahest_renderer::{
     camera::{tween::Tween, Camera},
     ecs::{
-        components::{EntityWorldId, Global, Hidden, Label, Mutable},
+        common::{EntityWorldId, Global, Hidden, Label, Mutable},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Ruler, Sphere},
