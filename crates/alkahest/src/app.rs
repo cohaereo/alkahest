@@ -19,6 +19,7 @@ use alkahest_renderer::{
     input::InputState,
     loaders::{map_tmp::load_map, texture::load_texture, AssetManager},
     postprocess::ssao::SsaoRenderer,
+    shader::matcap::MatcapRenderer,
     tfx::{
         externs,
         externs::{ExternDefault, ExternStorage, Frame, TextureView},
@@ -67,6 +68,7 @@ pub struct AlkahestApp {
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
     ssao: SsaoRenderer,
+    matcap: MatcapRenderer,
 }
 
 impl AlkahestApp {
@@ -152,6 +154,7 @@ impl AlkahestApp {
         update_dynamic_model_system(&map);
 
         Self {
+            matcap: MatcapRenderer::new(gctx.clone()).unwrap(),
             ssao: SsaoRenderer::new(gctx.clone()).unwrap(),
             tmp_gbuffers: GBuffer::create(
                 (window.inner_size().width, window.inner_size().height),
@@ -193,6 +196,7 @@ impl AlkahestApp {
             transparent_advanced_cbuffer,
             map,
             ssao,
+            matcap,
             ..
         } = self;
 
@@ -578,7 +582,8 @@ impl AlkahestApp {
                                 );
                             }
 
-                            draw_light_system(gctx, map, asset_manager, camera, &mut externs);
+                            matcap.draw(gctx, &externs, &tmp_gbuffers);
+                            // draw_light_system(gctx, map, asset_manager, camera, &mut externs);
 
                             ssao.draw(gctx, &externs, &tmp_gbuffers.ssao_intermediate);
 

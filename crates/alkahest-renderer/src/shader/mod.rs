@@ -1,3 +1,5 @@
+pub mod matcap;
+
 /// Relative to the assets directory
 /// Example: include_dxbc!(vs "shaders/test.hlsl") => 'assets/shaders/test.hlsl.vs.dxbc'
 #[macro_export]
