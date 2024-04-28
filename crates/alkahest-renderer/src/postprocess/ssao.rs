@@ -150,8 +150,8 @@ impl Default for ScopeAlkahestSsao {
 
         Self {
             target_pixel_to_world: Default::default(),
-            radius: 3.0,
-            bias: 0.15,
+            radius: 0.75,
+            bias: 0.05,
             kernel_size: KERNEL_SIZE as _,
             samples,
         }
