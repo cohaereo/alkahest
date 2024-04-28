@@ -14,14 +14,14 @@ use alkahest_renderer::{
         transform::Transform,
         Scene,
     },
-    gpu::{buffer::ConstantBuffer, GpuContext},
+    gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext},
     input::InputState,
-    loaders::{map_tmp::load_map, AssetManager},
+    loaders::{map_tmp::load_map, texture::load_texture, AssetManager},
     tfx::{
         externs,
-        externs::{ExternDefault, ExternStorage, Frame},
+        externs::{ExternDefault, ExternStorage, Frame, TextureView},
         gbuffer::GBuffer,
-        globals::RenderGlobals,
+        globals::{CubemapShape, RenderGlobals},
         scope::{ScopeFrame, ScopeTransparentAdvanced},
         view::View,
     },
@@ -63,6 +63,7 @@ pub struct AlkahestApp {
     time: Instant,
     delta_time: Instant,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
+    tex_atm: [Texture; 4],
 }
 
 impl AlkahestApp {
@@ -103,6 +104,21 @@ impl AlkahestApp {
         let rglobals = RenderGlobals::load(gctx.clone()).expect("Failed to load render globals");
         asset_manager.block_until_idle();
 
+        let p1 = rglobals.pipelines.get_specialized_cubemap_pipeline(
+            CubemapShape::Cube,
+            false,
+            true,
+            false,
+        );
+        let p2 = rglobals.pipelines.get_specialized_cubemap_pipeline(
+            CubemapShape::Cube,
+            false,
+            false,
+            false,
+        );
+
+        println!("Probes on: {}, Probes off: {}", p1.hash, p2.hash);
+
         let camera = Camera::new_fps(Viewport {
             size: glam::UVec2::new(1920, 1080),
             origin: glam::UVec2::new(0, 0),
@@ -141,6 +157,12 @@ impl AlkahestApp {
             frame_cbuffer,
             transparent_advanced_cbuffer,
             map,
+            tex_atm: [
+                load_texture(&gctx, TagHash(u32::from_be(0x3F9EE780))).unwrap(),
+                load_texture(&gctx, TagHash(u32::from_be(0x419EE780))).unwrap(),
+                load_texture(&gctx, TagHash(u32::from_be(0x419EE780))).unwrap(),
+                load_texture(&gctx, TagHash(u32::from_be(0x419EE780))).unwrap(),
+            ],
 
             window,
             event_loop,
@@ -173,6 +195,7 @@ impl AlkahestApp {
             frame_cbuffer,
             transparent_advanced_cbuffer,
             map,
+            tex_atm,
             ..
         } = self;
 
@@ -278,7 +301,6 @@ impl AlkahestApp {
                         }
 
                         gctx.begin_frame();
-                        //
                         unsafe {
                             gctx.context().OMSetRenderTargets(
                                 Some(&[
@@ -368,11 +390,17 @@ impl AlkahestApp {
                                 view
                             });
 
+                            let existing_transparent = externs
+                                .transparent
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or(ExternDefault::extern_default());
+
                             externs.transparent = Some(externs::Transparent {
-                                unk00: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk08: gctx.light_grey_texture.view.clone().into(),
-                                unk10: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk18: gctx.light_grey_texture.view.clone().into(),
+                                unk00: TextureView::Null,
+                                unk08: TextureView::Null,
+                                unk10: TextureView::Null,
+                                unk18: TextureView::Null,
                                 unk20: gctx.light_grey_texture.view.clone().into(),
                                 unk28: gctx.light_grey_texture.view.clone().into(),
                                 unk30: gctx.light_grey_texture.view.clone().into(),
@@ -382,11 +410,11 @@ impl AlkahestApp {
                                 unk48: tmp_gbuffers.staging_clone.view.clone().into(),
                                 unk50: gctx.dark_grey_texture.view.clone().into(),
                                 unk58: gctx.light_grey_texture.view.clone().into(),
-                                unk60: gctx.light_grey_texture.view.clone().into(),
-                                ..ExternDefault::extern_default()
+                                unk60: tmp_gbuffers.staging_clone.view.clone().into(),
+                                ..existing_transparent
                             });
                             externs.deferred = Some(externs::Deferred {
-                                unk00: Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0),
+                                depth_constants: Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0),
                                 deferred_depth: tmp_gbuffers.depth.texture_copy_view.clone().into(),
                                 deferred_rt0: tmp_gbuffers.rt0.view.clone().into(),
                                 deferred_rt1: tmp_gbuffers.rt1.view.clone().into(),
@@ -399,7 +427,12 @@ impl AlkahestApp {
                                     .clone()
                                     .into(),
                                 // unk98: gctx.light_grey_texture.view.clone().into(),
-                                unk98: tmp_gbuffers.staging_clone.view.clone().into(),
+                                // unk98: tmp_gbuffers.staging_clone.view.clone().into(),
+                                sky_hemisphere_mips: gctx
+                                    .sky_hemisphere_placeholder
+                                    .view
+                                    .clone()
+                                    .into(),
                                 ..ExternDefault::extern_default()
                             });
 
@@ -419,10 +452,22 @@ impl AlkahestApp {
                                 .as_ref()
                                 .cloned()
                                 .unwrap_or(ExternDefault::extern_default());
-                            externs.atmosphere = Some(externs::Atmosphere {
-                                unke0: gctx.dark_grey_texture.view.clone().into(),
 
-                                ..atmos_existing
+                            externs.atmosphere = Some({
+                                let mut atmos = externs::Atmosphere {
+                                    unk30: tex_atm[0].view.clone().into(),
+                                    unk40: tex_atm[1].view.clone().into(),
+                                    unk48: tex_atm[2].view.clone().into(),
+                                    unk58: tex_atm[3].view.clone().into(),
+                                    unke0: gctx.dark_grey_texture.view.clone().into(),
+
+                                    ..atmos_existing
+                                };
+
+                                atmos.unk20 = atmos.unk30.clone();
+                                atmos.unk38 = atmos.unk48.clone();
+
+                                atmos
                             });
 
                             rglobals
@@ -509,7 +554,7 @@ impl AlkahestApp {
                                 );
                                 gctx.context().ClearRenderTargetView(
                                     &tmp_gbuffers.light_diffuse.render_target,
-                                    &[0.0, 0.0, 0.0, 0.0],
+                                    &[0.01, 0.01, 0.01, 0.0],
                                 );
                                 gctx.context().ClearRenderTargetView(
                                     &tmp_gbuffers.light_specular.render_target,
@@ -541,6 +586,38 @@ impl AlkahestApp {
 
                             draw_light_system(gctx, map, asset_manager, camera, &mut externs);
 
+                            // unsafe {
+                            //     let existing_hdao = externs
+                            //         .hdao
+                            //         .as_ref()
+                            //         .cloned()
+                            //         .unwrap_or(ExternDefault::extern_default());
+                            //     let wh = Vec4::new(
+                            //         camera.viewport().size.x as f32,
+                            //         camera.viewport().size.y as f32,
+                            //         1.0 / camera.viewport().size.x as f32,
+                            //         1.0 / camera.viewport().size.y as f32,
+                            //     );
+                            //     externs.hdao = Some(externs::Hdao {
+                            //         unk60: tmp_gbuffers.depth.texture_view.clone().into(),
+                            //         unk68: tmp_gbuffers.depth.texture_view.clone().into(),
+                            //         unk70: wh,
+                            //         unk80: wh,
+                            //         ..existing_hdao
+                            //     });
+                            //
+                            //     gctx.context().OMSetDepthStencilState(None, 0);
+                            //     let pipeline = &rglobals.pipelines.hdao;
+                            //     if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
+                            //         error!("Failed to run hdao: {e}");
+                            //         return;
+                            //     }
+                            //
+                            //     // TODO(cohae): 4 vertices doesn't work...
+                            //     gctx.set_input_topology(EPrimitiveType::TriangleStrip);
+                            //     gctx.context().Draw(6, 0);
+                            // }
+
                             unsafe {
                                 gctx.context().OMSetRenderTargets(
                                     Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
@@ -555,6 +632,7 @@ impl AlkahestApp {
                                     return;
                                 }
 
+                                // TODO(cohae): 4 vertices doesn't work...
                                 gctx.set_input_topology(EPrimitiveType::TriangleStrip);
                                 gctx.context().Draw(6, 0);
 
@@ -620,9 +698,136 @@ impl AlkahestApp {
                                 .OMSetRenderTargets(Some(&[None, None, None]), None);
                         }
 
+                        // Experimental atmosphere rendering
+                        // {
+                        //     let mut externs = resources.get_mut::<ExternStorage>();
+                        //     let frame_existing = externs
+                        //         .frame
+                        //         .as_ref()
+                        //         .cloned()
+                        //         .unwrap_or(ExternDefault::extern_default());
+                        //     externs.frame = Some(Frame {
+                        //         unk00: time.elapsed().as_secs_f32(),
+                        //         unk04: time.elapsed().as_secs_f32(),
+                        //         specular_lobe_3d_lookup: rglobals
+                        //             .textures
+                        //             .specular_lobe_3d_lookup
+                        //             .view
+                        //             .clone()
+                        //             .into(),
+                        //         specular_lobe_lookup: rglobals
+                        //             .textures
+                        //             .specular_lobe_lookup
+                        //             .view
+                        //             .clone()
+                        //             .into(),
+                        //         specular_tint_lookup: rglobals
+                        //             .textures
+                        //             .specular_tint_lookup
+                        //             .view
+                        //             .clone()
+                        //             .into(),
+                        //         iridescence_lookup: rglobals
+                        //             .textures
+                        //             .iridescence_lookup
+                        //             .view
+                        //             .clone()
+                        //             .into(),
+                        //
+                        //         ..frame_existing
+                        //     });
+                        //
+                        //     externs.view = Some({
+                        //         let mut view = externs::View::default();
+                        //         camera.update(&resources.get::<InputState>(), delta_f32, true);
+                        //         camera.update_extern(&mut view);
+                        //         view
+                        //     });
+                        //
+                        //     gctx.current_states.store(StateSelection::new(
+                        //         Some(0),
+                        //         Some(0),
+                        //         Some(0),
+                        //         Some(0),
+                        //     ));
+                        //
+                        //     rglobals
+                        //         .scopes
+                        //         .frame
+                        //         .bind(gctx, asset_manager, &externs)
+                        //         .unwrap();
+                        //     rglobals
+                        //         .scopes
+                        //         .view
+                        //         .bind(gctx, asset_manager, &externs)
+                        //         .unwrap();
+                        //
+                        //     frame_cbuffer
+                        //         .write(&ScopeFrame {
+                        //             game_time: time.elapsed().as_secs_f32(),
+                        //             render_time: time.elapsed().as_secs_f32(),
+                        //             delta_game_time: delta_f32,
+                        //             ..Default::default()
+                        //         })
+                        //         .unwrap();
+                        //
+                        //     unsafe {
+                        //         gctx.context().VSSetConstantBuffers(
+                        //             13,
+                        //             Some(&[Some(frame_cbuffer.buffer().clone())]),
+                        //         );
+                        //         gctx.context().PSSetConstantBuffers(
+                        //             13,
+                        //             Some(&[Some(frame_cbuffer.buffer().clone())]),
+                        //         );
+                        //     }
+                        //
+                        //     let atmos_existing = externs
+                        //         .atmosphere
+                        //         .as_ref()
+                        //         .cloned()
+                        //         .unwrap_or(ExternDefault::extern_default());
+                        //     externs.atmosphere = Some({
+                        //         let mut atmos = externs::Atmosphere {
+                        //             unk30: tex_atm[0].view.clone().into(),
+                        //             unk40: tex_atm[1].view.clone().into(),
+                        //             unk48: tex_atm[2].view.clone().into(),
+                        //             unk58: tex_atm[3].view.clone().into(),
+                        //             unke0: gctx.dark_grey_texture.view.clone().into(),
+                        //
+                        //             ..atmos_existing
+                        //         };
+                        //
+                        //         atmos.unk20 = atmos.unk30.clone();
+                        //         atmos.unk38 = atmos.unk48.clone();
+                        //
+                        //         atmos
+                        //     });
+                        //
+                        //     unsafe {
+                        //         gctx.context().OMSetRenderTargets(
+                        //             Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
+                        //             None,
+                        //         );
+                        //
+                        //         gctx.context().OMSetDepthStencilState(None, 0);
+                        //
+                        //         let pipeline = &rglobals.pipelines.sky_lookup_generate_far;
+                        //         if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
+                        //             error!("Failed to run sky_lookup_generate_far: {e}");
+                        //             return;
+                        //         }
+                        //
+                        //         gctx.set_input_topology(EPrimitiveType::TriangleStrip);
+                        //         gctx.context().Draw(4, 0);
+                        //
+                        //         tmp_gbuffers.staging.copy_to(&tmp_gbuffers.staging_clone);
+                        //     }
+                        // }
+
                         gctx.blit_texture(
                             &tmp_gbuffers.staging.view,
-                            // &tmp_gbuffers.light_specular.view,
+                            // &tmp_gbuffers.light_diffuse.view,
                             gctx.swapchain_target.read().as_ref().unwrap(),
                         );
 
@@ -632,6 +837,7 @@ impl AlkahestApp {
                             puffin_egui::profiler_window(ectx);
                         });
 
+                        window.pre_present_notify();
                         gctx.present();
 
                         window.request_redraw();

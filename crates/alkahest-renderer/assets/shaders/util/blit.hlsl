@@ -1,20 +1,4 @@
-struct VSOutput {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
-};
-
-VSOutput VSMain(uint vertex_i : SV_VertexID) {
-    VSOutput output;
-
-
-    output.uv = float2(0, 0);
-    output.uv.x = vertex_i == 1 ? 2 : 0;
-    output.uv.y = vertex_i == 2 ? 2 : 0;
-
-    output.position = float4(output.uv * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-
-    return output;
-}
+#include "screen_space.hlsli"
 
 Texture2D Source : register(t0);
 SamplerState Sampler : register(s0);
@@ -37,4 +21,5 @@ void PSMain(
     out float4 rt : SV_Target0
 ) {
     rt = FinalCombineFilmCurve(Source.Sample(Sampler, input.uv));
+//     rt = Source.Sample(Sampler, input.uv);
 }

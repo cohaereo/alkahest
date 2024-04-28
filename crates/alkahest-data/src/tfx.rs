@@ -45,7 +45,7 @@ impl TigerReadable for TfxRenderStage {
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum TfxFeatureType {
+pub enum TfxFeatureRenderer {
     StaticObjects = 0,
     DynamicObjects = 1,
     ExampleEntity = 2,
@@ -75,7 +75,7 @@ pub enum TfxFeatureType {
     Cubemaps = 26,
 }
 
-impl TigerReadable for TfxFeatureType {
+impl TigerReadable for TfxFeatureRenderer {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
         endian: tiger_parse::Endian,
@@ -111,7 +111,7 @@ impl TfxShaderStage {
             _ => Err(format!("Invalid TFX shader stage: {}", value)),
         }
     }
-    
+
     pub fn short_name(&self) -> &'static str {
         match self {
             TfxShaderStage::Pixel => "PS",

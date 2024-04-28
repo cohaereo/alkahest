@@ -9,7 +9,7 @@ use glam::{Mat4, Vec3, Vec4};
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    ecs::{static_geometry::ModelBuffers, transform::Transform, Scene},
+    ecs::{components::Water, static_geometry::ModelBuffers, transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, GpuContext},
     handle::Handle,
     loaders::AssetManager,

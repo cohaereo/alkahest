@@ -6,9 +6,7 @@ use std::{
 use alkahest_data::tfx::TfxShaderStage;
 use glam::{Mat4, Vec4, Vec4Swizzles};
 use smallvec::SmallVec;
-use windows::{
-    Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResourceView},
-};
+use windows::Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResourceView};
 
 use super::opcodes::TfxBytecodeOp;
 use crate::{
@@ -280,8 +278,7 @@ impl TfxBytecodeInterpreter {
                 | &TfxBytecodeOp::Unk52 { unk1, .. }
                 | &TfxBytecodeOp::Unk53 { unk1, .. }
                 | &TfxBytecodeOp::Unk54 { unk1, .. } => match unk1 {
-                    10 => stack_push!(Vec4::ZERO),
-                    97 => stack_push!(Vec4::ZERO),
+                    10 | 97 => stack_push!(Vec4::ZERO),
                     _ => stack_push!(Vec4::ONE),
                 },
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {

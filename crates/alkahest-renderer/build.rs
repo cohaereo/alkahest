@@ -4,7 +4,7 @@
 
 use std::{
     alloc::{alloc_zeroed, dealloc, Layout},
-    ffi::c_void,
+    ffi::{c_void, CStr, CString},
     fs::File,
     io::Read,
     path::Path,
@@ -16,6 +16,7 @@ use windows::{
         Foundation::E_FAIL,
         Graphics::Direct3D::{
             Fxc::D3DCompile, ID3DBlob, ID3DInclude, ID3DInclude_Impl, D3D_INCLUDE_TYPE,
+            D3D_SHADER_MACRO,
         },
     },
 };
@@ -35,6 +36,15 @@ impl ShaderStage {
             ShaderStage::Pixel => "ps",
             ShaderStage::Geometry => "gs",
             ShaderStage::Compute => "cs",
+        }
+    }
+
+    pub fn define(&self) -> PCSTR {
+        match self {
+            ShaderStage::Vertex => s!("STAGE_VS"),
+            ShaderStage::Pixel => s!("STAGE_PS"),
+            ShaderStage::Geometry => s!("STAGE_GS"),
+            ShaderStage::Compute => s!("STAGE_CS"),
         }
     }
 
@@ -68,7 +78,19 @@ fn compile_blob(source: &str, stage: ShaderStage) -> ID3DBlob {
             source.as_ptr() as _,
             source.len(),
             None,
-            None,
+            Some(
+                [
+                    D3D_SHADER_MACRO {
+                        Name: stage.define(),
+                        Definition: PCSTR::null(),
+                    },
+                    D3D_SHADER_MACRO {
+                        Name: PCSTR::null(),
+                        Definition: PCSTR::null(),
+                    },
+                ]
+                .as_ptr() as _,
+            ),
             Some(&*includer),
             stage.entry(),
             stage.target(),
@@ -161,8 +183,9 @@ impl ID3DInclude_Impl for ShaderIncluder {
         // TODO(cohae): Local includes
         // if includetype == D3D_INCLUDE_LOCAL {
         let filename = unsafe { pfilename.to_string() }.unwrap_or_default();
-        let mut path = std::path::PathBuf::from("assets/shaders");
+        let mut path = std::path::PathBuf::from("assets/shaders/include/");
         path.push(&filename);
+        println!("cargo:rerun-if-changed={}", path.to_string_lossy());
 
         let data_result = File::open(path.as_path());
         match data_result {

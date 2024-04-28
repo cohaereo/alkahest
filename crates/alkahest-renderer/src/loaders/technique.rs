@@ -20,6 +20,7 @@ pub fn load_technique(gctx: SharedGpuContext, hash: TagHash) -> anyhow::Result<T
     let stech: STechnique = package_manager().read_tag_struct(hash)?;
 
     Ok(Technique {
+        hash,
         stage_vertex: load_technique_stage(
             gctx.clone(),
             &stech.shader_vertex,

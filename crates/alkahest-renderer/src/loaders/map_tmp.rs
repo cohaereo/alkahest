@@ -9,6 +9,7 @@ use alkahest_data::{
         SBubbleParent, SLightCollection, SMapDataTable, SShadowingLight, Unk808068d4, Unk80806aa7,
         Unk80806ef4, Unk8080714b,
     },
+    tfx::TfxFeatureRenderer,
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
@@ -21,7 +22,7 @@ use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 
 use crate::{
     ecs::{
-        components::ResourceOrigin,
+        components::{ResourceOrigin, Water},
         dynamic_geometry::{DynamicModel, DynamicModelComponent},
         light::LightRenderer,
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
@@ -125,16 +126,19 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         instances.push(entity);
                     }
 
-                    scene.insert_one(
+                    scene.insert(
                         parent,
-                        StaticInstances {
-                            cbuffer: ConstantBuffer::create_array_init(
-                                gctx.clone(),
-                                &vec![0u8; 32 + 64 * instances.len()],
-                            )?,
-                            instances,
-                            model,
-                        },
+                        (
+                            StaticInstances {
+                                cbuffer: ConstantBuffer::create_array_init(
+                                    gctx.clone(),
+                                    &vec![0u8; 32 + 64 * instances.len()],
+                                )?,
+                                instances,
+                                model,
+                            },
+                            TfxFeatureRenderer::StaticObjects,
+                        ),
                     )?;
                 }
             }
@@ -146,12 +150,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let terrain_resource: Unk8080714b = TigerReadable::read_ds(table_data).unwrap();
 
-                scene.spawn((TerrainPatches::load(
-                    gctx.clone(),
-                    asset_manager,
-                    terrain_resource.terrain,
-                )
-                .context("Failed to load terrain patches")?,));
+                scene.spawn((
+                    TerrainPatches::load(gctx.clone(), asset_manager, terrain_resource.terrain)
+                        .context("Failed to load terrain patches")?,
+                    TfxFeatureRenderer::TerrainPatch,
+                ));
             }
             0x80806aa3 => {
                 table_data
@@ -188,6 +191,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             .context("Failed to load background dynamic model")?,
                             cbuffer: ConstantBuffer::create(gctx.clone(), None)?,
                         },
+                        TfxFeatureRenderer::SkyTransparent,
                     ));
                 }
             }
@@ -205,6 +209,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             .context("Failed to load background dynamic model")?,
                         cbuffer: ConstantBuffer::create(gctx.clone(), None)?,
                     },
+                    TfxFeatureRenderer::Water,
                 ));
             }
             0x80806a63 => {
@@ -241,6 +246,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             .context("Failed to load light")?,
                         light,
                         bounds.bb,
+                        TfxFeatureRenderer::DeferredLights,
                     ));
                 }
             }
@@ -256,6 +262,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     LightRenderer::load_shadowing(gctx.clone(), asset_manager, &light)
                         .context("Failed to load shadowing light")?,
                     light,
+                    TfxFeatureRenderer::DeferredLights,
                 ));
             }
             u => {
@@ -297,6 +304,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     .context("Failed to load background dynamic model")?,
                                     cbuffer: ConstantBuffer::create(gctx.clone(), None)?,
                                 },
+                                TfxFeatureRenderer::DynamicObjects,
                             ));
                         }
                         u => {

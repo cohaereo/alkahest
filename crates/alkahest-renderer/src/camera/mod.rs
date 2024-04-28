@@ -107,6 +107,9 @@ impl Camera {
     pub fn set_viewport(&mut self, viewport: Viewport) {
         self.viewport = viewport;
     }
+    pub fn viewport(&self) -> &Viewport {
+        &self.viewport
+    }
 
     pub fn set_projection(&mut self, projection: CameraProjection) {
         self.projection = projection;

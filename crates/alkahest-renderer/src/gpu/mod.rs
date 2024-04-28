@@ -14,16 +14,13 @@ use std::{
 };
 
 use alkahest_data::{
-    dxgi::DxgiFormat,
-    geometry::EPrimitiveType,
-    technique::StateSelection,
-    tfx::{TfxShaderStage},
+    dxgi::DxgiFormat, geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage,
 };
 use crossbeam::atomic::AtomicCell;
 use parking_lot::RwLock;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::{
-    core::{Interface},
+    core::Interface,
     Win32::{
         Foundation::{DXGI_STATUS_OCCLUDED, HINSTANCE},
         Graphics::{
@@ -50,6 +47,7 @@ pub struct GpuContext {
     pub swapchain_resolution: AtomicCell<(u32, u32)>,
 
     pub fallback_texture: Texture,
+    pub sky_hemisphere_placeholder: Texture,
     pub white_texture: Texture,
     pub light_grey_texture: Texture,
     pub grey_texture: Texture,
@@ -184,6 +182,14 @@ impl GpuContext {
             Some("Black Texture"),
         )?;
 
+        let sky_hemisphere_placeholder = Texture::load_png(
+            &device,
+            &Png::from_bytes(include_bytes!(
+                "../../assets/textures/sky_hemisphere_placeholder.png"
+            ))?,
+            Some("sky_hemisphere_placeholder.png"),
+        )?;
+
         Ok(Self {
             main_thread_id: std::thread::current().id(),
             util_resources: UtilResources::new(&device),
@@ -196,6 +202,7 @@ impl GpuContext {
             swapchain_resolution: AtomicCell::new((0, 0)),
 
             fallback_texture,
+            sky_hemisphere_placeholder,
             white_texture,
             light_grey_texture,
             grey_texture,

@@ -1,8 +1,6 @@
 use std::mem::MaybeUninit;
 
-use alkahest_data::{
-    render_globals::{SRenderGlobals, Unk808066ae, Unk808067a8},
-};
+use alkahest_data::render_globals::{SRenderGlobals, Unk808066ae, Unk808067a8};
 use alkahest_pm::package_manager;
 use anyhow::Context;
 use field_access::FieldAccess;
@@ -11,7 +9,7 @@ use tiger_parse::PackageManagerExt;
 
 use crate::{
     gpu::{texture::Texture, GpuContext, SharedGpuContext},
-    loaders::{technique::load_technique},
+    loaders::technique::load_technique,
     tfx::{scope::TfxScope, technique::Technique},
 };
 
@@ -351,7 +349,7 @@ impl GlobalPipelines {
         pipelines
     }
 
-    pub fn get_cubemap_pipeline_specialized(
+    pub fn get_specialized_cubemap_pipeline(
         &self,
         shape: CubemapShape,
         alpha: bool,

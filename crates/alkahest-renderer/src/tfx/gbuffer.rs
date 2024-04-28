@@ -1,15 +1,10 @@
-use std::{
-    mem::{size_of},
-};
+use std::mem::size_of;
 
 use alkahest_data::dxgi::DxgiFormat;
 use anyhow::Context;
 use glam::Vec3;
 use windows::Win32::Graphics::{
-    Direct3D::{
-        D3D11_SRV_DIMENSION_TEXTURE2D,
-        D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
-    },
+    Direct3D::{D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY},
     Direct3D11::*,
     Dxgi::Common::*,
 };
@@ -99,14 +94,14 @@ impl GBuffer {
 
             staging: RenderTarget::create(
                 size,
-                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
                 "Staging",
             )
             .context("Staging")?,
             staging_clone: RenderTarget::create(
                 size,
-                DxgiFormat::B8G8R8A8_UNORM_SRGB,
+                DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
                 "Staging_Clone",
             )

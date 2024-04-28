@@ -200,8 +200,8 @@ impl LightRenderer {
             if let Some(tech) = asset_manager.techniques.get(&self.technique_shading) {
                 tech.bind(gctx, externs, asset_manager)
                     .expect("Failed to bind technique");
-            } else {
-                return;
+                // } else {
+                //     return;
             }
 
             gctx.context()

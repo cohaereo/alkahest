@@ -26,6 +26,7 @@ use crate::{
 
 pub struct Technique {
     pub tech: STechnique,
+    pub hash: TagHash,
 
     pub stage_vertex: Option<TechniqueStage>,
     // pub stage_hull: Option<TechniqueStage>,
@@ -138,7 +139,28 @@ impl Technique {
                         .context("Compute stage not set")?
                         .bind(gctx, externs, asset_manager)?;
                 }
-                u => anyhow::bail!("Unsupported shader bind type: {u}"),
+                // Seems to be primarily used by postprocessing shaders
+                0 => {
+                    self.stage_vertex
+                        .as_ref()
+                        .context("Vertex stage not set")?
+                        .bind(gctx, externs, asset_manager)?;
+                    self.stage_pixel
+                        .as_ref()
+                        .context("Pixel stage not set")?
+                        .bind(gctx, externs, asset_manager)?;
+                    self.stage_compute
+                        .as_ref()
+                        .context("Pixel stage not set")?
+                        .bind(gctx, externs, asset_manager)?;
+
+                    ctx.GSSetShader(None, None);
+                    ctx.HSSetShader(None, None);
+                    ctx.DSSetShader(None, None);
+                }
+                u => {
+                    anyhow::bail!("Unsupported shader bind type: {u}")
+                }
             }
         }
 
@@ -229,7 +251,7 @@ impl ShaderModule {
             }
         }
     }
-    
+
     pub fn with_name(self, name: &str) -> Self {
         self.set_name(name);
         self

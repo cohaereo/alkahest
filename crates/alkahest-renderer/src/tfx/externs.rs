@@ -69,6 +69,7 @@ pub struct ExternStorage {
     pub simple_geometry: Option<SimpleGeometry>,
     pub atmosphere: Option<Atmosphere>,
     pub water: Option<Water>,
+    pub hdao: Option<Hdao>,
 
     pub errors: RwLock<FxHashMap<String, TfxExpressionError>>,
 }
@@ -198,6 +199,7 @@ impl ExternStorage {
             SimpleGeometry => self.simple_geometry,
             Atmosphere => self.atmosphere,
             Water => self.water,
+            Hdao => self.hdao,
         }
     }
 
@@ -227,7 +229,8 @@ impl ExternStorage {
             Decal,
             SimpleGeometry,
             Atmosphere,
-            Water
+            Water,
+            Hdao
         }
     }
 
@@ -256,6 +259,7 @@ impl ExternStorage {
             SimpleGeometry => self.simple_geometry,
             Atmosphere => self.atmosphere,
             Water => self.water,
+            Hdao => self.hdao,
         }
     }
 }
@@ -413,7 +417,7 @@ extern_struct! {
 
 extern_struct! {
     struct Deferred("deferred") {
-        0x00 => unk00: Vec4 > unimplemented(false),
+        0x00 => depth_constants: Vec4 > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
         0x10 => unk10: Vec4 > unimplemented(true),
         0x20 => unk20: Vec4 > unimplemented(true),
         0x30 => unk30: f32 > unimplemented(true),
@@ -428,7 +432,7 @@ extern_struct! {
         0x80 => unk80: TextureView > unimplemented(true),
         0x88 => unk88: TextureView > unimplemented(true),
         0x90 => unk90: TextureView > unimplemented(true),
-        0x98 => unk98: TextureView > unimplemented(true),
+        0x98 => sky_hemisphere_mips: TextureView,
     }
 }
 
@@ -451,19 +455,19 @@ extern_struct! {
 
 extern_struct! {
     struct Transparent("transparent") {
-        0x00 => unk00: TextureView > unimplemented(false), // atmos_ss_far_lookup(_low_res)
-        0x08 => unk08: TextureView > unimplemented(false), // atmos_ss_far_lookup_downsampled
-        0x10 => unk10: TextureView > unimplemented(false), // atmos_ss_near_lookup(_low_res)
-        0x18 => unk18: TextureView > unimplemented(false), // atmos_ss_near_lookup_downsampled
-        0x20 => unk20: TextureView > unimplemented(false),
-        0x28 => unk28: TextureView > unimplemented(false), // Texture3D
-        0x30 => unk30: TextureView > unimplemented(false), // Texture3D
-        0x38 => unk38: TextureView > unimplemented(false), // Texture3D
-        0x40 => unk40: TextureView > unimplemented(false), // Texture3D
-        0x48 => unk48: TextureView > unimplemented(false), // Texture2D
-        0x50 => unk50: TextureView > unimplemented(false),
-        0x58 => unk58: TextureView > unimplemented(false),
-        0x60 => unk60: TextureView > unimplemented(false),
+        0x00 => unk00: TextureView > unimplemented(false), // t11 | atmos_ss_far_lookup(_low_res)
+        0x08 => unk08: TextureView > unimplemented(false), // t12 | atmos_ss_far_lookup_downsampled
+        0x10 => unk10: TextureView > unimplemented(false), // t13 | atmos_ss_near_lookup(_low_res)
+        0x18 => unk18: TextureView > unimplemented(false), // t14 | atmos_ss_near_lookup_downsampled
+        0x20 => unk20: TextureView > unimplemented(false), // t15 | surf_atmosphere_depth_angle_density_lookup
+        0x28 => unk28: TextureView > unimplemented(false), // t16 | field456_0x200 (Texture3D)
+        0x30 => unk30: TextureView > unimplemented(false), // t17 | field457_0x204 (Texture3D)
+        0x38 => unk38: TextureView > unimplemented(false), // t18 | field458_0x208 (Texture3D)
+        0x40 => unk40: TextureView > unimplemented(false), // t19 | light_grid_shadow_final Texture3D
+        0x48 => unk48: TextureView > unimplemented(false), // t20 | surf_volumetrics_surface0/surf_volumetrics_result Texture2D
+        0x50 => unk50: TextureView > unimplemented(false), // t21 | surf_volumetrics_result_intensity_3d
+        0x58 => unk58: TextureView > unimplemented(false), // t22 | field491_0x238
+        0x60 => unk60: TextureView > unimplemented(false), // t23 | surf_shading_result_read
         0x70 => unk70: Vec4 > unimplemented(true),
         0x80 => unk80: Vec4 > unimplemented(true),
         0x90 => unk90: Vec4 > unimplemented(true),
@@ -479,18 +483,26 @@ extern_struct! {
         0x10 => unk10: TextureView > unimplemented(true),
         0x18 => unk18: TextureView > unimplemented(true),
         0x20 => unk20: TextureView > unimplemented(true),
+        0x30 => unk30: TextureView > unimplemented(true),
         0x38 => unk38: TextureView > unimplemented(true),
-        0x50 => unk50: f32 > unimplemented(true),
+        0x40 => unk40: TextureView > unimplemented(true),
+        0x48 => unk48: TextureView > unimplemented(true),
+        // Normalized time of day value, where 0 is midnight, 0.5 is midday, and 1 is midnight again
+        0x50 => time_of_day_normalized: f32 > default(0.5),
         0x58 => unk58: TextureView > unimplemented(true),
         0x60 => unk60: TextureView > unimplemented(true),
         0x70 => unk70: Vec4 > unimplemented(true),
-        0x80 => unk80: TextureView > unimplemented(true),
+        0x80 => light_shaft_optical_depth: TextureView > unimplemented(true),
         0xa0 => unka0: TextureView > unimplemented(true),
         0xb0 => unkb0: Vec4 > unimplemented(true),
-        0xc0 => unkc0: TextureView > unimplemented(true),
-        0xd0 => unkd0: TextureView > unimplemented(true),
+        // Result of sky_lookup_generate_far
+        0xc0 => atmos_ss_far_lookup: TextureView > unimplemented(true),
+        0xc8 => atmos_ss_far_lookup_downsampled: TextureView > unimplemented(true),
+        // Result of sky_lookup_generate_near
+        0xd0 => atmos_ss_near_lookup: TextureView > unimplemented(true),
+        0xd8 => atmos_ss_near_lookup_downsampled: TextureView > unimplemented(true),
         0xe0 => unke0: TextureView > unimplemented(true),
-        0xf0 => unkf0: Vec4 > unimplemented(true),
+        0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),
         0x120 => unk120: Vec4 > unimplemented(true),
         0x130 => unk130: f32 > unimplemented(true),
         0x134 => unk134: f32 > unimplemented(true),
@@ -498,20 +510,24 @@ extern_struct! {
         0x144 => unk144: f32 > unimplemented(true),
         0x148 => unk148: f32 > unimplemented(true),
         0x14c => unk14c: f32 > unimplemented(true),
-        0x150 => unk150: f32 > unimplemented(true),
+        0x150 => unk150: f32 > unimplemented(true) > default(0.0001),
         0x160 => unk160: Vec4 > unimplemented(true),
         0x170 => unk170: f32 > unimplemented(true),
         0x174 => unk174: f32 > unimplemented(true),
-        0x178 => unk178: f32 > unimplemented(true),
-        0x194 => unk194: f32 > unimplemented(true),
-        0x198 => unk198: f32 > unimplemented(true),
-        0x19c => unk19c: f32 > unimplemented(true),
+        0x178 => unk178: f32 > unimplemented(true) > default(0.0001),
+        // Atmosphere rotation
+        0x194 => unk194_rotation: f32 > unimplemented(true) > default(0.0),
+        // Intensity
+        0x198 => unk198_intensity: f32 > unimplemented(true),
+        // Some kind of cutoff
+        0x19c => unk19c: f32 > unimplemented(true) > default(0.5),
         0x1a0 => unk1a0: f32 > unimplemented(true),
         0x1a4 => unk1a4: f32 > unimplemented(true),
-        0x1b0 => unk1b0: Vec4 > unimplemented(true),
+        0x1b0 => unk1b0: Vec4 > unimplemented(true) > default(Vec4::ZERO),
         0x1c0 => unk1c0: f32 > unimplemented(true),
         0x1c4 => unk1c4: f32 > unimplemented(true),
-        0x1c8 => unk1c8: f32 > unimplemented(true),
+        // Another cutoff value
+        0x1c8 => unk1c8: f32 > unimplemented(true) > default(0.0),
         0x1cc => unk1cc: f32 > unimplemented(true),
         0x1d8 => unk1d8: f32 > unimplemented(true),
         0x1dc => unk1dc: f32 > unimplemented(true),
@@ -558,10 +574,27 @@ extern_struct! {
     }
 }
 
+extern_struct! {
+    struct Hdao("hdao") {
+        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x10 => unk10: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x20 => unk20: Vec4 > unimplemented(true),
+        0x30 => unk30: Vec4 > unimplemented(true),
+        0x40 => unk40: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x50 => unk50: Vec4 > unimplemented(true),
+        0x60 => unk60: TextureView,
+        0x68 => unk68: TextureView,
+        0x70 => unk70: Vec4 > unimplemented(true),
+        0x80 => unk80: Vec4 > unimplemented(true),
+        0x90 => unk90: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        // 0xa0 => unka0: UnorderedAccessView,
+    }
+}
+
 #[test]
 fn test_externs() {
     let deferred = Deferred {
-        unk00: Vec4::new(1.0, 2.0, 3.0, 4.0),
+        depth_constants: Vec4::new(1.0, 2.0, 3.0, 4.0),
         ..Default::default()
     };
 
