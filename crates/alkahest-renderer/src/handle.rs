@@ -4,8 +4,6 @@ use std::{
     sync::{Arc, Weak},
 };
 
-
-
 use destiny_pkg::TagHash;
 use indexmap::IndexMap;
 use rustc_hash::FxHasher;
@@ -256,7 +254,10 @@ impl<T: Asset> AssetRegistry<T> {
     pub fn get_existing_handle_tiger(&self, taghash: TagHash) -> Option<Handle<T>> {
         let id = AssetId::new_tiger(taghash);
 
-        self.handle_map.get(&id).and_then(|h| h.refcount.upgrade()).map(|h| Handle {
+        self.handle_map
+            .get(&id)
+            .and_then(|h| h.refcount.upgrade())
+            .map(|h| Handle {
                 refcount: h,
                 id,
                 _phantom: std::marker::PhantomData,

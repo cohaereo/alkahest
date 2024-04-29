@@ -33,6 +33,7 @@ use windows::{
 
 use crate::{
     gpu::{global_state::RenderStates, texture::Texture, util::UtilResources},
+    loaders::vertex_buffer::{load_vertex_buffer_data, VertexBuffer},
     util::image::Png,
 };
 
@@ -47,6 +48,8 @@ pub struct GpuContext {
     pub swapchain_resolution: AtomicCell<(u32, u32)>,
 
     pub fallback_texture: Texture,
+    pub color0_fallback: VertexBuffer,
+
     pub sky_hemisphere_placeholder: Texture,
     pub white_texture: Texture,
     pub light_grey_texture: Texture,
@@ -181,6 +184,8 @@ impl GpuContext {
             Some("Black Texture"),
         )?;
 
+        let color0_fallback = load_vertex_buffer_data(&device, &[255, 255, 255, 255], 4)?;
+
         let sky_hemisphere_placeholder = Texture::load_png(
             &device,
             &Png::from_bytes(include_bytes!(
@@ -201,6 +206,7 @@ impl GpuContext {
             swapchain_resolution: AtomicCell::new((0, 0)),
 
             fallback_texture,
+            color0_fallback,
             sky_hemisphere_placeholder,
             white_texture,
             light_grey_texture,

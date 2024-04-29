@@ -8,22 +8,21 @@ use alkahest_renderer::{
         light::draw_light_system,
         map::MapAtmosphere,
         static_geometry::{
-            draw_static_instances_system, update_static_instances_system, StaticModel,
-            StaticModelSingle,
+            draw_static_instances_system, update_static_instances_system, StaticModelSingle,
         },
         terrain::draw_terrain_patches_system,
         transform::Transform,
         Scene,
     },
-    gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext},
+    gpu::{buffer::ConstantBuffer, GpuContext},
     input::InputState,
-    loaders::{map_tmp::load_map, texture::load_texture, AssetManager},
+    loaders::{map_tmp::load_map, AssetManager},
     postprocess::ssao::SsaoRenderer,
     renderer::RendererSettings,
     shader::matcap::MatcapRenderer,
     tfx::{
         externs,
-        externs::{ExternDefault, ExternStorage, Frame, TextureView},
+        externs::{ExternDefault, ExternStorage, Frame},
         gbuffer::GBuffer,
         globals::{CubemapShape, RenderGlobals},
         scope::{ScopeFrame, ScopeTransparentAdvanced},
@@ -587,7 +586,7 @@ impl AlkahestApp {
                             }
 
                             if render_settings.matcap {
-                                matcap.draw(gctx, &externs, &tmp_gbuffers);
+                                matcap.draw(gctx, &externs, tmp_gbuffers);
                             } else {
                                 draw_light_system(gctx, map, asset_manager, camera, &mut externs);
                             }
@@ -640,7 +639,7 @@ impl AlkahestApp {
                                 gctx.context().OMSetDepthStencilState(None, 0);
 
                                 let use_atmos =
-                                    if render_settings.atmosphere && map.query::<&MapAtmosphere>().iter().next().is_some() {
+                                    if map.query::<&MapAtmosphere>().iter().next().is_some() {
                                         gctx.context().OMSetRenderTargets(
                                             Some(&[
                                                 Some(
@@ -693,7 +692,7 @@ impl AlkahestApp {
                                     None,
                                 );
 
-                                let pipeline = if use_atmos {
+                                let pipeline = if use_atmos && render_settings.atmosphere {
                                     &rglobals.pipelines.deferred_shading
                                 } else {
                                     &rglobals.pipelines.deferred_shading_no_atm

@@ -42,9 +42,8 @@ impl ModelBuffers {
                 Some([0, 0].as_ptr()),
             );
 
-            if let Some(color) = color {
-                ctx.VSSetShaderResources(0, Some(&[color.srv.clone()]));
-            }
+            let color = color.unwrap_or(&gctx.color0_fallback);
+            ctx.VSSetShaderResources(0, Some(&[color.srv.clone()]));
         }
 
         Some(())
@@ -294,7 +293,7 @@ impl StaticInstances {
                     .write()
                     .as_slice(),
                 )
-                .unwrap()
+                .unwrap();
         }
     }
 }

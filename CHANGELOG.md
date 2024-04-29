@@ -90,6 +90,8 @@ received some polish!
 - Fixed decals not being blended properly
 - Fixed light shaft occlusion being rendered in the transparent stage
     - This caused objects to render the screen inside of them at 1/4th resolution
+- Fixed certain objects not being rendered correctly due to a missing color buffer
+    - These objects are now rendered with a default white color buffer
 
 ## 0.4.1 - 2024-03-27
 

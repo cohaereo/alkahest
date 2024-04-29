@@ -1,12 +1,12 @@
 use alkahest_data::buffers::VertexBufferHeader;
 use alkahest_pm::package_manager;
-use anyhow::{Context};
+use anyhow::Context;
 use destiny_pkg::TagHash;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::{
     Direct3D::D3D11_SRV_DIMENSION_BUFFER,
     Direct3D11::{
-        ID3D11Buffer, ID3D11ShaderResourceView, D3D11_BIND_SHADER_RESOURCE,
+        ID3D11Buffer, ID3D11Device, ID3D11ShaderResourceView, D3D11_BIND_SHADER_RESOURCE,
         D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_BUFFER_SRV, D3D11_BUFFER_SRV_0,
         D3D11_BUFFER_SRV_1, D3D11_SHADER_RESOURCE_VIEW_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC_0,
         D3D11_SUBRESOURCE_DATA, D3D11_USAGE_DEFAULT,
@@ -14,7 +14,7 @@ use windows::Win32::Graphics::{
     Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
 };
 
-use crate::gpu::SharedGpuContext;
+use crate::{gpu::GpuContext, util::d3d::D3dResource};
 
 pub struct VertexBuffer {
     pub buffer: ID3D11Buffer,
@@ -24,10 +24,7 @@ pub struct VertexBuffer {
     pub srv: Option<ID3D11ShaderResourceView>,
 }
 
-pub(crate) fn load_vertex_buffer(
-    gctx: &SharedGpuContext,
-    hash: TagHash,
-) -> anyhow::Result<VertexBuffer> {
+pub(crate) fn load_vertex_buffer(gctx: &GpuContext, hash: TagHash) -> anyhow::Result<VertexBuffer> {
     let entry = package_manager()
         .get_entry(hash)
         .context("Entry not found")?;
@@ -39,16 +36,26 @@ pub(crate) fn load_vertex_buffer(
         .read_tag(entry.reference)
         .context("Failed to read buffer data")?;
 
-    let bind_flags = if header.stride == 4 {
+    let vb = load_vertex_buffer_data(&gctx.device, &data, header.stride as _)?;
+    vb.buffer.set_debug_name(&format!("VertexBuffer: {hash}"));
+    Ok(vb)
+}
+
+pub fn load_vertex_buffer_data(
+    device: &ID3D11Device,
+    data: &[u8],
+    stride: u32,
+) -> anyhow::Result<VertexBuffer> {
+    let bind_flags = if stride == 4 {
         D3D11_BIND_VERTEX_BUFFER | D3D11_BIND_SHADER_RESOURCE
     } else {
         D3D11_BIND_VERTEX_BUFFER
     };
     let mut buffer = None;
     unsafe {
-        gctx.device.CreateBuffer(
+        device.CreateBuffer(
             &D3D11_BUFFER_DESC {
-                ByteWidth: header.data_size,
+                ByteWidth: data.len() as _,
                 Usage: D3D11_USAGE_DEFAULT,
                 BindFlags: bind_flags.0 as u32,
                 CPUAccessFlags: 0,
@@ -65,9 +72,9 @@ pub(crate) fn load_vertex_buffer(
     let buffer = buffer.unwrap();
 
     let mut srv = None;
-    if header.stride == 4 {
+    if stride == 4 {
         unsafe {
-            gctx.device.CreateShaderResourceView(
+            device.CreateShaderResourceView(
                 &buffer,
                 Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
                     Format: DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -76,7 +83,7 @@ pub(crate) fn load_vertex_buffer(
                         Buffer: D3D11_BUFFER_SRV {
                             Anonymous1: D3D11_BUFFER_SRV_0 { ElementOffset: 0 },
                             Anonymous2: D3D11_BUFFER_SRV_1 {
-                                NumElements: data.len() as u32 / header.stride as u32,
+                                NumElements: (data.len() / stride as usize) as u32,
                             },
                         },
                     },
@@ -88,8 +95,8 @@ pub(crate) fn load_vertex_buffer(
 
     Ok(VertexBuffer {
         buffer,
-        size: header.data_size,
-        stride: header.stride as u32,
+        size: data.len() as u32,
+        stride,
         srv,
     })
 }

@@ -1,9 +1,7 @@
 use std::{ffi::CStr, fmt::Write};
 
 use alkahest_data::dxgi::DxgiFormat;
-use anyhow::{Context};
-
-
+use anyhow::Context;
 use windows::{
     core::{s, PCSTR},
     Win32::{
@@ -20,8 +18,8 @@ use windows::{
                 D3D11_BLEND_SRC1_COLOR, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_SRC_COLOR,
                 D3D11_BLEND_ZERO, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CULL_BACK, D3D11_CULL_FRONT,
                 D3D11_CULL_MODE, D3D11_CULL_NONE, D3D11_FILL_MODE, D3D11_FILL_SOLID,
-                D3D11_FILL_WIREFRAME, D3D11_INPUT_ELEMENT_DESC,
-                D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
+                D3D11_FILL_WIREFRAME, D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA,
+                D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
             },
             Dxgi::Common::DXGI_FORMAT,
         },

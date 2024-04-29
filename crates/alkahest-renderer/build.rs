@@ -4,7 +4,7 @@
 
 use std::{
     alloc::{alloc_zeroed, dealloc, Layout},
-    ffi::{c_void, CStr, CString},
+    ffi::c_void,
     fs::File,
     io::Read,
     path::Path,

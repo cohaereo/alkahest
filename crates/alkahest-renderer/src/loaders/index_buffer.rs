@@ -1,14 +1,14 @@
 use alkahest_data::{buffers::IndexBufferHeader, dxgi::DxgiFormat};
 use alkahest_pm::package_manager;
-use anyhow::{Context};
+use anyhow::Context;
 use destiny_pkg::TagHash;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BUFFER_DESC,
-    D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
+    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,
+    D3D11_USAGE_IMMUTABLE,
 };
 
-use crate::gpu::SharedGpuContext;
+use crate::{gpu::SharedGpuContext, util::d3d::D3dResource};
 
 pub struct IndexBuffer {
     pub buffer: ID3D11Buffer,
@@ -49,9 +49,11 @@ pub(crate) fn load_index_buffer(
             Some(&mut buffer),
         )?;
     }
+    let buffer = buffer.unwrap();
+    buffer.set_debug_name(&format!("IndexBuffer: {hash}"));
 
     Ok(IndexBuffer {
-        buffer: buffer.unwrap(),
+        buffer,
         size: header.data_size,
         format: if header.is_32bit {
             DxgiFormat::R32_UINT

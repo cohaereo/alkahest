@@ -71,11 +71,7 @@ impl TfxScope {
         })
     }
 
-    pub fn bind(
-        &self,
-        gctx: &GpuContext,
-        externs: &ExternStorage,
-    ) -> anyhow::Result<()> {
+    pub fn bind(&self, gctx: &GpuContext, externs: &ExternStorage) -> anyhow::Result<()> {
         if let Some(stage) = &self.stage_vertex {
             stage.bind(gctx, externs)?;
         }
