@@ -4,6 +4,7 @@ use alkahest_data::{
     occlusion::AABB,
 };
 use anyhow::Context;
+use destiny_pkg::TagHash;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -24,7 +25,7 @@ use crate::{
     camera::Camera,
     ecs::{transform::Transform, Scene},
     gpu::{GpuContext, SharedGpuContext},
-    handle::Handle,
+    handle::{AssetId, Handle},
     loaders::AssetManager,
     tfx::{externs, externs::ExternStorage, technique::Technique},
 };
@@ -196,12 +197,11 @@ impl LightRenderer {
                 Some([12].as_ptr()),
                 Some(&0),
             );
-
             if let Some(tech) = asset_manager.techniques.get(&self.technique_shading) {
                 tech.bind(gctx, externs, asset_manager)
                     .expect("Failed to bind technique");
-                // } else {
-                //     return;
+            } else {
+                return;
             }
 
             gctx.context()
@@ -271,6 +271,8 @@ pub fn draw_light_system(
             unk40: Mat4::from_scale(Vec3::splat(0.15)),
             unk80: transform_mat,
             unkc0: transform.translation.extend(1.0),
+            unkd0: transform.translation.extend(1.0),
+            unke0: transform.translation.extend(1.0),
             unk100: light.unk50,
             unk110: 1.0,
             unk114: 1.0,
