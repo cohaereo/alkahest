@@ -45,7 +45,7 @@ impl Default for RendererSettings {
             vsync: true,
             ssao: true,
             atmosphere: true,
-            matcap: true,
+            matcap: false,
         }
     }
 }
