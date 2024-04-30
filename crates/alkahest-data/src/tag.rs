@@ -25,7 +25,7 @@ impl<T: TigerReadable> TigerReadable for Tag<T> {
 }
 
 impl<T: TigerReadable> Tag<T> {
-    pub fn hash(&self) -> TagHash {
+    pub fn taghash(&self) -> TagHash {
         self.1
     }
 }

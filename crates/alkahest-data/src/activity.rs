@@ -101,7 +101,7 @@ pub struct Unk80808948 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808E89)]
 pub struct Unk80808e89 {
     pub file_size: u64,
     pub unk8: u64,
@@ -112,14 +112,14 @@ pub struct Unk80808e89 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808EBE)]
 pub struct Unk80808ebe {
     pub file_size: u64,
     pub entity_resources: Vec<Tag<Unk80808943>>,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff, size = 0x24)]
+#[tiger_tag(id = 0x80808943, size = 0x24)]
 pub struct Unk80808943 {
     pub file_size: u64,
     #[tag(offset = 0x20)]

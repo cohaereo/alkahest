@@ -20,6 +20,7 @@ use crate::{
     gpu::{buffer::ConstantBufferCached, texture::Texture, GpuContext},
     handle::Handle,
     loaders::AssetManager,
+    renderer::Renderer,
     tfx::{bytecode::interpreter::TfxBytecodeInterpreter, externs::ExternStorage},
     util::d3d::D3dResource,
 };
@@ -56,38 +57,33 @@ impl Technique {
 }
 
 impl Technique {
-    pub fn bind(
-        &self,
-        gctx: &GpuContext,
-        externs: &ExternStorage,
-        asset_manager: &AssetManager,
-    ) -> anyhow::Result<()> {
-        let states = gctx.current_states.load().select(&self.tech.states);
+    pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
+        let states = renderer.gpu.current_states.load().select(&self.tech.states);
         if let Some(u) = states.blend_state() {
-            gctx.set_blend_state(u);
+            renderer.gpu.set_blend_state(u);
         }
         // if let Some(u) = states.depth_stencil_state() {
         //     gctx.set_depth_stencil_state(u);
         // }
         if let Some(u) = states.rasterizer_state() {
-            gctx.set_rasterizer_state(u);
+            renderer.gpu.set_rasterizer_state(u);
         }
         if let Some(u) = states.depth_bias_state() {
-            gctx.set_depth_bias(u);
+            renderer.gpu.set_depth_bias(u);
         }
 
-        let ctx = gctx.context();
+        let ctx = renderer.gpu.context();
         unsafe {
             match self.unk8 {
                 1 => {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
                     self.stage_pixel
                         .as_ref()
                         .context("Pixel stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
 
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
@@ -98,7 +94,7 @@ impl Technique {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
 
                     ctx.PSSetShader(None, None);
                     ctx.GSSetShader(None, None);
@@ -110,11 +106,11 @@ impl Technique {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
                     self.stage_geometry
                         .as_ref()
                         .context("Geometry stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
 
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
@@ -137,22 +133,22 @@ impl Technique {
                     self.stage_compute
                         .as_ref()
                         .context("Compute stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
                 }
                 // Seems to be primarily used by postprocessing shaders
                 0 => {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
                     self.stage_pixel
                         .as_ref()
                         .context("Pixel stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
                     self.stage_compute
                         .as_ref()
                         .context("Pixel stage not set")?
-                        .bind(gctx, externs, asset_manager)?;
+                        .bind(renderer)?;
 
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
@@ -191,25 +187,23 @@ pub struct TechniqueStage {
 }
 
 impl TechniqueStage {
-    pub fn bind(
-        &self,
-        gctx: &GpuContext,
-        externs: &ExternStorage,
-        asset_manager: &AssetManager,
-    ) -> anyhow::Result<()> {
-        self.shader_module.bind(gctx);
+    pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
+        self.shader_module.bind(&renderer.gpu);
         for (slot, tex) in &self.textures {
-            let tex = asset_manager
-                .textures
-                .get(tex)
-                .unwrap_or(&gctx.fallback_texture);
-            tex.bind(gctx, *slot, self.stage);
+            if let Some(tex) = renderer.data.lock().asset_manager.textures.get_shared(tex) {
+                tex.bind(&renderer.gpu, *slot, self.stage);
+            } else {
+                renderer
+                    .gpu
+                    .fallback_texture
+                    .bind(&renderer.gpu, *slot, self.stage);
+            }
         }
 
         if let (Some(cbuffer), Some(bytecode)) = (&self.cbuffer, &self.bytecode) {
             bytecode.evaluate(
-                gctx,
-                externs,
+                &renderer.gpu,
+                &renderer.data.lock().externs,
                 cbuffer,
                 &self.shader.bytecode_constants,
                 &self.samplers,
@@ -217,7 +211,7 @@ impl TechniqueStage {
         }
 
         if self.shader.constant_buffer_slot != -1 {
-            gctx.bind_cbuffer(
+            renderer.gpu.bind_cbuffer(
                 self.shader.constant_buffer_slot as u32,
                 self.cbuffer.as_ref().map(|v| v.buffer().clone()),
                 self.stage,

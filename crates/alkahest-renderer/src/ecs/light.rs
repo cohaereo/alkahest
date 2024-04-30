@@ -27,6 +27,7 @@ use crate::{
     gpu::{GpuContext, SharedGpuContext},
     handle::{AssetId, Handle},
     loaders::AssetManager,
+    renderer::Renderer,
     tfx::{externs, externs::ExternStorage, technique::Technique},
 };
 
@@ -181,46 +182,46 @@ impl LightRenderer {
         })
     }
 
-    fn draw(&self, gctx: &GpuContext, asset_manager: &AssetManager, externs: &mut ExternStorage) {
+    fn draw(&self, renderer: &Renderer) {
         unsafe {
-            gctx.context()
+            renderer
+                .gpu
+                .context()
                 .OMSetDepthStencilState(Some(&self.depth_state), 0);
 
             // Layout 1
             //  - float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12
-            gctx.set_input_layout(1);
-            gctx.set_blend_state(8);
-            gctx.context().IASetVertexBuffers(
+            renderer.gpu.set_input_layout(1);
+            renderer.gpu.set_blend_state(8);
+            renderer.gpu.context().IASetVertexBuffers(
                 0,
                 1,
                 Some([Some(self.vb_cube.clone())].as_ptr()),
                 Some([12].as_ptr()),
                 Some(&0),
             );
-            if let Some(tech) = asset_manager.techniques.get(&self.technique_shading) {
-                tech.bind(gctx, externs, asset_manager)
-                    .expect("Failed to bind technique");
+            if let Some(tech) = renderer.get_technique_shared(&self.technique_shading) {
+                tech.bind(renderer).expect("Failed to bind technique");
             } else {
                 return;
             }
 
-            gctx.context()
+            renderer
+                .gpu
+                .context()
                 .IASetIndexBuffer(Some(&self.ib_cube), DXGI_FORMAT_R16_UINT, 0);
 
-            gctx.set_input_topology(EPrimitiveType::Triangles);
+            renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
 
-            gctx.context().DrawIndexed(self.cube_index_count, 0, 0);
+            renderer
+                .gpu
+                .context()
+                .DrawIndexed(self.cube_index_count, 0, 0);
         }
     }
 }
 
-pub fn draw_light_system(
-    gctx: &GpuContext,
-    scene: &Scene,
-    asset_manager: &AssetManager,
-    camera: &Camera,
-    externs: &mut ExternStorage,
-) {
+pub fn draw_light_system(renderer: &Renderer, scene: &Scene, camera: &Camera) {
     profiling::scope!("draw_light_system");
     for (_, (transform, light_renderer, light, bounds)) in scene
         .query::<(&Transform, &LightRenderer, &SLight, Option<&AABB>)>()
@@ -233,26 +234,29 @@ pub fn draw_light_system(
         };
 
         let transform_mat = transform.to_mat4();
-        externs.simple_geometry = Some(externs::SimpleGeometry {
-            transform: camera.world_to_projective * (transform_mat * light_scale),
-        });
+        {
+            let externs = &mut renderer.data.lock().externs;
+            externs.simple_geometry = Some(externs::SimpleGeometry {
+                transform: camera.world_to_projective * (transform_mat * light_scale),
+            });
 
-        externs.deferred_light = Some(externs::DeferredLight {
-            // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-            unk40: Mat4::from_scale(Vec3::splat(0.15)),
-            unk80: transform_mat,
-            unkc0: transform.translation.extend(1.0),
-            unk100: light.unk50,
-            unk110: 1.0,
-            unk114: 1.0,
-            unk118: 1.0,
-            unk11c: 1.0,
-            unk120: 1.0,
+            externs.deferred_light = Some(externs::DeferredLight {
+                // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
+                unk40: Mat4::from_scale(Vec3::splat(0.15)),
+                unk80: transform_mat,
+                unkc0: transform.translation.extend(1.0),
+                unk100: light.unk50,
+                unk110: 1.0,
+                unk114: 1.0,
+                unk118: 1.0,
+                unk11c: 1.0,
+                unk120: 1.0,
 
-            ..Default::default()
-        });
+                ..Default::default()
+            });
+        }
 
-        light_renderer.draw(gctx, asset_manager, externs);
+        light_renderer.draw(renderer);
     }
 
     for (_, (transform, light_renderer, light)) in scene
@@ -262,27 +266,30 @@ pub fn draw_light_system(
         let light_scale = Mat4::from_scale(Vec3::splat(-(3000.0 * 4.0)));
 
         let transform_mat = transform.to_mat4();
-        externs.simple_geometry = Some(externs::SimpleGeometry {
-            transform: camera.world_to_projective * (transform_mat * light_scale),
-        });
+        {
+            let externs = &mut renderer.data.lock().externs;
+            externs.simple_geometry = Some(externs::SimpleGeometry {
+                transform: camera.world_to_projective * (transform_mat * light_scale),
+            });
 
-        externs.deferred_light = Some(externs::DeferredLight {
-            // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-            unk40: Mat4::from_scale(Vec3::splat(0.15)),
-            unk80: transform_mat,
-            unkc0: transform.translation.extend(1.0),
-            unkd0: transform.translation.extend(1.0),
-            unke0: transform.translation.extend(1.0),
-            unk100: light.unk50,
-            unk110: 1.0,
-            unk114: 1.0,
-            unk118: 1.0,
-            unk11c: 1.0,
-            unk120: 1.0,
+            externs.deferred_light = Some(externs::DeferredLight {
+                // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
+                unk40: Mat4::from_scale(Vec3::splat(0.15)),
+                unk80: transform_mat,
+                unkc0: transform.translation.extend(1.0),
+                unkd0: transform.translation.extend(1.0),
+                unke0: transform.translation.extend(1.0),
+                unk100: light.unk50,
+                unk110: 1.0,
+                unk114: 1.0,
+                unk118: 1.0,
+                unk11c: 1.0,
+                unk120: 1.0,
 
-            ..Default::default()
-        });
+                ..Default::default()
+            });
+        }
 
-        light_renderer.draw(gctx, asset_manager, externs);
+        light_renderer.draw(renderer);
     }
 }

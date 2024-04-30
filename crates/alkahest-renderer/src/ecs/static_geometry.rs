@@ -14,6 +14,7 @@ use crate::{
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
+    renderer::Renderer,
     tfx::{externs::ExternStorage, scope::ScopeInstances, technique::Technique},
 };
 
@@ -25,14 +26,15 @@ pub(super) struct ModelBuffers {
 }
 
 impl ModelBuffers {
-    pub fn bind(&self, asset_manager: &AssetManager, gctx: &GpuContext) -> Option<()> {
+    pub fn bind(&self, renderer: &Renderer) -> Option<()> {
         unsafe {
-            let vertex0 = asset_manager.vertex_buffers.get(&self.vertex0_buffer)?;
-            let vertex1 = asset_manager.vertex_buffers.get(&self.vertex1_buffer)?;
-            let color = asset_manager.vertex_buffers.get(&self.color_buffer);
-            let index = asset_manager.index_buffers.get(&self.index_buffer)?;
+            let am = &mut renderer.data.lock().asset_manager;
+            let vertex0 = am.vertex_buffers.get(&self.vertex0_buffer)?;
+            let vertex1 = am.vertex_buffers.get(&self.vertex1_buffer)?;
+            let color = am.vertex_buffers.get(&self.color_buffer);
+            let index = am.index_buffers.get(&self.index_buffer)?;
 
-            let ctx = gctx.context();
+            let ctx = renderer.gpu.context();
             ctx.IASetIndexBuffer(&index.buffer, DXGI_FORMAT(index.format as _), 0);
             ctx.IASetVertexBuffers(
                 0,
@@ -42,7 +44,7 @@ impl ModelBuffers {
                 Some([0, 0].as_ptr()),
             );
 
-            let color = color.unwrap_or(&gctx.color0_fallback);
+            let color = color.unwrap_or(&renderer.gpu.color0_fallback);
             ctx.VSSetShaderResources(0, Some(&[color.srv.clone()]));
         }
 
@@ -112,14 +114,7 @@ impl StaticModel {
     }
 
     /// ⚠ Expects the `instances` scope to be bound
-    pub fn draw(
-        &self,
-        asset_manager: &AssetManager,
-        externs: &ExternStorage,
-        gctx: &GpuContext,
-        render_stage: TfxRenderStage,
-        instances_count: u32,
-    ) {
+    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage, instances_count: u32) {
         profiling::scope!("StaticModel::draw");
         for (i, group) in self
             .model
@@ -136,24 +131,23 @@ impl StaticModel {
             }
 
             let buffers = &self.buffers[part.buffer_index as usize];
-            if buffers.bind(asset_manager, gctx).is_none() {
+            if buffers.bind(renderer).is_none() {
                 continue;
             }
 
-            let technique = &self.materials[i];
-            if let Some(technique) = asset_manager.techniques.get(technique) {
-                technique
-                    .bind(gctx, externs, asset_manager)
-                    .expect("Failed to bind technique");
+            if let Some(technique) = renderer.get_technique_shared(&self.materials[i]) {
+                technique.bind(renderer).expect("Failed to bind technique");
             } else {
                 continue;
             }
 
-            gctx.set_input_layout(group.input_layout_index as usize);
-            gctx.set_input_topology(part.primitive_type);
+            renderer
+                .gpu
+                .set_input_layout(group.input_layout_index as usize);
+            renderer.gpu.set_input_topology(part.primitive_type);
 
             unsafe {
-                gctx.context().DrawIndexedInstanced(
+                renderer.gpu.context().DrawIndexedInstanced(
                     part.index_count,
                     instances_count,
                     part.index_start,
@@ -163,14 +157,12 @@ impl StaticModel {
             }
         }
 
-        self.draw_special_meshes(asset_manager, externs, gctx, render_stage, instances_count);
+        self.draw_special_meshes(renderer, render_stage, instances_count);
     }
 
     fn draw_special_meshes(
         &self,
-        asset_manager: &AssetManager,
-        externs: &ExternStorage,
-        gctx: &GpuContext,
+        renderer: &Renderer,
         render_stage: TfxRenderStage,
         instances_count: u32,
     ) {
@@ -180,23 +172,23 @@ impl StaticModel {
             .iter()
             .filter(|m| m.mesh.render_stage == render_stage && m.mesh.lod.is_highest_detail())
         {
-            if mesh.buffers.bind(asset_manager, gctx).is_none() {
+            if mesh.buffers.bind(renderer).is_none() {
                 continue;
             }
 
-            if let Some(technique) = asset_manager.techniques.get(&mesh.technique) {
-                technique
-                    .bind(gctx, externs, asset_manager)
-                    .expect("Failed to bind technique");
+            if let Some(technique) = renderer.get_technique_shared(&mesh.technique) {
+                technique.bind(renderer).expect("Failed to bind technique");
                 // } else {
                 //     continue;
             }
 
-            gctx.set_input_layout(mesh.mesh.input_layout_index as usize);
-            gctx.set_input_topology(mesh.mesh.primitive_type);
+            renderer
+                .gpu
+                .set_input_layout(mesh.mesh.input_layout_index as usize);
+            renderer.gpu.set_input_topology(mesh.mesh.primitive_type);
 
             unsafe {
-                gctx.context().DrawIndexedInstanced(
+                renderer.gpu.context().DrawIndexedInstanced(
                     mesh.mesh.index_count,
                     instances_count,
                     mesh.mesh.index_start,
@@ -305,10 +297,8 @@ pub struct StaticInstance {
 }
 
 pub fn draw_static_instances_system(
-    gctx: &GpuContext,
+    renderer: &Renderer,
     scene: &Scene,
-    asset_manager: &AssetManager,
-    externs: &ExternStorage,
     render_stage: TfxRenderStage,
 ) {
     profiling::scope!(
@@ -318,20 +308,14 @@ pub fn draw_static_instances_system(
     for (_, instances) in scene.query::<&StaticInstances>().iter() {
         // TODO(cohae): We want to pull the slot number from the `instances` scope
         instances.cbuffer.bind(1, TfxShaderStage::Vertex);
-        instances.model.draw(
-            asset_manager,
-            externs,
-            gctx,
-            render_stage,
-            instances.instances.len() as u32,
-        );
+        instances
+            .model
+            .draw(renderer, render_stage, instances.instances.len() as u32);
     }
     for (_, instances) in scene.query::<&StaticModelSingle>().iter() {
         // TODO(cohae): We want to pull the slot number from the `instances` scope
         instances.cbuffer.bind(1, TfxShaderStage::Vertex);
-        instances
-            .model
-            .draw(asset_manager, externs, gctx, render_stage, 1);
+        instances.model.draw(renderer, render_stage, 1);
     }
 }
 

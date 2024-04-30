@@ -286,6 +286,13 @@ pub struct GlobalPipelines {
     pub debug_valid_source_color_saturation: Box<Technique>,
     pub debug_vertex_color: Box<Technique>,
     pub debug_world_normal: Box<Technique>,
+
+    // Feature renderer debug
+    debug_cubemap_diffuse_opacity: Box<Technique>,
+    debug_cubemap_diffuse_probes_alpha: Box<Technique>,
+    debug_cubemap_diffuse_probes: Box<Technique>,
+    debug_cubemap_overdraw: Box<Technique>,
+    debug_cubemap_specular_opacity: Box<Technique>,
 }
 
 #[derive(PartialEq)]
@@ -321,7 +328,7 @@ impl GlobalPipelines {
                             .expect("Failed to load global pipeline technique"),
                     );
 
-                    // println!("Technique {} ({})", p.name.to_string(), p.technique);
+                    println!("Technique {} ({})", p.name.to_string(), p.technique);
                     // for (_rs, tstage) in technique.all_stages() {
                     //     if let Some(stage) = tstage {
                     //         if let Some(int) = &stage.bytecode {

@@ -7,6 +7,7 @@ use crate::{
         buffer::ConstantBuffer, texture::Texture, util::DxDeviceExt, GpuContext, SharedGpuContext,
     },
     include_dxbc,
+    renderer::Renderer,
     tfx::{externs::ExternStorage, gbuffer::GBuffer},
     util::image::Png,
 };
@@ -55,28 +56,33 @@ impl MatcapRenderer {
         })
     }
 
-    pub fn draw(&self, gctx: &GpuContext, externs: &ExternStorage, gbuffers: &GBuffer) {
+    pub fn draw(&self, renderer: &Renderer) {
         unsafe {
-            if let Some(view) = &externs.view {
+            let data = renderer.data.lock();
+            if let Some(view) = &data.externs.view {
                 self.cam_cb.write(&view.world_to_camera).unwrap();
             } else {
                 return;
             }
 
             self.cam_cb.bind(0, TfxShaderStage::Pixel);
-            gctx.context()
-                .PSSetShaderResources(0, Some(&[Some(gbuffers.rt1.view.clone())]));
+            renderer
+                .gpu
+                .context()
+                .PSSetShaderResources(0, Some(&[Some(data.gbuffers.rt1.view.clone())]));
 
-            self.matcap_diffuse.bind(gctx, 1, TfxShaderStage::Pixel);
-            self.matcap_specular.bind(gctx, 2, TfxShaderStage::Pixel);
+            self.matcap_diffuse
+                .bind(&renderer.gpu, 1, TfxShaderStage::Pixel);
+            self.matcap_specular
+                .bind(&renderer.gpu, 2, TfxShaderStage::Pixel);
 
-            gctx.context().RSSetState(None);
-            gctx.set_input_topology(EPrimitiveType::Triangles);
-            gctx.context().OMSetDepthStencilState(None, 0);
-            gctx.context().VSSetShader(&self.shader_vs, None);
-            gctx.context().PSSetShader(&self.shader_ps, None);
+            renderer.gpu.context().RSSetState(None);
+            renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
+            renderer.gpu.context().OMSetDepthStencilState(None, 0);
+            renderer.gpu.context().VSSetShader(&self.shader_vs, None);
+            renderer.gpu.context().PSSetShader(&self.shader_ps, None);
 
-            gctx.context().Draw(3, 0);
+            renderer.gpu.context().Draw(3, 0);
         }
     }
 }

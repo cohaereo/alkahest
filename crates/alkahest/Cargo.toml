@@ -87,8 +87,9 @@ default = ["discord_rpc"]
 #tracy = []
 # Disable sorting the map list
 keep_map_order = []
-# TODO(cohae): This should be a runtime configuration setting?
+# TODO(cohae): This should be a runtime configuration setting
 discord_rpc = ["dep:discord-rpc-client"]
+deadlock_detection = ["parking_lot/deadlock_detection"]
 
 debug_lock = []
 tfx_strict_interpreter = []

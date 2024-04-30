@@ -35,7 +35,7 @@ pub struct GBuffer {
     pub atmos_ss_far_lookup: RenderTarget,
     pub atmos_ss_near_lookup: RenderTarget,
 
-    size: (u32, u32),
+    current_size: (u32, u32),
 }
 
 impl GBuffer {
@@ -142,13 +142,13 @@ impl GBuffer {
             )
             .context("atmos_ss_near_lookup")?,
 
-            size,
+            current_size: size,
         })
     }
 
-    pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
+    pub fn resize(&mut self, mut new_size: (u32, u32)) -> anyhow::Result<()> {
         if new_size.0 == 0 || new_size.1 == 0 {
-            return Ok(());
+            new_size = (4, 4);
         }
 
         self.rt0.resize(new_size).context("RT0")?;
@@ -184,7 +184,7 @@ impl GBuffer {
             .context("Staging_Clone")?;
         self.depth.resize(new_size).context("Depth")?;
         self.depth_staging.resize(new_size).context("Depth")?;
-        self.size = new_size;
+        self.current_size = new_size;
         Ok(())
     }
 
@@ -216,7 +216,10 @@ impl GBuffer {
             .unwrap_or(0.0)
     }
     pub fn depth_buffer_read_center(&self) -> f32 {
-        self.depth_buffer_read((self.size.0 / 2) as usize, (self.size.1 / 2) as usize)
+        self.depth_buffer_read(
+            (self.current_size.0 / 2) as usize,
+            (self.current_size.1 / 2) as usize,
+        )
     }
 
     pub fn depth_buffer_distance_pos_center(&self, camera: &Camera) -> (f32, Vec3) {

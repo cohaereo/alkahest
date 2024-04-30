@@ -12,6 +12,7 @@ use crate::{
         SharedGpuContext,
     },
     include_dxbc,
+    renderer::Renderer,
     tfx::{externs::ExternStorage, gbuffer::RenderTarget},
 };
 
@@ -63,7 +64,8 @@ impl SsaoRenderer {
         })
     }
 
-    pub fn draw(&self, gctx: &GpuContext, externs: &ExternStorage, intermediate_rt: &RenderTarget) {
+    pub fn draw(&self, renderer: &Renderer, intermediate_rt: &RenderTarget) {
+        let externs = &mut renderer.data.lock().externs;
         {
             let scope = self.scope.data();
             if let Some(view) = &externs.view {
@@ -75,16 +77,19 @@ impl SsaoRenderer {
 
         if let Some(deferred) = &externs.deferred {
             unsafe {
-                gctx.context().PSSetShaderResources(
+                renderer.gpu.context().PSSetShaderResources(
                     0,
                     Some(&[deferred.deferred_depth.view(), deferred.deferred_rt1.view()]),
                 );
 
-                gctx.context()
+                renderer
+                    .gpu
+                    .context()
                     .PSSetConstantBuffers(0, Some(&[Some(self.scope.buffer().clone())]));
             }
 
-            self.noise_texture.bind(gctx, 2, TfxShaderStage::Pixel);
+            self.noise_texture
+                .bind(&renderer.gpu, 2, TfxShaderStage::Pixel);
         } else {
             return;
         }
@@ -92,29 +97,45 @@ impl SsaoRenderer {
         unsafe {
             const NO_RT: Option<ID3D11RenderTargetView> = None;
             let mut rt_backup = [NO_RT; 4];
-            gctx.context()
+            renderer
+                .gpu
+                .context()
                 .OMGetRenderTargets(Some(&mut rt_backup), None);
 
-            gctx.context()
+            renderer
+                .gpu
+                .context()
                 .OMSetRenderTargets(Some(&[Some(intermediate_rt.render_target.clone())]), None);
 
-            gctx.set_blend_state(0);
-            gctx.context().RSSetState(None);
-            gctx.set_input_topology(EPrimitiveType::Triangles);
-            gctx.context().OMSetDepthStencilState(None, 0);
-            gctx.context().VSSetShader(&self.shader_vs, None);
-            gctx.context().PSSetShader(&self.shader_ps, None);
+            renderer.gpu.set_blend_state(0);
+            renderer.gpu.context().RSSetState(None);
+            renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
+            renderer.gpu.context().OMSetDepthStencilState(None, 0);
+            renderer.gpu.context().VSSetShader(&self.shader_vs, None);
+            renderer.gpu.context().PSSetShader(&self.shader_ps, None);
 
-            gctx.context().Draw(3, 0);
+            renderer.gpu.context().Draw(3, 0);
 
-            gctx.current_states
-                .store(StateSelection::new(Some(3), Some(1), Some(1), Some(1)));
-            gctx.set_blend_state(3);
-            gctx.context().OMSetRenderTargets(Some(&rt_backup), None);
-            gctx.context().PSSetShader(&self.shader_blur_ps, None);
-            gctx.context()
+            renderer.gpu.current_states.store(StateSelection::new(
+                Some(3),
+                Some(1),
+                Some(1),
+                Some(1),
+            ));
+            renderer.gpu.set_blend_state(3);
+            renderer
+                .gpu
+                .context()
+                .OMSetRenderTargets(Some(&rt_backup), None);
+            renderer
+                .gpu
+                .context()
+                .PSSetShader(&self.shader_blur_ps, None);
+            renderer
+                .gpu
+                .context()
                 .PSSetShaderResources(0, Some(&[Some(intermediate_rt.view.clone())]));
-            gctx.context().Draw(3, 0);
+            renderer.gpu.context().Draw(3, 0);
         }
     }
 }

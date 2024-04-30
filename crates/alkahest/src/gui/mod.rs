@@ -11,6 +11,7 @@ mod tfx;
 
 // Custom widgets
 pub mod big_button;
+mod bottom_bar;
 pub mod chip;
 
 pub trait UiExt {

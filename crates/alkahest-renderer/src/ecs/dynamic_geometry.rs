@@ -13,6 +13,7 @@ use crate::{
     gpu::{buffer::ConstantBuffer, GpuContext},
     handle::Handle,
     loaders::AssetManager,
+    renderer::Renderer,
     tfx::{
         externs::ExternStorage, scope::ScopeRigidModel, technique::Technique,
         view::RenderStageSubscriptions,
@@ -105,13 +106,7 @@ impl DynamicModel {
     }
 
     /// ⚠ Expects the `rigid_model` scope to be bound
-    pub fn draw(
-        &self,
-        asset_manager: &AssetManager,
-        externs: &ExternStorage,
-        gctx: &GpuContext,
-        render_stage: TfxRenderStage,
-    ) -> anyhow::Result<()> {
+    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) -> anyhow::Result<()> {
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
         ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
         // ensure!(
@@ -125,8 +120,10 @@ impl DynamicModel {
             return Ok(());
         }
 
-        gctx.set_input_layout(mesh.get_input_layout_for_stage(render_stage) as usize);
-        self.mesh_buffers[self.selected_mesh].bind(asset_manager, gctx);
+        renderer
+            .gpu
+            .set_input_layout(mesh.get_input_layout_for_stage(render_stage) as usize);
+        self.mesh_buffers[self.selected_mesh].bind(renderer);
         for part_index in mesh.get_range_for_stage(render_stage) {
             let part = &mesh.parts[part_index];
             if !part.lod_category.is_highest_detail() {
@@ -136,35 +133,37 @@ impl DynamicModel {
             let variant_material =
                 self.get_variant_technique(part.variant_shader_index, self.selected_variant);
 
-            if let Some(technique) = asset_manager
-                .techniques
-                .get(&self.part_techniques[self.selected_mesh][part_index])
+            if let Some(technique) =
+                renderer.get_technique_shared(&self.part_techniques[self.selected_mesh][part_index])
             {
-                technique
-                    .bind(gctx, externs, asset_manager)
-                    .expect("Failed to bind technique");
+                technique.bind(renderer).expect("Failed to bind technique");
                 // } else {
                 //     continue;
             }
 
-            if let Some(technique) = variant_material.and_then(|t| asset_manager.techniques.get(&t))
+            if let Some(technique) = variant_material
+                .and_then(|t| renderer.data.lock().asset_manager.techniques.get_shared(&t))
             {
                 technique
-                    .bind(gctx, externs, asset_manager)
+                    .bind(renderer)
                     .expect("Failed to bind variant technique");
             }
 
             if stages.contains(RenderStageSubscriptions::COMPUTE_SKINNING) {
                 unsafe {
-                    gctx.context()
-                        .VSSetShader(&gctx.util_resources.entity_vs_override, None);
+                    renderer
+                        .gpu
+                        .context()
+                        .VSSetShader(&renderer.gpu.util_resources.entity_vs_override, None);
                 }
             }
 
-            gctx.set_input_topology(part.primitive_type);
+            renderer.gpu.set_input_topology(part.primitive_type);
 
             unsafe {
-                gctx.context()
+                renderer
+                    .gpu
+                    .context()
                     .DrawIndexed(part.index_count, part.index_start, 0);
             }
         }
@@ -178,13 +177,7 @@ pub struct DynamicModelComponent {
     pub cbuffer: ConstantBuffer<ScopeRigidModel>,
 }
 
-pub fn draw_dynamic_model_system(
-    gctx: &GpuContext,
-    scene: &Scene,
-    asset_manager: &AssetManager,
-    externs: &ExternStorage,
-    render_stage: TfxRenderStage,
-) {
+pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
     profiling::scope!(
         "draw_dynamic_model_system",
         &format!("render_stage={render_stage:?}")
@@ -193,10 +186,7 @@ pub fn draw_dynamic_model_system(
         // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
         dynamic.cbuffer.bind(1, TfxShaderStage::Vertex);
         // TODO(cohae): Error reporting
-        dynamic
-            .model
-            .draw(asset_manager, externs, gctx, render_stage)
-            .unwrap();
+        dynamic.model.draw(renderer, render_stage).unwrap();
     }
 }
 

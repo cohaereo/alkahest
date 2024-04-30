@@ -18,7 +18,7 @@ use alkahest_renderer::{
     input::InputState,
     loaders::{map_tmp::load_map, AssetManager},
     postprocess::ssao::SsaoRenderer,
-    renderer::RendererSettings,
+    renderer::{Renderer, RendererSettings, RendererShared},
     shader::matcap::MatcapRenderer,
     tfx::{
         externs,
@@ -43,7 +43,12 @@ use winit::{
 
 use crate::{
     config,
-    gui::context::{GuiContext, GuiViewManager},
+    data::text::{GlobalStringmap, StringMapShared},
+    gui::{
+        activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
+        context::{GuiContext, GuiViewManager},
+    },
+    maplist::MapList,
     resources::Resources,
     ApplicationArgs,
 };
@@ -55,11 +60,7 @@ pub struct AlkahestApp {
     pub gctx: Arc<GpuContext>,
     pub gui: GuiContext,
     pub resources: Resources,
-    pub asset_manager: AssetManager,
 
-    tmp_gbuffers: GBuffer,
-    map: Scene,
-    rglobals: RenderGlobals,
     camera: Camera,
     frame_cbuffer: ConstantBuffer<ScopeFrame>,
     transparent_advanced_cbuffer: ConstantBuffer<ScopeTransparentAdvanced>,
@@ -69,6 +70,8 @@ pub struct AlkahestApp {
 
     ssao: SsaoRenderer,
     matcap: MatcapRenderer,
+    renderer: RendererShared,
+    map_placeholder: Scene,
 }
 
 impl AlkahestApp {
@@ -101,29 +104,23 @@ impl AlkahestApp {
         let gui = GuiContext::create(&window, gctx.clone());
         let mut resources = Resources::default();
         resources.insert(GuiViewManager::with_default_views());
-        resources.insert(ExternStorage::default());
         resources.insert(InputState::default());
+        resources.insert(CurrentActivity(args.activity));
         resources.insert(args);
         resources.insert(config!().renderer.clone());
+        resources.insert(MapList::default());
+        let renderer = Renderer::create(
+            gctx.clone(),
+            (window.inner_size().width, window.inner_size().height),
+        )
+        .unwrap();
+        resources.insert(renderer.clone());
+        let stringmap = Arc::new(GlobalStringmap::load().expect("Failed to load global strings"));
+        resources.insert(stringmap);
 
-        let mut asset_manager = AssetManager::new(gctx.clone());
-        let rglobals = RenderGlobals::load(gctx.clone()).expect("Failed to load render globals");
-        asset_manager.block_until_idle();
-
-        let p1 = rglobals.pipelines.get_specialized_cubemap_pipeline(
-            CubemapShape::Cube,
-            false,
-            true,
-            false,
-        );
-        let p2 = rglobals.pipelines.get_specialized_cubemap_pipeline(
-            CubemapShape::Cube,
-            false,
-            false,
-            false,
-        );
-
-        println!("Probes on: {}, Probes off: {}", p1.hash, p2.hash);
+        resources
+            .get_mut::<GuiViewManager>()
+            .insert(ActivityBrowser::new(&resources.get::<StringMapShared>()));
 
         let camera = Camera::new_fps(Viewport {
             size: glam::UVec2::new(1920, 1080),
@@ -133,49 +130,31 @@ impl AlkahestApp {
         let frame_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
         let transparent_advanced_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
 
-        let map = if let Some(map_hash) = resources.get::<ApplicationArgs>().map {
-            load_map(gctx.clone(), &mut asset_manager, map_hash).unwrap()
-        } else {
-            let mut scene = Scene::new();
-
-            scene.spawn((
-                Transform::default(),
-                StaticModelSingle::load(
-                    gctx.clone(),
-                    &mut asset_manager,
-                    TagHash(u32::from_be(0x8c3bd580)),
-                )
-                .unwrap(),
-            ));
-
-            scene
-        };
-
-        update_static_instances_system(&map);
-        update_dynamic_model_system(&map);
+        if let Some(maphash) = resources.get::<ApplicationArgs>().map {
+            let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
+                .unwrap_or_else(|_| format!("Unknown map {maphash}"));
+            
+            resources
+                .get_mut::<MapList>()
+                .add_map(map_name, maphash);
+        }
 
         Self {
             matcap: MatcapRenderer::new(gctx.clone()).unwrap(),
             ssao: SsaoRenderer::new(gctx.clone()).unwrap(),
-            tmp_gbuffers: GBuffer::create(
-                (window.inner_size().width, window.inner_size().height),
-                gctx.clone(),
-            )
-            .unwrap(),
             frame_cbuffer,
             transparent_advanced_cbuffer,
-            map,
             window,
             event_loop,
             gctx,
             gui,
             resources,
-            asset_manager,
-            rglobals,
             camera,
             time: Instant::now(),
             delta_time: Instant::now(),
             last_cursor_pos: None,
+            renderer,
+            map_placeholder: Scene::new(),
         }
     }
 
@@ -186,18 +165,16 @@ impl AlkahestApp {
             gui,
             gctx,
             resources,
-            asset_manager,
-            tmp_gbuffers,
-            rglobals,
             camera,
             time,
             delta_time,
             last_cursor_pos,
             frame_cbuffer,
             transparent_advanced_cbuffer,
-            map,
             ssao,
             matcap,
+            renderer,
+            map_placeholder,
             ..
         } = self;
 
@@ -273,7 +250,10 @@ impl AlkahestApp {
                             })
                             .expect("Failed to resize buffers");
 
-                        tmp_gbuffers
+                        renderer
+                            .data
+                            .lock()
+                            .gbuffers
                             .resize((new_dims.width, new_dims.height))
                             .expect("Failed to resize GBuffer");
                         camera.set_viewport(Viewport {
@@ -284,7 +264,7 @@ impl AlkahestApp {
                     WindowEvent::RedrawRequested => {
                         let delta_f32 = delta_time.elapsed().as_secs_f32();
                         *delta_time = Instant::now();
-                        asset_manager.poll();
+                        renderer.data.lock().asset_manager.poll();
                         let render_settings = resources.get::<RendererSettings>();
 
                         if gui.input_mut(|i| {
@@ -304,6 +284,20 @@ impl AlkahestApp {
                         }
 
                         gctx.begin_frame();
+                        let mut maps = resources.get_mut::<MapList>();
+                        maps.update_maps(resources);
+
+                        let map = maps
+                            .current_map()
+                            .map(|m| &m.scene)
+                            .unwrap_or(&map_placeholder);
+
+                        // TODO(cohae): Guess who's going to jail for this one (hint: it's me)
+                        let tmp_gbuffers = unsafe {
+                            let data = renderer.data.lock();
+                            &*(&data.gbuffers as *const GBuffer)
+                        };
+
                         unsafe {
                             gctx.context().OMSetRenderTargets(
                                 Some(&[
@@ -350,29 +344,33 @@ impl AlkahestApp {
                         }
 
                         {
-                            let mut externs = resources.get_mut::<ExternStorage>();
+                            let mut externs = &mut renderer.data.lock().externs;
                             externs.frame = Frame {
                                 unk00: time.elapsed().as_secs_f32(),
                                 unk04: time.elapsed().as_secs_f32(),
-                                specular_lobe_3d_lookup: rglobals
+                                specular_lobe_3d_lookup: renderer
+                                    .render_globals
                                     .textures
                                     .specular_lobe_3d_lookup
                                     .view
                                     .clone()
                                     .into(),
-                                specular_lobe_lookup: rglobals
+                                specular_lobe_lookup: renderer
+                                    .render_globals
                                     .textures
                                     .specular_lobe_lookup
                                     .view
                                     .clone()
                                     .into(),
-                                specular_tint_lookup: rglobals
+                                specular_tint_lookup: renderer
+                                    .render_globals
                                     .textures
                                     .specular_tint_lookup
                                     .view
                                     .clone()
                                     .into(),
-                                iridescence_lookup: rglobals
+                                iridescence_lookup: renderer
+                                    .render_globals
                                     .textures
                                     .iridescence_lookup
                                     .view
@@ -434,7 +432,6 @@ impl AlkahestApp {
                                     .into(),
                                 ..ExternDefault::extern_default()
                             });
-
                             let water_existing = externs
                                 .water
                                 .as_ref()
@@ -477,9 +474,11 @@ impl AlkahestApp {
 
                                 atmos
                             });
+                        }
 
-                            rglobals.scopes.frame.bind(gctx, &externs).unwrap();
-                            rglobals.scopes.view.bind(gctx, &externs).unwrap();
+                        {
+                            renderer.render_globals.scopes.frame.bind(renderer).unwrap();
+                            renderer.render_globals.scopes.view.bind(renderer).unwrap();
 
                             unsafe {
                                 gctx.context().VSSetConstantBuffers(
@@ -499,47 +498,31 @@ impl AlkahestApp {
                                 Some(0),
                             ));
 
-                            draw_terrain_patches_system(gctx, map, asset_manager, &externs);
+                            draw_terrain_patches_system(&renderer, map);
 
                             draw_static_instances_system(
-                                gctx,
+                                &renderer,
                                 map,
-                                asset_manager,
-                                &externs,
                                 TfxRenderStage::GenerateGbuffer,
                             );
 
                             draw_dynamic_model_system(
-                                gctx,
+                                &renderer,
                                 map,
-                                asset_manager,
-                                &externs,
                                 TfxRenderStage::GenerateGbuffer,
                             );
 
                             tmp_gbuffers.rt1.copy_to(&tmp_gbuffers.rt1_clone);
                             tmp_gbuffers.depth.copy_depth();
 
-                            externs.decal = Some(externs::Decal {
+                            renderer.data.lock().externs.decal = Some(externs::Decal {
                                 unk08: tmp_gbuffers.rt1_clone.view.clone().into(),
                                 ..Default::default()
                             });
 
-                            draw_static_instances_system(
-                                gctx,
-                                map,
-                                asset_manager,
-                                &externs,
-                                TfxRenderStage::Decals,
-                            );
+                            draw_static_instances_system(&renderer, map, TfxRenderStage::Decals);
 
-                            draw_dynamic_model_system(
-                                gctx,
-                                map,
-                                asset_manager,
-                                &externs,
-                                TfxRenderStage::Decals,
-                            );
+                            draw_dynamic_model_system(&renderer, map, TfxRenderStage::Decals);
 
                             tmp_gbuffers.rt0.copy_to(&tmp_gbuffers.staging_clone);
                             // tmp_gbuffers.rt0.copy_to(&tmp_gbuffers.staging);
@@ -586,13 +569,13 @@ impl AlkahestApp {
                             }
 
                             if render_settings.matcap {
-                                matcap.draw(gctx, &externs, tmp_gbuffers);
+                                matcap.draw(&renderer);
                             } else {
-                                draw_light_system(gctx, map, asset_manager, camera, &mut externs);
+                                draw_light_system(&renderer, map, camera);
                             }
 
                             if render_settings.ssao {
-                                ssao.draw(gctx, &externs, &tmp_gbuffers.ssao_intermediate);
+                                ssao.draw(&renderer, &tmp_gbuffers.ssao_intermediate);
                             }
 
                             // unsafe {
@@ -616,7 +599,7 @@ impl AlkahestApp {
                             //     });
                             //
                             //     gctx.context().OMSetDepthStencilState(None, 0);
-                            //     let pipeline = &rglobals.pipelines.hdao;
+                            //     let pipeline = &renderer.render_globals.pipelines.hdao;
                             //     if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
                             //         error!("Failed to run hdao: {e}");
                             //         return;
@@ -653,10 +636,11 @@ impl AlkahestApp {
                                             None,
                                         );
 
-                                        rglobals
+                                        renderer
+                                            .render_globals
                                             .pipelines
                                             .sky_lookup_generate_far
-                                            .bind(gctx, &externs, asset_manager)
+                                            .bind(&renderer)
                                             .unwrap();
 
                                         gctx.context().Draw(6, 0);
@@ -674,10 +658,11 @@ impl AlkahestApp {
                                             None,
                                         );
 
-                                        rglobals
+                                        renderer
+                                            .render_globals
                                             .pipelines
                                             .sky_lookup_generate_near
-                                            .bind(gctx, &externs, asset_manager)
+                                            .bind(&renderer)
                                             .unwrap();
 
                                         gctx.context().Draw(6, 0);
@@ -693,11 +678,11 @@ impl AlkahestApp {
                                 );
 
                                 let pipeline = if use_atmos && render_settings.atmosphere {
-                                    &rglobals.pipelines.deferred_shading
+                                    &renderer.render_globals.pipelines.deferred_shading
                                 } else {
-                                    &rglobals.pipelines.deferred_shading_no_atm
+                                    &renderer.render_globals.pipelines.deferred_shading_no_atm
                                 };
-                                if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
+                                if let Err(e) = pipeline.bind(&renderer) {
                                     error!("Failed to run deferred_shading: {e}");
                                     return;
                                 }
@@ -716,7 +701,12 @@ impl AlkahestApp {
                                     .OMSetDepthStencilState(&tmp_gbuffers.depth.state_readonly, 0);
                             }
 
-                            rglobals.scopes.transparent.bind(gctx, &externs).unwrap();
+                            renderer
+                                .render_globals
+                                .scopes
+                                .transparent
+                                .bind(&renderer)
+                                .unwrap();
 
                             gctx.current_states.store(StateSelection::new(
                                 Some(2),
@@ -726,36 +716,24 @@ impl AlkahestApp {
                             ));
 
                             draw_static_instances_system(
-                                gctx,
+                                &renderer,
                                 map,
-                                asset_manager,
-                                &externs,
                                 TfxRenderStage::DecalsAdditive,
                             );
 
                             draw_dynamic_model_system(
-                                gctx,
+                                &renderer,
                                 map,
-                                asset_manager,
-                                &externs,
                                 TfxRenderStage::DecalsAdditive,
                             );
 
                             draw_static_instances_system(
-                                gctx,
+                                &renderer,
                                 map,
-                                asset_manager,
-                                &externs,
                                 TfxRenderStage::Transparents,
                             );
 
-                            draw_dynamic_model_system(
-                                gctx,
-                                map,
-                                asset_manager,
-                                &externs,
-                                TfxRenderStage::Transparents,
-                            );
+                            draw_dynamic_model_system(&renderer, map, TfxRenderStage::Transparents);
                         }
 
                         unsafe {
@@ -770,6 +748,7 @@ impl AlkahestApp {
                             gctx.swapchain_target.read().as_ref().unwrap(),
                         );
 
+                        drop(maps);
                         drop(render_settings);
                         gui.draw_frame(window, |ctx, ectx| {
                             let mut gui_views = resources.get_mut::<GuiViewManager>();

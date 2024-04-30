@@ -1,17 +1,20 @@
 use alkahest_data::{
     activity::{SActivity, SDestination},
-    map::SBubbleParent,
+    map::{SBubbleParent, SBubbleParentShallow},
 };
 use alkahest_pm::package_manager;
 use destiny_pkg::TagHash;
-use egui::{ahash::HashMapExt, TextBuffer};
+use egui::{ahash::HashMapExt, Context, TextBuffer};
 use rustc_hash::FxHashMap;
 use tiger_parse::{PackageManagerExt, TigerReadable};
+use winit::window::Window;
 
 use crate::{
     data::text::{GlobalStringmap, StringContainer, StringMapShared},
+    gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
     resources::Resources,
+    ApplicationArgs,
 };
 
 #[derive(Debug)]
@@ -24,12 +27,13 @@ pub struct ActivitiesForDestination {
 #[derive(PartialEq)]
 pub enum ActivitySelectPanel {
     Activities,
+    Patrols,
     Maps,
 }
 
 pub struct ActivityBrowser {
-    // pub destinations: Vec<ActivitiesForDestination>,
     pub activity_buckets: Vec<(String, Vec<ActivitiesForDestination>)>,
+    pub activity_patrols: Vec<(String, TagHash)>,
     pub maps: Vec<(String, Vec<(String, TagHash)>)>,
     show_ambient: bool,
     panel: ActivitySelectPanel,
@@ -38,9 +42,10 @@ pub struct ActivityBrowser {
 impl ActivityBrowser {
     pub fn new(stringmap_global: &GlobalStringmap) -> Self {
         let destination_hashes = package_manager().get_all_by_reference(SDestination::ID.unwrap());
-        // let mut destinations = vec![];
         let mut activity_buckets: FxHashMap<String, Vec<ActivitiesForDestination>> =
             FxHashMap::new();
+        let mut activity_patrols = vec![];
+
         for (hash, _) in destination_hashes {
             match package_manager().read_tag_struct::<SDestination>(hash) {
                 Ok(destination) => {
@@ -61,6 +66,22 @@ impl ActivityBrowser {
                     };
 
                     let mut activities = vec![];
+
+                    let destination_code = destination.destination_name.to_string();
+                    let bucket_name =
+                        if let Some(name) = stringmap.get(&destination.location_name.0) {
+                            name.clone()
+                        } else {
+                            destination_code.clone()
+                        };
+
+                    let bucket_name = if destination_code.starts_with("gambit_") {
+                        "Gambit".to_string()
+                    } else if destination_code.starts_with("crucible_") {
+                        "Crucible".to_string()
+                    } else {
+                        bucket_name
+                    };
 
                     let destination_name = stringmap.get(&destination.location_name.0).cloned();
 
@@ -87,24 +108,13 @@ impl ActivityBrowser {
                                 activity_code
                             };
 
+                        if let Some(base_name) = activity_name.strip_suffix("_freeroam") {
+                            activity_patrols
+                                .push((format!("{bucket_name} ({base_name})"), activity_hash));
+                        }
+
                         activities.push((activity_name, activity_hash));
                     }
-
-                    let destination_code = destination.destination_name.to_string();
-                    let bucket_name =
-                        if let Some(name) = stringmap.get(&destination.location_name.0) {
-                            name.clone()
-                        } else {
-                            destination_code.clone()
-                        };
-
-                    let bucket_name = if destination_code.starts_with("gambit_") {
-                        "Gambit".to_string()
-                    } else if destination_code.starts_with("crucible_") {
-                        "Crucible".to_string()
-                    } else {
-                        bucket_name
-                    };
 
                     activity_buckets.entry(bucket_name).or_default().push(
                         ActivitiesForDestination {
@@ -113,12 +123,6 @@ impl ActivityBrowser {
                             activities,
                         },
                     );
-
-                    // destinations.push(ActivitiesForDestination {
-                    //     destination_name,
-                    //     destination_code: destination.destination_name.to_string(),
-                    //     activities,
-                    // });
                 }
                 Err(e) => {
                     error!("Failed to read SDestination: {}", e);
@@ -127,17 +131,16 @@ impl ActivityBrowser {
             }
         }
 
-        let maps: FxHashMap<String, Vec<(String, TagHash)>> = FxHashMap::default();
+        let mut maps: FxHashMap<String, Vec<(String, TagHash)>> = FxHashMap::default();
 
         for (m, _) in package_manager().get_all_by_reference(SBubbleParent::ID.unwrap()) {
-            let _package_name = package_manager().package_paths[&m.pkg_id()].name.clone();
-            todo!()
-            // let Ok(map_name) = get_map_name(m, stringmap_global) else {
-            //     error!("Failed to get map name for {m}");
-            //     continue;
-            // };
-            //
-            // maps.entry(package_name).or_default().push((map_name, m));
+            let package_name = package_manager().package_paths[&m.pkg_id()].name.clone();
+            let Ok(map_name) = get_map_name(m, stringmap_global) else {
+                error!("Failed to get map name for {m}");
+                continue;
+            };
+
+            maps.entry(package_name).or_default().push((map_name, m));
         }
 
         let mut maps: Vec<_> = maps.into_iter().collect();
@@ -149,29 +152,11 @@ impl ActivityBrowser {
         Self {
             // destinations,
             activity_buckets,
+            activity_patrols,
             maps,
             show_ambient: false,
             panel: ActivitySelectPanel::Activities,
         }
-    }
-
-    pub fn show(&mut self, ctx: &egui::Context, resources: &Resources) {
-        egui::Window::new("Activities").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.selectable_value(
-                    &mut self.panel,
-                    ActivitySelectPanel::Activities,
-                    "Activities",
-                );
-                ui.selectable_value(&mut self.panel, ActivitySelectPanel::Maps, "Maps");
-            });
-            ui.separator();
-
-            match self.panel {
-                ActivitySelectPanel::Activities => self.activities_panel(ctx, ui, resources),
-                ActivitySelectPanel::Maps => self.maps_panel(ctx, ui, resources),
-            }
-        });
     }
 
     fn activities_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &Resources) {
@@ -188,51 +173,45 @@ impl ActivityBrowser {
                 for (bucket_name, destinations) in &self.activity_buckets {
                     ui.collapsing(bucket_name, |ui| {
                         for destination in destinations {
-                            ui.collapsing(
-                                destination.destination_code.clone(),
-                                // if let Some(destination_name) = &destination.destination_name {
-                                //     format!(
-                                //         "{} ({destination_name})",
-                                //         destination.destination_code
-                                //     )
-                                // } else {
-                                //     destination.destination_code.clone()
-                                // },
-                                |ui| {
-                                    for (activity_name, _activity_hash) in &destination.activities {
-                                        if !self.show_ambient && activity_name.ends_with("_ambient")
-                                        {
-                                            continue;
-                                        }
-                                        let mut activity_name = activity_name.clone();
-                                        if activity_name.contains("_ls_") {
-                                            activity_name.insert_text(" ", 0);
-                                        }
-                                        if ui.selectable_label(false, &activity_name).clicked() {
-                                            let _maplist = resources.get_mut::<MapList>();
-                                            let _stringmap = resources.get::<StringMapShared>();
-                                            todo!();
-                                            // let Ok(maps) =
-                                            //     query_activity_maps(*activity_hash, &stringmap)
-                                            // else {
-                                            //     error!(
-                                            //         "Failed to query activity maps for \
-                                            //          {activity_name}"
-                                            //     );
-                                            //     continue;
-                                            // };
-                                            //
-                                            // // TODO(cohae): very hacky way to set the activity
-                                            // resources.get_mut::<Args>().unwrap().activity =
-                                            //     Some(activity_hash.to_string());
-                                            //
-                                            // maplist.set_maps(&maps);
+                            ui.collapsing(&destination.destination_code, |ui| {
+                                for (activity_name, activity_hash) in &destination.activities {
+                                    if !self.show_ambient && activity_name.ends_with("_ambient") {
+                                        continue;
+                                    }
+                                    let mut activity_name = activity_name.clone();
+                                    if activity_name.contains("_ls_") {
+                                        activity_name.insert_text(" ", 0);
+                                    }
+                                    if ui.selectable_label(false, &activity_name).clicked() {
+                                        if let Err(e) = set_activity(resources, *activity_hash) {
+                                            error!(
+                                                "Failed to set activity \
+                                                 {activity_name}/{activity_hash}: {e:?}"
+                                            );
                                         }
                                     }
-                                },
-                            );
+                                }
+                            });
                         }
                     });
+                }
+            });
+    }
+
+    fn patrols_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &Resources) {
+        egui::ScrollArea::vertical()
+            .max_height(ctx.available_rect().height() * 0.9)
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                for (patrol_name, activity_hash) in &self.activity_patrols {
+                    if ui.selectable_label(false, patrol_name).clicked() {
+                        if let Err(e) = set_activity(resources, *activity_hash) {
+                            error!(
+                                "Failed to set patrol activity {patrol_name}/{activity_hash}: \
+                                 {e:?}"
+                            );
+                        }
+                    }
                 }
             });
     }
@@ -261,3 +240,98 @@ impl ActivityBrowser {
             });
     }
 }
+
+impl GuiView for ActivityBrowser {
+    fn draw(
+        &mut self,
+        ctx: &Context,
+        _window: &Window,
+        resources: &Resources,
+        _gui: &GuiCtx<'_>,
+    ) -> Option<ViewResult> {
+        egui::Window::new("Activities").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.selectable_value(
+                    &mut self.panel,
+                    ActivitySelectPanel::Activities,
+                    "Activities",
+                );
+                ui.selectable_value(&mut self.panel, ActivitySelectPanel::Patrols, "Free Roam");
+                ui.selectable_value(&mut self.panel, ActivitySelectPanel::Maps, "Maps");
+            });
+            ui.separator();
+
+            match self.panel {
+                ActivitySelectPanel::Activities => self.activities_panel(ctx, ui, resources),
+                ActivitySelectPanel::Patrols => self.patrols_panel(ctx, ui, resources),
+                ActivitySelectPanel::Maps => self.maps_panel(ctx, ui, resources),
+            }
+        });
+
+        None
+    }
+}
+
+pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Result<()> {
+    let mut maplist = resources.get_mut::<MapList>();
+    let stringmap = resources.get::<StringMapShared>();
+    let maps = query_activity_maps(activity_hash, &stringmap)?;
+    resources.get_mut::<CurrentActivity>().0 = Some(activity_hash);
+    maplist.set_maps(&maps);
+    Ok(())
+}
+
+pub fn get_map_name(map_hash: TagHash, stringmap: &GlobalStringmap) -> anyhow::Result<String> {
+    let _span = info_span!("Get map name", %map_hash).entered();
+    let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(map_hash) {
+        Ok(m) => m.map_name,
+        Err(e) => {
+            anyhow::bail!("Failed to load map {map_hash}: {e}");
+        }
+    };
+
+    Ok(stringmap.get(map_name))
+}
+
+pub fn query_activity_maps(
+    activity_hash: TagHash,
+    stringmap: &GlobalStringmap,
+) -> anyhow::Result<Vec<(TagHash, String)>> {
+    let _span = info_span!("Query activity maps").entered();
+    let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
+    let mut string_container = StringContainer::default();
+    if let Ok(destination) = package_manager().read_tag_struct::<SDestination>(activity.destination)
+    {
+        if let Ok(sc) = StringContainer::load(destination.string_container) {
+            string_container = sc;
+        }
+    }
+
+    let mut maps = vec![];
+    for u1 in &activity.unk50 {
+        for map in &u1.map_references {
+            let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(*map) {
+                Ok(m) => m.map_name,
+                Err(e) => {
+                    error!("Failed to load map {map}: {e:?}");
+                    continue;
+                }
+            };
+
+            let map_name = string_container
+                .get(&map_name.0)
+                .cloned()
+                .unwrap_or_else(|| {
+                    // Fall back to global stringmap
+                    stringmap.get(map_name)
+                });
+
+            maps.push((map.hash32(), map_name));
+        }
+    }
+
+    Ok(maps)
+}
+
+#[derive(Default)]
+pub struct CurrentActivity(pub Option<TagHash>);

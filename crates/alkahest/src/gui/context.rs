@@ -17,6 +17,7 @@ use crate::{
     resources::Resources,
     util::image::EguiPngLoader,
 };
+use crate::gui::bottom_bar::BottomBar;
 
 pub struct GuiContext {
     pub egui: egui::Context,
@@ -184,6 +185,7 @@ impl GuiViewManager {
         views.insert(TfxErrorViewer::default());
         views.insert(TfxExternEditor);
         views.insert(RenderSettingsPanel);
+        views.insert(BottomBar);
 
         views
     }
@@ -271,7 +273,7 @@ mod style {
             // set your drag value text style:
             // drag_value_text_style: TextStyle,
             spacing: Spacing {
-                item_spacing: Vec2 { x: 8.0, y: 6.0 },
+                item_spacing: Vec2 { x: 8.0, y: 3.0 },
                 window_margin: Margin {
                     left: 6.0,
                     right: 6.0,

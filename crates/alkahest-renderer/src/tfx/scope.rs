@@ -15,6 +15,7 @@ use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 use crate::{
     gpu::{buffer::ConstantBufferCached, GpuContext, SharedGpuContext},
     loaders::AssetManager,
+    renderer::Renderer,
     tfx::{
         bytecode::{interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp},
         externs::ExternStorage,
@@ -71,21 +72,21 @@ impl TfxScope {
         })
     }
 
-    pub fn bind(&self, gctx: &GpuContext, externs: &ExternStorage) -> anyhow::Result<()> {
+    pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
         if let Some(stage) = &self.stage_vertex {
-            stage.bind(gctx, externs)?;
+            stage.bind(renderer)?;
         }
 
         if let Some(stage) = &self.stage_pixel {
-            stage.bind(gctx, externs)?;
+            stage.bind(renderer)?;
         }
 
         if let Some(stage) = &self.stage_geometry {
-            stage.bind(gctx, externs)?;
+            stage.bind(renderer)?;
         }
 
         if let Some(stage) = &self.stage_compute {
-            stage.bind(gctx, externs)?;
+            stage.bind(renderer)?;
         }
 
         Ok(())
@@ -157,11 +158,11 @@ impl TfxScopeStage {
         }))
     }
 
-    pub fn bind(&self, gctx: &GpuContext, externs: &ExternStorage) -> anyhow::Result<()> {
+    pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
         if let (Some(cbuffer), Some(bytecode)) = (&self.cbuffer, &self.bytecode) {
             bytecode.evaluate(
-                gctx,
-                externs,
+                &renderer.gpu,
+                &renderer.data.lock().externs,
                 cbuffer,
                 &self.stage.bytecode_constants,
                 &self.samplers,
@@ -169,7 +170,7 @@ impl TfxScopeStage {
         }
 
         if self.stage.constant_buffer_slot != -1 {
-            gctx.bind_cbuffer(
+            renderer.gpu.bind_cbuffer(
                 self.stage.constant_buffer_slot as u32,
                 self.cbuffer.as_ref().map(|v| v.buffer().clone()),
                 self.shader_stage,

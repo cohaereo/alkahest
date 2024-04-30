@@ -198,7 +198,7 @@ impl Asset for IndexBuffer {}
 
 struct AssetStorage<T: Asset> {
     refcount: Weak<()>,
-    asset: Option<T>,
+    asset: Option<Arc<T>>,
 }
 
 type FastHasher = BuildHasherDefault<FxHasher>;
@@ -272,7 +272,7 @@ impl<T: Asset> AssetRegistry<T> {
     pub fn overwrite(&mut self, handle: RawHandle, asset: T) {
         let id = handle.id;
         if let Some(storage) = self.handle_map.get_mut(&id) {
-            storage.asset.insert(asset);
+            storage.asset.insert(Arc::new(asset));
         } else {
             error!("Tried to overwrite non-existent asset {id:?}")
         }
@@ -291,7 +291,7 @@ impl<T: Asset> AssetRegistry<T> {
             handle.id,
             AssetStorage {
                 refcount: Arc::downgrade(&handle.refcount),
-                asset: Some(asset),
+                asset: Some(Arc::new(asset)),
             },
         );
         handle
@@ -300,16 +300,26 @@ impl<T: Asset> AssetRegistry<T> {
     pub fn get(&self, handle: &Handle<T>) -> Option<&T> {
         self.handle_map
             .get(&handle.id)
-            .and_then(|storage| storage.asset.as_ref())
+            .and_then(|storage| storage.asset.as_ref().map(|v| v.as_ref()))
     }
 
-    pub fn remove_all_dead(&mut self) {
+    pub fn get_shared(&self, handle: &Handle<T>) -> Option<Arc<T>> {
+        self.handle_map
+            .get(&handle.id)
+            .and_then(|storage| storage.asset.as_ref().map(|v| Arc::clone(v)))
+    }
+
+    pub fn remove_all_dead(&mut self) -> usize {
+        let mut removed = 0;
         for idx in (0..self.handle_map.len()).rev() {
             let element = self.handle_map.get_index(idx).unwrap().1;
             if element.refcount.strong_count() == 0 {
                 _ = self.handle_map.swap_remove_index(idx).unwrap();
+                removed += 1;
             }
         }
+
+        removed
     }
 }
 

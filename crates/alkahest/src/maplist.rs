@@ -1,8 +1,22 @@
-use alkahest_renderer::ecs::Scene;
+use std::sync::Arc;
+
+use alkahest_renderer::{
+    ecs::{
+        common::Global, dynamic_geometry::update_dynamic_model_system,
+        static_geometry::update_static_instances_system, Scene,
+    },
+    loaders::map_tmp::load_map,
+    renderer::RendererShared,
+};
+use anyhow::Context;
 use destiny_pkg::TagHash;
+use hecs::With;
 use poll_promise::Promise;
 
-use crate::resources::Resources;
+use crate::{
+    data::text::StringMapShared, gui::activity_select::CurrentActivity, resources::Resources,
+    ApplicationArgs,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum MapLoadState {
@@ -17,33 +31,47 @@ pub enum MapLoadState {
 pub struct Map {
     pub hash: TagHash,
     pub name: String,
-    pub promise: Option<Box<Promise<anyhow::Result<()>>>>,
+    pub promise: Option<Box<Promise<anyhow::Result<Scene>>>>,
     pub load_state: MapLoadState,
-    pub command_buffer: hecs::CommandBuffer,
 
+    pub command_buffer: hecs::CommandBuffer,
     pub scene: Scene,
 }
 
 impl Map {
     pub fn update(&mut self) {
-        // TODO(cohae): This seems dirty
         if let Some(promise) = self.promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
-                    Ok(_map) => {
-                        // let mut ent_list = vec![];
+                    Ok(scene) => {
+                        self.scene = scene;
 
+                        // TODO(cohae): We can't merge the scenes like this without screwing up the entity IDs
+                        // let mut ent_list = vec![];
+                        //
                         // // Get all non-global entities
-                        // for (entity, global) in map.scene.query::<Option<&Global>>().iter() {
-                        //     if !global.map_or(false, |g| g.0) {
-                        //         ent_list.push(entity);
-                        //     }
+                        // for (entity, _global) in scene
+                        //     .query::<Option<&Global>>()
+                        //     .iter()
+                        //     .filter(|(_, g)| g.is_none())
+                        // {
+                        //     ent_list.push(entity);
                         // }
                         //
                         // // Insert all entities from the loaded map into the current scene
                         // for entity in ent_list {
-                        //     self.scene.spawn(map.scene.take(entity).ok().unwrap());
+                        //     self.scene.spawn(scene.take(entity).ok().unwrap());
                         // }
+
+                        // TODO(cohae): Use scheduler for this
+                        update_static_instances_system(&self.scene);
+                        update_dynamic_model_system(&self.scene);
+
+                        info!(
+                            "Loaded map {} with {} entities",
+                            self.name,
+                            self.scene.iter().count()
+                        );
 
                         self.load_state = MapLoadState::Loaded;
                     }
@@ -61,7 +89,7 @@ impl Map {
         // }
     }
 
-    fn start_load(&mut self, _resources: &Resources) {
+    fn start_load(&mut self, resources: &Resources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
                 "Attempted to load map {}, but it is already loading or loaded",
@@ -69,30 +97,18 @@ impl Map {
             );
             return;
         }
-        // let dcs = Arc::clone(&resources.get::<DcsShared>().unwrap());
-        // let renderer = Arc::clone(&resources.get::<RendererShared>().unwrap());
-        // let cli_args = resources.get::<Args>().unwrap();
-        // let stringmap = Arc::clone(&resources.get::<StringMapShared>().unwrap());
-        //
-        // let activity_hash = cli_args.activity.as_ref().map(|a| {
-        //     TagHash(u32::from_be(
-        //         u32::from_str_radix(a, 16)
-        //             .context("Invalid activity hash format")
-        //             .unwrap(),
-        //     ))
-        // });
-        //
-        // info!("Loading map {} '{}'", self.hash, self.name);
-        // self.promise = Some(Box::new(Promise::spawn_async(
-        //     mapload_temporary::load_map_scene(
-        //         dcs,
-        //         renderer,
-        //         self.hash,
-        //         stringmap,
-        //         activity_hash,
-        //         !cli_args.no_ambient,
-        //     ),
-        // )));
+
+        let renderer = resources.get::<RendererShared>().clone();
+        let cli_args = resources.get::<ApplicationArgs>();
+        let activity_hash = resources.get_mut::<CurrentActivity>().0;
+
+        info!("Loading map {} '{}'", self.hash, self.name);
+        self.promise = Some(Box::new(Promise::spawn_async(load_map(
+            renderer,
+            self.hash,
+            activity_hash,
+            !cli_args.no_ambient,
+        ))));
 
         self.load_state = MapLoadState::Loading;
     }
@@ -103,8 +119,6 @@ pub struct MapList {
     pub current_map: usize,
     pub previous_map: usize,
 
-    // TODO(cohae): What is this used for?
-    pub updated: bool,
     pub load_all_maps: bool,
 
     pub maps: Vec<Map>,
@@ -126,6 +140,20 @@ impl MapList {
     // pub fn get_index(&self, tag: TagHash) -> Option<usize> {
     //     self.maps.iter().position(|m| m.hash == tag)
     // }
+
+    pub fn count_loading(&self) -> usize {
+        self.maps
+            .iter()
+            .filter(|m| m.load_state == MapLoadState::Loading)
+            .count()
+    }
+
+    pub fn count_loaded(&self) -> usize {
+        self.maps
+            .iter()
+            .filter(|m| m.load_state == MapLoadState::Loaded)
+            .count()
+    }
 }
 
 impl MapList {
@@ -138,8 +166,7 @@ impl MapList {
         }
 
         if self.load_all_maps {
-            // TODO(cohae): Loading multiple maps at once doesn't play well with the current asset management system
-            const LOAD_MAX_PARALLEL: usize = 1;
+            const LOAD_MAX_PARALLEL: usize = 4;
             let mut loaded = 0;
             for map in self.maps.iter_mut() {
                 if loaded >= LOAD_MAX_PARALLEL {
@@ -173,7 +200,6 @@ impl MapList {
         #[cfg(not(feature = "keep_map_order"))]
         self.maps.sort_by_key(|m| m.name.clone());
 
-        self.updated = true;
         self.current_map = 0;
         self.previous_map = 0;
 
@@ -196,21 +222,9 @@ impl MapList {
         }
     }
 
-    // pub fn load_all(&mut self, resources: &crate::Resources) {
-    //     for map in self.maps.iter_mut() {
-    //         map.start_load(resources);
-    //     }
-    // }
+    pub fn load_all(&mut self, resources: &Resources) {
+        for map in self.maps.iter_mut() {
+            map.start_load(resources);
+        }
+    }
 }
-
-// impl Default for MapList {
-//     fn default() -> Self {
-//         Self {
-//             current_map: 0,
-//             previous_map: 0,
-//             updated: false,
-//             load_all_maps: false,
-//             maps: vec![],
-//         }
-//     }
-// }

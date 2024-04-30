@@ -1,5 +1,6 @@
-use alkahest_renderer::tfx::externs::{
-    ExternStorage, TextureView, TfxExpressionErrorType, TfxExtern,
+use alkahest_renderer::{
+    renderer::RendererShared,
+    tfx::externs::{ExternStorage, TextureView, TfxExpressionErrorType, TfxExtern},
 };
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
@@ -38,7 +39,8 @@ impl GuiView for TfxErrorViewer {
         resources: &Resources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
-        let externs = resources.get::<ExternStorage>();
+        let renderer = resources.get::<RendererShared>();
+        let externs = &mut renderer.data.lock().externs;
 
         let mut open = true;
         egui::Window::new("TFX Expression Debugger")
@@ -148,7 +150,8 @@ impl GuiView for TfxExternEditor {
             // TfxExtern::PatternBlending,
         ];
 
-        let mut externs = resources.get_mut::<ExternStorage>();
+        let renderer = resources.get::<RendererShared>();
+        let externs = &mut renderer.data.lock().externs;
 
         let mut open = true;
         egui::Window::new("TFX Extern Editor")

@@ -9,6 +9,7 @@ use crate::{
     gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext, SharedGpuContext},
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
+    renderer::Renderer,
     tfx::{externs::ExternStorage, technique::Technique},
 };
 
@@ -24,22 +25,23 @@ pub struct TerrainPatches {
 }
 
 impl TerrainPatches {
-    pub fn load(
-        gctx: SharedGpuContext,
-        asset_manager: &mut AssetManager,
-        hash: TagHash,
-    ) -> anyhow::Result<Self> {
+    pub fn load(renderer: &Renderer, hash: TagHash) -> anyhow::Result<Self> {
         let terrain: STerrain = package_manager().read_tag_struct(hash)?;
 
+        let mut render_data = renderer.data.lock();
         let dyemaps = terrain
             .mesh_groups
             .iter()
-            .map(|group| asset_manager.get_or_load_texture(group.dyemap))
+            .map(|group| render_data.asset_manager.get_or_load_texture(group.dyemap))
             .collect();
         let techniques = terrain
             .mesh_parts
             .iter()
-            .map(|part| asset_manager.get_or_load_technique(part.technique))
+            .map(|part| {
+                render_data
+                    .asset_manager
+                    .get_or_load_technique(part.technique)
+            })
             .collect();
 
         let mut group_cbuffers = vec![];
@@ -56,14 +58,20 @@ impl TerrainPatches {
 
             let scope_terrain = Mat4::from_cols(offset, texcoord_transform, Vec4::ZERO, Vec4::ZERO);
 
-            let cb = ConstantBuffer::create(gctx.clone(), Some(&scope_terrain))?;
+            let cb = ConstantBuffer::create(renderer.gpu.clone(), Some(&scope_terrain))?;
             group_cbuffers.push(cb);
         }
 
         Ok(Self {
-            vertex0_buffer: asset_manager.get_or_load_vertex_buffer(terrain.vertex0_buffer),
-            vertex1_buffer: asset_manager.get_or_load_vertex_buffer(terrain.vertex1_buffer),
-            index_buffer: asset_manager.get_or_load_index_buffer(terrain.index_buffer),
+            vertex0_buffer: render_data
+                .asset_manager
+                .get_or_load_vertex_buffer(terrain.vertex0_buffer),
+            vertex1_buffer: render_data
+                .asset_manager
+                .get_or_load_vertex_buffer(terrain.vertex1_buffer),
+            index_buffer: render_data
+                .asset_manager
+                .get_or_load_index_buffer(terrain.index_buffer),
             terrain,
             techniques,
             dyemaps,
@@ -71,21 +79,38 @@ impl TerrainPatches {
         })
     }
 
-    pub fn draw(&self, gctx: &GpuContext, externs: &ExternStorage, asset_manager: &AssetManager) {
+    pub fn draw(&self, renderer: &Renderer) {
         // Layout 22
         //  - int4 v0 : POSITION0, // Format DXGI_FORMAT_R16G16B16A16_SINT size 8
         //  - float4 v1 : NORMAL0, // Format DXGI_FORMAT_R16G16B16A16_SNORM size 8
         //  - float2 v2 : TEXCOORD1, // Format DXGI_FORMAT_R16G16_FLOAT size 4
-        gctx.set_input_layout(22);
-        gctx.set_input_topology(EPrimitiveType::TriangleStrip);
+        renderer.gpu.set_input_layout(22);
+        renderer
+            .gpu
+            .set_input_topology(EPrimitiveType::TriangleStrip);
 
-        let vertex0 = asset_manager.vertex_buffers.get(&self.vertex0_buffer);
-        let vertex1 = asset_manager.vertex_buffers.get(&self.vertex1_buffer);
-        let index = asset_manager.index_buffers.get(&self.index_buffer);
+        let vertex0 = renderer
+            .data
+            .lock()
+            .asset_manager
+            .vertex_buffers
+            .get_shared(&self.vertex0_buffer);
+        let vertex1 = renderer
+            .data
+            .lock()
+            .asset_manager
+            .vertex_buffers
+            .get_shared(&self.vertex1_buffer);
+        let index = renderer
+            .data
+            .lock()
+            .asset_manager
+            .index_buffers
+            .get_shared(&self.index_buffer);
 
         if let (Some(vertex0), Some(vertex1), Some(index)) = (vertex0, vertex1, index) {
             unsafe {
-                let ctx = gctx.context();
+                let ctx = renderer.gpu.context();
                 ctx.IASetIndexBuffer(&index.buffer, DXGI_FORMAT(index.format as _), 0);
                 ctx.IASetVertexBuffers(
                     0,
@@ -108,37 +133,35 @@ impl TerrainPatches {
         {
             let cb11 = &self.group_cbuffers[part.group_index as usize];
 
-            if let Some(technique) = asset_manager.techniques.get(&self.techniques[i]) {
-                technique
-                    .bind(gctx, externs, asset_manager)
-                    .expect("Failed to bind technique");
+            if let Some(technique) = renderer.get_technique_shared(&self.techniques[i]) {
+                technique.bind(renderer).expect("Failed to bind technique");
             } else {
                 continue;
             }
 
             cb11.bind(11, TfxShaderStage::Vertex);
-            if let Some(dyemap) = asset_manager
+            if let Some(dyemap) = renderer
+                .data
+                .lock()
+                .asset_manager
                 .textures
                 .get(&self.dyemaps[part.group_index as usize])
             {
-                dyemap.bind(gctx, 14, TfxShaderStage::Pixel);
+                dyemap.bind(&renderer.gpu, 14, TfxShaderStage::Pixel);
             }
 
             unsafe {
-                gctx.context()
+                renderer
+                    .gpu
+                    .context()
                     .DrawIndexed(part.index_count as _, part.index_start as _, 0);
             }
         }
     }
 }
 
-pub fn draw_terrain_patches_system(
-    gctx: &GpuContext,
-    scene: &hecs::World,
-    asset_manager: &AssetManager,
-    externs: &ExternStorage,
-) {
+pub fn draw_terrain_patches_system(renderer: &Renderer, scene: &hecs::World) {
     for (_, (terrain,)) in scene.query::<(&TerrainPatches,)>().iter() {
-        terrain.draw(gctx, externs, asset_manager);
+        terrain.draw(renderer);
     }
 }

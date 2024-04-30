@@ -61,13 +61,8 @@ struct ApplicationArgs {
     fullscreen: bool,
 }
 
-fn main() -> anyhow::Result<()> {
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()?;
-
-    let _ = rt.enter();
-
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     util::fix_windows_command_prompt();
 
     let mut panic_header = String::new();
@@ -80,6 +75,32 @@ fn main() -> anyhow::Result<()> {
     consts::print_banner();
 
     config::load();
+
+    #[cfg(feature = "deadlock_detection")]
+    {
+        // only for #[cfg]
+        use std::{thread, time::Duration};
+
+        use parking_lot::deadlock;
+
+        // Create a background thread which checks for deadlocks every 10s
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(10));
+            let deadlocks = deadlock::check_deadlock();
+            if deadlocks.is_empty() {
+                continue;
+            }
+
+            println!("{} deadlocks detected", deadlocks.len());
+            for (i, threads) in deadlocks.iter().enumerate() {
+                println!("Deadlock #{}", i);
+                for t in threads {
+                    println!("Thread Id {:#?}", t.thread_id());
+                    println!("{:#?}", t.backtrace());
+                }
+            }
+        });
+    } // only for #[cfg]
 
     let args = ApplicationArgs::parse();
     config::with_mut(|c| {

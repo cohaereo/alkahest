@@ -4,21 +4,24 @@ use std::{
 };
 
 use alkahest_data::{
-    entity::{SEntity, Unk808072c5},
+    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
+    common::ResourceHash,
+    entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
         SBubbleParent, SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight,
         Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b,
     },
     tfx::TfxFeatureRenderer,
+    Tag,
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
-use itertools::multizip;
-use rustc_hash::FxHashSet;
-use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
+use itertools::{multizip, Itertools};
+use rustc_hash::{FxHashMap, FxHashSet};
+use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
 
 use crate::{
     ecs::{
@@ -33,15 +36,17 @@ use crate::{
     },
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
     loaders::AssetManager,
+    renderer::{Renderer, RendererShared},
 };
 
-pub fn load_map(
-    gctx: SharedGpuContext,
-    asset_manager: &mut AssetManager,
-    tag: TagHash,
+pub async fn load_map(
+    renderer: RendererShared,
+    map_hash: TagHash,
+    activity_hash: Option<TagHash>,
+    load_ambient_activity: bool,
 ) -> anyhow::Result<Scene> {
     let bubble_parent = package_manager()
-        .read_tag_struct::<SBubbleParent>(tag)
+        .read_tag_struct::<SBubbleParent>(map_hash)
         .context("Failed to read SBubbleParent")?;
 
     let mut scene = Scene::new();
@@ -63,12 +68,185 @@ pub fn load_map(
             table_hash,
             &mut cur,
             &mut scene,
-            gctx.clone(),
-            asset_manager,
+            &renderer,
             ResourceOrigin::Map,
             0,
         )
         .context("Failed to load datatable")?;
+    }
+
+    let mut activity_entrefs: Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOrigin)> =
+        Default::default();
+    if let Some(activity_hash) = activity_hash {
+        let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
+        for u1 in &activity.unk50 {
+            for map in &u1.map_references {
+                if map.hash32() != map_hash {
+                    continue;
+                }
+
+                for u2 in &u1.unk18 {
+                    activity_entrefs.push((
+                        u2.unk_entity_reference.clone(),
+                        u2.activity_phase_name2,
+                        ResourceOrigin::Activity,
+                    ));
+                }
+            }
+        }
+
+        if load_ambient_activity {
+            match package_manager().read_tag_struct::<SActivity>(activity.ambient_activity) {
+                Ok(activity) => {
+                    for u1 in &activity.unk50 {
+                        for map in &u1.map_references {
+                            if map.hash32() != map_hash {
+                                continue;
+                            }
+
+                            for u2 in &u1.unk18 {
+                                activity_entrefs.push((
+                                    u2.unk_entity_reference.clone(),
+                                    u2.activity_phase_name2,
+                                    ResourceOrigin::Ambient,
+                                ));
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to load ambient activity {}: {e}",
+                        activity.ambient_activity
+                    );
+                }
+            }
+        }
+    }
+
+    let mut entity_worldid_name_map: FxHashMap<u64, String> = Default::default();
+    for (e, _, _) in &activity_entrefs {
+        for resource in &e.unk18.entity_resources {
+            if let Some(strings) = get_entity_labels(resource.entity_resource) {
+                entity_worldid_name_map.extend(strings);
+            }
+        }
+    }
+
+    let mut unknown_res_types: FxHashSet<u32> = Default::default();
+    for (e, phase_name2, origin) in activity_entrefs {
+        for resource in &e.unk18.entity_resources {
+            if resource.entity_resource.is_some() {
+                let data = package_manager().read_tag(resource.entity_resource)?;
+                let mut cur = Cursor::new(&data);
+                let res: SEntityResource = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                let mut data_tables = FxHashSet::default();
+                match res.unk18.resource_type {
+                    0x808092d8 => {
+                        cur.seek(SeekFrom::Start(res.unk18.offset))?;
+                        let tag: Unk808092d8 =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                        if tag.unk84.is_some() {
+                            data_tables.insert(tag.unk84);
+                        }
+                    }
+                    0x80808cef => {
+                        cur.seek(SeekFrom::Start(res.unk18.offset))?;
+                        let tag: Unk80808cef =
+                            TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                        if tag.unk58.is_some() {
+                            data_tables.insert(tag.unk58);
+                        }
+                    }
+                    u => {
+                        if !unknown_res_types.contains(&u) {
+                            warn!(
+                                "Unknown activity entref resource table resource type 0x{u:x} in \
+                                 resource table {}",
+                                resource.entity_resource
+                            );
+
+                            unknown_res_types.insert(u);
+                        }
+                    }
+                }
+
+                let mut data_tables2 = FxHashSet::default();
+                // TODO(cohae): This is a very dirty hack to find every other data table in the entityresource. We need to fully flesh out the EntityResource format first.
+                // TODO(cohae): PS: gets assigned as Activity2 (A2) to keep them separate from known tables
+                for b in data.chunks_exact(4) {
+                    let v: [u8; 4] = b.try_into().unwrap();
+                    let hash = TagHash(u32::from_le_bytes(v));
+
+                    if hash.is_pkg_file()
+                        && package_manager()
+                            .get_entry(hash)
+                            .map(|v| v.reference == 0x80809883)
+                            .unwrap_or_default()
+                        && !data_tables.contains(&hash)
+                    {
+                        data_tables2.insert(hash);
+                    }
+                }
+
+                if !data_tables2.is_empty() {
+                    let tstr = data_tables2.iter().map(|v| v.to_string()).join(", ");
+                    warn!(
+                        "TODO: Found {} map data tables ({}) EntityResource by brute force ({} \
+                         found normally)",
+                        data_tables2.len(),
+                        tstr,
+                        data_tables.len()
+                    );
+                }
+
+                for table_hash in data_tables {
+                    let data = package_manager().read_tag(table_hash)?;
+                    let mut cur = Cursor::new(&data);
+                    let table: SMapDataTable =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                    load_datatable_into_scene(
+                        &table,
+                        table_hash,
+                        &mut cur,
+                        &mut scene,
+                        &renderer,
+                        ResourceOrigin::Map,
+                        phase_name2.0,
+                    )
+                    .context("Failed to load datatable")?;
+                }
+
+                for table_hash in data_tables2 {
+                    let data = package_manager().read_tag(table_hash)?;
+                    let mut cur = Cursor::new(&data);
+                    let table: SMapDataTable =
+                        TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                    load_datatable_into_scene(
+                        &table,
+                        table_hash,
+                        &mut cur,
+                        &mut scene,
+                        &renderer,
+                        // cohae: yes, this means bruteforced ambient data tables will always be
+                        // shown as ambient, but i don't think it matters once we fix the normal
+                        // bruteforced activity tables
+                        if origin == ResourceOrigin::Ambient {
+                            origin
+                        } else {
+                            ResourceOrigin::ActivityBruteforce
+                        },
+                        phase_name2.0,
+                    )
+                    .context("Failed to load datatable")?;
+                }
+            } else {
+                warn!("null entity resource tag in {}", resource.taghash());
+            }
+        }
     }
 
     Ok(scene)
@@ -81,8 +259,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     _table_hash: TagHash,
     table_data: &mut R,
     scene: &mut Scene,
-    gctx: SharedGpuContext,
-    asset_manager: &mut AssetManager,
+    renderer: &Renderer,
     _resource_origin: ResourceOrigin,
     _group_id: u32,
 ) -> anyhow::Result<()> {
@@ -106,8 +283,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 for s in &preheader.instances.instance_groups {
                     let mesh_tag = preheader.instances.statics[s.static_index as usize];
-                    let model = StaticModel::load(asset_manager, mesh_tag)
-                        .context("Failed to load StaticModel")?;
+                    let model =
+                        StaticModel::load(&mut renderer.data.lock().asset_manager, mesh_tag)
+                            .context("Failed to load StaticModel")?;
 
                     let transforms = &preheader.instances.transforms
                         [s.instance_start as usize..(s.instance_start + s.instance_count) as usize];
@@ -132,7 +310,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         (
                             StaticInstances {
                                 cbuffer: ConstantBuffer::create_array_init(
-                                    gctx.clone(),
+                                    renderer.gpu.clone(),
                                     &vec![0u8; 32 + 64 * instances.len()],
                                 )?,
                                 instances,
@@ -152,7 +330,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let terrain_resource: Unk8080714b = TigerReadable::read_ds(table_data).unwrap();
 
                 scene.spawn((
-                    TerrainPatches::load(gctx.clone(), asset_manager, terrain_resource.terrain)
+                    TerrainPatches::load(renderer, terrain_resource.terrain)
                         .context("Failed to load terrain patches")?,
                     TfxFeatureRenderer::TerrainPatch,
                 ));
@@ -182,13 +360,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         Transform::from_mat4(Mat4::from_cols_array(&unk8.transform)),
                         DynamicModelComponent {
                             model: DynamicModel::load(
-                                asset_manager,
+                                &mut renderer.data.lock().asset_manager,
                                 unk8.unk60.entity_model,
                                 vec![],
                                 vec![],
                             )
                             .context("Failed to load background dynamic model")?,
-                            cbuffer: ConstantBuffer::create(gctx.clone(), None)?,
+                            cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
                         },
                         TfxFeatureRenderer::SkyTransparent,
                     ));
@@ -204,9 +382,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 scene.spawn((
                     transform,
                     DynamicModelComponent {
-                        model: DynamicModel::load(asset_manager, d.entity_model, vec![], vec![])
-                            .context("Failed to load background dynamic model")?,
-                        cbuffer: ConstantBuffer::create(gctx.clone(), None)?,
+                        model: DynamicModel::load(
+                            &mut renderer.data.lock().asset_manager,
+                            d.entity_model,
+                            vec![],
+                            vec![],
+                        )
+                        .context("Failed to load background dynamic model")?,
+                        cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
                     },
                     TfxFeatureRenderer::Water,
                 ));
@@ -241,8 +424,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             ),
                             ..Default::default()
                         },
-                        LightRenderer::load(gctx.clone(), asset_manager, &light)
-                            .context("Failed to load light")?,
+                        LightRenderer::load(
+                            renderer.gpu.clone(),
+                            &mut renderer.data.lock().asset_manager,
+                            &light,
+                        )
+                        .context("Failed to load light")?,
                         light,
                         bounds.bb,
                         TfxFeatureRenderer::DeferredLights,
@@ -258,8 +445,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 scene.spawn((
                     transform,
-                    LightRenderer::load_shadowing(gctx.clone(), asset_manager, &light)
-                        .context("Failed to load shadowing light")?,
+                    LightRenderer::load_shadowing(
+                        renderer.gpu.clone(),
+                        &mut renderer.data.lock().asset_manager,
+                        &light,
+                    )
+                    .context("Failed to load shadowing light")?,
                     light,
                     TfxFeatureRenderer::DeferredLights,
                 ));
@@ -270,9 +461,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let atmos: SMapAtmosphere = TigerReadable::read_ds(table_data)?;
-                scene
-                    .spawn((MapAtmosphere::load(&gctx, atmos)
-                        .context("Failed to load map atmosphere")?,));
+                scene.spawn((MapAtmosphere::load(&renderer.gpu, atmos)
+                    .context("Failed to load map atmosphere")?,));
             }
             u => {
                 if u != u32::MAX {
@@ -290,7 +480,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 for e in &header.entity_resources {
                     match e.unk0.unk10.resource_type {
                         0x80806d8a => {
-                            let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
+                            let mut cur =
+                                Cursor::new(package_manager().read_tag(e.unk0.taghash())?);
                             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
                             let model_hash: TagHash =
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
@@ -307,13 +498,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 transform,
                                 DynamicModelComponent {
                                     model: DynamicModel::load(
-                                        asset_manager,
+                                        &mut renderer.data.lock().asset_manager,
                                         model_hash,
                                         entity_material_map,
                                         materials,
                                     )
                                     .context("Failed to load background dynamic model")?,
-                                    cbuffer: ConstantBuffer::create(gctx.clone(), None)?,
+                                    cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
                                 },
                                 TfxFeatureRenderer::DynamicObjects,
                             ));
@@ -323,7 +514,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
                                 u.to_be(),
                                 e.unk0.unk10.resource_type.to_be(),
-                                e.unk0.hash()
+                                e.unk0.taghash()
                             )
                         }
                     }
@@ -333,4 +524,64 @@ fn load_datatable_into_scene<R: Read + Seek>(
     }
 
     Ok(())
+}
+
+fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
+    let data: Vec<u8> = package_manager().read_tag(entity).ok()?;
+    let mut cur = Cursor::new(&data);
+
+    let e: SEntityResource = TigerReadable::read_ds(&mut cur).ok()?;
+    let mut world_id_list: Vec<Unk80809905> = vec![];
+    if e.unk80.is_none() {
+        return None;
+    }
+
+    for (i, b) in data.chunks_exact(4).enumerate() {
+        let v: [u8; 4] = b.try_into().unwrap();
+        let hash = u32::from_le_bytes(v);
+        let offset = i as u64 * 4;
+
+        if hash == 0x80809905 {
+            cur.seek(SeekFrom::Start(offset - 8)).ok()?;
+            let count: u64 = TigerReadable::read_ds(&mut cur).ok()?;
+            cur.seek(SeekFrom::Start(offset + 8)).ok()?;
+            for _ in 0..count {
+                let e: Unk80809905 = TigerReadable::read_ds(&mut cur).ok()?;
+                world_id_list.push(e);
+            }
+            // let list: TablePointer<Unk80809905> = TigerReadable::read_ds_endian(&mut cur, Endian::Little).ok()?;
+            // world_id_list = list.take_data();
+            break;
+        }
+    }
+
+    // TODO(cohae): There's volumes and stuff without a world ID that still have a name
+    world_id_list.retain(|w| w.world_id != u64::MAX);
+
+    let mut name_hash_map: FxHashMap<FnvHash, String> = FxHashMap::default();
+
+    let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
+    for v in tablethingy.unk0.into_iter() {
+        if let Some(name_ptr) = v.unk0_name_pointer.as_ref() {
+            name_hash_map.insert(
+                fnv1(name_ptr.name.0 .0.as_bytes()),
+                name_ptr.name.to_string(),
+            );
+        }
+    }
+
+    Some(
+        world_id_list
+            .into_iter()
+            .filter_map(|w| Some((w.world_id, name_hash_map.get(&w.name_hash)?.clone())))
+            .collect(),
+    )
+}
+
+const FNV1_BASE: u32 = 0x811c9dc5;
+const FNV1_PRIME: u32 = 0x01000193;
+fn fnv1(data: &[u8]) -> FnvHash {
+    data.iter().fold(FNV1_BASE, |acc, b| {
+        acc.wrapping_mul(FNV1_PRIME) ^ (*b as u32)
+    })
 }

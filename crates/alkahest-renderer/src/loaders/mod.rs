@@ -126,7 +126,9 @@ impl AssetManager {
         if budget != 0 {
             debug!("Polling asset manager ({} assets to process)", budget);
         }
-        while budget > 0 {
+        let time_budget = std::time::Instant::now() + std::time::Duration::from_millis(30);
+
+        while budget > 0 && time_budget > std::time::Instant::now() {
             match self.asset_rx.try_recv() {
                 Ok(asset) => {
                     debug!(
@@ -188,10 +190,15 @@ impl AssetManager {
             budget -= 1;
         }
 
-        self.textures.remove_all_dead();
-        self.techniques.remove_all_dead();
-        self.vertex_buffers.remove_all_dead();
-        self.index_buffers.remove_all_dead();
+        let mut total_removed = 0;
+        total_removed += self.textures.remove_all_dead();
+        total_removed += self.techniques.remove_all_dead();
+        total_removed += self.vertex_buffers.remove_all_dead();
+        total_removed += self.index_buffers.remove_all_dead();
+
+        if total_removed > 0 {
+            info!("Removed {} dead assets", total_removed);
+        }
     }
 
     /// Blocks until all pending requests have been processed.
