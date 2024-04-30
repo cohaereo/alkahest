@@ -92,6 +92,7 @@ received some polish!
     - This caused objects to render the screen inside of them at 1/4th resolution
 - Fixed certain objects not being rendered correctly due to a missing color buffer
     - These objects are now rendered with a default white color buffer
+- Fixed some suns turning into black holes
 
 ## 0.4.1 - 2024-03-27
 

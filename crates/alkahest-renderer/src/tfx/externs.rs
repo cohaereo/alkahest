@@ -57,7 +57,6 @@ impl From<ID3D11ShaderResourceView> for TextureView {
 //     }
 // }
 
-#[derive(Default)]
 pub struct ExternStorage {
     pub frame: Frame,
     pub view: Option<View>,
@@ -71,7 +70,33 @@ pub struct ExternStorage {
     pub water: Option<Water>,
     pub hdao: Option<Hdao>,
 
+    pub unk4f: [Vec4; 256],
+    pub unk4f_used: RwLock<[usize; 256]>,
+
     pub errors: RwLock<FxHashMap<String, TfxExpressionError>>,
+}
+
+impl Default for ExternStorage {
+    fn default() -> Self {
+        Self {
+            frame: Frame::default(),
+            view: None,
+            deferred: None,
+            deferred_light: None,
+            transparent: None,
+            rigid_model: None,
+            decal: None,
+            simple_geometry: None,
+            atmosphere: None,
+            water: None,
+            hdao: None,
+
+            unk4f: get_unk4f_defaults(),
+            unk4f_used: RwLock::new([0; 256]),
+
+            errors: RwLock::new(FxHashMap::default()),
+        }
+    }
 }
 
 impl ExternStorage {
@@ -760,4 +785,17 @@ impl ExternDefault for f32 {
     fn extern_default() -> Self {
         1.0
     }
+}
+
+fn get_unk4f_defaults() -> [Vec4; 256] {
+    let mut unk4f = [Vec4::ONE; 256];
+
+    unk4f[10] = Vec4::ZERO;
+    unk4f[97] = Vec4::ZERO;
+
+    // Sun related
+    unk4f[98] = Vec4::ZERO;
+    unk4f[100] = Vec4::ZERO;
+
+    unk4f
 }

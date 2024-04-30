@@ -11,13 +11,13 @@ use winit::{event::WindowEvent, window::Window};
 use crate::{
     config::APP_DIRS,
     gui::{
+        bottom_bar::BottomBar,
         configuration::RenderSettingsPanel,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
     resources::Resources,
     util::image::EguiPngLoader,
 };
-use crate::gui::bottom_bar::BottomBar;
 
 pub struct GuiContext {
     pub egui: egui::Context,
@@ -67,19 +67,19 @@ impl GuiContext {
 
         fonts
             .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(0, "materialdesignicons".to_owned());
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(1, "Destiny_Keys".to_owned());
+        fonts
+            .families
             .get_mut(&egui::FontFamily::Proportional)
             .unwrap()
-            .insert(0, "Inter-Medium".into());
-        fonts
-            .families
-            .entry(egui::FontFamily::Proportional)
-            .or_default()
-            .insert(1, "materialdesignicons".to_owned());
-        fonts
-            .families
-            .entry(egui::FontFamily::Proportional)
-            .or_default()
-            .insert(2, "Destiny_Keys".to_owned());
+            .insert(2, "Inter-Medium".into());
 
         egui.set_fonts(fonts);
         egui.set_style(style::style());
@@ -183,7 +183,7 @@ impl GuiViewManager {
         let mut views = Self::default();
 
         views.insert(TfxErrorViewer::default());
-        views.insert(TfxExternEditor);
+        views.insert(TfxExternEditor::default());
         views.insert(RenderSettingsPanel);
         views.insert(BottomBar);
 

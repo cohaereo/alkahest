@@ -328,7 +328,7 @@ impl GlobalPipelines {
                             .expect("Failed to load global pipeline technique"),
                     );
 
-                    println!("Technique {} ({})", p.name.to_string(), p.technique);
+                    // println!("Technique {} ({})", p.name.to_string(), p.technique);
                     // for (_rs, tstage) in technique.all_stages() {
                     //     if let Some(stage) = tstage {
                     //         if let Some(int) = &stage.bytecode {

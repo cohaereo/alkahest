@@ -110,7 +110,10 @@ impl GuiView for TfxErrorViewer {
     }
 }
 
-pub struct TfxExternEditor;
+#[derive(Default)]
+pub struct TfxExternEditor {
+    only_show_used: bool,
+}
 
 impl GuiView for TfxExternEditor {
     fn draw(
@@ -192,6 +195,24 @@ impl GuiView for TfxExternEditor {
                             });
                         });
                     }
+
+                    ui.collapsing("Unk4F", |ui| {
+                        ui.checkbox(&mut self.only_show_used, "Only show used");
+                        for (i, value) in externs.unk4f.iter_mut().enumerate() {
+                            let times_used = externs.unk4f_used.read()[i];
+                            if self.only_show_used && times_used == 0 {
+                                continue;
+                            }
+
+                            ui.horizontal(|ui| {
+                                ui.strong(format!("Unk4F[{i}]: "));
+                                ui.vec4_input(value);
+                                ui.label(format!("(used {times_used} times)"))
+                            });
+                        }
+
+                        externs.unk4f_used.write().iter_mut().for_each(|x| *x = 0);
+                    });
                 });
             });
 

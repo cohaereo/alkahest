@@ -276,10 +276,10 @@ impl TfxBytecodeInterpreter {
                 | &TfxBytecodeOp::Unk50 { unk1, .. }
                 | &TfxBytecodeOp::Unk52 { unk1, .. }
                 | &TfxBytecodeOp::Unk53 { unk1, .. }
-                | &TfxBytecodeOp::Unk54 { unk1, .. } => match unk1 {
-                    10 | 97 => stack_push!(Vec4::ZERO),
-                    _ => stack_push!(Vec4::ONE),
-                },
+                | &TfxBytecodeOp::Unk54 { unk1, .. } => {
+                    externs.unk4f_used.write()[unk1 as usize] += 1;
+                    stack_push!(externs.unk4f[unk1 as usize]);
+                }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
                     *stack_top!() = constants[*constant_index as usize];
