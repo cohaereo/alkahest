@@ -16,4 +16,4 @@ pub mod texture;
 pub mod tfx;
 pub mod unknown;
 
-pub use tag::{ExtendedTag, Tag, WideHash};
+pub use tag::{Tag, WideHash, WideTag};

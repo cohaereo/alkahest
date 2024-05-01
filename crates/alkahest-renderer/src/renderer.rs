@@ -5,11 +5,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     gpu::SharedGpuContext,
+    handle::Handle,
     loaders::AssetManager,
-    tfx::{externs::ExternStorage, gbuffer::GBuffer, globals::RenderGlobals},
+    tfx::{externs::ExternStorage, gbuffer::GBuffer, globals::RenderGlobals, technique::Technique},
 };
-use crate::handle::Handle;
-use crate::tfx::technique::Technique;
 
 pub type RendererShared = Arc<Renderer>;
 
@@ -37,14 +36,14 @@ impl Renderer {
             data: Mutex::new(RendererData {
                 asset_manager: AssetManager::new(gpu.clone()),
                 gbuffers: GBuffer::create(window_size, gpu.clone())?,
-                externs: ExternStorage::default(),
+                externs: ExternStorage ::default()
             }),
             gpu,
             render_globals,
             time: Instant::now(),
         }))
     }
-    
+
     pub fn get_technique_shared(&self, handle: &Handle<Technique>) -> Option<Arc<Technique>> {
         let data = self.data.lock();
         data.asset_manager.techniques.get_shared(handle)

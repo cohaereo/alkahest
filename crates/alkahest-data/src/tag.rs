@@ -168,17 +168,17 @@ impl TigerReadable for WideHash {
 }
 
 #[derive(Clone)]
-pub struct ExtendedTag<T: TigerReadable>(pub T);
+pub struct WideTag<T: TigerReadable>(pub T);
 
-impl<T: TigerReadable> TigerReadable for ExtendedTag<T> {
+impl<T: TigerReadable> TigerReadable for WideTag<T> {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
         endian: tiger_parse::Endian,
     ) -> tiger_parse::Result<Self> {
         let tag = WideHash::read_ds_endian(reader, endian)?;
         match tag {
-            WideHash::Hash32(h) => Ok(ExtendedTag(package_manager().read_tag_struct(h)?)),
-            WideHash::Hash64(h) => Ok(ExtendedTag(package_manager().read_tag64_struct(h)?)),
+            WideHash::Hash32(h) => Ok(WideTag(package_manager().read_tag_struct(h)?)),
+            WideHash::Hash64(h) => Ok(WideTag(package_manager().read_tag64_struct(h)?)),
         }
     }
 
@@ -186,14 +186,14 @@ impl<T: TigerReadable> TigerReadable for ExtendedTag<T> {
     const SIZE: usize = TagHash::SIZE;
 }
 
-impl<T: TigerReadable> Deref for ExtendedTag<T> {
+impl<T: TigerReadable> Deref for WideTag<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T: TigerReadable + Debug> Debug for ExtendedTag<T> {
+impl<T: TigerReadable + Debug> Debug for WideTag<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }

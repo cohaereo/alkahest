@@ -1,6 +1,6 @@
 use std::mem::MaybeUninit;
 
-use alkahest_data::render_globals::{SRenderGlobals, Unk808066ae, Unk808067a8};
+use alkahest_data::render_globals::{SRenderGlobals, SUnk808066ae, SUnk808067a8, SUnk8080822d};
 use alkahest_pm::package_manager;
 use anyhow::Context;
 use field_access::FieldAccess;
@@ -18,6 +18,8 @@ pub struct RenderGlobals {
     pub pipelines: GlobalPipelines,
 
     pub textures: GlobalTextures,
+
+    pub unk34: SUnk8080822d,
 }
 
 impl RenderGlobals {
@@ -26,9 +28,10 @@ impl RenderGlobals {
         let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
 
         Ok(Self {
-            scopes: GlobalScopes::load(gctx.clone(), globs),
-            pipelines: GlobalPipelines::load(gctx.clone(), globs),
+            scopes: GlobalScopes::load(gctx.clone(), &globs),
+            pipelines: GlobalPipelines::load(gctx.clone(), &globs),
             textures: GlobalTextures::load(&gctx, &globs.unk30),
+            unk34: globs.unk34.0.clone(),
         })
     }
 }
@@ -41,7 +44,7 @@ pub struct GlobalTextures {
 }
 
 impl GlobalTextures {
-    pub fn load(gctx: &GpuContext, data: &Unk808066ae) -> Self {
+    pub fn load(gctx: &GpuContext, data: &SUnk808066ae) -> Self {
         Self {
             specular_tint_lookup: Texture::load(
                 &gctx.device,
@@ -110,7 +113,7 @@ pub struct GlobalScopes {
 }
 
 impl GlobalScopes {
-    pub fn load(gctx: SharedGpuContext, globals: &Unk808067a8) -> Self {
+    pub fn load(gctx: SharedGpuContext, globals: &SUnk808067a8) -> Self {
         let mut scopes = unsafe { MaybeUninit::<Self>::zeroed().assume_init() };
 
         let fields = scopes
@@ -306,7 +309,7 @@ pub enum CubemapShape {
 }
 
 impl GlobalPipelines {
-    pub fn load(gctx: SharedGpuContext, globals: &Unk808067a8) -> Self {
+    pub fn load(gctx: SharedGpuContext, globals: &SUnk808067a8) -> Self {
         let mut pipelines = unsafe { MaybeUninit::<Self>::zeroed().assume_init() };
 
         let fields = pipelines

@@ -5,7 +5,7 @@ use crate::{
     common::ResourceHash,
     occlusion::{SObjectOcclusionBounds, SOcclusionBounds, AABB},
     statics::SStaticMeshInstances,
-    ExtendedTag, Tag, WideHash,
+    Tag, WideHash, WideTag,
 };
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ pub struct Unk80809644 {
 #[tiger_tag(id = 0x80808701, size = 0x18)]
 pub struct SBubbleDefinition {
     pub file_size: u64,
-    pub map_resources: Vec<ExtendedTag<SMapContainer>>,
+    pub map_resources: Vec<WideTag<SMapContainer>>,
 }
 
 #[derive(Debug)]
