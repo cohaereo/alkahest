@@ -10,14 +10,14 @@ use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::{common::Water, static_geometry::ModelBuffers, transform::Transform, Scene},
-    gpu::{buffer::ConstantBuffer, GpuContext},
+    gpu::{
+        buffer::{ConstantBuffer, ConstantBufferCached},
+        GpuContext,
+    },
     handle::Handle,
     loaders::AssetManager,
     renderer::Renderer,
-    tfx::{
-        externs::ExternStorage, scope::ScopeRigidModel, technique::Technique,
-        view::RenderStageSubscriptions,
-    },
+    tfx::{externs, externs::ExternStorage, technique::Technique, view::RenderStageSubscriptions},
 };
 
 pub struct DynamicModel {
@@ -174,7 +174,57 @@ impl DynamicModel {
 
 pub struct DynamicModelComponent {
     pub model: DynamicModel,
-    pub cbuffer: ConstantBuffer<ScopeRigidModel>,
+    pub ext: externs::RigidModel,
+    pub cbuffer: ConstantBuffer<externs::RigidModel>,
+}
+
+impl DynamicModelComponent {
+    pub fn load(
+        renderer: &Renderer,
+        transform: &Transform,
+        hash: TagHash,
+        technique_map: Vec<Unk808072c5>,
+        techniques: Vec<TagHash>,
+    ) -> anyhow::Result<Self> {
+        let model = DynamicModel::load(
+            &mut renderer.data.lock().asset_manager,
+            hash,
+            technique_map,
+            techniques,
+        )?;
+
+        let mut d = Self {
+            model,
+            ext: Default::default(),
+            cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
+        };
+        d.ext = d.create_extern(transform);
+        d.cbuffer = ConstantBuffer::create(renderer.gpu.clone(), Some(&d.ext))?;
+
+        Ok(d)
+    }
+
+    fn create_extern(&self, transform: &Transform) -> externs::RigidModel {
+        externs::RigidModel {
+            mesh_to_world: transform.to_mat4(),
+            position_scale: self.model.model.model_scale,
+            position_offset: self.model.model.model_offset,
+            texcoord0_scale_offset: Vec4::new(
+                self.model.model.texcoord_scale.x,
+                self.model.model.texcoord_scale.y,
+                self.model.model.texcoord_offset.x,
+                self.model.model.texcoord_offset.y,
+            ),
+            dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+        }
+    }
+
+    pub(self) fn update_cbuffer(&mut self, transform: &Transform) {
+        let ext = self.create_extern(transform);
+
+        self.cbuffer.write(&ext).unwrap();
+        self.ext = ext;
+    }
 }
 
 pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
@@ -183,6 +233,9 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         &format!("render_stage={render_stage:?}")
     );
     for (_, dynamic) in scene.query::<&DynamicModelComponent>().iter() {
+        // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
+        renderer.data.lock().externs.rigid_model = Some(dynamic.ext.clone());
+
         // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
         dynamic.cbuffer.bind(1, TfxShaderStage::Vertex);
         // TODO(cohae): Error reporting
@@ -192,38 +245,10 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
 
 pub fn update_dynamic_model_system(scene: &Scene) {
     profiling::scope!("update_dynamic_model_system");
-    for (_, (transform, model)) in scene.query::<(&Transform, &DynamicModelComponent)>().iter() {
-        let mm = transform.to_mat4();
-
-        let model_matrix = Mat4::from_cols(
-            mm.x_axis.truncate().extend(mm.w_axis.x),
-            mm.y_axis.truncate().extend(mm.w_axis.y),
-            mm.z_axis.truncate().extend(mm.w_axis.z),
-            mm.w_axis,
-        );
-
-        let alt_matrix = Mat4::from_cols(
-            Vec3::ONE.extend(mm.w_axis.x),
-            Vec3::ONE.extend(mm.w_axis.y),
-            Vec3::ONE.extend(mm.w_axis.z),
-            Vec4::W,
-        );
-
-        model
-            .cbuffer
-            .write(&ScopeRigidModel {
-                mesh_to_world: model_matrix,
-                position_scale: model.model.model.model_scale,
-                position_offset: model.model.model.model_offset,
-                texcoord0_scale_offset: Vec4::new(
-                    model.model.model.texcoord_scale.x,
-                    model.model.model.texcoord_scale.y,
-                    model.model.model.texcoord_offset.x,
-                    model.model.model.texcoord_offset.y,
-                ),
-                dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-                unk8: [alt_matrix; 8],
-            })
-            .unwrap();
+    for (_, (transform, model)) in scene
+        .query::<(&Transform, &mut DynamicModelComponent)>()
+        .iter()
+    {
+        model.update_cbuffer(transform);
     }
 }

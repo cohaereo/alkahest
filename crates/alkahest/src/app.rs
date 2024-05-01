@@ -133,10 +133,8 @@ impl AlkahestApp {
         if let Some(maphash) = resources.get::<ApplicationArgs>().map {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
-            
-            resources
-                .get_mut::<MapList>()
-                .add_map(map_name, maphash);
+
+            resources.get_mut::<MapList>().add_map(map_name, maphash);
         }
 
         Self {
@@ -398,14 +396,15 @@ impl AlkahestApp {
                                 unk08: tmp_gbuffers.atmos_ss_far_lookup.view.clone().into(),
                                 unk10: tmp_gbuffers.atmos_ss_near_lookup.view.clone().into(),
                                 unk18: tmp_gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                                unk20: gctx.light_grey_texture.view.clone().into(),
+                                unk20: gctx.grey_texture.view.clone().into(),
+                                // unk20: tmp_gbuffers.staging_clone.view.clone().into(),
                                 unk28: gctx.light_grey_texture.view.clone().into(),
                                 unk30: gctx.light_grey_texture.view.clone().into(),
                                 unk38: gctx.light_grey_texture.view.clone().into(),
                                 unk40: gctx.light_grey_texture.view.clone().into(),
-                                // unk48: gctx.light_grey_texture.view.clone().into(),
+                                // unk48: gctx.black_texture.view.clone().into(),
                                 unk48: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk50: gctx.dark_grey_texture.view.clone().into(),
+                                unk50: gctx.black_texture.view.clone().into(),
                                 unk58: gctx.light_grey_texture.view.clone().into(),
                                 unk60: tmp_gbuffers.staging_clone.view.clone().into(),
                                 ..existing_transparent

@@ -152,7 +152,7 @@ impl GpuContext {
             &device,
             1,
             1,
-            &[196, 196, 196, 255],
+            &[196, 196, 196, 196],
             DxgiFormat::R8G8B8A8_UNORM_SRGB,
             Some("Grey Texture"),
         )?;
@@ -179,7 +179,7 @@ impl GpuContext {
             &device,
             1,
             1,
-            &[0, 0, 0, 255],
+            &[0, 0, 0, 0],
             DxgiFormat::R8G8B8A8_UNORM_SRGB,
             Some("Black Texture"),
         )?;

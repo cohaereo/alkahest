@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
     marker::PhantomData,
+    ptr::{null, null_mut},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -9,7 +10,7 @@ use std::{
 
 use alkahest_data::tfx::TfxShaderStage;
 use anyhow::Context;
-use windows::Win32::Graphics::Direct3D11::*;
+use windows::{core::Interface, Win32::Graphics::Direct3D11::*};
 
 use crate::gpu::{GpuContext, SharedGpuContext};
 
@@ -214,11 +215,11 @@ impl<T: Sized + Clone> ConstantBufferCached<T> {
         unsafe { &mut *(self.data.as_ptr() as *mut T) }
     }
 
-    // pub fn bind(&self, slot: u32, stage: TfxShaderStage) {
-    //     // Make sure the buffer is written before we bind it
-    //     // Its fine to call this multiple times per draw, as we keep track of whether
-    //     // the buffer has been acquired before we write
-    //     self.write().ok();
-    //     self.cbuffer.bind(slot, stage)
-    // }
+    pub fn bind(&self, slot: u32, stage: TfxShaderStage) {
+        // Make sure the buffer is written before we bind it
+        // Its fine to call this multiple times per draw, as we keep track of whether
+        // the buffer has been acquired before we write
+        self.write().ok();
+        self.cbuffer.bind(slot, stage)
+    }
 }

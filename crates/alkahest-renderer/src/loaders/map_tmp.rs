@@ -356,18 +356,16 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         );
                     }
 
+                    let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
                     scene.spawn((
-                        Transform::from_mat4(Mat4::from_cols_array(&unk8.transform)),
-                        DynamicModelComponent {
-                            model: DynamicModel::load(
-                                &mut renderer.data.lock().asset_manager,
-                                unk8.unk60.entity_model,
-                                vec![],
-                                vec![],
-                            )
-                            .context("Failed to load background dynamic model")?,
-                            cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
-                        },
+                        transform,
+                        DynamicModelComponent::load(
+                            renderer,
+                            &transform,
+                            unk8.unk60.entity_model,
+                            vec![],
+                            vec![],
+                        )?,
                         TfxFeatureRenderer::SkyTransparent,
                     ));
                 }
@@ -381,16 +379,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 scene.spawn((
                     transform,
-                    DynamicModelComponent {
-                        model: DynamicModel::load(
-                            &mut renderer.data.lock().asset_manager,
-                            d.entity_model,
-                            vec![],
-                            vec![],
-                        )
-                        .context("Failed to load background dynamic model")?,
-                        cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
-                    },
+                    DynamicModelComponent::load(
+                        renderer,
+                        &transform,
+                        d.entity_model,
+                        vec![],
+                        vec![],
+                    )?,
                     TfxFeatureRenderer::Water,
                 ));
             }
@@ -496,16 +491,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                             scene.spawn((
                                 transform,
-                                DynamicModelComponent {
-                                    model: DynamicModel::load(
-                                        &mut renderer.data.lock().asset_manager,
-                                        model_hash,
-                                        entity_material_map,
-                                        materials,
-                                    )
-                                    .context("Failed to load background dynamic model")?,
-                                    cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
-                                },
+                                DynamicModelComponent::load(
+                                    renderer,
+                                    &transform,
+                                    model_hash,
+                                    entity_material_map,
+                                    materials,
+                                )?,
                                 TfxFeatureRenderer::DynamicObjects,
                             ));
                         }
