@@ -30,13 +30,13 @@ impl GuiView for BottomBar {
                 let mut current_map = maplist.current_map;
 
                 let amount_loaded = maplist.count_loaded();
-                let combo_label = if maplist.count_loading() != 0 {
-                    format!("Map (loading {}/{})", amount_loaded + 1, maplist.maps.len())
+                let combo_postlabel = if maplist.count_loading() != 0 {
+                    format!("({} loading {}/{})", LoadingIcon::Circle.get_frame(), amount_loaded + 1, maplist.maps.len())
                 } else {
-                    "Map".to_string()
+                    "".to_string()
                 };
                 ui.horizontal(|ui| {
-                    let map_changed = egui::ComboBox::from_label(combo_label)
+                    let map_changed = egui::ComboBox::from_label("Map")
                         .width(192.0)
                         .show_index(ui, &mut current_map, maplist.maps.len(), |i| {
                             let map = &maplist.maps[i];
@@ -56,6 +56,9 @@ impl GuiView for BottomBar {
                             RichText::new(format!("{icon} {}", maplist.maps[i].name)).color(color)
                         })
                         .changed();
+
+                    ui.label(combo_postlabel);
+
                     ui.checkbox(&mut maplist.load_all_maps, "Load all maps");
 
                     if map_changed {
