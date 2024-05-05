@@ -32,11 +32,11 @@ use alkahest_renderer::{
 use anyhow::Context;
 use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers, Widget};
-use glam::Vec4;
+use glam::{Vec2, Vec4};
 use windows::{core::HRESULT, Win32::Graphics::Direct3D11::D3D11_CLEAR_DEPTH};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    event::WindowEvent,
+    event::{MouseScrollDelta, WindowEvent},
     event_loop::EventLoop,
     platform::run_on_demand::EventLoopExtRunOnDemand,
 };
@@ -61,7 +61,6 @@ pub struct AlkahestApp {
     pub gui: GuiContext,
     pub resources: Resources,
 
-    camera: Camera,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
     renderer: RendererShared,
@@ -120,6 +119,7 @@ impl AlkahestApp {
             size: glam::UVec2::new(1920, 1080),
             origin: glam::UVec2::new(0, 0),
         });
+        resources.insert(camera);
 
         if let Some(maphash) = resources.get::<ApplicationArgs>().map {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
@@ -134,7 +134,6 @@ impl AlkahestApp {
             gctx,
             gui,
             resources,
-            camera,
             last_cursor_pos: None,
             renderer,
             map_placeholder: Scene::new(),
@@ -148,7 +147,6 @@ impl AlkahestApp {
             gui,
             gctx,
             resources,
-            camera,
             last_cursor_pos,
             renderer,
             map_placeholder,
@@ -173,8 +171,9 @@ impl AlkahestApp {
                             if (input.mouse_left() | input.mouse_middle())
                                 && !egui_event_response.consumed
                             {
-                                // let mut camera = resources.get_mut::<FpsCamera>().unwrap();
-                                camera.update_mouse((delta.0 as f32, delta.1 as f32).into(), 0.0);
+                                resources
+                                    .get_mut::<Camera>()
+                                    .update_mouse((delta.0 as f32, delta.1 as f32).into(), 0.0);
 
                                 // Wrap the cursor around if it goes out of bounds
                                 let window_dims = window.inner_size();
@@ -218,6 +217,16 @@ impl AlkahestApp {
                             *last_cursor_pos = Some(position);
                         }
                     }
+                    WindowEvent::MouseWheel {
+                        delta: MouseScrollDelta::LineDelta(_scroll_x, scroll_y),
+                        ..
+                    } => {
+                        if !egui_event_response.consumed {
+                            resources
+                                .get_mut::<Camera>()
+                                .update_mouse(Vec2::ZERO, scroll_y);
+                        }
+                    }
                     WindowEvent::Resized(new_dims) => {
                         let _ = gui
                             .renderer
@@ -233,7 +242,7 @@ impl AlkahestApp {
                             .gbuffers
                             .resize((new_dims.width, new_dims.height))
                             .expect("Failed to resize GBuffer");
-                        camera.set_viewport(Viewport {
+                        resources.get_mut::<Camera>().set_viewport(Viewport {
                             size: glam::UVec2::new(new_dims.width, new_dims.height),
                             origin: glam::UVec2::ZERO,
                         });
@@ -258,11 +267,9 @@ impl AlkahestApp {
                             });
                         }
 
-                        camera.update(
-                            &resources.get::<InputState>(),
-                            renderer.delta_time as f32,
-                            true,
-                        );
+                        resources
+                            .get_mut::<Camera>()
+                            .update(&resources.get::<InputState>(), renderer.delta_time as f32);
 
                         gctx.begin_frame();
                         let mut maps = resources.get_mut::<MapList>();
@@ -273,7 +280,7 @@ impl AlkahestApp {
                             .map(|m| &m.scene)
                             .unwrap_or(&map_placeholder);
 
-                        renderer.render_world(camera, &map);
+                        renderer.render_world(&*resources.get::<Camera>(), &map);
 
                         unsafe {
                             renderer.gpu.context().OMSetRenderTargets(

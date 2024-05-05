@@ -21,7 +21,9 @@ pub trait CameraController {
         tween: &mut Option<Tween>,
         input: &InputState,
         delta_time: f32,
-        smooth_movement: bool,
+        speed: f32,
+        smooth_movement: f32,
+        smooth_look: f32,
     );
     fn update_mouse(&mut self, tween: &mut Option<Tween>, delta: Vec2, scroll: f32);
 
@@ -65,6 +67,10 @@ pub struct Camera {
     pub projective_to_world: Mat4,
 
     pub target_pixel_to_projective: Mat4,
+
+    pub speed_mul: f32,
+    pub smooth_movement: f32,
+    pub smooth_look: f32,
 }
 
 impl Camera {
@@ -98,6 +104,10 @@ impl Camera {
             world_to_projective: Mat4::IDENTITY,
             projective_to_world: Mat4::IDENTITY,
             target_pixel_to_projective: Mat4::IDENTITY,
+
+            speed_mul: 1.0,
+            smooth_movement: 1.0,
+            smooth_look: 0.0,
         };
 
         camera.update_matrices();
@@ -116,13 +126,20 @@ impl Camera {
     }
 
     pub fn update_mouse(&mut self, delta: Vec2, scroll: f32) {
+        self.speed_mul = (self.speed_mul + scroll * 0.05).clamp(0.0, 5.0);
         self.controller.update_mouse(&mut self.tween, delta, scroll);
         self.update_matrices();
     }
 
-    pub fn update(&mut self, input: &InputState, delta_time: f32, smooth_movement: bool) {
-        self.controller
-            .update(&mut self.tween, input, delta_time, smooth_movement);
+    pub fn update(&mut self, input: &InputState, delta_time: f32) {
+        self.controller.update(
+            &mut self.tween,
+            input,
+            delta_time,
+            self.speed_mul,
+            self.smooth_movement,
+            self.smooth_look,
+        );
         self.update_matrices();
     }
 

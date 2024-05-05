@@ -11,7 +11,6 @@ pub struct FpsCamera {
     pub up: Vec3,
     pub position: Vec3,
     target_position: Vec3,
-    pub speed_mul: f32,
 }
 
 impl FpsCamera {
@@ -37,7 +36,6 @@ impl Default for FpsCamera {
             position: Vec3::ZERO,
             target_position: Vec3::ZERO,
             orientation: Vec2::ZERO,
-            speed_mul: 1.0,
         }
     }
 }
@@ -48,7 +46,10 @@ impl CameraController for FpsCamera {
         tween: &mut Option<Tween>,
         input: &crate::input::InputState,
         delta_time: f32,
-        smooth_movement: bool,
+        speed_mul: f32,
+        smooth_movement: f32,
+        // TODO(cohae): Implement smooth look
+        _smooth_look: f32,
     ) {
         let mut speed = delta_time * 25.0;
         let mut absolute = false;
@@ -113,7 +114,7 @@ impl CameraController for FpsCamera {
             }
         }
 
-        speed *= self.speed_mul;
+        speed *= speed_mul;
 
         // Cancel tween if the user moves the camera
         if tween.is_some() && direction.length() > 0.0 {
@@ -131,10 +132,11 @@ impl CameraController for FpsCamera {
             *tween = None;
         }
 
-        if smooth_movement {
-            self.position = self
-                .position
-                .lerp(self.target_position, (delta_time * 15.0).min(1.0));
+        if smooth_movement > 0.0 {
+            self.position = self.position.lerp(
+                self.target_position,
+                (delta_time * (15.0 / smooth_movement)).min(1.0),
+            );
         } else {
             self.position = self.target_position;
         }
@@ -149,9 +151,8 @@ impl CameraController for FpsCamera {
                 * Quat::from_rotation_y(self.orientation.x.to_radians());
     }
 
-    fn update_mouse(&mut self, tween: &mut Option<Tween>, delta: Vec2, scroll_y: f32) {
+    fn update_mouse(&mut self, tween: &mut Option<Tween>, delta: Vec2, _scroll_y: f32) {
         self.orientation += Vec2::new(delta.y * 0.8, delta.x) * 0.15;
-        self.speed_mul = (self.speed_mul + scroll_y * 0.005).clamp(0.0, 5.0);
 
         // Cancel angle tween if the user rotates the camera
         if tween.as_ref().map_or(false, |t| t.angle_movement.is_some()) {

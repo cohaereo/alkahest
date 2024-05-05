@@ -1,8 +1,9 @@
 use alkahest_renderer::{
+    camera::{Camera, CameraProjection},
     hocus,
     renderer::{RendererSettings, RendererShared},
 };
-use egui::Context;
+use egui::{Context, RichText, Widget};
 use winit::window::Window;
 
 use crate::{
@@ -20,7 +21,8 @@ impl GuiView for RenderSettingsPanel {
         resources: &Resources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
-        egui::Window::new("Render Settings").show(ctx, |ui| {
+        egui::Window::new("Settings").show(ctx, |ui| {
+            ui.heading("Graphics");
             let mut settings = resources.get_mut::<RendererSettings>();
             ui.checkbox(&mut settings.vsync, "VSync");
             ui.checkbox(&mut settings.ssao, "SSAO");
@@ -29,6 +31,43 @@ impl GuiView for RenderSettingsPanel {
 
             let renderer = resources.get::<RendererShared>();
             renderer.set_render_settings(settings.clone());
+
+            let mut camera = resources.get_mut::<Camera>();
+            ui.heading("Camera");
+            ui.strong(RichText::new("TODO: move to dropdown button").color(egui::Color32::YELLOW));
+            ui.horizontal(|ui| {
+                egui::DragValue::new(&mut camera.speed_mul)
+                    .clamp_range(0f32..=5.0)
+                    .speed(0.05)
+                    .ui(ui);
+                ui.label("Speed");
+            });
+
+            if let CameraProjection::Perspective { fov, .. } = &mut camera.projection {
+                ui.horizontal(|ui| {
+                    egui::DragValue::new(fov)
+                        .clamp_range(20f32..=120.0)
+                        .speed(0.05)
+                        .ui(ui);
+                    ui.label("FOV");
+                });
+            }
+
+            ui.horizontal(|ui| {
+                egui::DragValue::new(&mut camera.smooth_movement)
+                    .clamp_range(0f32..=5.0)
+                    .speed(0.05)
+                    .ui(ui);
+                ui.label("Smooth movement");
+            });
+
+            ui.horizontal(|ui| {
+                egui::DragValue::new(&mut camera.smooth_look)
+                    .clamp_range(0f32..=5.0)
+                    .speed(0.05)
+                    .ui(ui);
+                ui.label("Smooth look");
+            });
         });
 
         None
