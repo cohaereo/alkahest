@@ -12,8 +12,8 @@ use crate::{
         SharedGpuContext,
     },
     include_dxbc,
-    renderer::Renderer,
-    tfx::{externs::ExternStorage, gbuffer::RenderTarget},
+    renderer::{gbuffer::RenderTarget, Renderer},
+    tfx::externs::ExternStorage,
 };
 
 pub struct SsaoRenderer {
@@ -64,7 +64,12 @@ impl SsaoRenderer {
         })
     }
 
-    pub fn draw(&self, renderer: &Renderer, intermediate_rt: &RenderTarget) {
+    pub fn draw(&self, renderer: &Renderer) {
+        let (intermediate_rt, intermediate_view) = {
+            let e = &renderer.data.lock().gbuffers.ssao_intermediate;
+            e.clear(&[0.0, 0.0, 0.0, 0.0]);
+            (e.render_target.clone(), e.view.clone())
+        };
         let externs = &mut renderer.data.lock().externs;
         {
             let scope = self.scope.data();
@@ -105,7 +110,7 @@ impl SsaoRenderer {
             renderer
                 .gpu
                 .context()
-                .OMSetRenderTargets(Some(&[Some(intermediate_rt.render_target.clone())]), None);
+                .OMSetRenderTargets(Some(&[Some(intermediate_rt)]), None);
 
             renderer.gpu.set_blend_state(0);
             renderer.gpu.context().RSSetState(None);
@@ -118,7 +123,7 @@ impl SsaoRenderer {
 
             renderer.gpu.current_states.store(StateSelection::new(
                 Some(3),
-                Some(1),
+                Some(0),
                 Some(1),
                 Some(1),
             ));
@@ -134,13 +139,13 @@ impl SsaoRenderer {
             renderer
                 .gpu
                 .context()
-                .PSSetShaderResources(0, Some(&[Some(intermediate_rt.view.clone())]));
+                .PSSetShaderResources(0, Some(&[Some(intermediate_view)]));
             renderer.gpu.context().Draw(3, 0);
         }
     }
 }
 
-const KERNEL_SIZE: usize = 16;
+const KERNEL_SIZE: usize = 32;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -171,8 +176,8 @@ impl Default for ScopeAlkahestSsao {
 
         Self {
             target_pixel_to_world: Default::default(),
-            radius: 0.75,
-            bias: 0.05,
+            radius: 1.00,
+            bias: 0.10,
             kernel_size: KERNEL_SIZE as _,
             samples,
         }

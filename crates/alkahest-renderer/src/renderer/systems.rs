@@ -1,0 +1,24 @@
+use alkahest_data::tfx::TfxRenderStage;
+
+use crate::{
+    ecs::{
+        dynamic_geometry::draw_dynamic_model_system, static_geometry::draw_static_instances_system,
+        terrain::draw_terrain_patches_system, Scene,
+    },
+    renderer::Renderer,
+};
+
+impl Renderer {
+    pub(super) fn run_renderstage_systems(&self, scene: &Scene, stage: TfxRenderStage) {
+        if matches!(
+            stage,
+            TfxRenderStage::GenerateGbuffer
+                | TfxRenderStage::ShadowGenerate
+                | TfxRenderStage::DepthPrepass
+        ) {
+            draw_terrain_patches_system(self, scene);
+        }
+        draw_static_instances_system(self, scene, stage);
+        draw_dynamic_model_system(self, scene, stage);
+    }
+}

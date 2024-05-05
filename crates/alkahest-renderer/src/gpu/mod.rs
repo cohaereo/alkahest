@@ -1,4 +1,5 @@
 pub mod buffer;
+pub mod debug;
 pub mod global_state;
 pub mod texture;
 pub mod util;
@@ -43,6 +44,8 @@ pub struct GpuContext {
 
     pub device: ID3D11Device,
     context: ID3D11DeviceContext,
+    annotation: ID3DUserDefinedAnnotation,
+
     pub swap_chain: IDXGISwapChain,
     pub swapchain_target: RwLock<Option<ID3D11RenderTargetView>>,
     pub swapchain_resolution: AtomicCell<(u32, u32)>,
@@ -66,6 +69,8 @@ pub struct GpuContext {
     current_rasterizer_state: AtomicUsize,
     current_depth_bias: AtomicUsize,
     current_input_topology: AtomicI32,
+    current_depth_state: AtomicUsize,
+    use_flipped_depth_comparison: AtomicBool,
 
     pub current_states: AtomicCell<StateSelection>,
 
@@ -184,7 +189,7 @@ impl GpuContext {
             Some("Black Texture"),
         )?;
 
-        let color0_fallback = load_vertex_buffer_data(&device, &[255, 255, 255, 255], 4)?;
+        let color0_fallback = load_vertex_buffer_data(&device, &[0, 0, 0, 255], 4)?;
 
         let sky_hemisphere_placeholder = Texture::load_png(
             &device,
@@ -199,7 +204,9 @@ impl GpuContext {
             util_resources: UtilResources::new(&device),
 
             device,
+            annotation: device_context.cast()?,
             context: device_context,
+
             swap_chain,
             swapchain_target: RwLock::new(swapchain_target),
             present_parameters: AtomicU32::new(0),
@@ -221,6 +228,9 @@ impl GpuContext {
             current_rasterizer_state: AtomicUsize::new(usize::MAX),
             current_depth_bias: AtomicUsize::new(usize::MAX),
             current_input_topology: AtomicI32::new(-1),
+            current_depth_state: AtomicUsize::new(usize::MAX),
+            use_flipped_depth_comparison: AtomicBool::new(false),
+
             current_states: AtomicCell::new(StateSelection::new(
                 Some(0),
                 Some(0),
@@ -249,10 +259,8 @@ impl GpuContext {
 impl GpuContext {
     pub fn begin_frame(&self) {
         unsafe {
-            self.context.ClearRenderTargetView(
-                self.swapchain_target.read().as_ref().unwrap(),
-                &[0.0, 0.0, 0.0, 1.0],
-            );
+            // TODO(cohae): Clearing the state causes maps like bannerfall to use a point fill mode (which doesn't exist in dx11????)
+            // self.context.ClearState();
 
             self.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
@@ -267,9 +275,11 @@ impl GpuContext {
         self.reset_states();
     }
 
-    pub fn reset_states(&self) {
+    fn reset_states(&self) {
         // Reset current states
         self.current_blend_state
+            .store(usize::MAX, Ordering::Relaxed);
+        self.current_depth_state
             .store(usize::MAX, Ordering::Relaxed);
         self.current_input_layout
             .store(usize::MAX, Ordering::Relaxed);
@@ -284,9 +294,9 @@ impl GpuContext {
         if let Some(blend) = states.blend_state() {
             self.set_blend_state(blend);
         }
-        // if let Some(depth_stencil) = states.depth_stencil_state() {
-        //     self.set_depth_stencil_state(depth_stencil);
-        // }
+        if let Some(depth_stencil) = states.depth_stencil_state() {
+            self.set_depth_stencil_state(depth_stencil);
+        }
         if let Some(rasterizer) = states.rasterizer_state() {
             self.set_rasterizer_state(rasterizer);
         }
@@ -349,6 +359,23 @@ impl GpuContext {
                 );
             }
             self.current_blend_state.store(index, Ordering::Relaxed);
+        }
+    }
+
+    pub fn set_depth_stencil_state(&self, index: usize) {
+        if self.current_depth_state.load(Ordering::Relaxed) != index {
+            let states = &self.states.depth_stencil_states[index];
+            unsafe {
+                self.context().OMSetDepthStencilState(
+                    if self.use_flipped_depth_comparison.load(Ordering::Relaxed) {
+                        &states.1
+                    } else {
+                        &states.0
+                    },
+                    0,
+                );
+            }
+            self.current_depth_state.store(index, Ordering::Relaxed);
         }
     }
 

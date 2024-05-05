@@ -23,11 +23,10 @@ pub struct STechnique {
     pub unk14: u32,
     pub unk18: u32,
     pub unk1c: u32,
-    pub unk20: u16,
-    pub unk22: u16,
-    pub unk24: u32,
-    pub unk28: u32,
-    pub unk2c: u32,
+    
+    pub used_scopes: u64,
+    pub compatible_scopes: u64,
+
     pub states: StateSelection,
     pub unk34: [u32; 15],
 
@@ -56,38 +55,38 @@ impl STechnique {
             .collect()
     }
 
-    pub fn debug_header_string(&self) -> String {
-        format!(
-            "STechnique {{
-    unk8: 0x{:x},
-    unkc: 0x{:x},
-    unk10: 0x{:x},
-    unk14: 0x{:x},
-    unk18: 0x{:x},
-    unk1c: 0x{:x},
-    unk20: 0x{:x},
-    unk22: 0x{:x},
-    unk24: 0x{:x},
-    unk28: 0x{:x},
-    unk2c: 0x{:x},
-    states: 0x{:?},
-    unk34: {:x?}
-}}",
-            self.unk8,
-            self.unkc,
-            self.unk10,
-            self.unk14,
-            self.unk18,
-            self.unk1c,
-            self.unk20,
-            self.unk22,
-            self.unk24,
-            self.unk28,
-            self.unk2c,
-            self.states,
-            self.unk34
-        )
-    }
+    //     pub fn debug_header_string(&self) -> String {
+    //         format!(
+    //             "STechnique {{
+    //     unk8: 0x{:x},
+    //     unkc: 0x{:x},
+    //     unk10: 0x{:x},
+    //     unk14: 0x{:x},
+    //     unk18: 0x{:x},
+    //     unk1c: 0x{:x},
+    //     unk20: 0x{:x},
+    //     unk22: 0x{:x},
+    //     unk24: 0x{:x},
+    //     unk28: 0x{:x},
+    //     unk2c: 0x{:x},
+    //     states: 0x{:?},
+    //     unk34: {:x?}
+    // }}",
+    //             self.unk8,
+    //             self.unkc,
+    //             self.unk10,
+    //             self.unk14,
+    //             self.unk18,
+    //             self.unk1c,
+    //             self.unk20,
+    //             self.unk22,
+    //             self.unk24,
+    //             self.unk28,
+    //             self.unk2c,
+    //             self.states,
+    //             self.unk34
+    //         )
+    //     }
 }
 
 #[derive(Debug, Clone)]

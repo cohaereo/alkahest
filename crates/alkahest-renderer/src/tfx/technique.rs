@@ -62,9 +62,9 @@ impl Technique {
         if let Some(u) = states.blend_state() {
             renderer.gpu.set_blend_state(u);
         }
-        // if let Some(u) = states.depth_stencil_state() {
-        //     gctx.set_depth_stencil_state(u);
-        // }
+        if let Some(u) = states.depth_stencil_state() {
+            renderer.gpu.set_depth_stencil_state(u);
+        }
         if let Some(u) = states.rasterizer_state() {
             renderer.gpu.set_rasterizer_state(u);
         }

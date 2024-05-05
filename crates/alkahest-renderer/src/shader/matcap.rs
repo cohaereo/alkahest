@@ -8,7 +8,7 @@ use crate::{
     },
     include_dxbc,
     renderer::Renderer,
-    tfx::{externs::ExternStorage, gbuffer::GBuffer},
+    tfx::externs::ExternStorage,
     util::image::Png,
 };
 
@@ -76,6 +76,7 @@ impl MatcapRenderer {
             self.matcap_specular
                 .bind(&renderer.gpu, 2, TfxShaderStage::Pixel);
 
+            renderer.gpu.flush_states();
             renderer.gpu.context().RSSetState(None);
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
             renderer.gpu.context().OMSetDepthStencilState(None, 0);

@@ -25,6 +25,7 @@ use crate::{
     camera::Camera,
     ecs::{transform::Transform, Scene},
     gpu::{GpuContext, SharedGpuContext},
+    gpu_event,
     handle::{AssetId, Handle},
     loaders::AssetManager,
     renderer::Renderer,
@@ -46,6 +47,8 @@ pub struct LightRenderer {
     // TfxRenderStage::LightProbeApply
     technique_compute_lightprobe: Handle<Technique>,
     technique_compute_lightprobe_shadowing: Option<Handle<Technique>>,
+
+    debug_label: String,
 }
 
 impl LightRenderer {
@@ -142,6 +145,7 @@ impl LightRenderer {
             technique_volumetrics_shadowing: None,
             technique_compute_lightprobe: Handle::none(),
             technique_compute_lightprobe_shadowing: None,
+            debug_label: "Unknown DeferredLight".to_string(),
         })
     }
 
@@ -149,12 +153,14 @@ impl LightRenderer {
         gctx: SharedGpuContext,
         asset_manager: &mut AssetManager,
         light: &SLight,
+        debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
             technique_compute_lightprobe: asset_manager
                 .get_or_load_technique(light.technique_compute_lightprobe),
+            debug_label,
             ..Self::new_empty(gctx.clone())?
         })
     }
@@ -163,6 +169,7 @@ impl LightRenderer {
         gctx: SharedGpuContext,
         asset_manager: &mut AssetManager,
         light: &SShadowingLight,
+        debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
@@ -178,11 +185,13 @@ impl LightRenderer {
             technique_compute_lightprobe_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_compute_lightprobe_shadowing),
             ),
+            debug_label,
             ..Self::new_empty(gctx.clone())?
         })
     }
 
     fn draw(&self, renderer: &Renderer) {
+        gpu_event!(renderer.gpu, &self.debug_label);
         unsafe {
             renderer
                 .gpu
@@ -221,7 +230,7 @@ impl LightRenderer {
     }
 }
 
-pub fn draw_light_system(renderer: &Renderer, scene: &Scene, camera: &Camera) {
+pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
     profiling::scope!("draw_light_system");
     for (_, (transform, light_renderer, light, bounds)) in scene
         .query::<(&Transform, &LightRenderer, &SLight, Option<&AABB>)>()
@@ -236,8 +245,13 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene, camera: &Camera) {
         let transform_mat = transform.to_mat4();
         {
             let externs = &mut renderer.data.lock().externs;
+            let Some(view) = &externs.view else {
+                error!("No view extern bound for light rendering");
+                return;
+            };
+
             externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: camera.world_to_projective * (transform_mat * light_scale),
+                transform: view.world_to_projective * (transform_mat * light_scale),
             });
 
             externs.deferred_light = Some(externs::DeferredLight {
@@ -245,6 +259,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene, camera: &Camera) {
                 unk40: Mat4::from_scale(Vec3::splat(0.15)),
                 unk80: transform_mat,
                 unkc0: transform.translation.extend(1.0),
+                unkd0: transform.translation.extend(1.0),
+                unke0: transform.translation.extend(1.0),
                 unk100: light.unk50,
                 unk110: 1.0,
                 unk114: 1.0,
@@ -268,8 +284,13 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene, camera: &Camera) {
         let transform_mat = transform.to_mat4();
         {
             let externs = &mut renderer.data.lock().externs;
+            let Some(view) = &externs.view else {
+                error!("No view extern bound for light rendering");
+                return;
+            };
+
             externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: camera.world_to_projective * (transform_mat * light_scale),
+                transform: view.world_to_projective * (transform_mat * light_scale),
             });
 
             externs.deferred_light = Some(externs::DeferredLight {

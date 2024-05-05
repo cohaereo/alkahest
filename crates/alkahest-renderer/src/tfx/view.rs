@@ -1,3 +1,4 @@
+use std::ops::{BitOr, BitOrAssign};
 use alkahest_data::tfx::TfxRenderStage;
 
 use super::externs;
@@ -12,7 +13,7 @@ pub trait View {
 }
 
 bitflags::bitflags! {
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub struct RenderStageSubscriptions: u32 {
         const GENERATE_GBUFFER                  = 1 << TfxRenderStage::GenerateGbuffer as u32;
         const DECALS                            = 1 << TfxRenderStage::Decals as u32;
@@ -54,5 +55,25 @@ impl RenderStageSubscriptions {
             }
         }
         flags
+    }
+}
+
+impl From<TfxRenderStage> for RenderStageSubscriptions {
+    fn from(stage: TfxRenderStage) -> Self {
+        Self::from_bits_truncate(1 << stage as u32)
+    }
+}
+
+impl BitOr<TfxRenderStage> for RenderStageSubscriptions {
+    type Output = Self;
+
+    fn bitor(self, rhs: TfxRenderStage) -> Self::Output {
+        self | Self::from(rhs)
+    }
+}
+
+impl BitOrAssign<TfxRenderStage> for RenderStageSubscriptions {
+    fn bitor_assign(&mut self, rhs: TfxRenderStage) {
+        *self |= Self::from(rhs);
     }
 }

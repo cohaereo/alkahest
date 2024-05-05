@@ -7,6 +7,7 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
     gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext, SharedGpuContext},
+    gpu_event,
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
     renderer::Renderer,
@@ -22,6 +23,8 @@ pub struct TerrainPatches {
     pub vertex0_buffer: Handle<VertexBuffer>,
     pub vertex1_buffer: Handle<VertexBuffer>,
     pub index_buffer: Handle<IndexBuffer>,
+
+    pub hash: TagHash,
 }
 
 impl TerrainPatches {
@@ -76,10 +79,13 @@ impl TerrainPatches {
             techniques,
             dyemaps,
             group_cbuffers,
+            hash,
         })
     }
 
     pub fn draw(&self, renderer: &Renderer) {
+        gpu_event!(renderer.gpu, format!("terrain_patch {}", self.hash));
+
         // Layout 22
         //  - int4 v0 : POSITION0, // Format DXGI_FORMAT_R16G16B16A16_SINT size 8
         //  - float4 v1 : NORMAL0, // Format DXGI_FORMAT_R16G16B16A16_SNORM size 8

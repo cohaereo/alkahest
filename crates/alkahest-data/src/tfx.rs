@@ -75,6 +75,40 @@ pub enum TfxFeatureRenderer {
     Cubemaps = 26,
 }
 
+impl TfxFeatureRenderer {
+    pub fn short(&self) -> &'static str {
+        match self {
+            TfxFeatureRenderer::StaticObjects => "static_object",
+            TfxFeatureRenderer::DynamicObjects => "dynamic_object",
+            TfxFeatureRenderer::ExampleEntity => "example_entity",
+            TfxFeatureRenderer::SkinnedObject => "skinned_object",
+            TfxFeatureRenderer::Gear => "gear",
+            TfxFeatureRenderer::RigidObject => "rigid_object",
+            TfxFeatureRenderer::Cloth => "cloth",
+            TfxFeatureRenderer::ChunkedInstanceObjects => "chunked_instance_object",
+            TfxFeatureRenderer::SoftDeformable => "soft_deformable",
+            TfxFeatureRenderer::TerrainPatch => "terrain_patch",
+            TfxFeatureRenderer::SpeedtreeTrees => "speedtree_trees",
+            TfxFeatureRenderer::EditorTerrainTile => "editor_terrain_tile",
+            TfxFeatureRenderer::EditorMesh => "editor_mesh",
+            TfxFeatureRenderer::BatchedEditorMesh => "batched_editor_mesh",
+            TfxFeatureRenderer::EditorDecal => "editor_decal",
+            TfxFeatureRenderer::Particles => "particles",
+            TfxFeatureRenderer::ChunkedLights => "chunked_light",
+            TfxFeatureRenderer::DeferredLights => "deferred_light",
+            TfxFeatureRenderer::SkyTransparent => "sky_transparent",
+            TfxFeatureRenderer::Widget => "widget",
+            TfxFeatureRenderer::Decals => "decal",
+            TfxFeatureRenderer::DynamicDecals => "dynamic_decal",
+            TfxFeatureRenderer::RoadDecals => "road_decal",
+            TfxFeatureRenderer::Water => "water",
+            TfxFeatureRenderer::LensFlares => "lens_flare",
+            TfxFeatureRenderer::Volumetrics => "volumetrics",
+            TfxFeatureRenderer::Cubemaps => "cubemap",
+        }
+    }
+}
+
 impl TigerReadable for TfxFeatureRenderer {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,

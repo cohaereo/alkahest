@@ -5,7 +5,7 @@ use windows::Win32::Graphics::Direct3D11::{
     D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_CLAMP,
 };
 
-use crate::{gpu::GpuContext, include_dxbc};
+use crate::{gpu::GpuContext, gpu_event, include_dxbc};
 
 pub struct UtilResources {
     pub entity_vs_override: ID3D11VertexShader,
@@ -57,6 +57,7 @@ impl GpuContext {
         texture_view: &ID3D11ShaderResourceView,
         rt: &ID3D11RenderTargetView,
     ) {
+        gpu_event!(self, "blit_texture");
         unsafe {
             self.set_blend_state(0);
             // self.set_rasterizer_state(0);
@@ -67,11 +68,12 @@ impl GpuContext {
 
             self.set_input_topology(EPrimitiveType::Triangles);
             self.context
+                .OMSetRenderTargets(Some(&[Some(rt.clone())]), None);
+            self.context.OMSetDepthStencilState(None, 0);
+            self.context
                 .PSSetSamplers(0, Some(&[Some(self.util_resources.point_sampler.clone())]));
             self.context
                 .PSSetShaderResources(0, Some(&[Some(texture_view.clone())]));
-            self.context
-                .OMSetRenderTargets(Some(&[Some(rt.clone())]), None);
 
             self.context.Draw(3, 0);
         }

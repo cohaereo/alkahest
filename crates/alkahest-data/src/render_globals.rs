@@ -68,7 +68,7 @@ pub struct SScope {
     pub file_size: u64,
     pub name: Pointer<NullString>,
 
-    #[tag(offset = 0x58)]
+    #[tag(offset = 0x48)]
     // TODO(cohae): Order *might* be incorrect
     pub stage_pixel: SScopeStage,
     pub stage_vertex: SScopeStage,
@@ -95,7 +95,8 @@ impl SScope {
 #[derive(Debug, Clone)]
 #[tiger_tag(id = 0xffffffff)]
 pub struct SScopeStage {
-    pub unk0: u64,
+    pub unk0: [u32; 4],
+    pub unk10: u64,
     pub bytecode: Vec<u8>,
     pub bytecode_constants: Vec<Vec4>,
     pub samplers: Vec<WideHash>,
@@ -105,7 +106,7 @@ pub struct SScopeStage {
     pub constant_buffer_slot: i32,
     pub constant_buffer: TagHash,
 
-    pub unksomething: [u32; 10],
+    pub unk60: [u32; 6],
 }
 
 #[derive(Debug, Clone)]

@@ -1,11 +1,12 @@
 use alkahest_data::{
     entity::{SDynamicModel, Unk808072c5},
-    tfx::{TfxRenderStage, TfxShaderStage},
+    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
 use anyhow::ensure;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3, Vec4};
+use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
@@ -14,10 +15,12 @@ use crate::{
         buffer::{ConstantBuffer, ConstantBufferCached},
         GpuContext,
     },
+    gpu_event,
     handle::Handle,
     loaders::AssetManager,
     renderer::Renderer,
     tfx::{externs, externs::ExternStorage, technique::Technique, view::RenderStageSubscriptions},
+    util::packages::TagHashExt,
 };
 
 pub struct DynamicModel {
@@ -28,25 +31,30 @@ pub struct DynamicModel {
 
     pub model: SDynamicModel,
     pub mesh_stages: Vec<RenderStageSubscriptions>,
+    pub subscribed_stages: RenderStageSubscriptions,
     part_techniques: Vec<Vec<Handle<Technique>>>,
 
     pub selected_mesh: usize,
     // TODO(cohae): How can we find the variant count?
     pub selected_variant: usize,
+
+    pub hash: TagHash,
+    pub feature_type: TfxFeatureRenderer,
 }
 
 impl DynamicModel {
     pub fn load(
         am: &mut AssetManager,
-        tag: TagHash,
+        hash: TagHash,
         technique_map: Vec<Unk808072c5>,
         techniques: Vec<TagHash>,
+        feature_type: TfxFeatureRenderer,
     ) -> anyhow::Result<Self> {
-        let model = package_manager().read_tag_struct::<SDynamicModel>(tag)?;
+        let model = package_manager().read_tag_struct::<SDynamicModel>(hash)?;
         let techniques = techniques
             .iter()
             .map(|&tag| am.get_or_load_technique(tag))
-            .collect();
+            .collect_vec();
 
         let mesh_buffers = model
             .meshes
@@ -57,13 +65,13 @@ impl DynamicModel {
                 color_buffer: am.get_or_load_vertex_buffer(m.color_buffer),
                 index_buffer: am.get_or_load_index_buffer(m.index_buffer),
             })
-            .collect();
+            .collect_vec();
 
         let mesh_stages = model
             .meshes
             .iter()
             .map(|m| RenderStageSubscriptions::from_partrange_list(&m.part_range_per_render_stage))
-            .collect();
+            .collect_vec();
 
         let part_techniques = model
             .meshes
@@ -72,9 +80,9 @@ impl DynamicModel {
                 m.parts
                     .iter()
                     .map(|p| am.get_or_load_technique(p.technique))
-                    .collect()
+                    .collect_vec()
             })
-            .collect();
+            .collect_vec();
 
         Ok(Self {
             selected_variant: 0,
@@ -83,8 +91,13 @@ impl DynamicModel {
             technique_map,
             techniques,
             model,
+            subscribed_stages: mesh_stages
+                .iter()
+                .fold(RenderStageSubscriptions::empty(), |acc, &x| acc | x),
             mesh_stages,
             part_techniques,
+            hash,
+            feature_type,
         })
     }
 
@@ -107,6 +120,15 @@ impl DynamicModel {
 
     /// ⚠ Expects the `rigid_model` scope to be bound
     pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) -> anyhow::Result<()> {
+        gpu_event!(
+            renderer.gpu,
+            format!(
+                "{} {}",
+                self.feature_type.short(),
+                self.hash.prepend_package_name()
+            )
+        );
+
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
         ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
         // ensure!(
@@ -185,12 +207,14 @@ impl DynamicModelComponent {
         hash: TagHash,
         technique_map: Vec<Unk808072c5>,
         techniques: Vec<TagHash>,
+        feature_type: TfxFeatureRenderer,
     ) -> anyhow::Result<Self> {
         let model = DynamicModel::load(
             &mut renderer.data.lock().asset_manager,
             hash,
             technique_map,
             techniques,
+            feature_type,
         )?;
 
         let mut d = Self {
@@ -233,6 +257,10 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         &format!("render_stage={render_stage:?}")
     );
     for (_, dynamic) in scene.query::<&DynamicModelComponent>().iter() {
+        if !dynamic.model.subscribed_stages.is_subscribed(render_stage) {
+            continue;
+        }
+
         // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
         renderer.data.lock().externs.rigid_model = Some(dynamic.ext.clone());
 

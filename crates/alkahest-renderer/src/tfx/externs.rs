@@ -386,15 +386,16 @@ macro_rules! extern_struct {
 
 extern_struct! {
     struct Frame("frame") {
-        0x00 => unk00: f32 > unimplemented(false),
-        0x04 => unk04: f32 > unimplemented(false),
+        0x00 => game_time: f32,
+        0x04 => render_time: f32,
         0x0c => unk0c: f32 > unimplemented(true),
         0x10 => unk10: f32 > unimplemented(true),
-        0x14 => unk14: f32 > unimplemented(true),
-        0x1c => light_mul: f32 > unimplemented(false),
+        0x14 => delta_game_time: f32 > unimplemented(true),
+        0x18 => exposure_time: f32 > unimplemented(true),
+        0x1c => exposure_scale: f32 > unimplemented(false),
         0x20 => unk20: f32 > unimplemented(true),
         0x24 => unk24: f32 > unimplemented(true),
-        0x28 => unk28: f32 > unimplemented(true),
+        0x28 => exposure_illum_relative: f32 > unimplemented(true),
         0x2c => unk2c: f32 > unimplemented(true),
         0x40 => unk40: f32 > unimplemented(true),
         0x70 => unk70: f32 > unimplemented(true),
@@ -418,6 +419,7 @@ extern_struct! {
         // When not zero, causes a weird noise pattern on cutout textures
         0x1a0 => unk1a0: Vec4 > unimplemented(false) > default(Vec4::ZERO),
         0x1b0 => unk1b0: Vec4 > unimplemented(false),
+        0x1c0 => unk1c0: Vec4 > unimplemented(false) > default(Vec4::new(1.0, 1.0, 0.0, 1.0)),
         0x1e0 => unk1e0: TextureView > unimplemented(true),
         0x1e8 => unk1e8: TextureView > unimplemented(true),
         0x1f0 => unk1f0: TextureView > unimplemented(true),

@@ -9,12 +9,12 @@ use windows::Win32::Graphics::{
     Dxgi::Common::*,
 };
 
-use crate::{camera::Camera, gpu::SharedGpuContext, util::d3d::D3dResource};
+use crate::{camera::Camera, gpu::SharedGpuContext, gpu_event, util::d3d::D3dResource};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,
     pub rt1: RenderTarget,
-    pub rt1_clone: RenderTarget,
+    pub rt1_read: RenderTarget,
     pub rt2: RenderTarget,
     pub rt3: RenderTarget,
 
@@ -26,8 +26,8 @@ pub struct GBuffer {
     pub light_specular: RenderTarget,
     pub light_ibl_specular: RenderTarget,
 
-    pub staging: RenderTarget,
-    pub staging_clone: RenderTarget,
+    pub shading_result: RenderTarget,
+    pub shading_result_read: RenderTarget,
     pub depth: DepthState,
     pub depth_staging: CpuStagingBuffer,
 
@@ -47,7 +47,7 @@ impl GBuffer {
                 .context("RT0")?,
             rt1: RenderTarget::create(size, DxgiFormat::R10G10B10A2_UNORM, gctx.clone(), "RT1")
                 .context("RT1")?,
-            rt1_clone: RenderTarget::create(
+            rt1_read: RenderTarget::create(
                 size,
                 DxgiFormat::R10G10B10A2_UNORM,
                 gctx.clone(),
@@ -97,14 +97,14 @@ impl GBuffer {
             )
             .context("Specular_IBL")?,
 
-            staging: RenderTarget::create(
+            shading_result: RenderTarget::create(
                 size,
                 DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
                 "Staging",
             )
             .context("Staging")?,
-            staging_clone: RenderTarget::create(
+            shading_result_read: RenderTarget::create(
                 size,
                 DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
@@ -153,7 +153,7 @@ impl GBuffer {
 
         self.rt0.resize(new_size).context("RT0")?;
         self.rt1.resize(new_size).context("RT1")?;
-        self.rt1_clone.resize(new_size).context("RT1_Clone")?;
+        self.rt1_read.resize(new_size).context("RT1_Clone")?;
         self.rt2.resize(new_size).context("RT2")?;
         self.rt3.resize(new_size).context("RT3")?;
 
@@ -178,8 +178,8 @@ impl GBuffer {
             .resize(new_size)
             .context("Specular_IBL")?;
 
-        self.staging.resize(new_size).context("Staging")?;
-        self.staging_clone
+        self.shading_result.resize(new_size).context("Staging")?;
+        self.shading_result_read
             .resize(new_size)
             .context("Staging_Clone")?;
         self.depth.resize(new_size).context("Depth")?;
@@ -321,6 +321,7 @@ impl RenderTarget {
     }
 
     pub fn copy_to(&self, dest: &RenderTarget) {
+        gpu_event!(self.gctx, format!("copy {}->{}", self.name, dest.name));
         unsafe {
             self.gctx
                 .context()
@@ -329,6 +330,7 @@ impl RenderTarget {
     }
 
     pub fn copy_to_staging(&self, dest: &CpuStagingBuffer) {
+        gpu_event!(self.gctx, format!("copy_cpu {}->{}", self.name, dest.name));
         unsafe {
             self.gctx
                 .context()
@@ -339,6 +341,14 @@ impl RenderTarget {
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
         *self = Self::create(new_size, self.format, self.gctx.clone(), &self.name)?;
         Ok(())
+    }
+
+    pub fn clear(&self, color: &[f32; 4]) {
+        unsafe {
+            self.gctx
+                .context()
+                .ClearRenderTargetView(&self.render_target, color)
+        }
     }
 }
 
@@ -420,7 +430,7 @@ impl CpuStagingBuffer {
 
 pub struct DepthState {
     pub texture: ID3D11Texture2D,
-    // TODO(cohae): Should this be here?
+    // TODO(cohae): replace with global depth stencil states
     pub state: ID3D11DepthStencilState,
     pub state_readonly: ID3D11DepthStencilState,
     pub view: ID3D11DepthStencilView,
@@ -642,6 +652,17 @@ impl DepthState {
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
         *self = Self::create(new_size, self.gctx.clone())?;
         Ok(())
+    }
+
+    pub fn clear(&self, depth: f32, stencil: u8) {
+        unsafe {
+            self.gctx.context().ClearDepthStencilView(
+                &self.view,
+                (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
+                depth,
+                stencil,
+            )
+        }
     }
 }
 

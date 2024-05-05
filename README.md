@@ -6,11 +6,12 @@
   Alexis Haraux, Nate Hawbaker (GDC 2018) ([PDF](https://ubm-twvideo01.s3.amazonaws.com/o1/vault/gdc2018/presentations/Haraux_Alexis_Hawbaker_Nate_Translating_Art_Into_Technology.pdf))
 - [The Visual Effects Technology of 'Destiny](https://gdcvault.com/play/1025282/The-Visual-Effects-Technology-of) - Ali
   Mayyasi, Brandon Whitley (GDC 2018)
-- ['Destiny' Shader Pipeline](https://gdcvault.com/play/1024231/-Destiny-Shader) - Natalya Tatarchuk , Chris Tchou (GDC 2017)
+- ['Destiny' Shader Pipeline](https://gdcvault.com/play/1024231/-Destiny-Shader) - Natalya Tatarchuk , Chris Tchou (GDC
+    2017)
 - [The Destiny Particle Architecture](https://advances.realtimerendering.com/s2017/Destiny_Particle_Architecture_Siggraph_Advances_2017.pptx) -
   Brandon Whitley (SIGGRAPH 2017)
 - [Destiny's Multithreaded Rendering Architecture](https://gdcvault.com/play/1021926/Destiny-s-Multithreaded-Rendering) -
-  Natalya Tatarchuk (GDC 2015)
+  Natalya Tatarchuk (GDC 2015) ([PDF](https://advances.realtimerendering.com/destiny/gdc_2015/Tatarchuk_GDC_2015__Destiny_Renderer_web.pdf))
 - [Multithreading the Entire Destiny Engine](https://gdcvault.com/play/1022164/Multithreading-the-Entire-Destiny) -
   Barry Genova (GDC 2015)
 - [Lessons from the Core Engine Architecture of Destiny](https://gdcvault.com/play/1022105/Lessons-from-the-Core-Engine) -

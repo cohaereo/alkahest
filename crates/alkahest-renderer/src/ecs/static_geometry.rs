@@ -12,10 +12,15 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 use crate::{
     ecs::{transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
+    gpu_event,
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
     renderer::Renderer,
-    tfx::{externs::ExternStorage, scope::ScopeInstances, technique::Technique},
+    tfx::{
+        externs::ExternStorage, scope::ScopeInstances, technique::Technique,
+        view::RenderStageSubscriptions,
+    },
+    util::packages::TagHashExt,
 };
 
 pub(super) struct ModelBuffers {
@@ -62,6 +67,8 @@ pub struct StaticModel {
     pub model: SStaticMesh,
     pub materials: Vec<Handle<Technique>>,
     pub hash: TagHash,
+    pub subscribed_stages: RenderStageSubscriptions,
+
     buffers: Vec<ModelBuffers>,
     special_meshes: Vec<SpecialMesh>,
 }
@@ -89,18 +96,29 @@ impl StaticModel {
             )
             .collect();
 
+        let mut subscribed_stages = model
+            .opaque_meshes
+            .mesh_groups
+            .iter()
+            .fold(RenderStageSubscriptions::empty(), |acc, group| {
+                acc | group.render_stage
+            });
+
         let special_meshes = model
             .special_meshes
             .iter()
-            .map(|mesh| SpecialMesh {
-                mesh: mesh.clone(),
-                buffers: ModelBuffers {
-                    vertex0_buffer: am.get_or_load_vertex_buffer(mesh.vertex0_buffer),
-                    vertex1_buffer: am.get_or_load_vertex_buffer(mesh.vertex1_buffer),
-                    color_buffer: am.get_or_load_vertex_buffer(mesh.color_buffer),
-                    index_buffer: am.get_or_load_index_buffer(mesh.index_buffer),
-                },
-                technique: am.get_or_load_technique(mesh.technique),
+            .map(|mesh| {
+                subscribed_stages |= mesh.render_stage;
+                SpecialMesh {
+                    mesh: mesh.clone(),
+                    buffers: ModelBuffers {
+                        vertex0_buffer: am.get_or_load_vertex_buffer(mesh.vertex0_buffer),
+                        vertex1_buffer: am.get_or_load_vertex_buffer(mesh.vertex1_buffer),
+                        color_buffer: am.get_or_load_vertex_buffer(mesh.color_buffer),
+                        index_buffer: am.get_or_load_index_buffer(mesh.index_buffer),
+                    },
+                    technique: am.get_or_load_technique(mesh.technique),
+                }
             })
             .collect();
 
@@ -110,11 +128,21 @@ impl StaticModel {
             materials,
             buffers,
             special_meshes,
+            subscribed_stages,
         })
     }
 
     /// ⚠ Expects the `instances` scope to be bound
     pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage, instances_count: u32) {
+        if !self.subscribed_stages.is_subscribed(render_stage) {
+            return;
+        }
+
+        gpu_event!(
+            renderer.gpu,
+            format!("static_model {}", self.hash.prepend_package_name())
+        );
+
         profiling::scope!("StaticModel::draw");
         for (i, group) in self
             .model

@@ -51,12 +51,12 @@ received some polish!
     - Atmosphere rendering
     - Ambient voxel/cubemap IBL
     - Bind DX11 depth, blend, rasterizer and depth bias states based on Technique data
+- Shadow mapping
 - Compile-time shader compilation
 - Post processing effects
     - Ambient occlusion
-    - Bloom
-    - Shadowmapping for shadowing lights
-    - Color grading (WIP, currently set manually)
+    - ~~Bloom~~ (TODO)
+    - ~~Color grading (WIP, currently set manually)~~ (TODO)
 - Settings panel
 - Fullscreen mode (can be enabled through `--fullscreen` argument or alt+enter)
 - Hide the cursor when moving the camera
@@ -64,7 +64,7 @@ received some polish!
 
 ### Changed
 
-- Reworked the multi-threaded asset loader to use channels
+- Reworked the multi-threaded asset loader to use channels, preventing locks
 - Asset loads are requested by the renderer to prevent duplicate loads
 - Cubemaps are now applied to only their respective volumes
 - Replaced the `Visible`  component with `Hidden`
@@ -79,19 +79,19 @@ received some polish!
       the in-game shading pipeline.
 - Removed the composite shader
 - Removed entity VS override
-    - This is internally still used as a workaround for skinned objects, but is no longer exposed as an option
+    - This is internally still used as a workaround for skinned (skeleton) objects, but is no longer exposed as an
+      option
 
 ### Fixed
 
-- Fixed specular highlights
-- Fix skinned meshes not displaying properly by populating skinning data
+- Fix skinned meshes not displaying properly without VS override
 - Fixed windows with 0 size
 - Don't save the window size if it's minimized
 - Fixed decals not being blended properly
 - Fixed light shaft occlusion being rendered in the transparent stage
     - This caused objects to render the screen inside of them at 1/4th resolution
 - Fixed certain objects not being rendered correctly due to a missing color buffer
-    - These objects are now rendered with a default white color buffer
+    - These objects are now rendered with a default color buffer
 - Fixed some suns turning into black holes
 
 ## 0.4.1 - 2024-03-27

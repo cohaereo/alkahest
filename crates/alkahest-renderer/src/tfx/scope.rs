@@ -18,6 +18,7 @@ use crate::{
     renderer::Renderer,
     tfx::{
         bytecode::{interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp},
+        externs,
         externs::ExternStorage,
     },
 };
@@ -26,10 +27,10 @@ use crate::{
 pub struct TfxScope {
     scope: SScope,
 
-    stage_pixel: Option<TfxScopeStage>,
-    stage_vertex: Option<TfxScopeStage>,
-    stage_geometry: Option<TfxScopeStage>,
-    stage_compute: Option<TfxScopeStage>,
+    pub stage_pixel: Option<TfxScopeStage>,
+    pub stage_vertex: Option<TfxScopeStage>,
+    pub stage_geometry: Option<TfxScopeStage>,
+    pub stage_compute: Option<TfxScopeStage>,
 }
 
 impl TfxScope {
@@ -94,12 +95,12 @@ impl TfxScope {
 }
 
 pub struct TfxScopeStage {
-    stage: SScopeStage,
+    pub stage: SScopeStage,
     shader_stage: TfxShaderStage,
 
     samplers: Vec<Option<ID3D11SamplerState>>,
 
-    cbuffer: Option<ConstantBufferCached<Vec4>>,
+    pub cbuffer: Option<ConstantBufferCached<Vec4>>,
     bytecode: Option<TfxBytecodeInterpreter>,
 }
 
@@ -204,6 +205,39 @@ pub struct ScopeFrame {
 
     pub unk6: Vec4, // c6
     pub unk7: Vec4, // c7
+
+    pub unk8: Vec4, // c8
+    pub unk9: Vec4, // c9
+    pub unka: Vec4, // ca
+}
+
+impl From<&externs::Frame> for ScopeFrame {
+    fn from(x: &externs::Frame) -> Self {
+        ScopeFrame {
+            game_time: x.game_time,
+            render_time: x.render_time,
+            delta_game_time: x.delta_game_time,
+            exposure_time: x.exposure_time,
+
+            exposure_scale: x.exposure_scale,
+            exposure_illum_relative_glow: x.exposure_illum_relative * 16.0,
+            exposure_scale_for_shading: x.exposure_scale,
+            exposure_illum_relative: x.exposure_illum_relative,
+
+            random_seed_scales: Vec4::new(
+                (x.render_time + 33.75) * 1.258699,
+                (x.render_time + 60.0) * 0.9583125,
+                (x.render_time + 60.0) * 8.789123,
+                (x.render_time + 33.75) * 2.311535,
+            ),
+
+            unk4: x.unk1c0,
+
+            unk6: Vec4::new(0.0, 1.0, (x.render_time * 6.0).sin() * 0.5 + 0.5, 0.0),
+
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for ScopeFrame {
@@ -223,6 +257,9 @@ impl Default for ScopeFrame {
             unk5: Vec4::new(0.0, f32::NAN, 512.0, 0.0),
             unk6: Vec4::new(0.0, 1.0, 0.966_787_6, 0.0),
             unk7: Vec4::new(0.0, 0.5, 180.0, 0.0),
+            unk8: Vec4::ZERO,
+            unk9: Vec4::ZERO,
+            unka: Vec4::new(f32::NAN, 0.0, 0.0, 0.0),
         }
     }
 }

@@ -2,6 +2,7 @@ use std::{ffi::CStr, fmt::Write};
 
 use alkahest_data::dxgi::DxgiFormat;
 use anyhow::Context;
+use itertools::Itertools;
 use windows::{
     core::{s, PCSTR},
     Win32::{
@@ -9,17 +10,23 @@ use windows::{
         Graphics::{
             Direct3D::Fxc::D3DCompile,
             Direct3D11::{
-                ID3D11BlendState, ID3D11Device, ID3D11InputLayout, ID3D11RasterizerState,
-                D3D11_APPEND_ALIGNED_ELEMENT, D3D11_BLEND_BLEND_FACTOR, D3D11_BLEND_DESC,
-                D3D11_BLEND_DEST_ALPHA, D3D11_BLEND_DEST_COLOR, D3D11_BLEND_INV_BLEND_FACTOR,
-                D3D11_BLEND_INV_DEST_ALPHA, D3D11_BLEND_INV_SRC1_ALPHA, D3D11_BLEND_INV_SRC1_COLOR,
-                D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_OP_MAX,
-                D3D11_BLEND_OP_MIN, D3D11_BLEND_OP_REV_SUBTRACT, D3D11_BLEND_SRC1_ALPHA,
-                D3D11_BLEND_SRC1_COLOR, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_SRC_COLOR,
-                D3D11_BLEND_ZERO, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CULL_BACK, D3D11_CULL_FRONT,
-                D3D11_CULL_MODE, D3D11_CULL_NONE, D3D11_FILL_MODE, D3D11_FILL_SOLID,
-                D3D11_FILL_WIREFRAME, D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA,
-                D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
+                ID3D11BlendState, ID3D11DepthStencilState, ID3D11Device, ID3D11InputLayout,
+                ID3D11RasterizerState, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_BLEND_BLEND_FACTOR,
+                D3D11_BLEND_DESC, D3D11_BLEND_DEST_ALPHA, D3D11_BLEND_DEST_COLOR,
+                D3D11_BLEND_INV_BLEND_FACTOR, D3D11_BLEND_INV_DEST_ALPHA,
+                D3D11_BLEND_INV_SRC1_ALPHA, D3D11_BLEND_INV_SRC1_COLOR, D3D11_BLEND_INV_SRC_ALPHA,
+                D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_OP_MAX, D3D11_BLEND_OP_MIN,
+                D3D11_BLEND_OP_REV_SUBTRACT, D3D11_BLEND_SRC1_ALPHA, D3D11_BLEND_SRC1_COLOR,
+                D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_SRC_COLOR, D3D11_BLEND_ZERO,
+                D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_COMPARISON_ALWAYS, D3D11_COMPARISON_EQUAL,
+                D3D11_COMPARISON_FUNC, D3D11_COMPARISON_GREATER, D3D11_COMPARISON_GREATER_EQUAL,
+                D3D11_COMPARISON_LESS, D3D11_COMPARISON_LESS_EQUAL, D3D11_COMPARISON_NEVER,
+                D3D11_COMPARISON_NOT_EQUAL, D3D11_CULL_BACK, D3D11_CULL_FRONT, D3D11_CULL_MODE,
+                D3D11_CULL_NONE, D3D11_DEPTH_STENCILOP_DESC, D3D11_DEPTH_STENCIL_DESC,
+                D3D11_DEPTH_WRITE_MASK, D3D11_FILL_MODE, D3D11_FILL_SOLID, D3D11_FILL_WIREFRAME,
+                D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC,
+                D3D11_RENDER_TARGET_BLEND_DESC, D3D11_STENCIL_OP, D3D11_STENCIL_OP_INVERT,
+                D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_REPLACE, D3D11_STENCIL_OP_ZERO,
             },
             Dxgi::Common::DXGI_FORMAT,
         },
@@ -30,6 +37,7 @@ pub struct RenderStates {
     pub blend_states: [ID3D11BlendState; 90],
     pub input_layouts: [ID3D11InputLayout; 77],
     pub rasterizer_states: [[ID3D11RasterizerState; 9]; 9],
+    pub depth_stencil_states: [(ID3D11DepthStencilState, ID3D11DepthStencilState); 88],
 }
 
 impl RenderStates {
@@ -98,10 +106,58 @@ impl RenderStates {
             }
         }
 
+        let depth_stencil_states = DEPTH_STENCIL_COMBOS
+            .iter()
+            .map(|(depth_idx, stencil_idx)| {
+                let depth = &DEPTH_STATES[*depth_idx];
+                let stencil = &STENCIL_STATES[*stencil_idx];
+                let mut d3d_desc = D3D11_DEPTH_STENCIL_DESC {
+                    DepthEnable: depth.enable,
+                    DepthWriteMask: D3D11_DEPTH_WRITE_MASK(depth.write_mask as i32),
+                    DepthFunc: depth.func,
+                    StencilEnable: stencil.stencil_enable,
+                    StencilReadMask: stencil.stencil_read_mask,
+                    StencilWriteMask: stencil.stencil_write_mask,
+                    FrontFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: stencil.front_face.fail_op,
+                        StencilDepthFailOp: stencil.front_face.depth_fail_op,
+                        StencilPassOp: stencil.front_face.pass_op,
+                        StencilFunc: stencil.front_face.func,
+                    },
+                    BackFace: D3D11_DEPTH_STENCILOP_DESC {
+                        StencilFailOp: stencil.back_face.fail_op,
+                        StencilDepthFailOp: stencil.back_face.depth_fail_op,
+                        StencilPassOp: stencil.back_face.pass_op,
+                        StencilFunc: stencil.back_face.func,
+                    },
+                };
+
+                let depth_state1 = unsafe {
+                    let mut state = None;
+                    device
+                        .CreateDepthStencilState(&d3d_desc, Some(&mut state))
+                        .unwrap();
+                    state.unwrap()
+                };
+
+                d3d_desc.DepthFunc = depth.func_alt;
+                let depth_state2 = unsafe {
+                    let mut state = None;
+                    device
+                        .CreateDepthStencilState(&d3d_desc, Some(&mut state))
+                        .unwrap();
+                    state.unwrap()
+                };
+
+                (depth_state1, depth_state2)
+            })
+            .collect_vec();
+
         Ok(Self {
             blend_states: blend_states.try_into().unwrap(),
             input_layouts: input_layouts.try_into().unwrap(),
             rasterizer_states,
+            depth_stencil_states: depth_stencil_states.try_into().unwrap(),
         })
     }
 
@@ -9480,6 +9536,1139 @@ const RASTERIZER_STATES: [BungieRasterizerDesc; 9] = [
         front_counter_clockwise: BOOL(1),
         depth_clip_enable: BOOL(0),
         scissor_enable: BOOL(0),
+    },
+];
+
+//endregion
+
+struct BungieStencilDesc {
+    stencil_enable: BOOL,
+    stencil_read_mask: u8,
+    stencil_write_mask: u8,
+    front_face: BungieStencilOpDesc,
+    back_face: BungieStencilOpDesc,
+}
+
+struct BungieStencilOpDesc {
+    func: D3D11_COMPARISON_FUNC,
+    pass_op: D3D11_STENCIL_OP,
+    fail_op: D3D11_STENCIL_OP,
+    depth_fail_op: D3D11_STENCIL_OP,
+}
+
+struct BungieDepthDesc {
+    enable: BOOL,
+    write_mask: u32,
+    func: D3D11_COMPARISON_FUNC,
+    enable_alt: BOOL,
+    write_mask_alt: u32,
+    func_alt: D3D11_COMPARISON_FUNC,
+}
+
+//region Depth/Stencil States
+
+const DEPTH_STENCIL_COMBOS: [(usize, usize); 88] = [
+    (0, 0),
+    (1, 1),
+    (2, 1),
+    (8, 1),
+    (2, 2),
+    (1, 3),
+    (1, 4),
+    (2, 5),
+    (2, 6),
+    (2, 9),
+    (2, 10),
+    (2, 0xb),
+    (2, 0xc),
+    (4, 1),
+    (6, 1),
+    (3, 1),
+    (7, 1),
+    (3, 0x10),
+    (9, 0x10),
+    (3, 0x11),
+    (3, 0x12),
+    (7, 0x13),
+    (7, 0x1b),
+    (3, 0x13),
+    (3, 0x19),
+    (3, 0x1b),
+    (6, 0x14),
+    (2, 0x15),
+    (3, 0x15),
+    (3, 0x18),
+    (3, 0x1a),
+    (1, 0x1d),
+    (1, 0x12),
+    (1, 0x13),
+    (10, 1),
+    (0xb, 1),
+    (3, 0x1e),
+    (0xc, 0x1f),
+    (1, 0x1f),
+    (1, 0x20),
+    (1, 0x21),
+    (3, 0x21),
+    (2, 0x21),
+    (6, 0x20),
+    (3, 0x20),
+    (3, 6),
+    (3, 10),
+    (3, 0xb),
+    (3, 0xc),
+    (3, 9),
+    (0xd, 0x22),
+    (1, 0x23),
+    (3, 0x1c),
+    (7, 0x1c),
+    (0xd, 0x10),
+    (0xd, 0x25),
+    (9, 0x24),
+    (3, 0x26),
+    (1, 0x26),
+    (3, 0x27),
+    (1, 0x27),
+    (3, 0x14),
+    (1, 0x14),
+    (3, 0x28),
+    (3, 8),
+    (2, 8),
+    (1, 2),
+    (1, 8),
+    (3, 7),
+    (3, 0x17),
+    (3, 0xd),
+    (3, 0xe),
+    (3, 0xf),
+    (1, 0x29),
+    (1, 0x2a),
+    (1, 0x2b),
+    (1, 0x2c),
+    (1, 0x2d),
+    (1, 0x2e),
+    (1, 0x2f),
+    (1, 0x30),
+    (1, 0x1a),
+    (2, 0x16),
+    (5, 1),
+    (5, 0x29),
+    (5, 0x2a),
+    (10, 0x16),
+    (1, 0x16),
+];
+
+const STENCIL_STATES: [BungieStencilDesc; 49] = [
+    // Stencil 0
+    BungieStencilDesc {
+        stencil_enable: BOOL(0),
+        stencil_read_mask: 0,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 1
+    BungieStencilDesc {
+        stencil_enable: BOOL(0),
+        stencil_read_mask: 0,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 2
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 175,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 3
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 2,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 4
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 1,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 5
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 6
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 4,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 7
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 20,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 8
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 4,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 9
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 10
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 6,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 11
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 7,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_LESS_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_LESS_EQUAL,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 12
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 3,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_GREATER,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_GREATER,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 13
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 22,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 14
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 23,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_LESS_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_LESS_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 15
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 19,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_GREATER,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_GREATER,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 16
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 17
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_ZERO,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_ZERO,
+        },
+    },
+    // Stencil 18
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 19
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 20
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 32,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 21
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 22
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 255,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 23
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 184,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 24
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_INVERT,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_INVERT,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 25
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_INVERT,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_INVERT,
+        },
+    },
+    // Stencil 26
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 27
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 28
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 29
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 30
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 31
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 255,
+        stencil_write_mask: 255,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 32
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 255,
+        stencil_write_mask: 255,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 33
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 255,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 34
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_ZERO,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_ZERO,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 35
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 0,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_NOT_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 36
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_REPLACE,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_REPLACE,
+        },
+    },
+    // Stencil 37
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 38
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_KEEP,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 39
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 16,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_EQUAL,
+            pass_op: D3D11_STENCIL_OP_ZERO,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 40
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 64,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 41
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 1,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 42
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 2,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 43
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 4,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 44
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 8,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 45
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 16,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 46
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 32,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 47
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 64,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+    // Stencil 48
+    BungieStencilDesc {
+        stencil_enable: BOOL(1),
+        stencil_read_mask: 0,
+        stencil_write_mask: 128,
+        front_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+        back_face: BungieStencilOpDesc {
+            func: D3D11_COMPARISON_ALWAYS,
+            pass_op: D3D11_STENCIL_OP_REPLACE,
+            fail_op: D3D11_STENCIL_OP_KEEP,
+            depth_fail_op: D3D11_STENCIL_OP_KEEP,
+        },
+    },
+];
+
+const DEPTH_STATES: [BungieDepthDesc; 14] = [
+    // Depth 0
+    BungieDepthDesc {
+        enable: BOOL(0),
+        write_mask: 0,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(0),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 1
+    BungieDepthDesc {
+        enable: BOOL(0),
+        write_mask: 0,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(0),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 2
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 3
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 4
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_LESS_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_GREATER_EQUAL,
+    },
+    // Depth 5
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_LESS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_GREATER,
+    },
+    // Depth 6
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_LESS_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_GREATER_EQUAL,
+    },
+    // Depth 7
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_LESS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_GREATER,
+    },
+    // Depth 8
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 9
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 10
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 11
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_NEVER,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_NEVER,
+    },
+    // Depth 12
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 13
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
     },
 ];
 

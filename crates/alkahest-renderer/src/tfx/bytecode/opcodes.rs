@@ -94,7 +94,7 @@ pub enum TfxBytecodeOp {
     /// Offset is in u64s (8 bytes)
     #[br(magic = 0x41_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
 
-    // TODO(cohae): Loads a value from the interpreter state + 0x44a0
+    // TODO(cohae): Loads a value from render context + 0x44a0
     #[br(magic = 0x42_u8)] Unk42,
     #[br(magic = 0x43_u8)] PushFromOutput { element: u8 },
     #[br(magic = 0x44_u8)] PopOutput { element: u8 },

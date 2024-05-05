@@ -365,6 +365,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             unk8.unk60.entity_model,
                             vec![],
                             vec![],
+                            TfxFeatureRenderer::SkyTransparent,
                         )?,
                         TfxFeatureRenderer::SkyTransparent,
                     ));
@@ -385,6 +386,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         d.entity_model,
                         vec![],
                         vec![],
+                        TfxFeatureRenderer::Water,
                     )?,
                     TfxFeatureRenderer::Water,
                 ));
@@ -400,7 +402,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
-                for (_i, (transform, light, bounds)) in
+                for (i, (transform, light, bounds)) in
                     multizip((header.unk40, header.unk30, &header.occlusion_bounds.bounds))
                         .enumerate()
                 {
@@ -423,6 +425,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             renderer.gpu.clone(),
                             &mut renderer.data.lock().asset_manager,
                             &light,
+                            format!("light {tag}+{i}"),
                         )
                         .context("Failed to load light")?,
                         light,
@@ -444,6 +447,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         renderer.gpu.clone(),
                         &mut renderer.data.lock().asset_manager,
                         &light,
+                        format!("shadowing_light {tag}"),
                     )
                     .context("Failed to load shadowing light")?,
                     light,
@@ -497,6 +501,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     model_hash,
                                     entity_material_map,
                                     materials,
+                                    TfxFeatureRenderer::DynamicObjects,
                                 )?,
                                 TfxFeatureRenderer::DynamicObjects,
                             ));

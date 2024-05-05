@@ -15,15 +15,15 @@ use alkahest_renderer::{
         Scene,
     },
     gpu::{buffer::ConstantBuffer, GpuContext},
+    gpu_event,
     input::InputState,
     loaders::{map_tmp::load_map, AssetManager},
     postprocess::ssao::SsaoRenderer,
-    renderer::{Renderer, RendererSettings, RendererShared},
+    renderer::{gbuffer::GBuffer, Renderer, RendererSettings, RendererShared},
     shader::matcap::MatcapRenderer,
     tfx::{
         externs,
         externs::{ExternDefault, ExternStorage, Frame},
-        gbuffer::GBuffer,
         globals::{CubemapShape, RenderGlobals},
         scope::{ScopeFrame, ScopeTransparentAdvanced},
         view::View,
@@ -62,14 +62,8 @@ pub struct AlkahestApp {
     pub resources: Resources,
 
     camera: Camera,
-    frame_cbuffer: ConstantBuffer<ScopeFrame>,
-    transparent_advanced_cbuffer: ConstantBuffer<ScopeTransparentAdvanced>,
-    time: Instant,
-    delta_time: Instant,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
-    ssao: SsaoRenderer,
-    matcap: MatcapRenderer,
     renderer: RendererShared,
     map_placeholder: Scene,
 }
@@ -127,9 +121,6 @@ impl AlkahestApp {
             origin: glam::UVec2::new(0, 0),
         });
 
-        let frame_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
-        let transparent_advanced_cbuffer = ConstantBuffer::create(gctx.clone(), None).unwrap();
-
         if let Some(maphash) = resources.get::<ApplicationArgs>().map {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
@@ -138,18 +129,12 @@ impl AlkahestApp {
         }
 
         Self {
-            matcap: MatcapRenderer::new(gctx.clone()).unwrap(),
-            ssao: SsaoRenderer::new(gctx.clone()).unwrap(),
-            frame_cbuffer,
-            transparent_advanced_cbuffer,
             window,
             event_loop,
             gctx,
             gui,
             resources,
             camera,
-            time: Instant::now(),
-            delta_time: Instant::now(),
             last_cursor_pos: None,
             renderer,
             map_placeholder: Scene::new(),
@@ -164,13 +149,7 @@ impl AlkahestApp {
             gctx,
             resources,
             camera,
-            time,
-            delta_time,
             last_cursor_pos,
-            frame_cbuffer,
-            transparent_advanced_cbuffer,
-            ssao,
-            matcap,
             renderer,
             map_placeholder,
             ..
@@ -260,8 +239,6 @@ impl AlkahestApp {
                         });
                     }
                     WindowEvent::RedrawRequested => {
-                        let delta_f32 = delta_time.elapsed().as_secs_f32();
-                        *delta_time = Instant::now();
                         renderer.data.lock().asset_manager.poll();
                         let render_settings = resources.get::<RendererSettings>();
 
@@ -281,6 +258,12 @@ impl AlkahestApp {
                             });
                         }
 
+                        camera.update(
+                            &resources.get::<InputState>(),
+                            renderer.delta_time as f32,
+                            true,
+                        );
+
                         gctx.begin_frame();
                         let mut maps = resources.get_mut::<MapList>();
                         maps.update_maps(resources);
@@ -290,488 +273,44 @@ impl AlkahestApp {
                             .map(|m| &m.scene)
                             .unwrap_or(&map_placeholder);
 
-                        // TODO(cohae): Guess who's going to jail for this one (hint: it's me)
-                        let tmp_gbuffers = unsafe {
-                            let data = renderer.data.lock();
-                            &*(&data.gbuffers as *const GBuffer)
-                        };
+                        renderer.render_world(camera, &map);
 
                         unsafe {
-                            gctx.context().OMSetRenderTargets(
-                                Some(&[
-                                    Some(tmp_gbuffers.rt0.render_target.clone()),
-                                    Some(tmp_gbuffers.rt1.render_target.clone()),
-                                    Some(tmp_gbuffers.rt2.render_target.clone()),
-                                ]),
-                                &tmp_gbuffers.depth.view,
+                            renderer.gpu.context().OMSetRenderTargets(
+                                Some(&[renderer.gpu.swapchain_target.read().clone()]),
+                                None,
                             );
-                            gctx.context().ClearRenderTargetView(
-                                &tmp_gbuffers.rt0.render_target,
-                                &[0.0, 0.0, 0.0, 0.0],
-                            );
-                            gctx.context().ClearRenderTargetView(
-                                &tmp_gbuffers.rt1.render_target,
-                                &[0.0, 0.0, 0.0, 0.0],
-                            );
-                            gctx.context().ClearRenderTargetView(
-                                &tmp_gbuffers.rt2.render_target,
-                                &[1.0, 0.5, 1.0, 0.0],
-                            );
-                            gctx.context().ClearDepthStencilView(
-                                &tmp_gbuffers.depth.view,
-                                D3D11_CLEAR_DEPTH.0 as _,
-                                0.0,
-                                0,
-                            );
-
-                            gctx.context()
-                                .OMSetDepthStencilState(&tmp_gbuffers.depth.state, 0);
-
-                            frame_cbuffer
-                                .write(&ScopeFrame {
-                                    game_time: time.elapsed().as_secs_f32(),
-                                    render_time: time.elapsed().as_secs_f32(),
-                                    delta_game_time: delta_f32,
-                                    ..Default::default()
-                                })
-                                .unwrap();
-
-                            transparent_advanced_cbuffer
-                                .write(&ScopeTransparentAdvanced::default())
-                                .unwrap();
                         }
-
-                        {
-                            let mut externs = &mut renderer.data.lock().externs;
-                            externs.frame = Frame {
-                                unk00: time.elapsed().as_secs_f32(),
-                                unk04: time.elapsed().as_secs_f32(),
-                                specular_lobe_3d_lookup: renderer
-                                    .render_globals
-                                    .textures
-                                    .specular_lobe_3d_lookup
-                                    .view
-                                    .clone()
-                                    .into(),
-                                specular_lobe_lookup: renderer
-                                    .render_globals
-                                    .textures
-                                    .specular_lobe_lookup
-                                    .view
-                                    .clone()
-                                    .into(),
-                                specular_tint_lookup: renderer
-                                    .render_globals
-                                    .textures
-                                    .specular_tint_lookup
-                                    .view
-                                    .clone()
-                                    .into(),
-                                iridescence_lookup: renderer
-                                    .render_globals
-                                    .textures
-                                    .iridescence_lookup
-                                    .view
-                                    .clone()
-                                    .into(),
-
-                                ..externs.frame.clone()
-                            };
-                            externs.view = Some({
-                                let mut view = externs::View::default();
-                                camera.update(&resources.get::<InputState>(), delta_f32, true);
-                                camera.update_extern(&mut view);
-                                view
-                            });
-
-                            let existing_transparent = externs
-                                .transparent
-                                .as_ref()
-                                .cloned()
-                                .unwrap_or(ExternDefault::extern_default());
-
-                            externs.transparent = Some(externs::Transparent {
-                                unk00: tmp_gbuffers.atmos_ss_far_lookup.view.clone().into(),
-                                // TODO(cohae): unk08 and unk18 are actually the downsampling of their respective lookup
-                                unk08: tmp_gbuffers.atmos_ss_far_lookup.view.clone().into(),
-                                unk10: tmp_gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                                unk18: tmp_gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                                unk20: gctx.grey_texture.view.clone().into(),
-                                // unk20: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk28: gctx.light_grey_texture.view.clone().into(),
-                                unk30: gctx.light_grey_texture.view.clone().into(),
-                                unk38: gctx.light_grey_texture.view.clone().into(),
-                                unk40: gctx.light_grey_texture.view.clone().into(),
-                                // unk48: gctx.black_texture.view.clone().into(),
-                                unk48: tmp_gbuffers.staging_clone.view.clone().into(),
-                                unk50: gctx.black_texture.view.clone().into(),
-                                unk58: gctx.light_grey_texture.view.clone().into(),
-                                unk60: tmp_gbuffers.staging_clone.view.clone().into(),
-                                ..existing_transparent
-                            });
-                            externs.deferred = Some(externs::Deferred {
-                                depth_constants: Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0),
-                                deferred_depth: tmp_gbuffers.depth.texture_copy_view.clone().into(),
-                                deferred_rt0: tmp_gbuffers.rt0.view.clone().into(),
-                                deferred_rt1: tmp_gbuffers.rt1.view.clone().into(),
-                                deferred_rt2: tmp_gbuffers.rt2.view.clone().into(),
-                                light_diffuse: tmp_gbuffers.light_diffuse.view.clone().into(),
-                                light_specular: tmp_gbuffers.light_specular.view.clone().into(),
-                                light_ibl_specular: tmp_gbuffers
-                                    .light_ibl_specular
-                                    .view
-                                    .clone()
-                                    .into(),
-                                // unk98: gctx.light_grey_texture.view.clone().into(),
-                                // unk98: tmp_gbuffers.staging_clone.view.clone().into(),
-                                sky_hemisphere_mips: gctx
-                                    .sky_hemisphere_placeholder
-                                    .view
-                                    .clone()
-                                    .into(),
-                                ..ExternDefault::extern_default()
-                            });
-                            let water_existing = externs
-                                .water
-                                .as_ref()
-                                .cloned()
-                                .unwrap_or(ExternDefault::extern_default());
-
-                            externs.water = Some(externs::Water {
-                                unk08: tmp_gbuffers.staging_clone.view.clone().into(),
-                                ..water_existing
-                            });
-
-                            let atmos_existing = externs
-                                .atmosphere
-                                .as_ref()
-                                .cloned()
-                                .unwrap_or(ExternDefault::extern_default());
-
-                            externs.atmosphere = Some({
-                                let mut atmos = externs::Atmosphere {
-                                    atmos_ss_far_lookup: tmp_gbuffers
-                                        .atmos_ss_far_lookup
-                                        .view
-                                        .clone()
-                                        .into(),
-                                    atmos_ss_near_lookup: tmp_gbuffers
-                                        .atmos_ss_near_lookup
-                                        .view
-                                        .clone()
-                                        .into(),
-                                    unke0: gctx.dark_grey_texture.view.clone().into(),
-
-                                    ..atmos_existing
-                                };
-
-                                if let Some((_, map_atmos)) =
-                                    map.query::<&MapAtmosphere>().iter().next()
-                                {
-                                    map_atmos.update_extern(&mut atmos);
-                                }
-
-                                atmos
-                            });
-                        }
-
-                        {
-                            renderer.render_globals.scopes.frame.bind(renderer).unwrap();
-                            renderer.render_globals.scopes.view.bind(renderer).unwrap();
-
-                            unsafe {
-                                gctx.context().VSSetConstantBuffers(
-                                    13,
-                                    Some(&[Some(frame_cbuffer.buffer().clone())]),
-                                );
-                                gctx.context().PSSetConstantBuffers(
-                                    13,
-                                    Some(&[Some(frame_cbuffer.buffer().clone())]),
-                                );
-                            }
-
-                            gctx.current_states.store(StateSelection::new(
-                                Some(0),
-                                Some(0),
-                                Some(2),
-                                Some(0),
-                            ));
-
-                            draw_terrain_patches_system(&renderer, map);
-
-                            draw_static_instances_system(
-                                &renderer,
-                                map,
-                                TfxRenderStage::GenerateGbuffer,
-                            );
-
-                            draw_dynamic_model_system(
-                                &renderer,
-                                map,
-                                TfxRenderStage::GenerateGbuffer,
-                            );
-
-                            tmp_gbuffers.rt1.copy_to(&tmp_gbuffers.rt1_clone);
-                            tmp_gbuffers.depth.copy_depth();
-
-                            renderer.data.lock().externs.decal = Some(externs::Decal {
-                                unk08: tmp_gbuffers.rt1_clone.view.clone().into(),
-                                ..Default::default()
-                            });
-
-                            draw_static_instances_system(&renderer, map, TfxRenderStage::Decals);
-
-                            draw_dynamic_model_system(&renderer, map, TfxRenderStage::Decals);
-
-                            tmp_gbuffers.rt0.copy_to(&tmp_gbuffers.staging_clone);
-                            // tmp_gbuffers.rt0.copy_to(&tmp_gbuffers.staging);
-
-                            unsafe {
-                                gctx.context().OMSetRenderTargets(
-                                    Some(&[
-                                        Some(tmp_gbuffers.light_diffuse.render_target.clone()),
-                                        Some(tmp_gbuffers.light_specular.render_target.clone()),
-                                    ]),
-                                    None,
-                                );
-                                gctx.context().ClearRenderTargetView(
-                                    &tmp_gbuffers.light_diffuse.render_target,
-                                    &[0.01, 0.01, 0.01, 0.0],
-                                );
-                                gctx.context().ClearRenderTargetView(
-                                    &tmp_gbuffers.light_specular.render_target,
-                                    &[0.0, 0.0, 0.0, 0.0],
-                                );
-                                gctx.context().ClearRenderTargetView(
-                                    &tmp_gbuffers.staging.render_target,
-                                    &[0.0, 0.0, 0.0, 0.0],
-                                );
-                            }
-
-                            gctx.current_states.store(StateSelection::new(
-                                Some(8),
-                                Some(0),
-                                Some(2),
-                                Some(2),
-                            ));
-                            gctx.flush_states();
-
-                            unsafe {
-                                gctx.context().VSSetConstantBuffers(
-                                    8,
-                                    Some(&[Some(transparent_advanced_cbuffer.buffer().clone())]),
-                                );
-                                gctx.context().PSSetConstantBuffers(
-                                    8,
-                                    Some(&[Some(transparent_advanced_cbuffer.buffer().clone())]),
-                                );
-                            }
-
-                            if render_settings.matcap {
-                                matcap.draw(&renderer);
-                            } else {
-                                draw_light_system(&renderer, map, camera);
-                            }
-
-                            if render_settings.ssao {
-                                ssao.draw(&renderer, &tmp_gbuffers.ssao_intermediate);
-                            }
-
-                            // unsafe {
-                            //     let existing_hdao = externs
-                            //         .hdao
-                            //         .as_ref()
-                            //         .cloned()
-                            //         .unwrap_or(ExternDefault::extern_default());
-                            //     let wh = Vec4::new(
-                            //         camera.viewport().size.x as f32,
-                            //         camera.viewport().size.y as f32,
-                            //         1.0 / camera.viewport().size.x as f32,
-                            //         1.0 / camera.viewport().size.y as f32,
-                            //     );
-                            //     externs.hdao = Some(externs::Hdao {
-                            //         unk60: tmp_gbuffers.depth.texture_view.clone().into(),
-                            //         unk68: tmp_gbuffers.depth.texture_view.clone().into(),
-                            //         unk70: wh,
-                            //         unk80: wh,
-                            //         ..existing_hdao
-                            //     });
-                            //
-                            //     gctx.context().OMSetDepthStencilState(None, 0);
-                            //     let pipeline = &renderer.render_globals.pipelines.hdao;
-                            //     if let Err(e) = pipeline.bind(gctx, &externs, asset_manager) {
-                            //         error!("Failed to run hdao: {e}");
-                            //         return;
-                            //     }
-                            //
-                            //     // TODO(cohae): 4 vertices doesn't work...
-                            //     gctx.set_input_topology(EPrimitiveType::TriangleStrip);
-                            //     gctx.context().Draw(6, 0);
-                            // }
-
-                            unsafe {
-                                gctx.current_states.store(StateSelection::new(
-                                    Some(0),
-                                    Some(0),
-                                    Some(0),
-                                    Some(0),
-                                ));
-                                gctx.set_input_topology(EPrimitiveType::TriangleStrip);
-
-                                gctx.context().OMSetDepthStencilState(None, 0);
-
-                                let use_atmos =
-                                    if map.query::<&MapAtmosphere>().iter().next().is_some() {
-                                        gctx.context().OMSetRenderTargets(
-                                            Some(&[
-                                                Some(
-                                                    tmp_gbuffers
-                                                        .atmos_ss_far_lookup
-                                                        .render_target
-                                                        .clone(),
-                                                ),
-                                                None,
-                                            ]),
-                                            None,
-                                        );
-
-                                        renderer
-                                            .render_globals
-                                            .pipelines
-                                            .sky_lookup_generate_far
-                                            .bind(&renderer)
-                                            .unwrap();
-
-                                        gctx.context().Draw(6, 0);
-
-                                        gctx.context().OMSetRenderTargets(
-                                            Some(&[
-                                                Some(
-                                                    tmp_gbuffers
-                                                        .atmos_ss_near_lookup
-                                                        .render_target
-                                                        .clone(),
-                                                ),
-                                                None,
-                                            ]),
-                                            None,
-                                        );
-
-                                        renderer
-                                            .render_globals
-                                            .pipelines
-                                            .sky_lookup_generate_near
-                                            .bind(&renderer)
-                                            .unwrap();
-
-                                        gctx.context().Draw(6, 0);
-
-                                        true
-                                    } else {
-                                        false
-                                    };
-
-                                gctx.context().OMSetRenderTargets(
-                                    Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
-                                    None,
-                                );
-
-                                let pipeline = if use_atmos && render_settings.atmosphere {
-                                    &renderer.render_globals.pipelines.deferred_shading
-                                } else {
-                                    &renderer.render_globals.pipelines.deferred_shading_no_atm
-                                };
-                                if let Err(e) = pipeline.bind(&renderer) {
-                                    error!("Failed to run deferred_shading: {e}");
-                                    return;
-                                }
-
-                                // TODO(cohae): 4 vertices doesn't work...
-                                gctx.context().Draw(6, 0);
-
-                                tmp_gbuffers.staging.copy_to(&tmp_gbuffers.staging_clone);
-                            }
-                            unsafe {
-                                gctx.context().OMSetRenderTargets(
-                                    Some(&[Some(tmp_gbuffers.staging.render_target.clone()), None]),
-                                    Some(&tmp_gbuffers.depth.view),
-                                );
-                                gctx.context()
-                                    .OMSetDepthStencilState(&tmp_gbuffers.depth.state_readonly, 0);
-                            }
-
-                            renderer
-                                .render_globals
-                                .scopes
-                                .transparent
-                                .bind(&renderer)
-                                .unwrap();
-
-                            gctx.current_states.store(StateSelection::new(
-                                Some(2),
-                                Some(15),
-                                Some(2),
-                                Some(1),
-                            ));
-
-                            draw_static_instances_system(
-                                &renderer,
-                                map,
-                                TfxRenderStage::DecalsAdditive,
-                            );
-
-                            draw_dynamic_model_system(
-                                &renderer,
-                                map,
-                                TfxRenderStage::DecalsAdditive,
-                            );
-
-                            draw_static_instances_system(
-                                &renderer,
-                                map,
-                                TfxRenderStage::Transparents,
-                            );
-
-                            draw_dynamic_model_system(&renderer, map, TfxRenderStage::Transparents);
-                        }
-
-                        unsafe {
-                            gctx.context()
-                                .OMSetRenderTargets(Some(&[None, None, None]), None);
-                        }
-
-                        gctx.blit_texture(
-                            &tmp_gbuffers.staging.view,
-                            // &tmp_gbuffers.light_diffuse.view,
-                            // &tmp_gbuffers.atmos_ss_near_lookup.view,
-                            gctx.swapchain_target.read().as_ref().unwrap(),
-                        );
 
                         drop(maps);
                         drop(render_settings);
-                        gui.draw_frame(window, |ctx, ectx| {
-                            let mut gui_views = resources.get_mut::<GuiViewManager>();
-                            gui_views.draw(ectx, window, resources, ctx);
-                            puffin_egui::profiler_window(ectx);
 
-                            egui::Window::new("SSAO Settings").show(ectx, |ui| {
-                                let ssao_data = ssao.scope.data();
-                                ui.horizontal(|ui| {
-                                    ui.label("Radius");
-                                    egui::DragValue::new(&mut ssao_data.radius)
-                                        .speed(0.01)
-                                        .clamp_range(0.0..=10.0)
-                                        .suffix("m")
-                                        .ui(ui);
-                                });
+                        renderer.gpu.begin_event("interface_and_hud").scoped(|| {
+                            gpu_event!(renderer.gpu, "egui");
+                            gui.draw_frame(window, |ctx, ectx| {
+                                let mut gui_views = resources.get_mut::<GuiViewManager>();
+                                gui_views.draw(ectx, window, resources, ctx);
+                                puffin_egui::profiler_window(ectx);
 
-                                ui.horizontal(|ui| {
-                                    ui.label("Bias");
-                                    egui::DragValue::new(&mut ssao_data.bias)
-                                        .speed(0.01)
-                                        .clamp_range(0.0..=10.0)
-                                        .suffix("m")
-                                        .ui(ui);
+                                egui::Window::new("SSAO Settings").show(ectx, |ui| {
+                                    let ssao_data = renderer.ssao.scope.data();
+                                    ui.horizontal(|ui| {
+                                        ui.label("Radius");
+                                        egui::DragValue::new(&mut ssao_data.radius)
+                                            .speed(0.01)
+                                            .clamp_range(0.0..=10.0)
+                                            .suffix("m")
+                                            .ui(ui);
+                                    });
+
+                                    ui.horizontal(|ui| {
+                                        ui.label("Bias");
+                                        egui::DragValue::new(&mut ssao_data.bias)
+                                            .speed(0.01)
+                                            .clamp_range(0.0..=10.0)
+                                            .suffix("m")
+                                            .ui(ui);
+                                    });
                                 });
                             });
                         });
