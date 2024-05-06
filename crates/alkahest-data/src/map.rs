@@ -417,15 +417,15 @@ pub struct Unk80809f4f {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808CB7)]
 pub struct Unk80808cb7 {
     pub file_size: u64,
-    pub unk8: Vec<Unk80808cb9>,
+    pub unk8: Vec<SRespawnPoint>,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80808CB9)]
-pub struct Unk80808cb9 {
+pub struct SRespawnPoint {
     pub rotation: glam::Quat,
     pub translation: glam::Vec4,
     pub unk20: u32,
@@ -651,4 +651,10 @@ pub struct SMapAtmosphere {
     pub lookup_texture_1: WideHash,
     pub lookup_texture_2: WideHash,
     pub lookup_texture_3: WideHash,
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0x80806A78)]
+pub struct SLensFlare {
+    // TODO(cohae): Placeholder struct
 }

@@ -8,8 +8,8 @@ use alkahest_data::{
     common::ResourceHash,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SBubbleParent, SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight,
-        Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b,
+        SBubbleParent, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
+        SShadowingLight, Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b, Unk80808cb7,
     },
     tfx::TfxFeatureRenderer,
     Tag,
@@ -256,7 +256,7 @@ pub async fn load_map(
 #[allow(clippy::too_many_arguments)]
 fn load_datatable_into_scene<R: Read + Seek>(
     table: &SMapDataTable,
-    _table_hash: TagHash,
+    table_hash: TagHash,
     table_data: &mut R,
     scene: &mut Scene,
     renderer: &Renderer,
@@ -463,9 +463,40 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 scene.spawn((MapAtmosphere::load(&renderer.gpu, atmos)
                     .context("Failed to load map atmosphere")?,));
             }
+            0x808067b5 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
+
+                scene.spawn((transform, lens_flare));
+            }
+            0x80808cb5 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                if !tag.is_some() {
+                    continue;
+                }
+
+                let header: Unk80808cb7 = package_manager().read_tag_struct(tag).unwrap();
+
+                for respawn_point in header.unk8.iter() {
+                    scene.spawn((
+                        Transform {
+                            translation: respawn_point.translation.truncate(),
+                            rotation: respawn_point.rotation,
+                            ..Default::default()
+                        },
+                        respawn_point.clone(),
+                    ));
+                }
+            }
             u => {
                 if u != u32::MAX {
-                    warn!("Unknown resource type {u:08X}");
+                    warn!("Unknown resource type {u:08X} in table {table_hash}");
                 }
                 let entity_hash = data.entity.hash32();
                 if entity_hash.is_none() {
