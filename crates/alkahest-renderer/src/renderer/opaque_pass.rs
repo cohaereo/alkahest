@@ -66,7 +66,7 @@ impl Renderer {
 
         self.gpu
             .current_states
-            .store(StateSelection::new(Some(8), Some(2), Some(2), Some(2)));
+            .store(StateSelection::new(Some(8), Some(15), Some(2), Some(1)));
         self.run_renderstage_systems(scene, TfxRenderStage::Decals);
     }
 }
