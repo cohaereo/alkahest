@@ -19,6 +19,10 @@ macro_rules! include_dxbc {
         include_dxbc!($shader, "vs")
     };
 
+    (gs $shader:expr) => {
+        include_dxbc!($shader, "gs")
+    };
+
     (ps $shader:expr) => {
         include_dxbc!($shader, "ps")
     };

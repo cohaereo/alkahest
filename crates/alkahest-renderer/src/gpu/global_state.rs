@@ -9568,23 +9568,23 @@ struct BungieDepthDesc {
 //region Depth/Stencil States
 
 const DEPTH_STENCIL_COMBOS: [(usize, usize); 88] = [
-    (0, 0),
+    (0, 0), // 0
     (1, 1),
-    (2, 1),
+    (2, 1), // 2
     (8, 1),
-    (2, 2),
+    (2, 2), // 4
     (1, 3),
-    (1, 4),
+    (1, 4), // 6
     (2, 5),
-    (2, 6),
+    (2, 6), // 8
     (2, 9),
-    (2, 10),
+    (2, 10), // 10
     (2, 0xb),
-    (2, 0xc),
+    (2, 0xc), // 12
     (4, 1),
-    (6, 1),
+    (6, 1), // 14
     (3, 1),
-    (7, 1),
+    (7, 1), // 16
     (3, 0x10),
     (9, 0x10),
     (3, 0x11),
@@ -9656,6 +9656,135 @@ const DEPTH_STENCIL_COMBOS: [(usize, usize); 88] = [
     (5, 0x2a),
     (10, 0x16),
     (1, 0x16),
+];
+
+const DEPTH_STATES: [BungieDepthDesc; 14] = [
+    // Depth 0
+    BungieDepthDesc {
+        enable: BOOL(0),
+        write_mask: 0,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(0),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 1
+    BungieDepthDesc {
+        enable: BOOL(0),
+        write_mask: 0,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(0),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 2
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 3
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 4
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_LESS_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_GREATER_EQUAL,
+    },
+    // Depth 5
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_LESS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_GREATER,
+    },
+    // Depth 6
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_LESS_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_GREATER_EQUAL,
+    },
+    // Depth 7
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_LESS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_GREATER,
+    },
+    // Depth 8
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 9
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 10
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 1,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 1,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 11
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_NEVER,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_NEVER,
+    },
+    // Depth 12
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_ALWAYS,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_ALWAYS,
+    },
+    // Depth 13
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_GREATER_EQUAL,
+        enable_alt: BOOL(1),
+        write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
 ];
 
 const STENCIL_STATES: [BungieStencilDesc; 49] = [
@@ -10540,135 +10669,6 @@ const STENCIL_STATES: [BungieStencilDesc; 49] = [
             fail_op: D3D11_STENCIL_OP_KEEP,
             depth_fail_op: D3D11_STENCIL_OP_KEEP,
         },
-    },
-];
-
-const DEPTH_STATES: [BungieDepthDesc; 14] = [
-    // Depth 0
-    BungieDepthDesc {
-        enable: BOOL(0),
-        write_mask: 0,
-        func: D3D11_COMPARISON_ALWAYS,
-        enable_alt: BOOL(0),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_ALWAYS,
-    },
-    // Depth 1
-    BungieDepthDesc {
-        enable: BOOL(0),
-        write_mask: 0,
-        func: D3D11_COMPARISON_ALWAYS,
-        enable_alt: BOOL(0),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_ALWAYS,
-    },
-    // Depth 2
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 1,
-        func: D3D11_COMPARISON_GREATER_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 1,
-        func_alt: D3D11_COMPARISON_LESS_EQUAL,
-    },
-    // Depth 3
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_GREATER_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_LESS_EQUAL,
-    },
-    // Depth 4
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 1,
-        func: D3D11_COMPARISON_LESS_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 1,
-        func_alt: D3D11_COMPARISON_GREATER_EQUAL,
-    },
-    // Depth 5
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 1,
-        func: D3D11_COMPARISON_LESS,
-        enable_alt: BOOL(1),
-        write_mask_alt: 1,
-        func_alt: D3D11_COMPARISON_GREATER,
-    },
-    // Depth 6
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_LESS_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_GREATER_EQUAL,
-    },
-    // Depth 7
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_LESS,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_GREATER,
-    },
-    // Depth 8
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 1,
-        func: D3D11_COMPARISON_GREATER_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 1,
-        func_alt: D3D11_COMPARISON_LESS_EQUAL,
-    },
-    // Depth 9
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_GREATER_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_LESS_EQUAL,
-    },
-    // Depth 10
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 1,
-        func: D3D11_COMPARISON_ALWAYS,
-        enable_alt: BOOL(1),
-        write_mask_alt: 1,
-        func_alt: D3D11_COMPARISON_ALWAYS,
-    },
-    // Depth 11
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_NEVER,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_NEVER,
-    },
-    // Depth 12
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_ALWAYS,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_ALWAYS,
-    },
-    // Depth 13
-    BungieDepthDesc {
-        enable: BOOL(1),
-        write_mask: 0,
-        func: D3D11_COMPARISON_GREATER_EQUAL,
-        enable_alt: BOOL(1),
-        write_mask_alt: 0,
-        func_alt: D3D11_COMPARISON_LESS_EQUAL,
     },
 ];
 

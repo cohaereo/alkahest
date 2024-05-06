@@ -5,6 +5,9 @@ use tiger_parse::TigerReadable;
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub enum EPrimitiveType {
+    PointList = 0,
+    LineList = 1,
+    LineStrip = 2,
     Triangles = 3,
     TriangleStrip = 5,
 }

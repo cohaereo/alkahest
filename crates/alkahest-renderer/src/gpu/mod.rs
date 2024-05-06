@@ -34,7 +34,7 @@ use windows::{
 
 use crate::{
     gpu::{global_state::RenderStates, texture::Texture, util::UtilResources},
-    loaders::vertex_buffer::{load_vertex_buffer_data, VertexBuffer},
+    loaders::vertex_buffer::VertexBuffer,
     util::image::Png,
 };
 
@@ -189,7 +189,7 @@ impl GpuContext {
             Some("Black Texture"),
         )?;
 
-        let color0_fallback = load_vertex_buffer_data(&device, &[0, 0, 0, 255], 4)?;
+        let color0_fallback = VertexBuffer::load_data(&device, &[0, 0, 0, 255], 4)?;
 
         let sky_hemisphere_placeholder = Texture::load_png(
             &device,
@@ -420,6 +420,9 @@ impl GpuContext {
         if self.current_input_topology.load(Ordering::Relaxed) != topology as i32 {
             unsafe {
                 self.context().IASetPrimitiveTopology(match topology {
+                    EPrimitiveType::PointList => D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+                    EPrimitiveType::LineList => D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+                    EPrimitiveType::LineStrip => D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
                     EPrimitiveType::Triangles => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                     EPrimitiveType::TriangleStrip => D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
                 });

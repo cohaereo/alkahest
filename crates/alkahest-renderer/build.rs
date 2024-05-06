@@ -159,6 +159,7 @@ fn main() {
         println!("cargo:rerun-if-changed={}", shader);
 
         build_stage(out_dir, Path::new(shader), ShaderStage::Vertex);
+        build_stage(out_dir, Path::new(shader), ShaderStage::Geometry);
         build_stage(out_dir, Path::new(shader), ShaderStage::Pixel);
     }
 }

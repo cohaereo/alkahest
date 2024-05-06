@@ -1,3 +1,4 @@
+pub mod color;
 pub mod d3d;
 pub mod image;
 pub mod math;

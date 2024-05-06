@@ -8,12 +8,46 @@ use windows::Win32::Graphics::Direct3D11::{
     D3D11_USAGE_IMMUTABLE,
 };
 
-use crate::{gpu::SharedGpuContext, util::d3d::D3dResource};
+use crate::{
+    gpu::{GpuContext, SharedGpuContext},
+    util::d3d::D3dResource,
+};
 
 pub struct IndexBuffer {
     pub buffer: ID3D11Buffer,
-    pub size: u64,
+    /// Amount of elements in the buffer
+    pub length: usize,
     pub format: DxgiFormat,
+}
+
+impl IndexBuffer {
+    pub fn load_u16(gpu: &GpuContext, data: &[u16]) -> anyhow::Result<Self> {
+        let mut buffer = None;
+        unsafe {
+            gpu.device.CreateBuffer(
+                &D3D11_BUFFER_DESC {
+                    ByteWidth: std::mem::size_of_val(data) as u32,
+                    Usage: D3D11_USAGE_IMMUTABLE,
+                    BindFlags: D3D11_BIND_INDEX_BUFFER.0 as u32,
+                    CPUAccessFlags: 0,
+                    MiscFlags: 0,
+                    StructureByteStride: 0,
+                },
+                Some(&D3D11_SUBRESOURCE_DATA {
+                    pSysMem: data.as_ptr() as _,
+                    ..Default::default()
+                }),
+                Some(&mut buffer),
+            )?;
+        }
+        let buffer = buffer.unwrap();
+
+        Ok(Self {
+            buffer,
+            length: data.len(),
+            format: DxgiFormat::R16_UINT,
+        })
+    }
 }
 
 pub(crate) fn load_index_buffer(
@@ -54,7 +88,7 @@ pub(crate) fn load_index_buffer(
 
     Ok(IndexBuffer {
         buffer,
-        size: header.data_size,
+        length: header.data_size as usize / if header.is_32bit { 4 } else { 2 },
         format: if header.is_32bit {
             DxgiFormat::R32_UINT
         } else {

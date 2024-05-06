@@ -1,39 +1,9 @@
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
-use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection, tfx::TfxRenderStage};
-use alkahest_renderer::{
-    camera::{Camera, Viewport},
-    ecs::{
-        dynamic_geometry::{draw_dynamic_model_system, update_dynamic_model_system},
-        light::draw_light_system,
-        map::MapAtmosphere,
-        static_geometry::{
-            draw_static_instances_system, update_static_instances_system, StaticModelSingle,
-        },
-        terrain::draw_terrain_patches_system,
-        transform::Transform,
-        Scene,
-    },
-    gpu::{buffer::ConstantBuffer, GpuContext},
-    gpu_event,
-    input::InputState,
-    loaders::{map_tmp::load_map, AssetManager},
-    postprocess::ssao::SsaoRenderer,
-    renderer::{gbuffer::GBuffer, Renderer, RendererSettings, RendererShared},
-    shader::matcap::MatcapRenderer,
-    tfx::{
-        externs,
-        externs::{ExternDefault, ExternStorage, Frame},
-        globals::{CubemapShape, RenderGlobals},
-        scope::{ScopeFrame, ScopeTransparentAdvanced},
-        view::View,
-    },
-};
 use anyhow::Context;
-use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers, Widget};
-use glam::{Vec2, Vec4};
-use windows::{core::HRESULT, Win32::Graphics::Direct3D11::D3D11_CLEAR_DEPTH};
+use glam::Vec2;
+use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
     event::{MouseScrollDelta, WindowEvent},
@@ -41,16 +11,29 @@ use winit::{
     platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 
+use alkahest_renderer::{
+    camera::{Camera, Viewport},
+    ecs::Scene,
+    gpu::GpuContext,
+    gpu_event,
+    input::InputState
+
+    ,
+    renderer::{Renderer, RendererSettings, RendererShared}
+
+    ,
+};
+
 use crate::{
+    ApplicationArgs,
     config,
     data::text::{GlobalStringmap, StringMapShared},
     gui::{
-        activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
+        activity_select::{ActivityBrowser, CurrentActivity, get_map_name},
         context::{GuiContext, GuiViewManager},
     },
     maplist::MapList,
     resources::Resources,
-    ApplicationArgs,
 };
 
 pub struct AlkahestApp {

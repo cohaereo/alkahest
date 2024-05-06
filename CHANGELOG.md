@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### ✨ Major Changes
 
-Alkahest has been (partially) rewritten, improving performance and flexibility, as well as adding (or opening the gates
+Alkahest has been largely rewritten, improving performance and flexibility, as well as adding (or opening the gates
 for) a ton
 of new features.
 
@@ -51,7 +51,7 @@ received some polish!
     - Atmosphere rendering
     - Ambient voxel/cubemap IBL
     - Bind DX11 depth, blend, rasterizer and depth bias states based on Technique data
-- Shadow mapping
+- ~~Shadow mapping~~ (TODO)
 - Compile-time shader compilation
 - Post processing effects
     - Ambient occlusion
@@ -93,6 +93,7 @@ received some polish!
 - Fixed certain objects not being rendered correctly due to a missing color buffer
     - These objects are now rendered with a default color buffer
 - Fixed some suns turning into black holes
+- Fixed water showing up as a red box
 
 ## 0.4.1 - 2024-03-27
 

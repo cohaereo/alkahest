@@ -154,6 +154,16 @@ pub struct GlobalPipelines {
     pub clear_color_2_mrt: Box<Technique>,
     pub deferred_shading: Box<Technique>,
     pub deferred_shading_no_atm: Box<Technique>,
+    pub global_lighting: Box<Technique>,
+    pub global_lighting_ambient_only_and_shading: Box<Technique>,
+    pub global_lighting_ambient_only: Box<Technique>,
+    // pub global_lighting_and_shading_gel: Box<Technique>,
+    pub global_lighting_and_shading: Box<Technique>,
+    // pub global_lighting_gel: Box<Technique>,
+    // pub global_lighting_masked_sun_and_shading_gel: Box<Technique>,
+    // pub global_lighting_masked_sun_and_shading: Box<Technique>,
+    // pub global_lighting_masked_sun_gel: Box<Technique>,
+    // pub global_lighting_masked_sun: Box<Technique>,
 
     // Post
     pub hdao: Box<Technique>,
@@ -291,11 +301,11 @@ pub struct GlobalPipelines {
     pub debug_world_normal: Box<Technique>,
 
     // Feature renderer debug
-    debug_cubemap_diffuse_opacity: Box<Technique>,
-    debug_cubemap_diffuse_probes_alpha: Box<Technique>,
-    debug_cubemap_diffuse_probes: Box<Technique>,
-    debug_cubemap_overdraw: Box<Technique>,
-    debug_cubemap_specular_opacity: Box<Technique>,
+    pub debug_cubemap_diffuse_opacity: Box<Technique>,
+    pub debug_cubemap_diffuse_probes_alpha: Box<Technique>,
+    pub debug_cubemap_diffuse_probes: Box<Technique>,
+    pub debug_cubemap_overdraw: Box<Technique>,
+    pub debug_cubemap_specular_opacity: Box<Technique>,
 }
 
 #[derive(PartialEq)]

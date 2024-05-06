@@ -1,11 +1,15 @@
 use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
+use glam::Vec4;
 
 use crate::{
     camera::Camera,
     ecs::{light::draw_light_system, map::MapAtmosphere, Scene},
     gpu_event,
     renderer::Renderer,
-    tfx::{externs, externs::ExternDefault},
+    tfx::{
+        externs,
+        externs::{ExternDefault, GlobalLighting, TextureView},
+    },
 };
 
 impl Renderer {
@@ -13,21 +17,24 @@ impl Renderer {
         gpu_event!(self.gpu, "lighting_pass");
 
         unsafe {
-            let gbuffers = &self.data.lock().gbuffers;
+            let data = &mut self.data.lock();
             self.gpu.context().OMSetRenderTargets(
                 Some(&[
-                    Some(gbuffers.light_diffuse.render_target.clone()),
-                    Some(gbuffers.light_specular.render_target.clone()),
+                    Some(data.gbuffers.light_diffuse.render_target.clone()),
+                    Some(data.gbuffers.light_specular.render_target.clone()),
                 ]),
                 None,
             );
 
-            gbuffers.light_diffuse.clear(&[0.01, 0.01, 0.01, 0.0]);
-            gbuffers.light_specular.clear(&[0.0, 0.0, 0.0, 0.0]);
+            data.gbuffers.light_diffuse.clear(&[0.01, 0.01, 0.01, 0.0]);
+            data.gbuffers.light_specular.clear(&[0.0, 0.0, 0.0, 0.0]);
 
             self.gpu
                 .current_states
                 .store(StateSelection::new(Some(8), Some(0), Some(2), Some(2)));
+
+            data.externs.global_lighting =
+                Some(data.externs.global_lighting.take().unwrap_or_default());
         }
 
         {
@@ -35,8 +42,35 @@ impl Renderer {
                 gpu_event!(self.gpu, "matcap");
                 self.matcap.draw(self);
             } else {
-                gpu_event!(self.gpu, "deferred_lights");
-                draw_light_system(self, scene)
+                {
+                    gpu_event!(self.gpu, "deferred_lights");
+                    draw_light_system(self, scene)
+                }
+
+                // {
+                //     gpu_event!(self.gpu, "global_lighting");
+                //
+                //     let pipeline = &self.render_globals.pipelines.global_lighting_ambient_only;
+                //     if let Err(e) = pipeline.bind(self) {
+                //         error!("Failed to run global_lighting: {e}");
+                //         return;
+                //     }
+                //
+                //     // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
+                //     self.gpu.current_states.store(StateSelection::new(
+                //         Some(8),
+                //         Some(0),
+                //         Some(0),
+                //         Some(0),
+                //     ));
+                //     self.gpu.flush_states();
+                //     self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
+                //
+                //     // TODO(cohae): 4 vertices doesn't work...
+                //     unsafe {
+                //         self.gpu.context().Draw(6, 0);
+                //     }
+                // }
             }
         }
 

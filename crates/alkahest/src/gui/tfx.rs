@@ -137,7 +137,7 @@ impl GuiView for TfxExternEditor {
             // TfxExtern::Postprocess,
             TfxExtern::Transparent,
             // TfxExtern::Vignette,
-            // TfxExtern::GlobalLighting,
+            TfxExtern::GlobalLighting,
             // TfxExtern::ShadowMask,
             // TfxExtern::Fxaa,
             // TfxExtern::Smaa,

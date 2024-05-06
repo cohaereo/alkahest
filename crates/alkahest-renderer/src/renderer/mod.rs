@@ -1,6 +1,8 @@
 pub mod gbuffer;
+mod immediate;
 mod lighting_pass;
 mod opaque_pass;
+mod shader;
 mod systems;
 mod transparents_pass;
 
@@ -13,17 +15,20 @@ use std::{
 
 use alkahest_data::tfx::TfxShaderStage;
 use crossbeam::epoch::Atomic;
+use glam::Vec3;
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::Scene,
     gpu::SharedGpuContext,
+    gpu_event,
     handle::Handle,
     hocus,
     loaders::AssetManager,
     postprocess::ssao::SsaoRenderer,
-    renderer::gbuffer::GBuffer,
+    renderer::{gbuffer::GBuffer, immediate::ImmediateRenderer},
+    shader::matcap::MatcapRenderer,
     tfx::{
         externs,
         externs::{ExternStorage, Frame},
@@ -32,8 +37,8 @@ use crate::{
         technique::Technique,
         view::View,
     },
+    util::color::Color,
 };
-use crate::shader::matcap::MatcapRenderer;
 
 pub type RendererShared = Arc<Renderer>;
 
@@ -46,6 +51,7 @@ pub struct Renderer {
     pub render_settings: RendererSettings,
     pub ssao: SsaoRenderer,
     matcap: MatcapRenderer,
+    pub immediate: ImmediateRenderer,
 
     pub time: Instant,
     last_frame: Instant,
@@ -71,6 +77,7 @@ impl Renderer {
             }),
             ssao: SsaoRenderer::new(gpu.clone())?,
             matcap: MatcapRenderer::new(gpu.clone())?,
+            immediate: ImmediateRenderer::new(gpu.clone())?,
             gpu,
             render_globals,
             render_settings: RendererSettings::default(),
@@ -86,6 +93,7 @@ impl Renderer {
     }
 
     pub fn render_world(&self, view: &impl View, scene: &Scene) {
+        gpu_event!(self.gpu, "view_0");
         self.begin_world_frame(scene);
 
         self.data.lock().externs.view = Some({

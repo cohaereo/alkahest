@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub mod index_buffer;
-pub mod map_tmp;
+pub mod map;
 pub mod technique;
 pub mod texture;
 pub mod vertex_buffer;

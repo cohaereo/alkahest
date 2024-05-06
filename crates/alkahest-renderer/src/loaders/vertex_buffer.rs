@@ -24,6 +24,64 @@ pub struct VertexBuffer {
     pub srv: Option<ID3D11ShaderResourceView>,
 }
 
+impl VertexBuffer {
+    pub fn load_data(device: &ID3D11Device, data: &[u8], stride: u32) -> anyhow::Result<Self> {
+        let bind_flags = if stride == 4 {
+            D3D11_BIND_VERTEX_BUFFER | D3D11_BIND_SHADER_RESOURCE
+        } else {
+            D3D11_BIND_VERTEX_BUFFER
+        };
+        let mut buffer = None;
+        unsafe {
+            device.CreateBuffer(
+                &D3D11_BUFFER_DESC {
+                    ByteWidth: data.len() as _,
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: bind_flags.0 as u32,
+                    CPUAccessFlags: 0,
+                    MiscFlags: 0,
+                    StructureByteStride: 0,
+                },
+                Some(&D3D11_SUBRESOURCE_DATA {
+                    pSysMem: data.as_ptr() as _,
+                    ..Default::default()
+                }),
+                Some(&mut buffer),
+            )?;
+        }
+        let buffer = buffer.unwrap();
+
+        let mut srv = None;
+        if stride == 4 {
+            unsafe {
+                device.CreateShaderResourceView(
+                    &buffer,
+                    Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                        Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                        ViewDimension: D3D11_SRV_DIMENSION_BUFFER,
+                        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                            Buffer: D3D11_BUFFER_SRV {
+                                Anonymous1: D3D11_BUFFER_SRV_0 { ElementOffset: 0 },
+                                Anonymous2: D3D11_BUFFER_SRV_1 {
+                                    NumElements: (data.len() / stride as usize) as u32,
+                                },
+                            },
+                        },
+                    }),
+                    Some(&mut srv),
+                )?;
+            }
+        }
+
+        Ok(VertexBuffer {
+            buffer,
+            size: data.len() as u32,
+            stride,
+            srv,
+        })
+    }
+}
+
 pub(crate) fn load_vertex_buffer(gctx: &GpuContext, hash: TagHash) -> anyhow::Result<VertexBuffer> {
     let entry = package_manager()
         .get_entry(hash)
@@ -36,67 +94,7 @@ pub(crate) fn load_vertex_buffer(gctx: &GpuContext, hash: TagHash) -> anyhow::Re
         .read_tag(entry.reference)
         .context("Failed to read buffer data")?;
 
-    let vb = load_vertex_buffer_data(&gctx.device, &data, header.stride as _)?;
+    let vb = VertexBuffer::load_data(&gctx.device, &data, header.stride as _)?;
     vb.buffer.set_debug_name(&format!("VertexBuffer: {hash}"));
     Ok(vb)
-}
-
-pub fn load_vertex_buffer_data(
-    device: &ID3D11Device,
-    data: &[u8],
-    stride: u32,
-) -> anyhow::Result<VertexBuffer> {
-    let bind_flags = if stride == 4 {
-        D3D11_BIND_VERTEX_BUFFER | D3D11_BIND_SHADER_RESOURCE
-    } else {
-        D3D11_BIND_VERTEX_BUFFER
-    };
-    let mut buffer = None;
-    unsafe {
-        device.CreateBuffer(
-            &D3D11_BUFFER_DESC {
-                ByteWidth: data.len() as _,
-                Usage: D3D11_USAGE_DEFAULT,
-                BindFlags: bind_flags.0 as u32,
-                CPUAccessFlags: 0,
-                MiscFlags: 0,
-                StructureByteStride: 0,
-            },
-            Some(&D3D11_SUBRESOURCE_DATA {
-                pSysMem: data.as_ptr() as _,
-                ..Default::default()
-            }),
-            Some(&mut buffer),
-        )?;
-    }
-    let buffer = buffer.unwrap();
-
-    let mut srv = None;
-    if stride == 4 {
-        unsafe {
-            device.CreateShaderResourceView(
-                &buffer,
-                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                    Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                    ViewDimension: D3D11_SRV_DIMENSION_BUFFER,
-                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                        Buffer: D3D11_BUFFER_SRV {
-                            Anonymous1: D3D11_BUFFER_SRV_0 { ElementOffset: 0 },
-                            Anonymous2: D3D11_BUFFER_SRV_1 {
-                                NumElements: (data.len() / stride as usize) as u32,
-                            },
-                        },
-                    },
-                }),
-                Some(&mut srv),
-            )?;
-        }
-    }
-
-    Ok(VertexBuffer {
-        buffer,
-        size: data.len() as u32,
-        stride,
-        srv,
-    })
 }

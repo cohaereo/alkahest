@@ -69,6 +69,7 @@ pub struct ExternStorage {
     pub atmosphere: Option<Atmosphere>,
     pub water: Option<Water>,
     pub hdao: Option<Hdao>,
+    pub global_lighting: Option<GlobalLighting>,
 
     pub unk4f: [Vec4; 256],
     pub unk4f_used: RwLock<[usize; 256]>,
@@ -90,6 +91,7 @@ impl Default for ExternStorage {
             atmosphere: None,
             water: None,
             hdao: None,
+            global_lighting: None,
 
             unk4f: get_unk4f_defaults(),
             unk4f_used: RwLock::new([0; 256]),
@@ -225,6 +227,7 @@ impl ExternStorage {
             Atmosphere => self.atmosphere,
             Water => self.water,
             Hdao => self.hdao,
+            GlobalLighting => self.global_lighting,
         }
     }
 
@@ -255,7 +258,8 @@ impl ExternStorage {
             SimpleGeometry,
             Atmosphere,
             Water,
-            Hdao
+            Hdao,
+            GlobalLighting
         }
     }
 
@@ -285,6 +289,7 @@ impl ExternStorage {
             Atmosphere => self.atmosphere,
             Water => self.water,
             Hdao => self.hdao,
+            GlobalLighting => self.global_lighting,
         }
     }
 }
@@ -621,6 +626,25 @@ extern_struct! {
         0x80 => unk80: Vec4 > unimplemented(true),
         0x90 => unk90: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
         // 0xa0 => unka0: UnorderedAccessView,
+    }
+}
+
+extern_struct! {
+    struct GlobalLighting("global_lighting") {
+        0x08 => unk08: TextureView > unimplemented(true),
+        0x10 => unk10: Vec4 > unimplemented(true),
+        0x30 => unk30: Vec4 > unimplemented(true),
+        0x50 => unk50: Vec4 > unimplemented(true),
+        0x70 => unk70: Vec4 > unimplemented(true),
+        0x80 => unk80: Vec4 > unimplemented(true),
+        0x90 => unk90: f32 > unimplemented(true),
+        0x94 => unk94: f32 > unimplemented(true),
+        0x98 => unk98: f32 > unimplemented(true),
+        0x9c => unk9c: f32 > unimplemented(true),
+        0xa0 => unka0: f32 > unimplemented(true),
+        0xb0 => unkb0: Vec4 > unimplemented(true),
+        0xc0 => unkc0: Vec4 > unimplemented(true),
+        0xd0 => unkd0: Vec4 > unimplemented(true),
     }
 }
 

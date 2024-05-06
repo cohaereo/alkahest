@@ -5,7 +5,7 @@ use alkahest_renderer::{
         common::Global, dynamic_geometry::update_dynamic_model_system,
         static_geometry::update_static_instances_system, Scene,
     },
-    loaders::map_tmp::load_map,
+    loaders::map::load_map,
     renderer::RendererShared,
 };
 use anyhow::Context;
