@@ -23,7 +23,7 @@ use windows::Win32::Graphics::{
 
 use crate::{
     camera::Camera,
-    ecs::{transform::Transform, Scene},
+    ecs::{common::Hidden, transform::Transform, Scene},
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
     handle::{AssetId, Handle},
@@ -234,6 +234,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
     profiling::scope!("draw_light_system");
     for (_, (transform, light_renderer, light, bounds)) in scene
         .query::<(&Transform, &LightRenderer, &SLight, Option<&AABB>)>()
+        .without::<&Hidden>()
         .iter()
     {
         let light_scale = if let Some(bb) = bounds {
@@ -277,6 +278,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
 
     for (_, (transform, light_renderer, light)) in scene
         .query::<(&Transform, &LightRenderer, &SShadowingLight)>()
+        .without::<&Hidden>()
         .iter()
     {
         let light_scale = Mat4::from_scale(Vec3::splat(-(3000.0 * 4.0)));

@@ -22,6 +22,7 @@ use crate::{
     tfx::{externs, externs::ExternStorage, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
+use crate::ecs::common::Hidden;
 
 pub struct DynamicModel {
     mesh_buffers: Vec<ModelBuffers>,
@@ -262,7 +263,7 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         "draw_dynamic_model_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (_, dynamic) in scene.query::<&DynamicModelComponent>().iter() {
+    for (_, dynamic) in scene.query::<&DynamicModelComponent>().without::<&Hidden>().iter() {
         if !dynamic.model.subscribed_stages.is_subscribed(render_stage) {
             continue;
         }

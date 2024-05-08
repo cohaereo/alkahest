@@ -12,7 +12,7 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::{hierarchy::Children, transform::Transform, Scene},
+    ecs::{common::Hidden, hierarchy::Children, transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
@@ -348,14 +348,22 @@ pub fn draw_static_instances_system(
         "draw_static_instances_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (_, (instances, children)) in scene.query::<(&StaticInstances, &Children)>().iter() {
+    for (_, (instances, children)) in scene
+        .query::<(&StaticInstances, &Children)>()
+        .without::<&Hidden>()
+        .iter()
+    {
         // TODO(cohae): We want to pull the slot number from the `instances` scope
         instances.cbuffer.bind(1, TfxShaderStage::Vertex);
         instances
             .model
             .draw(renderer, render_stage, children.len() as u32);
     }
-    for (_, instances) in scene.query::<&StaticModelSingle>().iter() {
+    for (_, instances) in scene
+        .query::<&StaticModelSingle>()
+        .without::<&Hidden>()
+        .iter()
+    {
         // TODO(cohae): We want to pull the slot number from the `instances` scope
         instances.cbuffer.bind(1, TfxShaderStage::Vertex);
         instances.model.draw(renderer, render_stage, 1);
