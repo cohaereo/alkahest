@@ -8,6 +8,8 @@ cbuffer scope_alkahest_view : register(b0) {
     float4x4 world_to_camera;
 };
 
+SamplerState s_linear_clamp : register(s1);
+
 Texture2D RtNormal : register(t0);
 
 Texture2D MatcapDiffuse : register(t1);
@@ -28,16 +30,16 @@ void PSMain(
     out float4 light_diffuse : SV_Target0,
     out float4 light_specular : SV_Target1
 ) {
-    float4 rt1 = RtNormal.Sample(def_point_clamp, input.uv);
+    float4 rt1 = RtNormal.Sample(s_linear_clamp, input.uv);
     float3 normal = DecodeNormal(rt1.xyz);
     float smoothness = length(normal) * 4 - 3;
-    float3 viewNormal = mul((float3x3)world_to_camera, normal);
+    float3 viewNormal = mul((float3x3)world_to_camera, normalize(normal));
 
     float2 uv = MatcapUV(camera_forward, viewNormal);
-    float4 diffuse = MatcapDiffuse.Sample(def_point_clamp, uv);
-    float4 specular = MatcapSpecular.Sample(def_point_clamp, uv);
-    light_diffuse = diffuse;
-    light_specular = max(1 - smoothness, specular);
+    float4 diffuse = MatcapDiffuse.Sample(s_linear_clamp, uv);
+    float4 specular = MatcapSpecular.Sample(s_linear_clamp, uv);
+    light_diffuse = diffuse * exposure_scale_for_shading;
+    light_specular = max(1 - smoothness, specular) * exposure_scale_for_shading;
     light_diffuse.w = 1;
     light_specular.w = 1;
 }

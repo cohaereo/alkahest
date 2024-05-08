@@ -1127,9 +1127,9 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.9.9"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50e81d877c30e1b8e853e2bcf2c69d4dbdbd8a18ad8293333066c3e256ba700d"
+checksum = "372027ad668d7735a40d3f66417d0386da12ace3fb41b85fae8937effed4ba02"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -3810,8 +3810,8 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.8"
-source = "git+https://github.com/v4nguard/tiger-parse#6242806c86fb753181e420319068fc9671c2bd4c"
+version = "0.1.9"
+source = "git+https://github.com/v4nguard/tiger-parse#b72888c2fb4252c8d125f00b8ab55d5333842f07"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -3823,7 +3823,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#6242806c86fb753181e420319068fc9671c2bd4c"
+source = "git+https://github.com/v4nguard/tiger-parse#b72888c2fb4252c8d125f00b8ab55d5333842f07"
 dependencies = [
  "darling",
  "proc-macro2",

@@ -23,7 +23,7 @@ pub struct STechnique {
     pub unk14: u32,
     pub unk18: u32,
     pub unk1c: u32,
-    
+
     pub used_scopes: u64,
     pub compatible_scopes: u64,
 

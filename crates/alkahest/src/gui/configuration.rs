@@ -1,6 +1,5 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
-    hocus,
     renderer::{RendererSettings, RendererShared},
 };
 use egui::{Context, RichText, Widget};

@@ -189,7 +189,7 @@ impl GpuContext {
             Some("Black Texture"),
         )?;
 
-        let color0_fallback = VertexBuffer::load_data(&device, &[0, 0, 0, 255], 4)?;
+        let color0_fallback = VertexBuffer::load_data(&device, &[0, 0, 255, 255], 4)?;
 
         let sky_hemisphere_placeholder = Texture::load_png(
             &device,

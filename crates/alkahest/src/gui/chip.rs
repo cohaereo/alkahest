@@ -3,7 +3,7 @@ use egui::{epaint, vec2, Color32, Rect, Response, RichText};
 
 use crate::{
     gui::UiExt,
-    util::text::{name_to_color, text_color_for_background},
+    util::text::{alk_color_to_egui, name_to_color, text_color_for_background},
 };
 
 // Mmm, chip.
@@ -44,7 +44,8 @@ impl Chip {
 
         if ui.is_rect_visible(rect) {
             ui.painter().rect_filled(
-                rect.expand2(vec2(2.5, 1.25) * size_ratio),
+                rect.expand2(vec2(5.0, 1.25) * size_ratio)
+                    .translate(vec2(0.0, 1.0)),
                 16.0,
                 self.background,
             );
@@ -73,7 +74,7 @@ impl EcsTagsExt for Tags {
     fn ui_chips(&self, ui: &mut egui::Ui) {
         for tag in self.0.iter() {
             let c = tag.color();
-            ui.chip_with_color(tag.to_string(), Color32::from_rgb(c.0, c.1, c.2));
+            ui.chip_with_color(tag.to_string(), alk_color_to_egui(c));
         }
     }
 }

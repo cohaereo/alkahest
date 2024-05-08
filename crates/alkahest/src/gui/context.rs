@@ -1,4 +1,4 @@
-use std::{any::TypeId, mem::transmute, sync::Arc};
+use std::{any::TypeId, iter::Inspect, mem::transmute, sync::Arc};
 
 use alkahest_renderer::{gpu::GpuContext, util::image::Png};
 use egui::InputState;
@@ -13,6 +13,9 @@ use crate::{
     gui::{
         bottom_bar::BottomBar,
         configuration::RenderSettingsPanel,
+        fps_display::FpsDisplayOverlay,
+        inspector::InspectorPanel,
+        outliner::OutlinerPanel,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
     resources::Resources,
@@ -186,6 +189,9 @@ impl GuiViewManager {
         views.insert(TfxExternEditor::default());
         views.insert(RenderSettingsPanel);
         views.insert(BottomBar);
+        views.insert(OutlinerPanel::default());
+        views.insert(InspectorPanel);
+        views.insert(FpsDisplayOverlay::default());
 
         views
     }

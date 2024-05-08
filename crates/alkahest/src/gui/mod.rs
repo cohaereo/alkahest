@@ -3,6 +3,7 @@ use egui::Response;
 pub mod activity_select;
 mod configuration;
 pub mod context;
+mod fps_display;
 pub mod hotkeys;
 pub mod icons;
 mod input;
@@ -13,6 +14,8 @@ mod tfx;
 pub mod big_button;
 mod bottom_bar;
 pub mod chip;
+mod outliner;
+mod util;
 
 pub trait UiExt {
     fn chip(&mut self, label: impl AsRef<str>) -> Response;

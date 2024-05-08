@@ -2,19 +2,22 @@ use alkahest_renderer::{
     camera::{tween::Tween, Camera},
     ecs::{
         common::{EntityWorldId, Global, Hidden, Label, Mutable},
+        resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Ruler, Sphere},
         Scene,
     },
 };
-use egui::{Button, Color32, FontId, RichText, Widget};
+use egui::{Align2, Button, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
+use winit::window::Window;
 
 use crate::{
     gui::{
         chip::EcsTagsExt,
+        context::{GuiCtx, GuiView, ViewResult},
         hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
         icons::{
             ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
@@ -24,9 +27,64 @@ use crate::{
             ICON_TAG,
         },
     },
+    maplist::MapList,
     resources::Resources,
     util::text::prettify_distance,
 };
+
+pub struct InspectorPanel;
+
+impl GuiView for InspectorPanel {
+    fn draw(
+        &mut self,
+        ctx: &egui::Context,
+        window: &Window,
+        resources: &Resources,
+        gui: &GuiCtx<'_>,
+    ) -> Option<ViewResult> {
+        let mut maps = resources.get_mut::<MapList>();
+
+        if let Some(map) = maps.current_map_mut() {
+            egui::Window::new("Inspector").show(ctx, |ui| {
+                if let Some(ent) = resources.get::<SelectedEntity>().selected() {
+                    show_inspector_panel(
+                        ui,
+                        &mut map.scene,
+                        &mut map.command_buffer,
+                        ent,
+                        resources,
+                    );
+                } else {
+                    ui.colored_label(Color32::WHITE, "No entity selected");
+                    ui.horizontal(|ui| {
+                        ui.colored_label(Color32::WHITE, "Select one using");
+                        let p = ui.painter_at(ui.cursor());
+                        let pos = ui.cursor().min;
+                        ui.label("  ");
+
+                        p.text(
+                            pos,
+                            Align2::LEFT_TOP,
+                            "", // RMB button bg
+                            FontId::proportional(ui.text_style_height(&egui::TextStyle::Body)),
+                            Color32::from_rgb(0x33, 0x96, 0xda),
+                        );
+
+                        p.text(
+                            pos,
+                            Align2::LEFT_TOP,
+                            "", // RMB button foreground
+                            FontId::proportional(ui.text_style_height(&egui::TextStyle::Body)),
+                            Color32::WHITE,
+                        );
+                    });
+                }
+            });
+        }
+
+        None
+    }
+}
 
 pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
     macro_rules! icon_from_component_panels {

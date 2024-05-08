@@ -657,7 +657,7 @@ fn test_externs() {
 
     assert_eq!(
         deferred.get_field::<Vec4>(0x20),
-        ExternValue::Unimplemented(Vec4::default())
+        ExternValue::Unimplemented(Deferred::default().unk20)
     );
 
     let view = View {

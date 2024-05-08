@@ -1,6 +1,6 @@
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use glam::Mat4;
-use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
+use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader, D3D11_SAMPLER_DESC, D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP};
 
 use crate::{
     gpu::{
@@ -20,6 +20,7 @@ pub struct MatcapRenderer {
     cam_cb: ConstantBuffer<Mat4>,
     matcap_diffuse: Texture,
     matcap_specular: Texture,
+    sampler_linear: ID3D11SamplerState,
 }
 
 impl MatcapRenderer {
@@ -47,12 +48,21 @@ impl MatcapRenderer {
             Some("matcap_specular.png"),
         )?;
 
+        let sampler_linear = gctx.device.create_sampler_state(&D3D11_SAMPLER_DESC {
+            Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+            AddressU: D3D11_TEXTURE_ADDRESS_CLAMP,
+            AddressV: D3D11_TEXTURE_ADDRESS_CLAMP,
+            AddressW: D3D11_TEXTURE_ADDRESS_CLAMP,
+            ..Default::default()
+        })?;
+
         Ok(Self {
             shader_vs,
             shader_ps,
             cam_cb,
             matcap_diffuse,
             matcap_specular,
+            sampler_linear,
         })
     }
 
@@ -70,6 +80,8 @@ impl MatcapRenderer {
                 .gpu
                 .context()
                 .PSSetShaderResources(0, Some(&[Some(data.gbuffers.rt1.view.clone())]));
+            renderer.gpu
+                .context().PSSetSamplers(0, Some(&[Some(self.sampler_linear.clone())]));
 
             self.matcap_diffuse
                 .bind(&renderer.gpu, 1, TfxShaderStage::Pixel);

@@ -61,6 +61,7 @@ received some polish!
 - Fullscreen mode (can be enabled through `--fullscreen` argument or alt+enter)
 - Hide the cursor when moving the camera
 - Smooth camera acceleration
+- Specular matcap (makes shiny objects look shiny in unshaded mode)
 
 ### Changed
 

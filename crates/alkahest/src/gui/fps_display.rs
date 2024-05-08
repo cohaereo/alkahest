@@ -4,8 +4,13 @@ use egui::Color32;
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 use winit::window::Window;
 
-use super::gui::Overlay;
-use crate::resources::Resources;
+use crate::{
+    gui::{
+        context::{GuiCtx, GuiView, ViewResult},
+        util::PainterExt,
+    },
+    resources::Resources,
+};
 
 pub struct FpsDisplayOverlay {
     pub deltas: ConstGenericRingBuffer<f32, 25>,
@@ -21,23 +26,42 @@ impl Default for FpsDisplayOverlay {
     }
 }
 
-impl Overlay for FpsDisplayOverlay {
+impl GuiView for FpsDisplayOverlay {
     fn draw(
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        _resources: &mut Resources,
-        _gui: &mut super::gui::GuiContext<'_>,
-    ) -> bool {
+        _resources: &Resources,
+        _gui: &GuiCtx<'_>,
+    ) -> Option<ViewResult> {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;
+        let average_fps = 1.0 / average_delta;
+
+        let color = match average_fps {
+            fps if fps >= 59.0 => Color32::GREEN,
+            fps if fps >= 29.0 => Color32::GOLD,
+            _ => Color32::RED,
+        };
 
         let painter = ctx.layer_painter(egui::LayerId::debug());
-        painter.text(
-            [ctx.input(|i| i.screen_rect.right()) - 8.0, 8.0].into(),
+        painter.text_with_shadow(
+            [ctx.input(|i| i.screen_rect.right()) - 20.0, 22.0].into(),
             egui::Align2::RIGHT_TOP,
-            format!("{:3.0}", 1.0 / average_delta),
-            egui::FontId::default(),
-            Color32::WHITE,
+            format!("{average_fps:3.0}"),
+            egui::FontId::proportional(14.0),
+            color,
+        );
+
+        painter.text_with_shadow(
+            [
+                ctx.input(|i| i.screen_rect.right()) - 20.0,
+                22.0 + 14.0 + 1.0,
+            ]
+            .into(),
+            egui::Align2::RIGHT_TOP,
+            format!("{:.1}ms", average_delta * 1000.0),
+            egui::FontId::proportional(14.0),
+            color,
         );
 
         let now = Instant::now();
@@ -45,6 +69,6 @@ impl Overlay for FpsDisplayOverlay {
         self.deltas.push(delta);
         self.last_frame = now;
 
-        true
+        None
     }
 }

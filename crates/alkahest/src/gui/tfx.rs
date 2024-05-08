@@ -1,6 +1,6 @@
 use alkahest_renderer::{
     renderer::RendererShared,
-    tfx::externs::{ExternStorage, TextureView, TfxExpressionErrorType, TfxExtern},
+    tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
 };
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};

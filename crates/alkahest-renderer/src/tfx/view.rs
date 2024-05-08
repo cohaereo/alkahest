@@ -1,4 +1,5 @@
 use std::ops::{BitOr, BitOrAssign};
+
 use alkahest_data::tfx::TfxRenderStage;
 
 use super::externs;

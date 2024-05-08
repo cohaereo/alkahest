@@ -1,10 +1,11 @@
 use std::fmt::Display;
 
-use hecs::Entity;
+use hecs::{Entity, EntityRef};
 use rustc_hash::FxHashSet;
 use tiger_parse::FnvHash;
 
 use super::Scene;
+use crate::util::color::Color;
 
 #[derive(strum::EnumIter, Hash, PartialEq, Eq)]
 pub enum EntityTag {
@@ -24,18 +25,18 @@ fn fnv1(data: &[u8]) -> FnvHash {
     })
 }
 
-fn name_to_color(name: &str) -> (u8, u8, u8) {
+fn name_to_color(name: &str) -> Color {
     let hash = fnv1(name.as_bytes());
     let r = (hash & 0xFF) as u8;
     let g = ((hash >> 8) & 0xFF) as u8;
     let b = ((hash >> 16) & 0xFF) as u8;
-    (r, g, b)
+    [r, g, b, 255].into()
 }
 
 impl EntityTag {
-    pub fn color(&self) -> (u8, u8, u8) {
+    pub fn color(&self) -> Color {
         match self {
-            EntityTag::Havok => (253, 185, 10),
+            EntityTag::Havok => [253, 185, 10, 255].into(),
             u => name_to_color(&u.to_string()),
         }
     }

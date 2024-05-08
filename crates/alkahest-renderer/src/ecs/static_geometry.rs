@@ -10,7 +10,7 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::{transform::Transform, Scene},
+    ecs::{hierarchy::Children, transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
@@ -228,6 +228,7 @@ impl StaticModel {
     }
 }
 
+// TODO(cohae): With children separated into it's own component we can probably merge singular and instances staticmodels
 /// Singular static model
 pub struct StaticModelSingle {
     pub model: StaticModel,
@@ -277,16 +278,15 @@ impl StaticModelSingle {
 
 /// Parent of all static instances for a model
 pub struct StaticInstances {
-    pub instances: Vec<Entity>,
     pub model: StaticModel,
     pub cbuffer: ConstantBuffer<u8>,
 }
 
 impl StaticInstances {
-    pub fn update_cbuffer(&self, scene: &Scene) {
+    pub fn update_cbuffer(&self, scene: &Scene, instances: &[Entity]) {
         profiling::scope!("StaticInstances::update_cbuffer");
-        let mut transforms = Vec::with_capacity(self.instances.len());
-        for &instance in &self.instances {
+        let mut transforms = Vec::with_capacity(instances.len());
+        for &instance in instances {
             if let Ok(transform) = scene.get::<&Transform>(instance) {
                 let mat = transform.to_mat4().transpose();
                 transforms.push(Mat4::from_cols(
@@ -320,9 +320,7 @@ impl StaticInstances {
 
 /// A single instance of a static model, can be manipulated individually
 /// Rendered by [`StaticInstances`]
-pub struct StaticInstance {
-    pub parent: Entity,
-}
+pub struct StaticInstance;
 
 pub fn draw_static_instances_system(
     renderer: &Renderer,
@@ -333,12 +331,12 @@ pub fn draw_static_instances_system(
         "draw_static_instances_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (_, instances) in scene.query::<&StaticInstances>().iter() {
+    for (_, (instances, children)) in scene.query::<(&StaticInstances, &Children)>().iter() {
         // TODO(cohae): We want to pull the slot number from the `instances` scope
         instances.cbuffer.bind(1, TfxShaderStage::Vertex);
         instances
             .model
-            .draw(renderer, render_stage, instances.instances.len() as u32);
+            .draw(renderer, render_stage, children.len() as u32);
     }
     for (_, instances) in scene.query::<&StaticModelSingle>().iter() {
         // TODO(cohae): We want to pull the slot number from the `instances` scope
@@ -349,8 +347,8 @@ pub fn draw_static_instances_system(
 
 pub fn update_static_instances_system(scene: &Scene) {
     profiling::scope!("update_static_instances_system");
-    for (_, instances) in scene.query::<&StaticInstances>().iter() {
-        instances.update_cbuffer(scene);
+    for (_, (instances, children)) in scene.query::<(&StaticInstances, &Children)>().iter() {
+        instances.update_cbuffer(scene, &children);
     }
     for (_, (transform, model)) in scene.query::<(&Transform, &StaticModelSingle)>().iter() {
         model.update_cbuffer(transform);

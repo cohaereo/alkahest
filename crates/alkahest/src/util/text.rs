@@ -1,3 +1,4 @@
+use alkahest_renderer::util::color::Color;
 use egui::Color32;
 
 use super::fnv1;
@@ -29,6 +30,14 @@ pub fn invert_color(color: [u8; 3]) -> [u8; 3] {
 
 pub fn keep_color_bright(color: [u8; 3]) -> [u8; 3] {
     [color[0].max(127), color[1].max(127), color[2].max(127)]
+}
+
+pub fn alk_color_to_egui(c: Color) -> Color32 {
+    Color32::from_rgb(
+        (c.r() * 255.0) as u8,
+        (c.g() * 255.0) as u8,
+        (c.b() * 255.0) as u8,
+    )
 }
 
 /// Simplifies meters to other metric measurement units (mm, cm, m, km)

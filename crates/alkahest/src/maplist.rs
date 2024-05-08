@@ -1,22 +1,15 @@
-use std::sync::Arc;
-
 use alkahest_renderer::{
     ecs::{
-        common::Global, dynamic_geometry::update_dynamic_model_system,
+        dynamic_geometry::update_dynamic_model_system,
         static_geometry::update_static_instances_system, Scene,
     },
     loaders::map::load_map,
     renderer::RendererShared,
 };
-use anyhow::Context;
 use destiny_pkg::TagHash;
-use hecs::With;
 use poll_promise::Promise;
 
-use crate::{
-    data::text::StringMapShared, gui::activity_select::CurrentActivity, resources::Resources,
-    ApplicationArgs,
-};
+use crate::{gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum MapLoadState {
@@ -87,6 +80,8 @@ impl Map {
         // else {
         //     self.load_state = MapLoadState::Unloaded;
         // }
+
+        self.command_buffer.run_on(&mut self.scene);
     }
 
     fn start_load(&mut self, resources: &Resources) {

@@ -30,12 +30,38 @@ impl Color {
 
     pub const GRAY: Self = Self(Vec4::new(0.5, 0.5, 0.5, 1.0));
 
+    pub fn r(self) -> f32 {
+        self.0.x
+    }
+    
+    pub fn g(self) -> f32 {
+        self.0.y
+    }
+    
+    pub fn b(self) -> f32 {
+        self.0.z
+    }
+    
+    pub fn a(self) -> f32 {
+        self.0.w
+    }
+    
     pub fn with_alpha(self, alpha: f32) -> Self {
         Self(Vec4::new(self.0.x, self.0.y, self.0.z, alpha))
     }
 
     pub fn is_opaque(self) -> bool {
         self.0.w >= 1.0
+    }
+
+    pub fn text_color_for_background(&self) -> Self {
+        let luma = 0.2126 * self.r() + 0.7152 * self.g() + 0.0722 * self.b();
+
+        if luma > 0.5 {
+            Self::BLACK
+        } else {
+            Self::WHITE
+        }
     }
 }
 

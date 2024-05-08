@@ -31,7 +31,12 @@ impl GuiView for BottomBar {
 
                 let amount_loaded = maplist.count_loaded();
                 let combo_postlabel = if maplist.count_loading() != 0 {
-                    format!("({} loading {}/{})", LoadingIcon::Circle.get_frame(), amount_loaded + 1, maplist.maps.len())
+                    format!(
+                        "({} loading {}/{})",
+                        LoadingIcon::Circle.get_frame(),
+                        amount_loaded + 1,
+                        maplist.maps.len()
+                    )
                 } else {
                     "".to_string()
                 };

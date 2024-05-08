@@ -18,7 +18,7 @@ binrw = "0.13.3"
 bitflags = "2.5.0"
 bytemuck = "1.7.0"
 crossbeam = "0.8.4"
-destiny-pkg = "0.9.9"
+destiny-pkg = "0.10"
 egui = { version = "0.27", features = ["persistence"] }
 egui_extras = "0.27.2"
 field_access = "0.1.6"

@@ -14,7 +14,6 @@ use crate::{
     gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
     resources::Resources,
-    ApplicationArgs,
 };
 
 #[derive(Debug)]

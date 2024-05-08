@@ -1,5 +1,5 @@
-use destiny_pkg::TagHash;
 use alkahest_pm::package_manager;
+use destiny_pkg::TagHash;
 
 pub trait TagHashExt {
     fn prepend_package_name(&self) -> String;

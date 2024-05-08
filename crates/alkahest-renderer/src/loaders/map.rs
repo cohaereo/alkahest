@@ -19,6 +19,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3};
+use hecs::Entity;
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
@@ -27,9 +28,11 @@ use crate::{
     ecs::{
         common::{ResourceOrigin, Water},
         dynamic_geometry::{DynamicModel, DynamicModelComponent},
+        hierarchy::{Children, Parent},
         light::LightRenderer,
         map::MapAtmosphere,
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
+        tags::{insert_tag, EntityTag},
         terrain::TerrainPatches,
         transform::{Transform, TransformFlags},
         Scene,
@@ -249,6 +252,30 @@ pub async fn load_map(
         }
     }
 
+    // TODO(cohae): The persistent tag system is used exlusively for filtering, it's otherwise entirely redundant and should be replaced by components where possible
+    let mut tags: Vec<(Entity, Vec<EntityTag>)> = vec![];
+    for e in scene.iter() {
+        let mut tag_list = vec![];
+        if let Some(origin) = e.get::<&ResourceOrigin>().as_deref().cloned() {
+            match origin {
+                ResourceOrigin::Map => {}
+                ResourceOrigin::Activity => tag_list.push(EntityTag::Activity),
+                ResourceOrigin::ActivityBruteforce => tag_list.push(EntityTag::Activity),
+                ResourceOrigin::Ambient => tag_list.push(EntityTag::Ambient),
+            }
+        }
+
+        // TODO(cohae): Havok tags
+
+        tags.push((e.entity(), tag_list));
+    }
+
+    for (e, tags) in tags {
+        for tag in tags {
+            insert_tag(&mut scene, e, tag);
+        }
+    }
+
     Ok(scene)
 }
 
@@ -260,7 +287,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     table_data: &mut R,
     scene: &mut Scene,
     renderer: &Renderer,
-    _resource_origin: ResourceOrigin,
+    resource_origin: ResourceOrigin,
     _group_id: u32,
 ) -> anyhow::Result<()> {
     for data in &table.data_entries {
@@ -301,7 +328,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             flags: TransformFlags::empty(),
                         };
 
-                        let entity = scene.spawn((transform, StaticInstance { parent }));
+                        let entity = scene.spawn((transform, StaticInstance, Parent(parent)));
                         instances.push(entity);
                     }
 
@@ -313,10 +340,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     renderer.gpu.clone(),
                                     &vec![0u8; 32 + 64 * instances.len()],
                                 )?,
-                                instances,
                                 model,
                             },
+                            Children::from_slice(&instances),
                             TfxFeatureRenderer::StaticObjects,
+                            resource_origin,
                         ),
                     )?;
                 }
@@ -333,6 +361,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     TerrainPatches::load(renderer, terrain_resource.terrain)
                         .context("Failed to load terrain patches")?,
                     TfxFeatureRenderer::TerrainPatch,
+                    resource_origin,
                 ));
             }
             0x80806aa3 => {
@@ -368,6 +397,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             TfxFeatureRenderer::SkyTransparent,
                         )?,
                         TfxFeatureRenderer::SkyTransparent,
+                        resource_origin,
                     ));
                 }
             }
@@ -389,6 +419,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         TfxFeatureRenderer::Water,
                     )?,
                     TfxFeatureRenderer::Water,
+                    resource_origin,
                 ));
             }
             0x80806a63 => {
@@ -431,6 +462,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         light,
                         bounds.bb,
                         TfxFeatureRenderer::DeferredLights,
+                        resource_origin,
                     ));
                 }
             }
@@ -452,6 +484,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .context("Failed to load shadowing light")?,
                     light,
                     TfxFeatureRenderer::DeferredLights,
+                    resource_origin,
                 ));
             }
             0x80806BC1 => {
@@ -460,8 +493,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let atmos: SMapAtmosphere = TigerReadable::read_ds(table_data)?;
-                scene.spawn((MapAtmosphere::load(&renderer.gpu, atmos)
-                    .context("Failed to load map atmosphere")?,));
+                scene.spawn((
+                    MapAtmosphere::load(&renderer.gpu, atmos)
+                        .context("Failed to load map atmosphere")?,
+                    resource_origin,
+                ));
             }
             0x808067b5 => {
                 table_data
@@ -470,7 +506,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let tag: TagHash = table_data.read_le().unwrap();
                 let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
 
-                scene.spawn((transform, lens_flare));
+                scene.spawn((transform, lens_flare, resource_origin));
             }
             0x80808cb5 => {
                 table_data
@@ -491,6 +527,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             ..Default::default()
                         },
                         respawn_point.clone(),
+                        resource_origin,
                     ));
                 }
             }
@@ -535,6 +572,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     TfxFeatureRenderer::DynamicObjects,
                                 )?,
                                 TfxFeatureRenderer::DynamicObjects,
+                                resource_origin,
                             ));
                         }
                         u => {

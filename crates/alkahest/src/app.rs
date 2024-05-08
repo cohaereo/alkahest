@@ -1,5 +1,13 @@
 use std::sync::Arc;
 
+use alkahest_renderer::{
+    camera::{Camera, Viewport},
+    ecs::{resources::SelectedEntity, Scene},
+    gpu::GpuContext,
+    gpu_event,
+    input::InputState,
+    renderer::{Renderer, RendererSettings, RendererShared},
+};
 use anyhow::Context;
 use egui::{Key, KeyboardShortcut, Modifiers, Widget};
 use glam::Vec2;
@@ -11,29 +19,16 @@ use winit::{
     platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 
-use alkahest_renderer::{
-    camera::{Camera, Viewport},
-    ecs::Scene,
-    gpu::GpuContext,
-    gpu_event,
-    input::InputState
-
-    ,
-    renderer::{Renderer, RendererSettings, RendererShared}
-
-    ,
-};
-
 use crate::{
-    ApplicationArgs,
     config,
     data::text::{GlobalStringmap, StringMapShared},
     gui::{
-        activity_select::{ActivityBrowser, CurrentActivity, get_map_name},
+        activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager},
     },
     maplist::MapList,
     resources::Resources,
+    ApplicationArgs,
 };
 
 pub struct AlkahestApp {
@@ -82,6 +77,7 @@ impl AlkahestApp {
         resources.insert(GuiViewManager::with_default_views());
         resources.insert(InputState::default());
         resources.insert(CurrentActivity(args.activity));
+        resources.insert(SelectedEntity::default());
         resources.insert(args);
         resources.insert(config!().renderer.clone());
         resources.insert(MapList::default());
@@ -261,9 +257,9 @@ impl AlkahestApp {
                         let map = maps
                             .current_map()
                             .map(|m| &m.scene)
-                            .unwrap_or(&map_placeholder);
+                            .unwrap_or(map_placeholder);
 
-                        renderer.render_world(&*resources.get::<Camera>(), &map);
+                        renderer.render_world(&*resources.get::<Camera>(), map);
 
                         unsafe {
                             renderer.gpu.context().OMSetRenderTargets(
