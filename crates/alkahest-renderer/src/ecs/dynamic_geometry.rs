@@ -6,11 +6,18 @@ use alkahest_pm::package_manager;
 use anyhow::ensure;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec3, Vec4};
+use hecs::Entity;
 use itertools::Itertools;
+use smallvec::SmallVec;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    ecs::{common::Water, static_geometry::ModelBuffers, transform::Transform, Scene},
+    ecs::{
+        common::{Hidden, Water},
+        static_geometry::ModelBuffers,
+        transform::Transform,
+        Scene,
+    },
     gpu::{
         buffer::{ConstantBuffer, ConstantBufferCached},
         GpuContext,
@@ -22,7 +29,6 @@ use crate::{
     tfx::{externs, externs::ExternStorage, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
-use crate::ecs::common::Hidden;
 
 pub struct DynamicModel {
     mesh_buffers: Vec<ModelBuffers>,
@@ -230,7 +236,7 @@ impl DynamicModelComponent {
 
         Ok(d)
     }
-    
+
     pub fn mark_dirty(&mut self) {
         self.cbuffer_dirty = true;
     }
@@ -263,10 +269,29 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         "draw_dynamic_model_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (_, dynamic) in scene.query::<&DynamicModelComponent>().without::<&Hidden>().iter() {
+
+    let mut entities = Vec::new();
+    for (e, dynamic) in scene
+        .query::<&DynamicModelComponent>()
+        .without::<&Hidden>()
+        .iter()
+    {
         if !dynamic.model.subscribed_stages.is_subscribed(render_stage) {
             continue;
         }
+
+        entities.push((e, dynamic.model.feature_type));
+    }
+
+    entities.sort_by_key(|(_, feature_type)| match feature_type {
+        TfxFeatureRenderer::SkyTransparent => 0,
+        TfxFeatureRenderer::Water => 1,
+        TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
+        _ => 99,
+    });
+
+    for (e, _feature_type) in entities {
+        let dynamic = scene.get::<&DynamicModelComponent>(e).unwrap();
 
         // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
         renderer.data.lock().externs.rigid_model = Some(dynamic.ext.clone());

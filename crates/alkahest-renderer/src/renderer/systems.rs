@@ -18,7 +18,13 @@ impl Renderer {
         ) {
             draw_terrain_patches_system(self, scene);
         }
-        draw_static_instances_system(self, scene, stage);
-        draw_dynamic_model_system(self, scene, stage);
+
+        if stage == TfxRenderStage::Transparents {
+            draw_dynamic_model_system(self, scene, stage);
+            draw_static_instances_system(self, scene, stage);
+        } else {
+            draw_static_instances_system(self, scene, stage);
+            draw_dynamic_model_system(self, scene, stage);
+        }
     }
 }

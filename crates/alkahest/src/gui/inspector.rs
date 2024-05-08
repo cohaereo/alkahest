@@ -275,7 +275,7 @@ fn show_inspector_components(
 		};
 	}
 
-    component_views!(EntityWorldId, Ruler, Sphere, Beacon);
+    component_views!(EntityWorldId, Ruler, Sphere, Beacon, DynamicModelComponent);
 }
 
 fn inspector_component_frame(
@@ -491,6 +491,37 @@ impl ComponentPanel for Transform {
     }
 }
 
+impl ComponentPanel for DynamicModelComponent {
+    fn inspector_name() -> &'static str {
+        "Dynamic Model"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_CUBE_OUTLINE
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+        let mesh_count = self.model.mesh_count();
+        if mesh_count > 1 {
+            egui::ComboBox::from_label("Mesh").show_index(
+                ui,
+                &mut self.model.selected_mesh,
+                mesh_count,
+                |i| format!("Mesh {i}"),
+            );
+        }
+
+        ui.horizontal(|ui| {
+            egui::DragValue::new(&mut self.model.selected_variant).ui(ui);
+            ui.label("Material Variant");
+        });
+    }
+}
+
 impl ComponentPanel for EntityWorldId {
     fn inspector_name() -> &'static str {
         "World ID"
@@ -508,123 +539,6 @@ impl ComponentPanel for EntityWorldId {
         ui.label(format!("World ID: 0x{:016X}", self.0));
     }
 }
-
-// impl ComponentPanel for ResourcePoint {
-//     fn inspector_name() -> &'static str {
-//         "Map Resource"
-//     }
-//
-//     fn inspector_icon() -> char {
-//         ICON_MAP_MARKER
-//     }
-//
-//     fn has_inspector_ui() -> bool {
-//         true
-//     }
-//
-//     fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
-//         ui.horizontal(|ui| {
-//             ui.strong("Entity:");
-//             ui.label(self.entity.to_string());
-//         });
-//         ui.horizontal(|ui| {
-//             ui.strong("Origin:");
-//             ui.label(split_pascal_case(&self.origin.to_string()));
-//         });
-//         ui.horizontal(|ui| {
-//             ui.strong("Has havok data?:");
-//             ui.label(self.has_havok_data.yes_no());
-//         });
-//         ui.horizontal(|ui| {
-//             let c = self.resource.debug_color();
-//             let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
-//
-//             ui.strong("Type: ");
-//
-//             ui.label(
-//                 RichText::new(format!(
-//                     "{} {}",
-//                     self.resource.debug_icon(),
-//                     self.resource.debug_id()
-//                 ))
-//                 .color(color),
-//             );
-//         });
-//         ui.separator();
-//         ui.label(RichText::new(self.resource.debug_string()).italics());
-//     }
-// }
-//
-// impl ComponentPanel for EntityModel {
-//     fn inspector_name() -> &'static str {
-//         "Entity Model"
-//     }
-//
-//     fn inspector_icon() -> char {
-//         ICON_CUBE_OUTLINE
-//     }
-//
-//     fn has_inspector_ui() -> bool {
-//         true
-//     }
-//
-//     fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
-//         ui.horizontal(|ui| {
-//             ui.strong("Tag:");
-//             ui.label(format!("{}", self.2));
-//         });
-//     }
-// }
-//
-// impl ComponentPanel for StaticInstances {
-//     fn inspector_name() -> &'static str {
-//         "Static Instance Group"
-//     }
-//
-//     fn inspector_icon() -> char {
-//         ICON_CUBE_OUTLINE
-//     }
-//
-//     fn has_inspector_ui() -> bool {
-//         true
-//     }
-//
-//     fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
-//         ui.horizontal(|ui| {
-//             ui.strong("Mesh tag:");
-//             ui.label(self.1.to_string());
-//         });
-//         ui.horizontal(|ui| {
-//             ui.strong("Instance count:");
-//             ui.label(format!("{}", self.0.instance_count));
-//         });
-//     }
-// }
-
-// impl ComponentPanel for HavokShape {
-//     fn inspector_name() -> &'static str {
-//         "Havok Shape"
-//     }
-
-//     fn inspector_icon() -> char {
-//         ICON_HAZARD_LIGHTS
-//     }
-
-//     fn has_inspector_ui() -> bool {
-//         true
-//     }
-
-//     fn show_inspector_ui(&mut self, ui: &mut egui::Ui) {
-//         ui.horizontal(|ui| {
-//             ui.strong("Havok tag:");
-//             ui.label(self.0.to_string());
-//         });
-//         ui.horizontal(|ui| {
-//             ui.strong("Has debugshape:");
-//             ui.label(self.1.is_some().yes_no());
-//         });
-//     }
-// }
 
 impl ComponentPanel for Ruler {
     fn inspector_name() -> &'static str {
@@ -920,46 +834,3 @@ impl ComponentPanel for Beacon {
         }
     }
 }
-//
-// impl ComponentPanel for Light {
-//     fn inspector_name() -> &'static str {
-//         "Light"
-//     }
-//
-//     fn inspector_icon() -> char {
-//         ICON_LIGHTBULB
-//     }
-//
-//     fn has_inspector_ui() -> bool {
-//         true
-//     }
-//
-//     fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
-//         if !e.has::<Transform>() {
-//             ui.label(format!(
-//                 "{} This entity has no transform component",
-//                 ICON_ALERT
-//             ));
-//             return;
-//         }
-//
-//         let mut camera = resources.get_mut::<Camera>();
-//         let transform = e.get::<&Transform>().unwrap();
-//
-//         // if camera.driving == Some(e.entity()) {
-//         //     if ui
-//         //         .button(format!("{} Stop driving", ICON_OCTAGON))
-//         //         .clicked()
-//         //     {
-//         //         camera.driving = None;
-//         //     }
-//         // } else {
-//         //     if ui.button(format!("{} Drive", ICON_STEERING)).clicked() {
-//         //         camera.driving = Some(e.entity());
-//         //         camera.position = transform.translation;
-//         //         camera.orientation =
-//         //             camera.get_look_angle(transform.translation + transform.rotation * Vec3::X);
-//         //     }
-//         // }
-//     }
-// }
