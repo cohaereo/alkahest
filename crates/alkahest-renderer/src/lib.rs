@@ -11,4 +11,5 @@ pub mod renderer;
 pub mod shader;
 pub mod tfx;
 
+pub mod icons;
 pub mod util;

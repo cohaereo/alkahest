@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use hecs::Entity;
 use smallvec::SmallVec;
 
@@ -18,7 +20,39 @@ pub enum ResourceOrigin {
 
 pub struct ActivityGroup(pub u32);
 
+pub struct Icon(pub char);
+
+impl Display for Icon {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub struct Label(pub String);
+
+impl Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<&str> for Label {
+    fn from(s: &str) -> Self {
+        Self(s.to_string())
+    }
+}
+
+impl From<String> for Label {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl AsRef<str> for Label {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 pub struct Hidden;
 pub struct Global;

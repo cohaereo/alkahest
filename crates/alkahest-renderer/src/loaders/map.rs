@@ -26,7 +26,7 @@ use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
 
 use crate::{
     ecs::{
-        common::{ResourceOrigin, Water},
+        common::{Icon, Label, ResourceOrigin, Water},
         dynamic_geometry::{DynamicModel, DynamicModelComponent},
         hierarchy::{Children, Parent},
         light::LightRenderer,
@@ -38,6 +38,11 @@ use crate::{
         Scene,
     },
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
+    icons::{
+        ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
+        ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPOTLIGHT, ICON_SPOTLIGHT_BEAM, ICON_WAVES,
+        ICON_WEATHER_FOG, ICON_WEATHER_NIGHT, ICON_WEATHER_PARTLY_CLOUDY,
+    },
     loaders::AssetManager,
     renderer::{Renderer, RendererShared},
 };
@@ -328,13 +333,21 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             flags: TransformFlags::empty(),
                         };
 
-                        let entity = scene.spawn((transform, StaticInstance, Parent(parent)));
+                        let entity = scene.spawn((
+                            Icon(ICON_CUBE_OUTLINE),
+                            Label::from("Static Instance"),
+                            transform,
+                            StaticInstance,
+                            Parent(parent),
+                        ));
                         instances.push(entity);
                     }
 
                     scene.insert(
                         parent,
                         (
+                            Icon(ICON_SHAPE),
+                            Label::from("Static Instances"),
                             StaticInstances {
                                 cbuffer: ConstantBuffer::create_array_init(
                                     renderer.gpu.clone(),
@@ -358,6 +371,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let terrain_resource: Unk8080714b = TigerReadable::read_ds(table_data).unwrap();
 
                 scene.spawn((
+                    Icon(ICON_IMAGE_FILTER_HDR),
+                    Label::from("Terrain Patches"),
                     TerrainPatches::load(renderer, terrain_resource.terrain)
                         .context("Failed to load terrain patches")?,
                     TfxFeatureRenderer::TerrainPatch,
@@ -387,6 +402,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                     let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
                     scene.spawn((
+                        Icon(ICON_WEATHER_PARTLY_CLOUDY),
+                        Label::from("Sky Model"),
                         transform,
                         DynamicModelComponent::load(
                             renderer,
@@ -409,6 +426,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let d: Unk808068d4 = TigerReadable::read_ds(table_data)?;
 
                 scene.spawn((
+                    Icon(ICON_WAVES),
+                    Label::from("Water"),
                     transform,
                     DynamicModelComponent::load(
                         renderer,
@@ -438,6 +457,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .enumerate()
                 {
                     scene.spawn((
+                        Icon(ICON_LIGHTBULB_ON),
+                        Label::from("Light"),
                         Transform {
                             translation: Vec3::new(
                                 transform.translation.x,
@@ -474,6 +495,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
                 scene.spawn((
+                    Icon(ICON_SPOTLIGHT_BEAM),
+                    Label::from("Shadowing Light"),
                     transform,
                     LightRenderer::load_shadowing(
                         renderer.gpu.clone(),
@@ -494,6 +517,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let atmos: SMapAtmosphere = TigerReadable::read_ds(table_data)?;
                 scene.spawn((
+                    Icon(ICON_WEATHER_FOG),
+                    Label::from("Atmosphere Configuration"),
                     MapAtmosphere::load(&renderer.gpu, atmos)
                         .context("Failed to load map atmosphere")?,
                     resource_origin,
@@ -506,7 +531,13 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let tag: TagHash = table_data.read_le().unwrap();
                 let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
 
-                scene.spawn((transform, lens_flare, resource_origin));
+                scene.spawn((
+                    Icon(ICON_FLARE),
+                    Label::from("Lens Flare"),
+                    transform,
+                    lens_flare,
+                    resource_origin,
+                ));
             }
             0x80808cb5 => {
                 table_data
@@ -521,6 +552,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 for respawn_point in header.unk8.iter() {
                     scene.spawn((
+                        Icon(ICON_ACCOUNT_CONVERT),
+                        Label::from("Respawn point"),
                         Transform {
                             translation: respawn_point.translation.truncate(),
                             rotation: respawn_point.rotation,
@@ -562,6 +595,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                             scene.spawn((
+                                Icon(ICON_CUBE),
+                                if u != u32::MAX {
+                                    Label::from(format!("Unknown {u:08X}"))
+                                } else {
+                                    Label::from("Generic Entity")
+                                },
                                 transform,
                                 DynamicModelComponent::load(
                                     renderer,

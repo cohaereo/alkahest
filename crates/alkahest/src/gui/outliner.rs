@@ -1,7 +1,7 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Mutable},
+        common::{Hidden, Icon, Label, Mutable},
         hierarchy::Parent,
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
@@ -18,7 +18,7 @@ use crate::{
     gui::{
         chip::EcsTagsExt,
         context::{GuiCtx, GuiView, ViewResult},
-        icons::{ICON_DELETE, ICON_EYE_OFF},
+        icons::{ICON_DELETE, ICON_EYE_OFF, ICON_HELP_CIRCLE},
     },
     maplist::MapList,
     resources::Resources,
@@ -143,12 +143,22 @@ impl GuiView for OutlinerPanel {
                                         format!("{} ", ICON_EYE_OFF)
                                     };
 
+                                    let label = if let Some(label) = e.get::<&Label>() {
+                                        format!("{label} (id {})", ent.id())
+                                    } else {
+                                        format!("Entity {}", ent.id())
+                                    };
+                                    let icon = if let Some(icon) = e.get::<&Icon>() {
+                                        icon.0
+                                    } else {
+                                        ICON_HELP_CIRCLE
+                                    };
                                     let response = ui.selectable_label(
                                         Some(ent) == selected_entity.selected(),
                                         RichText::new(format!(
-                                            "{prefix_vis}{ent:?}{postfix}" // "{} {}{postfix}",
-                                                                           // resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
-                                                                           // resolve_entity_name(e, true)
+                                            "{prefix_vis}{icon} {label}{postfix}" // "{} {}{postfix}",
+                                                                                  // resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
+                                                                                  // resolve_entity_name(e, true)
                                         ))
                                         .color(
                                             if visible {

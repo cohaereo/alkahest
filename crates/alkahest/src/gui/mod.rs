@@ -5,7 +5,7 @@ mod configuration;
 pub mod context;
 mod fps_display;
 pub mod hotkeys;
-pub mod icons;
+pub use alkahest_renderer::icons;
 mod input;
 pub mod inspector;
 mod tfx;
