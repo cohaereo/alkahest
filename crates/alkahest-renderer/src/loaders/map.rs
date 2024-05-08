@@ -347,14 +347,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         parent,
                         (
                             Icon(ICON_SHAPE),
-                            Label::from("Static Instances"),
-                            StaticInstances {
-                                cbuffer: ConstantBuffer::create_array_init(
-                                    renderer.gpu.clone(),
-                                    &vec![0u8; 32 + 64 * instances.len()],
-                                )?,
-                                model,
-                            },
+                            Label::from(format!("Static Instances {mesh_tag}")),
+                            StaticInstances::new(renderer.gpu.clone(), model, instances.len())?,
                             Children::from_slice(&instances),
                             TfxFeatureRenderer::StaticObjects,
                             resource_origin,

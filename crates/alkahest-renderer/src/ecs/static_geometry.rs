@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{
     statics::{SStaticMesh, SStaticSpecialMesh},
     tfx::{TfxRenderStage, TfxShaderStage},
@@ -280,9 +282,24 @@ impl StaticModelSingle {
 pub struct StaticInstances {
     pub model: StaticModel,
     pub cbuffer: ConstantBuffer<u8>,
+    cbuffer_dirty: bool,
 }
 
 impl StaticInstances {
+    pub fn new(gpu: Arc<GpuContext>, model: StaticModel, instances: usize) -> anyhow::Result<Self> {
+        let cbuffer = ConstantBuffer::create_array_init(gpu, &vec![0u8; 32 + 64 * instances])?;
+
+        Ok(Self {
+            model,
+            cbuffer,
+            cbuffer_dirty: true,
+        })
+    }
+
+    pub fn mark_dirty(&mut self) {
+        self.cbuffer_dirty = true;
+    }
+
     pub fn update_cbuffer(&self, scene: &Scene, instances: &[Entity]) {
         profiling::scope!("StaticInstances::update_cbuffer");
         let mut transforms = Vec::with_capacity(instances.len());
@@ -347,9 +364,13 @@ pub fn draw_static_instances_system(
 
 pub fn update_static_instances_system(scene: &Scene) {
     profiling::scope!("update_static_instances_system");
-    for (_, (instances, children)) in scene.query::<(&StaticInstances, &Children)>().iter() {
-        instances.update_cbuffer(scene, &children);
+    for (_, (instances, children)) in scene.query::<(&mut StaticInstances, &Children)>().iter() {
+        if instances.cbuffer_dirty {
+            instances.update_cbuffer(scene, &children);
+            instances.cbuffer_dirty = false;
+        }
     }
+
     for (_, (transform, model)) in scene.query::<(&Transform, &StaticModelSingle)>().iter() {
         model.update_cbuffer(transform);
     }

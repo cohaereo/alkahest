@@ -198,6 +198,7 @@ pub struct DynamicModelComponent {
     pub model: DynamicModel,
     pub ext: externs::RigidModel,
     pub cbuffer: ConstantBuffer<externs::RigidModel>,
+    cbuffer_dirty: bool,
 }
 
 impl DynamicModelComponent {
@@ -221,11 +222,16 @@ impl DynamicModelComponent {
             model,
             ext: Default::default(),
             cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
+            cbuffer_dirty: true,
         };
         d.ext = d.create_extern(transform);
         d.cbuffer = ConstantBuffer::create(renderer.gpu.clone(), Some(&d.ext))?;
 
         Ok(d)
+    }
+    
+    pub fn mark_dirty(&mut self) {
+        self.cbuffer_dirty = true;
     }
 
     fn create_extern(&self, transform: &Transform) -> externs::RigidModel {
@@ -277,6 +283,9 @@ pub fn update_dynamic_model_system(scene: &Scene) {
         .query::<(&Transform, &mut DynamicModelComponent)>()
         .iter()
     {
-        model.update_cbuffer(transform);
+        if model.cbuffer_dirty {
+            model.update_cbuffer(transform);
+            model.cbuffer_dirty = false;
+        }
     }
 }

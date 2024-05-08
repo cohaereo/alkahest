@@ -4,6 +4,7 @@ use hecs::Entity;
 use smallvec::SmallVec;
 
 pub struct Parent(pub Entity);
+#[derive(Clone)]
 pub struct Children(pub SmallVec<[Entity; 8]>);
 
 impl Children {

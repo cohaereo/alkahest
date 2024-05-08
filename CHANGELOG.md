@@ -62,6 +62,7 @@ received some polish!
 - Hide the cursor when moving the camera
 - Smooth camera acceleration
 - Specular matcap (makes shiny objects look shiny in unshaded mode)
+- Static instances can now be moved, rotated and scaled individually
 
 ### Changed
 

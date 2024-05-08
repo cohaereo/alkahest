@@ -324,8 +324,8 @@ mod style {
                         bg_fill: Color32::from_rgba_premultiplied(60, 60, 60, 128),
                         weak_bg_fill: Color32::from_rgba_premultiplied(38, 38, 38, 128),
                         bg_stroke: Stroke {
-                            width: 0.25,
-                            color: Color32::from_rgba_premultiplied(255, 255, 255, 255),
+                            width: 0.20,
+                            color: Color32::from_rgb(255, 255, 255),
                         },
                         rounding: Rounding {
                             nw: 6.0,

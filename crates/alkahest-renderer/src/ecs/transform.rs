@@ -55,11 +55,11 @@ impl Default for Transform {
 bitflags! {
     #[derive(Default, Debug, Copy, Clone, PartialEq)]
     pub struct TransformFlags: u32 {
-        const IGNORE_TRANSLATION = (1 << 0);
-        const IGNORE_ROTATION = (1 << 1);
-        const IGNORE_SCALE = (1 << 2);
+        const IGNORE_TRANSLATION = 1 << 0;
+        const IGNORE_ROTATION = 1 << 1;
+        const IGNORE_SCALE = 1 << 2;
 
-        const SCALE_IS_RADIUS = (1 << 3);
+        const SCALE_IS_RADIUS = 1 << 3;
     }
 }
 

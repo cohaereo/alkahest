@@ -1,8 +1,11 @@
 use alkahest_renderer::{
     camera::{tween::Tween, Camera},
     ecs::{
-        common::{EntityWorldId, Global, Hidden, Label, Mutable},
+        common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
+        dynamic_geometry::DynamicModelComponent,
+        hierarchy::Parent,
         resources::SelectedEntity,
+        static_geometry::{StaticInstance, StaticInstances},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Ruler, Sphere},
@@ -97,9 +100,9 @@ pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
 		};
 	}
 
-    // if let Some(rp) = e.get::<&ResourcePoint>() {
-    //     return Some(rp.resource.debug_icon());
-    // }
+    if let Some(rp) = e.get::<&Icon>() {
+        return Some(rp.0);
+    }
 
     icon_from_component_panels!(Beacon, Ruler, Sphere);
 
@@ -221,7 +224,7 @@ pub fn show_inspector_panel(
         };
         ui.separator();
     }
-    show_inspector_components(ui, e, resources);
+    show_inspector_components(ui, scene, e, resources);
 
     if global_changed {
         if global {
@@ -232,10 +235,15 @@ pub fn show_inspector_panel(
     }
 }
 
-fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Resources) {
+fn show_inspector_components(
+    ui: &mut egui::Ui,
+    scene: &Scene,
+    e: EntityRef<'_>,
+    resources: &Resources,
+) {
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(e, ui, resources);
+            t.show_inspector_ui(scene, e, ui, resources);
             if let Some(ot) = e.get::<&OriginalTransform>() {
                 // Has the entity moved from it's original position?
                 let has_moved = *t != ot.0;
@@ -260,7 +268,7 @@ fn show_inspector_components(ui: &mut egui::Ui, e: EntityRef<'_>, resources: &Re
 			$(
 				if let Some(mut component) = e.get::<&mut $component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(e, ui, resources);
+						component.show_inspector_ui(scene, e, ui, resources);
 					});
 				}
 			)*
@@ -277,6 +285,7 @@ fn inspector_component_frame(
     add_body: impl FnOnce(&mut egui::Ui),
 ) {
     egui::CollapsingHeader::new(RichText::new(format!("{icon} {title}")).strong())
+        .default_open(true)
         .show(ui, add_body);
 
     ui.separator();
@@ -331,7 +340,14 @@ pub(super) trait ComponentPanel {
         false
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, _: &mut egui::Ui, _: &Resources) {}
+    fn show_inspector_ui<'s>(
+        &mut self,
+        _: &'s Scene,
+        _: EntityRef<'s>,
+        _: &mut egui::Ui,
+        _: &Resources,
+    ) {
+    }
 }
 
 impl ComponentPanel for Transform {
@@ -347,12 +363,19 @@ impl ComponentPanel for Transform {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        scene: &Scene,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+    ) {
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
         rotation_euler.y = rotation_euler.y.to_degrees();
         rotation_euler.z = rotation_euler.z.to_degrees();
 
+        let mut transform_changed = false;
         let mut rotation_changed = false;
         egui::Grid::new("transform_input_grid")
             .num_columns(2)
@@ -360,45 +383,46 @@ impl ComponentPanel for Transform {
             .striped(true)
             .show(ui, |ui| {
                 if !self.flags.contains(TransformFlags::IGNORE_TRANSLATION) {
-                    input_float3!(
+                    transform_changed |= input_float3!(
                         ui,
                         format!("{ICON_AXIS_ARROW} Translation"),
                         &mut self.translation
-                    );
+                    )
+                    .inner;
 
                     ui.horizontal(|ui| {
-                        if let camera = resources.get::<Camera>() {
-                            if ui
-                                .button(ICON_CAMERA_CONTROL.to_string())
-                                .on_hover_text("Set position to camera")
-                                .clicked()
-                            {
-                                self.translation = camera.position_target();
-                            }
-
-                            // TODO(cohae): Re-enable this when the renderer is back
-                            // if let Some(renderer) = resources.get::<RendererShared>() {
-                            //     let (d, pos) = renderer
-                            //         .read()
-                            //         .gbuffer
-                            //         .depth_buffer_distance_pos_center(&camera);
-                            //     if ui
-                            //         .add_enabled(
-                            //             d.is_finite(),
-                            //             Button::new(if d.is_finite() {
-                            //                 ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
-                            //             } else {
-                            //                 ICON_EYE_OFF_OUTLINE.to_string()
-                            //             }),
-                            //         )
-                            //         .on_hover_text("Set position to gaze")
-                            //         .clicked()
-                            //     {
-                            //         self.translation = pos;
-                            //     }
-                            //     ui.label(prettify_distance(d));
-                            // }
+                        let camera = resources.get::<Camera>();
+                        if ui
+                            .button(ICON_CAMERA_CONTROL.to_string())
+                            .on_hover_text("Set position to camera")
+                            .clicked()
+                        {
+                            self.translation = camera.position_target();
+                            transform_changed |= true;
                         }
+
+                        // TODO(cohae): Re-enable this when the renderer is back
+                        // if let Some(renderer) = resources.get::<RendererShared>() {
+                        //     let (d, pos) = renderer
+                        //         .read()
+                        //         .gbuffer
+                        //         .depth_buffer_distance_pos_center(&camera);
+                        //     if ui
+                        //         .add_enabled(
+                        //             d.is_finite(),
+                        //             Button::new(if d.is_finite() {
+                        //                 ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                        //             } else {
+                        //                 ICON_EYE_OFF_OUTLINE.to_string()
+                        //             }),
+                        //         )
+                        //         .on_hover_text("Set position to gaze")
+                        //         .clicked()
+                        //     {
+                        //         self.translation = pos;
+                        //     }
+                        //     ui.label(prettify_distance(d));
+                        // }
                     });
                     ui.end_row();
                 }
@@ -409,32 +433,35 @@ impl ComponentPanel for Transform {
                         &mut rotation_euler
                     )
                     .inner;
+                    transform_changed |= rotation_changed;
                     ui.end_row();
                 }
                 if !self.flags.contains(TransformFlags::IGNORE_SCALE) {
                     if self.flags.contains(TransformFlags::SCALE_IS_RADIUS) {
                         ui.label(format!("{ICON_RADIUS_OUTLINE} Radius"));
-                        ui.add(
-                            egui::DragValue::new(&mut self.scale.x)
-                                .speed(0.1)
-                                .clamp_range(0f32..=f32::INFINITY)
-                                .min_decimals(2)
-                                .max_decimals(2),
-                        );
+                        transform_changed |= egui::DragValue::new(&mut self.scale.x)
+                            .speed(0.1)
+                            .clamp_range(0f32..=f32::INFINITY)
+                            .min_decimals(2)
+                            .max_decimals(2)
+                            .ui(ui)
+                            .changed();
 
-                        if let camera = resources.get::<Camera>() {
-                            if ui
-                                .button(ICON_RADIUS_OUTLINE.to_string())
-                                .on_hover_text("Set radius to camera")
-                                .clicked()
-                            {
-                                self.scale = Vec3::splat(
-                                    (self.translation - camera.position()).length().max(0.1),
-                                );
-                            }
+                        let camera = resources.get::<Camera>();
+                        if ui
+                            .button(ICON_RADIUS_OUTLINE.to_string())
+                            .on_hover_text("Set radius to camera")
+                            .clicked()
+                        {
+                            self.scale = Vec3::splat(
+                                (self.translation - camera.position()).length().max(0.1),
+                            );
+                            transform_changed |= true;
                         }
                     } else {
-                        input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale);
+                        transform_changed |=
+                            input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale)
+                                .inner;
                     }
                     ui.end_row();
                 }
@@ -447,6 +474,19 @@ impl ComponentPanel for Transform {
                 rotation_euler.y.to_radians(),
                 rotation_euler.z.to_radians(),
             );
+        }
+
+        if transform_changed {
+            if let Some((_static_instances, parent)) = e.query::<(&StaticInstance, &Parent)>().get()
+            {
+                if let Ok(mut static_instances) = scene.get::<&mut StaticInstances>(parent.0) {
+                    static_instances.mark_dirty();
+                }
+            }
+
+            if let Some(mut dynamic) = e.get::<&mut DynamicModelComponent>() {
+                dynamic.mark_dirty();
+            }
         }
     }
 }
@@ -464,7 +504,7 @@ impl ComponentPanel for EntityWorldId {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
         ui.label(format!("World ID: 0x{:016X}", self.0));
     }
 }
@@ -599,7 +639,13 @@ impl ComponentPanel for Ruler {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &Scene,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+    ) {
         let camera = resources.get::<Camera>();
         egui::Grid::new("transform_input_grid")
             .num_columns(2)
@@ -732,7 +778,13 @@ impl ComponentPanel for Sphere {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, _resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &Scene,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _resources: &Resources,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
@@ -773,7 +825,13 @@ impl ComponentPanel for Beacon {
         true
     }
 
-    fn show_inspector_ui(&mut self, e: EntityRef<'_>, ui: &mut egui::Ui, resources: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &Scene,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+    ) {
         if !e.has::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",

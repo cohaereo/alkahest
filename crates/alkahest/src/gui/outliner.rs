@@ -2,13 +2,15 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Hidden, Icon, Label, Mutable},
-        hierarchy::Parent,
+        hierarchy::{Children, Parent},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::Transform,
+        Scene,
     },
 };
-use egui::{Color32, RichText};
+use egui::{collapsing_header::CollapsingState, Color32, RichText};
+use hecs::{Entity, EntityRef};
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use strum::IntoEnumIterator;
@@ -20,7 +22,7 @@ use crate::{
         context::{GuiCtx, GuiView, ViewResult},
         icons::{ICON_DELETE, ICON_EYE_OFF, ICON_HELP_CIRCLE},
     },
-    maplist::MapList,
+    maplist::{Map, MapList},
     resources::Resources,
     util::text::{alk_color_to_egui, prettify_distance},
 };
@@ -91,8 +93,8 @@ impl GuiView for OutlinerPanel {
                 entities.sort_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
             }
 
-            let mut selected_entity = resources.get_mut::<SelectedEntity>();
-            let mut delete_entity = None;
+            // let mut selected_entity = resources.get_mut::<SelectedEntity>();
+            // let mut delete_entity = None;
 
             egui::Window::new("Outliner").show(ctx, |ui| {
                 ui.horizontal(|ui| {
@@ -122,84 +124,126 @@ impl GuiView for OutlinerPanel {
 
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
-                    .show_rows(
+                    .show(
                         ui,
-                        ui.spacing().interact_size.y,
-                        entities.len(),
-                        |ui, range| {
-                            for &(ent, distance) in &entities[range] {
-                                let e = scene.entity(ent).unwrap();
-                                ui.horizontal(|ui| {
-                                    let postfix = if self.sort_by_distance {
-                                        format!(" ({})", prettify_distance(distance))
-                                    } else {
-                                        "".to_string()
-                                    };
-
-                                    let visible = !e.has::<Hidden>();
-                                    let prefix_vis = if visible {
-                                        "".to_string()
-                                    } else {
-                                        format!("{} ", ICON_EYE_OFF)
-                                    };
-
-                                    let label = if let Some(label) = e.get::<&Label>() {
-                                        format!("{label} (id {})", ent.id())
-                                    } else {
-                                        format!("Entity {}", ent.id())
-                                    };
-                                    let icon = if let Some(icon) = e.get::<&Icon>() {
-                                        icon.0
-                                    } else {
-                                        ICON_HELP_CIRCLE
-                                    };
-                                    let response = ui.selectable_label(
-                                        Some(ent) == selected_entity.selected(),
-                                        RichText::new(format!(
-                                            "{prefix_vis}{icon} {label}{postfix}" // "{} {}{postfix}",
-                                                                                  // resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
-                                                                                  // resolve_entity_name(e, true)
-                                        ))
-                                        .color(
-                                            if visible {
-                                                Color32::WHITE
-                                            } else {
-                                                Color32::GRAY
-                                            },
-                                        ),
-                                    );
-
-                                    response.context_menu(|ui| {
-                                        ui.add_enabled_ui(e.has::<Mutable>(), |ui| {
-                                            // Delete button
-                                            if ui
-                                                .button(format!("{} Delete", ICON_DELETE))
-                                                .clicked()
-                                            {
-                                                selected_entity.deselect();
-                                                delete_entity = Some(ent);
-                                            }
-                                        });
-                                    });
-
-                                    if response.clicked() {
-                                        selected_entity.select(ent);
-                                    }
-
-                                    if let Some(tags) = e.get::<&Tags>() {
-                                        tags.ui_chips(ui);
-                                    }
-                                });
+                        // ui.spacing().interact_size.y,
+                        // entities.len(),
+                        |ui| {
+                            for &(ent, _distance) in &entities {
+                                self.entity_entry(ui, ent, map, resources);
                             }
                         },
                     );
             });
-
-            if let Some(delete) = delete_entity {
-                scene.despawn(delete).ok();
-            }
         }
 
         None
+    }
+}
+
+impl OutlinerPanel {
+    fn entity_entry(
+        &mut self,
+        ui: &mut egui::Ui,
+        ent: Entity,
+        map: &mut Map,
+        resources: &Resources,
+    ) {
+        let e = map.scene.entity(ent).unwrap();
+
+        let children = e.get::<&Children>().as_deref().cloned();
+
+        if let Some(children) = children {
+            CollapsingState::load_with_default_open(
+                ui.ctx(),
+                egui::Id::new(format!("outliner_entity_{ent:?}",)),
+                false,
+            )
+            .show_header(ui, |ui| {
+                self.draw_entity_entry(ui, resources, e, &mut map.command_buffer)
+            })
+            .body_unindented(|ui| {
+                ui.style_mut().spacing.indent = 16.0 * 2.;
+                ui.indent("outliner_entity_indent", |ui| {
+                    for child in children.iter() {
+                        self.entity_entry(ui, *child, map, resources);
+                    }
+                });
+            });
+        } else {
+            self.draw_entity_entry(ui, resources, e, &mut map.command_buffer);
+        }
+    }
+
+    fn draw_entity_entry(
+        &self,
+        ui: &mut egui::Ui,
+        resources: &Resources,
+        e: EntityRef<'_>,
+        cmd: &mut hecs::CommandBuffer,
+    ) {
+        let distance = if let Some(transform) = e.get::<&Transform>() {
+            (transform.translation - resources.get::<Camera>().position()).length()
+        } else {
+            f32::INFINITY
+        };
+
+        let postfix = if self.sort_by_distance {
+            format!(" ({})", prettify_distance(distance))
+        } else {
+            "".to_string()
+        };
+
+        let visible = !e.has::<Hidden>();
+        let prefix_vis = if visible {
+            "".to_string()
+        } else {
+            format!("{} ", ICON_EYE_OFF)
+        };
+
+        let label = if let Some(label) = e.get::<&Label>() {
+            format!("{label} (id {})", e.entity().id())
+        } else {
+            format!("Entity {}", e.entity().id())
+        };
+        let icon = if let Some(icon) = e.get::<&Icon>() {
+            icon.0
+        } else {
+            ICON_HELP_CIRCLE
+        };
+
+        ui.horizontal(|ui| {
+            let response = ui.selectable_label(
+                Some(e.entity()) == resources.get::<SelectedEntity>().selected(),
+                RichText::new(format!(
+                    "{prefix_vis}{icon} {label}{postfix}" // "{} {}{postfix}",
+                                                          // resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
+                                                          // resolve_entity_name(e, true)
+                ))
+                .color(if visible {
+                    Color32::WHITE
+                } else {
+                    Color32::GRAY
+                }),
+            );
+
+            response.context_menu(|ui| {
+                ui.add_enabled_ui(e.has::<Mutable>(), |ui| {
+                    // Delete button
+                    if ui.button(format!("{} Delete", ICON_DELETE)).clicked() {
+                        resources.get_mut::<SelectedEntity>().deselect();
+                        cmd.despawn(e.entity());
+                    }
+                });
+            });
+
+            if response.clicked() {
+                resources.get_mut::<SelectedEntity>().select(e.entity());
+            }
+
+            if let Some(tags) = e.get::<&Tags>() {
+                tags.ui_chips(ui);
+            }
+        });
     }
 }

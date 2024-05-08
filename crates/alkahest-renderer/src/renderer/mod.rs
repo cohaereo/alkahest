@@ -20,7 +20,10 @@ use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::Scene,
+    ecs::{
+        dynamic_geometry::update_dynamic_model_system,
+        static_geometry::update_static_instances_system, Scene,
+    },
     gpu::SharedGpuContext,
     gpu_event,
     handle::Handle,
@@ -107,6 +110,9 @@ impl Renderer {
             .view
             .bind(self)
             .expect("Failed to bind view scope");
+
+        update_dynamic_model_system(scene);
+        update_static_instances_system(scene);
 
         self.draw_atmosphere(scene);
         self.draw_opaque_pass(scene);

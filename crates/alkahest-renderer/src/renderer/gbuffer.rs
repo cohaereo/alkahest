@@ -184,6 +184,11 @@ impl GBuffer {
             .context("Staging_Clone")?;
         self.depth.resize(new_size).context("Depth")?;
         self.depth_staging.resize(new_size).context("Depth")?;
+        
+        self.atmos_ss_near_lookup.resize(new_size)?;
+        self.atmos_ss_far_lookup.resize(new_size)?;
+        self.ssao_intermediate.resize(new_size)?;
+        
         self.current_size = new_size;
         Ok(())
     }
