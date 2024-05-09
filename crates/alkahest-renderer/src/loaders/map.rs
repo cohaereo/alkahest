@@ -504,7 +504,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 scene.spawn((
                     Icon(ICON_SPOTLIGHT_BEAM),
-                    Label::from("Shadowing Light"),
+                    Label::from(format!("Shadowing Light {tag}")),
                     transform,
                     LightRenderer::load_shadowing(
                         renderer.gpu.clone(),

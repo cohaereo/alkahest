@@ -242,7 +242,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        let transform_mat = transform.local_to_world() * light.unk60;
+        let transform_mat = transform.local_to_world();
+        let transform_mat_scaled = transform.local_to_world() * light.unk60;
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -251,7 +252,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             };
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: view.world_to_projective * transform_mat,
+                transform: view.world_to_projective * transform_mat_scaled,
             });
 
             externs.deferred_light = Some(externs::DeferredLight {
@@ -280,7 +281,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        let transform_mat = transform.local_to_world() * light.unk60;
+        let transform_mat = transform.local_to_world();
+        let transform_mat_scaled = transform.local_to_world() * light.unk60;
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -289,7 +291,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             };
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: view.world_to_projective * transform_mat,
+                transform: view.world_to_projective * transform_mat_scaled,
             });
 
             externs.deferred_light = Some(externs::DeferredLight {
