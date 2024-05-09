@@ -1,9 +1,11 @@
+use alkahest_data::map::{SLight, SShadowingLight};
 use alkahest_renderer::{
     camera::{tween::Tween, Camera},
     ecs::{
         common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
         dynamic_geometry::DynamicModelComponent,
         hierarchy::Parent,
+        light::LightRenderer,
         resources::SelectedEntity,
         static_geometry::{StaticInstance, StaticInstances},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -11,8 +13,11 @@ use alkahest_renderer::{
         utility::{Beacon, Ruler, Sphere},
         Scene,
     },
+    icons::ICON_LIGHTBULB_ON,
+    renderer::RendererShared,
+    util::color::Color,
 };
-use egui::{Align2, Button, Color32, FontId, RichText, Widget};
+use egui::{Align2, Button, Color32, FontId, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 use winit::window::Window;
@@ -41,9 +46,9 @@ impl GuiView for InspectorPanel {
     fn draw(
         &mut self,
         ctx: &egui::Context,
-        window: &Window,
+        _window: &Window,
         resources: &Resources,
-        gui: &GuiCtx<'_>,
+        _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let mut maps = resources.get_mut::<MapList>();
 
@@ -275,7 +280,14 @@ fn show_inspector_components(
 		};
 	}
 
-    component_views!(EntityWorldId, Ruler, Sphere, Beacon, DynamicModelComponent);
+    component_views!(
+        EntityWorldId,
+        Ruler,
+        Sphere,
+        Beacon,
+        DynamicModelComponent,
+        LightRenderer
+    );
 }
 
 fn inspector_component_frame(
@@ -831,6 +843,62 @@ impl ComponentPanel for Beacon {
             //     }
             //     ui.label("Look at Beacon Location");
             // });
+        }
+    }
+}
+
+impl ComponentPanel for LightRenderer {
+    fn inspector_name() -> &'static str {
+        "Light Renderer"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_LIGHTBULB_ON
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui<'s>(
+        &mut self,
+        _: &'s Scene,
+        e: EntityRef<'s>,
+        ui: &mut Ui,
+        resources: &Resources,
+    ) {
+        let renderer = resources.get::<RendererShared>();
+        if !e.has::<SLight>() && !e.has::<SShadowingLight>() {
+            ui.label(
+                RichText::new("⚠ This light renderer is missing a (shadowing)light component")
+                    .strong()
+                    .color(Color32::RED),
+            );
+            return;
+        }
+
+        let is_shadowing = e.has::<SShadowingLight>();
+        ui.horizontal(|ui| {
+            ui.strong("Type:");
+            ui.label(if is_shadowing {
+                "Shadowing"
+            } else {
+                "Non-shadowing"
+            });
+        });
+
+        if let Some(transform) = e.get::<&Transform>() {
+            renderer.immediate.cube_outline(
+                transform.local_to_world() * self.projection_matrix,
+                Color::YELLOW,
+            )
+        } else {
+            ui.label(
+                RichText::new("⚠ This light renderer is missing a transform component")
+                    .strong()
+                    .color(Color32::RED),
+            );
+            return;
         }
     }
 }

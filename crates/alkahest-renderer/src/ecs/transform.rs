@@ -16,6 +16,42 @@ pub struct Transform {
 }
 
 impl Transform {
+    pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
+        Self {
+            translation,
+            rotation,
+            scale,
+            flags: TransformFlags::default(),
+        }
+    }
+    
+    pub fn from_translation(translation: Vec3) -> Self {
+        Self {
+            translation,
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+            flags: TransformFlags::default(),
+        }
+    }
+    
+    pub fn from_rotation(rotation: Quat) -> Self {
+        Self {
+            translation: Vec3::ZERO,
+            rotation,
+            scale: Vec3::ONE,
+            flags: TransformFlags::default(),
+        }
+    }
+    
+    pub fn from_scale(scale: Vec3) -> Self {
+        Self {
+            translation: Vec3::ZERO,
+            rotation: Quat::IDENTITY,
+            scale,
+            flags: TransformFlags::default(),
+        }
+    }
+    
     pub fn from_mat4(mat: Mat4) -> Transform {
         let (scale, rotation, translation) = mat.to_scale_rotation_translation();
 
@@ -27,7 +63,7 @@ impl Transform {
         }
     }
 
-    pub fn to_mat4(self) -> Mat4 {
+    pub fn local_to_world(self) -> Mat4 {
         Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
     }
 
@@ -38,6 +74,12 @@ impl Transform {
         } else {
             f32::NAN
         }
+    }
+}
+
+impl Into<Mat4> for Transform {
+    fn into(self) -> Mat4 {
+        self.local_to_world()
     }
 }
 

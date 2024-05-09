@@ -33,6 +33,8 @@ use crate::{
 };
 
 pub struct LightRenderer {
+    pub projection_matrix: Mat4,
+
     depth_state: ID3D11DepthStencilState,
     vb_cube: ID3D11Buffer,
     ib_cube: ID3D11Buffer,
@@ -134,6 +136,7 @@ impl LightRenderer {
         };
 
         Ok(Self {
+            projection_matrix: Mat4::IDENTITY,
             depth_state: depth_state.unwrap(),
             vb_cube: vb_cube.unwrap(),
             ib_cube: ib_cube.unwrap(),
@@ -156,6 +159,7 @@ impl LightRenderer {
         debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
+            projection_matrix: light.unk60,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
             technique_compute_lightprobe: asset_manager
@@ -172,6 +176,7 @@ impl LightRenderer {
         debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
+            projection_matrix: light.unk60,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             technique_shading_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_shading_shadowing),
@@ -237,13 +242,15 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        let light_scale = if let Some(bb) = bounds {
-            Mat4::from_scale(-(bb.extents() * 3.0))
-        } else {
+        let light_scale =
+        //     if let Some(bb) = bounds {
+        //     Mat4::from_scale(-(bb.extents() * 3.0))
+        // } else {
             light.unk60
-        };
+        // };
+        ;
 
-        let transform_mat = transform.to_mat4();
+        let transform_mat = transform.local_to_world();
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -281,9 +288,10 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        let light_scale = Mat4::from_scale(Vec3::splat(-(3000.0 * 4.0)));
+        // let light_scale = Mat4::from_scale(Vec3::splat(-(3000.0 * 4.0)));
+        let light_scale = light.unk60;
 
-        let transform_mat = transform.to_mat4();
+        let transform_mat = transform.local_to_world();
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {

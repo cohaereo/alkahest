@@ -8,6 +8,7 @@ use glam::{Mat4, Vec3, Vec4};
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
+    ecs::transform::Transform,
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
@@ -183,20 +184,8 @@ impl ImmediateRenderer {
         let color = color.into();
         self.shader_simple.bind(&self.gpu);
 
-        unsafe {
-            self.gpu.context().IASetVertexBuffers(
-                0,
-                1,
-                Some(&Some(self.vb_sphere.buffer.clone())),
-                Some(&self.vb_sphere.stride),
-                Some(&0),
-            );
-            self.gpu.context().IASetIndexBuffer(
-                &self.ib_sphere.buffer,
-                DXGI_FORMAT(self.ib_sphere.format as i32),
-                0,
-            );
-        }
+        self.vb_sphere.bind_single(&self.gpu);
+        self.ib_sphere.bind(&self.gpu);
 
         self.cb_debug_shape
             .write(&ScopeAlkDebugShape {
@@ -222,4 +211,117 @@ impl ImmediateRenderer {
                 .DrawIndexed(self.ib_sphere.length as u32, 0, 0);
         }
     }
+
+    pub fn cube<C: Into<Color>>(&self, transform: impl Into<Mat4>, color: C) {
+        gpu_event!(self.gpu, "imm_cube");
+        let color = color.into();
+        self.shader_simple.bind(&self.gpu);
+
+        self.vb_cube.bind_single(&self.gpu);
+        self.ib_cube.bind(&self.gpu);
+
+        self.cb_debug_shape
+            .write(&ScopeAlkDebugShape {
+                local_to_world: transform.into(),
+                color: color.0,
+            })
+            .unwrap();
+
+        self.cb_debug_shape.bind(0, TfxShaderStage::Vertex);
+        self.cb_debug_shape.bind(0, TfxShaderStage::Pixel);
+
+        self.gpu.set_input_layout(0);
+        self.gpu.set_input_topology(EPrimitiveType::Triangles);
+        if color.is_opaque() {
+            self.gpu.set_blend_state(0);
+        } else {
+            self.gpu.set_blend_state(8);
+        }
+
+        unsafe {
+            self.gpu
+                .context()
+                .DrawIndexed(self.ib_cube.length as u32, 0, 0);
+        }
+    }
+
+    pub fn cube_outline<C: Into<Color>>(&self, transform: impl Into<Mat4>, color: C) {
+        gpu_event!(self.gpu, "imm_cube_outline");
+        let color = color.into();
+        self.shader_simple.bind(&self.gpu);
+
+        self.vb_cube.bind_single(&self.gpu);
+        self.ib_cube_outline.bind(&self.gpu);
+
+        self.cb_debug_shape
+            .write(&ScopeAlkDebugShape {
+                local_to_world: transform.into(),
+                color: color.0,
+            })
+            .unwrap();
+
+        self.cb_debug_shape.bind(0, TfxShaderStage::Vertex);
+        self.cb_debug_shape.bind(0, TfxShaderStage::Pixel);
+
+        self.gpu.set_input_layout(0);
+        self.gpu.set_input_topology(EPrimitiveType::LineList);
+        if color.is_opaque() {
+            self.gpu.set_blend_state(0);
+        } else {
+            self.gpu.set_blend_state(8);
+        }
+
+        unsafe {
+            self.gpu
+                .context()
+                .DrawIndexed(self.ib_cube_outline.length as u32, 0, 0);
+        }
+    }
 }
+
+// #[derive(Clone)]
+// pub enum ShapeFillMode {
+//     Solid,
+//     Wireframe,
+//     SolidWireframe,
+// }
+//
+// #[derive(Clone)]
+// pub enum DebugShape {
+//     Cube {
+//         transform: Transform,
+//         fill_mode: ShapeFillMode,
+//     },
+//     Sphere {
+//         center: Vec3,
+//         radius: f32,
+//     },
+//     Line {
+//         start: Vec3,
+//         end: Vec3,
+//     },
+//     Circle {
+//         center: Vec3,
+//         axis: Vec3,
+//         edges: u8,
+//     },
+//     Custom {
+//         transform: Transform,
+//         shape: CustomDebugShape,
+//         sides: bool,
+//     },
+// }
+//
+// bitflags! {
+//     #[derive(Default, Debug, Copy, Clone, PartialEq)]
+//     pub struct DebugDrawFlags: u32 {
+//         const DRAW_NORMAL = (1 << 0);
+//         const DRAW_PICK = (1 << 1);
+//     }
+// }
+//
+// #[derive(Default)]
+// pub struct DebugShapes {
+//     shapes: Vec<(DebugShape, Color, DebugDrawFlags, Option<Entity>)>,
+//     labels: Vec<(String, Vec3, egui::Align2, Color)>,
+// }

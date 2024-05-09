@@ -13,7 +13,10 @@ use std::{
     time::Instant,
 };
 
-use alkahest_data::tfx::TfxShaderStage;
+use alkahest_data::{
+    map::{SLight, SShadowingLight},
+    tfx::TfxShaderStage,
+};
 use crossbeam::epoch::Atomic;
 use glam::Vec3;
 use parking_lot::{Mutex, RwLock};
@@ -22,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ecs::{
         dynamic_geometry::update_dynamic_model_system,
-        static_geometry::update_static_instances_system, Scene,
+        static_geometry::update_static_instances_system, transform::Transform, Scene,
     },
     gpu::SharedGpuContext,
     gpu_event,

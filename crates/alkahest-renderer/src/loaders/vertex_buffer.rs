@@ -80,6 +80,18 @@ impl VertexBuffer {
             srv,
         })
     }
+
+    pub fn bind_single(&self, gpu: &GpuContext) {
+        unsafe {
+            gpu.context().IASetVertexBuffers(
+                0,
+                1,
+                Some(&Some(self.buffer.clone())),
+                Some(&self.stride),
+                Some(&0),
+            );
+        }
+    }
 }
 
 pub(crate) fn load_vertex_buffer(gctx: &GpuContext, hash: TagHash) -> anyhow::Result<VertexBuffer> {

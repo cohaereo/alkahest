@@ -241,8 +241,10 @@ impl GpuContext {
     }
 
     /// The device context may only be accessed from the thread that the DCS was created on
-    /// Panics if the current thread is not the main thread
+    /// Panics in debug mode if the current thread is not the main thread
+    #[inline(always)]
     pub fn context(&self) -> &ID3D11DeviceContext {
+        #[cfg(debug_assertions)]
         assert_eq!(
             std::thread::current().id(),
             self.main_thread_id,

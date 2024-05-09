@@ -243,7 +243,7 @@ impl DynamicModelComponent {
 
     fn create_extern(&self, transform: &Transform) -> externs::RigidModel {
         externs::RigidModel {
-            mesh_to_world: transform.to_mat4(),
+            mesh_to_world: transform.local_to_world(),
             position_scale: self.model.model.model_scale,
             position_offset: self.model.model.model_offset,
             texcoord0_scale_offset: Vec4::new(

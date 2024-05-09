@@ -250,7 +250,7 @@ impl StaticModelSingle {
 
     pub fn update_cbuffer(&self, transform: &Transform) {
         profiling::scope!("StaticInstances::update_cbuffer");
-        let mat = transform.to_mat4().transpose();
+        let mat = transform.local_to_world().transpose();
         let mat = Mat4::from_cols(
             mat.x_axis.truncate().extend(transform.translation.x),
             mat.y_axis.truncate().extend(transform.translation.y),
@@ -305,7 +305,7 @@ impl StaticInstances {
         let mut transforms = Vec::with_capacity(instances.len());
         for &instance in instances {
             if let Ok(transform) = scene.get::<&Transform>(instance) {
-                let mat = transform.to_mat4().transpose();
+                let mat = transform.local_to_world().transpose();
                 transforms.push(Mat4::from_cols(
                     mat.x_axis.truncate().extend(transform.translation.x),
                     mat.y_axis.truncate().extend(transform.translation.y),
