@@ -237,20 +237,12 @@ impl LightRenderer {
 
 pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
     profiling::scope!("draw_light_system");
-    for (_, (transform, light_renderer, light, bounds)) in scene
-        .query::<(&Transform, &LightRenderer, &SLight, Option<&AABB>)>()
+    for (_, (transform, light_renderer, light)) in scene
+        .query::<(&Transform, &LightRenderer, &SLight)>()
         .without::<&Hidden>()
         .iter()
     {
-        let light_scale =
-        //     if let Some(bb) = bounds {
-        //     Mat4::from_scale(-(bb.extents() * 3.0))
-        // } else {
-            light.unk60
-        // };
-        ;
-
-        let transform_mat = transform.local_to_world();
+        let transform_mat = transform.local_to_world() * light.unk60;
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -259,7 +251,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             };
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: view.world_to_projective * (transform_mat * light_scale),
+                transform: view.world_to_projective * transform_mat,
             });
 
             externs.deferred_light = Some(externs::DeferredLight {
@@ -288,10 +280,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        // let light_scale = Mat4::from_scale(Vec3::splat(-(3000.0 * 4.0)));
-        let light_scale = light.unk60;
-
-        let transform_mat = transform.local_to_world();
+        let transform_mat = transform.local_to_world() * light.unk60;
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -300,7 +289,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             };
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: view.world_to_projective * (transform_mat * light_scale),
+                transform: view.world_to_projective * transform_mat,
             });
 
             externs.deferred_light = Some(externs::DeferredLight {

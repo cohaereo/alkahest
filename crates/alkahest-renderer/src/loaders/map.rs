@@ -40,8 +40,8 @@ use crate::{
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPOTLIGHT, ICON_SPOTLIGHT_BEAM, ICON_WAVES,
-        ICON_WEATHER_FOG, ICON_WEATHER_NIGHT, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPOTLIGHT, ICON_SPOTLIGHT_BEAM,
+        ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_NIGHT, ICON_WEATHER_PARTLY_CLOUDY,
     },
     loaders::AssetManager,
     renderer::{Renderer, RendererShared},
@@ -446,40 +446,54 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
+                let light_collection_entity = scene.reserve_entity();
+                let mut children = vec![];
                 for (i, (transform, light, bounds)) in
                     multizip((header.unk40, header.unk30, &header.occlusion_bounds.bounds))
                         .enumerate()
                 {
-                    scene.spawn((
-                        Icon(ICON_LIGHTBULB_ON),
-                        Label::from("Light"),
-                        Transform {
-                            translation: Vec3::new(
-                                transform.translation.x,
-                                transform.translation.y,
-                                transform.translation.z,
-                            ),
-                            rotation: Quat::from_xyzw(
-                                transform.rotation.x,
-                                transform.rotation.y,
-                                transform.rotation.z,
-                                transform.rotation.w,
-                            ),
-                            ..Default::default()
-                        },
-                        LightRenderer::load(
-                            renderer.gpu.clone(),
-                            &mut renderer.data.lock().asset_manager,
-                            &light,
-                            format!("light {tag}+{i}"),
-                        )
-                        .context("Failed to load light")?,
-                        light,
-                        bounds.bb,
-                        TfxFeatureRenderer::DeferredLights,
-                        resource_origin,
-                    ));
+                    children.push(
+                        scene.spawn((
+                            Icon(ICON_LIGHTBULB_ON),
+                            Label::from(format!("Light {i}")),
+                            Transform {
+                                translation: Vec3::new(
+                                    transform.translation.x,
+                                    transform.translation.y,
+                                    transform.translation.z,
+                                ),
+                                rotation: Quat::from_xyzw(
+                                    transform.rotation.x,
+                                    transform.rotation.y,
+                                    transform.rotation.z,
+                                    transform.rotation.w,
+                                ),
+                                ..Default::default()
+                            },
+                            LightRenderer::load(
+                                renderer.gpu.clone(),
+                                &mut renderer.data.lock().asset_manager,
+                                &light,
+                                format!("light {tag}+{i}"),
+                            )
+                            .context("Failed to load light")?,
+                            light,
+                            bounds.bb,
+                            TfxFeatureRenderer::DeferredLights,
+                            resource_origin,
+                            Parent(light_collection_entity),
+                        )),
+                    );
                 }
+
+                scene.insert(
+                    light_collection_entity,
+                    (
+                        Icon(ICON_LIGHTBULB_GROUP),
+                        Label::from(format!("Light Collection {tag}")),
+                        Children::from_slice(&children),
+                    ),
+                )?;
             }
             0x80806c5e => {
                 table_data
