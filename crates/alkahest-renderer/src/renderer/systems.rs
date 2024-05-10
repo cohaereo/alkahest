@@ -5,11 +5,14 @@ use crate::{
         dynamic_geometry::draw_dynamic_model_system, static_geometry::draw_static_instances_system,
         terrain::draw_terrain_patches_system, Scene,
     },
+    gpu_event,
     renderer::Renderer,
 };
 
 impl Renderer {
     pub(super) fn run_renderstage_systems(&self, scene: &Scene, stage: TfxRenderStage) {
+        gpu_event!(self.gpu, stage.to_string());
+
         if matches!(
             stage,
             TfxRenderStage::GenerateGbuffer

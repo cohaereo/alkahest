@@ -2,6 +2,7 @@ use alkahest_data::{
     geometry::EPrimitiveType,
     map::{SLight, SShadowingLight},
     occlusion::AABB,
+    tfx::TfxShaderStage,
 };
 use anyhow::Context;
 use destiny_pkg::TagHash;
@@ -9,27 +10,32 @@ use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
-use glam::{Mat4, Vec3};
+use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
-        D3D11_BUFFER_DESC, D3D11_COMPARISON_ALWAYS, D3D11_DEPTH_STENCILOP_DESC,
-        D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_STENCIL_OP_DECR,
-        D3D11_STENCIL_OP_INCR, D3D11_STENCIL_OP_KEEP, D3D11_SUBRESOURCE_DATA,
-        D3D11_USAGE_IMMUTABLE,
+        D3D11_BUFFER_DESC, D3D11_CLEAR_DEPTH, D3D11_CLEAR_STENCIL, D3D11_COMPARISON_ALWAYS,
+        D3D11_DEPTH_STENCILOP_DESC, D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_WRITE_MASK_ZERO,
+        D3D11_STENCIL_OP_DECR, D3D11_STENCIL_OP_INCR, D3D11_STENCIL_OP_KEEP,
+        D3D11_SUBRESOURCE_DATA, D3D11_USAGE_IMMUTABLE,
     },
     Dxgi::Common::DXGI_FORMAT_R16_UINT,
 };
 
 use crate::{
-    camera::Camera,
+    camera::{Camera, CameraProjection, Viewport},
     ecs::{common::Hidden, transform::Transform, Scene},
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
     handle::{AssetId, Handle},
     loaders::AssetManager,
-    renderer::Renderer,
-    tfx::{externs, externs::ExternStorage, technique::Technique},
+    renderer::{gbuffer::ShadowDepthMap, Renderer},
+    tfx::{
+        externs,
+        externs::{ExternStorage, TextureView},
+        technique::Technique,
+        view::{RenderStageSubscriptions, View},
+    },
 };
 
 pub struct LightRenderer {
@@ -195,7 +201,7 @@ impl LightRenderer {
         })
     }
 
-    fn draw(&self, renderer: &Renderer) {
+    fn draw(&self, renderer: &Renderer, draw_shadows: bool) {
         gpu_event!(renderer.gpu, &self.debug_label);
         unsafe {
             renderer
@@ -214,7 +220,13 @@ impl LightRenderer {
                 Some([12].as_ptr()),
                 Some(&0),
             );
-            if let Some(tech) = renderer.get_technique_shared(&self.technique_shading) {
+            if let Some(tech) = renderer.get_technique_shared(if draw_shadows {
+                self.technique_shading_shadowing
+                    .as_ref()
+                    .unwrap_or(&self.technique_shading)
+            } else {
+                &self.technique_shading
+            }) {
                 tech.bind(renderer).expect("Failed to bind technique");
             } else {
                 return;
@@ -233,6 +245,12 @@ impl LightRenderer {
                 .DrawIndexed(self.cube_index_count, 0, 0);
         }
     }
+}
+
+pub enum ShadowPcfSamples {
+    Samples13 = 0,
+    Samples17 = 1,
+    Samples21 = 2,
 }
 
 pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
@@ -255,6 +273,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                 transform: view.world_to_projective * transform_mat_scaled,
             });
 
+            let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
                 unk40: Mat4::from_scale(Vec3::splat(0.15)),
@@ -263,21 +282,21 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                 unkd0: transform.translation.extend(1.0),
                 unke0: transform.translation.extend(1.0),
                 unk100: light.unk50,
-                unk110: 1.0,
-                unk114: 1.0,
-                unk118: 1.0,
-                unk11c: 1.0,
-                unk120: 1.0,
 
-                ..Default::default()
+                ..existing_deflight
             });
         }
 
-        light_renderer.draw(renderer);
+        light_renderer.draw(renderer, false);
     }
 
-    for (_, (transform, light_renderer, light)) in scene
-        .query::<(&Transform, &LightRenderer, &SShadowingLight)>()
+    for (_, (transform, light_renderer, light, shadowmap)) in scene
+        .query::<(
+            &Transform,
+            &LightRenderer,
+            &SShadowingLight,
+            Option<&ShadowMapRenderer>,
+        )>()
         .without::<&Hidden>()
         .iter()
     {
@@ -294,6 +313,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                 transform: view.world_to_projective * transform_mat_scaled,
             });
 
+            let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
                 unk40: Mat4::from_scale(Vec3::splat(0.15)),
@@ -302,16 +322,118 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                 unkd0: transform.translation.extend(1.0),
                 unke0: transform.translation.extend(1.0),
                 unk100: light.unk50,
-                unk110: 1.0,
-                unk114: 1.0,
-                unk118: 1.0,
-                unk11c: 1.0,
-                unk120: 1.0,
-
-                ..Default::default()
+                // unk110: 1.0,
+                // unk114: 2000.0,
+                // unk118: 1.0,
+                // unk11c: 1.0,
+                // unk120: 1.0,
+                ..existing_deflight
             });
+
+            if let Some(shadowmap) = shadowmap {
+                // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
+                renderer
+                    .gpu
+                    .shadowmap_vs_t2
+                    .bind(&renderer.gpu, 2, TfxShaderStage::Vertex);
+                let existing_shadowmap = externs
+                    .deferred_shadow
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_default();
+                externs.deferred_shadow = Some(externs::DeferredShadow {
+                    unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
+                    resolution_width: ShadowMapRenderer::RESOLUTION as f32,
+                    resolution_height: ShadowMapRenderer::RESOLUTION as f32,
+                    unkc0: shadowmap.camera_to_projective * shadowmap.world_to_camera,
+                    unk180: ShadowPcfSamples::Samples21 as u8 as f32,
+                    ..existing_shadowmap
+                })
+            }
         }
 
-        light_renderer.draw(renderer);
+        light_renderer.draw(
+            renderer,
+            shadowmap.is_some() && renderer.render_settings.shadows,
+        );
+    }
+}
+
+pub struct ShadowMapRenderer {
+    // pub needs_update: bool,
+    pub update_timer: u32,
+
+    depth: ShadowDepthMap,
+    viewport: Viewport,
+
+    world_to_camera: Mat4,
+    camera_to_projective: Mat4,
+}
+
+impl ShadowMapRenderer {
+    const RESOLUTION: u32 = 2048;
+    pub fn new(gpu: &GpuContext, transform: Transform) -> anyhow::Result<Self> {
+        let depth = ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
+
+        let viewport = Viewport {
+            origin: UVec2::ZERO,
+            size: UVec2::splat(Self::RESOLUTION),
+        };
+
+        let world_to_camera = Mat4::look_at_rh(
+            transform.translation,
+            transform.translation + transform.forward(),
+            Vec3::Z,
+        );
+        let camera_to_projective = CameraProjection::perspective_bounded(90.0, 0.1, 5000.0)
+            .matrix(viewport.aspect_ratio());
+
+        Ok(Self {
+            // needs_update: true,
+            update_timer: 4,
+            depth,
+            viewport,
+            world_to_camera,
+            camera_to_projective,
+        })
+    }
+
+    pub fn bind_for_generation(&self, renderer: &Renderer) {
+        unsafe {
+            renderer.gpu.context().ClearDepthStencilView(
+                &self.depth.views[0],
+                (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
+                1.0,
+                0,
+            );
+            renderer
+                .gpu
+                .context()
+                .OMSetRenderTargets(None, &self.depth.views[0]);
+        }
+    }
+}
+
+impl View for ShadowMapRenderer {
+    fn viewport(&self) -> Viewport {
+        self.viewport.clone()
+    }
+
+    fn subscribed_views(&self) -> RenderStageSubscriptions {
+        RenderStageSubscriptions::SHADOW_GENERATE
+    }
+
+    fn name(&self) -> String {
+        "ShadowRenderer".to_string()
+    }
+
+    fn update_extern(&self, x: &mut externs::View) {
+        x.world_to_camera = self.world_to_camera;
+        x.camera_to_projective = self.camera_to_projective;
+
+        x.derive_matrices(&self.viewport);
+
+        // Only known values are (0, 1, 0, 0) and (0, 3.428143, 0, 0)
+        x.view_miscellaneous = Vec4::new(0., 1., 0., 0.);
     }
 }

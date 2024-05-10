@@ -1,7 +1,7 @@
 use std::{any::TypeId, iter::Inspect, mem::transmute, sync::Arc};
 
 use alkahest_renderer::{gpu::GpuContext, util::image::Png};
-use egui::InputState;
+use egui::{InputState, Key, KeyboardShortcut, Modifiers};
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
 use rustc_hash::FxHashMap;
@@ -179,6 +179,9 @@ pub trait GuiView {
 #[derive(Default)]
 pub struct GuiViewManager {
     views: FxHashMap<TypeId, Box<dyn GuiView>>,
+    views_overlay: FxHashMap<TypeId, Box<dyn GuiView>>,
+
+    pub hide_views: bool,
 }
 
 impl GuiViewManager {
@@ -191,13 +194,16 @@ impl GuiViewManager {
         views.insert(BottomBar);
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
-        views.insert(FpsDisplayOverlay::default());
+        views.insert_overlay(FpsDisplayOverlay::default());
 
         views
     }
 
     pub fn insert<T: GuiView + 'static>(&mut self, view: T) {
         self.views.insert(TypeId::of::<T>(), Box::new(view));
+    }
+    pub fn insert_overlay<T: GuiView + 'static>(&mut self, view: T) {
+        self.views_overlay.insert(TypeId::of::<T>(), Box::new(view));
     }
 
     pub fn remove<T: GuiView + 'static>(&mut self) {
@@ -211,19 +217,34 @@ impl GuiViewManager {
         resources: &Resources,
         gui: &GuiCtx<'_>,
     ) {
-        let mut to_remove = SmallVec::<[TypeId; 4]>::new();
-        for (tid, view) in self.views.iter_mut() {
-            if let Some(result) = view.draw(ctx, window, resources, gui) {
-                if result == ViewResult::Close {
-                    to_remove.push(*tid);
+        if ctx.input_mut(|input| {
+            input.consume_shortcut(&KeyboardShortcut::new(
+                Modifiers::CTRL | Modifiers::SHIFT,
+                Key::H,
+            ))
+        }) {
+            self.hide_views = !self.hide_views;
+        }
+
+        if !self.hide_views {
+            let mut to_remove = SmallVec::<[TypeId; 4]>::new();
+            for (tid, view) in self.views.iter_mut() {
+                if let Some(result) = view.draw(ctx, window, resources, gui) {
+                    if result == ViewResult::Close {
+                        to_remove.push(*tid);
+                    }
+                }
+            }
+
+            for tid in to_remove {
+                if let Some(mut view) = self.views.remove(&tid) {
+                    view.dispose(ctx, resources, gui);
                 }
             }
         }
 
-        for tid in to_remove {
-            if let Some(mut view) = self.views.remove(&tid) {
-                view.dispose(ctx, resources, gui);
-            }
+        for view in self.views_overlay.values_mut() {
+            view.draw(ctx, window, resources, gui);
         }
     }
 }

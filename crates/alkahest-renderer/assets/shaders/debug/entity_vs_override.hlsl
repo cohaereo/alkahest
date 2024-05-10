@@ -16,15 +16,13 @@ cbuffer cb1 : register(b1)
 
 cbuffer cb12 : register(b12)
 {
-  row_major float4x4 world_to_projective; // c0
-  row_major float4x4 camera_to_world; // c4
-  row_major float4x4 target_pixel_to_camera; // c8
-
-  float4 target; // c12
-
-  float4 unk13; // c13
-  float4 view_miscellaneous; // c14
-  // float4 cb12[15];
+    row_major float4x4 world_to_projective  : packoffset(c0);
+    row_major float4x4 camera_to_world      : packoffset(c4);
+    float4 target		                    : packoffset(c8);
+    float4 view_miscellaneous		        : packoffset(c9);
+    float4 view_unk20                       : packoffset(c10);
+    float4x4 camera_to_projective           : packoffset(c11);
+    float4 unk15                            : packoffset(c15);
 }
 
 

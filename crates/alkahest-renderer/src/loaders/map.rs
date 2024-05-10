@@ -29,7 +29,7 @@ use crate::{
         common::{Icon, Label, ResourceOrigin, Water},
         dynamic_geometry::{DynamicModel, DynamicModelComponent},
         hierarchy::{Children, Parent},
-        light::LightRenderer,
+        light::{LightRenderer, ShadowMapRenderer},
         map::MapAtmosphere,
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
         tags::{insert_tag, EntityTag},
@@ -44,7 +44,7 @@ use crate::{
         ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_NIGHT, ICON_WEATHER_PARTLY_CLOUDY,
     },
     loaders::AssetManager,
-    renderer::{Renderer, RendererShared},
+    renderer::{gbuffer::ShadowDepthMap, Renderer, RendererShared},
 };
 
 pub async fn load_map(
@@ -295,7 +295,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     resource_origin: ResourceOrigin,
     _group_id: u32,
 ) -> anyhow::Result<()> {
-    for data in &table.data_entries {
+    for (i, data) in table.data_entries.iter().enumerate() {
         let transform = Transform {
             translation: Vec3::new(data.translation.x, data.translation.y, data.translation.z),
             rotation: data.rotation,
@@ -502,6 +502,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let tag: TagHash = table_data.read_le().unwrap();
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
+                let mut shadowmap = ShadowMapRenderer::new(&renderer.gpu, transform)?;
+                shadowmap.update_timer = i as u32 % 4;
+
                 scene.spawn((
                     Icon(ICON_SPOTLIGHT_BEAM),
                     Label::from(format!("Shadowing Light {tag}")),
@@ -513,6 +516,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         format!("shadowing_light {tag}"),
                     )
                     .context("Failed to load shadowing light")?,
+                    shadowmap,
                     light,
                     TfxFeatureRenderer::DeferredLights,
                     resource_origin,

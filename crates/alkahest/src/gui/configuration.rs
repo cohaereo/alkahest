@@ -27,6 +27,7 @@ impl GuiView for RenderSettingsPanel {
             ui.checkbox(&mut settings.ssao, "SSAO");
             ui.checkbox(&mut settings.atmosphere, "Atmosphere");
             ui.checkbox(&mut settings.matcap, "Matcap");
+            ui.checkbox(&mut settings.shadows, "Shadows");
 
             let renderer = resources.get::<RendererShared>();
             renderer.set_render_settings(settings.clone());

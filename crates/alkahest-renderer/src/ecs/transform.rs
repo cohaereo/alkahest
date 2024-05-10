@@ -24,7 +24,7 @@ impl Transform {
             flags: TransformFlags::default(),
         }
     }
-    
+
     pub fn from_translation(translation: Vec3) -> Self {
         Self {
             translation,
@@ -33,7 +33,7 @@ impl Transform {
             flags: TransformFlags::default(),
         }
     }
-    
+
     pub fn from_rotation(rotation: Quat) -> Self {
         Self {
             translation: Vec3::ZERO,
@@ -42,7 +42,7 @@ impl Transform {
             flags: TransformFlags::default(),
         }
     }
-    
+
     pub fn from_scale(scale: Vec3) -> Self {
         Self {
             translation: Vec3::ZERO,
@@ -51,7 +51,7 @@ impl Transform {
             flags: TransformFlags::default(),
         }
     }
-    
+
     pub fn from_mat4(mat: Mat4) -> Transform {
         let (scale, rotation, translation) = mat.to_scale_rotation_translation();
 
@@ -74,6 +74,10 @@ impl Transform {
         } else {
             f32::NAN
         }
+    }
+
+    pub fn forward(&self) -> Vec3 {
+        self.rotation * Vec3::X
     }
 }
 

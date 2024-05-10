@@ -1,4 +1,7 @@
-use std::mem::transmute;
+use std::{
+    fmt::{Display, Formatter},
+    mem::transmute,
+};
 
 use tiger_parse::TigerReadable;
 
@@ -29,6 +32,39 @@ pub enum TfxRenderStage {
     PostprocessScreen = 21,
     WorldForces = 22,
     ComputeSkinning = 23,
+}
+
+impl Display for TfxRenderStage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let n = match self {
+            Self::GenerateGbuffer => "generate_gbuffer",
+            Self::Decals => "decals",
+            Self::InvestmentDecals => "investment_decals",
+            Self::ShadowGenerate => "shadow_generate",
+            Self::LightingApply => "lighting_apply",
+            Self::LightProbeApply => "light_probe_apply",
+            Self::DecalsAdditive => "decals_additive",
+            Self::Transparents => "transparents",
+            Self::Distortion => "distortion",
+            Self::LightShaftOcclusion => "light_shaft_occlusion",
+            Self::SkinPrepass => "skin_prepass",
+            Self::LensFlares => "lens_flares",
+            Self::DepthPrepass => "depth_prepass",
+            Self::WaterReflection => "water_reflection",
+            Self::PostprocessTransparentStencil => "postprocess_transparent_stencil",
+            Self::Impulse => "impulse",
+            Self::Reticle => "reticle",
+            Self::WaterRipples => "water_ripples",
+            Self::MaskSunLight => "mask_sun_light",
+            Self::Volumetrics => "volumetrics",
+            Self::Cubemaps => "cubemaps",
+            Self::PostprocessScreen => "postprocess_screen",
+            Self::WorldForces => "world_forces",
+            Self::ComputeSkinning => "compute_skinning",
+        };
+
+        write!(f, "{}", n)
+    }
 }
 
 impl TigerReadable for TfxRenderStage {

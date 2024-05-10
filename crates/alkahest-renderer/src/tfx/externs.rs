@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
-use crate::{loaders::AssetManager, util::short_type_name};
+use crate::{camera::Viewport, loaders::AssetManager, util::short_type_name};
 
 #[derive(Default, Clone)]
 pub enum TextureView {
@@ -62,6 +62,7 @@ pub struct ExternStorage {
     pub view: Option<View>,
     pub deferred: Option<Deferred>,
     pub deferred_light: Option<DeferredLight>,
+    pub deferred_shadow: Option<DeferredShadow>,
     pub transparent: Option<Transparent>,
     pub rigid_model: Option<RigidModel>,
     pub decal: Option<Decal>,
@@ -84,6 +85,7 @@ impl Default for ExternStorage {
             view: None,
             deferred: None,
             deferred_light: None,
+            deferred_shadow: None,
             transparent: None,
             rigid_model: None,
             decal: None,
@@ -220,6 +222,7 @@ impl ExternStorage {
             View => self.view,
             Deferred => self.deferred,
             DeferredLight => self.deferred_light,
+            DeferredShadow => self.deferred_shadow,
             Transparent => self.transparent,
             RigidModel => self.rigid_model,
             Decal => self.decal,
@@ -252,6 +255,7 @@ impl ExternStorage {
             View,
             Deferred,
             DeferredLight,
+            DeferredShadow,
             Transparent,
             RigidModel,
             Decal,
@@ -282,6 +286,7 @@ impl ExternStorage {
             View => self.view,
             Deferred => self.deferred,
             DeferredLight => self.deferred_light,
+            DeferredShadow => self.deferred_shadow,
             Transparent => self.transparent,
             RigidModel => self.rigid_model,
             Decal => self.decal,
@@ -453,6 +458,30 @@ extern_struct! {
     }
 }
 
+impl View {
+    /// Derives matrices based on world_to_camera, camera_to_projective and viewport
+    pub fn derive_matrices(&mut self, viewport: &Viewport) {
+        self.resolution_width = viewport.size.x as f32;
+        self.resolution_height = viewport.size.y as f32;
+
+        self.camera_to_world = self.world_to_camera.inverse();
+        self.world_to_projective = self.camera_to_projective * self.world_to_camera;
+        self.projective_to_world = self.world_to_projective.inverse();
+        self.projective_to_camera = self.camera_to_projective.inverse();
+        self.target_pixel_to_camera =
+            self.projective_to_camera * viewport.target_pixel_to_projective();
+        self.target_pixel_to_world = self.camera_to_world * self.target_pixel_to_camera;
+
+        self.position = self.camera_to_world.w_axis;
+        self.unk30 = Vec4::Z - self.world_to_projective.w_axis;
+
+        // TODO(cohae): Still figuring out these transforms for lights
+        // x.combined_tptoc_wtoc = x.target_pixel_to_camera;
+        self.combined_tptoc_wtoc = self.target_pixel_to_world;
+        // x.combined_tptoc_wtoc = x.world_to_camera * x.target_pixel_to_camera;
+    }
+}
+
 extern_struct! {
     struct Deferred("deferred") {
         0x00 => depth_constants: Vec4 > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
@@ -484,10 +513,32 @@ extern_struct! {
         0xf0 => unkf0: Vec4 > unimplemented(false),
         0x100 => unk100: Vec4,
         0x110 => unk110: f32 > unimplemented(false),
-        0x114 => unk114: f32 > unimplemented(false),
+        0x114 => unk114: f32 > unimplemented(false) > default(20000.0),
         0x118 => unk118: f32 > unimplemented(false),
         0x11c => unk11c: f32 > unimplemented(false),
         0x120 => unk120: f32 > unimplemented(false),
+    }
+}
+
+extern_struct! {
+    struct DeferredShadow("deferred_shadow") {
+        0x00 => unk00: TextureView,
+        0x08 => unk08: TextureView > unimplemented(true),
+        0x10 => unk10: TextureView > unimplemented(true),
+        0x18 => resolution_width: f32,
+        0x1c => resolution_height: f32,
+        0x20 => unk20: f32 > unimplemented(true),
+        0x28 => unk28: TextureView > unimplemented(true),
+        0x30 => unk30: Vec4 > unimplemented(true) > default(Vec4::new(1.5, 1.0, 1.0, 1.0)),
+        0x40 => unk40: Vec4 > unimplemented(true),
+        0x50 => unk50: Vec4 > unimplemented(true),
+        0x80 => unk80: Vec4 > unimplemented(true),
+        0x90 => unk90: Vec4 > unimplemented(true),
+        0xa0 => unka0: Vec4 > unimplemented(true),
+        0xb0 => unkb0: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 1.0, 1.0)),
+        0xc0 => unkc0: Mat4,
+        0x100 => unk100: Mat4 > unimplemented(true),
+        0x180 => unk180: f32 > unimplemented(true),
     }
 }
 

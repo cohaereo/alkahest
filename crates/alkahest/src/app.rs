@@ -276,28 +276,31 @@ impl AlkahestApp {
                             gui.draw_frame(window, |ctx, ectx| {
                                 let mut gui_views = resources.get_mut::<GuiViewManager>();
                                 gui_views.draw(ectx, window, resources, ctx);
-                                puffin_egui::profiler_window(ectx);
 
-                                egui::Window::new("SSAO Settings").show(ectx, |ui| {
-                                    let ssao_data = renderer.ssao.scope.data();
-                                    ui.horizontal(|ui| {
-                                        ui.label("Radius");
-                                        egui::DragValue::new(&mut ssao_data.radius)
-                                            .speed(0.01)
-                                            .clamp_range(0.0..=10.0)
-                                            .suffix("m")
-                                            .ui(ui);
-                                    });
+                                if !gui_views.hide_views {
+                                    puffin_egui::profiler_window(ectx);
 
-                                    ui.horizontal(|ui| {
-                                        ui.label("Bias");
-                                        egui::DragValue::new(&mut ssao_data.bias)
-                                            .speed(0.01)
-                                            .clamp_range(0.0..=10.0)
-                                            .suffix("m")
-                                            .ui(ui);
+                                    egui::Window::new("SSAO Settings").show(ectx, |ui| {
+                                        let ssao_data = renderer.ssao.scope.data();
+                                        ui.horizontal(|ui| {
+                                            ui.label("Radius");
+                                            egui::DragValue::new(&mut ssao_data.radius)
+                                                .speed(0.01)
+                                                .clamp_range(0.0..=10.0)
+                                                .suffix("m")
+                                                .ui(ui);
+                                        });
+
+                                        ui.horizontal(|ui| {
+                                            ui.label("Bias");
+                                            egui::DragValue::new(&mut ssao_data.bias)
+                                                .speed(0.01)
+                                                .clamp_range(0.0..=10.0)
+                                                .suffix("m")
+                                                .ui(ui);
+                                        });
                                     });
-                                });
+                                }
                             });
                         });
 

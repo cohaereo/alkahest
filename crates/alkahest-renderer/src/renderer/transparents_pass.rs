@@ -99,15 +99,7 @@ impl Renderer {
             .store(StateSelection::new(Some(2), Some(15), Some(2), Some(1)));
         self.render_globals.scopes.transparent.bind(self).unwrap();
 
-        {
-            gpu_event!(self.gpu, "decals_additive");
-
-            self.run_renderstage_systems(scene, TfxRenderStage::DecalsAdditive);
-        }
-
-        {
-            gpu_event!(self.gpu, "transparents");
-            self.run_renderstage_systems(scene, TfxRenderStage::Transparents);
-        }
+        self.run_renderstage_systems(scene, TfxRenderStage::DecalsAdditive);
+        self.run_renderstage_systems(scene, TfxRenderStage::Transparents);
     }
 }

@@ -54,6 +54,7 @@ pub struct GpuContext {
     pub color0_fallback: VertexBuffer,
 
     pub sky_hemisphere_placeholder: Texture,
+    pub shadowmap_vs_t2: Texture,
     pub white_texture: Texture,
     pub light_grey_texture: Texture,
     pub grey_texture: Texture,
@@ -70,7 +71,7 @@ pub struct GpuContext {
     current_depth_bias: AtomicUsize,
     current_input_topology: AtomicI32,
     current_depth_state: AtomicUsize,
-    use_flipped_depth_comparison: AtomicBool,
+    pub use_flipped_depth_comparison: AtomicBool,
 
     pub current_states: AtomicCell<StateSelection>,
 
@@ -189,6 +190,15 @@ impl GpuContext {
             Some("Black Texture"),
         )?;
 
+        let shadowmap_vs_t2 = Texture::load_2d_raw(
+            &device,
+            1,
+            1,
+            &[0, 0, 255, 255],
+            DxgiFormat::R8G8B8A8_UNORM_SRGB,
+            Some("shadowmap_vs_t2"),
+        )?;
+
         let color0_fallback = VertexBuffer::load_data(&device, &[0, 0, 255, 255], 4)?;
 
         let sky_hemisphere_placeholder = Texture::load_png(
@@ -220,6 +230,7 @@ impl GpuContext {
             grey_texture,
             dark_grey_texture,
             black_texture,
+            shadowmap_vs_t2,
 
             states,
 

@@ -6,9 +6,9 @@ use super::externs;
 use crate::camera::Viewport;
 
 pub trait View {
-    fn get_viewport(&self) -> Viewport;
-    fn get_subscribed_views(&self) -> RenderStageSubscriptions;
-    fn get_name(&self) -> String;
+    fn viewport(&self) -> Viewport;
+    fn subscribed_views(&self) -> RenderStageSubscriptions;
+    fn name(&self) -> String;
 
     fn update_extern(&self, x: &mut externs::View);
 }

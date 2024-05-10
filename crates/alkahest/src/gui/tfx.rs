@@ -151,6 +151,8 @@ impl GuiView for TfxExternEditor {
             // TfxExtern::Ssao3d,
             // TfxExtern::WaterDisplacement,
             // TfxExtern::PatternBlending,
+            TfxExtern::DeferredLight,
+            TfxExtern::DeferredShadow,
         ];
 
         let renderer = resources.get::<RendererShared>();
@@ -178,9 +180,9 @@ impl GuiView for TfxExternEditor {
                                                 ui.vec4_input(v);
                                             }
 
-                                            if let Some(v) = f.get::<Mat4>() {
-                                                ui.label(format!("{:#?}", v));
-                                            }
+                                            // if let Some(v) = f.get::<Mat4>() {
+                                            //     ui.label(format!("{:#?}", v));
+                                            // }
 
                                             if let Some(v) = f.get_mut::<f32>() {
                                                 ui.add(egui::DragValue::new(v).speed(0.01));

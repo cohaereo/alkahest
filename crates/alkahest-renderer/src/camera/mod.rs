@@ -153,12 +153,7 @@ impl Camera {
         self.world_to_projective = self.camera_to_projective * self.world_to_camera;
         self.projective_to_world = self.world_to_projective.inverse();
 
-        self.target_pixel_to_projective = Mat4::from_cols_array_2d(&[
-            [2.0 / self.viewport.size.x as f32, 0.0, 0.0, 0.0],
-            [0.0, -2.0 / self.viewport.size.y as f32, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [-1.0, 1.0, 0.0, 1.0],
-        ]);
+        self.target_pixel_to_projective = self.viewport.target_pixel_to_projective();
     }
 }
 
@@ -172,7 +167,7 @@ impl Camera {
         self.controller.position()
     }
 
-    pub fn rotation(&self) -> glam::Quat {
+    pub fn rotation(&self) -> Quat {
         self.controller.rotation()
     }
 
@@ -202,39 +197,23 @@ impl Camera {
 }
 
 impl View for Camera {
-    fn get_viewport(&self) -> Viewport {
+    fn viewport(&self) -> Viewport {
         self.viewport.clone()
     }
 
-    fn get_subscribed_views(&self) -> RenderStageSubscriptions {
+    fn subscribed_views(&self) -> RenderStageSubscriptions {
         RenderStageSubscriptions::all()
     }
 
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         "Camera".to_string()
     }
 
     fn update_extern(&self, x: &mut crate::tfx::externs::View) {
-        x.resolution_width = self.viewport.size.x as f32;
-        x.resolution_height = self.viewport.size.y as f32;
-        x.camera_to_world = self.world_to_camera;
-        x.world_to_projective = self.world_to_projective;
-        x.position = self.controller.position().extend(1.0);
-        x.unk30 = Vec4::Z - self.world_to_projective.w_axis;
-
         x.world_to_camera = self.world_to_camera;
         x.camera_to_projective = self.camera_to_projective;
-        x.camera_to_world = self.camera_to_world;
-        x.projective_to_camera = self.projective_to_camera;
-        x.world_to_projective = self.world_to_projective;
-        x.projective_to_world = self.projective_to_world;
-        x.target_pixel_to_world = self.projective_to_world * self.target_pixel_to_projective;
-        x.target_pixel_to_camera = self.projective_to_camera * self.target_pixel_to_projective;
 
-        // // TODO(cohae): Still figuring out these transforms for lights
-        // x.combined_tptoc_wtoc = x.target_pixel_to_camera;
-        x.combined_tptoc_wtoc = x.target_pixel_to_world;
-        // x.combined_tptoc_wtoc = x.world_to_camera * x.target_pixel_to_camera;
+        x.derive_matrices(&self.viewport);
 
         // Only known values are (0, 1, 0, 0) and (0, 3.428143, 0, 0)
         x.view_miscellaneous = Vec4::new(0., 1., 0., 0.);

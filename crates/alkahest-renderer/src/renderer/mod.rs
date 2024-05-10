@@ -3,6 +3,7 @@ mod immediate;
 mod lighting_pass;
 mod opaque_pass;
 mod shader;
+mod shadows;
 mod systems;
 mod transparents_pass;
 
@@ -21,6 +22,7 @@ use crossbeam::epoch::Atomic;
 use glam::Vec3;
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
+use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
@@ -99,9 +101,31 @@ impl Renderer {
     }
 
     pub fn render_world(&self, view: &impl View, scene: &Scene) {
-        gpu_event!(self.gpu, "view_0");
         self.begin_world_frame(scene);
 
+        update_dynamic_model_system(scene);
+        update_static_instances_system(scene);
+
+        self.update_shadow_maps(scene);
+
+        {
+            gpu_event!(self.gpu, "view_0");
+            self.bind_view(view);
+
+            self.draw_atmosphere(scene);
+            self.draw_opaque_pass(scene);
+            self.draw_lighting_pass(scene);
+            self.draw_shading_pass(scene);
+            self.draw_transparents_pass(scene);
+        }
+
+        self.gpu.blit_texture(
+            &self.data.lock().gbuffers.shading_result.view,
+            &self.gpu.swapchain_target.read().as_ref().unwrap(),
+        );
+    }
+
+    fn bind_view(&self, view: &impl View) {
         self.data.lock().externs.view = Some({
             let mut e = externs::View::default();
             view.update_extern(&mut e);
@@ -114,19 +138,17 @@ impl Renderer {
             .bind(self)
             .expect("Failed to bind view scope");
 
-        update_dynamic_model_system(scene);
-        update_static_instances_system(scene);
-
-        self.draw_atmosphere(scene);
-        self.draw_opaque_pass(scene);
-        self.draw_lighting_pass(scene);
-        self.draw_shading_pass(scene);
-        self.draw_transparents_pass(scene);
-
-        self.gpu.blit_texture(
-            &self.data.lock().gbuffers.shading_result.view,
-            &self.gpu.swapchain_target.read().as_ref().unwrap(),
-        );
+        let vp = view.viewport();
+        unsafe {
+            self.gpu.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: vp.origin.x as f32,
+                TopLeftY: vp.origin.y as f32,
+                Width: vp.size.x as f32,
+                Height: vp.size.y as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
+        }
     }
 
     fn begin_world_frame(&self, _scene: &Scene) {
@@ -220,6 +242,7 @@ pub struct RendererSettings {
     pub ssao: bool,
     pub atmosphere: bool,
     pub matcap: bool,
+    pub shadows: bool,
 }
 
 impl Default for RendererSettings {
@@ -229,6 +252,7 @@ impl Default for RendererSettings {
             ssao: true,
             atmosphere: false,
             matcap: false,
+            shadows: true,
         }
     }
 }
