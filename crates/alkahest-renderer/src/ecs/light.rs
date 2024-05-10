@@ -385,7 +385,7 @@ impl ShadowMapRenderer {
             transform.translation + transform.forward(),
             Vec3::Z,
         );
-        let camera_to_projective = CameraProjection::perspective_bounded(90.0, 0.1, 5000.0)
+        let camera_to_projective = CameraProjection::perspective_bounded(105.0, 0.1, 4000.0)
             .matrix(viewport.aspect_ratio());
 
         Ok(Self {
@@ -398,7 +398,13 @@ impl ShadowMapRenderer {
         })
     }
 
-    pub fn bind_for_generation(&self, renderer: &Renderer) {
+    pub fn bind_for_generation(&mut self, transform: &Transform, renderer: &Renderer) {
+        self.world_to_camera = Mat4::look_at_rh(
+            transform.translation,
+            transform.translation + transform.forward(),
+            Vec3::Z,
+        );
+
         unsafe {
             renderer.gpu.context().ClearDepthStencilView(
                 &self.depth.views[0],

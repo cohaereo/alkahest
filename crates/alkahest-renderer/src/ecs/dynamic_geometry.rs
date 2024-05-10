@@ -285,8 +285,8 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
 
     entities.sort_by_key(|(_, feature_type)| match feature_type {
         TfxFeatureRenderer::SkyTransparent => 0,
-        TfxFeatureRenderer::Water => 1,
-        TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
+        TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 1,
+        TfxFeatureRenderer::Water => 2,
         _ => 99,
     });
 

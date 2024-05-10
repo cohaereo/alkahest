@@ -14,14 +14,13 @@ cbuffer cb1 : register(b1)
   // float4 cb1[8];
 }
 
-cbuffer cb12 : register(b12)
-{
+cbuffer cb12 : register(b12) {
     row_major float4x4 world_to_projective  : packoffset(c0);
     row_major float4x4 camera_to_world      : packoffset(c4);
     float4 target		                    : packoffset(c8);
     float4 view_miscellaneous		        : packoffset(c9);
     float4 view_unk20                       : packoffset(c10);
-    float4x4 camera_to_projective           : packoffset(c11);
+    row_major float4x4 camera_to_projective : packoffset(c11);
     float4 unk15                            : packoffset(c15);
 }
 
@@ -92,7 +91,7 @@ void VSMain(
   r1.xyzw = world_to_projective[1].xyzw * r0.yyyy;
   r1.xyzw = world_to_projective[0].xyzw * r0.xxxx + r1.xyzw;
   r0.xyzw = world_to_projective[2].xyzw * r0.zzzz + r1.xyzw;
-  out_position.xyzw = view_miscellaneous.xyzw + r0.xyzw;
+  out_position.xyzw = camera_to_projective[3].xyzw + r0.xyzw;
 
   o5.xyz = in_position.xyz;
   o8 = t0.Load(vertex_id);

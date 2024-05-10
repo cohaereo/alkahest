@@ -13,6 +13,7 @@ use crate::{
     gpu_event,
     renderer::Renderer,
 };
+use crate::ecs::transform::Transform;
 
 impl Renderer {
     pub fn update_shadow_maps(&self, scene: &Scene) {
@@ -25,16 +26,16 @@ impl Renderer {
             .store(true, Ordering::Relaxed);
 
         gpu_event!(self.gpu, "update_shadow_maps");
-        for (e, (_light, shadow)) in scene
-            .query::<(&LightRenderer, &mut ShadowMapRenderer)>()
+        for (e, (transform, shadow)) in scene
+            .query::<(&Transform, &mut ShadowMapRenderer)>()
             .iter()
         {
             if shadow.update_timer <= 0 {
                 gpu_event!(self.gpu, format!("update_shadow_map_{}", e.id()));
                 shadow.update_timer = 4;
 
+                shadow.bind_for_generation(transform, self);
                 self.bind_view(shadow);
-                shadow.bind_for_generation(self);
 
                 self.gpu.current_states.store(StateSelection::new(
                     Some(0),
