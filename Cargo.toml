@@ -18,10 +18,13 @@ binrw = "0.13.3"
 bitflags = "2.5.0"
 bytemuck = "1.7.0"
 crossbeam = "0.8.4"
-#destiny-pkg = "0.10"
-destiny-pkg = { path = "../destiny-pkg2" }
-egui = { version = "0.27", features = ["persistence"] }
+destiny-pkg = "0.10"
+
+# egui crates (make sure these are all the same version)
+ecolor = "0.27.2"
+egui = { version = "0.27.2", features = ["persistence"] }
 egui_extras = "0.27.2"
+
 field_access = "0.1.6"
 glam = { version = "0.27", features = ["bytemuck", "mint"] }
 hecs = "0.10.3"
@@ -41,18 +44,12 @@ serde_json = "1.0.113"
 serde_yaml = "0.9.25"
 smallvec = { version = "1.13.2", features = ["const_new"] }
 thiserror = "1"
-tiger-parse = { version = "0.1.8", path = "../tiger-parse", features = [
+tiger-parse = { version = "0.1.8", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
     "check_types_strict",
     "destiny_pkg",
     "check_types_debug",
 ] }
-#tiger-parse = { version = "0.1.8", git = "https://github.com/v4nguard/tiger-parse", features = [
-#    "check_types",
-#    "check_types_strict",
-#    "destiny_pkg",
-#    "check_types_debug",
-#] }
 tracing = "0.1.37"
 windows = { version = "0.56.0", features = [
     "Win32_Graphics_Direct3D11",

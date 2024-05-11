@@ -10,6 +10,7 @@ pub mod postprocess;
 pub mod renderer;
 pub mod shader;
 pub mod tfx;
+pub mod resources;
 
 pub mod icons;
 pub mod util;

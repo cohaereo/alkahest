@@ -4,7 +4,7 @@ use alkahest_data::{
 };
 
 use crate::{
-    ecs::Scene,
+    ecs::{utility::draw_utilities, Scene},
     gpu_event,
     renderer::Renderer,
     tfx::{
@@ -101,5 +101,7 @@ impl Renderer {
 
         self.run_renderstage_systems(scene, TfxRenderStage::DecalsAdditive);
         self.run_renderstage_systems(scene, TfxRenderStage::Transparents);
+
+        // draw_utilities(self, scene);
     }
 }

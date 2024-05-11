@@ -30,13 +30,13 @@ fn name_to_color(name: &str) -> Color {
     let r = (hash & 0xFF) as u8;
     let g = ((hash >> 8) & 0xFF) as u8;
     let b = ((hash >> 16) & 0xFF) as u8;
-    [r, g, b, 255].into()
+    Color::from_srgba_unmultiplied(r, g, b, 255)
 }
 
 impl EntityTag {
     pub fn color(&self) -> Color {
         match self {
-            EntityTag::Havok => [253, 185, 10, 255].into(),
+            EntityTag::Havok => Color::from_srgba_unmultiplied(253, 185, 10, 255),
             u => name_to_color(&u.to_string()),
         }
     }

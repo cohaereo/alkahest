@@ -14,6 +14,7 @@ mod tfx;
 pub mod big_button;
 mod bottom_bar;
 pub mod chip;
+mod menu;
 mod outliner;
 mod util;
 

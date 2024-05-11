@@ -220,6 +220,7 @@ dependencies = [
  "bytemuck",
  "crossbeam",
  "destiny-pkg",
+ "ecolor",
  "fastrand",
  "field_access",
  "genmesh",
@@ -230,6 +231,7 @@ dependencies = [
  "hex",
  "indexmap",
  "itertools 0.12.1",
+ "lazy_static",
  "num",
  "parking_lot",
  "png",
@@ -1129,6 +1131,8 @@ dependencies = [
 [[package]]
 name = "destiny-pkg"
 version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "372027ad668d7735a40d3f66417d0386da12ace3fb41b85fae8937effed4ba02"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -3810,6 +3814,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse"
 version = "0.1.9"
+source = "git+https://github.com/v4nguard/tiger-parse#b72888c2fb4252c8d125f00b8ab55d5333842f07"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -3821,6 +3826,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
+source = "git+https://github.com/v4nguard/tiger-parse#b72888c2fb4252c8d125f00b8ab55d5333842f07"
 dependencies = [
  "darling",
  "proc-macro2",

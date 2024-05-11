@@ -26,7 +26,9 @@ mod data;
 mod game_selector;
 mod gui;
 mod maplist;
-mod resources;
+mod resources {
+    pub use alkahest_renderer::resources::*;
+}
 mod updater;
 mod util;
 

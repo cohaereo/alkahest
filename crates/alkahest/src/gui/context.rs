@@ -21,6 +21,7 @@ use crate::{
     resources::Resources,
     util::image::EguiPngLoader,
 };
+use crate::gui::menu::MenuBar;
 
 pub struct GuiContext {
     pub egui: egui::Context,
@@ -192,8 +193,10 @@ impl GuiViewManager {
         views.insert(TfxExternEditor::default());
         views.insert(RenderSettingsPanel);
         views.insert(BottomBar);
+        views.insert(MenuBar::default());
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
+        
         views.insert_overlay(FpsDisplayOverlay::default());
 
         views

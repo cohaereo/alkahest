@@ -13,7 +13,10 @@ use crate::{
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::shader::ShaderProgram,
-    util::{color::Color, mat4_scale_translation},
+    util::{
+        color::{Color, ColorExt},
+        mat4_scale_translation,
+    },
 };
 
 #[repr(C)]
@@ -152,8 +155,8 @@ impl ImmediateRenderer {
             .write(&ScopeAlkDebugLine {
                 line_start: start.extend(1.0),
                 line_end: end.extend(1.0),
-                color_start: start_color.0,
-                color_end: end_color.0,
+                color_start: start_color.to_vec4(),
+                color_end: end_color.to_vec4(),
                 width,
                 dot_scale: 1.0,
                 line_ratio: 0.5,
@@ -190,7 +193,7 @@ impl ImmediateRenderer {
         self.cb_debug_shape
             .write(&ScopeAlkDebugShape {
                 local_to_world: mat4_scale_translation(Vec3::splat(radius), center),
-                color: color.0,
+                color: color.to_vec4(),
             })
             .unwrap();
 
@@ -223,7 +226,7 @@ impl ImmediateRenderer {
         self.cb_debug_shape
             .write(&ScopeAlkDebugShape {
                 local_to_world: transform.into(),
-                color: color.0,
+                color: color.to_vec4(),
             })
             .unwrap();
 
@@ -256,7 +259,7 @@ impl ImmediateRenderer {
         self.cb_debug_shape
             .write(&ScopeAlkDebugShape {
                 local_to_world: transform.into(),
-                color: color.0,
+                color: color.to_vec4(),
             })
             .unwrap();
 

@@ -53,7 +53,7 @@ impl ComponentPanel for LightRenderer {
         if let Some(transform) = e.get::<&Transform>() {
             renderer.immediate.cube_outline(
                 transform.local_to_world() * self.projection_matrix,
-                Color::YELLOW,
+                Color::from_rgb(1.0, 1.0, 0.0),
             )
         } else {
             ui.label(

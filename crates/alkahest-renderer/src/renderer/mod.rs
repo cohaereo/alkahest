@@ -123,6 +123,13 @@ impl Renderer {
             &self.data.lock().gbuffers.shading_result.view,
             &self.gpu.swapchain_target.read().as_ref().unwrap(),
         );
+
+        {
+            let data = self.data.lock();
+            data.gbuffers
+                .depth
+                .copy_to_staging(&data.gbuffers.depth_staging);
+        }
     }
 
     fn bind_view(&self, view: &impl View) {
