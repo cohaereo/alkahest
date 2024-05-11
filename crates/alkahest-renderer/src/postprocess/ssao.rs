@@ -7,13 +7,9 @@ use windows::Win32::Graphics::Direct3D11::{
 };
 
 use crate::{
-    gpu::{
-        buffer::ConstantBufferCached, texture::Texture, util::DxDeviceExt, GpuContext,
-        SharedGpuContext,
-    },
+    gpu::{buffer::ConstantBufferCached, texture::Texture, util::DxDeviceExt, SharedGpuContext},
     include_dxbc,
-    renderer::{gbuffer::RenderTarget, Renderer},
-    tfx::externs::ExternStorage,
+    renderer::Renderer,
 };
 
 pub struct SsaoRenderer {

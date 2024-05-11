@@ -81,9 +81,9 @@ impl Transform {
     }
 }
 
-impl Into<Mat4> for Transform {
-    fn into(self) -> Mat4 {
-        self.local_to_world()
+impl From<Transform> for Mat4 {
+    fn from(val: Transform) -> Self {
+        val.local_to_world()
     }
 }
 

@@ -147,12 +147,8 @@ impl MapList {
         self.maps.get_mut(self.current_map)
     }
 
-    pub fn get_map_mut(&mut self, index: usize) -> Option<&mut Map> {
-        self.maps.get_mut(index)
-    }
-
-    // pub fn get_index(&self, tag: TagHash) -> Option<usize> {
-    //     self.maps.iter().position(|m| m.hash == tag)
+    // pub fn get_map_mut(&mut self, index: usize) -> Option<&mut Map> {
+    //     self.maps.get_mut(index)
     // }
 
     pub fn count_loading(&self) -> usize {
@@ -233,12 +229,6 @@ impl MapList {
                 name: map_name,
                 ..Default::default()
             });
-        }
-    }
-
-    pub fn load_all(&mut self, resources: &Resources) {
-        for map in self.maps.iter_mut() {
-            map.start_load(resources);
         }
     }
 

@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use anyhow::Context;
 use poll_promise::Promise;
 use serde::{Deserialize, Serialize};
@@ -188,41 +186,42 @@ pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
 pub struct UpdateCheck(pub Option<Promise<Option<AvailableUpdate>>>);
 
 impl UpdateCheck {
-    pub fn start(&mut self, channel: UpdateChannel) {
-        self.0 = Some(Promise::spawn_async(async move {
-            match channel.check_for_updates().await {
-                Ok(o) => o,
-                Err(e) => {
-                    error!("Failed to check for updates: {}", e);
-                    None
-                }
-            }
-        }));
+    pub fn start(&mut self, _channel: UpdateChannel) {
+        todo!("Reimplement UpdateCheck")
+        // self.0 = Some(Promise::spawn_async(async move {
+        //     match channel.check_for_updates().await {
+        //         Ok(o) => o,
+        //         Err(e) => {
+        //             error!("Failed to check for updates: {}", e);
+        //             None
+        //         }
+        //     }
+        // }));
     }
 }
 
-pub fn execute_update(zip_data: Vec<u8>) -> anyhow::Result<()> {
-    let exe_path = std::env::current_exe().context("Failed to retrieve current executable path")?;
-    let old_exe_path = exe_path.with_file_name("alkahest_old.exe");
-
-    std::fs::rename(&exe_path, old_exe_path)
-        .context("Failed to move the old alkahest executable")?;
-
-    let mut zip_reader = Cursor::new(zip_data);
-    let exe_dir = exe_path
-        .parent()
-        .context("Exe does not have a parent directory??")?;
-    zip_extract::extract(&mut zip_reader, exe_dir, true)?;
-
-    if !exe_path.exists() {
-        return Err(anyhow::anyhow!("alkahest.exe does not exist in the zip"));
-    }
-
-    // Spawn the new process
-    std::process::Command::new(exe_path)
-        .args(std::env::args().skip(1))
-        .spawn()
-        .context("Failed to spawn the new alkahest process")?;
-
-    std::process::exit(0);
-}
+// pub fn execute_update(zip_data: Vec<u8>) -> anyhow::Result<()> {
+//     let exe_path = std::env::current_exe().context("Failed to retrieve current executable path")?;
+//     let old_exe_path = exe_path.with_file_name("alkahest_old.exe");
+//
+//     std::fs::rename(&exe_path, old_exe_path)
+//         .context("Failed to move the old alkahest executable")?;
+//
+//     let mut zip_reader = Cursor::new(zip_data);
+//     let exe_dir = exe_path
+//         .parent()
+//         .context("Exe does not have a parent directory??")?;
+//     zip_extract::extract(&mut zip_reader, exe_dir, true)?;
+//
+//     if !exe_path.exists() {
+//         return Err(anyhow::anyhow!("alkahest.exe does not exist in the zip"));
+//     }
+//
+//     // Spawn the new process
+//     std::process::Command::new(exe_path)
+//         .args(std::env::args().skip(1))
+//         .spawn()
+//         .context("Failed to spawn the new alkahest process")?;
+//
+//     std::process::exit(0);
+// }

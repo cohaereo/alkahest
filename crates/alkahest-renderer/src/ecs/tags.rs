@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use hecs::{Entity, EntityRef};
+use hecs::Entity;
 use rustc_hash::FxHashSet;
 use tiger_parse::FnvHash;
 

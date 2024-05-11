@@ -306,7 +306,7 @@ impl<T: Asset> AssetRegistry<T> {
     pub fn get_shared(&self, handle: &Handle<T>) -> Option<Arc<T>> {
         self.handle_map
             .get(&handle.id)
-            .and_then(|storage| storage.asset.as_ref().map(|v| Arc::clone(v)))
+            .and_then(|storage| storage.asset.clone())
     }
 
     pub fn remove_all_dead(&mut self) -> usize {

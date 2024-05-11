@@ -22,6 +22,7 @@ use windows::{
 };
 
 #[derive(Clone, Copy)]
+#[allow(unused)]
 enum ShaderStage {
     Vertex,
     Pixel,

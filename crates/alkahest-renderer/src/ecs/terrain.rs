@@ -6,12 +6,12 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, texture::Texture},
     gpu_event,
     handle::Handle,
-    loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
+    loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::Renderer,
-    tfx::{externs::ExternStorage, technique::Technique},
+    tfx::technique::Technique,
 };
 
 pub struct TerrainPatches {

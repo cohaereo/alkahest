@@ -1,15 +1,14 @@
-use alkahest_renderer::{
-    renderer::RendererShared,
-    tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
-    ColorExt,
-};
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
-use field_access::FieldAccess;
-use glam::{Mat4, Vec4};
+use glam::Vec4;
 use itertools::Itertools;
-use strum::IntoEnumIterator;
 use winit::window::Window;
+
+use alkahest_renderer::{
+    ColorExt,
+    renderer::RendererShared,
+    tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
+};
 
 use crate::{
     gui::{

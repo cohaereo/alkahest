@@ -1,8 +1,5 @@
 use std::fmt::Display;
 
-use hecs::Entity;
-use smallvec::SmallVec;
-
 /// Tiger entity world ID
 #[derive(Copy, Clone)]
 pub struct EntityWorldId(pub u64);

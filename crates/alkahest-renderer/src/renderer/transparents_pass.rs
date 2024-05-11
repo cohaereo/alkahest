@@ -4,14 +4,10 @@ use alkahest_data::{
 };
 
 use crate::{
-    ecs::{utility::draw_utilities, Scene},
+    ecs::Scene,
     gpu_event,
     renderer::Renderer,
-    tfx::{
-        externs,
-        externs::ExternDefault,
-        scope::{ScopeFrame, ScopeTransparentAdvanced},
-    },
+    tfx::{externs, externs::ExternDefault, scope::ScopeTransparentAdvanced},
 };
 
 impl Renderer {

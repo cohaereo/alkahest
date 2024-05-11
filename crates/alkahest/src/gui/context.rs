@@ -1,4 +1,4 @@
-use std::{any::TypeId, iter::Inspect, mem::transmute, sync::Arc};
+use std::{any::TypeId, mem::transmute, sync::Arc};
 
 use alkahest_renderer::{gpu::GpuContext, util::image::Png};
 use egui::{InputState, Key, KeyboardShortcut, Modifiers};
@@ -15,13 +15,13 @@ use crate::{
         configuration::RenderSettingsPanel,
         fps_display::FpsDisplayOverlay,
         inspector::InspectorPanel,
+        menu::MenuBar,
         outliner::OutlinerPanel,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
     resources::Resources,
     util::image::EguiPngLoader,
 };
-use crate::gui::menu::MenuBar;
 
 pub struct GuiContext {
     pub egui: egui::Context,
@@ -196,7 +196,7 @@ impl GuiViewManager {
         views.insert(MenuBar::default());
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
-        
+
         views.insert_overlay(FpsDisplayOverlay::default());
 
         views

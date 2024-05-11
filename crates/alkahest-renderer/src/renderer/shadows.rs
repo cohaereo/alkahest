@@ -6,14 +6,10 @@ use alkahest_data::{
 };
 
 use crate::{
-    ecs::{
-        light::{LightRenderer, ShadowMapRenderer},
-        Scene,
-    },
+    ecs::{light::ShadowMapRenderer, transform::Transform, Scene},
     gpu_event,
     renderer::Renderer,
 };
-use crate::ecs::transform::Transform;
 
 impl Renderer {
     pub fn update_shadow_maps(&self, scene: &Scene) {
@@ -26,11 +22,9 @@ impl Renderer {
             .store(true, Ordering::Relaxed);
 
         gpu_event!(self.gpu, "update_shadow_maps");
-        for (e, (transform, shadow)) in scene
-            .query::<(&Transform, &mut ShadowMapRenderer)>()
-            .iter()
+        for (e, (transform, shadow)) in scene.query::<(&Transform, &mut ShadowMapRenderer)>().iter()
         {
-            if shadow.update_timer <= 0 {
+            if shadow.update_timer == 0 {
                 gpu_event!(self.gpu, format!("update_shadow_map_{}", e.id()));
                 shadow.update_timer = 4;
 

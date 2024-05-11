@@ -3,11 +3,13 @@ use alkahest_pm::package_manager;
 use anyhow::Context;
 use destiny_pkg::TagHash;
 use tiger_parse::PackageManagerExt;
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,
-    D3D11_USAGE_IMMUTABLE,
+use windows::Win32::Graphics::{
+    Direct3D11::{
+        ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,
+        D3D11_USAGE_IMMUTABLE,
+    },
+    Dxgi::Common::DXGI_FORMAT,
 };
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
     gpu::{GpuContext, SharedGpuContext},
@@ -49,14 +51,11 @@ impl IndexBuffer {
             format: DxgiFormat::R16_UINT,
         })
     }
-    
+
     pub fn bind(&self, gpu: &GpuContext) {
         unsafe {
-            gpu.context().IASetIndexBuffer(
-                &self.buffer,
-                DXGI_FORMAT(self.format as i32),
-                0,
-            );
+            gpu.context()
+                .IASetIndexBuffer(&self.buffer, DXGI_FORMAT(self.format as i32), 0);
         }
     }
 }

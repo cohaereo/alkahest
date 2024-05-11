@@ -61,7 +61,6 @@ impl ComponentPanel for LightRenderer {
                     .strong()
                     .color(Color32::RED),
             );
-            return;
         }
     }
 }

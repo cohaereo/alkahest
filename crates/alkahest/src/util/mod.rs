@@ -1,8 +1,8 @@
 pub mod changelog_diff;
 pub mod consts;
-pub mod dds;
+// pub mod dds;
 pub mod error;
-pub mod export;
+// pub mod export;
 pub mod image;
 pub mod text;
 
@@ -25,12 +25,6 @@ pub fn fix_windows_command_prompt() {
             .ok();
         }
     }
-}
-
-#[allow(non_snake_case)]
-#[inline]
-pub fn D3D11CalcSubresource(MipSlice: usize, ArraySlice: usize, MipLevels: usize) -> usize {
-    MipSlice + ArraySlice * MipLevels
 }
 
 pub const FNV1_BASE: u32 = 0x811c9dc5;

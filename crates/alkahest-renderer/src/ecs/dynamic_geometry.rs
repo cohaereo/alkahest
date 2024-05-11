@@ -5,28 +5,18 @@ use alkahest_data::{
 use alkahest_pm::package_manager;
 use anyhow::ensure;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Vec3, Vec4};
-use hecs::Entity;
+use glam::Vec4;
 use itertools::Itertools;
-use smallvec::SmallVec;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    ecs::{
-        common::{Hidden, Water},
-        static_geometry::ModelBuffers,
-        transform::Transform,
-        Scene,
-    },
-    gpu::{
-        buffer::{ConstantBuffer, ConstantBufferCached},
-        GpuContext,
-    },
+    ecs::{common::Hidden, static_geometry::ModelBuffers, transform::Transform, Scene},
+    gpu::buffer::ConstantBuffer,
     gpu_event,
     handle::Handle,
     loaders::AssetManager,
     renderer::Renderer,
-    tfx::{externs, externs::ExternStorage, technique::Technique, view::RenderStageSubscriptions},
+    tfx::{externs, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
 

@@ -1,7 +1,4 @@
-use std::{
-    hash::Hash,
-    io::{Cursor, Read, Seek, SeekFrom},
-};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 
 use alkahest_data::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
@@ -26,8 +23,8 @@ use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
 
 use crate::{
     ecs::{
-        common::{Icon, Label, ResourceOrigin, Water},
-        dynamic_geometry::{DynamicModel, DynamicModelComponent},
+        common::{Icon, Label, ResourceOrigin},
+        dynamic_geometry::DynamicModelComponent,
         hierarchy::{Children, Parent},
         light::{LightRenderer, ShadowMapRenderer},
         map::MapAtmosphere,
@@ -37,14 +34,12 @@ use crate::{
         transform::{Transform, TransformFlags},
         Scene,
     },
-    gpu::{buffer::ConstantBuffer, SharedGpuContext},
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPOTLIGHT, ICON_SPOTLIGHT_BEAM,
-        ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_NIGHT, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPOTLIGHT_BEAM, ICON_WAVES,
+        ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
-    loaders::AssetManager,
-    renderer::{gbuffer::ShadowDepthMap, Renderer, RendererShared},
+    renderer::{Renderer, RendererShared},
 };
 
 pub async fn load_map(
@@ -545,7 +540,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     // cohae: Apparently the lens flare tag is optional?
                     continue;
                 }
-                
+
                 let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
 
                 scene.spawn((

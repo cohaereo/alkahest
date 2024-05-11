@@ -208,7 +208,7 @@ impl AssetManager {
             self.poll();
         }
     }
-    
+
     pub fn is_idle(&self) -> bool {
         self.pending_requests.is_empty()
     }

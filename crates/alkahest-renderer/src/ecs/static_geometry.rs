@@ -18,10 +18,7 @@ use crate::{
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
     renderer::Renderer,
-    tfx::{
-        externs::ExternStorage, scope::ScopeInstances, technique::Technique,
-        view::RenderStageSubscriptions,
-    },
+    tfx::{scope::ScopeInstances, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
 
@@ -244,7 +241,7 @@ impl StaticModelSingle {
         tag: TagHash,
     ) -> anyhow::Result<Self> {
         let model = StaticModel::load(am, tag)?;
-        let cbuffer = ConstantBuffer::create_array_init(gctx, &vec![0u8; 32 + 64])?;
+        let cbuffer = ConstantBuffer::create_array_init(gctx, &[0u8; 32 + 64])?;
         Ok(Self { model, cbuffer })
     }
 
@@ -374,7 +371,7 @@ pub fn update_static_instances_system(scene: &Scene) {
     profiling::scope!("update_static_instances_system");
     for (_, (instances, children)) in scene.query::<(&mut StaticInstances, &Children)>().iter() {
         if instances.cbuffer_dirty {
-            instances.update_cbuffer(scene, &children);
+            instances.update_cbuffer(scene, children);
             instances.cbuffer_dirty = false;
         }
     }

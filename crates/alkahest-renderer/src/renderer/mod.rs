@@ -7,28 +7,17 @@ mod shadows;
 mod systems;
 mod transparents_pass;
 
-use std::{
-    cell::UnsafeCell,
-    sync::{atomic::Ordering, Arc},
-    thread::Scope,
-    time::Instant,
-};
+use std::{sync::Arc, time::Instant};
 
-use alkahest_data::{
-    map::{SLight, SShadowingLight},
-    tfx::TfxShaderStage,
-};
-use crossbeam::epoch::Atomic;
-use glam::Vec3;
-use parking_lot::{Mutex, RwLock};
+use alkahest_data::tfx::TfxShaderStage;
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
         dynamic_geometry::update_dynamic_model_system,
-        static_geometry::update_static_instances_system, transform::Transform,
-        utility::draw_utilities, Scene,
+        static_geometry::update_static_instances_system, utility::draw_utilities, Scene,
     },
     gpu::SharedGpuContext,
     gpu_event,
@@ -47,7 +36,6 @@ use crate::{
         technique::Technique,
         view::View,
     },
-    util::color::Color,
 };
 
 pub type RendererShared = Arc<Renderer>;
@@ -125,7 +113,7 @@ impl Renderer {
 
         self.gpu.blit_texture(
             &self.data.lock().gbuffers.shading_result.view,
-            &self.gpu.swapchain_target.read().as_ref().unwrap(),
+            self.gpu.swapchain_target.read().as_ref().unwrap(),
         );
 
         {

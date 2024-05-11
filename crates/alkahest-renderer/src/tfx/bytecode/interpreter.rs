@@ -11,7 +11,6 @@ use windows::Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResou
 use super::opcodes::TfxBytecodeOp;
 use crate::{
     gpu::{buffer::ConstantBufferCached, GpuContext},
-    loaders::AssetManager,
     tfx::externs::{ExternStorage, TextureView},
 };
 

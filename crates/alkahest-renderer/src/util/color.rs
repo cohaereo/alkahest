@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::Deref, time::Instant};
+use std::{ops::Deref, time::Instant};
 
 use glam::Vec4;
 use lazy_static::lazy_static;

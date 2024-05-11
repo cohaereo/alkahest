@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
-use crate::{camera::Viewport, loaders::AssetManager, util::short_type_name};
+use crate::{camera::Viewport, util::short_type_name};
 
 #[derive(Default, Clone)]
 pub enum TextureView {

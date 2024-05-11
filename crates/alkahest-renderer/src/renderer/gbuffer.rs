@@ -184,11 +184,11 @@ impl GBuffer {
             .context("Staging_Clone")?;
         self.depth.resize(new_size).context("Depth")?;
         self.depth_staging.resize(new_size).context("Depth")?;
-        
+
         self.atmos_ss_near_lookup.resize(new_size)?;
         self.atmos_ss_far_lookup.resize(new_size)?;
         self.ssao_intermediate.resize(new_size)?;
-        
+
         self.current_size = new_size;
         Ok(())
     }
@@ -418,6 +418,7 @@ impl CpuStagingBuffer {
         f: impl FnOnce(D3D11_MAPPED_SUBRESOURCE) -> R,
     ) -> anyhow::Result<R> {
         unsafe {
+            #[allow(clippy::uninit_assumed_init)]
             let mut ptr = std::mem::MaybeUninit::uninit().assume_init();
             self.gctx
                 .context()

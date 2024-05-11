@@ -1,15 +1,10 @@
 use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
-use glam::Vec4;
 
 use crate::{
-    camera::Camera,
     ecs::{light::draw_light_system, map::MapAtmosphere, Scene},
     gpu_event,
     renderer::Renderer,
-    tfx::{
-        externs,
-        externs::{ExternDefault, GlobalLighting, TextureView},
-    },
+    tfx::{externs, externs::ExternDefault},
 };
 
 impl Renderer {

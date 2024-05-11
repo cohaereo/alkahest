@@ -28,8 +28,8 @@ impl RenderGlobals {
         let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
 
         Ok(Self {
-            scopes: GlobalScopes::load(gctx.clone(), &globs),
-            pipelines: GlobalPipelines::load(gctx.clone(), &globs),
+            scopes: GlobalScopes::load(gctx.clone(), globs),
+            pipelines: GlobalPipelines::load(gctx.clone(), globs),
             textures: GlobalTextures::load(&gctx, &globs.unk30),
             unk34: globs.unk34.0.clone(),
         })

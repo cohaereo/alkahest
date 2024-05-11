@@ -1,10 +1,9 @@
 use std::f32::consts::PI;
 
-use glam::{Quat, Vec3};
+use glam::Vec3;
 use hecs::Entity;
 
 use crate::{
-    camera::tween::ease_out_exponential,
     ecs::{common::Hidden, resources::SelectedEntity, transform::Transform, Scene},
     renderer::Renderer,
     resources::Resources,

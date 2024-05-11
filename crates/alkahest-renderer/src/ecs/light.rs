@@ -1,16 +1,14 @@
 use alkahest_data::{
     geometry::EPrimitiveType,
     map::{SLight, SShadowingLight},
-    occlusion::AABB,
     tfx::TfxShaderStage,
 };
 use anyhow::Context;
-use destiny_pkg::TagHash;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
-use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
+use glam::{Mat4, UVec2, Vec3, Vec4};
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
@@ -23,16 +21,16 @@ use windows::Win32::Graphics::{
 };
 
 use crate::{
-    camera::{Camera, CameraProjection, Viewport},
+    camera::{CameraProjection, Viewport},
     ecs::{common::Hidden, transform::Transform, Scene},
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
-    handle::{AssetId, Handle},
+    handle::Handle,
     loaders::AssetManager,
     renderer::{gbuffer::ShadowDepthMap, Renderer},
     tfx::{
         externs,
-        externs::{ExternStorage, TextureView},
+        externs::TextureView,
         technique::Technique,
         view::{RenderStageSubscriptions, View},
     },

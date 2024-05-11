@@ -6,7 +6,6 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::Transform,
-        Scene,
     },
     resources::Resources,
     util::color::ColorExt,

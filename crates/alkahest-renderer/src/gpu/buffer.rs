@@ -1,7 +1,5 @@
 use std::{
-    fmt::Debug,
     marker::PhantomData,
-    ptr::{null, null_mut},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -105,6 +103,7 @@ impl<T> ConstantBuffer<T> {
         f: impl FnOnce(D3D11_MAPPED_SUBRESOURCE),
     ) -> anyhow::Result<()> {
         unsafe {
+            #[allow(clippy::uninit_assumed_init)]
             let mut ptr = std::mem::MaybeUninit::uninit().assume_init();
             self.gctx
                 .context()

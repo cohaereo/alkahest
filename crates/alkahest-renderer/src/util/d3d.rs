@@ -1,6 +1,5 @@
 use windows::Win32::Graphics::{
-    Direct3D::WKPDID_D3DDebugObjectName,
-    Direct3D11::{ID3D11DeviceChild, ID3D11VertexShader},
+    Direct3D::WKPDID_D3DDebugObjectName, Direct3D11::ID3D11DeviceChild,
 };
 
 #[inline]

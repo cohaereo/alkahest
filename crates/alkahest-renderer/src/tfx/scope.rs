@@ -13,13 +13,11 @@ use glam::{Mat4, Vec2, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{
-    gpu::{buffer::ConstantBufferCached, GpuContext, SharedGpuContext},
-    loaders::AssetManager,
+    gpu::{buffer::ConstantBufferCached, SharedGpuContext},
     renderer::Renderer,
     tfx::{
         bytecode::{interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp},
         externs,
-        externs::ExternStorage,
     },
 };
 
@@ -171,11 +169,13 @@ impl TfxScopeStage {
         }
 
         if self.stage.constant_buffer_slot != -1 {
-            renderer.gpu.bind_cbuffer(
-                self.stage.constant_buffer_slot as u32,
-                self.cbuffer.as_ref().map(|v| v.buffer().clone()),
-                self.shader_stage,
-            );
+            if let Some(cbuffer) = &self.cbuffer {
+                renderer.gpu.bind_cbuffer(
+                    self.stage.constant_buffer_slot as u32,
+                    Some(cbuffer.buffer().clone()),
+                    self.shader_stage,
+                );
+            }
         }
 
         Ok(())

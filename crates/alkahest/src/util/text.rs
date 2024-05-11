@@ -34,19 +34,19 @@ pub fn prettify_distance(meters: f32) -> String {
     }
 }
 
-pub fn split_pascal_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut last_upper = false;
-    for c in s.chars() {
-        if c.is_uppercase() {
-            if !last_upper {
-                result.push(' ');
-            }
-            last_upper = true;
-        } else {
-            last_upper = false;
-        }
-        result.push(c);
-    }
-    result
-}
+// pub fn split_pascal_case(s: &str) -> String {
+//     let mut result = String::new();
+//     let mut last_upper = false;
+//     for c in s.chars() {
+//         if c.is_uppercase() {
+//             if !last_upper {
+//                 result.push(' ');
+//             }
+//             last_upper = true;
+//         } else {
+//             last_upper = false;
+//         }
+//         result.push(c);
+//     }
+//     result
+// }

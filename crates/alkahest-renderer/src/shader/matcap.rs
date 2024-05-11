@@ -1,14 +1,14 @@
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use glam::Mat4;
-use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader, D3D11_SAMPLER_DESC, D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP};
+use windows::Win32::Graphics::Direct3D11::{
+    ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+    D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_CLAMP,
+};
 
 use crate::{
-    gpu::{
-        buffer::ConstantBuffer, texture::Texture, util::DxDeviceExt, GpuContext, SharedGpuContext,
-    },
+    gpu::{buffer::ConstantBuffer, texture::Texture, util::DxDeviceExt, SharedGpuContext},
     include_dxbc,
     renderer::Renderer,
-    tfx::externs::ExternStorage,
     util::image::Png,
 };
 
@@ -80,8 +80,10 @@ impl MatcapRenderer {
                 .gpu
                 .context()
                 .PSSetShaderResources(0, Some(&[Some(data.gbuffers.rt1.view.clone())]));
-            renderer.gpu
-                .context().PSSetSamplers(0, Some(&[Some(self.sampler_linear.clone())]));
+            renderer
+                .gpu
+                .context()
+                .PSSetSamplers(0, Some(&[Some(self.sampler_linear.clone())]));
 
             self.matcap_diffuse
                 .bind(&renderer.gpu, 1, TfxShaderStage::Pixel);

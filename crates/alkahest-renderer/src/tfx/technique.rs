@@ -8,20 +8,16 @@ use alkahest_pm::package_manager;
 use anyhow::{ensure, Context};
 use destiny_pkg::TagHash;
 use glam::Vec4;
-use windows::{
-    core::GUID,
-    Win32::Graphics::Direct3D11::{
-        ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
-        ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
-    },
+use windows::Win32::Graphics::Direct3D11::{
+    ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
+    ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
 };
 
 use crate::{
     gpu::{buffer::ConstantBufferCached, texture::Texture, GpuContext},
     handle::Handle,
-    loaders::AssetManager,
     renderer::Renderer,
-    tfx::{bytecode::interpreter::TfxBytecodeInterpreter, externs::ExternStorage},
+    tfx::bytecode::interpreter::TfxBytecodeInterpreter,
     util::d3d::D3dResource,
 };
 
@@ -211,11 +207,13 @@ impl TechniqueStage {
         }
 
         if self.shader.constant_buffer_slot != -1 {
-            renderer.gpu.bind_cbuffer(
-                self.shader.constant_buffer_slot as u32,
-                self.cbuffer.as_ref().map(|v| v.buffer().clone()),
-                self.stage,
-            );
+            if let Some(cbuffer) = &self.cbuffer {
+                renderer.gpu.bind_cbuffer(
+                    self.shader.constant_buffer_slot as u32,
+                    Some(cbuffer.buffer().clone()),
+                    self.stage,
+                );
+            }
         }
 
         Ok(())

@@ -1,9 +1,8 @@
 mod light;
 mod util;
 
-use alkahest_data::map::{SLight, SShadowingLight};
 use alkahest_renderer::{
-    camera::{tween::Tween, Camera},
+    camera::Camera,
     ecs::{
         common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
         dynamic_geometry::DynamicModelComponent,
@@ -16,11 +15,8 @@ use alkahest_renderer::{
         utility::{Beacon, Ruler, Sphere},
         Scene,
     },
-    icons::ICON_LIGHTBULB_ON,
-    renderer::RendererShared,
-    util::color::Color,
 };
-use egui::{Align2, Button, Color32, FontId, RichText, Ui, Widget};
+use egui::{Align2, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 use winit::window::Window;
@@ -31,17 +27,14 @@ use crate::{
         context::{GuiCtx, GuiView, ViewResult},
         hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
         icons::{
-            ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_AXIS_ARROW, ICON_CAMERA_CONTROL,
-            ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF,
-            ICON_EYE_OFF_OUTLINE, ICON_HELP, ICON_IDENTIFIER, ICON_MAP_MARKER, ICON_RADIUS_OUTLINE,
-            ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
-            ICON_TAG,
+            ICON_AXIS_ARROW, ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
+            ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_RADIUS_OUTLINE, ICON_RESIZE,
+            ICON_ROTATE_ORBIT, ICON_TAG,
         },
     },
     input_float3,
     maplist::MapList,
     resources::Resources,
-    util::text::prettify_distance,
 };
 
 pub struct InspectorPanel;

@@ -1,17 +1,14 @@
 use std::f32::consts::PI;
 
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
-use crossbeam::epoch::Shared;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
 use glam::{Mat4, Vec3, Vec4};
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::transform::Transform,
-    gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, SharedGpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::shader::ShaderProgram,
@@ -263,7 +260,7 @@ impl ImmediateRenderer {
         gpu_event!(self.gpu, "imm_cube_extents");
         let mat = transform.into();
         if sides {
-            self.cube(mat.clone(), color);
+            self.cube(mat, color);
         }
 
         self.cube_outline(mat, color);
