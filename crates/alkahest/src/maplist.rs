@@ -1,12 +1,13 @@
 use alkahest_renderer::{
     ecs::{
-        dynamic_geometry::update_dynamic_model_system,
+        common::Global, dynamic_geometry::update_dynamic_model_system,
         static_geometry::update_static_instances_system, Scene,
     },
     loaders::map::load_map,
     renderer::RendererShared,
 };
 use destiny_pkg::TagHash;
+use itertools::Itertools;
 use poll_promise::Promise;
 
 use crate::{gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs};
@@ -37,24 +38,24 @@ impl Map {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
                     Ok(scene) => {
-                        self.scene = scene;
+                        // Move all globals to a temporary scene
+                        let mut scene_tmp = Scene::new();
+                        let ent_list = self
+                            .scene
+                            .query::<&Global>()
+                            .iter()
+                            .map(|(e, _)| e)
+                            .collect_vec();
 
-                        // TODO(cohae): We can't merge the scenes like this without screwing up the entity IDs
-                        // let mut ent_list = vec![];
-                        //
-                        // // Get all non-global entities
-                        // for (entity, _global) in scene
-                        //     .query::<Option<&Global>>()
-                        //     .iter()
-                        //     .filter(|(_, g)| g.is_none())
-                        // {
-                        //     ent_list.push(entity);
-                        // }
-                        //
-                        // // Insert all entities from the loaded map into the current scene
-                        // for entity in ent_list {
-                        //     self.scene.spawn(scene.take(entity).ok().unwrap());
-                        // }
+                        for &entity in &ent_list {
+                            // Use the original entity IDs so we can reuse ent_list
+                            scene_tmp.spawn_at(entity, self.scene.take(entity).ok().unwrap());
+                        }
+
+                        self.scene = scene;
+                        for entity in ent_list {
+                            self.scene.spawn(scene_tmp.take(entity).ok().unwrap());
+                        }
 
                         // TODO(cohae): Use scheduler for this
                         update_static_instances_system(&self.scene);
@@ -84,6 +85,19 @@ impl Map {
         self.command_buffer.run_on(&mut self.scene);
     }
 
+    /// Remove global entities from the scene and store them in this one
+    pub fn take_globals(&mut self, source: &mut Scene) {
+        let ent_list = source
+            .query::<&Global>()
+            .iter()
+            .map(|(e, _)| e)
+            .collect_vec();
+
+        for &entity in &ent_list {
+            self.scene.spawn(source.take(entity).ok().unwrap());
+        }
+    }
+
     fn start_load(&mut self, resources: &Resources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
@@ -111,8 +125,8 @@ impl Map {
 
 #[derive(Default)]
 pub struct MapList {
-    pub current_map: usize,
-    pub previous_map: usize,
+    current_map: usize,
+    pub previous_map: Option<usize>,
 
     pub load_all_maps: bool,
 
@@ -120,6 +134,10 @@ pub struct MapList {
 }
 
 impl MapList {
+    pub fn current_map_index(&self) -> usize {
+        self.current_map
+    }
+
     pub fn current_map(&self) -> Option<&Map> {
         self.maps.get(self.current_map)
     }
@@ -196,7 +214,7 @@ impl MapList {
         self.maps.sort_by_key(|m| m.name.clone());
 
         self.current_map = 0;
-        self.previous_map = 0;
+        self.previous_map = None;
 
         // TODO(cohae): Reimplement Discord RPC
         // #[cfg(feature = "discord_rpc")]
@@ -220,6 +238,36 @@ impl MapList {
     pub fn load_all(&mut self, resources: &Resources) {
         for map in self.maps.iter_mut() {
             map.start_load(resources);
+        }
+    }
+
+    pub fn set_current_map(&mut self, index: usize) {
+        if index >= self.maps.len() {
+            warn!(
+                "Attempted to set current map to index {}, but there are only {} maps",
+                index,
+                self.maps.len()
+            );
+            return;
+        }
+
+        self.previous_map = Some(self.current_map);
+        self.current_map = index;
+
+        if let Some(previous_map) = self.previous_map {
+            if previous_map >= self.maps.len() {
+                warn!(
+                    "Previous map index {} is out of bounds, not migrating globals",
+                    previous_map
+                );
+                self.previous_map = None;
+                return;
+            }
+
+            let mut source = std::mem::take(&mut self.maps[previous_map].scene);
+            let dest = &mut self.maps[self.current_map];
+            dest.take_globals(&mut source);
+            self.maps[previous_map].scene = source;
         }
     }
 }

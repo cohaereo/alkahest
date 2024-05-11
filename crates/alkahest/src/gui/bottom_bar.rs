@@ -27,7 +27,7 @@ impl GuiView for BottomBar {
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
             let mut maplist = resources.get_mut::<MapList>();
             if !maplist.maps.is_empty() {
-                let mut current_map = maplist.current_map;
+                let mut current_map = maplist.current_map_index();
 
                 let amount_loaded = maplist.count_loaded();
                 let combo_postlabel = if maplist.count_loading() != 0 {
@@ -54,7 +54,9 @@ impl GuiView for BottomBar {
                                 MapLoadState::Error(_) => (ICON_ALERT_CIRCLE_OUTLINE, Color32::RED),
                             };
 
-                            if maplist.current_map == i && map.load_state == MapLoadState::Loaded {
+                            if maplist.current_map_index() == i
+                                && map.load_state == MapLoadState::Loaded
+                            {
                                 icon = ICON_CHECK_CIRCLE;
                             }
 
@@ -67,7 +69,7 @@ impl GuiView for BottomBar {
                     ui.checkbox(&mut maplist.load_all_maps, "Load all maps");
 
                     if map_changed {
-                        maplist.current_map = current_map;
+                        maplist.set_current_map(current_map);
                     }
                 });
             }

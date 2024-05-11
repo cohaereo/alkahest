@@ -75,6 +75,7 @@ impl EcsTagsExt for Tags {
         for tag in self.0.iter() {
             let c = tag.color();
             ui.chip_with_color(tag.to_string(), alk_color_to_egui(c));
+            ui.add_space(4.0);
         }
     }
 }

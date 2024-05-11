@@ -231,7 +231,8 @@ impl ActivityBrowser {
 
                                 maplist.add_map(map_name.clone(), *map_hash);
 
-                                maplist.current_map = maplist.maps.len() - 1;
+                                let new_map = maplist.maps.len() - 1;
+                                maplist.set_current_map(new_map);
                             }
                         }
                     });

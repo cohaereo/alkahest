@@ -48,13 +48,7 @@ impl ColorExt for ecolor::Rgba {
 
 impl ColorExt for ecolor::Color32 {
     fn text_color_for_background(&self) -> Self {
-        let luma = 0.2126 * self.r() as f32 + 0.7152 * self.g() as f32 + 0.0722 * self.b() as f32;
-
-        if luma > 0.5 {
-            Self::BLACK
-        } else {
-            Self::WHITE
-        }
+        ecolor::Color32::from(Color::from(*self).text_color_for_background())
     }
 
     fn to_vec4(&self) -> Vec4 {
@@ -66,12 +60,7 @@ impl ColorExt for ecolor::Color32 {
     }
 
     fn invert(&self) -> Self {
-        Self::from_rgba_premultiplied(
-            255 - self.r(),
-            255 - self.g(),
-            255 - self.b(),
-            self.a(),
-        )
+        Self::from_rgba_premultiplied(255 - self.r(), 255 - self.g(), 255 - self.b(), self.a())
     }
 
     fn keep_bright(&self) -> Self {
