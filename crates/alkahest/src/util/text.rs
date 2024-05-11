@@ -3,33 +3,12 @@ use egui::Color32;
 
 use super::fnv1;
 
-pub fn text_color_for_background(background: Color32) -> Color32 {
-    let r = background.r() as f32 / 255.;
-    let g = background.g() as f32 / 255.;
-    let b = background.b() as f32 / 255.;
-    let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-    if luma > 0.5 {
-        Color32::BLACK
-    } else {
-        Color32::WHITE
-    }
-}
-
 pub fn name_to_color(name: &str) -> Color32 {
     let hash = fnv1(name.as_bytes());
     let r = (hash & 0xFF) as u8;
     let g = ((hash >> 8) & 0xFF) as u8;
     let b = ((hash >> 16) & 0xFF) as u8;
     Color32::from_rgb(r, g, b)
-}
-
-pub fn invert_color(color: [u8; 3]) -> [u8; 3] {
-    [255 - color[0], 255 - color[1], 255 - color[2]]
-}
-
-pub fn keep_color_bright(color: [u8; 3]) -> [u8; 3] {
-    [color[0].max(127), color[1].max(127), color[2].max(127)]
 }
 
 pub fn alk_color_to_egui(c: Color) -> Color32 {

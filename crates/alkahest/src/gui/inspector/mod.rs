@@ -223,12 +223,12 @@ pub fn show_inspector_panel(
     let mut global = e.has::<Global>();
     let mut global_changed = false;
     if e.has::<Mutable>() {
-        if ui.checkbox(&mut global, "Show in all Maps").clicked() {
+        if ui.checkbox(&mut global, "Show in all Maps").changed() {
             global_changed = true;
             if global {
-                cmd.remove_one::<Global>(ent);
-            } else {
                 cmd.insert_one(ent, Global);
+            } else {
+                cmd.remove_one::<Global>(ent);
             }
         };
         ui.separator();
@@ -483,6 +483,12 @@ impl ComponentPanel for DynamicModelComponent {
     }
 
     fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+        ui.horizontal(|ui| {
+            ui.strong("Hash:");
+            ui.label(self.model.hash.to_string());
+        });
+        ui.separator();
+
         let mesh_count = self.model.mesh_count();
         if mesh_count > 1 {
             egui::ComboBox::from_label("Mesh").show_index(
@@ -493,10 +499,13 @@ impl ComponentPanel for DynamicModelComponent {
             );
         }
 
-        ui.horizontal(|ui| {
-            egui::DragValue::new(&mut self.model.selected_variant).ui(ui);
-            ui.label("Material Variant");
-        });
+        let variant_count = self.model.variant_count();
+        if variant_count > 1 {
+            ui.style_mut().spacing.slider_width = 200.0;
+            egui::Slider::new(&mut self.model.selected_variant, 0..=(variant_count - 1))
+                .text("Material Variant")
+                .ui(ui);
+        }
     }
 }
 

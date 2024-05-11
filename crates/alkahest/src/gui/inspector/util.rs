@@ -10,8 +10,12 @@ use alkahest_renderer::{
         ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_MAP_MARKER, ICON_RULER_SQUARE,
         ICON_SIGN_POLE, ICON_SPHERE,
     },
+    renderer::RendererShared,
 };
-use egui::Button;
+use egui::{
+    color_picker::{color_edit_button_rgba, Alpha},
+    Button,
+};
 use hecs::EntityRef;
 
 use crate::{
@@ -45,14 +49,12 @@ impl ComponentPanel for Ruler {
             .spacing([40.0, 4.0])
             .striped(true)
             .show(ui, |ui| {
-                let (d, pos) = /*if let Some(renderer) = resources.get::<RendererShared>() {
-                    renderer
-                        .read()
-                        .gbuffer
-                        .depth_buffer_distance_pos_center(&camera)
-                } else*/ {
-                    (0.0f32, camera.position())
-                };
+                let (d, pos) = resources
+                    .get::<RendererShared>()
+                    .data
+                    .lock()
+                    .gbuffers
+                    .depth_buffer_distance_pos_center(&camera);
                 input_float3!(ui, format!("{ICON_ALPHA_A_BOX} Start"), &mut self.start);
                 ui.horizontal(|ui| {
                     if ui
@@ -148,10 +150,9 @@ impl ComponentPanel for Ruler {
         ui.separator();
 
         ui.horizontal(|ui| {
-            ui.color_edit_button_srgb(&mut self.color)
-                .context_menu(|ui| {
-                    ui.checkbox(&mut self.rainbow, "Rainbow mode");
-                });
+            color_edit_button_rgba(ui, &mut self.color, Alpha::OnlyBlend).context_menu(|ui| {
+                ui.checkbox(&mut self.rainbow, "Rainbow mode");
+            });
 
             ui.label("Color");
         });
@@ -195,10 +196,9 @@ impl ComponentPanel for Sphere {
         });
 
         ui.horizontal(|ui| {
-            ui.color_edit_button_srgba_unmultiplied(&mut self.color)
-                .context_menu(|ui| {
-                    ui.checkbox(&mut self.rainbow, "Rainbow mode");
-                });
+            color_edit_button_rgba(ui, &mut self.color, Alpha::OnlyBlend).context_menu(|ui| {
+                ui.checkbox(&mut self.rainbow, "Rainbow mode");
+            });
 
             ui.label("Color");
         });
@@ -266,7 +266,7 @@ impl ComponentPanel for Beacon {
         });
 
         ui.horizontal(|ui| {
-            ui.color_edit_button_srgb(&mut self.color);
+            color_edit_button_rgba(ui, &mut self.color, Alpha::Opaque);
 
             ui.label("Color");
         });

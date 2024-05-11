@@ -1,6 +1,7 @@
 use alkahest_renderer::{
     renderer::RendererShared,
     tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
+    ColorExt,
 };
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
@@ -16,7 +17,6 @@ use crate::{
         UiExt,
     },
     resources::Resources,
-    util::text::text_color_for_background,
 };
 
 pub struct TfxErrorViewer {
@@ -90,7 +90,9 @@ impl GuiView for TfxErrorViewer {
                                             RichText::new(label)
                                                 .strong()
                                                 .background_color(background_color)
-                                                .color(text_color_for_background(background_color)),
+                                                .color(
+                                                    background_color.text_color_for_background(),
+                                                ),
                                         );
                                     });
                                     row.col(|ui| {

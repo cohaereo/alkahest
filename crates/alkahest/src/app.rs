@@ -259,7 +259,7 @@ impl AlkahestApp {
                             .map(|m| &m.scene)
                             .unwrap_or(map_placeholder);
 
-                        renderer.render_world(&*resources.get::<Camera>(), map);
+                        renderer.render_world(&*resources.get::<Camera>(), map, resources);
 
                         unsafe {
                             renderer.gpu.context().OMSetRenderTargets(

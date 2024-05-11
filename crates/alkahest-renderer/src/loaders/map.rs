@@ -602,6 +602,10 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             let entity_material_map: Vec<Unk808072c5> =
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
+                            // cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3f0))?;
+                            // let entity_material_map_pre: Vec<(u16, u16)> =
+                            //     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
                             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
                             let materials: Vec<TagHash> =
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;

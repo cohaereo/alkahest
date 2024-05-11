@@ -27,7 +27,8 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 use crate::{
     ecs::{
         dynamic_geometry::update_dynamic_model_system,
-        static_geometry::update_static_instances_system, transform::Transform, Scene,
+        static_geometry::update_static_instances_system, transform::Transform,
+        utility::draw_utilities, Scene,
     },
     gpu::SharedGpuContext,
     gpu_event,
@@ -36,6 +37,7 @@ use crate::{
     loaders::AssetManager,
     postprocess::ssao::SsaoRenderer,
     renderer::{gbuffer::GBuffer, immediate::ImmediateRenderer},
+    resources::Resources,
     shader::matcap::MatcapRenderer,
     tfx::{
         externs,
@@ -100,7 +102,7 @@ impl Renderer {
         data.asset_manager.techniques.get_shared(handle)
     }
 
-    pub fn render_world(&self, view: &impl View, scene: &Scene) {
+    pub fn render_world(&self, view: &impl View, scene: &Scene, resources: &Resources) {
         self.begin_world_frame(scene);
 
         update_dynamic_model_system(scene);
@@ -117,6 +119,8 @@ impl Renderer {
             self.draw_lighting_pass(scene);
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
+
+            draw_utilities(self, scene, resources)
         }
 
         self.gpu.blit_texture(

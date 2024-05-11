@@ -371,7 +371,7 @@ pub struct ShadowMapRenderer {
 }
 
 impl ShadowMapRenderer {
-    const RESOLUTION: u32 = 2048;
+    const RESOLUTION: u32 = 1024;
     pub fn new(gpu: &GpuContext, transform: Transform) -> anyhow::Result<Self> {
         let depth = ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
 

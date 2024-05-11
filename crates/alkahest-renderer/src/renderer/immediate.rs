@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use crossbeam::epoch::Shared;
 use genmesh::{
@@ -30,8 +32,8 @@ struct ScopeAlkDebugLine {
     line_start: Vec4,
     line_end: Vec4,
 
-    color_start: Vec4,
-    color_end: Vec4,
+    color_start: Color,
+    color_end: Color,
 
     width: f32,
     dot_scale: f32,
@@ -138,13 +140,50 @@ impl ImmediateRenderer {
         self.line_2color(start, end, color, color, width);
     }
 
-    pub fn line_2color<C: Into<Color>>(
+    pub fn cross<C: Into<Color> + Copy>(&self, point: Vec3, length: f32, color: C) {
+        let color = color.into();
+        let half_length = length / 2.0;
+        self.line(
+            point - Vec3::X * half_length,
+            point + Vec3::X * half_length,
+            color,
+            1.0,
+        );
+        self.line(
+            point - Vec3::Y * half_length,
+            point + Vec3::Y * half_length,
+            color,
+            1.0,
+        );
+        self.line(
+            point - Vec3::Z * half_length,
+            point + Vec3::Z * half_length,
+            color,
+            1.0,
+        );
+    }
+
+    pub fn line_2color<C: Into<Color> + Copy>(
         &self,
         start: Vec3,
         end: Vec3,
         start_color: C,
         end_color: C,
         width: f32,
+    ) {
+        self.line_dotted(start, end, start_color, end_color, width, 0.0, 0.0, 0.0);
+    }
+
+    pub fn line_dotted<C: Into<Color>>(
+        &self,
+        start: Vec3,
+        end: Vec3,
+        start_color: C,
+        end_color: C,
+        width: f32,
+        dot_scale: f32,
+        line_ratio: f32,
+        scroll_speed: f32,
     ) {
         gpu_event!(self.gpu, "imm_line");
         let start_color = start_color.into();
@@ -155,12 +194,12 @@ impl ImmediateRenderer {
             .write(&ScopeAlkDebugLine {
                 line_start: start.extend(1.0),
                 line_end: end.extend(1.0),
-                color_start: start_color.to_vec4(),
-                color_end: end_color.to_vec4(),
+                color_start: start_color,
+                color_end: end_color,
                 width,
-                dot_scale: 1.0,
-                line_ratio: 0.5,
-                scroll_speed: 1.0,
+                dot_scale,
+                line_ratio,
+                scroll_speed,
             })
             .unwrap();
 
@@ -171,7 +210,7 @@ impl ImmediateRenderer {
         self.gpu.set_input_layout(0);
         self.gpu.set_input_topology(EPrimitiveType::LineList);
         if !start_color.is_opaque() || !end_color.is_opaque() {
-            self.gpu.set_blend_state(8);
+            self.gpu.set_blend_state(12);
         } else {
             self.gpu.set_blend_state(0);
         }
@@ -205,7 +244,7 @@ impl ImmediateRenderer {
         if color.is_opaque() {
             self.gpu.set_blend_state(0);
         } else {
-            self.gpu.set_blend_state(8);
+            self.gpu.set_blend_state(12);
         }
 
         unsafe {
@@ -213,6 +252,21 @@ impl ImmediateRenderer {
                 .context()
                 .DrawIndexed(self.ib_sphere.length as u32, 0, 0);
         }
+    }
+
+    pub fn cube_extents<C: Into<Color> + Copy>(
+        &self,
+        transform: impl Into<Mat4>,
+        color: C,
+        sides: bool,
+    ) {
+        gpu_event!(self.gpu, "imm_cube_extents");
+        let mat = transform.into();
+        if sides {
+            self.cube(mat.clone(), color);
+        }
+
+        self.cube_outline(mat, color);
     }
 
     pub fn cube<C: Into<Color>>(&self, transform: impl Into<Mat4>, color: C) {
@@ -238,7 +292,7 @@ impl ImmediateRenderer {
         if color.is_opaque() {
             self.gpu.set_blend_state(0);
         } else {
-            self.gpu.set_blend_state(8);
+            self.gpu.set_blend_state(12);
         }
 
         unsafe {
@@ -271,7 +325,7 @@ impl ImmediateRenderer {
         if color.is_opaque() {
             self.gpu.set_blend_state(0);
         } else {
-            self.gpu.set_blend_state(8);
+            self.gpu.set_blend_state(12);
         }
 
         unsafe {
@@ -279,6 +333,25 @@ impl ImmediateRenderer {
                 .context()
                 .DrawIndexed(self.ib_cube_outline.length as u32, 0, 0);
         }
+    }
+
+    pub fn circle<C: Into<Color> + Copy>(&self, center: Vec3, axis: Vec3, edges: u8, color: C) {
+        let a = axis.normalize();
+        let r = axis.length();
+
+        let (va, vb) = a.any_orthonormal_pair();
+
+        let mut prev;
+        let mut next = va;
+
+        for t in 0..edges {
+            prev = next;
+            let (s, c) = (2.0 * t as f32 * PI / edges as f32).sin_cos();
+            next = va * c + vb * s;
+
+            self.line(center + r * prev, center + r * next, color, 2.0);
+        }
+        self.line(center + r * next, center + r * va, color, 2.0);
     }
 }
 

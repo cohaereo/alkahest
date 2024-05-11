@@ -9,9 +9,11 @@ pub trait ColorExt {
     fn text_color_for_background(&self) -> Self;
     fn to_vec4(&self) -> Vec4;
     fn is_opaque(&self) -> bool;
+    fn invert(&self) -> Self;
+    fn keep_bright(&self) -> Self;
 }
 
-impl ColorExt for Color {
+impl ColorExt for ecolor::Rgba {
     fn text_color_for_background(&self) -> Self {
         let luma = 0.2126 * self.r() + 0.7152 * self.g() + 0.0722 * self.b();
 
@@ -28,6 +30,57 @@ impl ColorExt for Color {
 
     fn is_opaque(&self) -> bool {
         self.a() == 1.0
+    }
+
+    fn invert(&self) -> Self {
+        Self::from_rgba_premultiplied(1.0 - self.r(), 1.0 - self.g(), 1.0 - self.b(), self.a())
+    }
+
+    fn keep_bright(&self) -> Self {
+        Self::from_rgba_premultiplied(
+            self.r().max(0.5),
+            self.g().max(0.5),
+            self.b().max(0.5),
+            self.a(),
+        )
+    }
+}
+
+impl ColorExt for ecolor::Color32 {
+    fn text_color_for_background(&self) -> Self {
+        let luma = 0.2126 * self.r() as f32 + 0.7152 * self.g() as f32 + 0.0722 * self.b() as f32;
+
+        if luma > 0.5 {
+            Self::BLACK
+        } else {
+            Self::WHITE
+        }
+    }
+
+    fn to_vec4(&self) -> Vec4 {
+        Color::from(*self).to_vec4()
+    }
+
+    fn is_opaque(&self) -> bool {
+        self.a() == 255
+    }
+
+    fn invert(&self) -> Self {
+        Self::from_rgba_premultiplied(
+            255 - self.r(),
+            255 - self.g(),
+            255 - self.b(),
+            self.a(),
+        )
+    }
+
+    fn keep_bright(&self) -> Self {
+        Self::from_rgba_premultiplied(
+            self.r().max(128),
+            self.g().max(128),
+            self.b().max(128),
+            self.a(),
+        )
     }
 }
 

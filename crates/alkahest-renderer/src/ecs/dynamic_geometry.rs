@@ -42,8 +42,8 @@ pub struct DynamicModel {
     part_techniques: Vec<Vec<Handle<Technique>>>,
 
     pub selected_mesh: usize,
-    // TODO(cohae): How can we find the variant count?
     pub selected_variant: usize,
+    variant_count: usize,
 
     pub hash: TagHash,
     pub feature_type: TfxFeatureRenderer,
@@ -91,8 +91,16 @@ impl DynamicModel {
             })
             .collect_vec();
 
+        let variant_count = technique_map
+            .iter()
+            .filter(|m| m.unk8 == 0)
+            .map(|m| m.technique_count as usize)
+            .next()
+            .unwrap_or(0);
+
         Ok(Self {
             selected_variant: 0,
+            variant_count,
             selected_mesh: 0,
             mesh_buffers,
             technique_map,
@@ -110,6 +118,10 @@ impl DynamicModel {
 
     pub fn mesh_count(&self) -> usize {
         self.model.meshes.len()
+    }
+
+    pub fn variant_count(&self) -> usize {
+        self.variant_count
     }
 
     fn get_variant_technique(&self, index: u16, variant: usize) -> Option<Handle<Technique>> {
@@ -138,10 +150,10 @@ impl DynamicModel {
 
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
         ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
-        // ensure!(
-        //     self.selected_variant < self.variant_count(),
-        //     "Material variant out of range"
-        // );
+        ensure!(
+            self.selected_variant < self.variant_count() || self.variant_count() == 0,
+            "Material variant out of range"
+        );
 
         let mesh = &self.model.meshes[self.selected_mesh];
         let stages = &self.mesh_stages[self.selected_mesh];

@@ -1,9 +1,9 @@
-use alkahest_renderer::ecs::tags::Tags;
+use alkahest_renderer::{ecs::tags::Tags, ColorExt};
 use egui::{epaint, vec2, Color32, Rect, Response, RichText};
 
 use crate::{
     gui::UiExt,
-    util::text::{alk_color_to_egui, name_to_color, text_color_for_background},
+    util::text::{alk_color_to_egui, name_to_color},
 };
 
 // Mmm, chip.
@@ -32,7 +32,7 @@ impl Chip {
         let wrap_og = ui.style().wrap;
         ui.style_mut().wrap = Some(false);
 
-        let text_color = text_color_for_background(self.background);
+        let text_color = self.background.text_color_for_background();
         let label = egui::Label::new(
             RichText::from(&self.label)
                 .color(text_color)
