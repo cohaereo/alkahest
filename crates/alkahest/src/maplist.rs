@@ -70,6 +70,7 @@ impl Map {
                         self.load_state = MapLoadState::Loaded;
                     }
                     Err(e) => {
+                        error!("Failed to load map {} '{}': {:?}", self.hash, self.name, e);
                         self.load_state = MapLoadState::Error(format!("{:?}", e));
                     }
                 }

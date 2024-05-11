@@ -80,7 +80,7 @@ pub async fn load_map(
             ResourceOrigin::Map,
             0,
         )
-        .context("Failed to load datatable")?;
+        .context("Failed to load map datatable")?;
     }
 
     let mut activity_entrefs: Vec<(Tag<Unk80808e89>, ResourceHash, ResourceOrigin)> =
@@ -224,7 +224,7 @@ pub async fn load_map(
                         ResourceOrigin::Map,
                         phase_name2.0,
                     )
-                    .context("Failed to load datatable")?;
+                    .context("Failed to load activity datatable")?;
                 }
 
                 for table_hash in data_tables2 {
@@ -249,7 +249,7 @@ pub async fn load_map(
                         },
                         phase_name2.0,
                     )
-                    .context("Failed to load datatable")?;
+                    .context("Failed to load AB atatable")?;
                 }
             } else {
                 warn!("null entity resource tag in {}", resource.taghash());
@@ -541,6 +541,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
                 let tag: TagHash = table_data.read_le().unwrap();
+                if tag.is_none() {
+                    // cohae: Apparently the lens flare tag is optional?
+                    continue;
+                }
+                
                 let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
 
                 scene.spawn((
