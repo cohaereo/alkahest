@@ -347,7 +347,7 @@ impl TfxBytecodeDecompiler {
                     let offset_bytes = offset as usize * 16;
                     let path = ExternStorage::get_field_path(extern_, offset_bytes)
                         .unwrap_or_else(|| format!("{extern_:?}->_0x{offset_bytes:x}"));
-                    stack_push!(format!("extern<float4x4>({path})"));
+                    stack_push!(format!("extern<float4>({path})"));
                 }
                 &TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
                     let offset_bytes = offset as usize * 16;
