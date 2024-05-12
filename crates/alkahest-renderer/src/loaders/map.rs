@@ -546,6 +546,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     min: volume_min.truncate(),
                     max: volume_max.truncate(),
                 };
+                
+                let voxel_diffuse = if cubemap_volume.voxel_ibl_texture.is_some() {
+                    Some(renderer
+                        .data
+                        .lock()
+                        .asset_manager
+                        .get_or_load_texture(cubemap_volume.voxel_ibl_texture))
+                } else {
+                    None
+                };
+                
                 scene.spawn((
                     Transform {
                         translation: data.translation.xyz(),
@@ -553,11 +564,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         ..Default::default()
                     },
                     CubemapVolume {
-                        texture: renderer
+                        specular_ibl: renderer
                             .data
                             .lock()
                             .asset_manager
                             .get_or_load_texture(cubemap_volume.cubemap_texture),
+                        voxel_diffuse,
                         bb,
                         name: cubemap_volume.cubemap_name.to_string(),
                     },

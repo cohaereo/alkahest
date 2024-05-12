@@ -132,8 +132,13 @@ impl GlobalScopes {
                     let ptr = f.get_mut::<TfxScope>().unwrap() as *mut TfxScope;
                     unsafe {
                         ptr.write(
-                            TfxScope::load(p.scope.0.clone(), gctx.clone())
-                                .expect("Failed to load scope"),
+                            TfxScope::load(
+                                package_manager()
+                                    .read_tag_struct(p.scope)
+                                    .expect(&format!("Failed to read scope {name}")),
+                                gctx.clone(),
+                            )
+                            .expect("Failed to load scope"),
                         );
                     }
                 }

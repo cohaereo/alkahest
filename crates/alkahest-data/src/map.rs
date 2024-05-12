@@ -188,7 +188,7 @@ pub struct SCubemapVolume {
 
     pub cubemap_name: Pointer<NullString>,
     pub cubemap_texture: TagHash,
-    pub unk1bc: u32,
+    pub voxel_ibl_texture: TagHash,
     pub unk1c0: TagHash,
     pub unk1c4: [u32; 7],
 }

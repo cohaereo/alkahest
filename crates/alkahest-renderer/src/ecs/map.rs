@@ -75,7 +75,9 @@ impl MapAtmosphere {
 }
 
 pub struct CubemapVolume {
-    pub texture: Handle<Texture>,
+    pub specular_ibl: Handle<Texture>,
+    pub voxel_diffuse: Option<Handle<Texture>>,
+
     pub bb: AABB,
     pub name: String,
 }

@@ -49,6 +49,7 @@ impl ComponentPanel for LightRenderer {
                 "Non-shadowing"
             });
         });
+        ui.label(&self.debug_label);
 
         if let Some(transform) = e.get::<&Transform>() {
             renderer.immediate.cube_outline(

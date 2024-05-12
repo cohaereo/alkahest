@@ -1,10 +1,9 @@
 use destiny_pkg::TagHash;
 use glam::Vec4;
-use tiger_parse::{NullString, Pointer, tiger_tag};
-
-use crate::technique::SDynamicConstants;
+use tiger_parse::{tiger_tag, NullString, Pointer};
 
 use super::Tag;
+use crate::technique::SDynamicConstants;
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x8080978C)]
@@ -52,7 +51,8 @@ pub struct SUnk808066ae {
 pub struct SUnk808067ad {
     pub name: Pointer<NullString>,
     pub unk8: u32,
-    pub scope: Tag<SScope>,
+    // TODO(cohae): Optional Tag<T>
+    pub scope: TagHash,
 }
 
 #[derive(Debug)]

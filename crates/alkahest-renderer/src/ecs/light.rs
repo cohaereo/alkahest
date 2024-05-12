@@ -54,7 +54,7 @@ pub struct LightRenderer {
     technique_compute_lightprobe: Handle<Technique>,
     technique_compute_lightprobe_shadowing: Option<Handle<Technique>>,
 
-    debug_label: String,
+    pub debug_label: String,
 }
 
 impl LightRenderer {
