@@ -59,9 +59,9 @@ fn load_technique_stage(
         return Ok(None);
     }
 
-    let cbuffer = if shader.constant_buffer.is_some() {
+    let cbuffer = if shader.constants.constant_buffer.is_some() {
         let buffer_header_ref = package_manager()
-            .get_entry(shader.constant_buffer)
+            .get_entry(shader.constants.constant_buffer)
             .unwrap()
             .reference;
 
@@ -71,10 +71,10 @@ fn load_technique_stage(
         let buf = ConstantBufferCached::create_array_init(gctx.clone(), data).unwrap();
 
         Some(buf)
-    } else if !shader.unk50.is_empty() {
+    } else if !shader.constants.unk38.is_empty() {
         let buf = ConstantBufferCached::create_array_init(
             gctx.clone(),
-            bytemuck::cast_slice(&shader.unk50),
+            bytemuck::cast_slice(&shader.constants.unk38),
         )
         .unwrap();
 
@@ -83,12 +83,13 @@ fn load_technique_stage(
         None
     };
 
-    let bytecode = match TfxBytecodeOp::parse_all(&shader.bytecode, binrw::Endian::Little) {
+    let bytecode = match TfxBytecodeOp::parse_all(&shader.constants.bytecode, binrw::Endian::Little)
+    {
         Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
         Err(e) => {
             debug!(
                 "Failed to parse VS TFX bytecode: {e:?} (data={})",
-                hex::encode(&shader.bytecode)
+                hex::encode(&shader.constants.bytecode)
             );
             None
         }
@@ -113,7 +114,7 @@ fn load_technique_stage(
         bytecode,
     };
 
-    for sampler in shader.samplers.iter() {
+    for sampler in shader.constants.samplers.iter() {
         stage
             .samplers
             .push(load_sampler(&gctx, sampler.hash32()).ok());

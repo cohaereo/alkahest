@@ -5,9 +5,10 @@ use alkahest_data::{
     common::ResourceHash,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SBubbleParent, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
+        SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
         SShadowingLight, Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b, Unk80808cb7,
     },
+    occlusion::AABB,
     tfx::TfxFeatureRenderer,
     Tag,
 };
@@ -15,7 +16,7 @@ use alkahest_pm::package_manager;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Quat, Vec3};
+use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use hecs::Entity;
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -27,7 +28,7 @@ use crate::{
         dynamic_geometry::DynamicModelComponent,
         hierarchy::{Children, Parent},
         light::{LightRenderer, ShadowMapRenderer},
-        map::MapAtmosphere,
+        map::{CubemapVolume, MapAtmosphere},
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
         tags::{insert_tag, EntityTag},
         terrain::TerrainPatches,
@@ -529,6 +530,37 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     MapAtmosphere::load(&renderer.gpu, atmos)
                         .context("Failed to load map atmosphere")?,
                     resource_origin,
+                ));
+            }
+            // Cubemap volume
+            0x80806695 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset))
+                    .unwrap();
+
+                let cubemap_volume: SCubemapVolume = TigerReadable::read_ds(table_data).unwrap();
+                let volume_min = data.translation - cubemap_volume.cubemap_extents;
+                let volume_max = data.translation + cubemap_volume.cubemap_extents;
+
+                let bb = AABB {
+                    min: volume_min.truncate(),
+                    max: volume_max.truncate(),
+                };
+                scene.spawn((
+                    Transform {
+                        translation: data.translation.xyz(),
+                        rotation: transform.rotation,
+                        ..Default::default()
+                    },
+                    CubemapVolume {
+                        texture: renderer
+                            .data
+                            .lock()
+                            .asset_manager
+                            .get_or_load_texture(cubemap_volume.cubemap_texture),
+                        bb,
+                        name: cubemap_volume.cubemap_name.to_string(),
+                    },
                 ));
             }
             0x808067b5 => {

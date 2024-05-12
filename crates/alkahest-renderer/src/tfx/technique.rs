@@ -201,15 +201,15 @@ impl TechniqueStage {
                 &renderer.gpu,
                 &renderer.data.lock().externs,
                 cbuffer,
-                &self.shader.bytecode_constants,
+                &self.shader.constants.bytecode_constants,
                 &self.samplers,
             )?;
         }
 
-        if self.shader.constant_buffer_slot != -1 {
+        if self.shader.constants.constant_buffer_slot != -1 {
             if let Some(cbuffer) = &self.cbuffer {
                 renderer.gpu.bind_cbuffer(
-                    self.shader.constant_buffer_slot as u32,
+                    self.shader.constants.constant_buffer_slot as u32,
                     Some(cbuffer.buffer().clone()),
                     self.stage,
                 );

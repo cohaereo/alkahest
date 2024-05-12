@@ -1,8 +1,10 @@
 use destiny_pkg::TagHash;
 use glam::Vec4;
-use tiger_parse::{tiger_tag, NullString, Pointer};
+use tiger_parse::{NullString, Pointer, tiger_tag};
 
-use super::{Tag, WideHash};
+use crate::technique::SDynamicConstants;
+
+use super::Tag;
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x8080978C)]
@@ -97,14 +99,7 @@ impl SScope {
 pub struct SScopeStage {
     pub unk0: [u32; 4],
     pub unk10: u64,
-    pub bytecode: Vec<u8>,
-    pub bytecode_constants: Vec<Vec4>,
-    pub samplers: Vec<WideHash>,
-    pub unk38: Vec<Vec4>,
-    pub unk48: [u32; 4],
-
-    pub constant_buffer_slot: i32,
-    pub constant_buffer: TagHash,
+    pub constants: SDynamicConstants,
 
     pub unk60: [u32; 6],
 }

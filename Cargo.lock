@@ -179,6 +179,7 @@ version = "0.1.0"
 dependencies = [
  "alkahest-pm",
  "binrw",
+ "bitflags 2.5.0",
  "destiny-pkg",
  "glam",
  "nohash-hasher",
@@ -3813,8 +3814,7 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.9"
-source = "git+https://github.com/v4nguard/tiger-parse#b72888c2fb4252c8d125f00b8ab55d5333842f07"
+version = "0.1.10"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -3826,7 +3826,6 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#b72888c2fb4252c8d125f00b8ab55d5333842f07"
 dependencies = [
  "darling",
  "proc-macro2",

@@ -218,6 +218,7 @@ impl Renderer {
                         .as_ref()
                         .unwrap()
                         .stage
+                        .constants
                         .constant_buffer_slot as u32;
 
                     frame_cb.bind(slot, TfxShaderStage::Pixel);

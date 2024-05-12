@@ -1,7 +1,8 @@
-use alkahest_data::map::SMapAtmosphere;
+use alkahest_data::{map::SMapAtmosphere, occlusion::AABB};
 
 use crate::{
     gpu::{texture::Texture, GpuContext},
+    handle::Handle,
     loaders::texture::load_texture,
     tfx::externs,
 };
@@ -71,4 +72,10 @@ impl MapAtmosphere {
         x.unk20 = x.unk30.clone();
         x.unk38 = x.unk48.clone();
     }
+}
+
+pub struct CubemapVolume {
+    pub texture: Handle<Texture>,
+    pub bb: AABB,
+    pub name: String,
 }

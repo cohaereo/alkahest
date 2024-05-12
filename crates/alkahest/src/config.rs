@@ -71,31 +71,10 @@ macro_rules! config {
 #[serde(default)]
 pub struct Config {
     pub window: WindowConfig,
-    pub resources: ResourceConfig,
     pub renderer: RendererSettings,
     // pub render_settings: RenderConfig,
     pub update_channel: Option<UpdateChannel>,
     pub packages_directory: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(default)]
-pub struct ResourceConfig {
-    pub show_resources: bool,
-    pub resource_distance_limit: bool,
-    pub map_resource_label_background: bool,
-    pub filters: HashMap<String, bool>,
-}
-
-impl Default for ResourceConfig {
-    fn default() -> Self {
-        Self {
-            resource_distance_limit: true,
-            map_resource_label_background: true,
-            show_resources: false,
-            filters: Default::default(),
-        }
-    }
 }
 
 // #[derive(Serialize, Deserialize, Default)]

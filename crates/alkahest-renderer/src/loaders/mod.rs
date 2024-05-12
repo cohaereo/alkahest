@@ -126,9 +126,8 @@ impl AssetManager {
         if budget != 0 {
             debug!("Polling asset manager ({} assets to process)", budget);
         }
-        let time_budget = std::time::Instant::now() + std::time::Duration::from_millis(30);
 
-        while budget > 0 && time_budget > std::time::Instant::now() {
+        while budget > 0 {
             match self.asset_rx.try_recv() {
                 Ok(asset) => {
                     debug!(

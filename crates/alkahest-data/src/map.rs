@@ -168,7 +168,7 @@ pub struct Unk8080714b {
 /// Cubemap volume resource
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff, size = 0x1e0)]
-pub struct Unk80806b7f {
+pub struct SCubemapVolume {
     #[tag(offset = 0x20)]
     pub cubemap_extents: glam::Vec4,
     /// Represents the visual center of the cubemap

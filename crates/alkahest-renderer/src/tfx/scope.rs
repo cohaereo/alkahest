@@ -34,19 +34,19 @@ pub struct TfxScope {
 impl TfxScope {
     pub fn load(scope: SScope, gctx: SharedGpuContext) -> anyhow::Result<TfxScope> {
         let sscope = scope.clone();
-        let stage_vertex = if sscope.stage_vertex.constant_buffer_slot != -1 {
+        let stage_vertex = if sscope.stage_vertex.constants.constant_buffer_slot != -1 {
             TfxScopeStage::load(sscope.stage_vertex, TfxShaderStage::Vertex, gctx.clone())?
         } else {
             None
         };
 
-        let stage_pixel = if sscope.stage_pixel.constant_buffer_slot != -1 {
+        let stage_pixel = if sscope.stage_pixel.constants.constant_buffer_slot != -1 {
             TfxScopeStage::load(sscope.stage_pixel, TfxShaderStage::Pixel, gctx.clone())?
         } else {
             None
         };
 
-        let stage_geometry = if sscope.stage_geometry.constant_buffer_slot != -1 {
+        let stage_geometry = if sscope.stage_geometry.constants.constant_buffer_slot != -1 {
             TfxScopeStage::load(
                 sscope.stage_geometry,
                 TfxShaderStage::Geometry,
@@ -56,7 +56,7 @@ impl TfxScope {
             None
         };
 
-        let stage_compute = if sscope.stage_compute.constant_buffer_slot != -1 {
+        let stage_compute = if sscope.stage_compute.constants.constant_buffer_slot != -1 {
             TfxScopeStage::load(sscope.stage_compute, TfxShaderStage::Compute, gctx.clone())?
         } else {
             None
@@ -108,9 +108,9 @@ impl TfxScopeStage {
         shader_stage: TfxShaderStage,
         gctx: SharedGpuContext,
     ) -> anyhow::Result<Option<TfxScopeStage>> {
-        let cbuffer = if stage.constant_buffer.is_some() {
+        let cbuffer = if stage.constants.constant_buffer.is_some() {
             let buffer_header_ref = package_manager()
-                .get_entry(stage.constant_buffer)
+                .get_entry(stage.constants.constant_buffer)
                 .unwrap()
                 .reference;
 
@@ -120,10 +120,10 @@ impl TfxScopeStage {
             let buf = ConstantBufferCached::create_array_init(gctx.clone(), data).unwrap();
 
             Some(buf)
-        } else if !stage.unk38.is_empty() {
+        } else if !stage.constants.unk38.is_empty() {
             let buf = ConstantBufferCached::create_array_init(
                 gctx.clone(),
-                bytemuck::cast_slice(&stage.unk38),
+                bytemuck::cast_slice(&stage.constants.unk38),
             )
             .unwrap();
 
@@ -132,19 +132,20 @@ impl TfxScopeStage {
             None
         };
 
-        let bytecode = match TfxBytecodeOp::parse_all(&stage.bytecode, binrw::Endian::Little) {
-            Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
-            Err(e) => {
-                debug!(
-                    "Failed to parse VS TFX bytecode: {e:?} (data={})",
-                    hex::encode(&stage.bytecode)
-                );
-                None
-            }
-        };
+        let bytecode =
+            match TfxBytecodeOp::parse_all(&stage.constants.bytecode, binrw::Endian::Little) {
+                Ok(opcodes) => Some(TfxBytecodeInterpreter::new(opcodes)),
+                Err(e) => {
+                    debug!(
+                        "Failed to parse VS TFX bytecode: {e:?} (data={})",
+                        hex::encode(&stage.constants.bytecode)
+                    );
+                    None
+                }
+            };
 
         let mut samplers = vec![];
-        for sampler in stage.samplers.iter() {
+        for sampler in stage.constants.samplers.iter() {
             samplers.push(crate::loaders::technique::load_sampler(&gctx, sampler.hash32()).ok());
         }
 
@@ -163,15 +164,15 @@ impl TfxScopeStage {
                 &renderer.gpu,
                 &renderer.data.lock().externs,
                 cbuffer,
-                &self.stage.bytecode_constants,
+                &self.stage.constants.bytecode_constants,
                 &self.samplers,
             )?;
         }
 
-        if self.stage.constant_buffer_slot != -1 {
+        if self.stage.constants.constant_buffer_slot != -1 {
             if let Some(cbuffer) = &self.cbuffer {
                 renderer.gpu.bind_cbuffer(
-                    self.stage.constant_buffer_slot as u32,
+                    self.stage.constants.constant_buffer_slot as u32,
                     Some(cbuffer.buffer().clone()),
                     self.shader_stage,
                 );

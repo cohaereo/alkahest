@@ -39,7 +39,11 @@ pub struct GBuffer {
 }
 
 impl GBuffer {
-    pub fn create(size: (u32, u32), gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn create(mut size: (u32, u32), gctx: SharedGpuContext) -> anyhow::Result<Self> {
+        if size.0 == 0 || size.1 == 0 {
+            size = (1, 1);
+        }
+
         Ok(Self {
             // rt0: RenderTarget::create(size, DxgiFormat::R11G11B10_FLOAT, gctx.clone(), "RT0")
             //     .context("RT0")?,
@@ -148,7 +152,7 @@ impl GBuffer {
 
     pub fn resize(&mut self, mut new_size: (u32, u32)) -> anyhow::Result<()> {
         if new_size.0 == 0 || new_size.1 == 0 {
-            new_size = (4, 4);
+            new_size = (1, 1);
         }
 
         self.rt0.resize(new_size).context("RT0")?;
@@ -451,7 +455,7 @@ impl DepthState {
     pub fn create(size: (u32, u32), gctx: SharedGpuContext) -> anyhow::Result<Self> {
         let size = if size.0 == 0 || size.1 == 0 {
             warn!("Zero size depth state requested, using 1x1");
-            (1, 1)
+            (4, 4)
         } else {
             size
         };

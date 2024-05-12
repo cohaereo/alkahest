@@ -1,7 +1,11 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    io::{Read, Seek},
+};
 
 use destiny_pkg::TagHash;
-use tiger_parse::{tiger_tag, NullString, Pointer};
+use glam::Vec4;
+use tiger_parse::{tiger_tag, Endian, NullString, Pointer, TigerReadable};
 
 use crate::{tfx::TfxShaderStage, WideHash};
 
@@ -24,8 +28,8 @@ pub struct STechnique {
     pub unk18: u32,
     pub unk1c: u32,
 
-    pub used_scopes: u64,
-    pub compatible_scopes: u64,
+    pub used_scopes: ScopeBits,
+    pub compatible_scopes: ScopeBits,
 
     pub states: StateSelection,
     pub unk34: [u32; 15],
@@ -54,39 +58,6 @@ impl STechnique {
             .filter(|(_, s)| s.shader.is_some())
             .collect()
     }
-
-    //     pub fn debug_header_string(&self) -> String {
-    //         format!(
-    //             "STechnique {{
-    //     unk8: 0x{:x},
-    //     unkc: 0x{:x},
-    //     unk10: 0x{:x},
-    //     unk14: 0x{:x},
-    //     unk18: 0x{:x},
-    //     unk1c: 0x{:x},
-    //     unk20: 0x{:x},
-    //     unk22: 0x{:x},
-    //     unk24: 0x{:x},
-    //     unk28: 0x{:x},
-    //     unk2c: 0x{:x},
-    //     states: 0x{:?},
-    //     unk34: {:x?}
-    // }}",
-    //             self.unk8,
-    //             self.unkc,
-    //             self.unk10,
-    //             self.unk14,
-    //             self.unk18,
-    //             self.unk1c,
-    //             self.unk20,
-    //             self.unk22,
-    //             self.unk24,
-    //             self.unk28,
-    //             self.unk2c,
-    //             self.states,
-    //             self.unk34
-    //         )
-    //     }
 }
 
 #[derive(Debug, Clone)]
@@ -96,15 +67,7 @@ pub struct STechniqueShader {
     pub unk4: u32,
     pub textures: Vec<SMaterialTextureAssignment>, // 0x8
     pub unk18: u64,
-    pub bytecode: Vec<u8>,                   // 0x20
-    pub bytecode_constants: Vec<glam::Vec4>, // 0x30
-    pub samplers: Vec<WideHash>,             // 0x40
-    pub unk50: Vec<glam::Vec4>,              // 0x50
-
-    pub unk60: [u32; 4], // 0x60
-
-    pub constant_buffer_slot: i32, // 0x70
-    pub constant_buffer: TagHash,  // 0x74
+    pub constants: SDynamicConstants,
 
     pub unk78: [u32; 6],
 }
@@ -141,17 +104,75 @@ pub struct Unk80806cb5 {
 
 pub type Unk80806cb6 = Unk80806cb5;
 
+#[tiger_tag]
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806da1 {
-    pub file_size: u64,
-    pub unk8: u64,
-    pub unk10: [u32; 8],
-
+pub struct SDynamicConstants {
     pub bytecode: Vec<u8>,
-    pub bytecode_constants: Vec<glam::Vec4>,
-    pub unk50: [u32; 4],
-    pub unk60: Vec<glam::Vec4>,
+    pub bytecode_constants: Vec<Vec4>,
+    pub samplers: Vec<WideHash>,
+    pub unk38: Vec<Vec4>,
+    pub unk48: [u32; 4],
+
+    pub constant_buffer_slot: i32,
+    pub constant_buffer: TagHash,
+}
+
+bitflags::bitflags! {
+    #[derive(Debug, Clone)]
+    pub struct ScopeBits: u64 {
+        const FRAME                             = 1 << 0;
+        const VIEW                              = 1 << 1;
+        const RIGID_MODEL                       = 1 << 2;
+        const EDITOR_MESH                       = 1 << 3;
+        const EDITOR_TERRAIN                    = 1 << 4;
+        const CUI_VIEW                          = 1 << 5;
+        const CUI_OBJECT                        = 1 << 6;
+        const SKINNING                          = 1 << 7;
+        const SPEEDTREE                         = 1 << 8;
+        const CHUNK_MODEL                       = 1 << 9;
+        const DECAL                             = 1 << 10;
+        const INSTANCES                         = 1 << 11;
+        const SPEEDTREE_LOD_DRAWCALL_DATA       = 1 << 12;
+        const TRANSPARENT                       = 1 << 13;
+        const TRANSPARENT_ADVANCED              = 1 << 14;
+        const SDSM_BIAS_AND_SCALE_TEXTURES      = 1 << 15;
+        const TERRAIN                           = 1 << 16;
+        const POSTPROCESS                       = 1 << 17;
+        const CUI_BITMAP                        = 1 << 18;
+        const CUI_STANDARD                      = 1 << 19;
+        const UI_FONT                           = 1 << 20;
+        const CUI_HUD                           = 1 << 21;
+        const PARTICLE_TRANSFORMS               = 1 << 22;
+        const PARTICLE_LOCATION_METADATA        = 1 << 23;
+        const CUBEMAP_VOLUME                    = 1 << 24;
+        const GEAR_PLATED_TEXTURES              = 1 << 25;
+        const GEAR_DYE_0                        = 1 << 26;
+        const GEAR_DYE_1                        = 1 << 27;
+        const GEAR_DYE_2                        = 1 << 28;
+        const GEAR_DYE_DECAL                    = 1 << 29;
+        const GENERIC_ARRAY                     = 1 << 30;
+        const GEAR_DYE_SKIN                     = 1 << 31;
+        const GEAR_DYE_LIPS                     = 1 << 32;
+        const GEAR_DYE_HAIR                     = 1 << 33;
+        const GEAR_DYE_FACIAL_LAYER_0_MASK      = 1 << 34;
+        const GEAR_DYE_FACIAL_LAYER_0_MATERIAL  = 1 << 35;
+        const GEAR_DYE_FACIAL_LAYER_1_MASK      = 1 << 36;
+        const GEAR_DYE_FACIAL_LAYER_1_MATERIAL  = 1 << 37;
+        const PLAYER_CENTERED_CASCADED_GRID     = 1 << 38;
+        const GEAR_DYE_012                      = 1 << 39;
+        const COLOR_GRADING_UBERSHADER          = 1 << 40;
+    }
+}
+
+// TODO(cohae): tiger-parse doesnt work with bitflags, so we have to implement this manually
+impl TigerReadable for ScopeBits {
+    fn read_ds_endian<R: Read + Seek>(reader: &mut R, endian: Endian) -> tiger_parse::Result<Self> {
+        let bits: u64 = u64::read_ds_endian(reader, endian)?;
+        Ok(Self::from_bits_truncate(bits))
+    }
+
+    const ZEROCOPY: bool = true;
+    const SIZE: usize = 8;
 }
 
 /// Selection of blend, rasterizer, depth bias and depth stencil state

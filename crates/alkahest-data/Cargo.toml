@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 alkahest-pm = { path = "../alkahest-pm" }
 binrw.workspace = true
+bitflags.workspace = true
 destiny-pkg.workspace = true
 glam.workspace = true
 tiger-parse.workspace = true
