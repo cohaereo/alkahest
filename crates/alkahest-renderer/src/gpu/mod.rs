@@ -117,12 +117,12 @@ impl GpuContext {
                 HINSTANCE::default(),
                 Default::default(),
                 // D3D11_CREATE_DEVICE_DEBUG,
-                Some(&[D3D_FEATURE_LEVEL_11_1]),
+                Some(&[D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0]),
                 D3D11_SDK_VERSION,
                 Some(&swap_chain_description),
                 Some(&mut swap_chain),
                 Some(&mut device),
-                Some(&mut D3D_FEATURE_LEVEL_11_1),
+                None,
                 Some(&mut device_context),
             )?;
         }

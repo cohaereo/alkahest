@@ -73,6 +73,7 @@ received some polish!
 - Reworked the `Global` and `Hidden` components as stateless ECS flags
 - Removed the scope editor
     - The scope editor has been replaced by the higher-level extern editor
+- Lowered DirectX feature level requirement to 11.0
 
 ### Removed
 
