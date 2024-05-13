@@ -500,12 +500,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let tag: TagHash = table_data.read_le().unwrap();
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
-                println!(
-                    "near={} far={} fov={}",
-                    light.half_fov,
-                    light.far_plane,
-                    (light.half_fov * 2.).to_degrees()
-                );
                 let mut shadowmap = ShadowMapRenderer::new(
                     &renderer.gpu,
                     transform,
