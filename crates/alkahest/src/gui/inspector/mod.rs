@@ -92,54 +92,6 @@ impl GuiView for InspectorPanel {
     }
 }
 
-pub fn resolve_entity_icon(e: EntityRef<'_>) -> Option<char> {
-    macro_rules! icon_from_component_panels {
-		($($component:ty),+) => {
-			$(
-				if e.has::<$component>() {
-					return Some(<$component>::inspector_icon());
-				}
-			)*
-		};
-	}
-
-    if let Some(rp) = e.get::<&Icon>() {
-        return Some(rp.0);
-    }
-
-    icon_from_component_panels!(Beacon, Ruler, Sphere);
-
-    None
-}
-
-pub fn resolve_entity_name(e: EntityRef<'_>, append_ent: bool) -> String {
-    let postfix = if append_ent {
-        format!(" (ent {})", e.entity().id())
-    } else {
-        String::new()
-    };
-
-    if let Some(label) = e.get::<&Label>() {
-        format!("{}{postfix}", label.0)
-    // } else if let Some(rp) = e.get::<&ResourcePoint>() {
-    //     format!("{}{postfix}", split_pascal_case(rp.resource.debug_id()))
-    } else {
-        macro_rules! name_from_component_panels {
-            ($($component:ty),+) => {
-                $(
-                    if e.has::<$component>() {
-                        return format!("{}{postfix}", <$component>::inspector_name());
-                    }
-                )*
-            };
-        }
-
-        name_from_component_panels!(Beacon, Ruler, Sphere);
-
-        format!("ent {}", e.entity().id())
-    }
-}
-
 pub fn show_inspector_panel(
     ui: &mut egui::Ui,
     scene: &mut Scene,
@@ -179,11 +131,7 @@ pub fn show_inspector_panel(
             }
         }
 
-        let title = format!(
-            "{} {}",
-            resolve_entity_icon(e).unwrap_or(ICON_HELP),
-            resolve_entity_name(e, true)
-        );
+        let title = format!("{} Entity {}", ICON_HELP, e.entity().id());
 
         if e.has::<Mutable>() {
             if let Some(mut label) = e.get::<&mut Label>() {
@@ -197,7 +145,7 @@ pub fn show_inspector_panel(
                     .on_hover_text("Add label")
                     .clicked()
                 {
-                    cmd.insert_one(ent, Label(resolve_entity_name(e, false)));
+                    cmd.insert_one(ent, Label(format!("Entity {}", e.entity().id())));
                 }
             }
         } else {
