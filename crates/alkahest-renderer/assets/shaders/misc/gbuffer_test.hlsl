@@ -1,10 +1,8 @@
-cbuffer alk_scope_error : register(b7) {
-    float4x4 projViewMatrix;
-    float4x4 viewMatrix;
-    float4x4 modelMatrix;
-};
+#include "scopes/view.hlsli"
 
 cbuffer appearance: register(b0) {
+    float4x4 modelMatrix;
+
     // XYZ = albedo, W = iridescence index
     // TODO(cohae): Describe the iridescence index value
     float4 rgb_iridescence;
@@ -16,13 +14,15 @@ cbuffer appearance: register(b0) {
 
 struct VSOutput {
     float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
     float3 normalWorldSpace : NORMAL0;
 };
 
-VSOutput VSMain(float3 in_position : POSITION, float3 in_normal : NORMAL) {
+VSOutput VSMain(float3 in_position : POSITION, float2 in_texcoord : TEXCOORD0, float3 in_normal : NORMAL) {
     VSOutput output;
 
-    output.position = mul(projViewMatrix, mul(modelMatrix, float4(in_position, 1.0)));
+    output.position = mul(world_to_projective, mul(modelMatrix, float4(in_position, 1.0)));
+    output.texcoord = in_texcoord;
     output.normalWorldSpace = mul((float3x3)modelMatrix, normalize(in_normal));
 
     return output;
@@ -39,7 +39,8 @@ void PSMain(
 ) {
 
     rt0 = rgb_iridescence;
-    rt1.xyz = input.normalWorldSpace;
+    float normal_length = 0.25 * smoothness + 0.75;
+    rt1.xyz = input.normalWorldSpace * normal_length;
     rt1.w = 0.0;
 
     rt2.x = metalness;

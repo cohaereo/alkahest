@@ -1,4 +1,5 @@
 pub mod matcap;
+pub mod shader_ball;
 
 /// Relative to the assets directory
 /// Example: include_dxbc!(vs "shaders/test.hlsl") => 'assets/shaders/test.hlsl.vs.dxbc'

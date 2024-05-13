@@ -8,6 +8,7 @@ use crate::{
     gpu_event,
     renderer::Renderer,
 };
+use crate::shader::shader_ball::draw_shaderball_system;
 
 impl Renderer {
     pub(super) fn run_renderstage_systems(&self, scene: &Scene, stage: TfxRenderStage) {
@@ -20,6 +21,7 @@ impl Renderer {
                 | TfxRenderStage::DepthPrepass
         ) {
             draw_terrain_patches_system(self, scene);
+            draw_shaderball_system(self, scene);
         }
 
         if stage == TfxRenderStage::Transparents {

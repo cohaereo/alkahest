@@ -1,7 +1,7 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::Mutable,
+        common::{Icon, Label, Mutable},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::{Transform, TransformFlags},
@@ -11,9 +11,11 @@ use alkahest_renderer::{
         ICON_ALPHA_A_BOX_OUTLINE, ICON_ALPHA_D_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
         ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE,
         ICON_ALPHA_W_BOX_OUTLINE, ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE,
-        ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
+        ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE,
+        ICON_SPHERE,
     },
     renderer::RendererShared,
+    shader::shader_ball::ShaderBallComponent,
 };
 use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
@@ -199,6 +201,33 @@ impl GuiView for MenuBar {
                     //         ui.close_menu();
                     //     }
                     // }
+                    
+                    ui.separator();
+
+                    if ui
+                        .button(format!("{} Material Ball", ICON_POKEBALL))
+                        .clicked()
+                    {
+                        let mut maps: std::cell::RefMut<'_, MapList> =
+                            resources.get_mut::<MapList>();
+                        let renderer = resources.get::<RendererShared>();
+
+                        if let Some(map) = maps.current_map_mut() {
+                            let camera = resources.get::<Camera>();
+                            let e = map.scene.spawn((
+                                Icon(ICON_POKEBALL),
+                                Label::from("Material Ball"),
+                                Transform::from_translation(camera.position()),
+                                ShaderBallComponent::new(&renderer).unwrap(),
+                                Tags::from_iter([EntityTag::Utility]),
+                                Mutable,
+                            ));
+
+                            resources.get_mut::<SelectedEntity>().select(e);
+
+                            ui.close_menu();
+                        }
+                    }
                 });
 
                 // ui.menu_button("View", |ui| {

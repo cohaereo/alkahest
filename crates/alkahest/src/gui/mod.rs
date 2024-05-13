@@ -40,6 +40,8 @@ pub trait UiExt {
     // ) -> Response;
 
     fn vec4_input(&mut self, value: &mut glam::Vec4) -> Response;
+    
+    fn vec3_input(&mut self, value: &mut glam::Vec3) -> Response;
 }
 
 impl UiExt for egui::Ui {
@@ -79,5 +81,9 @@ impl UiExt for egui::Ui {
 
     fn vec4_input(&mut self, value: &mut glam::Vec4) -> Response {
         input::Vec4Input::new(value).ui(self)
+    }
+
+    fn vec3_input(&mut self, value: &mut glam::Vec3) -> Response {
+        input::Vec3Input::new(value).ui(self)
     }
 }

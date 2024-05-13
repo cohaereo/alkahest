@@ -234,6 +234,7 @@ dependencies = [
  "itertools 0.12.1",
  "lazy_static",
  "num",
+ "obj",
  "parking_lot",
  "png",
  "profiling",

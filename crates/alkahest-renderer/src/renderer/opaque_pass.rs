@@ -38,6 +38,7 @@ impl Renderer {
 
         // Draw opaque pass
         self.run_renderstage_systems(scene, TfxRenderStage::GenerateGbuffer);
+        
         {
             let mut data = self.data.lock();
 

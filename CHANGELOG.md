@@ -63,6 +63,7 @@ received some polish!
 - Smooth camera acceleration
 - Specular matcap (makes shiny objects look shiny in unshaded mode)
 - Static instances can now be moved, rotated and scaled individually
+- Added a material ball with configurable GBuffer output parameters
 
 ### Changed
 

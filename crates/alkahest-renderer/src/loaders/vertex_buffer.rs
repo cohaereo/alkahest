@@ -19,6 +19,7 @@ use crate::{gpu::GpuContext, util::d3d::D3dResource};
 pub struct VertexBuffer {
     pub buffer: ID3D11Buffer,
     pub size: u32,
+    pub length: u32,
     pub stride: u32,
     /// Optional SRV for the buffer. Created for buffers with stride 4
     pub srv: Option<ID3D11ShaderResourceView>,
@@ -76,6 +77,7 @@ impl VertexBuffer {
         Ok(VertexBuffer {
             buffer,
             size: data.len() as u32,
+            length: data.len() as u32 / stride,
             stride,
             srv,
         })

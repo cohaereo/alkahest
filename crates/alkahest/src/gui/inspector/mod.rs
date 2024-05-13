@@ -16,6 +16,8 @@ use alkahest_renderer::{
         utility::{Beacon, Ruler, Sphere},
         Scene,
     },
+    icons::ICON_POKEBALL,
+    shader::shader_ball::ShaderBallComponent,
 };
 use egui::{Align2, Color32, FontId, RichText, Widget};
 use glam::{Quat, Vec3};
@@ -32,6 +34,7 @@ use crate::{
             ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_RADIUS_OUTLINE, ICON_RESIZE,
             ICON_ROTATE_ORBIT, ICON_TAG,
         },
+        UiExt,
     },
     input_float3,
     maplist::MapList,
@@ -233,7 +236,8 @@ fn show_inspector_components(
         Beacon,
         DynamicModelComponent,
         LightRenderer,
-        CubemapVolume
+        CubemapVolume,
+        ShaderBallComponent
     );
 }
 
@@ -449,6 +453,47 @@ impl ComponentPanel for DynamicModelComponent {
                 .text("Material Variant")
                 .ui(ui);
         }
+    }
+}
+
+impl ComponentPanel for ShaderBallComponent {
+    fn inspector_name() -> &'static str {
+        "Shader Ball"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_POKEBALL
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+        ui.horizontal(|ui| {
+            ui.strong("Color:");
+            ui.color_edit_button_rgb(self.color.as_mut());
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Iridescence:");
+            egui::Slider::new(&mut self.iridescence, 0..=128).ui(ui);
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Emissive:");
+            egui::Slider::new(&mut self.emission, 0.0..=1.0).ui(ui);
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Metalness:");
+            egui::Slider::new(&mut self.metalness, 0.0..=1.0).ui(ui);
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Smoothness:");
+            egui::Slider::new(&mut self.smoothness, 0.0..=1.0).ui(ui);
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Transmission:");
+            egui::Slider::new(&mut self.transmission, 0.0..=1.0).ui(ui);
+        });
     }
 }
 
