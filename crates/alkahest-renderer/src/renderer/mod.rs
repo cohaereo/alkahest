@@ -26,7 +26,7 @@ use crate::{
     hocus,
     loaders::AssetManager,
     postprocess::ssao::SsaoRenderer,
-    renderer::{gbuffer::GBuffer, immediate::ImmediateRenderer},
+    renderer::{cubemaps::CubemapRenderer, gbuffer::GBuffer, immediate::ImmediateRenderer},
     resources::Resources,
     shader::matcap::MatcapRenderer,
     tfx::{
@@ -48,9 +48,11 @@ pub struct Renderer {
     pub data: Mutex<RendererData>,
 
     pub render_settings: RendererSettings,
+
     pub ssao: SsaoRenderer,
     matcap: MatcapRenderer,
     pub immediate: ImmediateRenderer,
+    cubemap_renderer: CubemapRenderer,
 
     pub time: Instant,
     last_frame: Instant,
@@ -77,6 +79,7 @@ impl Renderer {
             ssao: SsaoRenderer::new(gpu.clone())?,
             matcap: MatcapRenderer::new(gpu.clone())?,
             immediate: ImmediateRenderer::new(gpu.clone())?,
+            cubemap_renderer: CubemapRenderer::new(gpu.clone())?,
             gpu,
             render_globals,
             render_settings: RendererSettings::default(),

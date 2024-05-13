@@ -23,6 +23,9 @@ impl Renderer {
 
             data.gbuffers.light_diffuse.clear(&[0.01, 0.01, 0.01, 0.0]);
             data.gbuffers.light_specular.clear(&[0.0, 0.0, 0.0, 0.0]);
+            data.gbuffers
+                .light_ibl_specular
+                .clear(&[0.0, 0.0, 0.0, 0.0]);
 
             self.gpu
                 .current_states
@@ -43,6 +46,17 @@ impl Renderer {
                 }
 
                 {
+                    unsafe {
+                        let data = &mut self.data.lock();
+                        self.gpu.context().OMSetRenderTargets(
+                            Some(&[
+                                Some(data.gbuffers.light_diffuse.render_target.clone()),
+                                Some(data.gbuffers.light_ibl_specular.render_target.clone()),
+                            ]),
+                            None,
+                        );
+                    }
+
                     gpu_event!(self.gpu, "cubemaps");
                     draw_cubemap_system(self, scene);
                 }

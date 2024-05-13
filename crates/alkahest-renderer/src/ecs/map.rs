@@ -82,3 +82,9 @@ pub struct CubemapVolume {
     pub extents: Vec3,
     pub name: String,
 }
+
+impl CubemapVolume {
+    pub fn volume(&self) -> f32 {
+        self.extents.x * self.extents.y * self.extents.z
+    }
+}
