@@ -385,7 +385,7 @@ impl ShadowMapRenderer {
         let world_to_camera = Mat4::look_at_rh(
             transform.translation,
             transform.translation + transform.forward(),
-            Vec3::Z,
+            transform.up(),
         );
         let camera_to_projective = projection.matrix(viewport.aspect_ratio());
 
@@ -403,7 +403,7 @@ impl ShadowMapRenderer {
         self.world_to_camera = Mat4::look_at_rh(
             transform.translation,
             transform.translation + transform.forward(),
-            Vec3::Z,
+            transform.up(),
         );
 
         unsafe {

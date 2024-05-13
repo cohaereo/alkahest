@@ -79,6 +79,10 @@ impl Transform {
     pub fn forward(&self) -> Vec3 {
         self.rotation * Vec3::X
     }
+
+    pub fn up(&self) -> Vec3 {
+        self.rotation * Vec3::Z
+    }
 }
 
 impl From<Transform> for Mat4 {
