@@ -370,7 +370,11 @@ pub struct ShadowMapRenderer {
 
 impl ShadowMapRenderer {
     const RESOLUTION: u32 = 1024;
-    pub fn new(gpu: &GpuContext, transform: Transform) -> anyhow::Result<Self> {
+    pub fn new(
+        gpu: &GpuContext,
+        transform: Transform,
+        projection: CameraProjection,
+    ) -> anyhow::Result<Self> {
         let depth = ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
 
         let viewport = Viewport {
@@ -383,8 +387,7 @@ impl ShadowMapRenderer {
             transform.translation + transform.forward(),
             Vec3::Z,
         );
-        let camera_to_projective = CameraProjection::perspective_bounded(105.0, 0.1, 4000.0)
-            .matrix(viewport.aspect_ratio());
+        let camera_to_projective = projection.matrix(viewport.aspect_ratio());
 
         Ok(Self {
             // needs_update: true,

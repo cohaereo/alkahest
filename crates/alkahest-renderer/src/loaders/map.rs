@@ -23,6 +23,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
 
 use crate::{
+    camera::CameraProjection,
     ecs::{
         common::{Icon, Label, ResourceOrigin},
         dynamic_geometry::DynamicModelComponent,
@@ -499,7 +500,21 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let tag: TagHash = table_data.read_le().unwrap();
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
-                let mut shadowmap = ShadowMapRenderer::new(&renderer.gpu, transform)?;
+                println!(
+                    "near={} far={} fov={}",
+                    light.half_fov,
+                    light.far_plane,
+                    (light.half_fov * 2.).to_degrees()
+                );
+                let mut shadowmap = ShadowMapRenderer::new(
+                    &renderer.gpu,
+                    transform,
+                    CameraProjection::perspective_bounded(
+                        (light.half_fov * 2.).to_degrees(),
+                        0.1,
+                        light.far_plane,
+                    ),
+                )?;
                 shadowmap.update_timer = i as u32 % 4;
 
                 scene.spawn((

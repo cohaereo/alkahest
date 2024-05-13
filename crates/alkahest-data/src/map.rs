@@ -387,12 +387,12 @@ pub struct SShadowingLight {
     pub unkb4: f32,
     pub unkb8: f32,
 
-    // Might be FoV?
     pub unkbc: f32,
 
-    pub unkc0: f32,
-    pub unkc4: f32,
-    pub unkc8: f32,
+    pub far_plane: f32,
+    pub half_fov: f32,
+
+    pub unkc8: u32,
     pub unkcc: f32,
 
     pub technique_shading: TagHash,

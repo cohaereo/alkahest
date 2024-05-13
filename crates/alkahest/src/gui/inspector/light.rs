@@ -51,6 +51,18 @@ impl ComponentPanel for LightRenderer {
         });
         ui.label(&self.debug_label);
 
+        if let Some(shadowing) = e.get::<&SShadowingLight>() {
+            ui.separator();
+            ui.horizontal(|ui| {
+                ui.strong("FoV:");
+                ui.label(format!("{:.1}", (shadowing.half_fov * 2.).to_degrees()));
+            });
+            ui.horizontal(|ui| {
+                ui.strong("Far Plane:");
+                ui.label(format!("{:.1}", shadowing.far_plane));
+            });
+        }
+
         if let Some(transform) = e.get::<&Transform>() {
             renderer.immediate.cube_outline(
                 transform.local_to_world() * self.projection_matrix,
