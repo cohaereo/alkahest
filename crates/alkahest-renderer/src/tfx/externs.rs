@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
-use crate::{camera::Viewport, util::short_type_name};
+use crate::{camera::Viewport, gpu::texture::Texture, util::short_type_name};
 
 #[derive(Default, Clone)]
 pub enum TextureView {
@@ -71,9 +71,10 @@ pub struct ExternStorage {
     pub water: Option<Water>,
     pub hdao: Option<Hdao>,
     pub global_lighting: Option<GlobalLighting>,
+    pub cubemaps: Option<Cubemaps>,
 
-    pub unk4f: [Vec4; 256],
-    pub unk4f_used: RwLock<[usize; 256]>,
+    pub global_channels: [Vec4; 256],
+    pub global_channels_used: RwLock<[usize; 256]>,
 
     pub errors: RwLock<FxHashMap<String, TfxExpressionError>>,
 }
@@ -94,9 +95,10 @@ impl Default for ExternStorage {
             water: None,
             hdao: None,
             global_lighting: None,
+            cubemaps: None,
 
-            unk4f: get_unk4f_defaults(),
-            unk4f_used: RwLock::new([0; 256]),
+            global_channels: get_global_channel_defaults(),
+            global_channels_used: RwLock::new([0; 256]),
 
             errors: RwLock::new(FxHashMap::default()),
         }
@@ -231,6 +233,7 @@ impl ExternStorage {
             Water => self.water,
             Hdao => self.hdao,
             GlobalLighting => self.global_lighting,
+            Cubemaps => self.cubemaps,
         }
     }
 
@@ -263,7 +266,8 @@ impl ExternStorage {
             Atmosphere,
             Water,
             Hdao,
-            GlobalLighting
+            GlobalLighting,
+            Cubemaps
         }
     }
 
@@ -295,6 +299,7 @@ impl ExternStorage {
             Water => self.water,
             Hdao => self.hdao,
             GlobalLighting => self.global_lighting,
+            Cubemaps => self.cubemaps,
         }
     }
 }
@@ -645,6 +650,12 @@ extern_struct! {
 }
 
 extern_struct! {
+    struct Cubemaps("cubemaps") {
+        0x00 => temp_ao: TextureView > unimplemented(true),
+    }
+}
+
+extern_struct! {
     struct Decal("decal") {
         0x00 => unk00: TextureView > unimplemented(true),
         0x08 => unk08: TextureView, // rt1 copy
@@ -864,15 +875,15 @@ impl ExternDefault for f32 {
     }
 }
 
-fn get_unk4f_defaults() -> [Vec4; 256] {
-    let mut unk4f = [Vec4::ONE; 256];
+fn get_global_channel_defaults() -> [Vec4; 256] {
+    let mut channels = [Vec4::ONE; 256];
 
-    unk4f[10] = Vec4::ZERO;
-    unk4f[97] = Vec4::ZERO;
+    channels[10] = Vec4::ZERO;
+    channels[97] = Vec4::ZERO;
 
     // Sun related
-    unk4f[98] = Vec4::ZERO;
-    unk4f[100] = Vec4::ZERO;
+    channels[98] = Vec4::ZERO;
+    channels[100] = Vec4::ZERO;
 
-    unk4f
+    channels
 }

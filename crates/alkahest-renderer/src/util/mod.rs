@@ -30,3 +30,17 @@ macro_rules! hocus {
         $crate::util::Hocus($var).pocus()
     };
 }
+
+pub trait StringExt {
+    fn truncate_ellipsis(&self, max_len: usize) -> String;
+}
+
+impl StringExt for String {
+    fn truncate_ellipsis(&self, max_len: usize) -> String {
+        if self.len() > max_len {
+            format!("{}...", &self[..max_len - 3])
+        } else {
+            self.clone()
+        }
+    }
+}

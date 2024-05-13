@@ -3,7 +3,7 @@ use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
 use crate::{
     ecs::{light::draw_light_system, map::MapAtmosphere, Scene},
     gpu_event,
-    renderer::Renderer,
+    renderer::{cubemaps::draw_cubemap_system, Renderer},
     tfx::{externs, externs::ExternDefault},
 };
 
@@ -40,6 +40,11 @@ impl Renderer {
                 {
                     gpu_event!(self.gpu, "deferred_lights");
                     draw_light_system(self, scene)
+                }
+
+                {
+                    gpu_event!(self.gpu, "cubemaps");
+                    draw_cubemap_system(self, scene);
                 }
 
                 // {

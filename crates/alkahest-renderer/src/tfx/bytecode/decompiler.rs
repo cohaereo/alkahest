@@ -420,16 +420,11 @@ impl TfxBytecodeDecompiler {
                 TfxBytecodeOp::PushSampler { index } => {
                     stack_push!(format!("get_sampler({index})"));
                 }
-                TfxBytecodeOp::Unk4e {
-                    unk1,
-                    unk2,
-                    unk3,
-                    unk4,
-                } => {
-                    stack_push!(format!("unk4e(0x{unk1:02X}{unk2:02X}{unk3:02X}{unk4:02X})"));
+                TfxBytecodeOp::PushObjectChannelVector { hash } => {
+                    stack_push!(format!("object_channel({hash:08X})"));
                 }
-                TfxBytecodeOp::Unk4f { unk1 } => {
-                    stack_push!(format!("unk4f({unk1})"));
+                TfxBytecodeOp::PushGlobalChannelVector { unk1 } => {
+                    stack_push!(format!("global_channel({unk1})"));
                 }
                 // TfxBytecodeOp::Unk50 { unk1 } => todo!(),
                 // TfxBytecodeOp::Unk51 => todo!(),

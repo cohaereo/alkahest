@@ -1,14 +1,13 @@
+use alkahest_renderer::{
+    renderer::RendererShared,
+    tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
+    ColorExt,
+};
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
 use glam::Vec4;
 use itertools::Itertools;
 use winit::window::Window;
-
-use alkahest_renderer::{
-    ColorExt,
-    renderer::RendererShared,
-    tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
-};
 
 use crate::{
     gui::{
@@ -199,22 +198,26 @@ impl GuiView for TfxExternEditor {
                         });
                     }
 
-                    ui.collapsing("Unk4F", |ui| {
+                    ui.collapsing("Global Channels", |ui| {
                         ui.checkbox(&mut self.only_show_used, "Only show used");
-                        for (i, value) in externs.unk4f.iter_mut().enumerate() {
-                            let times_used = externs.unk4f_used.read()[i];
+                        for (i, value) in externs.global_channels.iter_mut().enumerate() {
+                            let times_used = externs.global_channels_used.read()[i];
                             if self.only_show_used && times_used == 0 {
                                 continue;
                             }
 
                             ui.horizontal(|ui| {
-                                ui.strong(format!("Unk4F[{i}]: "));
+                                ui.strong(format!("channel {i}: "));
                                 ui.vec4_input(value);
                                 ui.label(format!("(used {times_used} times)"))
                             });
                         }
 
-                        externs.unk4f_used.write().iter_mut().for_each(|x| *x = 0);
+                        externs
+                            .global_channels_used
+                            .write()
+                            .iter_mut()
+                            .for_each(|x| *x = 0);
                     });
                 });
             });

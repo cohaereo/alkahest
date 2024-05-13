@@ -37,10 +37,11 @@ use crate::{
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPOTLIGHT_BEAM, ICON_WAVES,
-        ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM,
+        ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
+    util::StringExt,
 };
 
 pub async fn load_map(
@@ -539,25 +540,28 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let cubemap_volume: SCubemapVolume = TigerReadable::read_ds(table_data).unwrap();
-                let volume_min = data.translation - cubemap_volume.cubemap_extents;
-                let volume_max = data.translation + cubemap_volume.cubemap_extents;
 
-                let bb = AABB {
-                    min: volume_min.truncate(),
-                    max: volume_max.truncate(),
-                };
-                
                 let voxel_diffuse = if cubemap_volume.voxel_ibl_texture.is_some() {
-                    Some(renderer
-                        .data
-                        .lock()
-                        .asset_manager
-                        .get_or_load_texture(cubemap_volume.voxel_ibl_texture))
+                    Some(
+                        renderer
+                            .data
+                            .lock()
+                            .asset_manager
+                            .get_or_load_texture(cubemap_volume.voxel_ibl_texture),
+                    )
                 } else {
                     None
                 };
-                
+
                 scene.spawn((
+                    Icon(ICON_SPHERE),
+                    Label::from(format!(
+                        "Cubemap Volume '{}'",
+                        cubemap_volume
+                            .cubemap_name
+                            .to_string()
+                            .truncate_ellipsis(48)
+                    )),
                     Transform {
                         translation: data.translation.xyz(),
                         rotation: transform.rotation,
@@ -570,7 +574,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             .asset_manager
                             .get_or_load_texture(cubemap_volume.cubemap_texture),
                         voxel_diffuse,
-                        bb,
+                        extents: cubemap_volume.cubemap_extents.truncate(),
                         name: cubemap_volume.cubemap_name.to_string(),
                     },
                 ));

@@ -18,7 +18,8 @@ binrw = "0.13.3"
 bitflags = "2.5.0"
 bytemuck = "1.7.0"
 crossbeam = "0.8.4"
-destiny-pkg = "0.10"
+#destiny-pkg = "0.10"
+destiny-pkg = { path = "../destiny-pkg2" }
 
 # egui crates (make sure these are all the same version)
 ecolor = "0.27.2"

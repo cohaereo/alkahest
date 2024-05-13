@@ -126,8 +126,9 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
     /// Pushes a sampler on the stack from the technique sampler table
     #[br(magic = 0x4d_u8)] PushSampler { index: u8 },
-    #[br(magic = 0x4e_u8)] Unk4e { unk1: u8, unk2: u8, unk3: u8, unk4: u8 },
-    #[br(magic = 0x4f_u8)] Unk4f { unk1: u8 },
+
+    #[br(magic = 0x4e_u8)] PushObjectChannelVector { hash: u32 },
+    #[br(magic = 0x4f_u8)] PushGlobalChannelVector { unk1: u8 },
     #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
     #[br(magic = 0x51_u8)] Unk51,
     #[br(magic = 0x52_u8)] Unk52 { unk1: u8, unk2: u8 },
@@ -322,16 +323,15 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PushSampler { index } => {
                 format!("push_sampler index={index}")
             }
-            TfxBytecodeOp::Unk4e {
-                unk1,
-                unk2,
-                unk3,
-                unk4,
+            TfxBytecodeOp::PushObjectChannelVector {
+                hash
             } => {
-                format!("unk4e unk1={unk1} unk2={unk2} unk3={unk3} unk4={unk4}")
+                format!(
+                    "push_object_channel_vector({hash:08X})"
+                )
             }
-            TfxBytecodeOp::Unk4f { unk1 } => {
-                format!("unk4f unk1={unk1}")
+            TfxBytecodeOp::PushGlobalChannelVector { unk1: index } => {
+                format!("push_global_channel_vector({index})")
             }
             TfxBytecodeOp::Unk50 { unk1 } => format!("unk50 unk1={unk1}"),
             TfxBytecodeOp::Unk51 => "unk51".to_string(),

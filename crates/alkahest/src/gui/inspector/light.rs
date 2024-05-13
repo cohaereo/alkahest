@@ -1,6 +1,6 @@
 use alkahest_data::map::{SLight, SShadowingLight};
 use alkahest_renderer::{
-    ecs::{light::LightRenderer, transform::Transform, Scene},
+    ecs::{light::LightRenderer, map::CubemapVolume, transform::Transform, Scene},
     icons::ICON_LIGHTBULB_ON,
     renderer::RendererShared,
     util::color::Color,
@@ -63,5 +63,37 @@ impl ComponentPanel for LightRenderer {
                     .color(Color32::RED),
             );
         }
+    }
+}
+
+impl ComponentPanel for CubemapVolume {
+    fn inspector_name() -> &'static str {
+        "Cubemap Volume"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_LIGHTBULB_ON
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui<'s>(
+        &mut self,
+        _: &'s Scene,
+        e: EntityRef<'s>,
+        _: &mut Ui,
+        resources: &Resources,
+    ) {
+        let renderer = resources.get::<RendererShared>();
+        let transform = e.get::<&Transform>().expect("Volume missing Transform");
+        renderer.immediate.cube_outline(
+            Transform {
+                scale: self.extents,
+                ..*transform
+            },
+            Color::GREEN,
+        );
     }
 }

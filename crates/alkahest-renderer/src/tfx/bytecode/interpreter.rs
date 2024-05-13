@@ -269,15 +269,18 @@ impl TfxBytecodeInterpreter {
                     stack_push!(mat.mul_vec4(value));
                 }
 
+                TfxBytecodeOp::PushObjectChannelVector { ..} => {
+                    stack_push!(Vec4::ONE)
+                }
                 &TfxBytecodeOp::Unk4c { unk1, .. }
-                | &TfxBytecodeOp::Unk4e { unk1, .. }
-                | &TfxBytecodeOp::Unk4f { unk1, .. }
+                // | &TfxBytecodeOp::PushObjectChannelVector { hash }
+                | &TfxBytecodeOp::PushGlobalChannelVector { unk1, .. }
                 | &TfxBytecodeOp::Unk50 { unk1, .. }
                 | &TfxBytecodeOp::Unk52 { unk1, .. }
                 | &TfxBytecodeOp::Unk53 { unk1, .. }
                 | &TfxBytecodeOp::Unk54 { unk1, .. } => {
-                    externs.unk4f_used.write()[unk1 as usize] += 1;
-                    stack_push!(externs.unk4f[unk1 as usize]);
+                    externs.global_channels_used.write()[unk1 as usize] += 1;
+                    stack_push!(externs.global_channels[unk1 as usize]);
                 }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());

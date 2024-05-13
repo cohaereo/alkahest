@@ -8,6 +8,7 @@ use alkahest_renderer::{
         dynamic_geometry::DynamicModelComponent,
         hierarchy::Parent,
         light::LightRenderer,
+        map::CubemapVolume,
         resources::SelectedEntity,
         static_geometry::{StaticInstance, StaticInstances},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -283,7 +284,8 @@ fn show_inspector_components(
         Sphere,
         Beacon,
         DynamicModelComponent,
-        LightRenderer
+        LightRenderer,
+        CubemapVolume
     );
 }
 

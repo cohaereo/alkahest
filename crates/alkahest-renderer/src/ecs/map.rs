@@ -1,4 +1,5 @@
 use alkahest_data::{map::SMapAtmosphere, occlusion::AABB};
+use glam::Vec3;
 
 use crate::{
     gpu::{texture::Texture, GpuContext},
@@ -78,6 +79,6 @@ pub struct CubemapVolume {
     pub specular_ibl: Handle<Texture>,
     pub voxel_diffuse: Option<Handle<Texture>>,
 
-    pub bb: AABB,
+    pub extents: Vec3,
     pub name: String,
 }

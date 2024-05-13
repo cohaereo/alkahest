@@ -1,3 +1,4 @@
+mod cubemaps;
 pub mod gbuffer;
 mod immediate;
 mod lighting_pass;
