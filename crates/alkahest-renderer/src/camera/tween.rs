@@ -51,8 +51,21 @@ impl Tween {
         new_angle
     }
 
+    pub fn reset(&mut self) {
+        self.start_time = Instant::now();
+    }
+
+    pub fn abort(&mut self) {
+        self.angle_movement = None;
+        self.pos_movement = None;
+    }
+
     pub fn is_finished(&self) -> bool {
         self.start_time.elapsed().as_secs_f32() >= self.duration
+    }
+
+    pub fn is_aborted(&self) -> bool {
+        self.angle_movement.is_none() && self.pos_movement.is_none()
     }
 }
 

@@ -314,6 +314,10 @@ pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Re
     Ok(())
 }
 
+pub fn get_activity_hash(resources: &Resources) -> Option<TagHash> {
+    resources.get_mut::<CurrentActivity>().0
+}
+
 pub fn get_map_name(map_hash: TagHash, stringmap: &GlobalStringmap) -> anyhow::Result<String> {
     let _span = info_span!("Get map name", %map_hash).entered();
     let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(map_hash) {
