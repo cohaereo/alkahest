@@ -38,6 +38,7 @@ use crate::{
     maplist::MapList,
     resources::Resources,
     updater::UpdateCheck,
+    util::action::ActionList,
     ApplicationArgs,
 };
 
@@ -97,6 +98,7 @@ impl AlkahestApp {
         resources.insert(MapList::default());
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
+        resources.insert(ActionList::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),
@@ -292,6 +294,10 @@ impl AlkahestApp {
                         });
                     }
                     WindowEvent::RedrawRequested => {
+                        {
+                            let mut action_list = resources.get_mut::<ActionList>();
+                            action_list.process(&resources);
+                        }
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
                         {
