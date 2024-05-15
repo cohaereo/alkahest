@@ -28,6 +28,7 @@ use crate::{
     },
     maplist::MapList,
     resources::Resources,
+    util::action::ActionList,
     ApplicationArgs,
 };
 
@@ -84,6 +85,7 @@ impl AlkahestApp {
         resources.insert(args);
         resources.insert(config!().renderer.clone());
         resources.insert(MapList::default());
+        resources.insert(ActionList::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),
@@ -230,6 +232,10 @@ impl AlkahestApp {
                         });
                     }
                     WindowEvent::RedrawRequested => {
+                        {
+                            let mut action_list = resources.get_mut::<ActionList>();
+                            action_list.process(&resources);
+                        }
                         renderer.data.lock().asset_manager.poll();
                         let render_settings = resources.get::<RendererSettings>();
 

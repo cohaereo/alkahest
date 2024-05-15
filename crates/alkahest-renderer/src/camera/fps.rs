@@ -117,13 +117,19 @@ impl CameraController for FpsCamera {
         speed *= speed_mul;
 
         // Cancel tween if the user moves the camera
-        if tween.is_some() && direction.length() > 0.0 {
-            *tween = None;
+        if direction.length() > 0.0 {
+            if let Some(t) = tween {
+                t.abort();
+            }
         }
 
         if let Some(tween) = tween {
-            self.target_position = tween.update_pos().unwrap_or(self.target_position);
-            self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            if tween.is_aborted() {
+                self.target_position += direction * speed;
+            } else {
+                self.target_position = tween.update_pos().unwrap_or(self.target_position);
+                self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            }
         } else {
             self.target_position += direction * speed;
         }
