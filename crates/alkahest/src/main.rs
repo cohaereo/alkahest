@@ -19,6 +19,7 @@ use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use util::consts;
 use winit::event_loop::EventLoop;
+use crate::gui::console::ConsoleLogLayer;
 
 mod app;
 mod config;
@@ -118,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
     LogTracer::init()?;
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
+            .with(ConsoleLogLayer)
             .with(tracing_subscriber::fmt::layer())
             .with(
                 EnvFilter::builder()

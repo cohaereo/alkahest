@@ -45,6 +45,7 @@ pub trait CameraController {
     fn view_matrix(&self) -> Mat4;
 
     fn set_position(&mut self, position: Vec3);
+    fn set_orientation(&mut self, orientation: Vec2);
     // fn set_rotation(&mut self, rotation: Quat);
     // fn look_at(&mut self, target: Vec3);
 }
@@ -185,6 +186,10 @@ impl Camera {
 
     pub fn set_position(&mut self, position: Vec3) {
         self.controller.set_position(position);
+    }
+
+    pub fn set_orientation(&mut self, orientation: Vec2) {
+        self.controller.set_orientation(orientation);
     }
 
     // pub fn set_rotation(&mut self, rotation: Quat) {

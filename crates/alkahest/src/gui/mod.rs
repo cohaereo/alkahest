@@ -14,6 +14,7 @@ mod tfx;
 pub mod big_button;
 mod bottom_bar;
 pub mod chip;
+pub mod console;
 mod menu;
 mod outliner;
 mod util;
@@ -40,7 +41,7 @@ pub trait UiExt {
     // ) -> Response;
 
     fn vec4_input(&mut self, value: &mut glam::Vec4) -> Response;
-    
+
     fn vec3_input(&mut self, value: &mut glam::Vec3) -> Response;
 }
 

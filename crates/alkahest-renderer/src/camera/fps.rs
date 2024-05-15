@@ -194,6 +194,11 @@ impl CameraController for FpsCamera {
         self.position = position;
         self.target_position = position;
     }
+
+    fn set_orientation(&mut self, orientation: Vec2) {
+        self.orientation = orientation;
+        self.update_vectors();
+    }
 }
 
 // use alkahest_data::occlusion::AABB;

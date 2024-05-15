@@ -13,6 +13,7 @@ use crate::{
     gui::{
         bottom_bar::BottomBar,
         configuration::RenderSettingsPanel,
+        console::ConsolePanel,
         fps_display::FpsDisplayOverlay,
         inspector::InspectorPanel,
         menu::MenuBar,
@@ -196,6 +197,7 @@ impl GuiViewManager {
         views.insert(MenuBar::default());
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
+        views.insert(ConsolePanel::default());
 
         views.insert_overlay(FpsDisplayOverlay::default());
 
