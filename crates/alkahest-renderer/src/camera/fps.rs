@@ -196,6 +196,14 @@ impl CameraController for FpsCamera {
         Mat4::look_at_rh(self.position, self.position + self.forward, Vec3::Z)
     }
 
+    fn view_angle(&self) -> Vec2 {
+        self.orientation
+    }
+
+    fn get_look_angle(&self, pos: Vec3) -> Vec2 {
+        super::get_look_angle(self.orientation, self.position, pos)
+    }
+
     fn set_position(&mut self, position: Vec3) {
         self.position = position;
         self.target_position = position;

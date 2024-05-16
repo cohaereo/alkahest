@@ -43,6 +43,8 @@ pub trait CameraController {
     fn up(&self) -> Vec3;
 
     fn view_matrix(&self) -> Mat4;
+    fn view_angle(&self) -> Vec2;
+    fn get_look_angle(&self, pos: Vec3) -> Vec2;
 
     fn set_position(&mut self, position: Vec3);
     fn set_orientation(&mut self, orientation: Vec2);
@@ -50,6 +52,23 @@ pub trait CameraController {
     // fn look_at(&mut self, target: Vec3);
 }
 
+pub fn get_look_angle(start_angle: Vec2, pos1: Vec3, pos2: Vec3) -> Vec2 {
+    let dir = pos2 - pos1;
+    let inv_r = dir.length_recip();
+    if inv_r.is_infinite() {
+        start_angle
+    } else {
+        let theta = dir.x.atan2(dir.y).to_degrees();
+        let mut diff = (theta - start_angle.y).rem_euclid(360.0);
+        if diff > 180.0 {
+            diff -= 360.0;
+        }
+        Vec2::new(
+            (dir.z * inv_r).acos().to_degrees() - 90.0,
+            start_angle.y + diff,
+        )
+    }
+}
 pub struct Camera {
     controller: Box<dyn CameraController>,
     viewport: Viewport,
@@ -190,6 +209,14 @@ impl Camera {
 
     pub fn set_orientation(&mut self, orientation: Vec2) {
         self.controller.set_orientation(orientation);
+    }
+
+    pub fn view_angle(&self) -> Vec2 {
+        self.controller.view_angle()
+    }
+
+    pub fn get_look_angle(&self, pos: Vec3) -> Vec2 {
+        self.controller.get_look_angle(pos)
     }
 
     // pub fn set_rotation(&mut self, rotation: Quat) {
