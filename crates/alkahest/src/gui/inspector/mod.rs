@@ -13,7 +13,7 @@ use alkahest_renderer::{
         static_geometry::{StaticInstance, StaticInstances},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
-        utility::{Beacon, Ruler, Sphere},
+        utility::{Beacon, Route, Ruler, Sphere},
         Scene,
     },
     icons::ICON_POKEBALL,
@@ -170,7 +170,7 @@ pub fn show_inspector_panel(
 
     let mut global = e.has::<Global>();
     let mut global_changed = false;
-    if e.has::<Mutable>() {
+    if e.has::<Mutable>() && !e.has::<Route>() {
         if ui.checkbox(&mut global, "Show in all Maps").changed() {
             global_changed = true;
             if global {
@@ -238,6 +238,7 @@ fn show_inspector_components(
         Ruler,
         Sphere,
         Beacon,
+        Route,
         DynamicModelComponent,
         LightRenderer,
         CubemapVolume,
