@@ -54,9 +54,7 @@ impl AlkahestApp {
     ) -> Self {
         let window = winit::window::WindowBuilder::new()
             .with_title("Alkahest")
-            .with_min_inner_size(
-                PhysicalSize::new(640, 360)
-            )
+            .with_min_inner_size(PhysicalSize::new(640, 360))
             .with_inner_size(config::with(|c| {
                 PhysicalSize::new(c.window.width, c.window.height)
             }))

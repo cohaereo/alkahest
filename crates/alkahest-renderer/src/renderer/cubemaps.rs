@@ -111,7 +111,7 @@ impl CubemapRenderer {
             .as_ref()
             .map(|v| v.target_pixel_to_world)
             .unwrap_or_default();
-        
+
         self.cbuffer
             .write(&(matrix, matrix.inverse(), target_pixel_to_world))
             .unwrap();

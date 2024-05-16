@@ -1,5 +1,6 @@
 use alkahest_data::tfx::TfxRenderStage;
 
+use crate::shader::shader_ball::draw_shaderball_system;
 use crate::{
     ecs::{
         dynamic_geometry::draw_dynamic_model_system, static_geometry::draw_static_instances_system,
@@ -8,7 +9,6 @@ use crate::{
     gpu_event,
     renderer::Renderer,
 };
-use crate::shader::shader_ball::draw_shaderball_system;
 
 impl Renderer {
     pub(super) fn run_renderstage_systems(&self, scene: &Scene, stage: TfxRenderStage) {

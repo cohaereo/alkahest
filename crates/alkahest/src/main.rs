@@ -7,6 +7,7 @@ extern crate tracing;
 
 use std::{fmt::Write, path::PathBuf, str::FromStr, sync::Arc};
 
+use crate::gui::console::ConsoleLogLayer;
 use alkahest_pm::PACKAGE_MANAGER;
 use alkahest_renderer::util::image::Png;
 use anyhow::Context;
@@ -19,7 +20,6 @@ use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use util::consts;
 use winit::event_loop::EventLoop;
-use crate::gui::console::ConsoleLogLayer;
 
 mod app;
 mod config;
