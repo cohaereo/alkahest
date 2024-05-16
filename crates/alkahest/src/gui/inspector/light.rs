@@ -5,6 +5,7 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::color::Color,
 };
+use destiny_pkg::TagHash;
 use egui::{Color32, RichText, Ui};
 use hecs::EntityRef;
 
@@ -29,6 +30,7 @@ impl ComponentPanel for LightRenderer {
         e: EntityRef<'s>,
         ui: &mut Ui,
         resources: &Resources,
+        _: TagHash,
     ) {
         let renderer = resources.get::<RendererShared>();
         if !e.has::<SLight>() && !e.has::<SShadowingLight>() {
@@ -97,6 +99,7 @@ impl ComponentPanel for CubemapVolume {
         e: EntityRef<'s>,
         _: &mut Ui,
         resources: &Resources,
+        _: TagHash,
     ) {
         let renderer = resources.get::<RendererShared>();
         let transform = e.get::<&Transform>().expect("Volume missing Transform");

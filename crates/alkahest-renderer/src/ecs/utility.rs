@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+use destiny_pkg::TagHash;
 use glam::Vec3;
 use hecs::Entity;
 
@@ -78,7 +79,7 @@ impl Default for Beacon {
     }
 }
 
-pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources) {
+pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources, _current_hash: TagHash) {
     for (e, ruler) in scene.query::<&Ruler>().without::<&Hidden>().iter() {
         draw_ruler(renderer, ruler, Some(e), resources);
     }

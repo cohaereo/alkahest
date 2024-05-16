@@ -11,6 +11,7 @@ mod transparents_pass;
 use std::{sync::Arc, time::Instant};
 
 use alkahest_data::tfx::TfxShaderStage;
+use destiny_pkg::TagHash;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
@@ -94,7 +95,13 @@ impl Renderer {
         data.asset_manager.techniques.get_shared(handle)
     }
 
-    pub fn render_world(&self, view: &impl View, scene: &Scene, resources: &Resources) {
+    pub fn render_world(
+        &self,
+        view: &impl View,
+        scene: &Scene,
+        resources: &Resources,
+        current_hash: TagHash,
+    ) {
         self.begin_world_frame(scene);
 
         update_dynamic_model_system(scene);
@@ -112,7 +119,7 @@ impl Renderer {
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
 
-            draw_utilities(self, scene, resources)
+            draw_utilities(self, scene, resources, current_hash)
         }
 
         self.gpu.blit_texture(

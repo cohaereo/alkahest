@@ -12,6 +12,7 @@ use alkahest_renderer::{
     },
     renderer::RendererShared,
 };
+use destiny_pkg::TagHash;
 use egui::{
     color_picker::{color_edit_button_rgba, Alpha},
     Button,
@@ -42,6 +43,7 @@ impl ComponentPanel for Ruler {
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
         resources: &Resources,
+        _: TagHash,
     ) {
         let camera = resources.get::<Camera>();
         egui::Grid::new("transform_input_grid")
@@ -178,6 +180,7 @@ impl ComponentPanel for Sphere {
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
         _resources: &Resources,
+        _: TagHash,
     ) {
         if !e.has::<Transform>() {
             ui.label(format!(
@@ -224,6 +227,7 @@ impl ComponentPanel for Beacon {
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
         resources: &Resources,
+        _: TagHash,
     ) {
         if !e.has::<Transform>() {
             ui.label(format!(
