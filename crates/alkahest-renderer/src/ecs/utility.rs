@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+use destiny_pkg::TagHash;
 use glam::Vec3;
 use hecs::Entity;
 
@@ -9,6 +10,8 @@ use crate::{
     resources::Resources,
     util::color::{Color, ColorExt, Hsv},
 };
+
+use super::SceneInfo;
 
 pub struct Ruler {
     pub start: Vec3,
@@ -78,6 +81,50 @@ impl Default for Beacon {
     }
 }
 
+pub struct RouteNode {
+    pub pos: Vec3,
+    pub map_hash: Option<TagHash>,
+    pub is_teleport: bool,
+    pub label: Option<String>,
+}
+
+impl Default for RouteNode {
+    fn default() -> Self {
+        Self {
+            pos: Vec3::ZERO,
+            map_hash: None,
+            is_teleport: false,
+            label: None,
+        }
+    }
+}
+
+pub struct Route {
+    pub path: Vec<RouteNode>,
+    pub color: Color,
+    pub rainbow: bool,
+    pub speed_multiplier: f32,
+    pub scale: f32,
+    pub marker_interval: f32,
+    pub show_all: bool,
+    pub activity_hash: Option<TagHash>,
+}
+
+impl Default for Route {
+    fn default() -> Self {
+        Self {
+            path: vec![],
+            color: Color::WHITE,
+            rainbow: false,
+            speed_multiplier: 1.0,
+            scale: 1.0,
+            marker_interval: 0.0,
+            show_all: false,
+            activity_hash: None,
+        }
+    }
+}
+
 pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources) {
     for (e, ruler) in scene.query::<&Ruler>().without::<&Hidden>().iter() {
         draw_ruler(renderer, ruler, Some(e), resources);
@@ -97,6 +144,12 @@ pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources)
         .iter()
     {
         draw_beacon(renderer, transform, beacon, Some(e), resources);
+    }
+
+    for (e, route) in scene.query::<&Route>().without::<&Hidden>().iter() {
+        if let Some(current_hash) = scene.get_map_hash() {
+            draw_route(renderer, route, Some(e), current_hash, resources);
+        }
     }
 }
 
@@ -328,4 +381,124 @@ fn draw_beacon(
     //     // DebugDrawFlags::DRAW_PICK,
     //     // entity,
     // );
+}
+
+fn draw_route(
+    renderer: &Renderer,
+    route: &Route,
+    entity: Option<Entity>,
+    current_hash: TagHash,
+    resources: &Resources,
+) {
+    let selected = resources.get::<SelectedEntity>();
+    let color = if route.rainbow {
+        selected.select_fade_color(Color::from(*Hsv::rainbow()), entity)
+    } else {
+        selected.select_fade_color(route.color, entity)
+    };
+
+    const BASE_RADIUS: f32 = 0.1;
+    let mut prev_is_local = false;
+    for i in 0..route.path.len() {
+        if let Some(node) = route.path.get(i) {
+            let node_is_local = node.map_hash.map_or(true, |h| h == current_hash);
+            let next_node = route.path.get(i + 1);
+            let next_is_local = next_node.map_or(false, |node| {
+                node.map_hash.map_or(false, |h| h == current_hash)
+            });
+
+            if !node_is_local {
+                if prev_is_local || next_is_local || route.show_all {
+                    draw_sphere_skeleton(renderer, node.pos, BASE_RADIUS * route.scale, 2, color);
+                }
+            } else {
+                renderer.immediate.sphere(
+                    node.pos,
+                    BASE_RADIUS * route.scale,
+                    color,
+                    //DebugDrawFlags::DRAW_NORMAL,
+                    //None,
+                );
+            }
+
+            // TODO (cohae): Fix up once we have text rendering
+            // if node_is_local || prev_is_local || next_is_local {
+            //     if let Some(label) = node.label.as_ref() {
+            //         renderer.immediate.text(
+            //             label.to_string(),
+            //             node.pos + route.scale / 2.0 * Vec3::Z,
+            //             egui::Align2::CENTER_BOTTOM,
+            //             [255, 255, 255],
+            //         );
+            //     }
+            // }
+            prev_is_local = node_is_local;
+
+            if next_node.is_some() {
+                let next_node = next_node.unwrap();
+                let segment_length = (next_node.pos - node.pos).length();
+
+                if !(route.show_all || node_is_local || next_is_local) {
+                    continue;
+                }
+
+                renderer.immediate.line_dotted(
+                    next_node.pos,
+                    node.pos,
+                    color,
+                    color,
+                    1.0,
+                    route.scale,
+                    if next_node.is_teleport { 0.10 } else { 0.75 },
+                    if next_node.is_teleport { 1.5 } else { 0.5 },
+                );
+                if route.marker_interval > 0.0 {
+                    let sphere_color = color.invert().keep_bright();
+                    let sphere_color = Color::from_rgba_premultiplied(
+                        sphere_color[0],
+                        sphere_color[1],
+                        sphere_color[2],
+                        0.75,
+                    );
+
+                    let mut current = 0.0;
+                    while current < segment_length {
+                        if current > 0.0 {
+                            let pos = node.pos + (next_node.pos - node.pos).normalize() * current;
+
+                            renderer.immediate.sphere(
+                                pos,
+                                route.scale * 0.20,
+                                sphere_color,
+                                //DebugDrawFlags::DRAW_NORMAL,
+                                //None,
+                            );
+                        }
+
+                        current += route.marker_interval;
+                    }
+                }
+                //TODO (cohae): Fix this once pick buffer exists
+                // renderer.immediate.cube_extents(
+                //     (node.pos + next_node.pos) / 2.0,
+                //     Vec3::new(segment_length / 2.0, route.scale / 2.0, route.scale / 2.0),
+                //     Quat::from_rotation_arc(Vec3::X, (next_node.pos - node.pos).normalize()),
+                //     color,
+                //     true,
+                //     DebugDrawFlags::DRAW_PICK,
+                //     entity,
+                // )
+            } else {
+                // renderer.immediate.cube_extents(
+                //     node.pos,
+                //     Vec3::new(route.scale / 2.0, route.scale / 2.0, route.scale / 2.0),
+                //     Quat::IDENTITY,
+                //     color,
+                //     true,
+                //     DebugDrawFlags::DRAW_PICK,
+                //     entity,
+                // )
+            }
+        }
+    }
 }

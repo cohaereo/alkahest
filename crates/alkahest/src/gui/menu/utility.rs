@@ -1,15 +1,17 @@
+use alkahest_renderer::ecs::SceneInfo;
 use egui::Ui;
 use glam::Vec3;
 use alkahest_renderer::camera::Camera;
-use alkahest_renderer::ecs::common::{Icon, Label, Mutable};
+use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
 use alkahest_renderer::ecs::resources::SelectedEntity;
 use alkahest_renderer::ecs::tags::{EntityTag, Tags};
 use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
-use alkahest_renderer::ecs::utility::{Beacon, Ruler, Sphere};
-use alkahest_renderer::icons::{ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE};
+use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere};
+use alkahest_renderer::icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE};
 use alkahest_renderer::renderer::RendererShared;
 use alkahest_renderer::resources::Resources;
 use alkahest_renderer::shader::shader_ball::ShaderBallComponent;
+use crate::gui::activity_select::get_activity_hash;
 use crate::gui::menu::MenuBar;
 use crate::maplist::MapList;
 
@@ -114,38 +116,35 @@ impl MenuBar {
                 ui.close_menu();
             }
         }
-        // if ui
-        //     .button(format!("{} Route", ICON_MAP_MARKER_PATH))
-        //     .clicked()
-        // {
-        //     let mut maps = resources.get_mut::<MapList>();
-        //     let map_hash = maps.current_map_hash();
-        //     let camera = resources.get::<Camera>();
-        //
-        //     if let Some(map) = maps.current_map_mut() {
-        //         let e = map.scene.spawn((
-        //             Route {
-        //                 path: vec![RouteNode {
-        //                     pos: camera.position,
-        //                     map_hash,
-        //                     is_teleport: false,
-        //                     label: None,
-        //                 }],
-        //                 activity_hash: get_activity_hash(resources),
-        //                 ..Default::default()
-        //             },
-        //             Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-        //             Mutable,
-        //             Global(true),
-        //         ));
-        //
-        //         if let Some(mut se) = resources.get_mut::<SelectedEntity>() {
-        //             se.0 = Some(e);
-        //         }
-        //
-        //         ui.close_menu();
-        //     }
-        // }
+        if ui
+            .button(format!("{} Route", ICON_MAP_MARKER_PATH))
+            .clicked()
+        {
+            let mut maps = resources.get_mut::<MapList>();
+            let camera = resources.get::<Camera>();
+
+            if let Some(map) = maps.current_map_mut() {
+                let e = map.scene.spawn((
+                    Route {
+                        path: vec![RouteNode {
+                            pos: camera.position(),
+                            map_hash: map.scene.get_map_hash(),
+                            is_teleport: false,
+                            label: None,
+                        }],
+                        activity_hash: map.scene.get_activity_hash(),
+                        ..Default::default()
+                    },
+                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                    Mutable,
+                    Global,
+                ));
+
+                resources.get_mut::<SelectedEntity>().select(e);
+
+                ui.close_menu();
+            }
+        }
 
         ui.separator();
 
