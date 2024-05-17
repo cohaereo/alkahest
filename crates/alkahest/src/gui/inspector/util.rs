@@ -514,10 +514,6 @@ impl ComponentPanel for Route {
             const METERS_PER_SEC: f32 = 18.0;
             action_list.clear_actions();
 
-            if let Some(hash) = self.activity_hash {
-                action_list.add_action(ActivitySwapAction::new(hash));
-            };
-
             if let Some(start_pos) = self.path.get(start_index) {
                 let mut old_pos = start_pos.pos + camera_offset;
                 let mut old_orient = camera.get_look_angle(old_pos);

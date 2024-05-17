@@ -1,5 +1,7 @@
+use alkahest_renderer::ecs::resources::SelectedEntity;
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
+use hecs::{CommandBuffer, DynamicBundle, Entity};
 
 use crate::gui::activity_select::{get_activity_hash, set_activity};
 use crate::maplist::{MapList, MapLoadState};
@@ -157,5 +159,38 @@ impl Action for ActivitySwapAction {
 
     fn is_aborted(&self, _: &Resources) -> bool {
         self.aborted
+    }
+}
+
+pub struct CommandBufferAction {
+    cmd: CommandBuffer,
+    entity: Option<Entity>,
+}
+
+impl CommandBufferAction {
+    pub fn new(cmd: CommandBuffer, entity: Option<Entity>) -> Self {
+        Self { cmd, entity }
+    }
+}
+
+impl Action for CommandBufferAction {
+    fn start(&mut self, resources: &Resources) {
+        let mut maps = resources.get_mut::<MapList>();
+
+        if let Some(map) = maps.current_map_mut() {
+            self.cmd.run_on(&mut map.scene);
+        }
+
+        if let Some(e) = self.entity {
+            resources.get_mut::<SelectedEntity>().select(e);
+        }
+    }
+
+    fn is_done(&self, _: &Resources) -> bool {
+        true
+    }
+
+    fn is_aborted(&self, _: &Resources) -> bool {
+        false
     }
 }
