@@ -232,7 +232,7 @@ impl AlkahestApp {
                     WindowEvent::RedrawRequested => {
                         {
                             let mut action_list = resources.get_mut::<ActionList>();
-                            action_list.process(&resources);
+                            action_list.process(resources);
                         }
                         renderer.data.lock().asset_manager.poll();
                         let render_settings = resources.get::<RendererSettings>();

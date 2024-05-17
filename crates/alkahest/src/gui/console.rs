@@ -9,10 +9,10 @@ use alkahest_pm::package_manager;
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Mutable},
+        common::{Global, Hidden, Mutable},
         resources::SelectedEntity,
         tags::{
-            EntityTag::{self, Global},
+            EntityTag::{self},
             Tags,
         },
         transform::{OriginalTransform, Transform},
