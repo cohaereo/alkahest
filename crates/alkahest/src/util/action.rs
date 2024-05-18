@@ -1,7 +1,9 @@
+use alkahest_renderer::ecs::common::{Global, Mutable};
 use alkahest_renderer::ecs::resources::SelectedEntity;
+use alkahest_renderer::ecs::tags::{EntityTag, Tags};
+use alkahest_renderer::ecs::utility::Route;
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
-use hecs::{CommandBuffer, DynamicBundle, Entity};
 
 use crate::gui::activity_select::{get_activity_hash, set_activity};
 use crate::maplist::{MapList, MapLoadState};
@@ -153,8 +155,10 @@ impl Action for ActivitySwapAction {
         self.aborted = set_activity(resources, self.hash).is_err();
     }
 
-    fn is_done(&self, _: &Resources) -> bool {
-        true
+    fn is_done(&self, resources: &Resources) -> bool {
+        let map_list = resources.get::<MapList>();
+
+        map_list.count_loaded() > 0 || map_list.count_loading() == 0
     }
 
     fn is_aborted(&self, _: &Resources) -> bool {
@@ -162,27 +166,30 @@ impl Action for ActivitySwapAction {
     }
 }
 
-pub struct CommandBufferAction {
-    cmd: CommandBuffer,
-    entity: Option<Entity>,
+pub struct SpawnRouteAction {
+    route: Option<Route>,
 }
 
-impl CommandBufferAction {
-    pub fn new(cmd: CommandBuffer, entity: Option<Entity>) -> Self {
-        Self { cmd, entity }
+impl SpawnRouteAction {
+    pub fn new(route: Route) -> Self {
+        Self { route: Some(route) }
     }
 }
 
-impl Action for CommandBufferAction {
+impl Action for SpawnRouteAction {
     fn start(&mut self, resources: &Resources) {
         let mut maps = resources.get_mut::<MapList>();
 
         if let Some(map) = maps.current_map_mut() {
-            self.cmd.run_on(&mut map.scene);
-        }
-
-        if let Some(e) = self.entity {
-            resources.get_mut::<SelectedEntity>().select(e);
+            if let Some(route) = self.route.take() {
+                let e = map.scene.spawn((
+                    route,
+                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                    Mutable,
+                    Global,
+                ));
+                resources.get_mut::<SelectedEntity>().select(e);
+            }
         }
     }
 

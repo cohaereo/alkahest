@@ -26,7 +26,6 @@ use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
 use glam::{Vec2, Vec3};
-use hecs::CommandBuffer;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -41,10 +40,8 @@ use winit::window::Window;
 use crate::{
     gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
-    util::action::{ActionList, ActivitySwapAction, CommandBufferAction},
+    util::action::{ActionList, ActivitySwapAction, SpawnRouteAction},
 };
-
-use super::activity_select::CurrentActivity;
 
 lazy_static! {
     static ref MESSAGE_BUFFER: Arc<parking_lot::RwLock<AllocRingBuffer<CapturedEvent>>> =
@@ -706,21 +703,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 action_list.add_action(ActivitySwapAction::new(hash));
             };
 
-            let mut maps = resources.get_mut::<MapList>();
-            if let Some(map) = maps.current_map_mut() {
-                let e = map.scene.reserve_entity();
-                let mut buffer = CommandBuffer::new();
-                buffer.insert(
-                    e,
-                    (
-                        route,
-                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                        Mutable,
-                        Global,
-                    ),
-                );
-                action_list.add_action(CommandBufferAction::new(buffer, Some(e)));
-            }
+            action_list.add_action(SpawnRouteAction::new(route));
         }
         _ => error!("Unknown command '{command}'"),
     }
