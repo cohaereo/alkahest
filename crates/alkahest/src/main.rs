@@ -19,6 +19,7 @@ use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use util::consts;
 use winit::event_loop::EventLoop;
+
 use crate::gui::console::ConsoleLogLayer;
 
 mod app;

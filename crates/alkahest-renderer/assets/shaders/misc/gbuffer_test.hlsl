@@ -40,7 +40,7 @@ void PSMain(
 
     rt0 = rgb_iridescence;
     float normal_length = 0.25 * smoothness + 0.75;
-    rt1.xyz = input.normalWorldSpace * normal_length;
+    rt1.xyz = normalize(input.normalWorldSpace) * normal_length;
     rt1.w = 0.0;
 
     rt2.x = metalness;

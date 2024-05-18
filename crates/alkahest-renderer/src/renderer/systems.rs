@@ -7,8 +7,8 @@ use crate::{
     },
     gpu_event,
     renderer::Renderer,
+    shader::shader_ball::draw_shaderball_system,
 };
-use crate::shader::shader_ball::draw_shaderball_system;
 
 impl Renderer {
     pub(super) fn run_renderstage_systems(&self, scene: &Scene, stage: TfxRenderStage) {

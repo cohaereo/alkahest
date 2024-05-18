@@ -33,10 +33,9 @@ impl<'a> Vec4Input<'a> {
                     .speed(DRAG_SPEED),
             );
         })
-            .response
+        .response
     }
 }
-
 
 pub struct Vec3Input<'a> {
     pub value: &'a mut glam::Vec3,
@@ -66,6 +65,6 @@ impl<'a> Vec3Input<'a> {
                     .speed(DRAG_SPEED),
             );
         })
-            .response
+        .response
     }
 }

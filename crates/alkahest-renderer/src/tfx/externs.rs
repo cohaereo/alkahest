@@ -1,8 +1,12 @@
-use std::{fmt::Debug, mem::transmute};
+use std::{
+    fmt::Debug,
+    mem::transmute,
+    ops::{Add, Mul},
+};
 
 use binrw::binread;
 use field_access::FieldAccess;
-use glam::{Mat4, Vec4};
+use glam::{Mat3, Mat4, Vec4, Vec4Swizzles};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use strum::EnumIter;
@@ -458,7 +462,7 @@ extern_struct! {
         0x1c0 => target_pixel_to_world: Mat4,
         0x200 => target_pixel_to_camera: Mat4,
         0x240 => unk240: Mat4 > unimplemented(true),
-        0x280 => combined_tptoc_wtoc: Mat4,
+        0x280 => tptow_no_proj_w: Mat4,
         0x2c0 => unk2c0: Mat4 > unimplemented(true),
     }
 }
@@ -480,10 +484,16 @@ impl View {
         self.position = self.camera_to_world.w_axis;
         self.unk30 = Vec4::Z - self.world_to_projective.w_axis;
 
-        // TODO(cohae): Still figuring out these transforms for lights
-        // x.combined_tptoc_wtoc = x.target_pixel_to_camera;
-        self.combined_tptoc_wtoc = self.target_pixel_to_world;
-        // x.combined_tptoc_wtoc = x.world_to_camera * x.target_pixel_to_camera;
+        let ptow_no_proj_w = {
+            let ptoc = self.projective_to_camera;
+            let ctow = self.camera_to_world;
+            let ctow_mat3 = Mat3::from_mat4(ctow);
+            let ctow = Mat4::from_mat3(ctow_mat3);
+
+            ctow * ptoc
+        };
+
+        self.tptow_no_proj_w = ptow_no_proj_w * viewport.target_pixel_to_projective();
     }
 }
 
@@ -512,10 +522,10 @@ extern_struct! {
     struct DeferredLight("deferred_light") {
         0x40 => unk40: Mat4 > unimplemented(false),
         0x80 => unk80: Mat4 > unimplemented(false),
-        0xc0 => unkc0: Vec4 > unimplemented(false),
-        0xd0 => unkd0: Vec4 > unimplemented(false),
-        0xe0 => unke0: Vec4 > unimplemented(false),
-        0xf0 => unkf0: Vec4 > unimplemented(false),
+        0xc0 => unkc0: Vec4 > unimplemented(false) > default(Vec4::W),
+        0xd0 => unkd0: Vec4 > unimplemented(false) > default(Vec4::W),
+        0xe0 => unke0: Vec4 > unimplemented(false) > default(Vec4::W),
+        0xf0 => unkf0: Vec4 > unimplemented(false) > default(Vec4::W),
         0x100 => unk100: Vec4,
         0x110 => unk110: f32 > unimplemented(false),
         0x114 => unk114: f32 > unimplemented(false) > default(20000.0),

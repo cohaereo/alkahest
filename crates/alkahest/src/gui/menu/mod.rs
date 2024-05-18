@@ -201,7 +201,7 @@ impl GuiView for MenuBar {
                     //         ui.close_menu();
                     //     }
                     // }
-                    
+
                     ui.separator();
 
                     if ui

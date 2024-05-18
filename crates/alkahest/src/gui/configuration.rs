@@ -46,7 +46,7 @@ impl GuiView for RenderSettingsPanel {
             if let CameraProjection::Perspective { fov, .. } = &mut camera.projection {
                 ui.horizontal(|ui| {
                     egui::DragValue::new(fov)
-                        .clamp_range(20f32..=120.0)
+                        .clamp_range(5f32..=120.0)
                         .speed(0.05)
                         .ui(ui);
                     ui.label("FOV");

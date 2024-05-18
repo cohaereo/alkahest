@@ -323,12 +323,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PushSampler { index } => {
                 format!("push_sampler index={index}")
             }
-            TfxBytecodeOp::PushObjectChannelVector {
-                hash
-            } => {
-                format!(
-                    "push_object_channel_vector({hash:08X})"
-                )
+            TfxBytecodeOp::PushObjectChannelVector { hash } => {
+                format!("push_object_channel_vector({hash:08X})")
             }
             TfxBytecodeOp::PushGlobalChannelVector { unk1: index } => {
                 format!("push_global_channel_vector({index})")
