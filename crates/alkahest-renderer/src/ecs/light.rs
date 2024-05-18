@@ -280,7 +280,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Mat4::from_scale(Vec3::splat(0.15)),
+                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
                 unk80: transform_mat,
                 unk100: light.unk50,
 
@@ -323,7 +323,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Mat4::from_scale(Vec3::splat(0.15)),
+                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
                 unk80: transform_mat,
                 unk100: light.unk50,
                 // unk110: 1.0,
@@ -349,7 +349,6 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                     unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
                     resolution_width: ShadowMapRenderer::RESOLUTION as f32,
                     resolution_height: ShadowMapRenderer::RESOLUTION as f32,
-                    // unkc0: shadowmap.camera_to_projective * shadowmap.world_to_camera,
                     unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
                     unk180: ShadowPcfSamples::Samples21 as u8 as f32,
                     ..existing_shadowmap
