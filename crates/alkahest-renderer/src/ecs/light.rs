@@ -349,7 +349,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                     unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
                     resolution_width: ShadowMapRenderer::RESOLUTION as f32,
                     resolution_height: ShadowMapRenderer::RESOLUTION as f32,
-                    unkc0: shadowmap.camera_to_projective * shadowmap.world_to_camera,
+                    // unkc0: shadowmap.camera_to_projective * shadowmap.world_to_camera,
+                    unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
                     unk180: ShadowPcfSamples::Samples21 as u8 as f32,
                     ..existing_shadowmap
                 })
@@ -357,8 +358,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         }
 
         light_renderer.draw(
-            renderer, // shadowmap.is_some() && renderer.render_settings.shadows,
-            false,
+            renderer,
+            shadowmap.is_some() && renderer.render_settings.shadows,
         );
     }
 }
@@ -388,11 +389,7 @@ impl ShadowMapRenderer {
             size: UVec2::splat(Self::RESOLUTION),
         };
 
-        let world_to_camera = Mat4::look_at_rh(
-            transform.translation,
-            transform.translation + transform.forward(),
-            transform.up(),
-        );
+        let world_to_camera = transform.view_matrix();
         let camera_to_projective = projection.matrix(viewport.aspect_ratio());
 
         Ok(Self {
@@ -406,11 +403,7 @@ impl ShadowMapRenderer {
     }
 
     pub fn bind_for_generation(&mut self, transform: &Transform, renderer: &Renderer) {
-        self.world_to_camera = Mat4::look_at_rh(
-            transform.translation,
-            transform.translation + transform.forward(),
-            transform.up(),
-        );
+        self.world_to_camera = transform.view_matrix();
 
         unsafe {
             renderer.gpu.context().ClearDepthStencilView(

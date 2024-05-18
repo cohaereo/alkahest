@@ -83,6 +83,14 @@ impl Transform {
     pub fn up(&self) -> Vec3 {
         self.rotation * Vec3::Z
     }
+
+    pub fn view_matrix(&self) -> Mat4 {
+        Mat4::look_at_rh(
+            self.translation,
+            self.translation + self.forward(),
+            self.up(),
+        )
+    }
 }
 
 impl From<Transform> for Mat4 {
