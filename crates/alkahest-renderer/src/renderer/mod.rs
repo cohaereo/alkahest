@@ -247,6 +247,7 @@ pub struct RendererSettings {
     pub atmosphere: bool,
     pub matcap: bool,
     pub shadows: bool,
+    pub decorators: bool,
 }
 
 impl Default for RendererSettings {
@@ -257,6 +258,7 @@ impl Default for RendererSettings {
             atmosphere: false,
             matcap: false,
             shadows: true,
+            decorators: true,
         }
     }
 }

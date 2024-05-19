@@ -8,7 +8,7 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::color::Color,
 };
-use egui::{Color32, RichText, Ui};
+use egui::{Color32, Key, RichText, Ui};
 use hecs::EntityRef;
 
 use crate::{gui::inspector::ComponentPanel, resources::Resources};

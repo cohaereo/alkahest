@@ -154,6 +154,7 @@ impl GuiView for TfxExternEditor {
             TfxExtern::DeferredLight,
             TfxExtern::DeferredShadow,
             TfxExtern::SpeedtreePlacements,
+            TfxExtern::DecoratorWind,
         ];
 
         let renderer = resources.get::<RendererShared>();

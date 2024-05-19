@@ -77,6 +77,7 @@ pub struct ExternStorage {
     pub global_lighting: Option<GlobalLighting>,
     pub cubemaps: Option<Cubemaps>,
     pub speedtree_placements: Option<SpeedtreePlacements>,
+    pub decorator_wind: Option<DecoratorWind>,
 
     pub global_channels: [Vec4; 256],
     pub global_channels_used: RwLock<[usize; 256]>,
@@ -101,7 +102,8 @@ impl Default for ExternStorage {
             hdao: None,
             global_lighting: None,
             cubemaps: None,
-            speedtree_placements: Some(SpeedtreePlacements::default()),
+            speedtree_placements: None,
+            decorator_wind: Some(DecoratorWind::default()),
 
             global_channels: get_global_channel_defaults(),
             global_channels_used: RwLock::new([0; 256]),
@@ -241,6 +243,7 @@ impl ExternStorage {
             GlobalLighting => self.global_lighting,
             Cubemaps => self.cubemaps,
             SpeedtreePlacements => self.speedtree_placements,
+            DecoratorWind => self.decorator_wind,
         }
     }
 
@@ -275,7 +278,8 @@ impl ExternStorage {
             Hdao,
             GlobalLighting,
             Cubemaps,
-            SpeedtreePlacements
+            SpeedtreePlacements,
+            DecoratorWind
         }
     }
 
@@ -309,6 +313,7 @@ impl ExternStorage {
             GlobalLighting => self.global_lighting,
             Cubemaps => self.cubemaps,
             SpeedtreePlacements => self.speedtree_placements,
+            DecoratorWind => self.decorator_wind,
         }
     }
 }
@@ -736,7 +741,7 @@ extern_struct! {
 extern_struct! {
     struct SpeedtreePlacements("speedtree_placements") {
         0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::ZERO),
-        0x10 => unk10: Quat > unimplemented(true) > default(Quat::IDENTITY),
+        0x10 => unk10: Vec4 > unimplemented(true) > default(Vec4::W),
         0x20 => unk20: Vec4 > unimplemented(true),
         0x30 => unk30: Vec4 > unimplemented(true),
         0x40 => unk40: Vec4 > unimplemented(true),
@@ -744,6 +749,12 @@ extern_struct! {
         0x60 => unk60: Vec4 > unimplemented(true),
         // cohae: zero = color, one = white???
         0x70 => unk70: Vec4 > unimplemented(true) > default(Vec4::ZERO),
+    }
+}
+
+extern_struct! {
+    struct DecoratorWind("decorator_wind") {
+        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 0.0, 0.001)),
     }
 }
 

@@ -33,8 +33,8 @@ impl DecoratorRenderer {
             )?;
             let ext = externs::RigidModel {
                 mesh_to_world: Mat4::IDENTITY,
-                position_scale: model.model.model_offset,
-                position_offset: model.model.model_scale,
+                position_scale: model.model.model_scale,
+                position_offset: model.model.model_offset,
                 texcoord0_scale_offset: Vec4::new(
                     model.model.texcoord_scale.x,
                     model.model.texcoord_scale.y,
@@ -89,28 +89,36 @@ impl DecoratorRenderer {
 
         for (model, ext) in &self.models {
             renderer.data.lock().externs.rigid_model = Some(ext.clone());
-            model.draw_wrapped(
-                renderer,
-                stage,
-                move |_model, renderer, mesh, part| unsafe {
-                    let layout = mesh.get_input_layout_for_stage(stage);
-                    if !RenderStates::is_input_layout_instanced(layout as usize) {
-                        // TODO(cohae): Error handling so this doesnt clog the log
-                        warn!("Input layout {layout} is not instanced!!");
-                        return;
-                    }
+            for id in 0..(self.data.unk18.len() - 1) {
+                let instance_start = self.data.unk18[id];
+                let instance_end = self.data.unk18[id + 1];
+                let instance_count = instance_end - instance_start;
 
-                    self.instance_buffer.bind_single(&renderer.gpu, 1);
+                model.draw_wrapped(
+                    renderer,
+                    stage,
+                    id as u16,
+                    move |_model, renderer, mesh, part| unsafe {
+                        let layout = mesh.get_input_layout_for_stage(stage);
+                        if !RenderStates::is_input_layout_instanced(layout as usize) {
+                            // TODO(cohae): Error handling so this doesnt clog the log
+                            warn!("Input layout {layout} is not instanced!!");
+                            return;
+                        }
 
-                    renderer.gpu.context().DrawIndexedInstanced(
-                        part.index_count,
-                        self.data.unk48.instance_data.data.len() as _,
-                        part.index_start,
-                        0,
-                        0,
-                    );
-                },
-            )?;
+                        self.instance_buffer.bind_single(&renderer.gpu, 1);
+
+                        renderer.gpu.context().DrawIndexedInstanced(
+                            part.index_count,
+                            // self.data.unk48.instance_data.data.len() as _,
+                            instance_count,
+                            part.index_start,
+                            0,
+                            instance_start,
+                        );
+                    },
+                )?;
+            }
         }
 
         Ok(())

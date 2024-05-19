@@ -38,6 +38,8 @@ pub struct DynamicModel {
     pub selected_variant: usize,
     variant_count: usize,
 
+    identifier_count: usize,
+
     pub hash: TagHash,
     pub feature_type: TfxFeatureRenderer,
 }
@@ -91,10 +93,25 @@ impl DynamicModel {
             .next()
             .unwrap_or(0);
 
+        let identifier_count = model
+            .meshes
+            .iter()
+            .map(|m| {
+                m.parts
+                    .iter()
+                    .map(|p| p.external_identifier)
+                    .max()
+                    .unwrap_or(0)
+            })
+            .max()
+            .unwrap_or(0) as usize
+            + 1;
+
         Ok(Self {
             selected_variant: 0,
             variant_count,
             selected_mesh: 0,
+            identifier_count,
             mesh_buffers,
             technique_map,
             techniques,
@@ -117,6 +134,10 @@ impl DynamicModel {
         self.variant_count
     }
 
+    pub fn identifier_count(&self) -> usize {
+        self.identifier_count
+    }
+
     fn get_variant_technique(&self, index: u16, variant: usize) -> Option<Handle<Technique>> {
         if index == u16::MAX {
             None
@@ -131,19 +152,30 @@ impl DynamicModel {
     }
 
     /// ⚠ Expects the `rigid_model` scope to be bound
-    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) -> anyhow::Result<()> {
-        self.draw_wrapped(renderer, render_stage, |_, renderer, mesh, part| unsafe {
-            renderer
-                .gpu
-                .context()
-                .DrawIndexed(part.index_count, part.index_start, 0);
-        })
+    pub fn draw(
+        &self,
+        renderer: &Renderer,
+        render_stage: TfxRenderStage,
+        identifier: u16,
+    ) -> anyhow::Result<()> {
+        self.draw_wrapped(
+            renderer,
+            render_stage,
+            identifier,
+            |_, renderer, mesh, part| unsafe {
+                renderer
+                    .gpu
+                    .context()
+                    .DrawIndexed(part.index_count, part.index_start, 0);
+            },
+        )
     }
 
     pub fn draw_wrapped<F>(
         &self,
         renderer: &Renderer,
         render_stage: TfxRenderStage,
+        identifier: u16,
         f: F,
     ) -> anyhow::Result<()>
     where
@@ -177,6 +209,10 @@ impl DynamicModel {
         self.mesh_buffers[self.selected_mesh].bind(renderer);
         for part_index in mesh.get_range_for_stage(render_stage) {
             let part = &mesh.parts[part_index];
+            if identifier != u16::MAX && part.external_identifier != identifier {
+                continue;
+            }
+
             if !part.lod_category.is_highest_detail() {
                 continue;
             }
@@ -222,6 +258,7 @@ pub struct DynamicModelComponent {
     pub model: DynamicModel,
     pub ext: externs::RigidModel,
     pub cbuffer: ConstantBuffer<externs::RigidModel>,
+    pub identifier: u16,
     cbuffer_dirty: bool,
 }
 
@@ -243,6 +280,7 @@ impl DynamicModelComponent {
         )?;
 
         let mut d = Self {
+            identifier: u16::MAX,
             model,
             ext: Default::default(),
             cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
@@ -316,18 +354,21 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
         dynamic.cbuffer.bind(1, TfxShaderStage::Vertex);
         // TODO(cohae): Error reporting
-        dynamic.model.draw(renderer, render_stage).unwrap();
+        dynamic
+            .model
+            .draw(renderer, render_stage, dynamic.identifier)
+            .unwrap();
     }
 
-    // if render_stage != TfxRenderStage::ShadowGenerate {
-    //     for (_e, decorator) in scene
-    //         .query::<&DecoratorRenderer>()
-    //         .without::<&Hidden>()
-    //         .iter()
-    //     {
-    //         decorator.draw(renderer, render_stage).unwrap();
-    //     }
-    // }
+    if renderer.render_settings.decorators && render_stage != TfxRenderStage::ShadowGenerate {
+        for (_e, decorator) in scene
+            .query::<&DecoratorRenderer>()
+            .without::<&Hidden>()
+            .iter()
+        {
+            decorator.draw(renderer, render_stage).unwrap();
+        }
+    }
 }
 
 pub fn update_dynamic_model_system(scene: &Scene) {
