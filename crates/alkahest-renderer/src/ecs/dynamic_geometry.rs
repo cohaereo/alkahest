@@ -1,5 +1,5 @@
 use alkahest_data::{
-    entity::{SDynamicModel, Unk808072c5},
+    entity::{SDynamicMesh, SDynamicMeshPart, SDynamicModel, Unk808072c5},
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
@@ -10,7 +10,10 @@ use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    ecs::{common::Hidden, static_geometry::ModelBuffers, transform::Transform, Scene},
+    ecs::{
+        common::Hidden, decorators::DecoratorRenderer, static_geometry::ModelBuffers,
+        transform::Transform, Scene,
+    },
     gpu::buffer::ConstantBuffer,
     gpu_event,
     handle::Handle,
@@ -129,6 +132,23 @@ impl DynamicModel {
 
     /// ⚠ Expects the `rigid_model` scope to be bound
     pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) -> anyhow::Result<()> {
+        self.draw_wrapped(renderer, render_stage, |_, renderer, mesh, part| unsafe {
+            renderer
+                .gpu
+                .context()
+                .DrawIndexed(part.index_count, part.index_start, 0);
+        })
+    }
+
+    pub fn draw_wrapped<F>(
+        &self,
+        renderer: &Renderer,
+        render_stage: TfxRenderStage,
+        f: F,
+    ) -> anyhow::Result<()>
+    where
+        F: Fn(&Self, &Renderer, &SDynamicMesh, &SDynamicMeshPart),
+    {
         gpu_event!(
             renderer.gpu,
             format!(
@@ -139,7 +159,7 @@ impl DynamicModel {
         );
 
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
-        ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
+        // ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
         ensure!(
             self.selected_variant < self.variant_count() || self.variant_count() == 0,
             "Material variant out of range"
@@ -191,12 +211,7 @@ impl DynamicModel {
 
             renderer.gpu.set_input_topology(part.primitive_type);
 
-            unsafe {
-                renderer
-                    .gpu
-                    .context()
-                    .DrawIndexed(part.index_count, part.index_start, 0);
-            }
+            f(self, renderer, mesh, part);
         }
 
         Ok(())
@@ -303,6 +318,16 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         // TODO(cohae): Error reporting
         dynamic.model.draw(renderer, render_stage).unwrap();
     }
+
+    // if render_stage != TfxRenderStage::ShadowGenerate {
+    //     for (_e, decorator) in scene
+    //         .query::<&DecoratorRenderer>()
+    //         .without::<&Hidden>()
+    //         .iter()
+    //     {
+    //         decorator.draw(renderer, render_stage).unwrap();
+    //     }
+    // }
 }
 
 pub fn update_dynamic_model_system(scene: &Scene) {

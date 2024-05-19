@@ -482,20 +482,6 @@ pub struct Unk80806d4f {
 //     /// Havok file
 //     pub unk28: TagHash,
 // }
-#[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806c98 {
-    pub file_size: u64,
-    pub unk8: Vec<TagHash>,
-    pub unk18: Vec<u32>,
-    pub unk28: Vec<u32>,
-    pub unk38: Vec<u32>,
-    pub unk48: TagHash,
-    pub unk4c: Tag<SOcclusionBounds>,
-    pub unk50: Vec<u32>,
-    pub unk60: [u32; 4],
-    pub bounds: AABB,
-}
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]

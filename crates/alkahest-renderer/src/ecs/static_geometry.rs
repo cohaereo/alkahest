@@ -34,19 +34,29 @@ impl ModelBuffers {
         unsafe {
             let am = &mut renderer.data.lock().asset_manager;
             let vertex0 = am.vertex_buffers.get(&self.vertex0_buffer)?;
-            let vertex1 = am.vertex_buffers.get(&self.vertex1_buffer)?;
+            let vertex1 = am.vertex_buffers.get(&self.vertex1_buffer);
             let color = am.vertex_buffers.get(&self.color_buffer);
             let index = am.index_buffers.get(&self.index_buffer)?;
 
             let ctx = renderer.gpu.context();
             ctx.IASetIndexBuffer(&index.buffer, DXGI_FORMAT(index.format as _), 0);
-            ctx.IASetVertexBuffers(
-                0,
-                2,
-                Some([Some(vertex0.buffer.clone()), Some(vertex1.buffer.clone())].as_ptr()),
-                Some([vertex0.stride as _, vertex1.stride as _].as_ptr()),
-                Some([0, 0].as_ptr()),
-            );
+            if let Some(vertex1) = vertex1 {
+                ctx.IASetVertexBuffers(
+                    0,
+                    2,
+                    Some([Some(vertex0.buffer.clone()), Some(vertex1.buffer.clone())].as_ptr()),
+                    Some([vertex0.stride as _, vertex1.stride as _].as_ptr()),
+                    Some([0, 0].as_ptr()),
+                );
+            } else {
+                ctx.IASetVertexBuffers(
+                    0,
+                    1,
+                    Some([Some(vertex0.buffer.clone())].as_ptr()),
+                    Some([vertex0.stride as _].as_ptr()),
+                    Some([0].as_ptr()),
+                );
+            }
 
             let color = color.unwrap_or(&renderer.gpu.color0_fallback);
             ctx.VSSetShaderResources(0, Some(&[color.srv.clone()]));

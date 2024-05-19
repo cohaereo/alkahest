@@ -122,7 +122,7 @@ pub fn draw_shaderball_system(renderer: &Renderer, scene: &Scene) {
 
         renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
         renderer.gpu.set_input_layout(12);
-        ball.renderer.vertex_buffer.bind_single(&renderer.gpu);
+        ball.renderer.vertex_buffer.bind_single(&renderer.gpu, 0);
         ball.renderer.cbuffer.bind(0, TfxShaderStage::Vertex);
         ball.renderer.cbuffer.bind(0, TfxShaderStage::Pixel);
 

@@ -1,3 +1,4 @@
+mod decorator;
 mod light;
 mod util;
 
@@ -5,6 +6,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
+        decorators::DecoratorRenderer,
         dynamic_geometry::DynamicModelComponent,
         hierarchy::Parent,
         light::LightRenderer,
@@ -237,7 +239,8 @@ fn show_inspector_components(
         DynamicModelComponent,
         LightRenderer,
         CubemapVolume,
-        ShaderBallComponent
+        ShaderBallComponent,
+        DecoratorRenderer
     );
 }
 

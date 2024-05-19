@@ -15,5 +15,6 @@ pub mod text;
 pub mod texture;
 pub mod tfx;
 pub mod unknown;
+pub mod decorator;
 
 pub use tag::{Tag, WideHash, WideTag};

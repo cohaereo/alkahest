@@ -1,4 +1,5 @@
 pub mod common;
+pub mod decorators;
 pub mod dynamic_geometry;
 pub mod hierarchy;
 pub mod light;

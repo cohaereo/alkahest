@@ -4,28 +4,37 @@ use std::{
     sync::Arc,
 };
 
-use alkahest_data::{entity::Unk808072c5, technique::STechnique, WideHash};
+use alkahest_data::{
+    entity::{SDynamicModel, SEntity, Unk808072c5},
+    technique::STechnique,
+    tfx::{TfxFeatureRenderer, TfxRenderStage},
+    WideHash,
+};
 use alkahest_pm::package_manager;
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Mutable},
+        common::{Hidden, Icon, Label, Mutable},
+        dynamic_geometry::DynamicModelComponent,
         resources::SelectedEntity,
         tags::{EntityTag, EntityTag::Global, Tags},
         transform::{OriginalTransform, Transform},
     },
-    renderer::Renderer,
+    icons::ICON_CUBE,
+    renderer::{Renderer, RendererShared},
     resources::Resources,
     tfx::bytecode::opcodes::TfxBytecodeOp,
 };
+use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
 use glam::{Vec2, Vec3};
+use hecs::DynamicBundle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use tiger_parse::{PackageManagerExt, TigerReadable};
+use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 use tracing::{
     field::{Field, Visit},
     Event, Level, Subscriber, Value,
@@ -339,143 +348,76 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 map.scene.clear();
             }
         }
-        // "sem" | "spawn_entity_model" => {
-        //     let mut maps = resources.get_mut::<MapList>();
-        //     if args.len() != 1 {
-        //         error!("Missing tag argument, expected 32/64-bit tag");
-        //         return;
-        //     }
-        //
-        //     let tag = match parse_extended_hash(args[0]) {
-        //         Ok(o) => o,
-        //         Err(e) => {
-        //             error!("Failed to parse tag: {e}");
-        //             return;
-        //         }
-        //     };
-        //
-        //     let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
-        //         return;
-        //     };
-        //
-        //     let camera = resources.get::<FpsCamera>().unwrap();
-        //
-        //     let renderer = resources.get_mut::<RendererShared>().unwrap();
-        //     let rb = renderer.read();
-        //     println!("Spawning entity {tag}...");
-        //     match load_entity_model(tag, &rb, vec![], vec![]) {
-        //         Ok(er) => {
-        //             let transform = Transform {
-        //                 translation: camera.position,
-        //                 ..Default::default()
-        //             };
-        //
-        //             let mm = transform.to_mat4();
-        //
-        //             let model_matrix = Mat4::from_cols(
-        //                 mm.x_axis.truncate().extend(mm.w_axis.x),
-        //                 mm.y_axis.truncate().extend(mm.w_axis.y),
-        //                 mm.z_axis.truncate().extend(mm.w_axis.z),
-        //                 mm.w_axis,
-        //             );
-        //
-        //             let alt_matrix = Mat4::from_cols(
-        //                 Vec3::ONE.extend(mm.w_axis.x),
-        //                 Vec3::ONE.extend(mm.w_axis.y),
-        //                 Vec3::ONE.extend(mm.w_axis.z),
-        //                 Vec4::W,
-        //             );
-        //
-        //             let scope = ConstantBufferCached::create_init(
-        //                 renderer.read().dcs.clone(),
-        //                 &ScopeRigidModel {
-        //                     mesh_to_world: model_matrix,
-        //                     position_scale: er.mesh_scale(),
-        //                     position_offset: er.mesh_offset(),
-        //                     texcoord0_scale_offset: er.texcoord_transform(),
-        //                     dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-        //                     unk8: [alt_matrix; 8],
-        //                 },
-        //             )
-        //             .unwrap();
-        //
-        //             let e = scene.spawn((transform, EntityModel(er, scope, tag.hash32())));
-        //             insert_tag(scene, e, EntityTag::User);
-        //
-        //             info!("Entity spawned");
-        //         }
-        //         Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
-        //     }
-        // }
-        // "se" | "spawn_entity" => {
-        //     if let Some(mut maps) = resources.get_mut::<MapList>() {
-        //         if args.len() != 1 {
-        //             error!("Missing tag argument, expected 32/64-bit tag");
-        //             return;
-        //         }
-        //
-        //         let tag = match parse_extended_hash(args[0]) {
-        //             Ok(o) => o,
-        //             Err(e) => {
-        //                 error!("Failed to parse tag: {e}");
-        //                 return;
-        //             }
-        //         };
-        //
-        //         let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
-        //             return;
-        //         };
-        //
-        //         let camera = resources.get::<FpsCamera>().unwrap();
-        //
-        //         let renderer = resources.get_mut::<RendererShared>().unwrap();
-        //         let rb = renderer.read();
-        //         println!("Spawning entity {tag}...");
-        //         match load_entity(tag, &rb) {
-        //             Ok(er) => {
-        //                 let transform = Transform {
-        //                     translation: camera.position,
-        //                     ..Default::default()
-        //                 };
-        //
-        //                 let mm = transform.to_mat4();
-        //
-        //                 let model_matrix = Mat4::from_cols(
-        //                     mm.x_axis.truncate().extend(mm.w_axis.x),
-        //                     mm.y_axis.truncate().extend(mm.w_axis.y),
-        //                     mm.z_axis.truncate().extend(mm.w_axis.z),
-        //                     mm.w_axis,
-        //                 );
-        //
-        //                 let alt_matrix = Mat4::from_cols(
-        //                     Vec3::ONE.extend(mm.w_axis.x),
-        //                     Vec3::ONE.extend(mm.w_axis.y),
-        //                     Vec3::ONE.extend(mm.w_axis.z),
-        //                     Vec4::W,
-        //                 );
-        //
-        //                 let scope = ConstantBufferCached::create_init(
-        //                     renderer.read().dcs.clone(),
-        //                     &ScopeRigidModel {
-        //                         mesh_to_world: model_matrix,
-        //                         position_scale: er.mesh_scale(),
-        //                         position_offset: er.mesh_offset(),
-        //                         texcoord0_scale_offset: er.texcoord_transform(),
-        //                         dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
-        //                         unk8: [alt_matrix; 8],
-        //                     },
-        //                 )
-        //                 .unwrap();
-        //
-        //                 let e = scene.spawn((transform, EntityModel(er, scope, tag.hash32())));
-        //                 insert_tag(scene, e, EntityTag::User);
-        //
-        //                 info!("Entity spawned");
-        //             }
-        //             Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
-        //         }
-        //     }
-        // }
+        "sem" | "spawn_entity_model" => {
+            let mut maps = resources.get_mut::<MapList>();
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32/64-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                return;
+            };
+
+            let camera = resources.get::<Camera>();
+
+            let renderer = resources.get_mut::<RendererShared>();
+            println!("Spawning entity {tag}...");
+            let transform = Transform {
+                translation: camera.position(),
+                ..Default::default()
+            };
+            match load_entity_model(tag, transform, &renderer) {
+                Ok(er) => {
+                    scene.spawn(er);
+                    info!("Entity model spawned");
+                }
+                Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
+            }
+        }
+        "se" | "spawn_entity" => {
+            let mut maps = resources.get_mut::<MapList>();
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32/64-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                return;
+            };
+
+            let camera = resources.get::<Camera>();
+
+            let renderer = resources.get_mut::<RendererShared>();
+            println!("Spawning entity {tag}...");
+            let transform = Transform {
+                translation: camera.position(),
+                ..Default::default()
+            };
+            match load_entity(tag, transform, &renderer) {
+                Ok(er) => {
+                    scene.spawn(er);
+                    info!("Entity spawned");
+                }
+                Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
+            }
+        }
         "distfx" | "disassemble_tfx" => {
             if args.is_empty() {
                 error!("Missing bytes argument, expected hex bytestream");
@@ -705,106 +647,155 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         //         resources.get_mut::<SelectedEntity>().select(e);
         //     }
         // }
+        "inspect.mat" => {
+            // TODO(cohae): Make some abstraction for this
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o.hash32(),
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let technique: STechnique = match package_manager().read_tag_struct(tag) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to read technique tag: {e}");
+                    return;
+                }
+            };
+
+            println!("Technique {tag}:");
+            println!("\tUsed scopes:");
+            for scope in technique.used_scopes.iter() {
+                println!("\t\t- {scope:?}");
+            }
+            println!("\tCompatible scopes:");
+            for scope in technique.compatible_scopes.iter() {
+                println!("\t\t- {scope:?}");
+            }
+        }
+        "inspect.model" => {
+            // TODO(cohae): Make some abstraction for this
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o.hash32(),
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let model: SDynamicModel = match package_manager().read_tag_struct(tag) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to read dynamic model tag: {e}");
+                    return;
+                }
+            };
+
+            println!("Model {tag}:");
+            for (i, m) in model.meshes.iter().enumerate() {
+                println!("\tMesh {i}:");
+                println!("\t\t{} parts", m.parts.len());
+                println!("\t\tSupported renderstages:");
+                for stage in TfxRenderStage::VARIANTS {
+                    let range = m.get_range_for_stage(stage);
+                    if !range.is_empty() {
+                        println!("\t\t\t- {stage:?}: {} parts", range.len());
+                    }
+                }
+            }
+        }
         _ => error!("Unknown command '{command}'"),
     }
 }
 
-// fn load_entity_model(
-//     t: WideHash,
-//     renderer: &Renderer,
-//     material_map: Vec<Unk808072c5>,
-//     materials: Vec<TagHash>,
-// ) -> anyhow::Result<EntityRenderer> {
-//     let model: SEntityModel = package_manager().read_tag_struct(t)?;
-//
-//     let mut part_materials = vec![];
-//     for m in &model.meshes {
-//         for p in &m.parts {
-//             if p.material.is_some() {
-//                 part_materials.push(p.material);
-//             }
-//         }
-//     }
-//
-//     for mat in materials.iter().chain(part_materials.iter()) {
-//         let technique = Technique::load(
-//             renderer,
-//             package_manager().read_tag_struct(*mat)?,
-//             *mat,
-//             true,
-//         );
-//
-//         for stage in technique.all_stages() {
-//             for s in stage.shader.samplers.iter() {
-//                 let sampler_header_ref = package_manager().get_entry(s.hash32()).unwrap().reference;
-//                 let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
-//
-//                 let sampler = unsafe {
-//                     renderer
-//                         .dcs
-//                         .device
-//                         .CreateSamplerState(sampler_data.as_ptr() as _)
-//                 };
-//
-//                 if let Ok(sampler) = sampler {
-//                     renderer
-//                         .render_data
-//                         .data_mut()
-//                         .samplers
-//                         .insert(s.key(), sampler);
-//                 }
-//             }
-//
-//             for t in stage.shader.textures.iter() {
-//                 renderer.render_data.load_texture(t.texture);
-//             }
-//         }
-//
-//         renderer
-//             .render_data
-//             .data_mut()
-//             .techniques
-//             .insert(*mat, technique);
-//     }
-//
-//     EntityRenderer::load(model, material_map, materials, renderer)
-// }
-//
-// fn load_entity(t: WideHash, renderer: &Renderer) -> anyhow::Result<EntityRenderer> {
-//     let nh = t.hash32();
-//     let _span = debug_span!("Load entity", hash = %nh).entered();
-//     let Ok(header) = package_manager().read_tag_struct::<Unk80809c0f>(nh) else {
-//         anyhow::bail!("Could not load entity {nh} ({t:?})");
-//     };
-//     debug!("Loading entity {nh}");
-//     for e in &header.entity_resources {
-//         if e.unk0.unk10.resource_type == 0x80806d8a {
-//             debug!(
-//                 "\t- EntityModel {:08x}/{}",
-//                 e.unk0.unk18.resource_type.to_be(),
-//                 e.unk0.unk10.resource_type.to_be(),
-//             );
-//             let mut cur = Cursor::new(package_manager().read_tag(e.unk0.hash())?);
-//             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-//             let model: TagHash = cur.read_le()?;
-//             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
-//             let entity_material_map: Vec<Unk808072c5> =
-//                 TigerReadable::read_ds_endian(&mut cur, tiger_parse::Endian::Little)?;
-//             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-//             let materials: Vec<TagHash> =
-//                 TigerReadable::read_ds_endian(&mut cur, tiger_parse::Endian::Little)?;
-//
-//             return load_entity_model(
-//                 WideHash::Hash32(model),
-//                 renderer,
-//                 entity_material_map.to_vec(),
-//                 materials.to_vec(),
-//             );
-//         }
-//     }
-//
-//     anyhow::bail!("No entitymodel found in entity");
-// }
+fn load_entity_model(
+    t: WideHash,
+    transform: Transform,
+    renderer: &Renderer,
+) -> anyhow::Result<impl DynamicBundle> {
+    Ok((
+        Icon(ICON_CUBE),
+        Label::from("Entity Model"),
+        transform,
+        DynamicModelComponent::load(
+            renderer,
+            &transform,
+            t.into(),
+            vec![],
+            vec![],
+            TfxFeatureRenderer::DynamicObjects,
+        )?,
+        TfxFeatureRenderer::DynamicObjects,
+        Mutable,
+        Tags::from_iter([EntityTag::User]),
+    ))
+}
+
+fn load_entity(
+    entity_hash: WideHash,
+    transform: Transform,
+    renderer: &Renderer,
+) -> anyhow::Result<impl DynamicBundle> {
+    let header = package_manager()
+        .read_tag_struct::<SEntity>(entity_hash)
+        .context("Failed to read SEntity")?;
+    for e in &header.entity_resources {
+        match e.unk0.unk10.resource_type {
+            0x80806d8a => {
+                let mut cur = Cursor::new(package_manager().read_tag(e.unk0.taghash())?);
+                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
+                let model_hash: TagHash = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
+                let entity_material_map: Vec<Unk808072c5> =
+                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
+                let materials: Vec<TagHash> =
+                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                return Ok((
+                    Icon(ICON_CUBE),
+                    Label::from("Entity"),
+                    transform,
+                    DynamicModelComponent::load(
+                        renderer,
+                        &transform,
+                        model_hash,
+                        entity_material_map,
+                        materials,
+                        TfxFeatureRenderer::DynamicObjects,
+                    )?,
+                    TfxFeatureRenderer::DynamicObjects,
+                    Mutable,
+                    Tags::from_iter([EntityTag::User]),
+                ));
+            }
+            u => {
+                debug!(
+                    "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                    u.to_be(),
+                    e.unk0.unk10.resource_type.to_be(),
+                    e.unk0.taghash()
+                )
+            }
+        }
+    }
+
+    Err(anyhow::anyhow!("Failed to load entity"))
+}
 
 fn parse_extended_hash(s: &str) -> anyhow::Result<WideHash> {
     let tag_parsed: anyhow::Result<WideHash> = (|| {

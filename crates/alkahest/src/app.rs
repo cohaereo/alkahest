@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use alkahest_data::{decorator::SDecorator, entity::SDynamicModel};
+use alkahest_pm::package_manager;
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{resources::SelectedEntity, Scene},
@@ -9,8 +11,10 @@ use alkahest_renderer::{
     renderer::{Renderer, RendererSettings, RendererShared},
 };
 use anyhow::Context;
+use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers, Widget};
 use glam::Vec2;
+use tiger_parse::PackageManagerExt;
 use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},

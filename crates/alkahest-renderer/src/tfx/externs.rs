@@ -6,7 +6,7 @@ use std::{
 
 use binrw::binread;
 use field_access::FieldAccess;
-use glam::{Mat3, Mat4, Vec4, Vec4Swizzles};
+use glam::{Mat3, Mat4, Quat, Vec4, Vec4Swizzles};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use strum::EnumIter;
@@ -76,6 +76,7 @@ pub struct ExternStorage {
     pub hdao: Option<Hdao>,
     pub global_lighting: Option<GlobalLighting>,
     pub cubemaps: Option<Cubemaps>,
+    pub speedtree_placements: Option<SpeedtreePlacements>,
 
     pub global_channels: [Vec4; 256],
     pub global_channels_used: RwLock<[usize; 256]>,
@@ -100,6 +101,7 @@ impl Default for ExternStorage {
             hdao: None,
             global_lighting: None,
             cubemaps: None,
+            speedtree_placements: Some(SpeedtreePlacements::default()),
 
             global_channels: get_global_channel_defaults(),
             global_channels_used: RwLock::new([0; 256]),
@@ -238,6 +240,7 @@ impl ExternStorage {
             Hdao => self.hdao,
             GlobalLighting => self.global_lighting,
             Cubemaps => self.cubemaps,
+            SpeedtreePlacements => self.speedtree_placements,
         }
     }
 
@@ -271,7 +274,8 @@ impl ExternStorage {
             Water,
             Hdao,
             GlobalLighting,
-            Cubemaps
+            Cubemaps,
+            SpeedtreePlacements
         }
     }
 
@@ -304,6 +308,7 @@ impl ExternStorage {
             Hdao => self.hdao,
             GlobalLighting => self.global_lighting,
             Cubemaps => self.cubemaps,
+            SpeedtreePlacements => self.speedtree_placements,
         }
     }
 }
@@ -358,7 +363,7 @@ macro_rules! extern_struct {
 
                 match offset {
                     $($field_offset => {
-                        if std::any::TypeId::of::<T>() == std::any::TypeId::of::<$field_type>() {
+                        if std::any::TypeId::of::<T>() == remap_quat_to_vec4(std::any::TypeId::of::<$field_type>()) {
                             unsafe {
                                 let ptr = ptr.add(std::mem::offset_of!(Self, $field)) as *const T;
 
@@ -401,6 +406,14 @@ macro_rules! extern_struct {
         }
     };
 
+}
+
+fn remap_quat_to_vec4(type_id: std::any::TypeId) -> std::any::TypeId {
+    if type_id == std::any::TypeId::of::<Quat>() {
+        std::any::TypeId::of::<Vec4>()
+    } else {
+        type_id
+    }
 }
 
 extern_struct! {
@@ -720,6 +733,20 @@ extern_struct! {
     }
 }
 
+extern_struct! {
+    struct SpeedtreePlacements("speedtree_placements") {
+        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::ZERO),
+        0x10 => unk10: Quat > unimplemented(true) > default(Quat::IDENTITY),
+        0x20 => unk20: Vec4 > unimplemented(true),
+        0x30 => unk30: Vec4 > unimplemented(true),
+        0x40 => unk40: Vec4 > unimplemented(true),
+        0x50 => unk50: Vec4 > unimplemented(true),
+        0x60 => unk60: Vec4 > unimplemented(true),
+        // cohae: zero = color, one = white???
+        0x70 => unk70: Vec4 > unimplemented(true) > default(Vec4::ZERO),
+    }
+}
+
 #[test]
 fn test_externs() {
     let deferred = Deferred {
@@ -870,6 +897,12 @@ impl ExternDefault for TextureView {
 impl ExternDefault for Vec4 {
     fn extern_default() -> Self {
         Vec4::ONE
+    }
+}
+
+impl ExternDefault for Quat {
+    fn extern_default() -> Self {
+        Quat::IDENTITY
     }
 }
 
