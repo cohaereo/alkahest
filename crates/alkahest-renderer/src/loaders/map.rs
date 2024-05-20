@@ -419,21 +419,28 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let d: Unk808068d4 = TigerReadable::read_ds(table_data)?;
 
-                scene.spawn((
-                    Icon(ICON_WAVES),
-                    Label::from("Water"),
-                    transform,
-                    DynamicModelComponent::load(
-                        renderer,
-                        &transform,
-                        d.entity_model,
-                        vec![],
-                        vec![],
+                if d.entity_model.is_some() {
+                    scene.spawn((
+                        Icon(ICON_WAVES),
+                        Label::from("Water"),
+                        transform,
+                        DynamicModelComponent::load(
+                            renderer,
+                            &transform,
+                            d.entity_model,
+                            vec![],
+                            vec![],
+                            TfxFeatureRenderer::Water,
+                        )?,
                         TfxFeatureRenderer::Water,
-                    )?,
-                    TfxFeatureRenderer::Water,
-                    resource_origin,
-                ));
+                        resource_origin,
+                    ));
+                } else {
+                    warn!(
+                        "Water entity model is None (table {}, offset 0x{:X})",
+                        table_hash, data.data_resource.offset
+                    );
+                }
             }
             0x80806a63 => {
                 table_data
