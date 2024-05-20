@@ -21,7 +21,7 @@ impl Renderer {
                 None,
             );
 
-            data.gbuffers.light_diffuse.clear(&[0.01, 0.01, 0.01, 0.0]);
+            data.gbuffers.light_diffuse.clear(&[0.001, 0.001, 0.001, 0.0]);
             data.gbuffers.light_specular.clear(&[0.0, 0.0, 0.0, 0.0]);
             data.gbuffers
                 .light_ibl_specular

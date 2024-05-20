@@ -4,12 +4,14 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::ensure;
+use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::dynamic_geometry::DynamicModel,
     gpu::{buffer::ConstantBuffer, global_state::RenderStates},
+    gpu_event,
     loaders::vertex_buffer::{load_vertex_buffer, VertexBuffer},
     renderer::Renderer,
     tfx::externs,
@@ -17,6 +19,7 @@ use crate::{
 
 pub struct DecoratorRenderer {
     pub data: SDecorator,
+    pub hash: TagHash,
     pub models: Vec<(
         DynamicModel,
         externs::RigidModel,
@@ -26,10 +29,11 @@ pub struct DecoratorRenderer {
 }
 
 impl DecoratorRenderer {
-    pub fn load(renderer: &Renderer, decorator: SDecorator) -> anyhow::Result<Self> {
+    pub fn load(renderer: &Renderer, hash: TagHash, decorator: SDecorator) -> anyhow::Result<Self> {
         let mut models = vec![];
         for smodel in &decorator.unk8 {
             let mut data = renderer.data.lock();
+
             let model = DynamicModel::load(
                 &mut data.asset_manager,
                 smodel.entity_model,
@@ -53,7 +57,7 @@ impl DecoratorRenderer {
             let speedtree_cbuffer = if let Ok(unk34) =
                 package_manager().read_tag_struct::<SUnk80806CB8>(smodel.unk34)
             {
-                let mut data = vec![Vec4::ONE; 54];
+                let mut data = vec![Vec4::W; 54];
                 data[0..5].copy_from_slice(&unk34.unk8[0].unk0);
                 Some(ConstantBuffer::create_array_init(
                     renderer.gpu.clone(),
@@ -70,19 +74,22 @@ impl DecoratorRenderer {
 
         if models.len() > 1 {
             // anyhow::bail!("Decorators with more than one model are not supported yet");
-            warn!("Decorators with more than one model are not supported yet");
+            warn!("Decorators with more than one model are WIP");
         }
 
         let instance_buffer = load_vertex_buffer(&renderer.gpu, decorator.unk48.instance_buffer)?;
 
         Ok(Self {
             models,
+            hash,
             data: decorator,
             instance_buffer,
         })
     }
 
     pub fn draw(&self, renderer: &Renderer, stage: TfxRenderStage) -> anyhow::Result<()> {
+        gpu_event!(renderer.gpu, format!("decorator {}", self.hash));
+
         {
             let mut data = renderer.data.lock();
             let existing_dec = data
@@ -134,7 +141,8 @@ impl DecoratorRenderer {
             let dyn_id = if self.models.len() == 1 {
                 id as u16
             } else {
-                u16::MAX
+                // cohae: Multi-models (usually trees) seem to use the ID as a LOD level?
+                0
             };
 
             model.draw_wrapped(

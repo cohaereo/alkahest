@@ -643,8 +643,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let header_tag: TagHash = table_data.read_le().unwrap();
                 let header: SDecorator = package_manager().read_tag_struct(header_tag)?;
 
-                println!("{header_tag}");
-                match DecoratorRenderer::load(renderer, header) {
+                match DecoratorRenderer::load(renderer, header_tag, header) {
                     Ok(decorator_renderer) => {
                         scene.spawn((
                             Icon(ICON_TREE),
