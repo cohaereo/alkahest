@@ -448,19 +448,19 @@ impl TfxBytecodeInterpreter {
                     .PSSetShaderResources(slot, Some(resource_slice)),
                 TfxShaderStage::Vertex => gctx
                     .context()
-                    .PSSetShaderResources(slot, Some(resource_slice)),
+                    .VSSetShaderResources(slot, Some(resource_slice)),
                 TfxShaderStage::Geometry => gctx
                     .context()
-                    .PSSetShaderResources(slot, Some(resource_slice)),
+                    .GSSetShaderResources(slot, Some(resource_slice)),
                 TfxShaderStage::Hull => gctx
                     .context()
-                    .PSSetShaderResources(slot, Some(resource_slice)),
+                    .HSSetShaderResources(slot, Some(resource_slice)),
                 TfxShaderStage::Compute => gctx
                     .context()
-                    .PSSetShaderResources(slot, Some(resource_slice)),
+                    .CSSetShaderResources(slot, Some(resource_slice)),
                 TfxShaderStage::Domain => gctx
                     .context()
-                    .PSSetShaderResources(slot, Some(resource_slice)),
+                    .DSSetShaderResources(slot, Some(resource_slice)),
             }
         }
 
@@ -479,11 +479,11 @@ impl TfxBytecodeInterpreter {
         unsafe {
             match stage {
                 TfxShaderStage::Pixel => gctx.context().PSSetSamplers(slot, Some(sampler_slice)),
-                TfxShaderStage::Vertex => gctx.context().PSSetSamplers(slot, Some(sampler_slice)),
-                TfxShaderStage::Geometry => gctx.context().PSSetSamplers(slot, Some(sampler_slice)),
-                TfxShaderStage::Hull => gctx.context().PSSetSamplers(slot, Some(sampler_slice)),
-                TfxShaderStage::Compute => gctx.context().PSSetSamplers(slot, Some(sampler_slice)),
-                TfxShaderStage::Domain => gctx.context().PSSetSamplers(slot, Some(sampler_slice)),
+                TfxShaderStage::Vertex => gctx.context().VSSetSamplers(slot, Some(sampler_slice)),
+                TfxShaderStage::Geometry => gctx.context().GSSetSamplers(slot, Some(sampler_slice)),
+                TfxShaderStage::Hull => gctx.context().HSSetSamplers(slot, Some(sampler_slice)),
+                TfxShaderStage::Compute => gctx.context().CSSetSamplers(slot, Some(sampler_slice)),
+                TfxShaderStage::Domain => gctx.context().DSSetSamplers(slot, Some(sampler_slice)),
             }
         }
         forget(sampler);
