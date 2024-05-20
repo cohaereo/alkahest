@@ -754,7 +754,7 @@ extern_struct! {
 
 extern_struct! {
     struct DecoratorWind("decorator_wind") {
-        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 0.0, 0.001)),
+        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 0.0, 0.01)),
     }
 }
 

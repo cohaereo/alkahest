@@ -1,13 +1,15 @@
 use alkahest_data::{
-    decorator::SDecorator,
-    tfx::{TfxFeatureRenderer, TfxRenderStage},
+    decorator::{SDecorator, SUnk80806CB8},
+    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
+use alkahest_pm::package_manager;
 use anyhow::ensure;
 use glam::{Mat4, Vec4};
+use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::dynamic_geometry::DynamicModel,
-    gpu::global_state::RenderStates,
+    gpu::{buffer::ConstantBuffer, global_state::RenderStates},
     loaders::vertex_buffer::{load_vertex_buffer, VertexBuffer},
     renderer::Renderer,
     tfx::externs,
@@ -15,18 +17,22 @@ use crate::{
 
 pub struct DecoratorRenderer {
     pub data: SDecorator,
-    pub models: Vec<(DynamicModel, externs::RigidModel)>,
+    pub models: Vec<(
+        DynamicModel,
+        externs::RigidModel,
+        Option<ConstantBuffer<Vec4>>,
+    )>,
     instance_buffer: VertexBuffer,
 }
 
 impl DecoratorRenderer {
     pub fn load(renderer: &Renderer, decorator: SDecorator) -> anyhow::Result<Self> {
         let mut models = vec![];
-        for model in &decorator.unk8 {
+        for smodel in &decorator.unk8 {
             let mut data = renderer.data.lock();
             let model = DynamicModel::load(
                 &mut data.asset_manager,
-                model.entity_model,
+                smodel.entity_model,
                 vec![],
                 vec![],
                 TfxFeatureRenderer::SpeedtreeTrees,
@@ -43,7 +49,21 @@ impl DecoratorRenderer {
                 ),
                 dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
             };
-            models.push((model, ext));
+
+            let speedtree_cbuffer = if let Ok(unk34) =
+                package_manager().read_tag_struct::<SUnk80806CB8>(smodel.unk34)
+            {
+                let mut data = vec![Vec4::ONE; 54];
+                data[0..5].copy_from_slice(&unk34.unk8[0].unk0);
+                Some(ConstantBuffer::create_array_init(
+                    renderer.gpu.clone(),
+                    &data,
+                )?)
+            } else {
+                None
+            };
+
+            models.push((model, ext, speedtree_cbuffer));
         }
 
         ensure!(models.len() >= 1, "No models found in decorator");
@@ -87,38 +107,60 @@ impl DecoratorRenderer {
             });
         }
 
-        for (model, ext) in &self.models {
-            renderer.data.lock().externs.rigid_model = Some(ext.clone());
-            for id in 0..(self.data.unk18.len() - 1) {
-                let instance_start = self.data.unk18[id];
-                let instance_end = self.data.unk18[id + 1];
-                let instance_count = instance_end - instance_start;
+        for id in 0..(self.data.unk18.len() - 1) {
+            let instance_start = self.data.unk18[id];
+            let instance_end = self.data.unk18[id + 1];
+            let instance_count = instance_end - instance_start;
 
-                model.draw_wrapped(
-                    renderer,
-                    stage,
-                    id as u16,
-                    move |_model, renderer, mesh, part| unsafe {
-                        let layout = mesh.get_input_layout_for_stage(stage);
-                        if !RenderStates::is_input_layout_instanced(layout as usize) {
-                            // TODO(cohae): Error handling so this doesnt clog the log
-                            warn!("Input layout {layout} is not instanced!!");
-                            return;
-                        }
+            let (model, ext, cb) = if self.models.len() == 1 {
+                &self.models[0]
+            } else {
+                &self.models[id]
+            };
 
-                        self.instance_buffer.bind_single(&renderer.gpu, 1);
-
-                        renderer.gpu.context().DrawIndexedInstanced(
-                            part.index_count,
-                            // self.data.unk48.instance_data.data.len() as _,
-                            instance_count,
-                            part.index_start,
-                            0,
-                            instance_start,
-                        );
-                    },
-                )?;
+            if let Some(cb) = cb {
+                cb.bind(10, TfxShaderStage::Vertex);
+            } else {
+                unsafe {
+                    renderer
+                        .gpu
+                        .context()
+                        .VSSetConstantBuffers(10, Some(&[None]));
+                }
             }
+
+            renderer.data.lock().externs.rigid_model = Some(ext.clone());
+
+            let dyn_id = if self.models.len() == 1 {
+                id as u16
+            } else {
+                u16::MAX
+            };
+
+            model.draw_wrapped(
+                renderer,
+                stage,
+                dyn_id,
+                move |_model, renderer, mesh, part| unsafe {
+                    let layout = mesh.get_input_layout_for_stage(stage);
+                    if !RenderStates::is_input_layout_instanced(layout as usize) {
+                        // TODO(cohae): Error handling so this doesnt clog the log
+                        warn!("Input layout {layout} is not instanced!!");
+                        return;
+                    }
+
+                    self.instance_buffer.bind_single(&renderer.gpu, 1);
+
+                    renderer.gpu.context().DrawIndexedInstanced(
+                        part.index_count,
+                        // self.data.unk48.instance_data.data.len() as _,
+                        instance_count,
+                        part.index_start,
+                        0,
+                        instance_start,
+                    );
+                },
+            )?;
         }
 
         Ok(())

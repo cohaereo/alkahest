@@ -67,5 +67,22 @@ pub struct SUnk80806C9F {
 pub struct SUnk80806CB2 {
     pub file_size: u64,
     pub entity_model: TagHash,
+    pub unk8: u32,
+    pub bb: AABB,
+    pub unk30: TagHash,
+    pub unk34: TagHash,
     // ...
+}
+
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0x80806CB8)]
+pub struct SUnk80806CB8 {
+    pub file_size: u64,
+    pub unk8: Vec<SUnk80806CBA>,
+}
+
+#[derive(Clone, Debug)]
+#[tiger_tag(id = 0x80806CBA)]
+pub struct SUnk80806CBA {
+    pub unk0: [Vec4; 5],
 }
