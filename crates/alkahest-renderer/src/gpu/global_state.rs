@@ -24,9 +24,10 @@ use windows::{
                 D3D11_COMPARISON_NOT_EQUAL, D3D11_CULL_BACK, D3D11_CULL_FRONT, D3D11_CULL_MODE,
                 D3D11_CULL_NONE, D3D11_DEPTH_STENCILOP_DESC, D3D11_DEPTH_STENCIL_DESC,
                 D3D11_DEPTH_WRITE_MASK, D3D11_FILL_MODE, D3D11_FILL_SOLID, D3D11_FILL_WIREFRAME,
-                D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC,
-                D3D11_RENDER_TARGET_BLEND_DESC, D3D11_STENCIL_OP, D3D11_STENCIL_OP_INVERT,
-                D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_REPLACE, D3D11_STENCIL_OP_ZERO,
+                D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_INSTANCE_DATA,
+                D3D11_INPUT_PER_VERTEX_DATA, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
+                D3D11_STENCIL_OP, D3D11_STENCIL_OP_INVERT, D3D11_STENCIL_OP_KEEP,
+                D3D11_STENCIL_OP_REPLACE, D3D11_STENCIL_OP_ZERO,
             },
             Dxgi::Common::DXGI_FORMAT,
         },
@@ -185,8 +186,12 @@ impl RenderStates {
                 Format: DXGI_FORMAT(e.format as i32),
                 InputSlot: e.buffer_index,
                 AlignedByteOffset: D3D11_APPEND_ALIGNED_ELEMENT,
-                InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                InstanceDataStepRate: 0,
+                InputSlotClass: if e.is_instance_data {
+                    D3D11_INPUT_PER_INSTANCE_DATA
+                } else {
+                    D3D11_INPUT_PER_VERTEX_DATA
+                },
+                InstanceDataStepRate: e.is_instance_data as u32,
             })
         }
 
@@ -217,6 +222,13 @@ impl RenderStates {
             device.CreateInputLayout(&elements_dx11, shader_blob_slice, Some(&mut out))?;
         }
         Ok(out.unwrap())
+    }
+
+    pub fn is_input_layout_instanced(index: usize) -> bool {
+        INPUT_LAYOUTS[index]
+            .elements
+            .iter()
+            .any(|e| e.is_instance_data)
     }
 }
 
@@ -4202,6 +4214,7 @@ struct TigerInputLayoutElement {
     pub semantic_name: &'static CStr,
     pub semantic_index: u32,
     pub buffer_index: u32,
+    pub is_instance_data: bool,
 }
 
 //region Input layouts
@@ -4215,6 +4228,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
             semantic_name: c"POSITION",
             semantic_index: 0,
             buffer_index: 0,
+            is_instance_data: false,
         }],
     },
     // Layout 1
@@ -4226,6 +4240,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
             semantic_name: c"POSITION",
             semantic_index: 0,
             buffer_index: 0,
+            is_instance_data: false,
         }],
     },
     // Layout 2
@@ -4238,6 +4253,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4246,6 +4262,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4254,6 +4271,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4267,6 +4285,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4275,6 +4294,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4283,6 +4303,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4296,6 +4317,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4304,6 +4326,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4317,6 +4340,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4325,6 +4349,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4338,6 +4363,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4346,6 +4372,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4354,6 +4381,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4362,6 +4390,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4375,6 +4404,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4383,6 +4413,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4391,6 +4422,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4399,6 +4431,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -4412,6 +4445,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4420,6 +4454,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4428,6 +4463,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -4441,6 +4477,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4449,6 +4486,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4457,6 +4495,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4465,6 +4504,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4473,6 +4513,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4486,6 +4527,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4494,6 +4536,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4502,6 +4545,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4515,6 +4559,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4523,6 +4568,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4536,6 +4582,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4544,6 +4591,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4552,6 +4600,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -4565,6 +4614,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4573,6 +4623,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4581,6 +4632,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4589,6 +4641,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4597,6 +4650,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDWEIGHT",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "uint4",
@@ -4605,6 +4659,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
         ],
     },
@@ -4618,6 +4673,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4626,6 +4682,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4634,6 +4691,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4642,6 +4700,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4650,6 +4709,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4658,6 +4718,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4666,6 +4727,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4674,6 +4736,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4682,6 +4745,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4690,6 +4754,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4698,6 +4763,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4706,6 +4772,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
         ],
     },
@@ -4719,6 +4786,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4727,6 +4795,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4735,6 +4804,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4743,6 +4813,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4751,6 +4822,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4759,6 +4831,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BINORMAL",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4767,6 +4840,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -4779,6 +4853,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
             semantic_name: c"POSITION",
             semantic_index: 0,
             buffer_index: 0,
+            is_instance_data: false,
         }],
     },
     // Layout 17
@@ -4791,6 +4866,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -4799,6 +4875,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4807,6 +4884,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4815,6 +4893,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -4828,6 +4907,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4836,6 +4916,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4844,6 +4925,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4852,6 +4934,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4860,6 +4943,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4868,6 +4952,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4876,6 +4961,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4884,6 +4970,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -4897,6 +4984,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4905,6 +4993,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4913,6 +5002,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4921,6 +5011,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4929,6 +5020,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4937,6 +5029,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4945,6 +5038,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4953,6 +5047,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -4961,6 +5056,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BINORMAL",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4969,6 +5065,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -4982,6 +5079,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4990,6 +5088,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -4998,6 +5097,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5006,6 +5106,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5014,6 +5115,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5022,6 +5124,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5030,6 +5133,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5038,6 +5142,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5046,6 +5151,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5054,6 +5160,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5062,6 +5169,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BINORMAL",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5070,6 +5178,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -5083,6 +5192,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -5091,6 +5201,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5099,6 +5210,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5107,6 +5219,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -5115,6 +5228,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -5128,6 +5242,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5136,6 +5251,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5144,6 +5260,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -5156,6 +5273,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
             semantic_name: c"POSITION",
             semantic_index: 0,
             buffer_index: 0,
+            is_instance_data: false,
         }],
     },
     // Layout 24
@@ -5168,6 +5286,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5176,6 +5295,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5184,6 +5304,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5192,6 +5313,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5200,6 +5322,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5208,6 +5331,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5216,6 +5340,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BINORMAL",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5224,6 +5349,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -5237,6 +5363,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5245,6 +5372,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5253,6 +5381,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5261,6 +5390,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5269,6 +5399,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5277,6 +5408,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5285,6 +5417,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BINORMAL",
                 semantic_index: 0,
                 buffer_index: 2,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5293,6 +5426,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -5306,6 +5440,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -5314,6 +5449,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5322,6 +5458,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5330,6 +5467,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5338,6 +5476,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5346,6 +5485,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5354,6 +5494,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5362,6 +5503,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: true,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5370,6 +5512,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"BLENDINDICES",
                 semantic_index: 0,
                 buffer_index: 3,
+                is_instance_data: false,
             },
         ],
     },
@@ -5382,6 +5525,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
             semantic_name: c"TEXCOORD",
             semantic_index: 0,
             buffer_index: 0,
+            is_instance_data: false,
         }],
     },
     // Layout 28
@@ -5394,6 +5538,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5402,6 +5547,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5415,6 +5561,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5423,6 +5570,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5431,6 +5579,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5444,6 +5593,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5452,6 +5602,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5460,6 +5611,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5468,6 +5620,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5481,6 +5634,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5489,6 +5643,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5497,6 +5652,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5505,6 +5661,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5513,6 +5670,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5526,6 +5684,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5534,6 +5693,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5542,6 +5702,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5550,6 +5711,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5558,6 +5720,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5566,6 +5729,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5579,6 +5743,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5587,6 +5752,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5595,6 +5761,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5603,6 +5770,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5611,6 +5779,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5619,6 +5788,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5627,6 +5797,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5640,6 +5811,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5648,6 +5820,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5656,6 +5829,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5664,6 +5838,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5672,6 +5847,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5680,6 +5856,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5688,6 +5865,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5696,6 +5874,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5709,6 +5888,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5717,6 +5897,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5725,6 +5906,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5733,6 +5915,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5741,6 +5924,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5749,6 +5933,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5757,6 +5942,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5765,6 +5951,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5773,6 +5960,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5786,6 +5974,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5794,6 +5983,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5802,6 +5992,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5810,6 +6001,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5818,6 +6010,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5826,6 +6019,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5834,6 +6028,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5842,6 +6037,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5850,6 +6046,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5858,6 +6055,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5871,6 +6069,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5879,6 +6078,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5887,6 +6087,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5895,6 +6096,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5903,6 +6105,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5911,6 +6114,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5919,6 +6123,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5927,6 +6132,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5935,6 +6141,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5943,6 +6150,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5951,6 +6159,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -5964,6 +6173,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5972,6 +6182,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5980,6 +6191,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5988,6 +6200,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -5996,6 +6209,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6004,6 +6218,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6012,6 +6227,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6020,6 +6236,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6028,6 +6245,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6036,6 +6254,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6044,6 +6263,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6052,6 +6272,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6065,6 +6286,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6073,6 +6295,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6081,6 +6304,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6089,6 +6313,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6097,6 +6322,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6105,6 +6331,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6113,6 +6340,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6121,6 +6349,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6129,6 +6358,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6137,6 +6367,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6145,6 +6376,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6153,6 +6385,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6161,6 +6394,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6174,6 +6408,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6182,6 +6417,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6190,6 +6426,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6198,6 +6435,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6206,6 +6444,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6214,6 +6453,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6222,6 +6462,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6230,6 +6471,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6238,6 +6480,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6246,6 +6489,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6254,6 +6498,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6262,6 +6507,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6270,6 +6516,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6278,6 +6525,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6291,6 +6539,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6299,6 +6548,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6307,6 +6557,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6315,6 +6566,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6323,6 +6575,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6331,6 +6584,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6339,6 +6593,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6347,6 +6602,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6355,6 +6611,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6363,6 +6620,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6371,6 +6629,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6379,6 +6638,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6387,6 +6647,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6395,6 +6656,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6403,6 +6665,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 14,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6416,6 +6679,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6424,6 +6688,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6432,6 +6697,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6440,6 +6706,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6448,6 +6715,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6456,6 +6724,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6464,6 +6733,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6472,6 +6742,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6480,6 +6751,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6488,6 +6760,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6496,6 +6769,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6504,6 +6778,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6512,6 +6787,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6520,6 +6796,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6528,6 +6805,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 14,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6536,6 +6814,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 15,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6548,6 +6827,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
             semantic_name: c"TEXCOORD",
             semantic_index: 0,
             buffer_index: 0,
+            is_instance_data: false,
         }],
     },
     // Layout 44
@@ -6560,6 +6840,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6568,6 +6849,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6581,6 +6863,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6589,6 +6872,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6597,6 +6881,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6610,6 +6895,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6618,6 +6904,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6626,6 +6913,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6634,6 +6922,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6647,6 +6936,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6655,6 +6945,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6663,6 +6954,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6671,6 +6963,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6679,6 +6972,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6692,6 +6986,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6700,6 +6995,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6708,6 +7004,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6716,6 +7013,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6724,6 +7022,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6732,6 +7031,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6745,6 +7045,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6753,6 +7054,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6761,6 +7063,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6769,6 +7072,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6777,6 +7081,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6785,6 +7090,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6793,6 +7099,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6806,6 +7113,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6814,6 +7122,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6822,6 +7131,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6830,6 +7140,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6838,6 +7149,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6846,6 +7158,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6854,6 +7167,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6862,6 +7176,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6875,6 +7190,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6883,6 +7199,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6891,6 +7208,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6899,6 +7217,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6907,6 +7226,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6915,6 +7235,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6923,6 +7244,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6931,6 +7253,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6939,6 +7262,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -6952,6 +7276,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6960,6 +7285,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6968,6 +7294,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6976,6 +7303,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6984,6 +7312,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -6992,6 +7321,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7000,6 +7330,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7008,6 +7339,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7016,6 +7348,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7024,6 +7357,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7037,6 +7371,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7045,6 +7380,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7053,6 +7389,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7061,6 +7398,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7069,6 +7407,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7077,6 +7416,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7085,6 +7425,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7093,6 +7434,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7101,6 +7443,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7109,6 +7452,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7117,6 +7461,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7130,6 +7475,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7138,6 +7484,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7146,6 +7493,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7154,6 +7502,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7162,6 +7511,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7170,6 +7520,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7178,6 +7529,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7186,6 +7538,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7194,6 +7547,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7202,6 +7556,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7210,6 +7565,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7218,6 +7574,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7231,6 +7588,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7239,6 +7597,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7247,6 +7606,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7255,6 +7615,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7263,6 +7624,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7271,6 +7633,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7279,6 +7642,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7287,6 +7651,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7295,6 +7660,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7303,6 +7669,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7311,6 +7678,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7319,6 +7687,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7327,6 +7696,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7340,6 +7710,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7348,6 +7719,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7356,6 +7728,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7364,6 +7737,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7372,6 +7746,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7380,6 +7755,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7388,6 +7764,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7396,6 +7773,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7404,6 +7782,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7412,6 +7791,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7420,6 +7800,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7428,6 +7809,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7436,6 +7818,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7444,6 +7827,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7457,6 +7841,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7465,6 +7850,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7473,6 +7859,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7481,6 +7868,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7489,6 +7877,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7497,6 +7886,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7505,6 +7895,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7513,6 +7904,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7521,6 +7913,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7529,6 +7922,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7537,6 +7931,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7545,6 +7940,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7553,6 +7949,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7561,6 +7958,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7569,6 +7967,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 14,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7582,6 +7981,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7590,6 +7990,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7598,6 +7999,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7606,6 +8008,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7614,6 +8017,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7622,6 +8026,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7630,6 +8035,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7638,6 +8044,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7646,6 +8053,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7654,6 +8062,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7662,6 +8071,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7670,6 +8080,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7678,6 +8089,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7686,6 +8098,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7694,6 +8107,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 14,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7702,6 +8116,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 15,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -7715,6 +8130,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7723,6 +8139,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -7731,6 +8148,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7739,6 +8157,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -7752,6 +8171,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7760,6 +8180,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7768,6 +8189,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -7776,6 +8198,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7784,6 +8207,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -7797,6 +8221,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7805,6 +8230,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7813,6 +8239,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7821,6 +8248,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -7829,6 +8257,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7837,6 +8266,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -7850,6 +8280,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7858,6 +8289,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7866,6 +8298,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7874,6 +8307,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7882,6 +8316,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -7890,6 +8325,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7898,6 +8334,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -7911,6 +8348,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7919,6 +8357,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7927,6 +8366,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7935,6 +8375,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7943,6 +8384,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7951,6 +8393,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -7959,6 +8402,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -7967,6 +8411,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -7980,6 +8425,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7988,6 +8434,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -7996,6 +8443,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8004,6 +8452,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8012,6 +8461,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8020,6 +8470,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8028,6 +8479,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8036,6 +8488,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8044,6 +8497,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8057,6 +8511,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8065,6 +8520,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8073,6 +8529,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8081,6 +8538,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8089,6 +8547,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8097,6 +8556,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8105,6 +8565,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8113,6 +8574,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8121,6 +8583,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8129,6 +8592,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8142,6 +8606,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8150,6 +8615,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8158,6 +8624,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8166,6 +8633,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8174,6 +8642,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8182,6 +8651,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8190,6 +8660,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8198,6 +8669,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8206,6 +8678,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8214,6 +8687,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8222,6 +8696,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8235,6 +8710,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8243,6 +8719,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8251,6 +8728,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8259,6 +8737,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8267,6 +8746,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8275,6 +8755,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8283,6 +8764,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8291,6 +8773,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8299,6 +8782,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8307,6 +8791,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8315,6 +8800,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8323,6 +8809,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8336,6 +8823,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8344,6 +8832,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8352,6 +8841,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8360,6 +8850,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8368,6 +8859,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8376,6 +8868,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8384,6 +8877,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8392,6 +8886,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8400,6 +8895,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8408,6 +8904,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8416,6 +8913,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8424,6 +8922,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8432,6 +8931,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8445,6 +8945,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8453,6 +8954,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8461,6 +8963,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8469,6 +8972,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8477,6 +8981,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8485,6 +8990,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8493,6 +8999,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8501,6 +9008,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8509,6 +9017,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8517,6 +9026,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8525,6 +9035,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8533,6 +9044,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8541,6 +9053,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8549,6 +9062,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8562,6 +9076,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8570,6 +9085,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8578,6 +9094,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8586,6 +9103,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8594,6 +9112,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8602,6 +9121,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8610,6 +9130,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8618,6 +9139,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8626,6 +9148,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8634,6 +9157,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8642,6 +9166,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8650,6 +9175,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8658,6 +9184,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8666,6 +9193,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8674,6 +9202,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8687,6 +9216,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8695,6 +9225,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8703,6 +9234,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8711,6 +9243,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8719,6 +9252,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8727,6 +9261,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8735,6 +9270,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8743,6 +9279,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8751,6 +9288,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8759,6 +9297,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8767,6 +9306,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8775,6 +9315,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8783,6 +9324,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8791,6 +9333,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8799,6 +9342,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8807,6 +9351,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8820,6 +9365,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8828,6 +9374,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8836,6 +9383,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8844,6 +9392,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8852,6 +9401,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8860,6 +9410,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8868,6 +9419,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8876,6 +9428,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8884,6 +9437,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8892,6 +9446,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8900,6 +9455,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8908,6 +9464,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8916,6 +9473,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8924,6 +9482,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8932,6 +9491,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -8940,6 +9500,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -8948,6 +9509,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -8961,6 +9523,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8969,6 +9532,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8977,6 +9541,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8985,6 +9550,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -8993,6 +9559,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9001,6 +9568,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9009,6 +9577,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9017,6 +9586,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9025,6 +9595,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9033,6 +9604,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9041,6 +9613,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9049,6 +9622,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9057,6 +9631,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9065,6 +9640,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9073,6 +9649,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 14,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -9081,6 +9658,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -9089,6 +9667,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -9097,6 +9676,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -9110,6 +9690,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9118,6 +9699,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 1,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9126,6 +9708,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 2,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9134,6 +9717,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 3,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9142,6 +9726,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9150,6 +9735,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9158,6 +9744,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9166,6 +9753,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9174,6 +9762,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9182,6 +9771,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 9,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9190,6 +9780,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 10,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9198,6 +9789,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 11,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9206,6 +9798,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 12,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9214,6 +9807,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 13,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9222,6 +9816,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 14,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9230,6 +9825,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 15,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -9238,6 +9834,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -9246,6 +9843,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 1,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -9254,6 +9852,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 2,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },
@@ -9267,6 +9866,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -9275,6 +9875,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9283,6 +9884,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -9291,6 +9893,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9299,6 +9902,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
         ],
     },
@@ -9312,6 +9916,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"POSITION",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float3",
@@ -9320,6 +9925,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"NORMAL",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9328,6 +9934,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TANGENT",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float2",
@@ -9336,6 +9943,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9344,6 +9952,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"COLOR",
                 semantic_index: 0,
                 buffer_index: 0,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9352,6 +9961,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 4,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9360,6 +9970,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 5,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9368,6 +9979,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 6,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9376,6 +9988,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 7,
                 buffer_index: 1,
+                is_instance_data: false,
             },
             TigerInputLayoutElement {
                 hlsl_type: "float4",
@@ -9384,6 +9997,7 @@ const INPUT_LAYOUTS: [TigerInputLayout; 77] = [
                 semantic_name: c"TEXCOORD",
                 semantic_index: 8,
                 buffer_index: 1,
+                is_instance_data: false,
             },
         ],
     },

@@ -56,15 +56,6 @@ void PSMain(
 
     float4 pos_in_cubemap = mul(world_to_model, float4(worldPos, 1.0));
     pos_in_cubemap /= pos_in_cubemap.w;
-//     if (pos_in_cubemap.x < -1.0 || pos_in_cubemap.x > 1.0 ||
-//         pos_in_cubemap.y < -1.0 || pos_in_cubemap.y > 1.0 ||
-//         pos_in_cubemap.z < -1.0 || pos_in_cubemap.z > 1.0) {
-//         lighting_specular = float4(0, 0, 0, 0);
-//         lighting_diffuse = float4(0, 0, 0, 0);
-//         return;
-//     }
-
-//     lighting_specular = float4(0, 0, 1, 1.0);
 
     if (pos_in_cubemap.x < -1.0 || pos_in_cubemap.x > 1.0 ||
         pos_in_cubemap.y < -1.0 || pos_in_cubemap.y > 1.0 ||

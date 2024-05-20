@@ -34,6 +34,35 @@ pub enum TfxRenderStage {
     ComputeSkinning = 23,
 }
 
+impl TfxRenderStage {
+    pub const VARIANTS: [TfxRenderStage; 24] = [
+        Self::GenerateGbuffer,
+        Self::Decals,
+        Self::InvestmentDecals,
+        Self::ShadowGenerate,
+        Self::LightingApply,
+        Self::LightProbeApply,
+        Self::DecalsAdditive,
+        Self::Transparents,
+        Self::Distortion,
+        Self::LightShaftOcclusion,
+        Self::SkinPrepass,
+        Self::LensFlares,
+        Self::DepthPrepass,
+        Self::WaterReflection,
+        Self::PostprocessTransparentStencil,
+        Self::Impulse,
+        Self::Reticle,
+        Self::WaterRipples,
+        Self::MaskSunLight,
+        Self::Volumetrics,
+        Self::Cubemaps,
+        Self::PostprocessScreen,
+        Self::WorldForces,
+        Self::ComputeSkinning,
+    ];
+}
+
 impl Display for TfxRenderStage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let n = match self {

@@ -3,6 +3,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 use alkahest_data::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
     common::ResourceHash,
+    decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
         SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
@@ -26,6 +27,7 @@ use crate::{
     camera::CameraProjection,
     ecs::{
         common::{Icon, Label, ResourceOrigin},
+        decorators::DecoratorRenderer,
         dynamic_geometry::DynamicModelComponent,
         hierarchy::{Children, Parent},
         light::{LightRenderer, ShadowMapRenderer},
@@ -39,7 +41,7 @@ use crate::{
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
         ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM,
-        ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::StringExt,
@@ -548,7 +550,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset))
                     .unwrap();
 
-                let cubemap_volume: SCubemapVolume = TigerReadable::read_ds(table_data).unwrap();
+                let cubemap_volume: SCubemapVolume = TigerReadable::read_ds(table_data)?;
 
                 let voxel_diffuse = if cubemap_volume.voxel_ibl_texture.is_some() {
                     Some(
@@ -617,7 +619,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     continue;
                 }
 
-                let header: Unk80808cb7 = package_manager().read_tag_struct(tag).unwrap();
+                let header: Unk80808cb7 = package_manager().read_tag_struct(tag)?;
 
                 for respawn_point in header.unk8.iter() {
                     scene.spawn((
@@ -631,6 +633,28 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         respawn_point.clone(),
                         resource_origin,
                     ));
+                }
+            }
+            // Decorator
+            0x80806cc3 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let header_tag: TagHash = table_data.read_le().unwrap();
+                let header: SDecorator = package_manager().read_tag_struct(header_tag)?;
+
+                println!("{header_tag}");
+                match DecoratorRenderer::load(renderer, header) {
+                    Ok(decorator_renderer) => {
+                        scene.spawn((
+                            Icon(ICON_TREE),
+                            Label::from(format!("Decorator {header_tag}")),
+                            decorator_renderer,
+                        ));
+                    }
+                    Err(e) => {
+                        error!("Failed to load decorator {header_tag}: {e}");
+                    }
                 }
             }
             u => {

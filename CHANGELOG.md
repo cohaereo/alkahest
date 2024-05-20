@@ -51,7 +51,8 @@ received some polish!
     - Atmosphere rendering
     - Ambient voxel/cubemap IBL
     - Bind DX11 depth, blend, rasterizer and depth bias states based on Technique data
-- ~~Shadow mapping~~ (TODO)
+- Shadow mapping
+- Decorator rendering (grass, plants, small rocks, etc.)
 - Compile-time shader compilation
 - Post processing effects
     - Ambient occlusion
@@ -88,6 +89,7 @@ received some polish!
 
 ### Fixed
 
+- Fixed specular highlights not moving with the camera
 - Fix skinned meshes not displaying properly without VS override
 - Fixed windows with 0 size
 - Don't save the window size if it's minimized

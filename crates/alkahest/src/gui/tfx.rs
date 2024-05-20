@@ -5,7 +5,7 @@ use alkahest_renderer::{
 };
 use egui::{Color32, Context, RichText};
 use egui_extras::{Column, TableBuilder};
-use glam::Vec4;
+use glam::{EulerRot, Quat, Vec4};
 use itertools::Itertools;
 use winit::window::Window;
 
@@ -153,6 +153,8 @@ impl GuiView for TfxExternEditor {
             // TfxExtern::PatternBlending,
             TfxExtern::DeferredLight,
             TfxExtern::DeferredShadow,
+            TfxExtern::SpeedtreePlacements,
+            TfxExtern::DecoratorWind,
         ];
 
         let renderer = resources.get::<RendererShared>();
@@ -178,6 +180,31 @@ impl GuiView for TfxExternEditor {
 
                                             if let Some(v) = f.get_mut::<Vec4>() {
                                                 ui.vec4_input(v);
+                                            }
+
+                                            if let Some(v) = f.get_mut::<Quat>() {
+                                                let mut rot = v.to_euler(EulerRot::YXZ);
+                                                ui.horizontal(|ui| {
+                                                    ui.add(
+                                                        egui::DragValue::new(&mut rot.0)
+                                                            .speed(0.01),
+                                                    );
+                                                    ui.add(
+                                                        egui::DragValue::new(&mut rot.1)
+                                                            .speed(0.01),
+                                                    );
+                                                    ui.add(
+                                                        egui::DragValue::new(&mut rot.2)
+                                                            .speed(0.01),
+                                                    );
+                                                });
+
+                                                *v = Quat::from_euler(
+                                                    EulerRot::YXZ,
+                                                    rot.0,
+                                                    rot.1,
+                                                    rot.2,
+                                                );
                                             }
 
                                             // if let Some(v) = f.get::<Mat4>() {

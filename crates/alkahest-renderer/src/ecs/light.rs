@@ -8,7 +8,7 @@ use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
-use glam::{Mat4, UVec2, Vec3, Vec4};
+use glam::{Mat4, UVec2, Vec3, Vec4, Vec4Swizzles};
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
@@ -258,8 +258,6 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        let transform_mat = transform.local_to_world();
-        let transform_mat_scaled = transform.local_to_world() * light.unk60;
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -267,18 +265,23 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                 return;
             };
 
+            let transform_relative = Transform {
+                translation: transform.translation - view.position.xyz(),
+                // translation: Vec3::ZERO,
+                ..*transform
+            };
+
+            let transform_mat = transform_relative.local_to_world();
+            let transform_mat_scaled = transform.local_to_world() * light.unk60;
+
             externs.simple_geometry = Some(externs::SimpleGeometry {
                 transform: view.world_to_projective * transform_mat_scaled,
             });
-
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Mat4::from_scale(Vec3::splat(0.15)),
+                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
                 unk80: transform_mat,
-                unkc0: transform.translation.extend(1.0),
-                unkd0: transform.translation.extend(1.0),
-                unke0: transform.translation.extend(1.0),
                 unk100: light.unk50,
 
                 ..existing_deflight
@@ -298,14 +301,20 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         .without::<&Hidden>()
         .iter()
     {
-        let transform_mat = transform.local_to_world();
-        let transform_mat_scaled = transform.local_to_world() * light.unk60;
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
                 error!("No view extern bound for light rendering");
                 return;
             };
+            let transform_relative = Transform {
+                translation: transform.translation - view.position.xyz(),
+                // translation: Vec3::ZERO,
+                ..*transform
+            };
+
+            let transform_mat = transform_relative.local_to_world();
+            let transform_mat_scaled = transform.local_to_world() * light.unk60;
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
                 transform: view.world_to_projective * transform_mat_scaled,
@@ -314,11 +323,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Mat4::from_scale(Vec3::splat(0.15)),
+                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
                 unk80: transform_mat,
-                unkc0: transform.translation.extend(1.0),
-                unkd0: transform.translation.extend(1.0),
-                unke0: transform.translation.extend(1.0),
                 unk100: light.unk50,
                 // unk110: 1.0,
                 // unk114: 2000.0,
@@ -343,7 +349,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                     unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
                     resolution_width: ShadowMapRenderer::RESOLUTION as f32,
                     resolution_height: ShadowMapRenderer::RESOLUTION as f32,
-                    unkc0: shadowmap.camera_to_projective * shadowmap.world_to_camera,
+                    unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
                     unk180: ShadowPcfSamples::Samples21 as u8 as f32,
                     ..existing_shadowmap
                 })
@@ -382,11 +388,7 @@ impl ShadowMapRenderer {
             size: UVec2::splat(Self::RESOLUTION),
         };
 
-        let world_to_camera = Mat4::look_at_rh(
-            transform.translation,
-            transform.translation + transform.forward(),
-            transform.up(),
-        );
+        let world_to_camera = transform.view_matrix();
         let camera_to_projective = projection.matrix(viewport.aspect_ratio());
 
         Ok(Self {
@@ -400,11 +402,7 @@ impl ShadowMapRenderer {
     }
 
     pub fn bind_for_generation(&mut self, transform: &Transform, renderer: &Renderer) {
-        self.world_to_camera = Mat4::look_at_rh(
-            transform.translation,
-            transform.translation + transform.forward(),
-            transform.up(),
-        );
+        self.world_to_camera = transform.view_matrix();
 
         unsafe {
             renderer.gpu.context().ClearDepthStencilView(

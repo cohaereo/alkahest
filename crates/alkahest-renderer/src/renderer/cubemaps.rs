@@ -95,7 +95,7 @@ impl CubemapRenderer {
     }
 
     pub fn draw(&self, renderer: &Renderer, transform: &Transform, cubemap: &CubemapVolume) {
-        self.vertex_buffer.bind_single(&renderer.gpu);
+        self.vertex_buffer.bind_single(&renderer.gpu, 0);
         self.index_buffer.bind(&renderer.gpu);
 
         let matrix = Mat4::from_scale_rotation_translation(

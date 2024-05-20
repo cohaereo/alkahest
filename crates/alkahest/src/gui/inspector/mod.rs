@@ -1,3 +1,4 @@
+mod decorator;
 mod light;
 mod util;
 
@@ -5,6 +6,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
+        decorators::DecoratorRenderer,
         dynamic_geometry::DynamicModelComponent,
         hierarchy::Parent,
         light::LightRenderer,
@@ -20,7 +22,7 @@ use alkahest_renderer::{
     shader::shader_ball::ShaderBallComponent,
 };
 use destiny_pkg::TagHash;
-use egui::{Align2, Color32, FontId, RichText, Widget};
+use egui::{Align2, Color32, FontId, Key, RichText, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 use winit::window::Window;
@@ -242,7 +244,8 @@ fn show_inspector_components(
         DynamicModelComponent,
         LightRenderer,
         CubemapVolume,
-        ShaderBallComponent
+        ShaderBallComponent,
+        DecoratorRenderer
     );
 }
 
@@ -458,6 +461,41 @@ impl ComponentPanel for DynamicModelComponent {
                 mesh_count,
                 |i| format!("Mesh {i}"),
             );
+        }
+
+        let identifier_count = self.model.identifier_count();
+        if identifier_count > 1 {
+            egui::ComboBox::from_label("Identifier")
+                .selected_text(if self.identifier == u16::MAX {
+                    "All".to_string()
+                } else {
+                    format!("ID {}", self.identifier)
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.identifier, u16::MAX, "All");
+                    for i in 0..identifier_count {
+                        ui.selectable_value(&mut self.identifier, i as u16, format!("ID {i}"));
+                    }
+
+                    if ui.input(|i| i.key_pressed(Key::ArrowUp)) {
+                        if self.identifier == u16::MAX {
+                            self.identifier = identifier_count as u16 - 1;
+                        } else {
+                            self.identifier = self.identifier.wrapping_sub(1);
+                        }
+                    }
+
+                    if ui.input(|i| i.key_pressed(Key::ArrowDown)) {
+                        if self.identifier == u16::MAX {
+                            self.identifier = 0;
+                        } else {
+                            self.identifier = self.identifier.wrapping_add(1);
+                            if self.identifier >= identifier_count as u16 {
+                                self.identifier = u16::MAX;
+                            }
+                        }
+                    }
+                });
         }
 
         let variant_count = self.model.variant_count();

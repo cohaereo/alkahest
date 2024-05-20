@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+use alkahest_data::occlusion::AABB;
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
@@ -223,7 +224,7 @@ impl ImmediateRenderer {
         let color = color.into();
         self.shader_simple.bind(&self.gpu);
 
-        self.vb_sphere.bind_single(&self.gpu);
+        self.vb_sphere.bind_single(&self.gpu, 0);
         self.ib_sphere.bind(&self.gpu);
 
         self.cb_debug_shape
@@ -271,7 +272,7 @@ impl ImmediateRenderer {
         let color = color.into();
         self.shader_simple.bind(&self.gpu);
 
-        self.vb_cube.bind_single(&self.gpu);
+        self.vb_cube.bind_single(&self.gpu, 0);
         self.ib_cube.bind(&self.gpu);
 
         self.cb_debug_shape
@@ -299,12 +300,18 @@ impl ImmediateRenderer {
         }
     }
 
+    pub fn cube_outline_aabb<C: Into<Color>>(&self, aabb: &AABB, color: C) {
+        let center = aabb.center();
+        let extents = aabb.extents();
+        self.cube_outline(mat4_scale_translation(extents, center), color);
+    }
+
     pub fn cube_outline<C: Into<Color>>(&self, transform: impl Into<Mat4>, color: C) {
         gpu_event!(self.gpu, "imm_cube_outline");
         let color = color.into();
         self.shader_simple.bind(&self.gpu);
 
-        self.vb_cube.bind_single(&self.gpu);
+        self.vb_cube.bind_single(&self.gpu, 0);
         self.ib_cube_outline.bind(&self.gpu);
 
         self.cb_debug_shape

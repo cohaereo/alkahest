@@ -28,6 +28,7 @@ impl GuiView for RenderSettingsPanel {
             ui.checkbox(&mut settings.atmosphere, "Atmosphere");
             ui.checkbox(&mut settings.matcap, "Matcap");
             ui.checkbox(&mut settings.shadows, "Shadows");
+            ui.checkbox(&mut settings.decorators, "Decorators");
 
             let renderer = resources.get::<RendererShared>();
             renderer.set_render_settings(settings.clone());
@@ -46,7 +47,7 @@ impl GuiView for RenderSettingsPanel {
             if let CameraProjection::Perspective { fov, .. } = &mut camera.projection {
                 ui.horizontal(|ui| {
                     egui::DragValue::new(fov)
-                        .clamp_range(20f32..=120.0)
+                        .clamp_range(5f32..=120.0)
                         .speed(0.05)
                         .ui(ui);
                     ui.label("FOV");

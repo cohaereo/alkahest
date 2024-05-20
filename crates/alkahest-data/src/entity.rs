@@ -60,14 +60,14 @@ pub struct SDynamicMesh {
     pub color_buffer: TagHash,
     pub skinning_buffer: TagHash,
     pub unk1c: u32,
-    pub parts: Vec<SDynamicMeshPart>,
+    pub parts: Vec<SDynamicMeshPart>, // 0x20
     /// Range of parts to render per render stage
     /// Can be obtained as follows:
     ///
     ///     - Start = part_range_per_render_stage[stage]
     ///     - End = part_range_per_render_stage[stage + 1]
-    pub part_range_per_render_stage: [u16; 25],
-    pub input_layout_per_render_stage: [u8; 24],
+    pub part_range_per_render_stage: [u16; 25], // 0x30
+    pub input_layout_per_render_stage: [u8; 24], // 0x62
     _pad7a: [u16; 3],
 }
 
