@@ -35,7 +35,7 @@ impl Renderer {
                     Some(0),
                     Some(2),
                     Some(2),
-                    Some(0),
+                    Some(6),
                 ));
                 self.gpu.flush_states();
 

@@ -163,7 +163,7 @@ impl LightRenderer {
         debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            projection_matrix: light.unk60,
+            projection_matrix: light.light_to_world,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
             technique_compute_lightprobe: asset_manager
@@ -180,7 +180,7 @@ impl LightRenderer {
         debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            projection_matrix: light.unk60,
+            projection_matrix: light.light_to_world,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             technique_shading_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_shading_shadowing),
@@ -272,7 +272,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             };
 
             let transform_mat = transform_relative.local_to_world();
-            let transform_mat_scaled = transform.local_to_world() * light.unk60;
+            let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
                 transform: view.world_to_projective * transform_mat_scaled,
@@ -314,7 +314,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             };
 
             let transform_mat = transform_relative.local_to_world();
-            let transform_mat_scaled = transform.local_to_world() * light.unk60;
+            let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
 
             externs.simple_geometry = Some(externs::SimpleGeometry {
                 transform: view.world_to_projective * transform_mat_scaled,

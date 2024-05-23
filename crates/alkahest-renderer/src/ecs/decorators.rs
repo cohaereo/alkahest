@@ -57,7 +57,7 @@ impl DecoratorRenderer {
             let speedtree_cbuffer = if let Ok(unk34) =
                 package_manager().read_tag_struct::<SUnk80806CB8>(smodel.unk34)
             {
-                let mut data = vec![Vec4::W; 54];
+                let mut data = vec![Vec4::ONE; 72];
                 data[0..5].copy_from_slice(&unk34.unk8[0].unk0);
                 Some(ConstantBuffer::create_array_init(
                     renderer.gpu.clone(),

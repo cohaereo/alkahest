@@ -67,6 +67,12 @@ impl ComponentPanel for LightRenderer {
             renderer.immediate.cube_outline(
                 transform.local_to_world() * self.projection_matrix,
                 Color::from_rgb(1.0, 1.0, 0.0),
+            );
+
+            renderer.immediate.sphere(
+                transform.translation,
+                0.04,
+                Color::from_rgba_premultiplied(1.0, 1.0, 0.0, 0.9),
             )
         } else {
             ui.label(

@@ -514,7 +514,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     transform,
                     CameraProjection::perspective_bounded(
                         (light.half_fov * 2.).to_degrees(),
-                        0.1,
+                        0.5,
                         light.far_plane,
                     ),
                 )?;
