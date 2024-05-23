@@ -93,7 +93,7 @@ impl Renderer {
 
         self.gpu
             .current_states
-            .store(StateSelection::new(Some(2), Some(15), Some(2), Some(1)));
+            .store(StateSelection::new(Some(8), Some(15), Some(2), Some(1)));
         self.render_globals.scopes.transparent.bind(self).unwrap();
 
         self.run_renderstage_systems(scene, TfxRenderStage::DecalsAdditive);

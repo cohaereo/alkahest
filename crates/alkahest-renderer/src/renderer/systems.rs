@@ -24,12 +24,7 @@ impl Renderer {
             draw_shaderball_system(self, scene);
         }
 
-        if stage == TfxRenderStage::Transparents {
-            draw_dynamic_model_system(self, scene, stage);
-            draw_static_instances_system(self, scene, stage);
-        } else {
-            draw_static_instances_system(self, scene, stage);
-            draw_dynamic_model_system(self, scene, stage);
-        }
+        draw_static_instances_system(self, scene, stage);
+        draw_dynamic_model_system(self, scene, stage);
     }
 }

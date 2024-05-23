@@ -339,9 +339,9 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
     }
 
     entities.sort_by_key(|(_, feature_type)| match feature_type {
-        TfxFeatureRenderer::SkyTransparent => 0,
-        TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 1,
-        TfxFeatureRenderer::Water => 2,
+        TfxFeatureRenderer::Water => 0,
+        TfxFeatureRenderer::SkyTransparent => 1,
+        TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
         _ => 99,
     });
 
@@ -360,7 +360,7 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
             .unwrap();
     }
 
-    if renderer.render_settings.decorators && render_stage != TfxRenderStage::ShadowGenerate {
+    if renderer.render_settings.decorators {
         for (_e, decorator) in scene
             .query::<&DecoratorRenderer>()
             .without::<&Hidden>()
