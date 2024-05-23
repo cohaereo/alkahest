@@ -21,7 +21,9 @@ impl Renderer {
                 None,
             );
 
-            data.gbuffers.light_diffuse.clear(&[0.001, 0.001, 0.001, 0.0]);
+            data.gbuffers
+                .light_diffuse
+                .clear(&[0.001, 0.001, 0.001, 0.0]);
             data.gbuffers.light_specular.clear(&[0.0, 0.0, 0.0, 0.0]);
             data.gbuffers
                 .light_ibl_specular
@@ -135,13 +137,6 @@ impl Renderer {
 
             // TODO(cohae): 4 vertices doesn't work...
             self.gpu.context().Draw(6, 0);
-        }
-
-        {
-            let gbuffers = &self.data.lock().gbuffers;
-            gbuffers
-                .shading_result
-                .copy_to(&gbuffers.shading_result_read);
         }
     }
 

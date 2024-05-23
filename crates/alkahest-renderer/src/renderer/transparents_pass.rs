@@ -94,9 +94,21 @@ impl Renderer {
         self.gpu
             .current_states
             .store(StateSelection::new(Some(8), Some(15), Some(2), Some(1)));
+        
+        self.run_renderstage_systems(scene, TfxRenderStage::DecalsAdditive);
+
+        {
+            let gbuffers = &self.data.lock().gbuffers;
+            gbuffers
+                .shading_result
+                .copy_to(&gbuffers.shading_result_read);
+        }
+
+        self.gpu
+            .current_states
+            .store(StateSelection::new(Some(8), Some(15), Some(2), Some(1)));
         self.render_globals.scopes.transparent.bind(self).unwrap();
 
-        self.run_renderstage_systems(scene, TfxRenderStage::DecalsAdditive);
         self.run_renderstage_systems(scene, TfxRenderStage::Transparents);
 
         // draw_utilities(self, scene);
