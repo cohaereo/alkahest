@@ -1132,9 +1132,9 @@ dependencies = [
 
 [[package]]
 name = "destiny-pkg"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "372027ad668d7735a40d3f66417d0386da12ace3fb41b85fae8937effed4ba02"
+checksum = "b5c7674e65d84e9d267316000bcff78fca5d87086bd1b3f4bc687a36472ad6f9"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -1143,7 +1143,8 @@ dependencies = [
  "clap",
  "clap-num",
  "ddsfile",
- "itertools 0.12.1",
+ "hex",
+ "itertools 0.13.0",
  "json",
  "lazy_static",
  "libloading",
@@ -2035,6 +2036,15 @@ name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -3815,8 +3825,8 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.10"
-source = "git+https://github.com/v4nguard/tiger-parse#71fb83dbe19d3d90a841d8f464150d9dcb2971d2"
+version = "0.1.11"
+source = "git+https://github.com/v4nguard/tiger-parse#0c4d2548ecee88f273d6dbde5fa7bd4d42a10956"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -3828,7 +3838,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#71fb83dbe19d3d90a841d8f464150d9dcb2971d2"
+source = "git+https://github.com/v4nguard/tiger-parse#0c4d2548ecee88f273d6dbde5fa7bd4d42a10956"
 dependencies = [
  "darling",
  "proc-macro2",
