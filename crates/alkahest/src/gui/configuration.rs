@@ -29,6 +29,7 @@ impl GuiView for RenderSettingsPanel {
             ui.checkbox(&mut settings.matcap, "Matcap");
             ui.checkbox(&mut settings.shadows, "Shadows");
             ui.checkbox(&mut settings.decorators, "Decorators");
+            ui.checkbox(&mut settings.cubemaps, "Cubemaps");
 
             let renderer = resources.get::<RendererShared>();
             renderer.set_render_settings(settings.clone());

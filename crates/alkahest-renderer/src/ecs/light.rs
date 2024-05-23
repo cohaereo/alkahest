@@ -364,8 +364,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
 }
 
 pub struct ShadowMapRenderer {
-    // pub needs_update: bool,
-    pub update_timer: u32,
+    pub last_update: usize,
 
     depth: ShadowDepthMap,
     viewport: Viewport,
@@ -392,8 +391,7 @@ impl ShadowMapRenderer {
         let camera_to_projective = projection.matrix(viewport.aspect_ratio());
 
         Ok(Self {
-            // needs_update: true,
-            update_timer: 4,
+            last_update: 0,
             depth,
             viewport,
             world_to_camera,

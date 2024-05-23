@@ -57,6 +57,7 @@ pub struct Renderer {
     pub time: Instant,
     last_frame: Instant,
     pub delta_time: f64,
+    pub frame_index: usize,
 }
 
 pub struct RendererData {
@@ -86,6 +87,7 @@ impl Renderer {
             time: Instant::now(),
             last_frame: Instant::now(),
             delta_time: 0.0,
+            frame_index: 0,
         }))
     }
 
@@ -126,6 +128,8 @@ impl Renderer {
                 .depth
                 .copy_to_staging(&data.gbuffers.depth_staging);
         }
+
+        hocus!(self).frame_index = self.frame_index.wrapping_add(1);
     }
 
     fn bind_view(&self, view: &impl View) {
@@ -247,7 +251,9 @@ pub struct RendererSettings {
     pub atmosphere: bool,
     pub matcap: bool,
     pub shadows: bool,
+    pub shadow_updates_per_frame: usize,
     pub decorators: bool,
+    pub cubemaps: bool,
 }
 
 impl Default for RendererSettings {
@@ -258,7 +264,9 @@ impl Default for RendererSettings {
             atmosphere: false,
             matcap: false,
             shadows: true,
+            shadow_updates_per_frame: 2,
             decorators: true,
+            cubemaps: false,
         }
     }
 }

@@ -47,7 +47,7 @@ impl Renderer {
                     draw_light_system(self, scene)
                 }
 
-                {
+                if self.render_settings.cubemaps {
                     unsafe {
                         let data = &mut self.data.lock();
                         self.gpu.context().OMSetRenderTargets(

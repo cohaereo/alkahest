@@ -295,7 +295,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     resource_origin: ResourceOrigin,
     _group_id: u32,
 ) -> anyhow::Result<()> {
-    for (i, data) in table.data_entries.iter().enumerate() {
+    for data in table.data_entries.iter() {
         let transform = Transform {
             translation: Vec3::new(data.translation.x, data.translation.y, data.translation.z),
             rotation: data.rotation,
@@ -518,7 +518,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         light.far_plane,
                     ),
                 )?;
-                shadowmap.update_timer = i as u32 % 4;
 
                 scene.spawn((
                     Icon(ICON_SPOTLIGHT_BEAM),
