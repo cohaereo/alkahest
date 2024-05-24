@@ -188,10 +188,16 @@ impl OutlinerPanel {
             f32::INFINITY
         };
 
-        let postfix = if self.sort_by_distance {
-            format!(" ({})", prettify_distance(distance))
+        let postfix = if let Some(children) = e.get::<&Children>() {
+            format!(" ({})", children.0.len())
         } else {
             "".to_string()
+        };
+
+        let postfix = if self.sort_by_distance {
+            format!("{postfix} ({})", prettify_distance(distance))
+        } else {
+            postfix
         };
 
         let visible = !e.has::<Hidden>();
@@ -209,7 +215,7 @@ impl OutlinerPanel {
         let icon = if let Some(icon) = e.get::<&Icon>() {
             icon.0
         } else {
-            ICON_HELP_CIRCLE
+            ' '
         };
 
         ui.horizontal(|ui| {

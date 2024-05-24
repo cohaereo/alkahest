@@ -3,6 +3,7 @@ pub mod d3d;
 pub mod image;
 pub mod math;
 pub mod packages;
+pub mod scene;
 
 use std::any::Any;
 

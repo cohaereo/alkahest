@@ -1,4 +1,7 @@
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::{
+    io::{Cursor, Read, Seek, SeekFrom},
+    ops::Deref,
+};
 
 use alkahest_data::{
     activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
@@ -18,7 +21,7 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
-use hecs::Entity;
+use hecs::{DynamicBundle, Entity};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
@@ -35,7 +38,7 @@ use crate::{
         static_geometry::{StaticInstance, StaticInstances, StaticModel},
         tags::{insert_tag, EntityTag},
         terrain::TerrainPatches,
-        transform::{Transform, TransformFlags},
+        transform::{OriginalTransform, Transform, TransformFlags},
         Scene,
     },
     icons::{
@@ -44,7 +47,7 @@ use crate::{
         ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
-    util::StringExt,
+    util::{scene::SceneExt, StringExt},
 };
 
 pub async fn load_map(
@@ -59,14 +62,16 @@ pub async fn load_map(
 
     let mut scene = Scene::new();
 
-    let mut data_tables = FxHashSet::<TagHash>::default();
+    let mut data_tables = FxHashMap::<TagHash, Entity>::default();
     for map_container in &bubble_parent.child_map.map_resources {
+        let parent_entity =
+            scene.spawn((Label::from(format!("Map Container {}", map_container.1)),));
         for table in &map_container.data_tables {
-            data_tables.insert(*table);
+            data_tables.insert(*table, parent_entity);
         }
     }
 
-    for table_hash in data_tables {
+    for (table_hash, parent_entity) in data_tables {
         let table_data = package_manager().read_tag(table_hash).unwrap();
         let mut cur = Cursor::new(&table_data);
         let table = TigerReadable::read_ds(&mut cur)?;
@@ -78,7 +83,7 @@ pub async fn load_map(
             &mut scene,
             &renderer,
             ResourceOrigin::Map,
-            0,
+            Some(parent_entity),
         )
         .context("Failed to load map datatable")?;
     }
@@ -142,7 +147,15 @@ pub async fn load_map(
     }
 
     let mut unknown_res_types: FxHashSet<u32> = Default::default();
+    let mut phase_entities = FxHashMap::<ResourceHash, Entity>::default();
     for (e, phase_name2, origin) in activity_entrefs {
+        let parent_entity = *phase_entities.entry(phase_name2).or_insert_with(|| {
+            scene.spawn((Label::from(format!(
+                "Activity Phase 0x{:08X}",
+                phase_name2.0
+            )),))
+        });
+
         for resource in &e.unk18.entity_resources {
             if resource.entity_resource.is_some() {
                 let data = package_manager().read_tag(resource.entity_resource)?;
@@ -222,7 +235,7 @@ pub async fn load_map(
                         &mut scene,
                         &renderer,
                         ResourceOrigin::Map,
-                        phase_name2.0,
+                        Some(parent_entity),
                     )
                     .context("Failed to load activity datatable")?;
                 }
@@ -247,7 +260,7 @@ pub async fn load_map(
                         } else {
                             ResourceOrigin::ActivityBruteforce
                         },
-                        phase_name2.0,
+                        Some(parent_entity),
                     )
                     .context("Failed to load AB atatable")?;
                 }
@@ -293,7 +306,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     scene: &mut Scene,
     renderer: &Renderer,
     resource_origin: ResourceOrigin,
-    _group_id: u32,
+    parent_entity: Option<Entity>,
 ) -> anyhow::Result<()> {
     for data in table.data_entries.iter() {
         let transform = Transform {
@@ -322,7 +335,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let transforms = &preheader.instances.transforms
                         [s.instance_start as usize..(s.instance_start + s.instance_count) as usize];
 
-                    let parent = scene.reserve_entity();
+                    let parent = spawn_data_entity(scene, (), parent_entity);
                     let mut instances = vec![];
 
                     for transform in transforms.iter() {
@@ -364,14 +377,18 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let terrain_resource: Unk8080714b = TigerReadable::read_ds(table_data).unwrap();
 
-                scene.spawn((
-                    Icon(ICON_IMAGE_FILTER_HDR),
-                    Label::from("Terrain Patches"),
-                    TerrainPatches::load(renderer, terrain_resource.terrain)
-                        .context("Failed to load terrain patches")?,
-                    TfxFeatureRenderer::TerrainPatch,
-                    resource_origin,
-                ));
+                spawn_data_entity(
+                    scene,
+                    (
+                        Icon(ICON_IMAGE_FILTER_HDR),
+                        Label::from("Terrain Patches"),
+                        TerrainPatches::load(renderer, terrain_resource.terrain)
+                            .context("Failed to load terrain patches")?,
+                        TfxFeatureRenderer::TerrainPatch,
+                        resource_origin,
+                    ),
+                    parent_entity,
+                );
             }
             0x80806aa3 => {
                 table_data
@@ -395,21 +412,25 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     }
 
                     let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
-                    scene.spawn((
-                        Icon(ICON_WEATHER_PARTLY_CLOUDY),
-                        Label::from("Sky Model"),
-                        transform,
-                        DynamicModelComponent::load(
-                            renderer,
-                            &transform,
-                            unk8.unk60.entity_model,
-                            vec![],
-                            vec![],
+                    spawn_data_entity(
+                        scene,
+                        (
+                            Icon(ICON_WEATHER_PARTLY_CLOUDY),
+                            Label::from("Sky Model"),
+                            transform,
+                            DynamicModelComponent::load(
+                                renderer,
+                                &transform,
+                                unk8.unk60.entity_model,
+                                vec![],
+                                vec![],
+                                TfxFeatureRenderer::SkyTransparent,
+                            )?,
                             TfxFeatureRenderer::SkyTransparent,
-                        )?,
-                        TfxFeatureRenderer::SkyTransparent,
-                        resource_origin,
-                    ));
+                            resource_origin,
+                        ),
+                        parent_entity,
+                    );
                 }
             }
             0x808068d4 => {
@@ -420,21 +441,25 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let d: Unk808068d4 = TigerReadable::read_ds(table_data)?;
 
                 if d.entity_model.is_some() {
-                    scene.spawn((
-                        Icon(ICON_WAVES),
-                        Label::from("Water"),
-                        transform,
-                        DynamicModelComponent::load(
-                            renderer,
-                            &transform,
-                            d.entity_model,
-                            vec![],
-                            vec![],
+                    spawn_data_entity(
+                        scene,
+                        (
+                            Icon(ICON_WAVES),
+                            Label::from("Water"),
+                            transform,
+                            DynamicModelComponent::load(
+                                renderer,
+                                &transform,
+                                d.entity_model,
+                                vec![],
+                                vec![],
+                                TfxFeatureRenderer::Water,
+                            )?,
                             TfxFeatureRenderer::Water,
-                        )?,
-                        TfxFeatureRenderer::Water,
-                        resource_origin,
-                    ));
+                            resource_origin,
+                        ),
+                        parent_entity,
+                    );
                 } else {
                     warn!(
                         "Water entity model is None (table {}, offset 0x{:X})",
@@ -453,7 +478,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
 
-                let light_collection_entity = scene.reserve_entity();
+                let light_collection_entity = spawn_data_entity(scene, (), parent_entity);
                 let mut children = vec![];
                 for (i, (transform, light, bounds)) in
                     multizip((header.unk40, header.unk30, &header.occlusion_bounds.bounds))
@@ -509,7 +534,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let tag: TagHash = table_data.read_le().unwrap();
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
-                let mut shadowmap = ShadowMapRenderer::new(
+                let shadowmap = ShadowMapRenderer::new(
                     &renderer.gpu,
                     transform,
                     CameraProjection::perspective_bounded(
@@ -519,22 +544,26 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ),
                 )?;
 
-                scene.spawn((
-                    Icon(ICON_SPOTLIGHT_BEAM),
-                    Label::from(format!("Shadowing Light {tag}")),
-                    transform,
-                    LightRenderer::load_shadowing(
-                        renderer.gpu.clone(),
-                        &mut renderer.data.lock().asset_manager,
-                        &light,
-                        format!("shadowing_light {tag}"),
-                    )
-                    .context("Failed to load shadowing light")?,
-                    shadowmap,
-                    light,
-                    TfxFeatureRenderer::DeferredLights,
-                    resource_origin,
-                ));
+                spawn_data_entity(
+                    scene,
+                    (
+                        Icon(ICON_SPOTLIGHT_BEAM),
+                        Label::from(format!("Shadowing Light {tag}")),
+                        transform,
+                        LightRenderer::load_shadowing(
+                            renderer.gpu.clone(),
+                            &mut renderer.data.lock().asset_manager,
+                            &light,
+                            format!("shadowing_light {tag}"),
+                        )
+                        .context("Failed to load shadowing light")?,
+                        shadowmap,
+                        light,
+                        TfxFeatureRenderer::DeferredLights,
+                        resource_origin,
+                    ),
+                    parent_entity,
+                );
             }
             0x80806BC1 => {
                 table_data
@@ -542,13 +571,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let atmos: SMapAtmosphere = TigerReadable::read_ds(table_data)?;
-                scene.spawn((
-                    Icon(ICON_WEATHER_FOG),
-                    Label::from("Atmosphere Configuration"),
-                    MapAtmosphere::load(&renderer.gpu, atmos)
-                        .context("Failed to load map atmosphere")?,
-                    resource_origin,
-                ));
+                spawn_data_entity(
+                    scene,
+                    (
+                        Icon(ICON_WEATHER_FOG),
+                        Label::from("Atmosphere Configuration"),
+                        MapAtmosphere::load(&renderer.gpu, atmos)
+                            .context("Failed to load map atmosphere")?,
+                        resource_origin,
+                    ),
+                    parent_entity,
+                );
             }
             // Cubemap volume
             0x80806695 => {
@@ -570,31 +603,35 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     None
                 };
 
-                scene.spawn((
-                    Icon(ICON_SPHERE),
-                    Label::from(format!(
-                        "Cubemap Volume '{}'",
-                        cubemap_volume
-                            .cubemap_name
-                            .to_string()
-                            .truncate_ellipsis(48)
-                    )),
-                    Transform {
-                        translation: data.translation.xyz(),
-                        rotation: transform.rotation,
-                        ..Default::default()
-                    },
-                    CubemapVolume {
-                        specular_ibl: renderer
-                            .data
-                            .lock()
-                            .asset_manager
-                            .get_or_load_texture(cubemap_volume.cubemap_texture),
-                        voxel_diffuse,
-                        extents: cubemap_volume.cubemap_extents.truncate(),
-                        name: cubemap_volume.cubemap_name.to_string(),
-                    },
-                ));
+                spawn_data_entity(
+                    scene,
+                    (
+                        Icon(ICON_SPHERE),
+                        Label::from(format!(
+                            "Cubemap Volume '{}'",
+                            cubemap_volume
+                                .cubemap_name
+                                .to_string()
+                                .truncate_ellipsis(48)
+                        )),
+                        Transform {
+                            translation: data.translation.xyz(),
+                            rotation: transform.rotation,
+                            ..Default::default()
+                        },
+                        CubemapVolume {
+                            specular_ibl: renderer
+                                .data
+                                .lock()
+                                .asset_manager
+                                .get_or_load_texture(cubemap_volume.cubemap_texture),
+                            voxel_diffuse,
+                            extents: cubemap_volume.cubemap_extents.truncate(),
+                            name: cubemap_volume.cubemap_name.to_string(),
+                        },
+                    ),
+                    parent_entity,
+                );
             }
             0x808067b5 => {
                 table_data
@@ -608,13 +645,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
 
-                scene.spawn((
-                    Icon(ICON_FLARE),
-                    Label::from("Lens Flare"),
-                    transform,
-                    lens_flare,
-                    resource_origin,
-                ));
+                spawn_data_entity(
+                    scene,
+                    (
+                        Icon(ICON_FLARE),
+                        Label::from("Lens Flare"),
+                        transform,
+                        lens_flare,
+                        resource_origin,
+                    ),
+                    parent_entity,
+                );
             }
             0x80808cb5 => {
                 table_data
@@ -628,17 +669,21 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let header: Unk80808cb7 = package_manager().read_tag_struct(tag)?;
 
                 for respawn_point in header.unk8.iter() {
-                    scene.spawn((
-                        Icon(ICON_ACCOUNT_CONVERT),
-                        Label::from("Respawn point"),
-                        Transform {
-                            translation: respawn_point.translation.truncate(),
-                            rotation: respawn_point.rotation,
-                            ..Default::default()
-                        },
-                        respawn_point.clone(),
-                        resource_origin,
-                    ));
+                    spawn_data_entity(
+                        scene,
+                        (
+                            Icon(ICON_ACCOUNT_CONVERT),
+                            Label::from("Respawn point"),
+                            Transform {
+                                translation: respawn_point.translation.truncate(),
+                                rotation: respawn_point.rotation,
+                                ..Default::default()
+                            },
+                            respawn_point.clone(),
+                            resource_origin,
+                        ),
+                        parent_entity,
+                    );
                 }
             }
             // Decorator
@@ -651,11 +696,15 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 match DecoratorRenderer::load(renderer, header_tag, header) {
                     Ok(decorator_renderer) => {
-                        scene.spawn((
-                            Icon(ICON_TREE),
-                            Label::from(format!("Decorator {header_tag}")),
-                            decorator_renderer,
-                        ));
+                        spawn_data_entity(
+                            scene,
+                            (
+                                Icon(ICON_TREE),
+                                Label::from(format!("Decorator {header_tag}")),
+                                decorator_renderer,
+                            ),
+                            parent_entity,
+                        );
                     }
                     Err(e) => {
                         error!("Failed to load decorator {header_tag}: {e}");
@@ -675,9 +724,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .read_tag_struct::<SEntity>(entity_hash)
                     .context("Failed to read SEntity")?;
                 debug!("Loading entity {entity_hash}");
+                let mut has_entity_model = false;
                 for e in &header.entity_resources {
                     match e.unk0.unk10.resource_type {
                         0x80806d8a => {
+                            has_entity_model = true;
                             let mut cur =
                                 Cursor::new(package_manager().read_tag(e.unk0.taghash())?);
                             cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
@@ -696,25 +747,29 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             let materials: Vec<TagHash> =
                                 TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                            scene.spawn((
-                                Icon(ICON_CUBE),
-                                if u != u32::MAX {
-                                    Label::from(format!("Unknown {u:08X}"))
-                                } else {
-                                    Label::from("Generic Entity")
-                                },
-                                transform,
-                                DynamicModelComponent::load(
-                                    renderer,
-                                    &transform,
-                                    model_hash,
-                                    entity_material_map,
-                                    materials,
+                            spawn_data_entity(
+                                scene,
+                                (
+                                    Icon(ICON_CUBE),
+                                    if u != u32::MAX {
+                                        Label::from(format!("Unknown {u:08X}"))
+                                    } else {
+                                        Label::from("Generic Entity")
+                                    },
+                                    transform,
+                                    DynamicModelComponent::load(
+                                        renderer,
+                                        &transform,
+                                        model_hash,
+                                        entity_material_map,
+                                        materials,
+                                        TfxFeatureRenderer::DynamicObjects,
+                                    )?,
                                     TfxFeatureRenderer::DynamicObjects,
-                                )?,
-                                TfxFeatureRenderer::DynamicObjects,
-                                resource_origin,
-                            ));
+                                    resource_origin,
+                                ),
+                                parent_entity,
+                            );
                         }
                         u => {
                             debug!(
@@ -726,11 +781,46 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         }
                     }
                 }
+
+                if !has_entity_model {
+                    spawn_data_entity(
+                        scene,
+                        (
+                            Icon(ICON_CUBE),
+                            if u != u32::MAX {
+                                Label::from(format!("Unknown {u:08X}"))
+                            } else {
+                                Label::from("Generic Entity")
+                            },
+                            transform,
+                            resource_origin,
+                        ),
+                        parent_entity,
+                    );
+                }
             }
         }
     }
 
     Ok(())
+}
+
+fn spawn_data_entity(
+    scene: &mut Scene,
+    components: impl DynamicBundle,
+    parent: Option<Entity>,
+) -> Entity {
+    let child = scene.spawn(components);
+    if let Some(parent) = parent {
+        scene.set_parent(child, parent);
+    }
+    if let Ok(transform) = scene.get::<&Transform>(child).map(|t| t.deref().clone()) {
+        scene
+            .insert_one(child, OriginalTransform(transform))
+            .unwrap();
+    }
+
+    child
 }
 
 fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {

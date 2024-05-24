@@ -168,7 +168,7 @@ impl TigerReadable for WideHash {
 }
 
 #[derive(Clone)]
-pub struct WideTag<T: TigerReadable>(pub T);
+pub struct WideTag<T: TigerReadable>(pub T, pub TagHash);
 
 impl<T: TigerReadable> TigerReadable for WideTag<T> {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
@@ -177,8 +177,11 @@ impl<T: TigerReadable> TigerReadable for WideTag<T> {
     ) -> tiger_parse::Result<Self> {
         let tag = WideHash::read_ds_endian(reader, endian)?;
         match tag {
-            WideHash::Hash32(h) => Ok(WideTag(package_manager().read_tag_struct(h)?)),
-            WideHash::Hash64(h) => Ok(WideTag(package_manager().read_tag64_struct(h)?)),
+            WideHash::Hash32(h) => Ok(WideTag(package_manager().read_tag_struct(h)?, h)),
+            WideHash::Hash64(h) => Ok(WideTag(
+                package_manager().read_tag64_struct(h)?,
+                tag.hash32(),
+            )),
         }
     }
 

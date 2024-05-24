@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter, Write};
 use binrw::BinRead;
 use tiger_parse::TigerReadable;
 
-#[derive(BinRead, Copy, Clone, PartialEq)]
+#[derive(BinRead, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct ResourceHash(pub u32);
 
 impl From<ResourceHash> for u32 {
