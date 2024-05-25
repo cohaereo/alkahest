@@ -13,6 +13,7 @@ use alkahest_renderer::{
             dynamic_geometry::DynamicModelComponent,
             light::LightRenderer,
             static_geometry::{StaticInstance, StaticInstances},
+            update_entity_transform,
         },
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -413,16 +414,7 @@ impl ComponentPanel for Transform {
         }
 
         if transform_changed {
-            if let Some((_static_instances, parent)) = e.query::<(&StaticInstance, &Parent)>().get()
-            {
-                if let Ok(mut static_instances) = scene.get::<&mut StaticInstances>(parent.0) {
-                    static_instances.mark_dirty();
-                }
-            }
-
-            if let Some(mut dynamic) = e.get::<&mut DynamicModelComponent>() {
-                dynamic.mark_dirty();
-            }
+            update_entity_transform(scene, e.entity());
         }
     }
 }

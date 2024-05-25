@@ -3,10 +3,11 @@ use hecs::Entity;
 
 use crate::{
     ecs::{
+        hierarchy::Parent,
         render::{
             decorators::DecoratorRenderer,
             dynamic_geometry::DynamicModelComponent,
-            static_geometry::{StaticInstances, StaticModelSingle},
+            static_geometry::{StaticInstance, StaticInstances, StaticModelSingle},
             terrain::TerrainPatches,
         },
         transform::Transform,
@@ -43,5 +44,20 @@ pub fn draw_entity(scene: &Scene, entity: Entity, renderer: &Renderer, stage: Tf
         er.query::<(&ShaderBallComponent, &Transform)>().get()
     {
         shaderball.draw(renderer, transform, stage);
+    }
+}
+
+pub fn update_entity_transform(scene: &Scene, entity: Entity) {
+    let Ok(e) = scene.entity(entity) else {
+        return;
+    };
+    if let Some((_static_instances, parent)) = e.query::<(&StaticInstance, &Parent)>().get() {
+        if let Ok(mut static_instances) = scene.get::<&mut StaticInstances>(parent.0) {
+            static_instances.mark_dirty();
+        }
+    }
+
+    if let Some(mut dynamic) = e.get::<&mut DynamicModelComponent>() {
+        dynamic.mark_dirty();
     }
 }

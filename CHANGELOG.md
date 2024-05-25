@@ -53,6 +53,7 @@ received some polish!
     - Bind DX11 depth, blend, rasterizer and depth bias states based on Technique data
 - Shadow mapping
 - Decorator rendering (grass, plants, small rocks, etc.)
+- Transform gizmo
 - Compile-time shader compilation
 - Post processing effects
     - Ambient occlusion

@@ -183,6 +183,10 @@ impl Pickbuffer {
     pub fn request_selection(&self, x: u32, y: u32) {
         self.pocus().selection_request.store(Some((x, y)));
     }
+    
+    pub fn cancel_request(&self) {
+        self.pocus().selection_request.store(None);
+    }
 
     /// Finish the current selection request and return the entity id at the request coordinates
     /// Must only be called after the current frame has been processed by the GPU

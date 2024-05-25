@@ -33,6 +33,7 @@ glam.workspace = true
 genmesh = "0.6.2"
 obj = "0.10.2"
 raw-window-handle.workspace = true
+transform-gizmo-egui = "0.1.0"
 windows.workspace = true
 winit.workspace = true
 

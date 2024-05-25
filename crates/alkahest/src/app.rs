@@ -15,6 +15,7 @@ use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers, Widget};
 use glam::Vec2;
 use tiger_parse::PackageManagerExt;
+use transform_gizmo_egui::{enum_set, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
 use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -29,6 +30,7 @@ use crate::{
     gui::{
         activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager},
+        gizmo::draw_transform_gizmos,
     },
     maplist::MapList,
     resources::Resources,
@@ -94,6 +96,13 @@ impl AlkahestApp {
         resources.insert(renderer.clone());
         let stringmap = Arc::new(GlobalStringmap::load().expect("Failed to load global strings"));
         resources.insert(stringmap);
+
+        let gizmo = Gizmo::new(GizmoConfig {
+            modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate | GizmoMode::Scale),
+            orientation: GizmoOrientation::Local,
+            ..Default::default()
+        });
+        resources.insert(gizmo);
 
         resources
             .get_mut::<GuiViewManager>()
@@ -296,6 +305,8 @@ impl AlkahestApp {
                                 gui_views.draw(ectx, window, resources, ctx);
 
                                 if !gui_views.hide_views {
+                                    draw_transform_gizmos(renderer, ectx, resources);
+
                                     puffin_egui::profiler_window(ectx);
 
                                     egui::Window::new("SSAO Settings").show(ectx, |ui| {

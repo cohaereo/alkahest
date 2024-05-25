@@ -15,6 +15,7 @@ pub mod big_button;
 mod bottom_bar;
 pub mod chip;
 pub mod console;
+pub mod gizmo;
 mod menu;
 mod outliner;
 mod util;

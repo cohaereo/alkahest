@@ -52,7 +52,7 @@ float4 PSMain(VSOutput input) : SV_Target {
         if(depthScene > depth) // Behind scene
             return float4(OUTLINE_COLOR, 0.08);
         else // In front of scene
-            return float4(OUTLINE_COLOR, 0.03);
+            return float4(OUTLINE_COLOR, 0.015);
     }
 
     discard;
