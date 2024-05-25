@@ -218,21 +218,10 @@ impl AlkahestApp {
                             && !resources.get::<SelectedEntity>().changed_this_frame
                         {
                             if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                                let id = renderer.pickbuffer.get(
-                                    (mouse_pos.x as f64 * window.scale_factor()).round() as usize,
-                                    (mouse_pos.y as f64 * window.scale_factor()).round() as usize,
+                                renderer.pickbuffer.request_selection(
+                                    (mouse_pos.x as f64 * window.scale_factor()).round() as u32,
+                                    (mouse_pos.y as f64 * window.scale_factor()).round() as u32,
                                 );
-
-                                let maps = resources.get::<MapList>();
-                                if let Some(map) = maps.current_map() {
-                                    if id != u32::MAX {
-                                        resources
-                                            .get_mut::<SelectedEntity>()
-                                            .select(unsafe { map.scene.find_entity_from_id(id) });
-                                    } else {
-                                        resources.get_mut::<SelectedEntity>().deselect();
-                                    }
-                                }
                             }
                         }
                     }
@@ -255,38 +244,43 @@ impl AlkahestApp {
                     WindowEvent::RedrawRequested => {
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
-                        let render_settings = resources.get::<RendererSettings>();
+                        {
+                            if gui.input_mut(|i| {
+                                i.consume_shortcut(&KeyboardShortcut::new(
+                                    Modifiers::ALT,
+                                    Key::Enter,
+                                ))
+                            }) {
+                                if window.fullscreen().is_some() {
+                                    window.set_fullscreen(None);
+                                } else {
+                                    window.set_fullscreen(Some(
+                                        winit::window::Fullscreen::Borderless(
+                                            window.current_monitor(),
+                                        ),
+                                    ));
+                                }
 
-                        if gui.input_mut(|i| {
-                            i.consume_shortcut(&KeyboardShortcut::new(Modifiers::ALT, Key::Enter))
-                        }) {
-                            if window.fullscreen().is_some() {
-                                window.set_fullscreen(None);
-                            } else {
-                                window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(
-                                    window.current_monitor(),
-                                )));
+                                config::with_mut(|c| {
+                                    c.window.fullscreen = window.fullscreen().is_some();
+                                });
                             }
 
-                            config::with_mut(|c| {
-                                c.window.fullscreen = window.fullscreen().is_some();
-                            });
+                            resources
+                                .get_mut::<Camera>()
+                                .update(&resources.get::<InputState>(), renderer.delta_time as f32);
+
+                            gctx.begin_frame();
+                            let mut maps = resources.get_mut::<MapList>();
+                            maps.update_maps(resources);
+
+                            let map = maps
+                                .current_map()
+                                .map(|m| &m.scene)
+                                .unwrap_or(map_placeholder);
+
+                            renderer.render_world(&*resources.get::<Camera>(), map, resources);
                         }
-
-                        resources
-                            .get_mut::<Camera>()
-                            .update(&resources.get::<InputState>(), renderer.delta_time as f32);
-
-                        gctx.begin_frame();
-                        let mut maps = resources.get_mut::<MapList>();
-                        maps.update_maps(resources);
-
-                        let map = maps
-                            .current_map()
-                            .map(|m| &m.scene)
-                            .unwrap_or(map_placeholder);
-
-                        renderer.render_world(&*resources.get::<Camera>(), map, resources);
 
                         unsafe {
                             renderer.gpu.context().OMSetRenderTargets(
@@ -294,9 +288,6 @@ impl AlkahestApp {
                                 None,
                             );
                         }
-
-                        drop(maps);
-                        drop(render_settings);
 
                         renderer.gpu.begin_event("interface_and_hud").scoped(|| {
                             gpu_event!(renderer.gpu, "egui");
@@ -336,6 +327,17 @@ impl AlkahestApp {
 
                         window.request_redraw();
                         profiling::finish_frame!();
+
+                        if let Some(e) = renderer.pickbuffer.finish_request() {
+                            if e != u32::MAX {
+                                let maps = resources.get::<MapList>();
+                                if let Some(map) = maps.current_map() {
+                                    resources
+                                        .get_mut::<SelectedEntity>()
+                                        .select(unsafe { map.scene.find_entity_from_id(e) });
+                                }
+                            }
+                        }
                     }
                     _ => {}
                 }

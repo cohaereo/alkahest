@@ -1,4 +1,7 @@
-use std::mem::size_of;
+use std::{
+    mem::size_of,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use alkahest_data::{
     dxgi::DxgiFormat,
@@ -7,8 +10,12 @@ use alkahest_data::{
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use anyhow::Context;
+use crossbeam::atomic::AtomicCell;
 use hecs::Entity;
-use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_MAP_READ};
+use windows::Win32::{
+    Foundation::RECT,
+    Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_MAP_READ},
+};
 
 use crate::{
     ecs::Scene,
@@ -28,13 +35,15 @@ impl Renderer {
         self.pickbuffer.pick_cb.bind(7, TfxShaderStage::Pixel);
         self.gpu.bind_pixel_shader(&self.pickbuffer.pick_ps);
         *self.gpu.custom_pixel_shader.pocus() = Some(self.pickbuffer.pick_ps.clone());
+        *self.pickbuffer.selected_entity.pocus() = selected;
         self.run_renderstage_systems(scene, TfxRenderStage::DepthPrepass);
         *self.gpu.custom_pixel_shader.pocus() = None;
-        self.pickbuffer.end();
+        self.pickbuffer.end(&self.gpu);
     }
 }
 
 pub struct Pickbuffer {
+    pub(super) selection_request: AtomicCell<Option<(u32, u32)>>,
     pub outline_depth: DepthState,
     pub pick_buffer: RenderTarget,
     pub pick_buffer_staging: CpuStagingBuffer,
@@ -45,6 +54,8 @@ pub struct Pickbuffer {
     pick_ps: ID3D11PixelShader,
     pick_cb: ConstantBuffer<u32>,
     pub(crate) active_entity: Option<Entity>,
+    /// The entity that's already selected. Will not be drawn into the pickbuffer
+    selected_entity: Option<Entity>,
 }
 
 impl Pickbuffer {
@@ -60,6 +71,7 @@ impl Pickbuffer {
             .load_pixel_shader(include_dxbc!(ps "gui/pickbuffer.hlsl"))?;
 
         Ok(Self {
+            selection_request: AtomicCell::new(None),
             outline_depth: DepthState::create(gctx.clone(), window_size)
                 .context("Outline Depth")?,
             pick_buffer: RenderTarget::create(
@@ -82,6 +94,7 @@ impl Pickbuffer {
             pick_ps,
             pick_cb: ConstantBuffer::create(gctx.clone(), None)?,
             active_entity: None,
+            selected_entity: None,
         })
     }
 
@@ -103,6 +116,19 @@ impl Pickbuffer {
         Ok(())
     }
 
+    pub fn request_selection(&self, x: u32, y: u32) {
+        self.pocus().selection_request.store(Some((x, y)));
+    }
+
+    /// Finish the current selection request and return the entity id at the request coordinates
+    /// Must only be called after the current frame has been processed by the GPU
+    pub fn finish_request(&self) -> Option<u32> {
+        self.pocus()
+            .selection_request
+            .take()
+            .map(|(x, y)| self.get(x as usize, y as usize))
+    }
+
     pub fn start(&self, gpu: &GpuContext) {
         self.clear(gpu);
         unsafe {
@@ -113,11 +139,24 @@ impl Pickbuffer {
 
             gpu.current_states
                 .store(StateSelection::new(Some(0), Some(2), Some(2), Some(0)));
+
+            // Limit the draw area to as small as possible
+            if let Some((x, y)) = self.selection_request.load() {
+                gpu.context().RSSetScissorRects(Some(&[RECT {
+                    left: x as i32 - 1,
+                    top: y as i32 - 1,
+                    right: x as i32 + 1,
+                    bottom: y as i32 + 1,
+                }]))
+            }
         }
     }
 
-    pub fn end(&self) {
+    pub fn end(&self, gpu: &GpuContext) {
         self.pick_buffer.copy_to_staging(&self.pick_buffer_staging);
+        unsafe {
+            gpu.context().RSSetScissorRects(None);
+        }
     }
 
     pub fn with_entity(&self, entity: Entity, f: impl FnOnce()) {
@@ -126,7 +165,11 @@ impl Pickbuffer {
         self.pocus().active_entity = None;
     }
 
-    fn set_entity(&self, entity: Entity) {
+    fn set_entity(&self, mut entity: Entity) {
+        if Some(entity) == self.selected_entity {
+            entity = Entity::DANGLING;
+        }
+
         if Some(entity) != self.active_entity {
             self.pocus().active_entity = Some(entity);
             self.pick_cb.write(&entity.id()).ok();

@@ -130,8 +130,9 @@ impl Renderer {
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
 
-            // TODO(cohae): Only draw pickbuffer when needed
-            self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
+            if self.pickbuffer.selection_request.load().is_some() {
+                self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
+            }
 
             draw_utilities(self, scene, resources)
         }
