@@ -20,7 +20,10 @@ use windows::Win32::{
 };
 
 use crate::{
-    ecs::{render::draw_entity, Scene},
+    ecs::{
+        render::{draw_entity, static_geometry::draw_static_instances_individual_system},
+        Scene,
+    },
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     renderer::{
@@ -39,6 +42,12 @@ impl Renderer {
         *self.gpu.custom_pixel_shader.pocus() = Some(self.pickbuffer.pick_ps.clone());
         *self.pickbuffer.selected_entity.pocus() = selected;
         self.run_renderstage_systems(scene, TfxRenderStage::DepthPrepass);
+        draw_static_instances_individual_system(
+            self,
+            scene,
+            &self.pickbuffer.static_instance_cb,
+            TfxRenderStage::DepthPrepass,
+        );
         *self.gpu.custom_pixel_shader.pocus() = None;
         self.pickbuffer.end(&self.gpu);
     }
@@ -62,7 +71,13 @@ impl Renderer {
             self.gpu
                 .context()
                 .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
-            draw_entity(scene, selected, self, TfxRenderStage::GenerateGbuffer);
+            draw_entity(
+                scene,
+                selected,
+                self,
+                Some(&self.pickbuffer.static_instance_cb),
+                TfxRenderStage::GenerateGbuffer,
+            );
 
             // Draw the outline itself
             self.gpu
@@ -99,6 +114,7 @@ pub struct Pickbuffer {
     pub outline_depth: DepthState,
     pub pick_buffer: RenderTarget,
     pub pick_buffer_staging: CpuStagingBuffer,
+    pub static_instance_cb: ConstantBuffer<u8>,
 
     pub(super) outline_vs: ID3D11VertexShader,
     pub(super) outline_ps: ID3D11PixelShader,
@@ -150,6 +166,10 @@ impl Pickbuffer {
                 "Entity_Pickbuffer_Staging",
             )
             .context("Entity_Pickbuffer_Staging")?,
+            static_instance_cb: ConstantBuffer::create_array_init(
+                gctx.clone(),
+                &vec![0u8; 32 + 64],
+            )?,
 
             outline_vs,
             outline_ps,
@@ -183,7 +203,7 @@ impl Pickbuffer {
     pub fn request_selection(&self, x: u32, y: u32) {
         self.pocus().selection_request.store(Some((x, y)));
     }
-    
+
     pub fn cancel_request(&self) {
         self.pocus().selection_request.store(None);
     }

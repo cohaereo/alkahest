@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alkahest_data::{
-    statics::{SStaticMesh, SStaticSpecialMesh},
+    statics::{SStaticMesh, SStaticMeshData, SStaticSpecialMesh},
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
@@ -12,7 +12,12 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::{common::Hidden, hierarchy::Children, transform::Transform, Scene},
+    ecs::{
+        common::Hidden,
+        hierarchy::{Children, Parent},
+        transform::Transform,
+        Scene,
+    },
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
@@ -257,28 +262,14 @@ impl StaticModelSingle {
 
     pub fn update_cbuffer(&self, transform: &Transform) {
         profiling::scope!("StaticInstances::update_cbuffer");
-        let mat = transform.local_to_world().transpose();
-        let mat = Mat4::from_cols(
-            mat.x_axis.truncate().extend(transform.translation.x),
-            mat.y_axis.truncate().extend(transform.translation.y),
-            mat.z_axis.truncate().extend(transform.translation.z),
-            mat.w_axis,
-        );
 
         unsafe {
             let mesh_data = &self.model.model.opaque_meshes;
             self.cbuffer
                 .write_array(
-                    ScopeInstances {
-                        mesh_offset: mesh_data.mesh_offset,
-                        mesh_scale: mesh_data.mesh_scale,
-                        uv_scale: mesh_data.texture_coordinate_scale,
-                        uv_offset: mesh_data.texture_coordinate_offset,
-                        max_color_index: mesh_data.max_color_index,
-                        transforms: vec![mat],
-                    }
-                    .write()
-                    .as_slice(),
+                    create_instances_scope(mesh_data, std::slice::from_ref(transform))
+                        .write()
+                        .as_slice(),
                 )
                 .unwrap()
         }
@@ -319,13 +310,7 @@ impl StaticInstances {
         let mut transforms = Vec::with_capacity(instances.len());
         for &instance in instances {
             if let Ok(transform) = scene.get::<&Transform>(instance) {
-                let mat = transform.local_to_world().transpose();
-                transforms.push(Mat4::from_cols(
-                    mat.x_axis.truncate().extend(transform.translation.x),
-                    mat.y_axis.truncate().extend(transform.translation.y),
-                    mat.z_axis.truncate().extend(transform.translation.z),
-                    mat.w_axis,
-                ));
+                transforms.push(*transform.clone());
             }
         }
 
@@ -333,16 +318,9 @@ impl StaticInstances {
             let mesh_data = &self.model.model.opaque_meshes;
             self.cbuffer
                 .write_array(
-                    ScopeInstances {
-                        mesh_offset: mesh_data.mesh_offset,
-                        mesh_scale: mesh_data.mesh_scale,
-                        uv_scale: mesh_data.texture_coordinate_scale,
-                        uv_offset: mesh_data.texture_coordinate_offset,
-                        max_color_index: mesh_data.max_color_index,
-                        transforms,
-                    }
-                    .write()
-                    .as_slice(),
+                    create_instances_scope(mesh_data, &transforms)
+                        .write()
+                        .as_slice(),
                 )
                 .unwrap();
         }
@@ -352,6 +330,28 @@ impl StaticInstances {
         self.cbuffer.bind(1, TfxShaderStage::Vertex);
         self.model
             .draw(renderer, render_stage, self.instance_count as u32);
+    }
+}
+
+pub fn create_instances_scope(mesh: &SStaticMeshData, transforms: &[Transform]) -> ScopeInstances {
+    ScopeInstances {
+        mesh_offset: mesh.mesh_offset,
+        mesh_scale: mesh.mesh_scale,
+        uv_scale: mesh.texture_coordinate_scale,
+        uv_offset: mesh.texture_coordinate_offset,
+        max_color_index: mesh.max_color_index,
+        transforms: transforms
+            .iter()
+            .map(|t| {
+                let mat = t.local_to_world().transpose();
+                Mat4::from_cols(
+                    mat.x_axis.truncate().extend(t.translation.x),
+                    mat.y_axis.truncate().extend(t.translation.y),
+                    mat.z_axis.truncate().extend(t.translation.z),
+                    mat.w_axis,
+                )
+            })
+            .collect(),
     }
 }
 
@@ -386,6 +386,43 @@ pub fn draw_static_instances_system(
         renderer.pickbuffer.with_entity(e, || {
             instances.draw(renderer, render_stage);
         });
+    }
+}
+
+/// Draws all static instance collection children individually
+pub fn draw_static_instances_individual_system(
+    renderer: &Renderer,
+    scene: &Scene,
+    cbuffer: &ConstantBuffer<u8>,
+    render_stage: TfxRenderStage,
+) {
+    profiling::scope!(
+        "draw_static_instances_individual_system",
+        &format!("render_stage={render_stage:?}")
+    );
+    cbuffer.bind(1, TfxShaderStage::Vertex);
+    for (e, (transform, _instance, parent)) in scene
+        .query::<(&Transform, &StaticInstance, &Parent)>()
+        .without::<&Hidden>()
+        .iter()
+    {
+        if let Ok(model) = scene.get::<&StaticInstances>(parent.0) {
+            unsafe {
+                cbuffer
+                    .write_array(
+                        create_instances_scope(
+                            &model.model.model.opaque_meshes,
+                            std::slice::from_ref(transform),
+                        )
+                        .write()
+                        .as_slice(),
+                    )
+                    .unwrap();
+            }
+            renderer.pickbuffer.with_entity(e, || {
+                model.model.draw(renderer, render_stage, 1);
+            });
+        }
     }
 }
 
