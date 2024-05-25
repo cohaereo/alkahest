@@ -219,13 +219,9 @@ impl AlkahestApp {
                                 HRESULT(0)
                             })
                             .expect("Failed to resize buffers");
-
-                        renderer
-                            .data
-                            .lock()
-                            .gbuffers
-                            .resize((new_dims.width, new_dims.height))
-                            .expect("Failed to resize GBuffer");
+                        
+                        renderer.resize_buffers(new_dims.width, new_dims.height);
+                        
                         resources.get_mut::<Camera>().set_viewport(Viewport {
                             size: glam::UVec2::new(new_dims.width, new_dims.height),
                             origin: glam::UVec2::ZERO,

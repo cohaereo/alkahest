@@ -18,10 +18,6 @@ pub struct GBuffer {
     pub rt2: RenderTarget,
     pub rt3: RenderTarget,
 
-    pub outline_depth: DepthState,
-    pub pick_buffer: RenderTarget,
-    pub pick_buffer_staging: CpuStagingBuffer,
-
     pub light_diffuse: RenderTarget,
     pub light_specular: RenderTarget,
     pub light_ibl_specular: RenderTarget,
@@ -63,22 +59,6 @@ impl GBuffer {
             rt3: RenderTarget::create(size, DxgiFormat::B8G8R8A8_UNORM, gctx.clone(), "RT3")
                 .context("RT3")?,
 
-            outline_depth: DepthState::create(size, gctx.clone()).context("Outline Depth")?,
-            pick_buffer: RenderTarget::create(
-                size,
-                DxgiFormat::R32_UINT,
-                gctx.clone(),
-                "Entity_Pickbuffer",
-            )
-            .context("Entity_Pickbuffer")?,
-            pick_buffer_staging: CpuStagingBuffer::create(
-                size,
-                DxgiFormat::R32_UINT,
-                gctx.clone(),
-                "Entity_Pickbuffer_Staging",
-            )
-            .context("Entity_Pickbuffer_Staging")?,
-
             light_diffuse: RenderTarget::create(
                 size,
                 DxgiFormat::R16G16B16A16_FLOAT,
@@ -115,7 +95,7 @@ impl GBuffer {
                 "Staging_Clone",
             )
             .context("Staging_Clone")?,
-            depth: DepthState::create(size, gctx.clone()).context("Depth")?,
+            depth: DepthState::create(gctx.clone(), size).context("Depth")?,
             depth_staging: CpuStagingBuffer::create(
                 size,
                 DxgiFormat::R32_TYPELESS,
@@ -161,17 +141,6 @@ impl GBuffer {
         self.rt2.resize(new_size).context("RT2")?;
         self.rt3.resize(new_size).context("RT3")?;
 
-        self.outline_depth
-            .resize(new_size)
-            .context("Outline Depth")?;
-
-        self.pick_buffer
-            .resize(new_size)
-            .context("Entity_Pickbuffer")?;
-        self.pick_buffer_staging
-            .resize(new_size)
-            .context("Entity_Pickbuffer_Staging")?;
-
         self.light_diffuse
             .resize(new_size)
             .context("Light_Diffuse")?;
@@ -195,20 +164,6 @@ impl GBuffer {
 
         self.current_size = new_size;
         Ok(())
-    }
-
-    pub fn pick_buffer_read(&self, x: usize, y: usize) -> u32 {
-        self.pick_buffer_staging
-            .map(D3D11_MAP_READ, |m| unsafe {
-                let data = m
-                    .pData
-                    .cast::<u8>()
-                    .add(y * m.RowPitch as usize + x * size_of::<u32>())
-                    .cast::<u32>();
-
-                data.read()
-            })
-            .unwrap_or(u32::MAX)
     }
 
     pub fn depth_buffer_read(&self, x: usize, y: usize) -> f32 {
@@ -452,7 +407,7 @@ pub struct DepthState {
 }
 
 impl DepthState {
-    pub fn create(size: (u32, u32), gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn create(gctx: SharedGpuContext, size: (u32, u32)) -> anyhow::Result<Self> {
         let size = if size.0 == 0 || size.1 == 0 {
             warn!("Zero size depth state requested, using 1x1");
             (4, 4)
@@ -660,7 +615,7 @@ impl DepthState {
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
-        *self = Self::create(new_size, self.gctx.clone())?;
+        *self = Self::create(self.gctx.clone(), new_size)?;
         Ok(())
     }
 

@@ -1,4 +1,6 @@
 use alkahest_data::tfx::TfxRenderStage;
+use hecs::Entity;
+use windows::Win32::Graphics::Direct3D11::ID3D11PixelShader;
 
 use crate::{
     ecs::{
@@ -8,6 +10,7 @@ use crate::{
     gpu_event,
     renderer::Renderer,
     shader::shader_ball::draw_shaderball_system,
+    tfx::technique::ShaderModule,
 };
 
 impl Renderer {

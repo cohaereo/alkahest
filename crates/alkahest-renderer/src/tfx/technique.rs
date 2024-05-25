@@ -234,7 +234,7 @@ impl ShaderModule {
         unsafe {
             match self {
                 ShaderModule::Vertex(shader) => gctx.context().VSSetShader(shader, None),
-                ShaderModule::Pixel(shader) => gctx.context().PSSetShader(shader, None),
+                ShaderModule::Pixel(shader) => gctx.bind_pixel_shader(shader),
                 ShaderModule::Geometry(shader) => gctx.context().GSSetShader(shader, None),
                 ShaderModule::Hull(shader) => gctx.context().HSSetShader(shader, None),
                 ShaderModule::Domain(shader) => gctx.context().DSSetShader(shader, None),

@@ -21,6 +21,8 @@ pub struct ConstantBuffer<T: Sized> {
 
 impl<T> ConstantBuffer<T> {
     pub fn create(gctx: Arc<GpuContext>, initial_data: Option<&T>) -> anyhow::Result<Self> {
+        let size_aligned = (std::mem::size_of::<T>() + 15) & !15;
+
         unsafe {
             let mut buffer = None;
             gctx.device.CreateBuffer(
@@ -28,13 +30,13 @@ impl<T> ConstantBuffer<T> {
                     Usage: D3D11_USAGE_DYNAMIC,
                     BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
                     CPUAccessFlags: D3D11_CPU_ACCESS_WRITE.0 as u32,
-                    ByteWidth: std::mem::size_of::<T>() as _,
+                    ByteWidth: size_aligned as _,
                     ..Default::default()
                 },
                 initial_data.map(|d| {
                     let sr = Box::new(D3D11_SUBRESOURCE_DATA {
                         pSysMem: d as *const T as _,
-                        SysMemPitch: std::mem::size_of::<T>() as _,
+                        SysMemPitch: size_aligned as _,
                         ..Default::default()
                     });
 

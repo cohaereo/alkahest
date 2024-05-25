@@ -17,7 +17,7 @@ use crate::{
     gpu_event,
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
-    renderer::Renderer,
+    renderer::{Renderer},
     tfx::{scope::ScopeInstances, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
@@ -366,6 +366,7 @@ pub fn draw_static_instances_system(
             .model
             .draw(renderer, render_stage, children.len() as u32);
     }
+
     for (_, instances) in scene
         .query::<&StaticModelSingle>()
         .without::<&Hidden>()

@@ -76,6 +76,7 @@ pub struct GpuContext {
     pub current_states: AtomicCell<StateSelection>,
 
     pub util_resources: UtilResources,
+    pub custom_pixel_shader: Option<ID3D11PixelShader>,
 }
 
 impl GpuContext {
@@ -248,6 +249,7 @@ impl GpuContext {
                 Some(2),
                 Some(0),
             )),
+            custom_pixel_shader: None,
         })
     }
 
@@ -457,6 +459,20 @@ impl GpuContext {
                 TfxShaderStage::Compute => ctx.CSSetConstantBuffers(slot, Some(&[buffer])),
                 TfxShaderStage::Hull => ctx.HSSetConstantBuffers(slot, Some(&[buffer])),
                 TfxShaderStage::Domain => ctx.DSSetConstantBuffers(slot, Some(&[buffer])),
+            }
+        }
+    }
+
+    pub fn bind_pixel_shader<'a, S: Into<Option<&'a ID3D11PixelShader>>>(&self, shader: S) {
+        let shader = shader.into();
+        if shader.is_some() {
+            unsafe {
+                self.context()
+                    .PSSetShader(self.custom_pixel_shader.as_ref().or(shader), None);
+            }
+        } else {
+            unsafe {
+                self.context().PSSetShader(None, None);
             }
         }
     }

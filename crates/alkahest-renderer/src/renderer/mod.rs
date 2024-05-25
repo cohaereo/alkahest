@@ -3,6 +3,7 @@ pub mod gbuffer;
 mod immediate;
 mod lighting_pass;
 mod opaque_pass;
+mod pickbuffer;
 mod shader;
 mod shadows;
 mod systems;
@@ -11,13 +12,15 @@ mod transparents_pass;
 use std::{sync::Arc, time::Instant};
 
 use alkahest_data::tfx::TfxShaderStage;
+use anyhow::Context;
+use hecs::Entity;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        dynamic_geometry::update_dynamic_model_system,
+        dynamic_geometry::update_dynamic_model_system, resources::SelectedEntity,
         static_geometry::update_static_instances_system, utility::draw_utilities, Scene,
     },
     gpu::SharedGpuContext,
@@ -26,7 +29,10 @@ use crate::{
     hocus,
     loaders::AssetManager,
     postprocess::ssao::SsaoRenderer,
-    renderer::{cubemaps::CubemapRenderer, gbuffer::GBuffer, immediate::ImmediateRenderer},
+    renderer::{
+        cubemaps::CubemapRenderer, gbuffer::GBuffer, immediate::ImmediateRenderer,
+        pickbuffer::Pickbuffer,
+    },
     resources::Resources,
     shader::matcap::MatcapRenderer,
     tfx::{
@@ -53,6 +59,7 @@ pub struct Renderer {
     matcap: MatcapRenderer,
     pub immediate: ImmediateRenderer,
     cubemap_renderer: CubemapRenderer,
+    pub pickbuffer: Pickbuffer,
 
     pub time: Instant,
     last_frame: Instant,
@@ -77,10 +84,14 @@ impl Renderer {
                 gbuffers: GBuffer::create(window_size, gpu.clone())?,
                 externs: ExternStorage::default(),
             }),
-            ssao: SsaoRenderer::new(gpu.clone())?,
-            matcap: MatcapRenderer::new(gpu.clone())?,
-            immediate: ImmediateRenderer::new(gpu.clone())?,
-            cubemap_renderer: CubemapRenderer::new(gpu.clone())?,
+            ssao: SsaoRenderer::new(gpu.clone()).context("failed to create SsaoRenderer")?,
+            matcap: MatcapRenderer::new(gpu.clone()).context("failed to create MatcapRenderer")?,
+            immediate: ImmediateRenderer::new(gpu.clone())
+                .context("failed to create ImmediateRenderer")?,
+            cubemap_renderer: CubemapRenderer::new(gpu.clone())
+                .context("failed to create CubemapRenderer")?,
+            pickbuffer: Pickbuffer::new(gpu.clone(), window_size)
+                .context("failed to create Pickbuffer")?,
             gpu,
             render_globals,
             render_settings: RendererSettings::default(),
@@ -113,6 +124,9 @@ impl Renderer {
             self.draw_lighting_pass(scene);
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
+
+            // TODO(cohae): Only draw pickbuffer when needed
+            self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
 
             draw_utilities(self, scene, resources)
         }
@@ -241,6 +255,18 @@ impl Renderer {
 
     pub fn set_render_settings(&self, settings: RendererSettings) {
         hocus!(self).render_settings = settings;
+    }
+
+    pub fn resize_buffers(&self, width: u32, height: u32) {
+        self.data
+            .lock()
+            .gbuffers
+            .resize((width, height))
+            .expect("Failed to resize GBuffer");
+
+        self.pickbuffer
+            .resize((width, height))
+            .expect("Failed to resize Pickbuffer");
     }
 }
 
