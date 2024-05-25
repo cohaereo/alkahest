@@ -139,7 +139,15 @@ impl Renderer {
 
             if let Some(selected) = resources.get::<SelectedEntity>().selected() {
                 if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
-                    self.draw_outline(scene, selected);
+                    self.draw_outline(
+                        scene,
+                        selected,
+                        resources
+                            .get::<SelectedEntity>()
+                            .time_selected
+                            .elapsed()
+                            .as_secs_f32(),
+                    );
                 }
             }
         }

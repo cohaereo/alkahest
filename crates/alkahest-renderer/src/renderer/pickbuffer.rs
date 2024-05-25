@@ -52,7 +52,8 @@ impl Renderer {
         self.pickbuffer.end(&self.gpu);
     }
 
-    pub(super) fn draw_outline(&self, scene: &Scene, selected: Entity) {
+    // TODO(cohae): move rendering logic to Pickbuffer (where possible)
+    pub(super) fn draw_outline(&self, scene: &Scene, selected: Entity, time_since_select: f32) {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
@@ -103,6 +104,8 @@ impl Renderer {
                     Some(self.data.lock().gbuffers.depth.texture_view.clone()),
                 ]),
             );
+            self.pickbuffer.outline_cb.write(&time_since_select).ok();
+            self.pickbuffer.outline_cb.bind(0, TfxShaderStage::Pixel);
 
             self.gpu.context().Draw(3, 0);
         }
@@ -118,6 +121,7 @@ pub struct Pickbuffer {
 
     pub(super) outline_vs: ID3D11VertexShader,
     pub(super) outline_ps: ID3D11PixelShader,
+    pub(super) outline_cb: ConstantBuffer<f32>,
 
     clear_vs: ID3D11VertexShader,
     clear_ps: ID3D11PixelShader,
@@ -173,6 +177,7 @@ impl Pickbuffer {
 
             outline_vs,
             outline_ps,
+            outline_cb: ConstantBuffer::create(gctx.clone(), None)?,
             clear_vs,
             clear_ps,
             pick_ps,
