@@ -16,6 +16,7 @@ pub fn short_type_name<T: Any>() -> &'static str {
 /// Nice immutable reference you got there, would be a shame if someone were to mutate it...
 pub trait Hocus {
     /// I'LL STEAL IT, NO ONE WILL EVER KNOW!
+    #[allow(clippy::mut_from_ref)]
     fn pocus(&self) -> &mut Self;
 }
 
