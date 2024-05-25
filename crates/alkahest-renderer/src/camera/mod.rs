@@ -127,7 +127,7 @@ impl Camera {
     }
 
     pub fn update_mouse(&mut self, delta: Vec2, scroll: f32) {
-        self.speed_mul = (self.speed_mul + scroll * 0.05).clamp(0.0, 5.0);
+        self.speed_mul = (self.speed_mul + scroll * 0.05).clamp(0.0, 25.0);
         self.controller.update_mouse(&mut self.tween, delta, scroll);
         self.update_matrices();
     }

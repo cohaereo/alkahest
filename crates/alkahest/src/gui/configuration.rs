@@ -39,7 +39,7 @@ impl GuiView for RenderSettingsPanel {
             ui.strong(RichText::new("TODO: move to dropdown button").color(egui::Color32::YELLOW));
             ui.horizontal(|ui| {
                 egui::DragValue::new(&mut camera.speed_mul)
-                    .clamp_range(0f32..=5.0)
+                    .clamp_range(0f32..=25.0)
                     .speed(0.05)
                     .ui(ui);
                 ui.label("Speed");
