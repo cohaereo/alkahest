@@ -20,6 +20,7 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
+        common::Hidden,
         render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
@@ -134,7 +135,13 @@ impl Renderer {
                 self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
             }
 
-            draw_utilities(self, scene, resources)
+            draw_utilities(self, scene, resources);
+
+            if let Some(selected) = resources.get::<SelectedEntity>().selected() {
+                if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
+                    self.draw_outline(scene, selected);
+                }
+            }
         }
 
         self.gpu.blit_texture(

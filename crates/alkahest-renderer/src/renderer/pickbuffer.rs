@@ -14,11 +14,13 @@ use crossbeam::atomic::AtomicCell;
 use hecs::Entity;
 use windows::Win32::{
     Foundation::RECT,
-    Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_MAP_READ},
+    Graphics::Direct3D11::{
+        ID3D11PixelShader, ID3D11RenderTargetView, ID3D11VertexShader, D3D11_MAP_READ,
+    },
 };
 
 use crate::{
-    ecs::Scene,
+    ecs::{render::draw_entity, Scene},
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     renderer::{
@@ -40,6 +42,56 @@ impl Renderer {
         *self.gpu.custom_pixel_shader.pocus() = None;
         self.pickbuffer.end(&self.gpu);
     }
+
+    pub(super) fn draw_outline(&self, scene: &Scene, selected: Entity) {
+        gpu_event!(self.gpu, "selection_outline");
+
+        self.pickbuffer.outline_depth.clear(0.0, 0);
+
+        unsafe {
+            const NO_RT: Option<ID3D11RenderTargetView> = None;
+            let mut rt_backup = [NO_RT; 4];
+            self.gpu
+                .context()
+                .OMGetRenderTargets(Some(&mut rt_backup), None);
+
+            // Draw the selected entity into the outline depth buffer
+            self.gpu
+                .context()
+                .OMSetRenderTargets(None, Some(&self.pickbuffer.outline_depth.view));
+            self.gpu
+                .context()
+                .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
+            draw_entity(scene, selected, self, TfxRenderStage::GenerateGbuffer);
+
+            // Draw the outline itself
+            self.gpu
+                .context()
+                .OMSetRenderTargets(Some(&rt_backup), None);
+            self.gpu.context().OMSetDepthStencilState(None, 0);
+
+            self.gpu.flush_states();
+            self.gpu.set_blend_state(12);
+            self.gpu.set_depth_stencil_state(1);
+            self.gpu.context().RSSetState(None);
+            self.gpu.set_input_topology(EPrimitiveType::Triangles);
+            self.gpu
+                .context()
+                .VSSetShader(&self.pickbuffer.outline_vs, None);
+            self.gpu
+                .context()
+                .PSSetShader(&self.pickbuffer.outline_ps, None);
+            self.gpu.context().PSSetShaderResources(
+                0,
+                Some(&[
+                    Some(self.pickbuffer.outline_depth.texture_view.clone()),
+                    Some(self.data.lock().gbuffers.depth.texture_view.clone()),
+                ]),
+            );
+
+            self.gpu.context().Draw(3, 0);
+        }
+    }
 }
 
 pub struct Pickbuffer {
@@ -48,18 +100,28 @@ pub struct Pickbuffer {
     pub pick_buffer: RenderTarget,
     pub pick_buffer_staging: CpuStagingBuffer,
 
+    pub(super) outline_vs: ID3D11VertexShader,
+    pub(super) outline_ps: ID3D11PixelShader,
+
     clear_vs: ID3D11VertexShader,
     clear_ps: ID3D11PixelShader,
 
     pick_ps: ID3D11PixelShader,
     pick_cb: ConstantBuffer<u32>,
-    pub(crate) active_entity: Option<Entity>,
+    active_entity: Option<Entity>,
     /// The entity that's already selected. Will not be drawn into the pickbuffer
     selected_entity: Option<Entity>,
 }
 
 impl Pickbuffer {
     pub fn new(gctx: SharedGpuContext, window_size: (u32, u32)) -> anyhow::Result<Self> {
+        let outline_vs = gctx
+            .device
+            .load_vertex_shader(include_dxbc!(vs "gui/outline.hlsl"))?;
+        let outline_ps = gctx
+            .device
+            .load_pixel_shader(include_dxbc!(ps "gui/outline.hlsl"))?;
+
         let clear_vs = gctx
             .device
             .load_vertex_shader(include_dxbc!(vs "gui/pickbuffer_clear.hlsl"))?;
@@ -89,6 +151,8 @@ impl Pickbuffer {
             )
             .context("Entity_Pickbuffer_Staging")?,
 
+            outline_vs,
+            outline_ps,
             clear_vs,
             clear_ps,
             pick_ps,

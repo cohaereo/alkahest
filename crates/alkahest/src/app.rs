@@ -336,6 +336,8 @@ impl AlkahestApp {
                                         .get_mut::<SelectedEntity>()
                                         .select(unsafe { map.scene.find_entity_from_id(e) });
                                 }
+                            } else {
+                                resources.get_mut::<SelectedEntity>().deselect();
                             }
                         }
                     }
