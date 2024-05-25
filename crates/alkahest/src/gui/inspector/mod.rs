@@ -138,7 +138,11 @@ pub fn show_inspector_panel(
             }
         }
 
-        let title = format!("{} Entity {}", ICON_HELP, e.entity().id());
+        let title = if let Some(label) = e.get::<&Label>() {
+            format!("{label} (id {})", e.entity().id())
+        } else {
+            format!("Entity {}", e.entity().id())
+        };
 
         if e.has::<Mutable>() {
             if let Some(mut label) = e.get::<&mut Label>() {
