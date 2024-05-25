@@ -72,3 +72,6 @@ opt-level = 3
 # opt-level = 3
 # cohae: Overflow checks are nice for some, but not for us
 overflow-checks = false
+
+[profile.release]
+debug = "limited"
