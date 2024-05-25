@@ -351,6 +351,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         let entity = scene.spawn((
                             Icon(ICON_CUBE_OUTLINE),
                             Label::from("Static Instance"),
+                            OriginalTransform(transform.clone()),
                             transform,
                             StaticInstance,
                             Parent(parent),
