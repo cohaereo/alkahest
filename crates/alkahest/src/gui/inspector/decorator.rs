@@ -1,8 +1,10 @@
 use alkahest_data::map::{SLight, SShadowingLight};
 use alkahest_renderer::{
     ecs::{
-        decorators::DecoratorRenderer, light::LightRenderer, map::CubemapVolume,
-        transform::Transform, Scene,
+        map::CubemapVolume,
+        render::{decorators::DecoratorRenderer, light::LightRenderer},
+        transform::Transform,
+        Scene,
     },
     icons::{ICON_LIGHTBULB_ON, ICON_TREE},
     renderer::RendererShared,

@@ -1,4 +1,4 @@
-cbuffer cb_entid : register(b0) {
+cbuffer cb_entid : register(b7) {
     uint entity_id;
 }
 

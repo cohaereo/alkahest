@@ -17,7 +17,7 @@ use crate::{
     gpu_event,
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
-    renderer::{Renderer},
+    renderer::Renderer,
     tfx::{scope::ScopeInstances, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
@@ -283,11 +283,17 @@ impl StaticModelSingle {
                 .unwrap()
         }
     }
+
+    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) {
+        self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        self.model.draw(renderer, render_stage, 1);
+    }
 }
 
 /// Parent of all static instances for a model
 pub struct StaticInstances {
     pub model: StaticModel,
+    pub instance_count: usize,
     pub cbuffer: ConstantBuffer<u8>,
     cbuffer_dirty: bool,
 }
@@ -298,6 +304,7 @@ impl StaticInstances {
 
         Ok(Self {
             model,
+            instance_count: instances,
             cbuffer,
             cbuffer_dirty: true,
         })
@@ -340,6 +347,12 @@ impl StaticInstances {
                 .unwrap();
         }
     }
+
+    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) {
+        self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        self.model
+            .draw(renderer, render_stage, self.instance_count as u32);
+    }
 }
 
 /// A single instance of a static model, can be manipulated individually
@@ -355,26 +368,24 @@ pub fn draw_static_instances_system(
         "draw_static_instances_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (_, (instances, children)) in scene
-        .query::<(&StaticInstances, &Children)>()
+    for (e, instances) in scene
+        .query::<&StaticInstances>()
         .without::<&Hidden>()
         .iter()
     {
-        // TODO(cohae): We want to pull the slot number from the `instances` scope
-        instances.cbuffer.bind(1, TfxShaderStage::Vertex);
-        instances
-            .model
-            .draw(renderer, render_stage, children.len() as u32);
+        renderer.pickbuffer.with_entity(e, || {
+            instances.draw(renderer, render_stage);
+        });
     }
 
-    for (_, instances) in scene
+    for (e, instances) in scene
         .query::<&StaticModelSingle>()
         .without::<&Hidden>()
         .iter()
     {
-        // TODO(cohae): We want to pull the slot number from the `instances` scope
-        instances.cbuffer.bind(1, TfxShaderStage::Vertex);
-        instances.model.draw(renderer, render_stage, 1);
+        renderer.pickbuffer.with_entity(e, || {
+            instances.draw(renderer, render_stage);
+        });
     }
 }
 
@@ -384,6 +395,7 @@ pub fn update_static_instances_system(scene: &Scene) {
         if instances.cbuffer_dirty {
             instances.update_cbuffer(scene, children);
             instances.cbuffer_dirty = false;
+            instances.instance_count = children.len();
         }
     }
 

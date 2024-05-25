@@ -1,6 +1,10 @@
 use std::io::Cursor;
 
-use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage};
+use alkahest_data::{
+    geometry::EPrimitiveType,
+    technique::StateSelection,
+    tfx::{TfxRenderStage, TfxShaderStage},
+};
 use glam::{Mat4, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
 
@@ -103,28 +107,35 @@ impl ShaderBallComponent {
             transmission: 0.0,
         })
     }
-}
 
-pub fn draw_shaderball_system(renderer: &Renderer, scene: &Scene) {
-    for (_, (transform, ball)) in scene.query::<(&Transform, &ShaderBallComponent)>().iter() {
+    pub fn draw(&self, renderer: &Renderer, transform: &Transform, render_stage: TfxRenderStage) {
+        if !matches!(
+            render_stage,
+            TfxRenderStage::GenerateGbuffer
+                | TfxRenderStage::ShadowGenerate
+                | TfxRenderStage::DepthPrepass
+        ) {
+            return;
+        }
+
         gpu_event!(renderer.gpu, "draw_shaderball");
-        ball.renderer
+        self.renderer
             .cbuffer
             .write(&ShaderBallCbuffer {
                 model_to_world: transform.local_to_world(),
-                rgb_iridescent: ball.color.extend(ball.iridescence as f32 / 128.0),
-                smoothness: ball.smoothness,
-                metalness: ball.metalness,
-                emission: ball.emission,
-                transmission: ball.transmission,
+                rgb_iridescent: self.color.extend(self.iridescence as f32 / 128.0),
+                smoothness: self.smoothness,
+                metalness: self.metalness,
+                emission: self.emission,
+                transmission: self.transmission,
             })
             .unwrap();
 
         renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
         renderer.gpu.set_input_layout(12);
-        ball.renderer.vertex_buffer.bind_single(&renderer.gpu, 0);
-        ball.renderer.cbuffer.bind(0, TfxShaderStage::Vertex);
-        ball.renderer.cbuffer.bind(0, TfxShaderStage::Pixel);
+        self.renderer.vertex_buffer.bind_single(&renderer.gpu, 0);
+        self.renderer.cbuffer.bind(0, TfxShaderStage::Vertex);
+        self.renderer.cbuffer.bind(0, TfxShaderStage::Pixel);
 
         renderer.gpu.set_blend_state(0);
         renderer.gpu.set_depth_stencil_state(2);
@@ -135,16 +146,27 @@ pub fn draw_shaderball_system(renderer: &Renderer, scene: &Scene) {
             renderer
                 .gpu
                 .context()
-                .VSSetShader(&ball.renderer.vshader, None);
-            renderer
-                .gpu
-                .context()
-                .PSSetShader(&ball.renderer.pshader, None);
+                .VSSetShader(&self.renderer.vshader, None);
+
+            if render_stage == TfxRenderStage::GenerateGbuffer {
+                renderer
+                    .gpu
+                    .context()
+                    .PSSetShader(&self.renderer.pshader, None);
+            } else {
+                renderer.gpu.context().PSSetShader(None, None);
+            }
 
             renderer
                 .gpu
                 .context()
-                .Draw(ball.renderer.vertex_buffer.length, 0);
+                .Draw(self.renderer.vertex_buffer.length, 0);
         }
+    }
+}
+
+pub fn draw_shaderball_system(renderer: &Renderer, scene: &Scene, stage: TfxRenderStage) {
+    for (_, (transform, ball)) in scene.query::<(&Transform, &ShaderBallComponent)>().iter() {
+        ball.draw(renderer, transform, stage);
     }
 }

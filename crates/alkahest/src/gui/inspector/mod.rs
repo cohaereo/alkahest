@@ -6,13 +6,15 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
-        decorators::DecoratorRenderer,
-        dynamic_geometry::DynamicModelComponent,
         hierarchy::Parent,
-        light::LightRenderer,
         map::CubemapVolume,
+        render::{
+            decorators::DecoratorRenderer,
+            dynamic_geometry::DynamicModelComponent,
+            light::LightRenderer,
+            static_geometry::{StaticInstance, StaticInstances},
+        },
         resources::SelectedEntity,
-        static_geometry::{StaticInstance, StaticInstances},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Ruler, Sphere},
@@ -470,7 +472,7 @@ impl ComponentPanel for DynamicModelComponent {
                             self.identifier = self.identifier.wrapping_sub(1);
                         }
                     }
-                    
+
                     if ui.input(|i| i.key_pressed(Key::ArrowDown)) {
                         if self.identifier == u16::MAX {
                             self.identifier = 0;

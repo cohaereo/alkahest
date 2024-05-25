@@ -1,7 +1,11 @@
 use alkahest_renderer::{
     ecs::{
-        common::Global, dynamic_geometry::update_dynamic_model_system,
-        static_geometry::update_static_instances_system, Scene,
+        common::Global,
+        render::{
+            dynamic_geometry::update_dynamic_model_system,
+            static_geometry::update_static_instances_system,
+        },
+        Scene,
     },
     loaders::map::load_map,
     renderer::RendererShared,

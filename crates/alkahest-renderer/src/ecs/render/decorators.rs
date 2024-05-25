@@ -9,7 +9,7 @@ use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    ecs::dynamic_geometry::DynamicModel,
+    ecs::render::dynamic_geometry::DynamicModel,
     gpu::{buffer::ConstantBuffer, global_state::RenderStates},
     gpu_event,
     loaders::vertex_buffer::{load_vertex_buffer, VertexBuffer},

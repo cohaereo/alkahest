@@ -15,7 +15,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Hidden, Icon, Label, Mutable},
-        dynamic_geometry::DynamicModelComponent,
+        render::dynamic_geometry::DynamicModelComponent,
         resources::SelectedEntity,
         tags::{EntityTag, EntityTag::Global, Tags},
         transform::{OriginalTransform, Transform},

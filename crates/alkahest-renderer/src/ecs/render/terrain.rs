@@ -1,4 +1,8 @@
-use alkahest_data::{geometry::EPrimitiveType, map::STerrain, tfx::TfxShaderStage};
+use alkahest_data::{
+    geometry::EPrimitiveType,
+    map::STerrain,
+    tfx::{TfxRenderStage, TfxShaderStage},
+};
 use alkahest_pm::package_manager;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
@@ -83,7 +87,16 @@ impl TerrainPatches {
         })
     }
 
-    pub fn draw(&self, renderer: &Renderer) {
+    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) {
+        if !matches!(
+            render_stage,
+            TfxRenderStage::GenerateGbuffer
+                | TfxRenderStage::ShadowGenerate
+                | TfxRenderStage::DepthPrepass
+        ) {
+            return;
+        }
+
         gpu_event!(renderer.gpu, format!("terrain_patch {}", self.hash));
 
         // Layout 22
@@ -166,8 +179,14 @@ impl TerrainPatches {
     }
 }
 
-pub fn draw_terrain_patches_system(renderer: &Renderer, scene: &hecs::World) {
-    for (_, (terrain,)) in scene.query::<(&TerrainPatches,)>().iter() {
-        terrain.draw(renderer);
+pub fn draw_terrain_patches_system(
+    renderer: &Renderer,
+    scene: &hecs::World,
+    render_stage: TfxRenderStage,
+) {
+    for (e, (terrain,)) in scene.query::<(&TerrainPatches,)>().iter() {
+        renderer.pickbuffer.with_entity(e, || {
+            terrain.draw(renderer, render_stage);
+        });
     }
 }

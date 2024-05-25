@@ -76,10 +76,12 @@ impl Technique {
                         .as_ref()
                         .context("Vertex stage not set")?
                         .bind(renderer)?;
-                    self.stage_pixel
-                        .as_ref()
-                        .context("Pixel stage not set")?
-                        .bind(renderer)?;
+                    if renderer.gpu.custom_pixel_shader.is_none() {
+                        self.stage_pixel
+                            .as_ref()
+                            .context("Pixel stage not set")?
+                            .bind(renderer)?;
+                    }
 
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
@@ -92,7 +94,9 @@ impl Technique {
                         .context("Vertex stage not set")?
                         .bind(renderer)?;
 
-                    ctx.PSSetShader(None, None);
+                    if renderer.gpu.custom_pixel_shader.is_none() {
+                        ctx.PSSetShader(None, None);
+                    }
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
                     ctx.DSSetShader(None, None);
@@ -137,10 +141,12 @@ impl Technique {
                         .as_ref()
                         .context("Vertex stage not set")?
                         .bind(renderer)?;
-                    self.stage_pixel
-                        .as_ref()
-                        .context("Pixel stage not set")?
-                        .bind(renderer)?;
+                    if renderer.gpu.custom_pixel_shader.is_none() {
+                        self.stage_pixel
+                            .as_ref()
+                            .context("Pixel stage not set")?
+                            .bind(renderer)?;
+                    }
                     self.stage_compute
                         .as_ref()
                         .context("Pixel stage not set")?

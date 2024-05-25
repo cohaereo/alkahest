@@ -6,7 +6,7 @@ use alkahest_data::{
 };
 
 use crate::{
-    ecs::{light::ShadowMapRenderer, transform::Transform, Scene},
+    ecs::{render::light::ShadowMapRenderer, transform::Transform, Scene},
     gpu_event,
     renderer::Renderer,
 };

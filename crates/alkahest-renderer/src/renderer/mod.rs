@@ -20,13 +20,17 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        dynamic_geometry::update_dynamic_model_system, resources::SelectedEntity,
-        static_geometry::update_static_instances_system, utility::draw_utilities, Scene,
+        render::{
+            dynamic_geometry::update_dynamic_model_system,
+            static_geometry::update_static_instances_system,
+        },
+        resources::SelectedEntity,
+        utility::draw_utilities,
+        Scene,
     },
     gpu::SharedGpuContext,
     gpu_event,
     handle::Handle,
-    hocus,
     loaders::AssetManager,
     postprocess::ssao::SsaoRenderer,
     renderer::{
@@ -43,6 +47,7 @@ use crate::{
         technique::Technique,
         view::View,
     },
+    util::Hocus,
 };
 
 pub type RendererShared = Arc<Renderer>;
@@ -143,7 +148,7 @@ impl Renderer {
                 .copy_to_staging(&data.gbuffers.depth_staging);
         }
 
-        hocus!(self).frame_index = self.frame_index.wrapping_add(1);
+        self.pocus().frame_index = self.frame_index.wrapping_add(1);
     }
 
     fn bind_view(&self, view: &impl View) {
@@ -173,8 +178,8 @@ impl Renderer {
     }
 
     fn begin_world_frame(&self, _scene: &Scene) {
-        hocus!(self).delta_time = self.last_frame.elapsed().as_secs_f64();
-        hocus!(self).last_frame = Instant::now();
+        self.pocus().delta_time = self.last_frame.elapsed().as_secs_f64();
+        self.pocus().last_frame = Instant::now();
 
         {
             let externs = &mut self.data.lock().externs;
@@ -254,7 +259,7 @@ impl Renderer {
     }
 
     pub fn set_render_settings(&self, settings: RendererSettings) {
-        hocus!(self).render_settings = settings;
+        self.pocus().render_settings = settings;
     }
 
     pub fn resize_buffers(&self, width: u32, height: u32) {
@@ -264,7 +269,8 @@ impl Renderer {
             .resize((width, height))
             .expect("Failed to resize GBuffer");
 
-        self.pickbuffer
+        self.pocus()
+            .pickbuffer
             .resize((width, height))
             .expect("Failed to resize Pickbuffer");
     }

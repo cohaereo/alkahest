@@ -184,7 +184,7 @@ impl InputState {
         self.shift
     }
 
-    pub fn is_mouse_pressed(&self, button: MouseButton) -> bool {
+    pub fn is_mouse_clicked(&self, button: MouseButton) -> bool {
         match button {
             MouseButton::Left => self.mouse1 == ButtonState::Down,
             MouseButton::Right => self.mouse2 == ButtonState::Down,
@@ -204,6 +204,14 @@ impl InputState {
             }
             MouseButton::Back => matches!(self.mouse4, ButtonState::Down | ButtonState::Repeated),
         }
+    }
+
+    pub fn mouse_left_clicked(&self) -> bool {
+        self.is_mouse_clicked(MouseButton::Left)
+    }
+
+    pub fn mouse_right_clicked(&self) -> bool {
+        self.is_mouse_clicked(MouseButton::Right)
     }
 
     pub fn mouse_left(&self) -> bool {

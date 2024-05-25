@@ -1,6 +1,6 @@
 use alkahest_data::map::{SLight, SShadowingLight};
 use alkahest_renderer::{
-    ecs::{light::LightRenderer, map::CubemapVolume, transform::Transform, Scene},
+    ecs::{map::CubemapVolume, render::light::LightRenderer, transform::Transform, Scene},
     icons::ICON_LIGHTBULB_ON,
     renderer::RendererShared,
     util::color::Color,

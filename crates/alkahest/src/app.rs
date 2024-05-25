@@ -149,10 +149,10 @@ impl AlkahestApp {
                         target.exit();
                     }
                     WindowEvent::CursorMoved { position, .. } => {
+                        let input = resources.get::<InputState>();
                         if let Some(ref mut p) = last_cursor_pos {
                             let delta = (position.x - p.x, position.y - p.y);
-                            let input = resources.get::<InputState>();
-                            if (input.mouse_left() | input.mouse_middle())
+                            if (input.mouse_right() || input.mouse_middle())
                                 && !egui_event_response.consumed
                             {
                                 resources
@@ -211,6 +211,31 @@ impl AlkahestApp {
                                 .update_mouse(Vec2::ZERO, scroll_y);
                         }
                     }
+                    WindowEvent::MouseInput { .. } => {
+                        let input = resources.get::<InputState>();
+                        if input.mouse_left_clicked()
+                            && !gui.egui.wants_pointer_input()
+                            && !resources.get::<SelectedEntity>().changed_this_frame
+                        {
+                            if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
+                                let id = renderer.pickbuffer.get(
+                                    (mouse_pos.x as f64 * window.scale_factor()).round() as usize,
+                                    (mouse_pos.y as f64 * window.scale_factor()).round() as usize,
+                                );
+
+                                let maps = resources.get::<MapList>();
+                                if let Some(map) = maps.current_map() {
+                                    if id != u32::MAX {
+                                        resources
+                                            .get_mut::<SelectedEntity>()
+                                            .select(unsafe { map.scene.find_entity_from_id(id) });
+                                    } else {
+                                        resources.get_mut::<SelectedEntity>().deselect();
+                                    }
+                                }
+                            }
+                        }
+                    }
                     WindowEvent::Resized(new_dims) => {
                         let _ = gui
                             .renderer
@@ -219,15 +244,16 @@ impl AlkahestApp {
                                 HRESULT(0)
                             })
                             .expect("Failed to resize buffers");
-                        
+
                         renderer.resize_buffers(new_dims.width, new_dims.height);
-                        
+
                         resources.get_mut::<Camera>().set_viewport(Viewport {
                             size: glam::UVec2::new(new_dims.width, new_dims.height),
                             origin: glam::UVec2::ZERO,
                         });
                     }
                     WindowEvent::RedrawRequested => {
+                        resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
                         let render_settings = resources.get::<RendererSettings>();
 

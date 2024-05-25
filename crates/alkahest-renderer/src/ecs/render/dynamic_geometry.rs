@@ -11,8 +11,10 @@ use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::{
-        common::Hidden, decorators::DecoratorRenderer, static_geometry::ModelBuffers,
-        transform::Transform, Scene,
+        common::Hidden,
+        render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
+        transform::Transform,
+        Scene,
     },
     gpu::buffer::ConstantBuffer,
     gpu_event,
@@ -317,6 +319,16 @@ impl DynamicModelComponent {
         self.cbuffer.write(&ext).unwrap();
         self.ext = ext;
     }
+
+    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) -> anyhow::Result<()> {
+        // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
+        renderer.data.lock().externs.rigid_model = Some(self.ext.clone());
+
+        // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
+        self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        // TODO(cohae): Error reporting
+        self.model.draw(renderer, render_stage, self.identifier)
+    }
 }
 
 pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
@@ -348,25 +360,20 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
     for (e, _feature_type) in entities {
         let dynamic = scene.get::<&DynamicModelComponent>(e).unwrap();
 
-        // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
-        renderer.data.lock().externs.rigid_model = Some(dynamic.ext.clone());
-
-        // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
-        dynamic.cbuffer.bind(1, TfxShaderStage::Vertex);
-        // TODO(cohae): Error reporting
-        dynamic
-            .model
-            .draw(renderer, render_stage, dynamic.identifier)
-            .unwrap();
+        renderer.pickbuffer.with_entity(e, || {
+            dynamic.draw(renderer, render_stage).unwrap();
+        });
     }
 
     if renderer.render_settings.decorators {
-        for (_e, decorator) in scene
+        for (e, decorator) in scene
             .query::<&DecoratorRenderer>()
             .without::<&Hidden>()
             .iter()
         {
-            decorator.draw(renderer, render_stage).unwrap();
+            renderer.pickbuffer.with_entity(e, || {
+                decorator.draw(renderer, render_stage).unwrap();
+            });
         }
     }
 }

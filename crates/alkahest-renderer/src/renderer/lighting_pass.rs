@@ -1,7 +1,7 @@
 use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
 
 use crate::{
-    ecs::{light::draw_light_system, map::MapAtmosphere, Scene},
+    ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
     gpu_event,
     renderer::{cubemaps::draw_cubemap_system, Renderer},
     tfx::{externs, externs::ExternDefault},
