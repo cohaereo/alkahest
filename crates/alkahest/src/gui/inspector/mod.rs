@@ -206,22 +206,6 @@ fn show_inspector_components(
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
             t.show_inspector_ui(scene, e, ui, resources);
-            if let Some(ot) = e.get::<&OriginalTransform>() {
-                // Has the entity moved from it's original position?
-                let has_moved = *t != ot.0;
-                ui.add_enabled_ui(has_moved, |ui: &mut egui::Ui| {
-                    if ui
-                        .button("Reset to original")
-                        .on_hover_text(
-                            "This object has an original transform defined.\nClicking this button \
-                             will reset the current transform back  to the original",
-                        )
-                        .clicked()
-                    {
-                        *t = ot.0;
-                    }
-                });
-            }
         });
     }
 
@@ -408,6 +392,24 @@ impl ComponentPanel for Transform {
                 rotation_euler.y.to_radians(),
                 rotation_euler.z.to_radians(),
             );
+        }
+
+        if let Some(ot) = e.get::<&OriginalTransform>() {
+            // Has the entity moved from it's original position?
+            let has_moved = *self != ot.0;
+            ui.add_enabled_ui(has_moved, |ui: &mut egui::Ui| {
+                if ui
+                    .button("Reset to original")
+                    .on_hover_text(
+                        "This object has an original transform defined.\nClicking this button \
+                         will reset the current transform back  to the original",
+                    )
+                    .clicked()
+                {
+                    transform_changed = true;
+                    *self = ot.0;
+                }
+            });
         }
 
         if transform_changed {
