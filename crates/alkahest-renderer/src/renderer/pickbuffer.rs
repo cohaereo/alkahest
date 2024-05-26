@@ -41,12 +41,12 @@ impl Renderer {
         self.gpu.bind_pixel_shader(&self.pickbuffer.pick_ps);
         *self.gpu.custom_pixel_shader.pocus() = Some(self.pickbuffer.pick_ps.clone());
         *self.pickbuffer.selected_entity.pocus() = selected;
-        self.run_renderstage_systems(scene, TfxRenderStage::DepthPrepass);
+        self.run_renderstage_systems(scene, TfxRenderStage::GenerateGbuffer);
         draw_static_instances_individual_system(
             self,
             scene,
             &self.pickbuffer.static_instance_cb,
-            TfxRenderStage::DepthPrepass,
+            TfxRenderStage::GenerateGbuffer,
         );
         *self.gpu.custom_pixel_shader.pocus() = None;
         self.pickbuffer.end(&self.gpu);
