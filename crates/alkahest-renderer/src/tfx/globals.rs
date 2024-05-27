@@ -455,6 +455,7 @@ impl GlobalPipelines {
     pub fn get_debug_view_pipeline(&self, view: RenderDebugView) -> &Technique {
         match view {
             RenderDebugView::None => &self.final_combine,
+            RenderDebugView::NoFilmCurve => &self.final_combine_no_film_curve,
             RenderDebugView::GbufferValidation => &self.debug_gbuffer_validation,
             RenderDebugView::SourceColor => &self.debug_source_color,
             RenderDebugView::Normal => &self.debug_world_normal,
@@ -462,6 +463,7 @@ impl GlobalPipelines {
             RenderDebugView::Metalness => &self.debug_metalness,
             RenderDebugView::AmbientOcclusion => &self.debug_ambient_occlusion,
             RenderDebugView::TextureAo => &self.debug_texture_ao,
+            RenderDebugView::Transmission => &self.debug_transmission,
             RenderDebugView::ColoredOvercoatId => &self.debug_colored_overcoat_id,
             RenderDebugView::ColoredOvercoat => &self.debug_colored_overcoat,
             RenderDebugView::DiffuseColor => &self.debug_diffuse_color,

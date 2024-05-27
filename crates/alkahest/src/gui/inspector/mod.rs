@@ -509,7 +509,7 @@ impl ComponentPanel for ShaderBallComponent {
         });
         ui.horizontal(|ui| {
             ui.strong("Iridescence:");
-            egui::Slider::new(&mut self.iridescence, 0..=128).ui(ui);
+            egui::Slider::new(&mut self.iridescence, 0..=126).ui(ui);
         });
         ui.horizontal(|ui| {
             ui.strong("Emissive:");

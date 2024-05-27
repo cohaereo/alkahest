@@ -121,7 +121,7 @@ impl ShaderBallComponent {
             .cbuffer
             .write(&ShaderBallCbuffer {
                 model_to_world: transform.local_to_world(),
-                rgb_iridescent: self.color.extend(self.iridescence as f32 / 128.0),
+                rgb_iridescent: self.color.extend((self.iridescence + 128) as f32 / 254.0),
                 smoothness: self.smoothness,
                 metalness: self.metalness,
                 emission: self.emission,
@@ -147,12 +147,9 @@ impl ShaderBallComponent {
                 .VSSetShader(&self.renderer.vshader, None);
 
             if render_stage == TfxRenderStage::GenerateGbuffer {
-                renderer
-                    .gpu
-                    .context()
-                    .PSSetShader(&self.renderer.pshader, None);
+                renderer.gpu.bind_pixel_shader(&self.renderer.pshader);
             } else {
-                renderer.gpu.context().PSSetShader(None, None);
+                renderer.gpu.bind_pixel_shader(None);
             }
 
             renderer
@@ -164,7 +161,9 @@ impl ShaderBallComponent {
 }
 
 pub fn draw_shaderball_system(renderer: &Renderer, scene: &Scene, stage: TfxRenderStage) {
-    for (_, (transform, ball)) in scene.query::<(&Transform, &ShaderBallComponent)>().iter() {
-        ball.draw(renderer, transform, stage);
+    for (e, (transform, ball)) in scene.query::<(&Transform, &ShaderBallComponent)>().iter() {
+        renderer.pickbuffer.with_entity(e, || {
+            ball.draw(renderer, transform, stage);
+        });
     }
 }

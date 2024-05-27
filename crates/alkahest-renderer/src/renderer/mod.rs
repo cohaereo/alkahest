@@ -363,6 +363,7 @@ impl Default for RendererSettings {
 )]
 pub enum RenderDebugView {
     None,
+    NoFilmCurve,
 
     GbufferValidation,
     SourceColor,
@@ -371,6 +372,7 @@ pub enum RenderDebugView {
     Metalness,
     AmbientOcclusion,
     TextureAo,
+    Transmission,
 
     ColoredOvercoatId,
     ColoredOvercoat,
