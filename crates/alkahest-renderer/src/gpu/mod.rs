@@ -87,7 +87,7 @@ impl GpuContext {
         let mut device_context: Option<ID3D11DeviceContext> = None;
         let swap_chain_description: DXGI_SWAP_CHAIN_DESC = {
             let buffer_descriptor = DXGI_MODE_DESC {
-                Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
                 ..Default::default()
             };
 
@@ -343,7 +343,7 @@ impl GpuContext {
             drop(self.swapchain_target.write().take());
 
             self.swap_chain
-                .ResizeBuffers(2, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0)
+                .ResizeBuffers(2, width, height, DXGI_FORMAT_B8G8R8A8_UNORM, 0)
                 .unwrap();
 
             let bb: ID3D11Texture2D = self.swap_chain.GetBuffer(0).unwrap();

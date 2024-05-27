@@ -155,10 +155,21 @@ impl Renderer {
         unsafe {
             {
                 let mut data = self.data.lock();
+                data.gbuffers
+                    .shading_result
+                    .copy_to(&data.gbuffers.shading_result_read);
                 data.externs.postprocess = Some(externs::Postprocess {
                     unk00: data.gbuffers.shading_result_read.view.clone().into(),
                     ..Default::default()
                 });
+
+                self.gpu.context().OMSetRenderTargets(
+                    Some(&[Some(
+                        // self.gpu.swapchain_target.read().as_ref().unwrap().clone(),
+                        data.gbuffers.shading_result.render_target.clone(),
+                    )]),
+                    None,
+                );
             }
 
             gpu_event!(self.gpu, "final_or_debug_view");
@@ -171,13 +182,6 @@ impl Renderer {
                 return;
             }
 
-            self.gpu.context().OMSetRenderTargets(
-                Some(&[Some(
-                    self.gpu.swapchain_target.read().as_ref().unwrap().clone(),
-                )]),
-                None,
-            );
-
             // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
             self.gpu
                 .current_states
@@ -188,10 +192,16 @@ impl Renderer {
             // TODO(cohae): 4 vertices doesn't work...
             self.gpu.context().Draw(6, 0);
         }
-        // self.gpu.blit_texture(
-        //     &self.data.lock().gbuffers.shading_result.view,
-        //     self.gpu.swapchain_target.read().as_ref().unwrap(),
-        // );
+
+        self.gpu.blit_texture(
+            &self.data.lock().gbuffers.shading_result.view,
+            self.gpu.swapchain_target.read().as_ref().unwrap(),
+            // final_combine and final_combine_no_film_curve already apply gamma correction
+            !matches!(
+                self.render_settings.debug_view,
+                RenderDebugView::None | RenderDebugView::NoFilmCurve
+            ),
+        );
 
         {
             let data = self.data.lock();

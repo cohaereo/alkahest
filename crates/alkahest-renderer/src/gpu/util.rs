@@ -11,6 +11,7 @@ pub struct UtilResources {
     pub entity_vs_override: ID3D11VertexShader,
     pub blit_vs: ID3D11VertexShader,
     pub blit_ps: ID3D11PixelShader,
+    pub blit_srgb_ps: ID3D11PixelShader,
 
     pub point_sampler: ID3D11SamplerState,
 }
@@ -25,6 +26,9 @@ impl UtilResources {
             .unwrap();
         let blit_ps = device
             .load_pixel_shader(include_dxbc!(ps "util/blit.hlsl"))
+            .unwrap();
+        let blit_srgb_ps = device
+            .load_pixel_shader(include_dxbc!(ps "util/blit_srgb.hlsl"))
             .unwrap();
 
         let point_sampler = device
@@ -46,6 +50,7 @@ impl UtilResources {
             entity_vs_override,
             blit_vs,
             blit_ps,
+            blit_srgb_ps,
             point_sampler,
         }
     }
@@ -56,6 +61,7 @@ impl GpuContext {
         &self,
         texture_view: &ID3D11ShaderResourceView,
         rt: &ID3D11RenderTargetView,
+        srgb: bool,
     ) {
         gpu_event!(self, "blit_texture");
         unsafe {
@@ -64,7 +70,14 @@ impl GpuContext {
             self.context.RSSetState(None);
 
             self.context.VSSetShader(&self.util_resources.blit_vs, None);
-            self.context.PSSetShader(&self.util_resources.blit_ps, None);
+            self.context.PSSetShader(
+                if srgb {
+                    &self.util_resources.blit_srgb_ps
+                } else {
+                    &self.util_resources.blit_ps
+                },
+                None,
+            );
 
             self.set_input_topology(EPrimitiveType::Triangles);
             self.context

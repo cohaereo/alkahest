@@ -111,13 +111,6 @@ impl Renderer {
 
         self.run_renderstage_systems(scene, TfxRenderStage::Transparents);
 
-        {
-            let gbuffers = &self.data.lock().gbuffers;
-            gbuffers
-                .shading_result
-                .copy_to(&gbuffers.shading_result_read);
-        }
-
         // draw_utilities(self, scene);
     }
 }
