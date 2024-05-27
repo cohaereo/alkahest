@@ -126,19 +126,21 @@ pub struct Unk80808943 {
     pub entity_resource: TagHash,
 }
 
-#[derive(Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x88)]
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0x80809B06, size = 0x88)]
 pub struct SEntityResource {
     pub file_size: u64,
     pub unk8: ResourcePointer,
-    pub unk10: ResourcePointerWithClass,
-    pub unk18: ResourcePointerWithClass,
+    pub unk10: ResourcePointer,
+    pub unk18: ResourcePointer,
+
+    pub unk20: Vec<ResourcePointerWithClass>,
 
     #[tag(offset = 0x40)]
     pub resource_table1: Vec<()>,
 
     #[tag(offset = 0x60)]
-    pub resource_table2: Vec<()>,
+    pub resource_table2: Vec<Pointer<SEntityRef>>,
 
     #[tag(offset = 0x80)]
     pub unk80: TagHash,
@@ -161,4 +163,12 @@ pub struct Unk808092d8 {
 pub struct Unk80808cef {
     pub unk0: [u32; 22],
     pub unk58: TagHash,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_tag(id = 0xffffffff)]
+pub struct SEntityRef {
+    pub entity: WideHash,
+    pub unk10: u32,
+    pub unk14: u32,
 }

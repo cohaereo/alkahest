@@ -415,7 +415,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                     scene.spawn(er);
                     info!("Entity spawned");
                 }
-                Err(e) => error!("Failed to load entitymodel {tag}: {e}"),
+                Err(e) => error!("Failed to load entity {tag}: {e:?}"),
             }
         }
         "distfx" | "disassemble_tfx" => {
@@ -794,7 +794,7 @@ fn load_entity(
         }
     }
 
-    Err(anyhow::anyhow!("Failed to load entity"))
+    Err(anyhow::anyhow!("No entitymodel found in entity"))
 }
 
 fn parse_extended_hash(s: &str) -> anyhow::Result<WideHash> {

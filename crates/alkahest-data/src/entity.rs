@@ -4,7 +4,7 @@ use destiny_pkg::TagHash;
 use tiger_parse::{tiger_tag, FnvHash, NullString, Pointer, PointerOptional, ResourcePointer};
 
 use super::geometry::{ELodCategory, EPrimitiveType};
-use crate::{tfx::TfxRenderStage, Tag};
+use crate::{activity::SEntityResource, tfx::TfxRenderStage, Tag};
 
 #[derive(Clone)]
 #[tiger_tag(id = 0x80809AD8)]
@@ -16,23 +16,9 @@ pub struct SEntity {
 #[derive(Clone)]
 #[tiger_tag(id = 0x80809ACD)]
 pub struct Unk80809c04 {
-    pub unk0: Tag<Unk80809b06>,
+    pub unk0: Tag<SEntityResource>,
     pub unk4: u32,
     pub unk8: u32,
-}
-
-/// Entity resource
-#[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80809B06, size = 0x90)]
-pub struct Unk80809b06 {
-    pub file_size: u64,
-    pub unk8: ResourcePointer,
-    pub unk10: ResourcePointer,
-    pub unk18: ResourcePointer,
-
-    #[tag(offset = 0x80)]
-    pub unk80: TagHash,
-    pub unk84: TagHash,
 }
 
 #[derive(Debug, Clone)]

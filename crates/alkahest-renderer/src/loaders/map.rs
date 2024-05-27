@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     io::{Cursor, Read, Seek, SeekFrom},
     ops::Deref,
 };
@@ -14,10 +15,10 @@ use alkahest_data::{
     },
     occlusion::AABB,
     tfx::TfxFeatureRenderer,
-    Tag,
+    Tag, WideHash,
 };
 use alkahest_pm::package_manager;
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
@@ -110,10 +111,20 @@ pub async fn load_map(
             }
         }
 
+        for u1 in &activity.unk40 {
+            for u2 in &u1.unk48 {
+                activity_entrefs.push((
+                    u2.unk_entity_reference.clone(),
+                    u2.activity_phase_name2,
+                    ResourceOrigin::Activity,
+                ));
+            }
+        }
+
         if load_ambient_activity {
             match package_manager().read_tag_struct::<SActivity>(activity.ambient_activity) {
-                Ok(activity) => {
-                    for u1 in &activity.unk50 {
+                Ok(ambient_activity) => {
+                    for u1 in &ambient_activity.unk50 {
                         for map in &u1.map_references {
                             if map.hash32() != map_hash {
                                 continue;
@@ -125,6 +136,16 @@ pub async fn load_map(
                                     u2.activity_phase_name2,
                                     ResourceOrigin::Ambient,
                                 ));
+                            }
+
+                            for u1 in &activity.unk40 {
+                                for u2 in &u1.unk48 {
+                                    activity_entrefs.push((
+                                        u2.unk_entity_reference.clone(),
+                                        u2.activity_phase_name2,
+                                        ResourceOrigin::Ambient,
+                                    ));
+                                }
                             }
                         }
                     }
@@ -183,15 +204,15 @@ pub async fn load_map(
                         }
                     }
                     u => {
-                        if !unknown_res_types.contains(&u) {
-                            warn!(
-                                "Unknown activity entref resource table resource type 0x{u:x} in \
-                                 resource table {}",
-                                resource.entity_resource
-                            );
+                        // if !unknown_res_types.contains(&u) {
+                        warn!(
+                            "Unknown activity entref resource table resource type 0x{u:X} @ \
+                             0x{:X} in resource table {}",
+                            res.unk18.offset, resource.entity_resource
+                        );
 
-                            unknown_res_types.insert(u);
-                        }
+                        //     unknown_res_types.insert(u);
+                        // }
                     }
                 }
 
@@ -266,6 +287,30 @@ pub async fn load_map(
                     )
                     .context("Failed to load AB atatable")?;
                 }
+
+                // if origin != ResourceOrigin::Ambient {
+                //     for r in &res.resource_table2 {
+                //         if r.entity.is_some() {
+                //             if let Some(entry) = package_manager().get_entry(r.entity.hash32()) {
+                //                 match entry.reference {
+                //                     0x80809AD8 => {
+                //                         // SEntity::ID
+                //                         load_entity_into_scene(
+                //                             r.entity.hash32(),
+                //                             &mut scene,
+                //                             &renderer,
+                //                             origin,
+                //                             None,
+                //                             Transform::default(),
+                //                             None,
+                //                         )?;
+                //                     }
+                //                     u => warn!("Unknown entref type 0x{u:08X}"),
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
             } else {
                 warn!("null entity resource tag in {}", resource.taghash());
             }
@@ -723,84 +768,16 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     continue;
                 }
 
-                let header = package_manager()
-                    .read_tag_struct::<SEntity>(entity_hash)
-                    .context("Failed to read SEntity")?;
-                debug!("Loading entity {entity_hash}");
-                let mut has_entity_model = false;
-                for e in &header.entity_resources {
-                    match e.unk0.unk10.resource_type {
-                        0x80806d8a => {
-                            has_entity_model = true;
-                            let mut cur =
-                                Cursor::new(package_manager().read_tag(e.unk0.taghash())?);
-                            cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x224))?;
-                            let model_hash: TagHash =
-                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                            cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3c0))?;
-                            let entity_material_map: Vec<Unk808072c5> =
-                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                            // cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x3f0))?;
-                            // let entity_material_map_pre: Vec<(u16, u16)> =
-                            //     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                            cur.seek(SeekFrom::Start(e.unk0.unk18.offset + 0x400))?;
-                            let materials: Vec<TagHash> =
-                                TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
-                            spawn_data_entity(
-                                scene,
-                                (
-                                    Icon(ICON_CUBE),
-                                    if u != u32::MAX {
-                                        Label::from(format!("Unknown {u:08X}"))
-                                    } else {
-                                        Label::from("Generic Entity")
-                                    },
-                                    transform,
-                                    DynamicModelComponent::load(
-                                        renderer,
-                                        &transform,
-                                        model_hash,
-                                        entity_material_map,
-                                        materials,
-                                        TfxFeatureRenderer::DynamicObjects,
-                                    )?,
-                                    TfxFeatureRenderer::DynamicObjects,
-                                    resource_origin,
-                                ),
-                                parent_entity,
-                            );
-                        }
-                        u => {
-                            debug!(
-                                "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
-                                u.to_be(),
-                                e.unk0.unk10.resource_type.to_be(),
-                                e.unk0.taghash()
-                            )
-                        }
-                    }
-                }
-
-                if !has_entity_model {
-                    spawn_data_entity(
-                        scene,
-                        (
-                            Icon(ICON_CUBE),
-                            if u != u32::MAX {
-                                Label::from(format!("Unknown {u:08X}"))
-                            } else {
-                                Label::from("Generic Entity")
-                            },
-                            transform,
-                            resource_origin,
-                        ),
-                        parent_entity,
-                    );
-                }
+                load_entity_into_scene(
+                    entity_hash,
+                    scene,
+                    renderer,
+                    resource_origin,
+                    parent_entity,
+                    transform,
+                    if u != u32::MAX { Some(u) } else { None },
+                )
+                .ok();
             }
         }
     }
@@ -878,6 +855,114 @@ fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
     )
 }
 
+fn load_entity_into_scene(
+    entity_hash: TagHash,
+    scene: &mut Scene,
+    renderer: &Renderer,
+    resource_origin: ResourceOrigin,
+    parent_entity: Option<Entity>,
+    transform: Transform,
+    u: Option<u32>,
+) -> anyhow::Result<Entity> {
+    let header = package_manager()
+        .read_tag_struct::<SEntity>(entity_hash)
+        .context("Failed to read SEntity")?;
+    debug!("Loading entity {entity_hash}");
+    let mut has_entity_model = false;
+    let scene_entity = spawn_data_entity(
+        scene,
+        (
+            Icon(ICON_CUBE),
+            if let Some(u) = u {
+                Label::from(format!("Unknown {u:08X}"))
+            } else {
+                Label::from("Generic Entity")
+            },
+            transform,
+            resource_origin,
+        ),
+        parent_entity,
+    );
+
+    for e in &header.entity_resources {
+        let entres = &e.unk0;
+        match entres.unk10.resource_type {
+            0x80806d8a => {
+                has_entity_model = true;
+                let mut cur = Cursor::new(package_manager().read_tag(entres.taghash())?);
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x224))?;
+                let model_hash: TagHash = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x3c0))?;
+                let entity_material_map: Vec<Unk808072c5> =
+                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                // cur.seek(SeekFrom::Start(entref.unk18.offset + 0x3f0))?;
+                // let entity_material_map_pre: Vec<(u16, u16)> =
+                //     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x400))?;
+                let materials: Vec<TagHash> =
+                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
+                scene.insert(
+                    scene_entity,
+                    (
+                        DynamicModelComponent::load(
+                            renderer,
+                            &transform,
+                            model_hash,
+                            entity_material_map,
+                            materials,
+                            TfxFeatureRenderer::DynamicObjects,
+                        )?,
+                        TfxFeatureRenderer::DynamicObjects,
+                    ),
+                )?;
+            }
+            u => {
+                debug!(
+                    "\t- Unknown entity resource type {:08X}/{:08X} (table {})",
+                    u.to_be(),
+                    entres.unk10.resource_type.to_be(),
+                    entres.taghash()
+                )
+            }
+        }
+
+        // let mut loaded = FxHashSet::<WideHash>::default();
+        // for r in &entres.resource_table2 {
+        //     if loaded.contains(&r.entity) {
+        //         continue;
+        //     }
+        //     if let Some(entry) = package_manager().get_entry(r.entity.hash32()) {
+        //         match entry.reference {
+        //             0x80809AD8 => {
+        //                 // SEntity::ID
+        //                 if r.entity.is_some() {
+        //                     load_entity_into_scene(
+        //                         r.entity.hash32(),
+        //                         scene,
+        //                         renderer,
+        //                         resource_origin,
+        //                         Some(scene_entity),
+        //                         Transform::default(),
+        //                         None,
+        //                     )?;
+        //                     loaded.insert(r.entity);
+        //                 }
+        //             }
+        //             u => warn!(
+        //                 "Unknown entref type 0x{u:08X} in entity resourc {}",
+        //                 entres.taghash()
+        //             ),
+        //         }
+        //     }
+        // }
+    }
+
+    Ok(scene_entity)
+}
 const FNV1_BASE: u32 = 0x811c9dc5;
 const FNV1_PRIME: u32 = 0x01000193;
 fn fnv1(data: &[u8]) -> FnvHash {
