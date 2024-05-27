@@ -27,6 +27,15 @@ impl GpuContext {
             annotation: self.annotation.clone(),
         }
     }
+
+    pub fn last_device_error(&self) -> Option<String> {
+        unsafe {
+            self.device
+                .GetDeviceRemovedReason()
+                .err()
+                .map(|e| format!("DirectX error: {e:?}"))
+        }
+    }
 }
 
 #[macro_export]

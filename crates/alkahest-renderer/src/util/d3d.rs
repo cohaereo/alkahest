@@ -2,6 +2,8 @@ use windows::Win32::Graphics::{
     Direct3D::WKPDID_D3DDebugObjectName, Direct3D11::ID3D11DeviceChild,
 };
 
+use crate::gpu::GpuContext;
+
 #[inline]
 pub fn calc_dx_subresource(mip_slice: usize, array_slice: usize, mip_levels: usize) -> usize {
     mip_slice + array_slice * mip_levels
@@ -22,6 +24,21 @@ impl D3dResource for ID3D11DeviceChild {
             ) {
                 warn!("Failed to set D3D11 object debug name '{name}': {e:?}");
             }
+        }
+    }
+}
+
+pub trait ErrorExt {
+    /// Append the last device error, if any, to the error chain.
+    fn with_d3d_error(self, gpu: &GpuContext) -> Self;
+}
+
+impl ErrorExt for anyhow::Error {
+    fn with_d3d_error(self, gpu: &GpuContext) -> Self {
+        if let Some(gerr) = gpu.last_device_error() {
+            self.context(gerr)
+        } else {
+            self
         }
     }
 }

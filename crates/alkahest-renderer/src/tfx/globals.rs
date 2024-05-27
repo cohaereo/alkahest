@@ -11,6 +11,7 @@ use crate::{
     gpu::{texture::Texture, GpuContext, SharedGpuContext},
     loaders::technique::load_technique,
     tfx::{scope::TfxScope, technique::Technique},
+    util::d3d::ErrorExt,
 };
 
 pub struct RenderGlobals {
@@ -343,6 +344,7 @@ impl GlobalPipelines {
                     let ptr = f.get_mut::<Box<Technique>>().unwrap() as *mut Box<Technique>;
                     let technique = Box::new(
                         load_technique(gctx.clone(), p.technique)
+                            .map_err(|e| e.with_d3d_error(&gctx))
                             .expect("Failed to load global pipeline technique"),
                     );
 

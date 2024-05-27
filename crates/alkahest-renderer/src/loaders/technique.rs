@@ -62,13 +62,16 @@ fn load_technique_stage(
     let cbuffer = if shader.constants.constant_buffer.is_some() {
         let buffer_header_ref = package_manager()
             .get_entry(shader.constants.constant_buffer)
-            .unwrap()
+            .context("Constant buffer entry not found")?
             .reference;
 
-        let data_raw = package_manager().read_tag(buffer_header_ref).unwrap();
+        let data_raw = package_manager()
+            .read_tag(buffer_header_ref)
+            .context("Failed to read constant buffer data")?;
 
         let data = bytemuck::cast_slice(&data_raw);
-        let buf = ConstantBufferCached::create_array_init(gctx.clone(), data).unwrap();
+        let buf = ConstantBufferCached::create_array_init(gctx.clone(), data)
+            .context("Failed to create constant buffer from data")?;
 
         Some(buf)
     } else if !shader.constants.unk38.is_empty() {
@@ -76,7 +79,7 @@ fn load_technique_stage(
             gctx.clone(),
             bytemuck::cast_slice(&shader.constants.unk38),
         )
-        .unwrap();
+        .context("Failed to create constant buffer from data")?;
 
         Some(buf)
     } else {
@@ -132,7 +135,9 @@ pub fn load_sampler(gctx: &GpuContext, hash: TagHash) -> anyhow::Result<ID3D11Sa
         "Sampler header type mismatch"
     );
     let sampler_header_ref = entry.reference;
-    let sampler_data = package_manager().read_tag(sampler_header_ref).unwrap();
+    let sampler_data = package_manager()
+        .read_tag(sampler_header_ref)
+        .context("Failed to read sampler data")?;
 
     let mut sampler = None;
     unsafe {

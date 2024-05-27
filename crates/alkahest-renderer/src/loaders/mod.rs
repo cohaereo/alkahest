@@ -8,6 +8,7 @@ use crate::{
     handle::{AssetId, AssetIdValue, AssetRegistry, Handle, RawHandle},
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     tfx::technique::Technique,
+    util::d3d::ErrorExt,
 };
 
 pub mod index_buffer;
@@ -144,7 +145,11 @@ impl AssetManager {
                                 self.textures.overwrite(h, t);
                             }
                             Err(e) => {
-                                error!("Failed to load texture {:?}: {:?}", h.id(), e);
+                                error!(
+                                    "Failed to load texture {:?}: {:?}",
+                                    h.id(),
+                                    e.with_d3d_error(&self.gctx)
+                                );
                             }
                         },
                         LoadedAsset::Technique(h, t) => match t {
@@ -162,7 +167,11 @@ impl AssetManager {
                                 self.techniques.overwrite(h, t);
                             }
                             Err(e) => {
-                                error!("Failed to load technique {:?}: {:?}", h.id(), e);
+                                error!(
+                                    "Failed to load technique {:?}: {:?}",
+                                    h.id(),
+                                    e.with_d3d_error(&self.gctx)
+                                );
                             }
                         },
                         LoadedAsset::VertexBuffer(h, vb) => match vb {
@@ -170,7 +179,11 @@ impl AssetManager {
                                 self.vertex_buffers.overwrite(h, vb);
                             }
                             Err(e) => {
-                                error!("Failed to load vertex buffer {:?}: {:?}", h.id(), e);
+                                error!(
+                                    "Failed to load vertex buffer {:?}: {:?}",
+                                    h.id(),
+                                    e.with_d3d_error(&self.gctx)
+                                );
                             }
                         },
                         LoadedAsset::IndexBuffer(h, ib) => match ib {
@@ -178,7 +191,11 @@ impl AssetManager {
                                 self.index_buffers.overwrite(h, ib);
                             }
                             Err(e) => {
-                                error!("Failed to load index buffer {:?}: {:?}", h.id(), e);
+                                error!(
+                                    "Failed to load index buffer {:?}: {:?}",
+                                    h.id(),
+                                    e.with_d3d_error(&self.gctx)
+                                );
                             }
                         },
                     }
@@ -268,7 +285,8 @@ fn load_worker_thread(
                     LoadRequest::Texture(h) => match h.id().value() {
                         AssetIdValue::Alkahest(_e) => {
                             todo!(
-                                "Alkahest handle loading unimplemented (texture handle {:?})",
+                                "Alkahest custom texture loading unimplemented (texture handle \
+                                 {:?})",
                                 h.id()
                             );
                         }
@@ -280,8 +298,8 @@ fn load_worker_thread(
                     LoadRequest::Technique(h) => match h.id().value() {
                         AssetIdValue::Alkahest(_e) => {
                             error!(
-                                "Alkahest technique loading is not supported (technique handle \
-                                 {:?})",
+                                "Alkahest custom technique loading is not supported (technique \
+                                 handle {:?})",
                                 h.id()
                             );
                         }
