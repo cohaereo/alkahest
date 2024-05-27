@@ -1,12 +1,11 @@
 use std::f32::consts::PI;
 
-use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
+use alkahest_data::{geometry::EPrimitiveType, occlusion::AABB, tfx::TfxShaderStage};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
 use glam::{Mat4, Vec3, Vec4};
-use alkahest_data::occlusion::AABB;
 
 use crate::{
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
@@ -299,7 +298,7 @@ impl ImmediateRenderer {
                 .DrawIndexed(self.ib_cube.length as u32, 0, 0);
         }
     }
-    
+
     pub fn cube_outline_aabb<C: Into<Color>>(&self, aabb: &AABB, color: C) {
         let center = aabb.center();
         let extents = aabb.extents();

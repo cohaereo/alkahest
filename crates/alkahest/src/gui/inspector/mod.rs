@@ -5,15 +5,11 @@ mod util;
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{EntityWorldId, Global, Hidden, Icon, Label, Mutable},
-        hierarchy::Parent,
+        common::{EntityWorldId, Global, Hidden, Label, Mutable},
         map::CubemapVolume,
         render::{
-            decorators::DecoratorRenderer,
-            dynamic_geometry::DynamicModelComponent,
-            light::LightRenderer,
-            static_geometry::{StaticInstance, StaticInstances},
-            update_entity_transform,
+            decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
+            light::LightRenderer, update_entity_transform,
         },
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -36,10 +32,9 @@ use crate::{
         hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
         icons::{
             ICON_AXIS_ARROW, ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
-            ICON_EYE_OFF, ICON_HELP, ICON_IDENTIFIER, ICON_RADIUS_OUTLINE, ICON_RESIZE,
-            ICON_ROTATE_ORBIT, ICON_TAG,
+            ICON_EYE_OFF, ICON_IDENTIFIER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT,
+            ICON_TAG,
         },
-        UiExt,
     },
     input_float3,
     maplist::MapList,

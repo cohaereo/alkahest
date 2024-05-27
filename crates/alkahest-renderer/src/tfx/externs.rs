@@ -1,18 +1,14 @@
-use std::{
-    fmt::Debug,
-    mem::transmute,
-    ops::{Add, Mul},
-};
+use std::{fmt::Debug, mem::transmute, ops::Add};
 
 use binrw::binread;
 use field_access::FieldAccess;
-use glam::{Mat3, Mat4, Quat, Vec4, Vec4Swizzles};
+use glam::{Mat3, Mat4, Quat, Vec4};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
-use crate::{camera::Viewport, gpu::texture::Texture, util::short_type_name};
+use crate::{camera::Viewport, util::short_type_name};
 
 #[derive(Default, Clone)]
 pub enum TextureView {
@@ -22,6 +18,8 @@ pub enum TextureView {
     RawSRV(ID3D11ShaderResourceView),
     // Tracked(WeakHandle<Texture>),
 }
+
+pub type UnorderedAccessView = TextureView;
 
 impl TextureView {
     pub fn view(&self) -> Option<ID3D11ShaderResourceView> {
@@ -78,6 +76,7 @@ pub struct ExternStorage {
     pub cubemaps: Option<Cubemaps>,
     pub speedtree_placements: Option<SpeedtreePlacements>,
     pub decorator_wind: Option<DecoratorWind>,
+    pub postprocess: Option<Postprocess>,
 
     pub global_channels: [Vec4; 256],
     pub global_channels_used: RwLock<[usize; 256]>,
@@ -104,6 +103,7 @@ impl Default for ExternStorage {
             cubemaps: None,
             speedtree_placements: None,
             decorator_wind: Some(DecoratorWind::default()),
+            postprocess: None,
 
             global_channels: get_global_channel_defaults(),
             global_channels_used: RwLock::new([0; 256]),
@@ -244,6 +244,7 @@ impl ExternStorage {
             Cubemaps => self.cubemaps,
             SpeedtreePlacements => self.speedtree_placements,
             DecoratorWind => self.decorator_wind,
+            Postprocess => self.postprocess,
         }
     }
 
@@ -279,7 +280,8 @@ impl ExternStorage {
             GlobalLighting,
             Cubemaps,
             SpeedtreePlacements,
-            DecoratorWind
+            DecoratorWind,
+            Postprocess
         }
     }
 
@@ -314,6 +316,7 @@ impl ExternStorage {
             Cubemaps => self.cubemaps,
             SpeedtreePlacements => self.speedtree_placements,
             DecoratorWind => self.decorator_wind,
+            Postprocess => self.postprocess,
         }
     }
 }
@@ -755,6 +758,31 @@ extern_struct! {
 extern_struct! {
     struct DecoratorWind("decorator_wind") {
         0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 0.0, 0.01)),
+    }
+}
+
+extern_struct! {
+    struct Postprocess("postprocess") {
+        0x00 => unk00: TextureView,
+        0x08 => unk08: TextureView,
+        0x10 => unk10: TextureView,
+        0x18 => unk18: TextureView,
+        0x20 => unk20: TextureView,
+        0x28 => unk28: TextureView,
+        0x30 => unk30: UnorderedAccessView,
+        0x38 => unk38: UnorderedAccessView,
+        0x40 => unk40: UnorderedAccessView,
+        0x48 => unk48: UnorderedAccessView,
+        0x50 => unk50: Vec4,
+        0x60 => unk60: Vec4,
+        0x80 => unk80: Vec4,
+        0xc0 => unkc0: Vec4,
+        0xd0 => unkd0: Vec4,
+        0xe0 => unke0: Vec4,
+        0xf0 => unkf0: Vec4,
+        0x100 => unk100: Vec4,
+        0x110 => unk110: Vec4,
+        0x130 => unk130: Vec4,
     }
 }
 

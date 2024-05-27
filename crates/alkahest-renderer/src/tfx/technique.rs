@@ -202,11 +202,11 @@ impl TechniqueStage {
             }
         }
 
-        if let (Some(cbuffer), Some(bytecode)) = (&self.cbuffer, &self.bytecode) {
+        if let Some(bytecode) = &self.bytecode {
             bytecode.evaluate(
                 &renderer.gpu,
                 &renderer.data.lock().externs,
-                cbuffer,
+                self.cbuffer.as_ref(),
                 &self.shader.constants.bytecode_constants,
                 &self.samplers,
             )?;

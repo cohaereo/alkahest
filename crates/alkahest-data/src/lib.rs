@@ -1,6 +1,7 @@
 pub mod activity;
 pub mod buffers;
 pub mod common;
+pub mod decorator;
 pub mod dxgi;
 pub mod entity;
 pub mod geometry;
@@ -15,6 +16,5 @@ pub mod text;
 pub mod texture;
 pub mod tfx;
 pub mod unknown;
-pub mod decorator;
 
 pub use tag::{Tag, WideHash, WideTag};

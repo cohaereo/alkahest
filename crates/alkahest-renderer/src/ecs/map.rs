@@ -1,4 +1,4 @@
-use alkahest_data::{map::SMapAtmosphere, occlusion::AABB};
+use alkahest_data::map::SMapAtmosphere;
 use glam::Vec3;
 
 use crate::{

@@ -23,7 +23,7 @@ impl SceneExt for Scene {
             children.0.push(child);
             return;
         }
-        
+
         self.insert_one(parent, Children(smallvec![child])).unwrap();
     }
 

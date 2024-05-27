@@ -1,6 +1,5 @@
 use alkahest_renderer::renderer::RendererSettings;
 use directories::ProjectDirs;
-use egui::epaint::ahash::HashMap;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 

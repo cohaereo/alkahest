@@ -1,16 +1,9 @@
-use alkahest_data::map::{SLight, SShadowingLight};
 use alkahest_renderer::{
-    ecs::{
-        map::CubemapVolume,
-        render::{decorators::DecoratorRenderer, light::LightRenderer},
-        transform::Transform,
-        Scene,
-    },
-    icons::{ICON_LIGHTBULB_ON, ICON_TREE},
+    ecs::{render::decorators::DecoratorRenderer, Scene},
+    icons::ICON_TREE,
     renderer::RendererShared,
-    util::color::Color,
 };
-use egui::{Color32, Key, RichText, Ui};
+use egui::{Color32, Ui};
 use hecs::EntityRef;
 
 use crate::{gui::inspector::ComponentPanel, resources::Resources};

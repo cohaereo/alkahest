@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use destiny_pkg::TagHash;
-use tiger_parse::{tiger_tag, FnvHash, NullString, Pointer, PointerOptional, ResourcePointer};
+use tiger_parse::{tiger_tag, FnvHash, NullString, Pointer, PointerOptional};
 
 use super::geometry::{ELodCategory, EPrimitiveType};
 use crate::{activity::SEntityResource, tfx::TfxRenderStage, Tag};

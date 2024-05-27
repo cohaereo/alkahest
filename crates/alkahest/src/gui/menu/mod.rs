@@ -27,7 +27,6 @@ use crate::{
     gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
     resources::Resources,
-    updater::UpdateChannel,
     util::{consts, consts::CHANGELOG_MD},
 };
 

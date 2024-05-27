@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     io::{Cursor, Read, Seek, SeekFrom},
     ops::Deref,
 };
@@ -13,15 +12,14 @@ use alkahest_data::{
         SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
         SShadowingLight, Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b, Unk80808cb7,
     },
-    occlusion::AABB,
     tfx::TfxFeatureRenderer,
-    Tag, WideHash,
+    Tag,
 };
 use alkahest_pm::package_manager;
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
-use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Quat, Vec3, Vec4Swizzles};
 use hecs::{DynamicBundle, Entity};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -50,7 +48,7 @@ use crate::{
         ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
-    util::{scene::SceneExt, StringExt},
+    util::{scene::SceneExt, text::StringExt},
 };
 
 pub async fn load_map(
@@ -169,7 +167,7 @@ pub async fn load_map(
         }
     }
 
-    let mut unknown_res_types: FxHashSet<u32> = Default::default();
+    let _unknown_res_types: FxHashSet<u32> = Default::default();
     let mut phase_entities = FxHashMap::<ResourceHash, Entity>::default();
     for (e, phase_name2, origin) in activity_entrefs {
         let parent_entity = *phase_entities.entry(phase_name2).or_insert_with(|| {
@@ -396,7 +394,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         let entity = scene.spawn((
                             Icon(ICON_CUBE_OUTLINE),
                             Label::from("Static Instance"),
-                            OriginalTransform(transform.clone()),
+                            OriginalTransform(transform),
                             transform,
                             StaticInstance,
                             Parent(parent),
@@ -794,7 +792,7 @@ fn spawn_data_entity(
     if let Some(parent) = parent {
         scene.set_parent(child, parent);
     }
-    if let Ok(transform) = scene.get::<&Transform>(child).map(|t| t.deref().clone()) {
+    if let Ok(transform) = scene.get::<&Transform>(child).map(|t| *t.deref()) {
         scene
             .insert_one(child, OriginalTransform(transform))
             .unwrap();

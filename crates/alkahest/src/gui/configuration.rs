@@ -1,8 +1,10 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
-    renderer::{RendererSettings, RendererShared},
+    renderer::{RenderDebugView, RendererSettings, RendererShared},
+    util::text::StringExt,
 };
 use egui::{Context, RichText, Widget};
+use strum::IntoEnumIterator;
 use winit::window::Window;
 
 use crate::{
@@ -30,6 +32,18 @@ impl GuiView for RenderSettingsPanel {
             ui.checkbox(&mut settings.shadows, "Shadows");
             ui.checkbox(&mut settings.decorators, "Decorators");
             ui.checkbox(&mut settings.cubemaps, "Cubemaps");
+
+            egui::ComboBox::from_label("Debug View")
+                .selected_text(settings.debug_view.to_string().split_pascalcase())
+                .show_ui(ui, |ui| {
+                    for view in RenderDebugView::iter() {
+                        ui.selectable_value(
+                            &mut settings.debug_view,
+                            view,
+                            view.to_string().split_pascalcase(),
+                        );
+                    }
+                });
 
             let renderer = resources.get::<RendererShared>();
             renderer.set_render_settings(settings.clone());

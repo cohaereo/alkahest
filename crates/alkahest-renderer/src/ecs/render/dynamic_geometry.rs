@@ -164,7 +164,7 @@ impl DynamicModel {
             renderer,
             render_stage,
             identifier,
-            |_, renderer, mesh, part| unsafe {
+            |_, renderer, _mesh, part| unsafe {
                 renderer
                     .gpu
                     .context()

@@ -1,7 +1,4 @@
-use std::{
-    mem::size_of,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::mem::size_of;
 
 use alkahest_data::{
     dxgi::DxgiFormat,
@@ -170,10 +167,7 @@ impl Pickbuffer {
                 "Entity_Pickbuffer_Staging",
             )
             .context("Entity_Pickbuffer_Staging")?,
-            static_instance_cb: ConstantBuffer::create_array_init(
-                gctx.clone(),
-                &vec![0u8; 32 + 64],
-            )?,
+            static_instance_cb: ConstantBuffer::create_array_init(gctx.clone(), &[0u8; 32 + 64])?,
 
             outline_vs,
             outline_ps,

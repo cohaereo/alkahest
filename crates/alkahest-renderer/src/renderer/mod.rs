@@ -11,11 +11,11 @@ mod transparents_pass;
 
 use std::{sync::Arc, time::Instant};
 
-use alkahest_data::tfx::TfxShaderStage;
+use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage};
 use anyhow::Context;
-use hecs::Entity;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
+use strum::{EnumCount, EnumIter};
 use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
@@ -152,10 +152,46 @@ impl Renderer {
             }
         }
 
-        self.gpu.blit_texture(
-            &self.data.lock().gbuffers.shading_result.view,
-            self.gpu.swapchain_target.read().as_ref().unwrap(),
-        );
+        unsafe {
+            {
+                let mut data = self.data.lock();
+                data.externs.postprocess = Some(externs::Postprocess {
+                    unk00: data.gbuffers.shading_result_read.view.clone().into(),
+                    ..Default::default()
+                });
+            }
+
+            gpu_event!(self.gpu, "final_or_debug_view");
+            let pipeline = self
+                .render_globals
+                .pipelines
+                .get_debug_view_pipeline(self.render_settings.debug_view);
+            if let Err(e) = pipeline.bind(self) {
+                error!("Failed to run deferred_shading: {e}");
+                return;
+            }
+
+            self.gpu.context().OMSetRenderTargets(
+                Some(&[Some(
+                    self.gpu.swapchain_target.read().as_ref().unwrap().clone(),
+                )]),
+                None,
+            );
+
+            // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
+            self.gpu
+                .current_states
+                .store(StateSelection::new(Some(0), Some(0), Some(0), Some(0)));
+            self.gpu.flush_states();
+            self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
+
+            // TODO(cohae): 4 vertices doesn't work...
+            self.gpu.context().Draw(6, 0);
+        }
+        // self.gpu.blit_texture(
+        //     &self.data.lock().gbuffers.shading_result.view,
+        //     self.gpu.swapchain_target.read().as_ref().unwrap(),
+        // );
 
         {
             let data = self.data.lock();
@@ -302,6 +338,8 @@ pub struct RendererSettings {
     pub shadow_updates_per_frame: usize,
     pub decorators: bool,
     pub cubemaps: bool,
+
+    pub debug_view: RenderDebugView,
 }
 
 impl Default for RendererSettings {
@@ -315,6 +353,43 @@ impl Default for RendererSettings {
             shadow_updates_per_frame: 2,
             decorators: true,
             cubemaps: false,
+            debug_view: RenderDebugView::None,
         }
     }
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter, strum::Display, EnumCount,
+)]
+pub enum RenderDebugView {
+    None,
+
+    GbufferValidation,
+    SourceColor,
+    Normal,
+    NormalEdges,
+    Metalness,
+    AmbientOcclusion,
+    TextureAo,
+
+    ColoredOvercoatId,
+    ColoredOvercoat,
+
+    DiffuseColor,
+    DiffuseLight,
+    SpecularColor,
+    SpecularLight,
+    SpecularOcclusion,
+    SpecularSmoothness,
+
+    Emissive,
+    EmissiveIntensity,
+    EmissiveLuminance,
+
+    GreyDiffuse,
+
+    Depth,
+    DepthEdges,
+    DepthGradient,
+    DepthWalkable,
 }

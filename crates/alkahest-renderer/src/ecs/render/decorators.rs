@@ -70,7 +70,7 @@ impl DecoratorRenderer {
             models.push((model, ext, speedtree_cbuffer));
         }
 
-        ensure!(models.len() >= 1, "No models found in decorator");
+        ensure!(!models.is_empty(), "No models found in decorator");
 
         if models.len() > 1 {
             // anyhow::bail!("Decorators with more than one model are not supported yet");

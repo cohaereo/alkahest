@@ -2,7 +2,6 @@ use std::io::Cursor;
 
 use alkahest_data::{
     geometry::EPrimitiveType,
-    technique::StateSelection,
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use glam::{Mat4, Vec3, Vec4};
@@ -12,9 +11,8 @@ use crate::{
     ecs::{transform::Transform, Scene},
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt},
     gpu_event, include_dxbc,
-    loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
+    loaders::vertex_buffer::VertexBuffer,
     renderer::Renderer,
-    tfx::technique::ShaderModule,
 };
 
 #[repr(C)]

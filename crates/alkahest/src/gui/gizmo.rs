@@ -1,14 +1,13 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{render::update_entity_transform, resources::SelectedEntity, transform::Transform},
-    renderer::{Renderer, RendererShared},
+    renderer::Renderer,
     resources::Resources,
 };
-use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rect, Rgba};
+use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba};
 use glam::{DQuat, DVec3};
 use transform_gizmo_egui::{
-    enum_set, math::Transform as GTransform, Gizmo, GizmoConfig, GizmoInteraction, GizmoMode,
-    GizmoOrientation, GizmoResult,
+    math::Transform as GTransform, Gizmo, GizmoConfig, GizmoInteraction, GizmoResult,
 };
 
 use crate::maplist::MapList;

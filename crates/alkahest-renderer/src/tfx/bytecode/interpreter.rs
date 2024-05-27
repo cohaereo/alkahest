@@ -33,7 +33,7 @@ impl TfxBytecodeInterpreter {
         &self,
         gctx: &GpuContext,
         externs: &ExternStorage,
-        buffer: &ConstantBufferCached<Vec4>,
+        buffer: Option<&ConstantBufferCached<Vec4>>,
         constants: &[Vec4],
         samplers: &[Option<ID3D11SamplerState>],
     ) -> anyhow::Result<()> {
@@ -41,7 +41,7 @@ impl TfxBytecodeInterpreter {
         let mut stack: SmallVec<[Vec4; 64]> = Default::default();
         let mut temp = [Vec4::ZERO; 16];
 
-        let buffer_map = buffer.data_array();
+        let mut buffer_map = buffer.map(|b| b.data_array());
 
         macro_rules! stack_pop {
             ($pops:literal) => {{
@@ -269,7 +269,7 @@ impl TfxBytecodeInterpreter {
                     stack_push!(mat.mul_vec4(value));
                 }
 
-                TfxBytecodeOp::PushObjectChannelVector { ..} => {
+                TfxBytecodeOp::PushObjectChannelVector { .. } => {
                     stack_push!(Vec4::ONE)
                 }
                 &TfxBytecodeOp::Unk4c { unk1, .. }
@@ -361,31 +361,37 @@ impl TfxBytecodeInterpreter {
                     stack_push!(t1.max(t0))
                 }
                 TfxBytecodeOp::PushFromOutput { element } => {
-                    anyhow::ensure!(
-                        (*element as usize) < buffer_map.len(),
-                        "Push from output element is out of range"
-                    );
+                    if let Some(buffer_map) = &mut buffer_map {
+                        anyhow::ensure!(
+                            (*element as usize) < buffer_map.len(),
+                            "Push from output element is out of range"
+                        );
 
-                    stack_push!(buffer_map[*element as usize]);
+                        stack_push!(buffer_map[*element as usize]);
+                    }
                 }
                 TfxBytecodeOp::PopOutput { element } => {
-                    anyhow::ensure!(
-                        (*element as usize) < buffer_map.len(),
-                        "Pop output element is out of range"
-                    );
+                    if let Some(buffer_map) = &mut buffer_map {
+                        anyhow::ensure!(
+                            (*element as usize) < buffer_map.len(),
+                            "Pop output element is out of range"
+                        );
 
-                    buffer_map[*element as usize] = stack_pop!(1)[0];
+                        buffer_map[*element as usize] = stack_pop!(1)[0];
+                    }
                 }
                 TfxBytecodeOp::PopOutputMat4 { element } => {
-                    anyhow::ensure!(
-                        (*element as usize + 3) < buffer_map.len(),
-                        "Pop output mat4 element is out of range"
-                    );
+                    if let Some(buffer_map) = &mut buffer_map {
+                        anyhow::ensure!(
+                            (*element as usize + 3) < buffer_map.len(),
+                            "Pop output mat4 element is out of range"
+                        );
 
-                    let [x_axis, y_axis, z_axis, w_axis] = stack_pop!(4);
+                        let [x_axis, y_axis, z_axis, w_axis] = stack_pop!(4);
 
-                    let start = *element as usize;
-                    buffer_map[start..start + 4].copy_from_slice(&[x_axis, y_axis, z_axis, w_axis]);
+                        let start = *element as usize;
+                        buffer_map[start..start + 4].copy_from_slice(&[x_axis, y_axis, z_axis, w_axis]);
+                    }
                 }
                 TfxBytecodeOp::PushTemp { slot } => {
                     let slotu = *slot as usize;

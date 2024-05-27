@@ -10,6 +10,7 @@ use tiger_parse::PackageManagerExt;
 use crate::{
     gpu::{texture::Texture, GpuContext, SharedGpuContext},
     loaders::technique::load_technique,
+    renderer::RenderDebugView,
     tfx::{scope::TfxScope, technique::Technique},
     util::d3d::ErrorExt,
 };
@@ -136,7 +137,7 @@ impl GlobalScopes {
                             TfxScope::load(
                                 package_manager()
                                     .read_tag_struct(p.scope)
-                                    .expect(&format!("Failed to read scope {name}")),
+                                    .unwrap_or_else(|_| panic!("Failed to read scope {name}")),
                                 gctx.clone(),
                             )
                             .expect("Failed to load scope"),
@@ -170,6 +171,8 @@ pub struct GlobalPipelines {
     // pub global_lighting_masked_sun_and_shading: Box<Technique>,
     // pub global_lighting_masked_sun_gel: Box<Technique>,
     // pub global_lighting_masked_sun: Box<Technique>,
+    pub final_combine_no_film_curve: Box<Technique>,
+    pub final_combine: Box<Technique>,
 
     // Post
     pub hdao: Box<Technique>,
@@ -447,5 +450,34 @@ impl GlobalPipelines {
         let relighting_index = if relighting { 1 } else { 0 };
 
         pipeline_list[shape_index * 8 + alpha_index * 4 + probes_index * 2 + relighting_index]
+    }
+
+    pub fn get_debug_view_pipeline(&self, view: RenderDebugView) -> &Technique {
+        match view {
+            RenderDebugView::None => &self.final_combine,
+            RenderDebugView::GbufferValidation => &self.debug_gbuffer_validation,
+            RenderDebugView::SourceColor => &self.debug_source_color,
+            RenderDebugView::Normal => &self.debug_world_normal,
+            RenderDebugView::NormalEdges => &self.debug_normal_edges,
+            RenderDebugView::Metalness => &self.debug_metalness,
+            RenderDebugView::AmbientOcclusion => &self.debug_ambient_occlusion,
+            RenderDebugView::TextureAo => &self.debug_texture_ao,
+            RenderDebugView::ColoredOvercoatId => &self.debug_colored_overcoat_id,
+            RenderDebugView::ColoredOvercoat => &self.debug_colored_overcoat,
+            RenderDebugView::DiffuseColor => &self.debug_diffuse_color,
+            RenderDebugView::DiffuseLight => &self.debug_diffuse_light,
+            RenderDebugView::SpecularColor => &self.debug_specular_color,
+            RenderDebugView::SpecularLight => &self.debug_specular_light,
+            RenderDebugView::SpecularOcclusion => &self.debug_specular_occlusion,
+            RenderDebugView::SpecularSmoothness => &self.debug_specular_smoothness,
+            RenderDebugView::Emissive => &self.debug_emissive,
+            RenderDebugView::EmissiveIntensity => &self.debug_emissive_intensity,
+            RenderDebugView::EmissiveLuminance => &self.debug_emissive_luminance,
+            RenderDebugView::GreyDiffuse => &self.debug_grey_diffuse,
+            RenderDebugView::Depth => &self.debug_depth,
+            RenderDebugView::DepthEdges => &self.debug_depth_edges,
+            RenderDebugView::DepthGradient => &self.debug_depth_gradient,
+            RenderDebugView::DepthWalkable => &self.debug_depth_walkable,
+        }
     }
 }

@@ -1,4 +1,4 @@
-use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage};
+use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -8,11 +8,11 @@ use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader
 
 use crate::{
     ecs::{map::CubemapVolume, transform::Transform, Scene},
-    gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, util::DxDeviceExt, SharedGpuContext},
     include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::Renderer,
-    tfx::{externs, globals::CubemapShape},
+    tfx::externs,
 };
 
 pub fn draw_cubemap_system(renderer: &Renderer, scene: &Scene) {
@@ -131,8 +131,7 @@ impl CubemapRenderer {
                 let diffuse_ibl = cubemap
                     .voxel_diffuse
                     .as_ref()
-                    .map(|t| data.asset_manager.textures.get(t).map(|v| v.view.clone()))
-                    .flatten();
+                    .and_then(|t| data.asset_manager.textures.get(t).map(|v| v.view.clone()));
 
                 renderer.gpu.context().PSSetShaderResources(
                     0,

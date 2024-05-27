@@ -4,6 +4,7 @@ pub mod image;
 pub mod math;
 pub mod packages;
 pub mod scene;
+pub mod text;
 
 use std::any::Any;
 
@@ -24,19 +25,5 @@ impl<T> Hocus for T {
     #[allow(invalid_reference_casting, clippy::mut_from_ref)]
     fn pocus(&self) -> &mut T {
         unsafe { &mut *(self as *const _ as *mut _) }
-    }
-}
-
-pub trait StringExt {
-    fn truncate_ellipsis(&self, max_len: usize) -> String;
-}
-
-impl StringExt for String {
-    fn truncate_ellipsis(&self, max_len: usize) -> String {
-        if self.len() > max_len {
-            format!("{}...", &self[..max_len - 3])
-        } else {
-            self.clone()
-        }
     }
 }

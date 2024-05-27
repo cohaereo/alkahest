@@ -21,7 +21,7 @@ use crate::{
     gui::{
         chip::EcsTagsExt,
         context::{GuiCtx, GuiView, ViewResult},
-        icons::{ICON_DELETE, ICON_EYE_OFF, ICON_HELP_CIRCLE},
+        icons::{ICON_DELETE, ICON_EYE_OFF},
     },
     maplist::{Map, MapList},
     util::text::{alk_color_to_egui, prettify_distance},

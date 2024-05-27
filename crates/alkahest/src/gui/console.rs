@@ -16,8 +16,7 @@ use alkahest_renderer::{
     ecs::{
         common::{Hidden, Icon, Label, Mutable},
         render::dynamic_geometry::DynamicModelComponent,
-        resources::SelectedEntity,
-        tags::{EntityTag, EntityTag::Global, Tags},
+        tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
     },
     icons::ICON_CUBE,
