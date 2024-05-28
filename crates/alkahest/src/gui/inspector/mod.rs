@@ -520,8 +520,8 @@ impl ComponentPanel for ShaderBallComponent {
             egui::Slider::new(&mut self.metalness, 0.0..=1.0).ui(ui);
         });
         ui.horizontal(|ui| {
-            ui.strong("Smoothness:");
-            egui::Slider::new(&mut self.smoothness, 0.0..=1.0).ui(ui);
+            ui.strong("Fuzz/Smoothness:");
+            egui::Slider::new(&mut self.smoothness, -1.0..=1.0).ui(ui);
         });
         ui.horizontal(|ui| {
             ui.strong("Transmission:");
