@@ -208,7 +208,7 @@ pub struct AssetRegistry<T: Asset> {
     next_id: usize,
 }
 
-impl<T: Asset> AssetRegistry<T> {
+impl<T: Asset + 'static> AssetRegistry<T> {
     // pub fn reserve_handle(&mut self) -> Handle<T> {
     //     let id = self.next_id;
     //     self.next_id += 1;
@@ -221,10 +221,10 @@ impl<T: Asset> AssetRegistry<T> {
 
     /// Reserve handle or return the existing handle if it already exists
     pub fn get_handle_tiger(&mut self, taghash: TagHash) -> Handle<T> {
-        let id = AssetId::new_tiger(taghash);
         if taghash.is_none() {
             return Handle::none();
         }
+        let id = AssetId::new_tiger(taghash);
 
         if let Some(h) = self.handle_map.get(&id).and_then(|h| h.refcount.upgrade()) {
             Handle {
@@ -298,12 +298,20 @@ impl<T: Asset> AssetRegistry<T> {
     }
 
     pub fn get(&self, handle: &Handle<T>) -> Option<&T> {
+        if handle.is_none() {
+            return None;
+        }
+
         self.handle_map
             .get(&handle.id)
             .and_then(|storage| storage.asset.as_ref().map(|v| v.as_ref()))
     }
 
     pub fn get_shared(&self, handle: &Handle<T>) -> Option<Arc<T>> {
+        if handle.is_none() {
+            return None;
+        }
+
         self.handle_map
             .get(&handle.id)
             .and_then(|storage| storage.asset.clone())

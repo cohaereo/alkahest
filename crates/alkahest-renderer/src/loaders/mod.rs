@@ -128,6 +128,16 @@ impl AssetManager {
             debug!("Polling asset manager ({} assets to process)", budget);
         }
 
+        let mut total_removed = 0;
+        total_removed += self.textures.remove_all_dead();
+        total_removed += self.techniques.remove_all_dead();
+        total_removed += self.vertex_buffers.remove_all_dead();
+        total_removed += self.index_buffers.remove_all_dead();
+
+        if total_removed > 0 {
+            info!("Removed {} dead assets", total_removed);
+        }
+
         while budget > 0 {
             match self.asset_rx.try_recv() {
                 Ok(asset) => {
@@ -204,16 +214,6 @@ impl AssetManager {
             }
 
             budget -= 1;
-        }
-
-        let mut total_removed = 0;
-        total_removed += self.textures.remove_all_dead();
-        total_removed += self.techniques.remove_all_dead();
-        total_removed += self.vertex_buffers.remove_all_dead();
-        total_removed += self.index_buffers.remove_all_dead();
-
-        if total_removed > 0 {
-            info!("Removed {} dead assets", total_removed);
         }
     }
 
