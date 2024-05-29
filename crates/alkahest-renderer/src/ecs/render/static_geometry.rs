@@ -364,6 +364,10 @@ pub fn draw_static_instances_system(
     scene: &Scene,
     render_stage: TfxRenderStage,
 ) {
+    if !renderer.render_settings.feature_statics {
+        return;
+    }
+
     profiling::scope!(
         "draw_static_instances_system",
         &format!("render_stage={render_stage:?}")
@@ -396,6 +400,10 @@ pub fn draw_static_instances_individual_system(
     cbuffer: &ConstantBuffer<u8>,
     render_stage: TfxRenderStage,
 ) {
+    if !renderer.render_settings.feature_statics {
+        return;
+    }
+
     profiling::scope!(
         "draw_static_instances_individual_system",
         &format!("render_stage={render_stage:?}")

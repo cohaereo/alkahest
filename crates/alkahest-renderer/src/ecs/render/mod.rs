@@ -27,6 +27,7 @@ pub mod static_geometry;
 pub mod terrain;
 
 /// Draw a specific entity. Only works for entities with geometry, but not screen-space decals, lights, etc
+/// Ignores the renderer's feature visibility settings
 pub fn draw_entity(
     scene: &Scene,
     entity: Entity,

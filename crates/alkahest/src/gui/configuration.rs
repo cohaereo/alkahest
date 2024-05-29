@@ -27,11 +27,8 @@ impl GuiView for RenderSettingsPanel {
             let mut settings = resources.get_mut::<RendererSettings>();
             ui.checkbox(&mut settings.vsync, "VSync");
             ui.checkbox(&mut settings.ssao, "SSAO");
-            ui.checkbox(&mut settings.atmosphere, "Atmosphere");
             ui.checkbox(&mut settings.matcap, "Matcap");
             ui.checkbox(&mut settings.shadows, "Shadows");
-            ui.checkbox(&mut settings.decorators, "Decorators");
-            ui.checkbox(&mut settings.cubemaps, "Cubemaps");
 
             egui::ComboBox::from_label("Debug View")
                 .selected_text(settings.debug_view.to_string().split_pascalcase())
@@ -45,8 +42,21 @@ impl GuiView for RenderSettingsPanel {
                     }
                 });
 
-            let renderer = resources.get::<RendererShared>();
-            renderer.set_render_settings(settings.clone());
+            ui.separator();
+            ui.heading("Feature Renderers");
+            ui.checkbox(&mut settings.feature_statics, "Statics");
+            ui.checkbox(&mut settings.feature_terrain, "Terrain");
+            ui.checkbox(&mut settings.feature_dynamics, "Dynamics");
+            ui.checkbox(&mut settings.feature_sky, "Sky Objects");
+            ui.checkbox(&mut settings.feature_decorators, "Trees/Decorators");
+            ui.checkbox(&mut settings.feature_atmosphere, "Atmosphere");
+            ui.checkbox(&mut settings.feature_cubemaps, "Cubemaps");
+
+            resources
+                .get::<RendererShared>()
+                .set_render_settings(settings.clone());
+
+            ui.separator();
 
             let mut camera = resources.get_mut::<Camera>();
             ui.heading("Camera");

@@ -347,6 +347,18 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
             continue;
         }
 
+        if !renderer.render_settings.feature_sky
+            && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
+        {
+            continue;
+        }
+
+        if !renderer.render_settings.feature_dynamics
+            && matches!(dynamic.model.feature_type, TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects)
+        {
+            continue;
+        }
+
         entities.push((e, dynamic.model.feature_type));
     }
 
@@ -365,7 +377,7 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         });
     }
 
-    if renderer.render_settings.decorators {
+    if renderer.render_settings.feature_decorators {
         for (e, decorator) in scene
             .query::<&DecoratorRenderer>()
             .without::<&Hidden>()

@@ -184,6 +184,10 @@ pub fn draw_terrain_patches_system(
     scene: &hecs::World,
     render_stage: TfxRenderStage,
 ) {
+    if !renderer.render_settings.feature_terrain {
+        return;
+    }
+
     for (e, (terrain,)) in scene.query::<(&TerrainPatches,)>().iter() {
         renderer.pickbuffer.with_entity(e, || {
             terrain.draw(renderer, render_stage);

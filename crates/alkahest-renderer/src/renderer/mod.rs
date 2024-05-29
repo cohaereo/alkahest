@@ -342,12 +342,17 @@ impl Renderer {
 pub struct RendererSettings {
     pub vsync: bool,
     pub ssao: bool,
-    pub atmosphere: bool,
     pub matcap: bool,
     pub shadows: bool,
     pub shadow_updates_per_frame: usize,
-    pub decorators: bool,
-    pub cubemaps: bool,
+
+    pub feature_statics: bool,
+    pub feature_terrain: bool,
+    pub feature_dynamics: bool,
+    pub feature_sky: bool,
+    pub feature_decorators: bool,
+    pub feature_atmosphere: bool,
+    pub feature_cubemaps: bool,
 
     pub debug_view: RenderDebugView,
 }
@@ -357,12 +362,18 @@ impl Default for RendererSettings {
         Self {
             vsync: true,
             ssao: true,
-            atmosphere: false,
             matcap: false,
             shadows: true,
             shadow_updates_per_frame: 2,
-            decorators: true,
-            cubemaps: false,
+
+            feature_statics: true,
+            feature_terrain: true,
+            feature_dynamics: true,
+            feature_sky: true,
+            feature_decorators: true,
+            feature_atmosphere: false,
+            feature_cubemaps: false,
+
             debug_view: RenderDebugView::None,
         }
     }

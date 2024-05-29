@@ -47,7 +47,7 @@ impl Renderer {
                     draw_light_system(self, scene)
                 }
 
-                if self.render_settings.cubemaps {
+                if self.render_settings.feature_cubemaps {
                     unsafe {
                         let data = &mut self.data.lock();
                         self.gpu.context().OMSetRenderTargets(
@@ -117,7 +117,7 @@ impl Renderer {
         unsafe {
             gpu_event!(self.gpu, "deferred_shading");
             let pipeline = if scene.query::<&MapAtmosphere>().iter().next().is_some()
-                && self.render_settings.atmosphere
+                && self.render_settings.feature_atmosphere
             {
                 &self.render_globals.pipelines.deferred_shading
             } else {
