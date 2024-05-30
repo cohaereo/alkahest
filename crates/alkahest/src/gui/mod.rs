@@ -20,6 +20,8 @@ mod menu;
 mod outliner;
 mod util;
 
+pub use configuration::SelectionGizmoMode;
+
 pub trait UiExt {
     fn chip(&mut self, label: impl AsRef<str>) -> Response;
 

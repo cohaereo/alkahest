@@ -5,6 +5,7 @@ use alkahest_renderer::{
 };
 use egui::{Context, RichText, Widget};
 use strum::IntoEnumIterator;
+use transform_gizmo_egui::{EnumSet, GizmoMode};
 use winit::window::Window;
 
 use crate::{
@@ -97,5 +98,25 @@ impl GuiView for RenderSettingsPanel {
         });
 
         None
+    }
+}
+
+#[derive(Default, PartialEq)]
+pub enum SelectionGizmoMode {
+    #[default]
+    Select,
+    Translate,
+    Rotate,
+    Scale,
+}
+
+impl SelectionGizmoMode {
+    pub fn to_enumset(&self) -> EnumSet<GizmoMode> {
+        match self {
+            SelectionGizmoMode::Select => EnumSet::empty(),
+            SelectionGizmoMode::Translate => EnumSet::only(GizmoMode::Translate),
+            SelectionGizmoMode::Rotate => EnumSet::only(GizmoMode::Rotate),
+            SelectionGizmoMode::Scale => EnumSet::only(GizmoMode::Scale),
+        }
     }
 }

@@ -27,6 +27,7 @@ use crate::{
         activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager},
         gizmo::draw_transform_gizmos,
+        SelectionGizmoMode,
     },
     maplist::MapList,
     resources::Resources,
@@ -84,6 +85,7 @@ impl AlkahestApp {
         resources.insert(args);
         resources.insert(config!().renderer.clone());
         resources.insert(MapList::default());
+        resources.insert(SelectionGizmoMode::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),

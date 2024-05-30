@@ -10,12 +10,23 @@ use transform_gizmo_egui::{
     math::Transform as GTransform, Gizmo, GizmoConfig, GizmoInteraction, GizmoResult,
 };
 
-use crate::maplist::MapList;
+use crate::{gui::configuration::SelectionGizmoMode, maplist::MapList};
 
 pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &Resources) {
     let Some(selected) = resources.get::<SelectedEntity>().selected() else {
         return;
     };
+
+    let mut gizmo_mode = resources.get_mut::<SelectionGizmoMode>();
+    if ctx.input(|i| i.key_pressed(egui::Key::Num1)) {
+        *gizmo_mode = SelectionGizmoMode::Select;
+    } else if ctx.input(|i| i.key_pressed(egui::Key::Num2)) {
+        *gizmo_mode = SelectionGizmoMode::Translate;
+    } else if ctx.input(|i| i.key_pressed(egui::Key::Num3)) {
+        *gizmo_mode = SelectionGizmoMode::Rotate;
+    } else if ctx.input(|i| i.key_pressed(egui::Key::Num4)) {
+        *gizmo_mode = SelectionGizmoMode::Scale;
+    }
 
     let maplist = resources.get::<MapList>();
     if let Some(map) = maplist.current_map() {
@@ -29,6 +40,7 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
         gizmo.update_config(GizmoConfig {
             view_matrix: camera.world_to_camera.as_dmat4().into(),
             projection_matrix: camera.camera_to_projective.as_dmat4().into(),
+            modes: gizmo_mode.to_enumset(),
             ..old_config
         });
 
