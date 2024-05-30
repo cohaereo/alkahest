@@ -967,5 +967,8 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     channels[98] = Vec4::ZERO;
     channels[100] = Vec4::ZERO;
 
+    // Misc lights
+    channels[131] = Vec4::new(0.5, 0.0, 0.0, 0.0); // Seems related to line lights
+
     channels
 }
