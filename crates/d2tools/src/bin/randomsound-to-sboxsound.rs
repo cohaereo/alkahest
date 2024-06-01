@@ -3,7 +3,7 @@ extern crate log;
 
 use std::sync::Arc;
 
-use alkahest_data::sound::SRandomSound;
+use alkahest_data::sound::SSoundCollection;
 use alkahest_pm::{package_manager, PACKAGE_MANAGER};
 use anyhow::Context;
 use clap::Parser;
@@ -40,7 +40,7 @@ fn main() -> anyhow::Result<()> {
         let hash = TagHash(u32::from_be(
             u32::from_str_radix(hash, 16).context("Invalid hash format")?,
         ));
-        let randomsound: SRandomSound = package_manager().read_tag_struct(hash)?;
+        let randomsound: SSoundCollection = package_manager().read_tag_struct(hash)?;
         info!(
             "Extracting RandomSound {}, {} streams",
             hash,

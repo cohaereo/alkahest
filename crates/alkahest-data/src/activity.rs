@@ -168,7 +168,8 @@ pub struct Unk80808cef {
 #[derive(Debug, Clone)]
 #[tiger_tag(id = 0xffffffff)]
 pub struct SEntityRef {
-    pub entity: WideHash,
+    /// SEntity, SSoundCollection
+    pub unk0: WideHash,
     pub unk10: u32,
     pub unk14: u32,
 }

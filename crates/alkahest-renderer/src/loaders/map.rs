@@ -13,7 +13,7 @@ use alkahest_data::{
         SShadowingLight, Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b, Unk80808cb7,
     },
     tfx::TfxFeatureRenderer,
-    Tag,
+    Tag, WideHash,
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
@@ -21,7 +21,7 @@ use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec3, Vec4Swizzles};
 use hecs::{DynamicBundle, Entity};
-use itertools::{multizip, Itertools};
+use itertools::{any, multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
 
@@ -286,29 +286,24 @@ pub async fn load_map(
                     .context("Failed to load AB atatable")?;
                 }
 
-                // if origin != ResourceOrigin::Ambient {
-                //     for r in &res.resource_table2 {
-                //         if r.entity.is_some() {
-                //             if let Some(entry) = package_manager().get_entry(r.entity.hash32()) {
-                //                 match entry.reference {
-                //                     0x80809AD8 => {
-                //                         // SEntity::ID
-                //                         load_entity_into_scene(
-                //                             r.entity.hash32(),
-                //                             &mut scene,
-                //                             &renderer,
-                //                             origin,
-                //                             None,
-                //                             Transform::default(),
-                //                             None,
-                //                         )?;
-                //                     }
-                //                     u => warn!("Unknown entref type 0x{u:08X}"),
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
+                if origin != ResourceOrigin::Ambient {
+                    for r in &res.resource_table2 {
+                        println!("{} - {:08X}", r.unk0.hash32(), r.unk14);
+                        if r.unk14 != 0xFFFFFFFF && r.unk0.is_some() {
+                            // SEntity::ID
+                            load_entity_into_scene(
+                                r.unk0.hash32(),
+                                &mut scene,
+                                &renderer,
+                                origin,
+                                None,
+                                Transform::default(),
+                                None,
+                                0,
+                            )?;
+                        }
+                    }
+                }
             } else {
                 warn!("null entity resource tag in {}", resource.taghash());
             }
@@ -774,6 +769,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     parent_entity,
                     transform,
                     if u != u32::MAX { Some(u) } else { None },
+                    0,
                 )
                 .ok();
             }
@@ -861,12 +857,26 @@ fn load_entity_into_scene(
     parent_entity: Option<Entity>,
     transform: Transform,
     u: Option<u32>,
+    depth: usize,
 ) -> anyhow::Result<Entity> {
+    // println!("{entity_hash} depth={depth}");
+    // TODO(cohae): Shouldnt be possible, but happens anyways on certain maps like heaven/hell
+    if depth > 8 {
+        error!("Entity recursion depth exceeded for entity_hash={entity_hash}");
+        return Err(anyhow::anyhow!("Entity recursion depth limit exceeded"));
+    }
+
+    if package_manager()
+        .get_entry(entity_hash)
+        .map_or(true, |v| Some(v.reference) != SEntity::ID)
+    {
+        return Ok(Entity::DANGLING);
+    }
+
     let header = package_manager()
         .read_tag_struct::<SEntity>(entity_hash)
         .context("Failed to read SEntity")?;
     debug!("Loading entity {entity_hash}");
-    let mut has_entity_model = false;
     let scene_entity = spawn_data_entity(
         scene,
         (
@@ -886,7 +896,6 @@ fn load_entity_into_scene(
         let entres = &e.unk0;
         match entres.unk10.resource_type {
             0x80806d8a => {
-                has_entity_model = true;
                 let mut cur = Cursor::new(package_manager().read_tag(entres.taghash())?);
                 cur.seek(SeekFrom::Start(entres.unk18.offset + 0x224))?;
                 let model_hash: TagHash = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
@@ -928,35 +937,33 @@ fn load_entity_into_scene(
             }
         }
 
-        // let mut loaded = FxHashSet::<WideHash>::default();
-        // for r in &entres.resource_table2 {
-        //     if loaded.contains(&r.entity) {
-        //         continue;
-        //     }
-        //     if let Some(entry) = package_manager().get_entry(r.entity.hash32()) {
-        //         match entry.reference {
-        //             0x80809AD8 => {
-        //                 // SEntity::ID
-        //                 if r.entity.is_some() {
-        //                     load_entity_into_scene(
-        //                         r.entity.hash32(),
-        //                         scene,
-        //                         renderer,
-        //                         resource_origin,
-        //                         Some(scene_entity),
-        //                         Transform::default(),
-        //                         None,
-        //                     )?;
-        //                     loaded.insert(r.entity);
-        //                 }
-        //             }
-        //             u => warn!(
-        //                 "Unknown entref type 0x{u:08X} in entity resourc {}",
-        //                 entres.taghash()
-        //             ),
-        //         }
-        //     }
-        // }
+        let mut loaded = FxHashSet::<WideHash>::default();
+        for r in &entres.resource_table2 {
+            // if matches!(r.unk14, 0 | 0xFFFFFFFF) {
+            if r.unk14 == 0xFFFFFFFF {
+                continue;
+            }
+
+            if loaded.contains(&r.unk0) {
+                continue;
+            }
+
+            // SEntity::ID
+            if r.unk0.is_some() {
+                load_entity_into_scene(
+                    r.unk0.hash32(),
+                    scene,
+                    renderer,
+                    resource_origin,
+                    Some(scene_entity),
+                    // TODO(cohae): transform hierarchy
+                    transform,
+                    None,
+                    depth + 1,
+                )?;
+                loaded.insert(r.unk0);
+            }
+        }
     }
 
     Ok(scene_entity)

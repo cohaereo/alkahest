@@ -3,7 +3,7 @@ use tiger_parse::tiger_tag;
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x80809738)]
-pub struct SRandomSound {
+pub struct SSoundCollection {
     pub file_size: u64,
     pub unk8: u32,
     pub unkc: u32,

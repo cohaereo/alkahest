@@ -33,6 +33,7 @@ use hecs::DynamicBundle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
+use rustc_hash::FxHashSet;
 use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 use tracing::{
     field::{Field, Visit},
@@ -709,8 +710,15 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 println!("\t\tSupported renderstages:");
                 for stage in TfxRenderStage::VARIANTS {
                     let range = m.get_range_for_stage(stage);
+                    let unique_shaders: FxHashSet<TagHash> =
+                        m.parts[range.clone()].iter().map(|p| p.technique).collect();
+
                     if !range.is_empty() {
-                        println!("\t\t\t- {stage:?}: {} parts", range.len());
+                        println!(
+                            "\t\t\t- {stage:?}: {} parts (techniques: [{}])",
+                            range.len(),
+                            unique_shaders.iter().map(|s| format!("{s}")).join(", ")
+                        );
                     }
                 }
             }
