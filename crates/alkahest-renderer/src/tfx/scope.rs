@@ -9,7 +9,7 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use alkahest_pm::package_manager;
-use glam::{Mat4, Vec2, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{
@@ -399,6 +399,36 @@ impl Default for ScopeTransparentAdvanced {
             unk34: Vec4::new(0.0, 0.0, 0.0, 0.0),
             unk35: Vec4::new(0.0, 0.0, 0.0, 0.0),
             unk36: Vec4::new(1.0, 0.0, 0.0, 0.0),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct ScopeSkinning {
+    pub unk0: Vec4,
+    pub unk1: Vec4,
+    pub unk2: Vec4,
+    pub unk3: Vec4,
+    pub unk4: Vec4,
+    pub offset_scale: Vec4, // XYZ = offset, W = scale
+    pub texcoord0_scale_offset: Vec4,
+    pub dynamic_sh_ao_values: Vec4,
+
+    pub nodes: [Vec4; 16],
+}
+
+impl Default for ScopeSkinning {
+    fn default() -> Self {
+        Self {
+            unk0: Vec4::W,
+            unk1: Vec4::W,
+            unk2: Vec4::W,
+            unk3: Vec4::W,
+            unk4: Vec4::W,
+            offset_scale: Vec4::W,
+            texcoord0_scale_offset: Vec4::W,
+            dynamic_sh_ao_values: Vec4::W,
+            nodes: [Vec4::ONE; 16],
         }
     }
 }

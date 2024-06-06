@@ -110,7 +110,7 @@ pub async fn load_map(
         }
 
         for u1 in &activity.unk40 {
-            for u2 in &u1.unk48 {
+            for u2 in &u1.unk50 {
                 activity_entrefs.push((
                     u2.unk_entity_reference.clone(),
                     u2.activity_phase_name2,
@@ -137,7 +137,7 @@ pub async fn load_map(
                             }
 
                             for u1 in &activity.unk40 {
-                                for u2 in &u1.unk48 {
+                                for u2 in &u1.unk50 {
                                     activity_entrefs.push((
                                         u2.unk_entity_reference.clone(),
                                         u2.activity_phase_name2,
@@ -288,7 +288,6 @@ pub async fn load_map(
 
                 if origin != ResourceOrigin::Ambient {
                     for r in &res.resource_table2 {
-                        println!("{} - {:08X}", r.unk0.hash32(), r.unk14);
                         if r.unk14 != 0xFFFFFFFF && r.unk0.is_some() {
                             // SEntity::ID
                             load_entity_into_scene(
@@ -530,17 +529,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             Icon(ICON_LIGHTBULB_ON),
                             Label::from(format!("Light {i}")),
                             Transform {
-                                translation: Vec3::new(
-                                    transform.translation.x,
-                                    transform.translation.y,
-                                    transform.translation.z,
-                                ),
-                                rotation: Quat::from_xyzw(
-                                    transform.rotation.x,
-                                    transform.rotation.y,
-                                    transform.rotation.z,
-                                    transform.rotation.w,
-                                ),
+                                translation: transform.translation.xyz(),
+                                rotation: transform.rotation,
                                 ..Default::default()
                             },
                             LightRenderer::load(
@@ -630,49 +620,52 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset))
                     .unwrap();
 
-                let cubemap_volume: SCubemapVolume = TigerReadable::read_ds(table_data)?;
+                match SCubemapVolume::read_ds(table_data) {
+                    Ok(cubemap_volume) => {
+                        let voxel_diffuse = if cubemap_volume.voxel_ibl_texture.is_some() {
+                            Some(
+                                renderer
+                                    .data
+                                    .lock()
+                                    .asset_manager
+                                    .get_or_load_texture(cubemap_volume.voxel_ibl_texture),
+                            )
+                        } else {
+                            None
+                        };
 
-                let voxel_diffuse = if cubemap_volume.voxel_ibl_texture.is_some() {
-                    Some(
-                        renderer
-                            .data
-                            .lock()
-                            .asset_manager
-                            .get_or_load_texture(cubemap_volume.voxel_ibl_texture),
-                    )
-                } else {
-                    None
-                };
-
-                spawn_data_entity(
-                    scene,
-                    (
-                        Icon(ICON_SPHERE),
-                        Label::from(format!(
-                            "Cubemap Volume '{}'",
-                            cubemap_volume
-                                .cubemap_name
-                                .to_string()
-                                .truncate_ellipsis(48)
-                        )),
-                        Transform {
-                            translation: data.translation.xyz(),
-                            rotation: transform.rotation,
-                            ..Default::default()
-                        },
-                        CubemapVolume {
-                            specular_ibl: renderer
-                                .data
-                                .lock()
-                                .asset_manager
-                                .get_or_load_texture(cubemap_volume.cubemap_texture),
-                            voxel_diffuse,
-                            extents: cubemap_volume.cubemap_extents.truncate(),
-                            name: cubemap_volume.cubemap_name.to_string(),
-                        },
-                    ),
-                    parent_entity,
-                );
+                        spawn_data_entity(
+                            scene,
+                            (
+                                Icon(ICON_SPHERE),
+                                Label::from(format!(
+                                    "Cubemap Volume '{}'",
+                                    cubemap_volume
+                                        .cubemap_name
+                                        .to_string()
+                                        .truncate_ellipsis(48)
+                                )),
+                                Transform {
+                                    translation: data.translation.xyz(),
+                                    rotation: transform.rotation,
+                                    ..Default::default()
+                                },
+                                CubemapVolume {
+                                    specular_ibl: renderer
+                                        .data
+                                        .lock()
+                                        .asset_manager
+                                        .get_or_load_texture(cubemap_volume.cubemap_texture),
+                                    voxel_diffuse,
+                                    extents: cubemap_volume.cubemap_extents.truncate(),
+                                    name: cubemap_volume.cubemap_name.to_string(),
+                                },
+                            ),
+                            parent_entity,
+                        );
+                    }
+                    Err(e) => error!("Failed to load cubemap volume: {e:?}"),
+                }
             }
             0x808067b5 => {
                 table_data

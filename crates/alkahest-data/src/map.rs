@@ -343,7 +343,7 @@ pub struct SLightCollection {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806C70)]
+#[tiger_tag(id = 0x80806C70, size = 240)]
 pub struct SLight {
     pub unk0: glam::Vec4,
     pub unk10: glam::Vec4,
@@ -361,12 +361,15 @@ pub struct SLight {
     pub unkb8: f32,
     pub unkbc: f32,
 
+    // TODO(cohae): This field is new in TFS. Taghash-like value such as 9E440E84, purpose unknown
+    pub unkc0: f32,
+
     pub technique_shading: TagHash,
     pub technique_volumetrics: TagHash,
     pub technique_compute_lightprobe: TagHash,
-    pub unkcc: TagHash, // Unk80806da1
     pub unkd0: TagHash, // Unk80806da1
-    pub unkd4: [u32; 7],
+    pub unkd4: TagHash, // Unk80806da1
+    pub unkd8: [u32; 6],
 }
 
 #[derive(Clone, Debug)]

@@ -39,7 +39,9 @@ impl<T: TigerReadable> Deref for Tag<T> {
 
 impl<T: TigerReadable + Debug> Debug for Tag<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        f.write_fmt(format_args!("Tag({}, ", self.1))?;
+        self.0.fmt(f)?;
+        f.write_str(")")
     }
 }
 

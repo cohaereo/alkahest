@@ -3,6 +3,9 @@ use destiny_pkg::TagHash;
 
 pub trait TagHashExt {
     fn prepend_package_name(&self) -> String;
+
+    /// Does the pkg referenced by this tag exist?
+    fn is_valid_pkg(&self) -> bool;
 }
 
 impl TagHashExt for TagHash {
@@ -12,5 +15,11 @@ impl TagHashExt for TagHash {
         } else {
             format!("unk/{}", self)
         }
+    }
+
+    fn is_valid_pkg(&self) -> bool {
+        package_manager()
+            .package_entry_index
+            .contains_key(&self.pkg_id())
     }
 }

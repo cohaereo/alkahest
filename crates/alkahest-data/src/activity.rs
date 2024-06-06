@@ -53,7 +53,7 @@ pub struct Unk8080892e {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808924)]
+#[tiger_tag(id = 0x80808924, size = 0x48)]
 pub struct Unk80808924 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -62,6 +62,7 @@ pub struct Unk80808924 {
     pub unk10: ResourcePointer,
     pub unk18: Vec<Unk80808948>,
     pub map_references: Vec<WideHash>,
+    pub unk28: [u32; 4],
 }
 
 #[derive(Debug)]
@@ -85,8 +86,12 @@ pub struct Unk80808926 {
     pub unk3c: u32,
     pub unk40: u32,
     pub unk44: u32,
-    pub unk48: Vec<Unk80808948>,
-    pub unk4c: [u32; 4],
+
+    // TODO(cohae): Stuff after this line got changed with TFS
+    pub unk48: u32,
+    pub unk4c: u32,
+    pub unk50: Vec<Unk80808948>,
+    pub unk60: [u32; 4],
 }
 
 #[derive(Debug)]

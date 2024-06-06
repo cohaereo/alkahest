@@ -15,7 +15,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Hidden, Icon, Label, Mutable},
-        render::dynamic_geometry::DynamicModelComponent,
+        render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
         tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
     },
@@ -43,7 +43,10 @@ use tracing_subscriber::Layer;
 use winit::window::Window;
 
 use crate::{
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::{
+        commands::load_pkg_entities,
+        context::{GuiCtx, GuiView, ViewResult},
+    },
     maplist::MapList,
 };
 
@@ -418,6 +421,54 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 Err(e) => error!("Failed to load entity {tag}: {e:?}"),
             }
         }
+        "ss" | "spawn_static" => {
+            let mut maps = resources.get_mut::<MapList>();
+            if args.len() != 1 {
+                error!("Missing tag argument, expected 32/64-bit tag");
+                return;
+            }
+
+            let tag = match parse_extended_hash(args[0]) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to parse tag: {e}");
+                    return;
+                }
+            };
+
+            let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                return;
+            };
+
+            let camera = resources.get::<Camera>();
+
+            let renderer = resources.get_mut::<RendererShared>();
+            let mut rdata = renderer.data.lock();
+
+            match StaticModelSingle::load(
+                renderer.gpu.clone(),
+                &mut rdata.asset_manager,
+                tag.hash32(),
+            ) {
+                Ok(er) => {
+                    let transform = Transform {
+                        translation: camera.position(),
+                        ..Default::default()
+                    };
+                    scene.spawn((
+                        er,
+                        Icon(ICON_CUBE),
+                        Label::from(format!("Static Model {}", tag.hash32())),
+                        transform,
+                        TfxFeatureRenderer::StaticObjects,
+                        Mutable,
+                        Tags::from_iter([EntityTag::User]),
+                    ));
+                    info!("Static model spawned");
+                }
+                Err(e) => error!("Failed to load static model {tag}: {e:?}"),
+            }
+        }
         "distfx" | "disassemble_tfx" => {
             if args.is_empty() {
                 error!("Missing bytes argument, expected hex bytestream");
@@ -723,11 +774,30 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 }
             }
         }
+        "load_entities_pkg" => {
+            // TODO(cohae): Make some abstraction for this
+            if args.len() != 1 {
+                error!("Missing package name argument");
+                return;
+            }
+
+            let mut maps = resources.get_mut::<MapList>();
+
+            let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                return;
+            };
+
+            let renderer = resources.get_mut::<RendererShared>();
+
+            if let Err(e) = load_pkg_entities(&args[0], renderer.clone(), scene) {
+                error!("Failed to load entities from package {}: {e}", args[0]);
+            }
+        }
         _ => error!("Unknown command '{command}'"),
     }
 }
 
-fn load_entity_model(
+pub fn load_entity_model(
     t: WideHash,
     transform: Transform,
     renderer: &Renderer,
@@ -750,7 +820,7 @@ fn load_entity_model(
     ))
 }
 
-fn load_entity(
+pub fn load_entity(
     entity_hash: WideHash,
     transform: Transform,
     renderer: &Renderer,

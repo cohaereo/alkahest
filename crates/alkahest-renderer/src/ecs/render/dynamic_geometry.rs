@@ -21,7 +21,9 @@ use crate::{
     handle::Handle,
     loaders::AssetManager,
     renderer::Renderer,
-    tfx::{externs, technique::Technique, view::RenderStageSubscriptions},
+    tfx::{
+        externs, scope, scope::ScopeSkinning, technique::Technique, view::RenderStageSubscriptions,
+    },
     util::packages::TagHashExt,
 };
 
@@ -144,12 +146,15 @@ impl DynamicModel {
         if index == u16::MAX {
             None
         } else {
-            let variant_range = &self.technique_map[index as usize];
-            Some(
-                self.techniques[variant_range.technique_start as usize
-                    + (variant % variant_range.technique_count as usize)]
-                    .clone(),
-            )
+            if let Some(variant_range) = &self.technique_map.get(index as usize) {
+                Some(
+                    self.techniques[variant_range.technique_start as usize
+                        + (variant % variant_range.technique_count as usize)]
+                        .clone(),
+                )
+            } else {
+                None
+            }
         }
     }
 
@@ -260,6 +265,7 @@ pub struct DynamicModelComponent {
     pub model: DynamicModel,
     pub ext: externs::RigidModel,
     pub cbuffer: ConstantBuffer<externs::RigidModel>,
+    pub cbuffer_skinning: Option<ConstantBuffer<ScopeSkinning>>,
     pub identifier: u16,
     cbuffer_dirty: bool,
 }
@@ -283,6 +289,10 @@ impl DynamicModelComponent {
 
         let mut d = Self {
             identifier: u16::MAX,
+            cbuffer_skinning: model
+                .subscribed_stages
+                .contains(RenderStageSubscriptions::COMPUTE_SKINNING)
+                .then(|| ConstantBuffer::create(renderer.gpu.clone(), None).unwrap()),
             model,
             ext: Default::default(),
             cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
@@ -317,6 +327,16 @@ impl DynamicModelComponent {
         let ext = self.create_extern(transform);
 
         self.cbuffer.write(&ext).unwrap();
+        if let Some(cbuffer_skinning) = &mut self.cbuffer_skinning {
+            cbuffer_skinning
+                .write(&ScopeSkinning {
+                    offset_scale: transform.translation.extend(transform.scale.x),
+                    texcoord0_scale_offset: ext.texcoord0_scale_offset,
+                    ..Default::default()
+                })
+                .unwrap();
+        }
+
         self.ext = ext;
     }
 
@@ -324,8 +344,14 @@ impl DynamicModelComponent {
         // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
         renderer.data.lock().externs.rigid_model = Some(self.ext.clone());
 
+        // if let Some(cbuffer_skinning) = &self.cbuffer_skinning {
+        //     cbuffer_skinning.bind(1, TfxShaderStage::Vertex);
+        //     cbuffer_skinning.bind(1, TfxShaderStage::Pixel);
+        // } else {
         // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
         self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        // }
+
         // TODO(cohae): Error reporting
         self.model.draw(renderer, render_stage, self.identifier)
     }
@@ -354,7 +380,10 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         }
 
         if !renderer.render_settings.feature_dynamics
-            && matches!(dynamic.model.feature_type, TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects)
+            && matches!(
+                dynamic.model.feature_type,
+                TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects
+            )
         {
             continue;
         }

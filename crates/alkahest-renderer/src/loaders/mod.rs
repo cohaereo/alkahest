@@ -8,7 +8,7 @@ use crate::{
     handle::{AssetId, AssetIdValue, AssetRegistry, Handle, RawHandle},
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     tfx::technique::Technique,
-    util::d3d::ErrorExt,
+    util::{d3d::ErrorExt, packages::TagHashExt},
 };
 
 pub mod index_buffer;
@@ -70,8 +70,19 @@ impl AssetManager {
         }
     }
 
+    #[track_caller]
     pub fn get_or_load_technique(&mut self, hash: TagHash) -> Handle<Technique> {
         if hash.is_none() {
+            return Handle::none();
+        }
+
+        if !hash.is_valid_pkg() {
+            let caller = std::panic::Location::caller();
+            error!(
+                "Invalid technique hash {hash} requested at {}:{}",
+                caller.file(),
+                caller.line()
+            );
             return Handle::none();
         }
 

@@ -3,6 +3,7 @@ use alkahest_data::{
     map::{SBubbleParent, SBubbleParentShallow},
 };
 use alkahest_pm::package_manager;
+use anyhow::Context as _;
 use destiny_pkg::TagHash;
 use egui::{ahash::HashMapExt, Context, TextBuffer};
 use rustc_hash::FxHashMap;
@@ -298,7 +299,9 @@ pub fn query_activity_maps(
     stringmap: &GlobalStringmap,
 ) -> anyhow::Result<Vec<(TagHash, String)>> {
     let _span = info_span!("Query activity maps").entered();
-    let activity: SActivity = package_manager().read_tag_struct(activity_hash)?;
+    let activity: SActivity = package_manager()
+        .read_tag_struct(activity_hash)
+        .context("Failed to read activity struct")?;
     let mut string_container = StringContainer::default();
     if let Ok(destination) = package_manager().read_tag_struct::<SDestination>(activity.destination)
     {
