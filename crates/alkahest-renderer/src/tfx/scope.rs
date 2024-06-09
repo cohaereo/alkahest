@@ -268,13 +268,13 @@ impl Default for ScopeFrame {
 #[repr(C)]
 #[derive(Clone, Default)]
 pub struct ScopeInstances {
-    pub mesh_offset: Vec3,
+    pub mesh_offset: Vec3, // c0
     pub mesh_scale: f32,
-    pub uv_scale: f32,
+    pub uv_scale: f32, // c1
     pub uv_offset: Vec2,
     pub max_color_index: u32,
 
-    pub transforms: Vec<Mat4>,
+    pub transforms: Vec<Mat4>, // c2-
 }
 
 impl ScopeInstances {

@@ -1,4 +1,5 @@
 use destiny_pkg::TagHash;
+use glam::{Mat4, Vec4};
 use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer};
 
 use crate::{
@@ -181,15 +182,22 @@ pub struct SCubemapVolume {
     pub unk70: [u32; 20],
 
     // Transform matrices?
-    pub unkc0: [glam::Vec4; 4],
-    pub unk100: [glam::Vec4; 4],
+    pub unkc0: Mat4,
+    pub unk100: Vec4,
+    pub unk110: Vec4,
+    pub unk120: Mat4,
 
-    pub unk140: [u32; 28],
+    pub unk160: Vec4,
+    pub unk170: Vec4,
+    pub unk180: Vec4,
+    pub unk190: Vec4,
+    pub unk1a0: [u32; 3],
 
-    pub cubemap_name: Pointer<NullString>,
-    pub cubemap_texture: TagHash,
-    pub _unk_cubemap_skymask: TagHash,
-    pub voxel_ibl_texture: TagHash,
+    // TODO(cohae): Removed in TFS, apply versioning to this field
+    // pub cubemap_name: Pointer<NullString>,
+    pub cubemap_texture: TagHash, // 0x1ac
+    pub _unk_cubemap_skymask: TagHash, // 0x1b0
+    pub voxel_ibl_texture: TagHash, // 0x1b4
     pub unk1c4: [u32; 7],
 }
 

@@ -6,7 +6,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use destiny_pkg::TagHash;
-use glam::Mat4;
+use glam::{Mat4, Vec4};
 use hecs::Entity;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
@@ -344,12 +344,7 @@ pub fn create_instances_scope(mesh: &SStaticMeshData, transforms: &[Transform]) 
             .iter()
             .map(|t| {
                 let mat = t.local_to_world().transpose();
-                Mat4::from_cols(
-                    mat.x_axis.truncate().extend(t.translation.x),
-                    mat.y_axis.truncate().extend(t.translation.y),
-                    mat.z_axis.truncate().extend(t.translation.z),
-                    mat.w_axis,
-                )
+                Mat4::from_cols(mat.x_axis, mat.y_axis, mat.z_axis, Vec4::ONE)
             })
             .collect(),
     }
