@@ -10,7 +10,7 @@ use alkahest_data::{
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
         SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
-        SShadowingLight, Unk808068d4, Unk80806aa7, Unk80806ef4, Unk8080714b, Unk80808cb7,
+        SShadowingLight, SUnk808068d4, SUnk80806aa7, SUnk80806ef4, SUnk8080714b, SUnk80808cb7,
     },
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
@@ -362,7 +362,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
                 let preheader_tag: TagHash = table_data.read_le().unwrap();
-                let preheader: Unk80806ef4 =
+                let preheader: SUnk80806ef4 =
                     package_manager().read_tag_struct(preheader_tag).unwrap();
 
                 for s in &preheader.instances.instance_groups {
@@ -415,7 +415,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset))
                     .unwrap();
 
-                let terrain_resource: Unk8080714b = TigerReadable::read_ds(table_data).unwrap();
+                let terrain_resource: SUnk8080714b = TigerReadable::read_ds(table_data).unwrap();
 
                 spawn_data_entity(
                     scene,
@@ -439,7 +439,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     continue;
                 }
 
-                let header: Unk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
+                let header: SUnk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
 
                 for (unk8, unk18, _unk28) in
                     multizip((header.unk8.iter(), header.unk18.iter(), header.unk28.iter()))
@@ -478,7 +478,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset))
                     .unwrap();
 
-                let d: Unk808068d4 = TigerReadable::read_ds(table_data)?;
+                let d: SUnk808068d4 = TigerReadable::read_ds(table_data)?;
 
                 if d.entity_model.is_some() {
                     spawn_data_entity(
@@ -516,13 +516,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     continue;
                 }
 
-                let header: SLightCollection = package_manager().read_tag_struct(tag).unwrap();
+                let light_collection: SLightCollection =
+                    package_manager().read_tag_struct(tag).unwrap();
 
                 let light_collection_entity = spawn_data_entity(scene, (), parent_entity);
                 let mut children = vec![];
-                for (i, (transform, light, bounds)) in
-                    multizip((header.unk40, header.unk30, &header.occlusion_bounds.bounds))
-                        .enumerate()
+                for (i, (light, transform, bounds)) in multizip((
+                    light_collection.unk30.clone(),
+                    light_collection.unk40.clone(),
+                    light_collection.occlusion_bounds.bounds.iter(),
+                ))
+                .enumerate()
                 {
                     children.push(
                         scene.spawn((
@@ -552,6 +556,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 scene.insert(
                     light_collection_entity,
                     (
+                        light_collection,
                         Icon(ICON_LIGHTBULB_GROUP),
                         Label::from(format!("Light Collection {tag}")),
                         Children::from_slice(&children),
@@ -606,12 +611,16 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     scene,
                     (
                         Icon(ICON_WEATHER_FOG),
-                        Label::from("Atmosphere Configuration"),
+                        Label::from(format!(
+                            "Atmosphere Configuration (table {}@0x{:X})",
+                            table_hash, data.data_resource.offset
+                        )),
                         MapAtmosphere::load(&renderer.gpu, atmos)
                             .context("Failed to load map atmosphere")?,
                         resource_origin,
                     ),
-                    parent_entity,
+                    // parent_entity,
+                    None,
                 );
             }
             // Cubemap volume
@@ -640,10 +649,10 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 Icon(ICON_SPHERE),
                                 Label::from(format!(
                                     "Cubemap Volume '{}'",
-                                    cubemap_volume
-                                        .cubemap_name
-                                        .to_string()
-                                        .truncate_ellipsis(48)
+                                    "<unknown>" // cubemap_volume
+                                                //     .cubemap_name
+                                                //     .to_string()
+                                                //     .truncate_ellipsis(48)
                                 )),
                                 Transform {
                                     translation: data.translation.xyz(),
@@ -658,7 +667,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                         .get_or_load_texture(cubemap_volume.cubemap_texture),
                                     voxel_diffuse,
                                     extents: cubemap_volume.cubemap_extents.truncate(),
-                                    name: cubemap_volume.cubemap_name.to_string(),
+                                    // name: cubemap_volume.cubemap_name.to_string(),
+                                    name: "<unknown>".to_string(),
                                 },
                             ),
                             parent_entity,
@@ -700,7 +710,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     continue;
                 }
 
-                let header: Unk80808cb7 = package_manager().read_tag_struct(tag)?;
+                let header: SUnk80808cb7 = package_manager().read_tag_struct(tag)?;
 
                 for respawn_point in header.unk8.iter() {
                     spawn_data_entity(

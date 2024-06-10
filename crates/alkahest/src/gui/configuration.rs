@@ -53,6 +53,12 @@ impl GuiView for RenderSettingsPanel {
             ui.checkbox(&mut settings.feature_atmosphere, "Atmosphere");
             ui.checkbox(&mut settings.feature_cubemaps, "Cubemaps");
 
+            ui.separator();
+            ui.heading("Render Stages");
+            ui.checkbox(&mut settings.stage_transparent, "Transparents");
+            ui.checkbox(&mut settings.stage_decals, "Decals");
+            ui.checkbox(&mut settings.stage_decals_additive, "Decals (additive)");
+
             resources
                 .get::<RendererShared>()
                 .set_render_settings(settings.clone());

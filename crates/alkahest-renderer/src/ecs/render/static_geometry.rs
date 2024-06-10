@@ -152,6 +152,22 @@ impl StaticModel {
             return;
         }
 
+        if !renderer.render_settings.stage_transparent
+            && render_stage == TfxRenderStage::Transparents
+        {
+            return;
+        }
+
+        if !renderer.render_settings.stage_decals && render_stage == TfxRenderStage::Decals {
+            return;
+        }
+
+        if !renderer.render_settings.stage_decals_additive
+            && render_stage == TfxRenderStage::DecalsAdditive
+        {
+            return;
+        }
+
         gpu_event!(
             renderer.gpu,
             format!("static_model {}", self.hash.prepend_package_name())

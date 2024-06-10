@@ -1,6 +1,6 @@
 use destiny_pkg::TagHash;
-use glam::{Mat4, Vec4};
-use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer};
+use glam::{Mat4, Quat, Vec4};
+use tiger_parse::{tiger_tag, Pointer, ResourcePointer};
 
 use crate::{
     common::ResourceHash,
@@ -27,7 +27,6 @@ pub struct SBubbleParentShallow {
 #[tiger_tag(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
-    // 808091e0
     pub child_map: Tag<SBubbleDefinition>,
     pub unkc: u32,
 
@@ -35,12 +34,12 @@ pub struct SBubbleParent {
     pub map_name: ResourceHash,
 
     #[tag(offset = 0x40)]
-    pub unk40: Vec<Unk80809644>,
+    pub unk40: Vec<SUnk808096c9>,
 }
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x808096C9)]
-pub struct Unk80809644 {
+pub struct SUnk808096c9 {
     pub unk0: u32,
     pub unk4: u32,
     pub unk8: u32,
@@ -73,9 +72,9 @@ pub struct SMapDataTable {
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80809885)]
 pub struct SUnk80809885 {
-    pub rotation: glam::Quat,    // 0x0
-    pub translation: glam::Vec4, // 0x10
-    pub entity_old: TagHash,     // 0x20
+    pub rotation: Quat,      // 0x0
+    pub translation: Vec4,   // 0x10
+    pub entity_old: TagHash, // 0x20
     pub unk24: u32,
     pub entity: WideHash,
     pub unk38: [u32; 9], //
@@ -91,7 +90,7 @@ pub struct SUnk80809885 {
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x80806A0D)]
-pub struct Unk80806ef4 {
+pub struct SUnk80806ef4 {
     pub unk0: u64,
     pub instances: Tag<SStaticMeshInstances>,
     pub unkc: [u32; 7],
@@ -104,12 +103,12 @@ pub struct STerrain {
     pub file_size: u64,
     pub unk8: u64,
 
-    pub unk10: glam::Vec4,
-    pub unk20: glam::Vec4,
-    pub unk30: glam::Vec4,
+    pub unk10: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
 
     #[tag(offset = 0x50)]
-    pub mesh_groups: Vec<Unk80807154>,
+    pub mesh_groups: Vec<SUnk80807154>,
 
     pub vertex0_buffer: TagHash,
     pub vertex1_buffer: TagHash,
@@ -118,18 +117,18 @@ pub struct STerrain {
     pub unk_technique2: TagHash,
 
     #[tag(offset = 0x78)]
-    pub mesh_parts: Vec<Unk80807152>,
+    pub mesh_parts: Vec<SUnk80807152>,
 }
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x80806C86)]
-pub struct Unk80807154 {
-    pub unk0: glam::Vec4,
+pub struct SUnk80807154 {
+    pub unk0: Vec4,
     pub unk10: f32,
     pub unk14: f32,
     pub unk18: f32,
     pub unk1c: u32,
-    pub unk20: glam::Vec4,
+    pub unk20: Vec4,
     pub unk30: u32,
     pub unk34: u32,
     pub unk38: u32,
@@ -146,7 +145,7 @@ pub struct Unk80807154 {
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x80806C84)]
-pub struct Unk80807152 {
+pub struct SUnk80807152 {
     pub technique: TagHash,
     pub index_start: u32,
     pub index_count: u16,
@@ -157,7 +156,7 @@ pub struct Unk80807152 {
 /// Terrain resource
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff, size = 0x20)]
-pub struct Unk8080714b {
+pub struct SUnk8080714b {
     #[tag(offset = 0x10)]
     pub unk10: u16,
     pub unk12: u16,
@@ -168,16 +167,16 @@ pub struct Unk8080714b {
 
 /// Cubemap volume resource
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff, size = 0x1e0)]
+#[tiger_tag(id = 0xffffffff, size = 0x1d0)]
 pub struct SCubemapVolume {
     #[tag(offset = 0x20)]
-    pub cubemap_extents: glam::Vec4,
+    pub cubemap_extents: Vec4,
     /// Represents the visual center of the cubemap
-    pub cubemap_center: glam::Vec4,
+    pub cubemap_center: Vec4,
     pub unk40: f32,
     pub unk44: [u32; 3],
-    pub unk50: glam::Vec4,
-    pub unk60: glam::Vec4,
+    pub unk50: Vec4,
+    pub unk60: Vec4,
 
     pub unk70: [u32; 20],
 
@@ -195,19 +194,18 @@ pub struct SCubemapVolume {
 
     // TODO(cohae): Removed in TFS, apply versioning to this field
     // pub cubemap_name: Pointer<NullString>,
-    pub cubemap_texture: TagHash, // 0x1ac
+    pub cubemap_texture: TagHash,      // 0x1ac
     pub _unk_cubemap_skymask: TagHash, // 0x1b0
-    pub voxel_ibl_texture: TagHash, // 0x1b4
-    pub unk1c4: [u32; 7],
+    pub voxel_ibl_texture: TagHash,    // 0x1b4
+    pub unk1c4: [u32; 3],
 }
 
 /// Decal collection resource
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806e68 {
+pub struct SUnk80806e68 {
     pub file_size: u64,
-    pub instances: Vec<Unk80806e6c>,
-    pub transforms: Vec<glam::Vec4>, // 80806e6d
+    pub instances: Vec<SUnk80806e6c>,
     pub instance_points: TagHash,
     pub unk_vertex_colors: TagHash,
 
@@ -218,78 +216,78 @@ pub struct Unk80806e68 {
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806963)]
-pub struct Unk80806e6c {
+pub struct SUnk80806e6c {
     pub material: TagHash,
     pub start: u16,
     pub count: u16,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806df3 {
+pub struct SUnk80806df3 {
     pub file_size: u64,
-    pub unk8: Vec<Unk80806dec>,
+    pub unk8: Vec<SUnk80806dec>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806dec {
+pub struct SUnk80806dec {
     pub material: TagHash,
     pub index_buffer: TagHash,
     pub vertex_buffer: TagHash,
     pub unkc: u32,
     pub unk10: [u32; 4],
 
-    pub translation: glam::Vec4,
+    pub translation: Vec4,
 
-    pub unk30: glam::Vec4,
-    pub unk40: glam::Vec4,
-    pub unk50: glam::Vec4,
+    pub unk30: Vec4,
+    pub unk40: Vec4,
+    pub unk50: Vec4,
 }
 
 // Unknown resource (some kind of octree?)
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80807268 {
+pub struct SUnk80807268 {
     pub file_size: u64,
     /// Vertex buffer
     pub unk8: TagHash,
     pub unkc: u32,
-    pub unk10: Vec<Unk8080726a>,
+    pub unk10: Vec<SUnk8080726a>,
     pub unk20: [u32; 6],
     /// Vertex buffer
     pub unk38: TagHash,
     pub unk3c: u32,
-    pub unk40: Vec<Unk8080726a>,
-    pub unk50: Vec<Unk8080726d>,
+    pub unk40: Vec<SUnk8080726a>,
+    pub unk50: Vec<SUnk8080726d>,
     pub unk60: Vec<u16>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk8080726a {
+pub struct SUnk8080726a {
     pub unk0: [u32; 4],
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk8080726d {
-    pub unk0: glam::Vec4,
-    pub unk10: glam::Vec4,
-    pub unk20: glam::Vec4,
+pub struct SUnk8080726d {
+    pub unk0: Vec4,
+    pub unk10: Vec4,
+    pub unk20: Vec4,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80809162 {
+pub struct SUnk80809162 {
     pub file_size: u64,
-    pub unk8: Vec<Unk80809164>,
+    pub unk8: Vec<SUnk80809164>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80809164 {
-    pub unk0: glam::Vec4,
-    pub unk10: glam::Vec4,
+pub struct SUnk80809164 {
+    pub unk0: Vec4,
+    pub unk10: Vec4,
     pub unk20: [u32; 4],
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80809802 {
+pub struct SUnk80809802 {
     pub file_size: u64,
     pub unk8: TagHash,
     pub unkc: TagHash,
@@ -301,22 +299,22 @@ pub struct Unk80809802 {
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806AA7)]
-pub struct Unk80806aa7 {
+pub struct SUnk80806aa7 {
     pub file_size: u64,
-    pub unk8: Vec<Unk80806aa9>,
+    pub unk8: Vec<SUnk80806aa9>,
     pub unk18: Vec<SObjectOcclusionBounds>,
     pub unk28: Vec<u32>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806AA9)]
-pub struct Unk80806aa9 {
+pub struct SUnk80806aa9 {
     /// Transformation matrix
     pub transform: [f32; 16],
 
     /// Same as the bounding box from the SObjectOcclusionBounds array
     pub bounds: AABB,
 
-    pub unk60: Tag<Unk80806aae>,
+    pub unk60: Tag<SUnk80806aae>,
     pub unk64: f32,
     pub unk68: f32,
     pub unk6c: i16,
@@ -333,7 +331,7 @@ pub struct Unk80806aa9 {
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806AAE)]
-pub struct Unk80806aae {
+pub struct SUnk80806aae {
     pub file_size: u64,
     pub entity_model: TagHash,
 }
@@ -344,7 +342,7 @@ pub struct SLightCollection {
     pub unk8: u64,
     pub bounds: AABB,
     pub unk30: Vec<SLight>,
-    pub unk40: Vec<Unk80809f4f>,
+    pub unk40: Vec<SUnk80809f4f>,
     pub light_count: u32,
     pub unk54: u32,
     pub occlusion_bounds: Tag<SOcclusionBounds>,
@@ -353,13 +351,13 @@ pub struct SLightCollection {
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806C70, size = 240)]
 pub struct SLight {
-    pub unk0: glam::Vec4,
-    pub unk10: glam::Vec4,
-    pub unk20: glam::Vec4,
-    pub unk30: glam::Vec4,
+    pub unk0: Vec4,
+    pub unk10: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
     pub unk40: [u32; 4],
-    pub unk50: glam::Vec4,
-    pub light_to_world: glam::Mat4,
+    pub unk50: Vec4,
+    pub light_to_world: Mat4,
     pub unka0: u32,
     pub unka4: u32,
     pub unka8: u32,
@@ -383,13 +381,13 @@ pub struct SLight {
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806C71)]
 pub struct SShadowingLight {
-    pub unk0: glam::Vec4,
-    pub unk10: glam::Vec4,
-    pub unk20: glam::Vec4,
-    pub unk30: glam::Vec4,
+    pub unk0: Vec4,
+    pub unk10: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
     pub unk40: [u32; 4],
-    pub unk50: glam::Vec4,
-    pub light_to_world: glam::Mat4,
+    pub unk50: Vec4,
+    pub light_to_world: Mat4,
     pub unka0: u32,
     pub unka4: u32,
     pub unka8: u32,
@@ -422,14 +420,14 @@ pub struct SShadowingLight {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80809F4F)]
-pub struct Unk80809f4f {
-    pub rotation: glam::Quat,
-    pub translation: glam::Vec4,
+pub struct SUnk80809f4f {
+    pub rotation: Quat,
+    pub translation: Vec4,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80808CB7)]
-pub struct Unk80808cb7 {
+pub struct SUnk80808cb7 {
     pub file_size: u64,
     pub unk8: Vec<SRespawnPoint>,
 }
@@ -437,8 +435,8 @@ pub struct Unk80808cb7 {
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80808CB9)]
 pub struct SRespawnPoint {
-    pub rotation: glam::Quat,
-    pub translation: glam::Vec4,
+    pub rotation: Quat,
+    pub translation: Vec4,
     pub unk20: u32,
     // cohae: Probably padding
     pub unk24: [u32; 3],
@@ -446,22 +444,22 @@ pub struct SRespawnPoint {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk808085c2 {
+pub struct SUnk808085c2 {
     pub file_size: u64,
-    pub unk8: Vec<Unk808085c4>,
+    pub unk8: Vec<SUnk808085c4>,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x808085C4)]
-pub struct Unk808085c4 {
+pub struct SUnk808085c4 {
     pub unk0: [u32; 4],
     pub unk10: [u32; 4],
-    pub translation: glam::Vec4,
+    pub translation: Vec4,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806d19 {
+pub struct SUnk80806d19 {
     pub file_size: u64,
     pub unk8: TagHash,
     pub unkc: u32, // Padding
@@ -472,14 +470,14 @@ pub struct Unk80806d19 {
     pub unk38: TagHash,
     pub unk3c: u32, // Padding
     pub unk40: Vec<()>,
-    pub unk50: Vec<Unk80806d4f>,
+    pub unk50: Vec<SUnk80806d4f>,
     pub unk60: Vec<()>,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806D4F)]
-pub struct Unk80806d4f {
-    pub translation: glam::Vec4,
+pub struct SUnk80806d4f {
+    pub translation: Vec4,
     pub unk10: [u32; 4],
     pub unk20: [u32; 4],
 }
@@ -496,7 +494,7 @@ pub struct Unk80806d4f {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80809178 {
+pub struct SUnk80809178 {
     // Points to havok pre-tag
     pub unk0: Pointer<SSlipSurfaceVolume>,
 
@@ -512,7 +510,7 @@ pub struct Unk80809178 {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk8080917b {
+pub struct SUnk8080917b {
     // Points to havok pre-tag
     pub unk0: Pointer<SSlipSurfaceVolume>,
     pub unk8: u32,
@@ -532,7 +530,7 @@ pub struct SSlipSurfaceVolume {
 
 #[derive(Clone)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk808068d4 {
+pub struct SUnk808068d4 {
     pub unk0: u32,
     pub unk4: u32,
     pub unk8: u32,
@@ -542,18 +540,18 @@ pub struct Unk808068d4 {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80808604 {
+pub struct SUnk80808604 {
     pub unk0: [u32; 4],
-    pub unk10: Tag<Unk80808724>,
+    pub unk10: Tag<SUnk80808724>,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80808606)]
-pub struct Unk80808606 {
-    pub rotation: glam::Quat,
-    pub translation: glam::Vec4,
-    pub unk20: glam::Vec4,
-    pub unk30: glam::Vec4,
+pub struct SUnk80808606 {
+    pub rotation: Quat,
+    pub translation: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
     pub unk40: u32,
     pub shape_index: u32,
     pub unk48: u32,
@@ -563,21 +561,21 @@ pub struct Unk80808606 {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80808724 {
+pub struct SUnk80808724 {
     pub file_size: u64,
-    pub unk8: Vec<Unk80808606>,
+    pub unk8: Vec<SUnk80808606>,
     pub havok_file: TagHash,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x8080824C)]
-pub struct Unk8080824c {
-    pub rotation: glam::Quat,
-    pub translation: glam::Vec4,
-    pub unk20: glam::Vec4,
-    pub unk30: glam::Vec4,
-    pub unk40: glam::Vec4,
-    pub unk50: glam::Vec4,
-    pub unk60: Vec<glam::Vec4>,
+pub struct SUnk8080824c {
+    pub rotation: Quat,
+    pub translation: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
+    pub unk40: Vec4,
+    pub unk50: Vec4,
+    pub unk60: Vec<Vec4>,
     pub unk70: Vec<()>,
     pub unk80: f32,
     pub unk84: [u32; 3],
@@ -588,44 +586,44 @@ pub struct Unk8080824c {
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80808248 {
+pub struct SUnk80808248 {
     pub file_size: u64,
     pub havok_file: TagHash,
     _pad: u32,
-    pub unk10: Vec<Unk8080824c>,
+    pub unk10: Vec<SUnk8080824c>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80808246 {
+pub struct SUnk80808246 {
     pub unk0: [u32; 4],
-    pub unk10: Tag<Unk80808248>,
+    pub unk10: Tag<SUnk80808248>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806ac2 {
+pub struct SUnk80806ac2 {
     pub unk0: [u32; 4],
-    pub unk10: Tag<Unk80806ac4>,
+    pub unk10: Tag<SUnk80806ac4>,
     pub array_index: u32,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct Unk80806ac4 {
+pub struct SUnk80806ac4 {
     pub file_size: u64,
     pub havok_file: TagHash,
     _pad: u32,
-    pub unk10: Vec<Unk80806ed8>,
+    pub unk10: Vec<SUnk80806ed8>,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806ED8)]
-pub struct Unk80806ed8 {
-    pub rotation: glam::Quat,
-    pub translation: glam::Vec4,
-    pub unk20: glam::Vec4,
-    pub unk30: glam::Vec4,
-    pub unk40: glam::Vec4,
-    pub unk50: glam::Vec4,
+pub struct SUnk80806ed8 {
+    pub rotation: Quat,
+    pub translation: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
+    pub unk40: Vec4,
+    pub unk50: Vec4,
 
-    pub unk60: Vec<glam::Vec4>,
+    pub unk60: Vec<Vec4>,
     pub unk70: Vec<()>,
 
     pub unk80: f32,

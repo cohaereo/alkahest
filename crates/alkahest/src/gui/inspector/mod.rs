@@ -2,6 +2,7 @@ mod decorator;
 mod light;
 mod util;
 
+use alkahest_data::map::SLightCollection;
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
@@ -224,6 +225,7 @@ fn show_inspector_components(
         Beacon,
         DynamicModelComponent,
         LightRenderer,
+        SLightCollection,
         CubemapVolume,
         ShaderBallComponent,
         DecoratorRenderer

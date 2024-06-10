@@ -354,6 +354,10 @@ pub struct RendererSettings {
     pub feature_atmosphere: bool,
     pub feature_cubemaps: bool,
 
+    pub stage_transparent: bool,
+    pub stage_decals: bool,
+    pub stage_decals_additive: bool,
+
     pub debug_view: RenderDebugView,
 }
 
@@ -373,6 +377,10 @@ impl Default for RendererSettings {
             feature_decorators: true,
             feature_atmosphere: false,
             feature_cubemaps: false,
+            
+            stage_transparent: true,
+            stage_decals: true,
+            stage_decals_additive: true,
 
             debug_view: RenderDebugView::None,
         }

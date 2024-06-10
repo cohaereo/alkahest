@@ -188,6 +188,22 @@ impl DynamicModel {
     where
         F: Fn(&Self, &Renderer, &SDynamicMesh, &SDynamicMeshPart),
     {
+        if !renderer.render_settings.stage_transparent
+            && render_stage == TfxRenderStage::Transparents
+        {
+            return Ok(());
+        }
+
+        if !renderer.render_settings.stage_decals && render_stage == TfxRenderStage::Decals {
+            return Ok(());
+        }
+
+        if !renderer.render_settings.stage_decals_additive
+            && render_stage == TfxRenderStage::DecalsAdditive
+        {
+            return Ok(());
+        }
+
         gpu_event!(
             renderer.gpu,
             format!(
@@ -319,7 +335,7 @@ impl DynamicModelComponent {
                 self.model.model.texcoord_offset.x,
                 self.model.model.texcoord_offset.y,
             ),
-            dynamic_sh_ao_values: Vec4::new(1.0, 1.0, 1.0, 0.0),
+            dynamic_sh_ao_values: Vec4::new(0.0, 0.0, 0.0, 1.0),
         }
     }
 

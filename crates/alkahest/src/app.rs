@@ -336,6 +336,11 @@ impl AlkahestApp {
 
                         window.request_redraw();
                         profiling::finish_frame!();
+                        
+                        if !window.has_focus() {
+                            // Slow the app down when it's not in focus
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+                        }
 
                         if let Some(e) = renderer.pickbuffer.finish_request() {
                             if e != u32::MAX {

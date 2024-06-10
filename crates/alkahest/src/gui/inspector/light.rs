@@ -1,7 +1,10 @@
-use alkahest_data::map::{SLight, SShadowingLight};
+use alkahest_data::map::{SLight, SLightCollection, SShadowingLight};
 use alkahest_renderer::{
-    ecs::{map::CubemapVolume, render::light::LightRenderer, transform::Transform, Scene},
-    icons::ICON_LIGHTBULB_ON,
+    ecs::{
+        hierarchy::Children, map::CubemapVolume, render::light::LightRenderer,
+        transform::Transform, Scene,
+    },
+    icons::{ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON},
     renderer::RendererShared,
     util::color::Color,
 };
@@ -9,6 +12,51 @@ use egui::{Color32, RichText, Ui};
 use hecs::EntityRef;
 
 use crate::{gui::inspector::ComponentPanel, resources::Resources};
+
+impl ComponentPanel for SLightCollection {
+    fn inspector_name() -> &'static str {
+        "Light Collection"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_LIGHTBULB_GROUP
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui<'s>(
+        &mut self,
+        scene: &'s Scene,
+        e: EntityRef<'s>,
+        _ui: &mut Ui,
+        resources: &Resources,
+    ) {
+        let renderer = resources.get::<RendererShared>();
+        let Some(children) = e.get::<&Children>() else {
+            return;
+        };
+
+        for child in &children.0 {
+            let Ok(mut q) = scene.query_one::<(&LightRenderer, &Transform)>(*child) else {
+                continue;
+            };
+            if let Some((light, transform)) = q.get() {
+                renderer.immediate.cube_outline(
+                    transform.local_to_world() * light.projection_matrix,
+                    Color::from_rgb(1.0, 1.0, 0.0),
+                );
+
+                renderer.immediate.sphere(
+                    transform.translation,
+                    0.04,
+                    Color::from_rgba_premultiplied(1.0, 1.0, 0.0, 0.9),
+                )
+            }
+        }
+    }
+}
 
 impl ComponentPanel for LightRenderer {
     fn inspector_name() -> &'static str {
