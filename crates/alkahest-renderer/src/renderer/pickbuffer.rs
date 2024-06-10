@@ -110,6 +110,9 @@ impl Renderer {
 }
 
 pub struct Pickbuffer {
+    /// Are we currently drawing the pickbuffer?
+    pub is_drawing_selection: bool,
+
     pub(super) selection_request: AtomicCell<Option<(u32, u32)>>,
     pub outline_depth: DepthState,
     pub pick_buffer: RenderTarget,
@@ -150,6 +153,7 @@ impl Pickbuffer {
             .load_pixel_shader(include_dxbc!(ps "gui/pickbuffer.hlsl"))?;
 
         Ok(Self {
+            is_drawing_selection: false,
             selection_request: AtomicCell::new(None),
             outline_depth: DepthState::create(gctx.clone(), window_size)
                 .context("Outline Depth")?,
@@ -237,10 +241,13 @@ impl Pickbuffer {
                 }]))
             }
         }
+
+        self.pocus().is_drawing_selection = true;
     }
 
     pub fn end(&self, gpu: &GpuContext) {
         self.pick_buffer.copy_to_staging(&self.pick_buffer_staging);
+        self.pocus().is_drawing_selection = false;
         unsafe {
             gpu.context().RSSetScissorRects(None);
         }

@@ -11,8 +11,13 @@ mod transparents_pass;
 
 use std::{sync::Arc, time::Instant};
 
-use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage};
+use alkahest_data::{
+    geometry::EPrimitiveType,
+    technique::StateSelection,
+    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
+};
 use anyhow::Context;
+use bitflags::bitflags;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use strum::{EnumCount, EnumIter};
@@ -336,6 +341,32 @@ impl Renderer {
             .resize((width, height))
             .expect("Failed to resize Pickbuffer");
     }
+
+    /// Checks if we should render the given stage and feature, based on render settings
+    #[rustfmt::skip]
+    pub fn should_render(&self, stage: Option<TfxRenderStage>, feature: Option<TfxFeatureRenderer>) -> bool {
+        let flags_to_check = if self.pickbuffer.is_drawing_selection {
+            // An object needs to be visible for it to be selectable
+            RenderFeatureVisibility::SELECTABLE | RenderFeatureVisibility::VISIBLE
+        } else {
+            RenderFeatureVisibility::VISIBLE
+        };
+
+        stage.map_or(true, |v| match v {
+            TfxRenderStage::Transparents => self.render_settings.stage_transparent,
+            TfxRenderStage::Decals => self.render_settings.stage_decals,
+            TfxRenderStage::DecalsAdditive => self.render_settings.stage_decals_additive,
+            _ => true,
+        }) && feature.map_or(true, |v| match v {
+            TfxFeatureRenderer::StaticObjects => self.render_settings.feature_statics.contains(flags_to_check),
+            TfxFeatureRenderer::TerrainPatch => self.render_settings.feature_terrain.contains(flags_to_check),
+            TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.render_settings.feature_dynamics.contains(flags_to_check),
+            TfxFeatureRenderer::SkyTransparent => self.render_settings.feature_sky.contains(flags_to_check),
+            TfxFeatureRenderer::SpeedtreeTrees => self.render_settings.feature_decorators.contains(flags_to_check),
+            TfxFeatureRenderer::Cubemaps => self.render_settings.feature_cubemaps,
+            _ => true,
+        })
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -346,11 +377,11 @@ pub struct RendererSettings {
     pub shadows: bool,
     pub shadow_updates_per_frame: usize,
 
-    pub feature_statics: bool,
-    pub feature_terrain: bool,
-    pub feature_dynamics: bool,
-    pub feature_sky: bool,
-    pub feature_decorators: bool,
+    pub feature_statics: RenderFeatureVisibility,
+    pub feature_terrain: RenderFeatureVisibility,
+    pub feature_dynamics: RenderFeatureVisibility,
+    pub feature_sky: RenderFeatureVisibility,
+    pub feature_decorators: RenderFeatureVisibility,
     pub feature_atmosphere: bool,
     pub feature_cubemaps: bool,
 
@@ -370,20 +401,34 @@ impl Default for RendererSettings {
             shadows: true,
             shadow_updates_per_frame: 2,
 
-            feature_statics: true,
-            feature_terrain: true,
-            feature_dynamics: true,
-            feature_sky: true,
-            feature_decorators: true,
+            feature_statics: RenderFeatureVisibility::all(),
+            feature_terrain: RenderFeatureVisibility::all(),
+            feature_dynamics: RenderFeatureVisibility::all(),
+            feature_sky: RenderFeatureVisibility::all(),
+            feature_decorators: RenderFeatureVisibility::all(),
             feature_atmosphere: false,
             feature_cubemaps: false,
-            
+
             stage_transparent: true,
             stage_decals: true,
             stage_decals_additive: true,
 
             debug_view: RenderDebugView::None,
         }
+    }
+}
+
+bitflags! {
+    #[derive(Serialize, Deserialize, Clone, Copy)]
+    pub struct RenderFeatureVisibility : u8 {
+        const SELECTABLE = 1 << 0;
+        const VISIBLE = 1 << 1;
+    }
+}
+
+impl Default for RenderFeatureVisibility {
+    fn default() -> Self {
+        Self::all()
     }
 }
 

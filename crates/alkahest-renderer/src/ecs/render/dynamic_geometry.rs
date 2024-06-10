@@ -20,7 +20,7 @@ use crate::{
     gpu_event,
     handle::Handle,
     loaders::AssetManager,
-    renderer::Renderer,
+    renderer::{RenderFeatureVisibility, Renderer},
     tfx::{
         externs, scope, scope::ScopeSkinning, technique::Technique, view::RenderStageSubscriptions,
     },
@@ -385,26 +385,9 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         .without::<&Hidden>()
         .iter()
     {
-        if !dynamic.model.subscribed_stages.is_subscribed(render_stage) {
-            continue;
+        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type)) {
+            entities.push((e, dynamic.model.feature_type));
         }
-
-        if !renderer.render_settings.feature_sky
-            && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
-        {
-            continue;
-        }
-
-        if !renderer.render_settings.feature_dynamics
-            && matches!(
-                dynamic.model.feature_type,
-                TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects
-            )
-        {
-            continue;
-        }
-
-        entities.push((e, dynamic.model.feature_type));
     }
 
     entities.sort_by_key(|(_, feature_type)| match feature_type {
@@ -422,7 +405,8 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         });
     }
 
-    if renderer.render_settings.feature_decorators {
+    if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) 
+    {
         for (e, decorator) in scene
             .query::<&DecoratorRenderer>()
             .without::<&Hidden>()

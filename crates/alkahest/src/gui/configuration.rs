@@ -1,9 +1,10 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
-    renderer::{RenderDebugView, RendererSettings, RendererShared},
+    icons::{ICON_CURSOR_POINTER, ICON_EYE},
+    renderer::{RenderDebugView, RenderFeatureVisibility, RendererSettings, RendererShared},
     util::text::StringExt,
 };
-use egui::{Context, RichText, Widget};
+use egui::{Context, RichText, Rounding, Widget};
 use strum::IntoEnumIterator;
 use transform_gizmo_egui::{EnumSet, GizmoMode};
 use winit::window::Window;
@@ -45,13 +46,13 @@ impl GuiView for RenderSettingsPanel {
 
             ui.separator();
             ui.heading("Feature Renderers");
-            ui.checkbox(&mut settings.feature_statics, "Statics");
-            ui.checkbox(&mut settings.feature_terrain, "Terrain");
-            ui.checkbox(&mut settings.feature_dynamics, "Dynamics");
-            ui.checkbox(&mut settings.feature_sky, "Sky Objects");
-            ui.checkbox(&mut settings.feature_decorators, "Trees/Decorators");
-            ui.checkbox(&mut settings.feature_atmosphere, "Atmosphere");
-            ui.checkbox(&mut settings.feature_cubemaps, "Cubemaps");
+            render_feat_vis_select(ui, "Statics", &mut settings.feature_statics);
+            render_feat_vis_select(ui, "Terrain", &mut settings.feature_terrain);
+            render_feat_vis_select(ui, "Dynamics", &mut settings.feature_dynamics);
+            render_feat_vis_select(ui, "Sky Objects", &mut settings.feature_sky);
+            render_feat_vis_select(ui, "Trees/Decorators", &mut settings.feature_decorators);
+            render_feat_vis(ui, "Atmosphere", &mut settings.feature_atmosphere);
+            render_feat_vis(ui, "Cubemaps", &mut settings.feature_cubemaps);
 
             ui.separator();
             ui.heading("Render Stages");
@@ -125,4 +126,82 @@ impl SelectionGizmoMode {
             SelectionGizmoMode::Scale => EnumSet::only(GizmoMode::Scale),
         }
     }
+}
+
+fn render_feat_vis_select(ui: &mut egui::Ui, name: &str, mode: &mut RenderFeatureVisibility) {
+    ui.horizontal(|ui| {
+        ui.label(name);
+
+        let rounding_l = Rounding {
+            ne: 0.0,
+            se: 0.0,
+            nw: 2.0,
+            sw: 2.0,
+        };
+        let rounding_r = Rounding {
+            nw: 0.0,
+            sw: 0.0,
+            ne: 2.0,
+            se: 2.0,
+        };
+
+        ui.style_mut().spacing.item_spacing = [0.0; 2].into();
+        ui.style_mut().spacing.button_padding = [4.0, 0.0].into();
+
+        ui.style_mut().visuals.widgets.active.rounding = rounding_l;
+        ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
+        ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+
+        if ui
+            .selectable_label(
+                mode.contains(RenderFeatureVisibility::VISIBLE),
+                ICON_EYE.to_string(),
+            )
+            .clicked()
+        {
+            *mode ^= RenderFeatureVisibility::VISIBLE;
+        }
+
+        ui.style_mut().visuals.widgets.active.rounding = rounding_r;
+        ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
+        ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+
+        ui.add_enabled_ui(mode.contains(RenderFeatureVisibility::VISIBLE), |ui| {
+            if ui
+                .selectable_label(
+                    mode.contains(RenderFeatureVisibility::SELECTABLE),
+                    ICON_CURSOR_POINTER.to_string(),
+                )
+                .clicked()
+            {
+                *mode ^= RenderFeatureVisibility::SELECTABLE;
+            }
+        });
+    });
+}
+
+fn render_feat_vis(ui: &mut egui::Ui, name: &str, visible: &mut bool) {
+    ui.horizontal(|ui| {
+        ui.label(name);
+
+        let rounding = Rounding {
+            nw: 2.0,
+            sw: 2.0,
+            ne: 2.0,
+            se: 2.0,
+        };
+
+        ui.style_mut().spacing.button_padding = [4.0, 0.0].into();
+
+        ui.style_mut().visuals.widgets.active.rounding = rounding;
+        ui.style_mut().visuals.widgets.hovered.rounding = rounding;
+        ui.style_mut().visuals.widgets.inactive.rounding = rounding;
+
+        if ui
+            .selectable_label(*visible, ICON_EYE.to_string())
+            .clicked()
+        {
+            *visible = !*visible;
+        }
+    });
 }

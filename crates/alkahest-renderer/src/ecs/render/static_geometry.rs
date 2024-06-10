@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use alkahest_data::{
     statics::{SStaticMesh, SStaticMeshData, SStaticSpecialMesh},
-    tfx::{TfxRenderStage, TfxShaderStage},
+    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
 use destiny_pkg::TagHash;
@@ -375,7 +375,7 @@ pub fn draw_static_instances_system(
     scene: &Scene,
     render_stage: TfxRenderStage,
 ) {
-    if !renderer.render_settings.feature_statics {
+    if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::StaticObjects)) {
         return;
     }
 
@@ -411,7 +411,7 @@ pub fn draw_static_instances_individual_system(
     cbuffer: &ConstantBuffer<u8>,
     render_stage: TfxRenderStage,
 ) {
-    if !renderer.render_settings.feature_statics {
+    if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::StaticObjects)) {
         return;
     }
 

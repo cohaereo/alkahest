@@ -15,7 +15,7 @@ members = [
 arc-swap = { version = "1.7.1", features = ["weak"] }
 anyhow = { version = "1.0.71" }
 binrw = "0.13.3"
-bitflags = "2.5.0"
+bitflags = { version = "2.5.0", features = ["serde"] }
 bytemuck = "1.7.0"
 crossbeam = "0.8.4"
 destiny-pkg = "0.10"

@@ -1,7 +1,7 @@
 use alkahest_data::{
     geometry::EPrimitiveType,
     map::STerrain,
-    tfx::{TfxRenderStage, TfxShaderStage},
+    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
 use destiny_pkg::TagHash;
@@ -184,7 +184,7 @@ pub fn draw_terrain_patches_system(
     scene: &hecs::World,
     render_stage: TfxRenderStage,
 ) {
-    if !renderer.render_settings.feature_terrain {
+    if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::TerrainPatch)) {
         return;
     }
 
