@@ -28,9 +28,30 @@ impl GuiView for RenderSettingsPanel {
             ui.heading("Graphics");
             let mut settings = resources.get_mut::<RendererSettings>();
             ui.checkbox(&mut settings.vsync, "VSync");
-            ui.checkbox(&mut settings.ssao, "SSAO");
             ui.checkbox(&mut settings.matcap, "Matcap");
             ui.checkbox(&mut settings.shadows, "Shadows");
+            ui.checkbox(&mut settings.ssao, "SSAO");
+            ui.collapsing("SSAO Settings", |ui| {
+                let renderer = resources.get::<RendererShared>();
+                let ssao_data = renderer.ssao.scope.data();
+                ui.horizontal(|ui| {
+                    ui.label("Radius");
+                    egui::DragValue::new(&mut ssao_data.radius)
+                        .speed(0.01)
+                        .clamp_range(0.0..=10.0)
+                        .suffix("m")
+                        .ui(ui);
+                });
+
+                ui.horizontal(|ui| {
+                    ui.label("Bias");
+                    egui::DragValue::new(&mut ssao_data.bias)
+                        .speed(0.01)
+                        .clamp_range(0.0..=10.0)
+                        .suffix("m")
+                        .ui(ui);
+                });
+            });
 
             egui::ComboBox::from_label("Debug View")
                 .selected_text(settings.debug_view.to_string().split_pascalcase())

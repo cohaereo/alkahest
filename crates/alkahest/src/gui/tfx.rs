@@ -11,7 +11,7 @@ use winit::window::Window;
 
 use crate::{
     gui::{
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
         UiExt,
     },
     resources::Resources,
@@ -40,10 +40,10 @@ impl GuiView for TfxErrorViewer {
         let renderer = resources.get::<RendererShared>();
         let externs = &mut renderer.data.lock().externs;
 
-        let mut open = true;
+        let mut windows = resources.get_mut::<HiddenWindows>();
         egui::Window::new("TFX Expression Debugger")
             .default_size([640., 720.])
-            .open(&mut open)
+            .open(&mut windows.tfx_extern_debugger)
             .show(ctx, |ui| {
                 ui.checkbox(&mut self.clear_each_frame, "Clear each frame");
                 egui::ScrollArea::new([false, true]).show(ui, |ui| {
@@ -106,7 +106,8 @@ impl GuiView for TfxErrorViewer {
             externs.errors.write().clear();
         }
 
-        (!open).then_some(ViewResult::Close)
+        // (!open).then_some(ViewResult::Close)
+        None
     }
 }
 
@@ -160,10 +161,11 @@ impl GuiView for TfxExternEditor {
         let renderer = resources.get::<RendererShared>();
         let externs = &mut renderer.data.lock().externs;
 
-        let mut open = true;
+        // let mut open = true;
+        let mut windows = resources.get_mut::<HiddenWindows>();
         egui::Window::new("TFX Extern Editor")
             .default_size([640., 720.])
-            .open(&mut open)
+            .open(&mut windows.tfx_extern_editor)
             .show(ctx, |ui| {
                 egui::ScrollArea::new([false, true]).show(ui, |ui| {
                     for &ext in SHOWN_EXTERNS {
@@ -249,6 +251,7 @@ impl GuiView for TfxExternEditor {
                 });
             });
 
-        (!open).then_some(ViewResult::Close)
+        // (!open).then_some(ViewResult::Close)
+        None
     }
 }

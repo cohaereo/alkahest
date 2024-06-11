@@ -19,6 +19,7 @@ pub mod console;
 pub mod gizmo;
 mod menu;
 mod outliner;
+mod profiler;
 mod util;
 
 pub use configuration::SelectionGizmoMode;

@@ -25,7 +25,7 @@ use crate::{
     data::text::{GlobalStringmap, StringMapShared},
     gui::{
         activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
-        context::{GuiContext, GuiViewManager},
+        context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
         SelectionGizmoMode,
     },
@@ -86,6 +86,7 @@ impl AlkahestApp {
         resources.insert(config!().renderer.clone());
         resources.insert(MapList::default());
         resources.insert(SelectionGizmoMode::default());
+        resources.insert(HiddenWindows::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),
@@ -304,29 +305,6 @@ impl AlkahestApp {
 
                                 if !gui_views.hide_views {
                                     draw_transform_gizmos(renderer, ectx, resources);
-
-                                    puffin_egui::profiler_window(ectx);
-
-                                    egui::Window::new("SSAO Settings").show(ectx, |ui| {
-                                        let ssao_data = renderer.ssao.scope.data();
-                                        ui.horizontal(|ui| {
-                                            ui.label("Radius");
-                                            egui::DragValue::new(&mut ssao_data.radius)
-                                                .speed(0.01)
-                                                .clamp_range(0.0..=10.0)
-                                                .suffix("m")
-                                                .ui(ui);
-                                        });
-
-                                        ui.horizontal(|ui| {
-                                            ui.label("Bias");
-                                            egui::DragValue::new(&mut ssao_data.bias)
-                                                .speed(0.01)
-                                                .clamp_range(0.0..=10.0)
-                                                .suffix("m")
-                                                .ui(ui);
-                                        });
-                                    });
                                 }
                             });
                         });
@@ -336,7 +314,7 @@ impl AlkahestApp {
 
                         window.request_redraw();
                         profiling::finish_frame!();
-                        
+
                         if !window.has_focus() {
                             // Slow the app down when it's not in focus
                             std::thread::sleep(std::time::Duration::from_millis(100));

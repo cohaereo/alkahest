@@ -18,6 +18,7 @@ use crate::{
         inspector::InspectorPanel,
         menu::MenuBar,
         outliner::OutlinerPanel,
+        profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
     resources::Resources,
@@ -198,6 +199,7 @@ impl GuiViewManager {
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
         views.insert(ConsolePanel::default());
+        views.insert(PuffinProfiler);
 
         views.insert_overlay(FpsDisplayOverlay::default());
 
@@ -279,6 +281,23 @@ impl GuiResources {
         );
 
         Self { icon_havok }
+    }
+}
+
+// TODO(cohae): Will be replaced by the panels system with the new UI
+pub struct HiddenWindows {
+    pub tfx_extern_editor: bool,
+    pub tfx_extern_debugger: bool,
+    pub cpu_profiler: bool,
+}
+
+impl Default for HiddenWindows {
+    fn default() -> Self {
+        Self {
+            tfx_extern_editor: false,
+            tfx_extern_debugger: false,
+            cpu_profiler: false,
+        }
     }
 }
 

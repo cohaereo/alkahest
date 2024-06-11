@@ -11,8 +11,8 @@ use alkahest_renderer::{
         ICON_ALPHA_A_BOX_OUTLINE, ICON_ALPHA_D_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
         ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE,
         ICON_ALPHA_W_BOX_OUTLINE, ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE,
-        ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE,
-        ICON_SPHERE,
+        ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_POKEBALL,
+        ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
@@ -24,7 +24,7 @@ use winit::window::Window;
 
 use crate::{
     config,
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
     maplist::MapList,
     resources::Resources,
     util::{consts, consts::CHANGELOG_MD},
@@ -229,16 +229,18 @@ impl GuiView for MenuBar {
                     }
                 });
 
-                // ui.menu_button("View", |ui| {
-                //     let mut windows = resources.get_mut::<HiddenWindows>().unwrap();
-                //     windows.texture_dumper ^= ui
-                //         .selectable_label(windows.texture_dumper, "Texture Dumper")
-                //         .clicked();
-                //
-                //     windows.tag_dumper ^= ui
-                //         .selectable_label(windows.tag_dumper, "Tag Dumper")
-                //         .clicked();
-                // });
+                ui.menu_button("View", |ui| {
+                    let mut windows = resources.get_mut::<HiddenWindows>();
+                    windows.tfx_extern_debugger ^= ui
+                        .selectable_label(windows.tfx_extern_debugger, "TFX Extern Debugger")
+                        .clicked();
+                    windows.tfx_extern_editor ^= ui
+                        .selectable_label(windows.tfx_extern_editor, "TFX Extern Editor")
+                        .clicked();
+                    windows.cpu_profiler ^= ui
+                        .selectable_label(windows.cpu_profiler, "Profiler")
+                        .clicked();
+                });
 
                 ui.menu_button("Help", |ui| {
                     if ui.button("Controls").clicked() {
@@ -383,7 +385,7 @@ impl MenuBar {
 
                             control_description!(
                                 ui,
-                                format!("{}+{}", ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_ARROW_ALL),
+                                format!("{}+{}", ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_ARROW_ALL),
                                 "Adjust Camera Direction"
                             );
 
@@ -460,11 +462,11 @@ impl MenuBar {
 
                             control_section_title!(ui, "Object Interactions");
 
-                            // control_description!(
-                            //     ui,
-                            //     ICON_MOUSE_RIGHT_CLICK_OUTLINE,
-                            //     "Select Object"
-                            // );
+                            control_description!(
+                                ui,
+                                ICON_MOUSE_LEFT_CLICK_OUTLINE,
+                                "Select Object"
+                            );
                             //
                             // control_description!(
                             //     ui,
@@ -510,8 +512,8 @@ impl MenuBar {
                             //     ICON_ARROW_UP_BOLD_BOX_OUTLINE,
                             //     "Select 'Previous' Object"
                             // );
-                            control_section_title!(ui, "Miscellaneous");
 
+                            // control_section_title!(ui, "Miscellaneous");
                             // control_description!(
                             //     ui,
                             //     ICON_ALPHA_I_BOX_OUTLINE,
