@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "alkahest-data",
  "alkahest-panic-handler",
@@ -211,7 +211,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest-renderer"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "alkahest-data",
  "alkahest-pm",
