@@ -24,6 +24,7 @@ use hecs::{DynamicBundle, Entity};
 use itertools::{any, multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
+use winit::window::Theme::Light;
 
 use crate::{
     camera::CameraProjection,
@@ -34,7 +35,7 @@ use crate::{
         render::{
             decorators::DecoratorRenderer,
             dynamic_geometry::DynamicModelComponent,
-            light::{LightRenderer, ShadowMapRenderer},
+            light::{LightRenderer, LightShape, ShadowMapRenderer},
             static_geometry::{StaticInstance, StaticInstances, StaticModel},
             terrain::TerrainPatches,
         },
@@ -528,10 +529,11 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 ))
                 .enumerate()
                 {
+                    let shape = LightShape::from_volume_matrix(light.light_to_world);
                     children.push(
                         scene.spawn((
-                            Icon(ICON_LIGHTBULB_ON),
-                            Label::from(format!("Light {i}")),
+                            Icon(shape.icon()),
+                            Label::from(format!("{} Light {tag}[{i}]", shape.name())),
                             Transform {
                                 translation: transform.translation.xyz(),
                                 rotation: transform.rotation,
@@ -584,7 +586,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     scene,
                     (
                         Icon(ICON_SPOTLIGHT_BEAM),
-                        Label::from(format!("Shadowing Light {tag}")),
+                        Label::from(format!("Shadowing Spotlight {tag}")),
                         transform,
                         LightRenderer::load_shadowing(
                             renderer.gpu.clone(),

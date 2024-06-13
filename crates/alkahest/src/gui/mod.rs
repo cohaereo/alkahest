@@ -18,6 +18,7 @@ mod commands;
 pub mod console;
 pub mod gizmo;
 mod menu;
+mod node_gizmos;
 mod outliner;
 mod profiler;
 mod util;

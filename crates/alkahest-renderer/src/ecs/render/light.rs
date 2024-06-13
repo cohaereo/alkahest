@@ -8,7 +8,7 @@ use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
-use glam::{Mat4, UVec2, Vec4, Vec4Swizzles};
+use glam::{Mat4, UVec2, Vec3, Vec4, Vec4Swizzles};
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
@@ -26,6 +26,7 @@ use crate::{
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
+    icons::{ICON_LIGHTBULB_FLUORESCENT_TUBE, ICON_LIGHTBULB_ON, ICON_SPOTLIGHT_BEAM},
     loaders::AssetManager,
     renderer::{gbuffer::ShadowDepthMap, Renderer},
     tfx::{
@@ -442,5 +443,40 @@ impl View for ShadowMapRenderer {
 
         // Only known values are (0, 1, 0, 0) and (0, 3.428143, 0, 0)
         x.view_miscellaneous = Vec4::new(0., 1., 0., 0.);
+    }
+}
+
+pub enum LightShape {
+    Omni,
+    Spot,
+    Line,
+}
+
+impl LightShape {
+    /// Discern the light shape from the volume matrix (volume space -> world)
+    pub fn from_volume_matrix(m: Mat4) -> LightShape {
+        if m.x_axis.x.abs() == 0.0 {
+            LightShape::Spot
+        } else if m.x_axis.x.abs() != m.y_axis.y.abs() || m.y_axis.y.abs() != m.z_axis.z.abs() {
+            LightShape::Line
+        } else {
+            LightShape::Omni
+        }
+    }
+
+    pub fn icon(&self) -> char {
+        match self {
+            LightShape::Omni => ICON_LIGHTBULB_ON,
+            LightShape::Spot => ICON_SPOTLIGHT_BEAM,
+            LightShape::Line => ICON_LIGHTBULB_FLUORESCENT_TUBE,
+        }
+    }
+    
+    pub fn name(&self) -> &'static str {
+        match self {
+            LightShape::Omni => "Omni",
+            LightShape::Spot => "Spot",
+            LightShape::Line => "Line",
+        }
     }
 }

@@ -156,6 +156,12 @@ impl Camera {
 
         self.target_pixel_to_projective = self.viewport.target_pixel_to_projective();
     }
+
+    pub fn is_point_visible(&self, point: Vec3) -> bool {
+        let point_transformed = self.world_to_projective.project_point3(point);
+
+        point_transformed.z >= 0.0
+    }
 }
 
 // Functions forwarded from CameraController

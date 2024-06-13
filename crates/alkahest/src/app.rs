@@ -321,15 +321,17 @@ impl AlkahestApp {
                         }
 
                         if let Some(e) = renderer.pickbuffer.finish_request() {
-                            if e != u32::MAX {
-                                let maps = resources.get::<MapList>();
-                                if let Some(map) = maps.current_map() {
-                                    resources
-                                        .get_mut::<SelectedEntity>()
-                                        .select(unsafe { map.scene.find_entity_from_id(e) });
+                            let mut selected = resources.get_mut::<SelectedEntity>();
+                            if !selected.changed_this_frame {
+                                if e != u32::MAX {
+                                    let maps = resources.get::<MapList>();
+                                    if let Some(map) = maps.current_map() {
+                                        selected
+                                            .select(unsafe { map.scene.find_entity_from_id(e) });
+                                    }
+                                } else {
+                                    selected.deselect();
                                 }
-                            } else {
-                                resources.get_mut::<SelectedEntity>().deselect();
                             }
                         }
                     }

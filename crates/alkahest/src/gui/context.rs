@@ -24,6 +24,7 @@ use crate::{
     resources::Resources,
     util::image::EguiPngLoader,
 };
+use crate::gui::node_gizmos::NodeGizmoOverlay;
 
 pub struct GuiContext {
     pub egui: egui::Context,
@@ -200,6 +201,7 @@ impl GuiViewManager {
         views.insert(InspectorPanel);
         views.insert(ConsolePanel::default());
         views.insert(PuffinProfiler);
+        views.insert(NodeGizmoOverlay);
 
         views.insert_overlay(FpsDisplayOverlay::default());
 
