@@ -43,7 +43,7 @@ impl Renderer {
             let mut data = self.data.lock();
 
             data.externs.deferred = Some(externs::Deferred {
-                depth_constants: Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0),
+                depth_constants: Vec4::new(0.0, 1. / 0.01, 0.0, 0.0),
                 deferred_depth: data.gbuffers.depth.texture_copy_view.clone().into(),
                 deferred_rt0: data.gbuffers.rt0.view.clone().into(),
                 deferred_rt1: data.gbuffers.rt1_read.view.clone().into(),

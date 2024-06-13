@@ -520,7 +520,7 @@ impl View {
 
 extern_struct! {
     struct Deferred("deferred") {
-        0x00 => depth_constants: Vec4 > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x00 => depth_constants: Vec4 > default(Vec4::new(0.0, 1. / 0.01, 0.0, 0.0)),
         0x10 => unk10: Vec4 > unimplemented(true),
         0x20 => unk20: Vec4 > unimplemented(true),
         0x30 => unk30: f32 > unimplemented(true),
@@ -635,11 +635,11 @@ extern_struct! {
         0x144 => unk144: f32 > unimplemented(true),
         0x148 => unk148: f32 > unimplemented(true),
         0x14c => unk14c: f32 > unimplemented(true),
-        0x150 => unk150: f32 > unimplemented(true) > default(0.0001),
+        0x150 => unk150: f32 > unimplemented(true) > default(0.01),
         0x160 => unk160: Vec4 > unimplemented(true),
         0x170 => unk170: f32 > unimplemented(true),
         0x174 => unk174: f32 > unimplemented(true),
-        0x178 => unk178: f32 > unimplemented(true) > default(0.0001),
+        0x178 => unk178: f32 > unimplemented(true) > default(0.01),
         // Atmosphere rotation
         0x194 => unk194_rotation: f32 > unimplemented(true) > default(0.0),
         // Intensity
@@ -707,17 +707,17 @@ extern_struct! {
 
 extern_struct! {
     struct Hdao("hdao") {
-        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
-        0x10 => unk10: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x00 => unk00: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.01, 0.0, 0.0)),
+        0x10 => unk10: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.01, 0.0, 0.0)),
         0x20 => unk20: Vec4 > unimplemented(true),
         0x30 => unk30: Vec4 > unimplemented(true),
-        0x40 => unk40: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x40 => unk40: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.01, 0.0, 0.0)),
         0x50 => unk50: Vec4 > unimplemented(true),
         0x60 => unk60: TextureView,
         0x68 => unk68: TextureView,
         0x70 => unk70: Vec4 > unimplemented(true),
         0x80 => unk80: Vec4 > unimplemented(true),
-        0x90 => unk90: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.0001, 0.0, 0.0)),
+        0x90 => unk90: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 1. / 0.01, 0.0, 0.0)),
         // 0xa0 => unka0: UnorderedAccessView,
     }
 }

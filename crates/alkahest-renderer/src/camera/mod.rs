@@ -80,7 +80,7 @@ impl Camera {
             viewport,
             CameraProjection::Perspective {
                 fov: 90.0,
-                near: 0.0001,
+                near: 0.01,
             },
             Box::<FpsCamera>::default(),
         )

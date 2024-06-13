@@ -41,7 +41,7 @@ VSOutput VSMain(uint vertex_id: SV_VertexID) {
     return output;
 }
 
-#define NEAR_PLANE 0.0001f
+#define NEAR_PLANE 0.01f
 
 [maxvertexcount(4)]
 void GSMain(line VSOutput input[2], inout TriangleStream<VSOutput> OutputStream ) {

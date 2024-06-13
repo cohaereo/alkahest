@@ -32,7 +32,7 @@ float3 DecodeNormal(float3 n) {
     return normalize(n * 2.0 - 1.0);
 }
 
-#define NEAR_PLANE 0.0001
+#define NEAR_PLANE 0.01
 
 // Linearize infinite reverse-Z right handed depth buffer
 float LinearizeDepth(float depth) {
