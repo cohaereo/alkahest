@@ -71,6 +71,7 @@ impl GuiView for RenderSettingsPanel {
             render_feat_vis_select(ui, "Terrain", &mut settings.feature_terrain);
             render_feat_vis_select(ui, "Dynamics", &mut settings.feature_dynamics);
             render_feat_vis_select(ui, "Sky Objects", &mut settings.feature_sky);
+            render_feat_vis_select(ui, "Water", &mut settings.feature_water);
             render_feat_vis_select(ui, "Trees/Decorators", &mut settings.feature_decorators);
             render_feat_vis(ui, "Atmosphere", &mut settings.feature_atmosphere);
             render_feat_vis(ui, "Cubemaps", &mut settings.feature_cubemaps);

@@ -362,6 +362,7 @@ impl Renderer {
             TfxFeatureRenderer::TerrainPatch => self.render_settings.feature_terrain.contains(flags_to_check),
             TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.render_settings.feature_dynamics.contains(flags_to_check),
             TfxFeatureRenderer::SkyTransparent => self.render_settings.feature_sky.contains(flags_to_check),
+            TfxFeatureRenderer::Water => self.render_settings.feature_water.contains(flags_to_check),
             TfxFeatureRenderer::SpeedtreeTrees => self.render_settings.feature_decorators.contains(flags_to_check),
             TfxFeatureRenderer::Cubemaps => self.render_settings.feature_cubemaps,
             _ => true,
@@ -382,6 +383,7 @@ pub struct RendererSettings {
     pub feature_dynamics: RenderFeatureVisibility,
     pub feature_sky: RenderFeatureVisibility,
     pub feature_decorators: RenderFeatureVisibility,
+    pub feature_water: RenderFeatureVisibility,
     pub feature_atmosphere: bool,
     pub feature_cubemaps: bool,
 
@@ -406,6 +408,7 @@ impl Default for RendererSettings {
             feature_dynamics: RenderFeatureVisibility::all(),
             feature_sky: RenderFeatureVisibility::all(),
             feature_decorators: RenderFeatureVisibility::all(),
+            feature_water: RenderFeatureVisibility::all(),
             feature_atmosphere: false,
             feature_cubemaps: false,
 
