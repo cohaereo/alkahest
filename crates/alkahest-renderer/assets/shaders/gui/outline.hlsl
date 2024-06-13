@@ -1,11 +1,13 @@
 // VSMain
 #include "screen_space.hlsli"
+#include "dither.hlsli"
 
 cbuffer cb_outline : register(b0) {
     float time_since_selection;
 };
 
 #define OUTLINE_COLOR float3(1.0, 0.6, 0.2)
+#define OUTLINE_COLOR_BACK (OUTLINE_COLOR * 0.6)
 #define OUTLINE_WIDTH 2
 
 Texture2D DepthTargetOutline : register(t0);
@@ -23,7 +25,7 @@ float2 QueryTexelSize(Texture2D t) {
 float4 PSMain(VSOutput input) : SV_Target {
     float depth = DepthTargetOutline.Sample(SampleType, input.uv).r;
 
-    // if the pixel isn't 0 (we are on the silhouette)
+    // if the pixel isn't 0 (we are on the depth silhouette)
     if (depth != 0)
     {
         float timeNormMul = clamp(time_since_selection * 4.0, 0.0, 1.0);
@@ -55,10 +57,13 @@ float4 PSMain(VSOutput input) : SV_Target {
         // if we are on the silhouette but not on the border
         float depthScene = DepthTargetScene.Sample(SampleType, input.uv).r;
         float fillFlash = (1.0 - timeNormMul) * 0.20;
-        if(depthScene > depth) // Behind scene
-            return float4(OUTLINE_COLOR, 0.08 + fillFlash);
-        else // In front of scene
-            return float4(OUTLINE_COLOR, 0.015 + fillFlash);
+        if(depthScene > depth) { // Behind scene
+            dither_discard(input.screen_pos, 0.15);
+//             return float4(OUTLINE_COLOR, 0.16 + fillFlash);
+            return float4(lerp(OUTLINE_COLOR, OUTLINE_COLOR_BACK, timeNormMul), 0.75 + fillFlash);
+        }
+//         else // In front of scene
+//             return float4(OUTLINE_COLOR, 0.015 + fillFlash);
     }
 
     discard;
