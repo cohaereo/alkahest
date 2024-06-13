@@ -77,6 +77,7 @@ pub struct ExternStorage {
     pub speedtree_placements: Option<SpeedtreePlacements>,
     pub decorator_wind: Option<DecoratorWind>,
     pub postprocess: Option<Postprocess>,
+    pub shadow_mask: Option<ShadowMask>,
 
     pub global_channels: [Vec4; 256],
     pub global_channels_used: RwLock<[usize; 256]>,
@@ -104,6 +105,7 @@ impl Default for ExternStorage {
             speedtree_placements: None,
             decorator_wind: Some(DecoratorWind::default()),
             postprocess: None,
+            shadow_mask: None,
 
             global_channels: get_global_channel_defaults(),
             global_channels_used: RwLock::new([0; 256]),
@@ -245,6 +247,7 @@ impl ExternStorage {
             SpeedtreePlacements => self.speedtree_placements,
             DecoratorWind => self.decorator_wind,
             Postprocess => self.postprocess,
+            ShadowMask => self.shadow_mask,
         }
     }
 
@@ -281,7 +284,8 @@ impl ExternStorage {
             Cubemaps,
             SpeedtreePlacements,
             DecoratorWind,
-            Postprocess
+            Postprocess,
+            ShadowMask
         }
     }
 
@@ -317,6 +321,7 @@ impl ExternStorage {
             SpeedtreePlacements => self.speedtree_placements,
             DecoratorWind => self.decorator_wind,
             Postprocess => self.postprocess,
+            ShadowMask => self.shadow_mask,
         }
     }
 }
@@ -727,7 +732,8 @@ extern_struct! {
         0x08 => unk08: TextureView > unimplemented(true),
         0x10 => unk10: Vec4 > unimplemented(true),
         0x30 => unk30: Vec4 > unimplemented(true),
-        0x50 => unk50: Vec4 > unimplemented(true),
+        // Light angle, not a quaternion
+        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(0.25, 0.5, 1.0, 1.0)),
         0x70 => unk70: Vec4 > unimplemented(true),
         0x80 => unk80: Vec4 > unimplemented(true),
         0x90 => unk90: f32 > unimplemented(true),
@@ -783,6 +789,17 @@ extern_struct! {
         0x100 => unk100: Vec4,
         0x110 => unk110: Vec4,
         0x130 => unk130: Vec4,
+    }
+}
+
+extern_struct! {
+    struct ShadowMask("shadowmask") {
+        0x00 => unk00: TextureView,
+        0x08 => unk08: TextureView,
+        0x10 => unk10: TextureView,
+        0x20 => unk20: Vec4,
+        0x30 => unk30: f32,
+        0x34 => unk34: f32,
     }
 }
 
@@ -964,10 +981,20 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     channels[97] = Vec4::ZERO;
 
     // Sun related
+    channels[82] = Vec4::ZERO;
     channels[98] = Vec4::ZERO;
     channels[100] = Vec4::ZERO;
 
+    channels[27] = Vec4::X * 2.0; // specular tint intensity
+    channels[28] = Vec4::ONE; // specular tint
+
+    channels[31] = Vec4::ONE; // diffuse tint 1
+    channels[32] = Vec4::X * 2.0; // diffuse tint 1 intensity
+    channels[33] = Vec4::ONE; // diffuse tint 2
+    channels[34] = Vec4::X * 2.0; // diffuse tint 2 intensity
+
     // Misc lights
+    channels[93] = Vec4::ZERO;
     channels[131] = Vec4::new(0.5, 0.0, 1.0, 0.0); // Seems related to line lights
 
     channels

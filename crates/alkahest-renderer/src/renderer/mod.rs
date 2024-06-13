@@ -386,6 +386,7 @@ pub struct RendererSettings {
     pub feature_water: RenderFeatureVisibility,
     pub feature_atmosphere: bool,
     pub feature_cubemaps: bool,
+    pub feature_global_lighting: bool,
 
     pub stage_transparent: bool,
     pub stage_decals: bool,
@@ -411,6 +412,7 @@ impl Default for RendererSettings {
             feature_water: RenderFeatureVisibility::all(),
             feature_atmosphere: false,
             feature_cubemaps: false,
+            feature_global_lighting: false,
 
             stage_transparent: true,
             stage_decals: true,

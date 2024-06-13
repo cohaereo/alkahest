@@ -75,6 +75,7 @@ impl GuiView for RenderSettingsPanel {
             render_feat_vis_select(ui, "Trees/Decorators", &mut settings.feature_decorators);
             render_feat_vis(ui, "Atmosphere", &mut settings.feature_atmosphere);
             render_feat_vis(ui, "Cubemaps", &mut settings.feature_cubemaps);
+            render_feat_vis(ui, "Global Lighting", &mut settings.feature_global_lighting);
 
             ui.separator();
             ui.heading("Render Stages");

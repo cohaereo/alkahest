@@ -52,6 +52,7 @@ received some polish!
     - Ambient voxel/cubemap IBL
     - Bind DX11 depth, blend, rasterizer and depth bias states based on Technique data
 - Shadow mapping
+- Global lighting
 - Decorator rendering (grass, plants, small rocks, etc.)
 - Transform gizmo
 - Compile-time shader compilation

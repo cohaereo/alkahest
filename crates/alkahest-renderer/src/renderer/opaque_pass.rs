@@ -32,7 +32,7 @@ impl Renderer {
 
             gbuffers.rt0.clear(&[0.0, 0.0, 0.0, 0.0]);
             gbuffers.rt1.clear(&[0.0, 0.0, 0.0, 0.0]);
-            gbuffers.rt2.clear(&[1.0, 0.5, 1.0, 0.0]);
+            gbuffers.rt2.clear(&[1.0, 0.5, 1.0, 1.0]);
             gbuffers.depth.clear(0.0, 0);
         }
 

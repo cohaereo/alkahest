@@ -8,7 +8,7 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::color::Color,
 };
-use egui::{Color32, RichText, Ui};
+use egui::{Color32, RichText, Ui, Widget};
 use hecs::EntityRef;
 
 use crate::{gui::inspector::ComponentPanel, resources::Resources};
@@ -98,6 +98,10 @@ impl ComponentPanel for LightRenderer {
             });
         });
         ui.label(&self.debug_label);
+        ui.collapsing("Debug Info", |ui| {
+            ui.style_mut().wrap = Some(true);
+            ui.label(&self.debug_info);
+        });
 
         if let Some(shadowing) = e.get::<&SShadowingLight>() {
             ui.separator();

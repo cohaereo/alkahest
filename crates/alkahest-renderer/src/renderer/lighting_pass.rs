@@ -4,7 +4,10 @@ use crate::{
     ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
     gpu_event,
     renderer::{cubemaps::draw_cubemap_system, Renderer},
-    tfx::{externs, externs::ExternDefault},
+    tfx::{
+        externs,
+        externs::{ExternDefault, ShadowMask},
+    },
 };
 
 impl Renderer {
@@ -35,6 +38,13 @@ impl Renderer {
 
             data.externs.global_lighting =
                 Some(data.externs.global_lighting.take().unwrap_or_default());
+
+            data.externs.shadow_mask = Some(ShadowMask {
+                unk00: self.gpu.white_texture.view.clone().into(),
+                unk08: self.gpu.white_texture.view.clone().into(),
+                unk10: self.gpu.white_texture.view.clone().into(),
+                ..Default::default()
+            })
         }
 
         {
@@ -63,30 +73,30 @@ impl Renderer {
                     draw_cubemap_system(self, scene);
                 }
 
-                // {
-                //     gpu_event!(self.gpu, "global_lighting");
-                //
-                //     let pipeline = &self.render_globals.pipelines.global_lighting_ambient_only;
-                //     if let Err(e) = pipeline.bind(self) {
-                //         error!("Failed to run global_lighting: {e}");
-                //         return;
-                //     }
-                //
-                //     // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
-                //     self.gpu.current_states.store(StateSelection::new(
-                //         Some(8),
-                //         Some(0),
-                //         Some(0),
-                //         Some(0),
-                //     ));
-                //     self.gpu.flush_states();
-                //     self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-                //
-                //     // TODO(cohae): 4 vertices doesn't work...
-                //     unsafe {
-                //         self.gpu.context().Draw(6, 0);
-                //     }
-                // }
+                if self.render_settings.feature_global_lighting {
+                    gpu_event!(self.gpu, "global_lighting");
+
+                    let pipeline = &self.render_globals.pipelines.global_lighting;
+                    if let Err(e) = pipeline.bind(self) {
+                        error!("Failed to run global_lighting: {e}");
+                        return;
+                    }
+
+                    // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
+                    self.gpu.current_states.store(StateSelection::new(
+                        Some(8),
+                        Some(0),
+                        Some(0),
+                        Some(0),
+                    ));
+                    self.gpu.flush_states();
+                    self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
+
+                    // TODO(cohae): 4 vertices doesn't work...
+                    unsafe {
+                        self.gpu.context().Draw(6, 0);
+                    }
+                }
             }
         }
 
@@ -95,10 +105,6 @@ impl Renderer {
                 gpu_event!(self.gpu, "ssao");
                 self.ssao.draw(self);
             }
-        }
-
-        {
-            gpu_event!(self.gpu, "global_lighting");
         }
     }
 

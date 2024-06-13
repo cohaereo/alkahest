@@ -274,7 +274,7 @@ pub struct ScopeInstances {
     pub uv_offset: Vec2,
     pub max_color_index: u32,
 
-    pub transforms: Vec<Mat4>, // c2-
+    pub transforms: Vec<Mat4>, // c2-c5
 }
 
 impl ScopeInstances {

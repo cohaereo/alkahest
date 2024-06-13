@@ -64,7 +64,13 @@ impl ModelBuffers {
             }
 
             let color = color.unwrap_or(&renderer.gpu.color0_fallback);
-            ctx.VSSetShaderResources(0, Some(&[color.srv.clone()]));
+            ctx.VSSetShaderResources(
+                0,
+                Some(&[
+                    color.srv.clone(),
+                    renderer.gpu.color_ao_fallback.srv.clone(),
+                ]),
+            );
         }
 
         Some(())
@@ -360,7 +366,12 @@ pub fn create_instances_scope(mesh: &SStaticMeshData, transforms: &[Transform]) 
             .iter()
             .map(|t| {
                 let mat = t.local_to_world().transpose();
-                Mat4::from_cols(mat.x_axis, mat.y_axis, mat.z_axis, Vec4::ONE)
+                Mat4::from_cols(
+                    mat.x_axis,
+                    mat.y_axis,
+                    mat.z_axis,
+                    Vec4::new(1.0, 1.0, 1.0, f32::from_bits(0x02000000)),
+                )
             })
             .collect(),
     }

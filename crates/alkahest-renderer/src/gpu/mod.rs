@@ -52,6 +52,7 @@ pub struct GpuContext {
 
     pub fallback_texture: Texture,
     pub color0_fallback: VertexBuffer,
+    pub color_ao_fallback: VertexBuffer,
 
     pub sky_hemisphere_placeholder: Texture,
     pub shadowmap_vs_t2: Texture,
@@ -200,7 +201,10 @@ impl GpuContext {
             Some("shadowmap_vs_t2"),
         )?;
 
-        let color0_fallback = VertexBuffer::load_data(&device, &[0, 0, 255, 255], 4)?;
+        let color0_fallback =
+            VertexBuffer::load_data(&device, &[0, 0, 255, 255], 4)?.with_name("color0_fallback");
+        let color_ao_fallback = VertexBuffer::load_data(&device, &[255; 128*4], 4)?
+            .with_name("color_ao_fallback");
 
         let sky_hemisphere_placeholder = Texture::load_png(
             &device,
@@ -225,6 +229,7 @@ impl GpuContext {
 
             fallback_texture,
             color0_fallback,
+            color_ao_fallback,
             sky_hemisphere_placeholder,
             white_texture,
             light_grey_texture,

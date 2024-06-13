@@ -368,7 +368,7 @@ pub struct SLight {
     pub unkbc: f32,
 
     // TODO(cohae): This field is new in TFS. Taghash-like value such as 9E440E84, purpose unknown
-    pub unkc0: f32,
+    pub unkc0: u32,
 
     pub technique_shading: TagHash,
     pub technique_volumetrics: TagHash,

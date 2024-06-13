@@ -94,6 +94,15 @@ impl VertexBuffer {
             );
         }
     }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.buffer.set_debug_name(name);
+    }
+
+    pub fn with_name(mut self, name: &str) -> Self {
+        self.set_name(name);
+        self
+    }
 }
 
 pub(crate) fn load_vertex_buffer(gctx: &GpuContext, hash: TagHash) -> anyhow::Result<VertexBuffer> {

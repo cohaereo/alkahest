@@ -55,6 +55,7 @@ pub struct LightRenderer {
     technique_compute_lightprobe_shadowing: Option<Handle<Technique>>,
 
     pub debug_label: String,
+    pub debug_info: String,
 }
 
 impl LightRenderer {
@@ -153,6 +154,7 @@ impl LightRenderer {
             technique_compute_lightprobe: Handle::none(),
             technique_compute_lightprobe_shadowing: None,
             debug_label: "Unknown DeferredLight".to_string(),
+            debug_info: "Unknown DeferredLight".to_string(),
         })
     }
 
@@ -169,6 +171,7 @@ impl LightRenderer {
             technique_compute_lightprobe: asset_manager
                 .get_or_load_technique(light.technique_compute_lightprobe),
             debug_label,
+            debug_info: format!("{light:X?}"),
             ..Self::new_empty(gctx.clone())?
         })
     }
@@ -195,6 +198,7 @@ impl LightRenderer {
                 asset_manager.get_or_load_technique(light.technique_compute_lightprobe_shadowing),
             ),
             debug_label,
+            debug_info: format!("{light:X?}"),
             ..Self::new_empty(gctx.clone())?
         })
     }
