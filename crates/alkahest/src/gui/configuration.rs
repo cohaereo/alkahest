@@ -53,6 +53,8 @@ impl GuiView for RenderSettingsPanel {
                 });
             });
 
+            render_feat_vis(ui, "Node Nametags", &mut settings.node_nametags);
+
             egui::ComboBox::from_label("Debug View")
                 .selected_text(settings.debug_view.to_string().split_pascalcase())
                 .show_ui(ui, |ui| {

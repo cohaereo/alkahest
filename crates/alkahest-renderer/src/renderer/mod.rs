@@ -393,6 +393,7 @@ pub struct RendererSettings {
     pub stage_decals_additive: bool,
 
     pub debug_view: RenderDebugView,
+    pub node_nametags: bool,
 }
 
 impl Default for RendererSettings {
@@ -419,6 +420,7 @@ impl Default for RendererSettings {
             stage_decals_additive: true,
 
             debug_view: RenderDebugView::None,
+            node_nametags: false,
         }
     }
 }

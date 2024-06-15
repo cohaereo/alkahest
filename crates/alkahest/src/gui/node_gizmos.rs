@@ -6,7 +6,9 @@ use alkahest_renderer::{
         transform::Transform,
     },
     icons::ICON_HELP,
+    renderer::RendererShared,
     resources::Resources,
+    ColorExt,
 };
 use egui::{Color32, Context, Rect};
 use glam::Vec2;
@@ -27,6 +29,11 @@ impl GuiView for NodeGizmoOverlay {
         resources: &Resources,
         gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
+        let renderer = resources.get::<RendererShared>();
+        if !renderer.render_settings.node_nametags {
+            return None;
+        }
+
         let camera = resources.get::<Camera>();
         let screen_size = ctx.screen_rect().size();
         let painter = ctx.layer_painter(egui::LayerId::background());
@@ -289,18 +296,18 @@ impl GuiView for NodeGizmoOverlay {
                         }
 
                         // if self.debug_overlay.borrow().map_resource_label_background {
-                        //     let background_color = color.text_color_for_background();
-                        //     let white_bg = background_color.r() == 255;
-                        //     painter.rect(
-                        //         debug_string_rect.expand(4.0),
-                        //         egui::Rounding::ZERO,
-                        //         if white_bg {
-                        //             Color32::from_white_alpha(196)
-                        //         } else {
-                        //             Color32::from_black_alpha(128)
-                        //         },
-                        //         egui::Stroke::default(),
-                        //     );
+                        let background_color = color.text_color_for_background();
+                        let white_bg = background_color.r() == 255;
+                        painter.rect(
+                            debug_string_rect.expand(4.0),
+                            egui::Rounding::ZERO,
+                            if white_bg {
+                                Color32::from_white_alpha(128)
+                            } else {
+                                Color32::from_black_alpha(96)
+                            },
+                            egui::Stroke::default(),
+                        );
                         // }
 
                         painter.text(
