@@ -1,4 +1,5 @@
-use alkahest_data::map::SMapAtmosphere;
+use alkahest_data::{map::SMapAtmosphere, Tag};
+use destiny_pkg::TagHash;
 use glam::Vec3;
 
 use crate::{
@@ -87,4 +88,13 @@ impl CubemapVolume {
     pub fn volume(&self) -> f32 {
         self.extents.x * self.extents.y * self.extents.z
     }
+}
+
+#[derive(Clone)]
+pub struct NodeMetadata {
+    pub entity_tag: TagHash,
+    pub world_id: u64,
+    pub source_table: TagHash,
+    pub source_table_resource_offset: u64,
+    pub resource_type: u32,
 }

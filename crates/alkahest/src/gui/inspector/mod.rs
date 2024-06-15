@@ -7,7 +7,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{EntityWorldId, Global, Hidden, Label, Mutable},
-        map::CubemapVolume,
+        map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
             light::LightRenderer, update_entity_transform,
@@ -21,7 +21,7 @@ use alkahest_renderer::{
     icons::ICON_POKEBALL,
     shader::shader_ball::ShaderBallComponent,
 };
-use egui::{Align2, Color32, FontId, Key, RichText, Widget};
+use egui::{Align2, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 use winit::window::Window;
@@ -219,7 +219,7 @@ fn show_inspector_components(
 	}
 
     component_views!(
-        EntityWorldId,
+        // EntityWorldId,
         Ruler,
         Sphere,
         Beacon,
@@ -228,7 +228,8 @@ fn show_inspector_components(
         SLightCollection,
         CubemapVolume,
         ShaderBallComponent,
-        DecoratorRenderer
+        DecoratorRenderer,
+        NodeMetadata
     );
 }
 
@@ -532,20 +533,67 @@ impl ComponentPanel for ShaderBallComponent {
     }
 }
 
-impl ComponentPanel for EntityWorldId {
+// impl ComponentPanel for EntityWorldId {
+//     fn inspector_name() -> &'static str {
+//         "World ID"
+//     }
+//
+//     fn inspector_icon() -> char {
+//         ICON_IDENTIFIER
+//     }
+//
+//     fn has_inspector_ui() -> bool {
+//         true
+//     }
+//
+//     fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+//         ui.label(format!("World ID: 0x{:016X}", self.0));
+//     }
+// }
+
+impl ComponentPanel for NodeMetadata {
     fn inspector_name() -> &'static str {
-        "World ID"
+        "Node Metadata"
     }
 
     fn inspector_icon() -> char {
-        ICON_IDENTIFIER
+        ICON_TAG
     }
 
     fn has_inspector_ui() -> bool {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
-        ui.label(format!("World ID: 0x{:016X}", self.0));
+    fn show_inspector_ui<'s>(
+        &mut self,
+        _: &'s Scene,
+        _: EntityRef<'s>,
+        ui: &mut Ui,
+        _: &Resources,
+    ) {
+        ui.horizontal(|ui| {
+            ui.strong("Entity:");
+            ui.label(self.entity_tag.to_string());
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("World ID:");
+            ui.label(format!("0x{:016X}", self.world_id));
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.strong("Source Table:");
+            ui.label(self.source_table.to_string());
+        });
+
+        ui.horizontal(|ui| {
+            ui.strong("Resource Type:");
+            ui.label(format!(
+                "{:08X} (offset 0x{:X})",
+                self.resource_type, self.source_table_resource_offset
+            ));
+        });
     }
 }

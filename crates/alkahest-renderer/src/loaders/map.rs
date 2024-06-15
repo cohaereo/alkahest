@@ -31,7 +31,7 @@ use crate::{
     ecs::{
         common::{Icon, Label, ResourceOrigin},
         hierarchy::{Children, Parent},
-        map::{CubemapVolume, MapAtmosphere},
+        map::{CubemapVolume, MapAtmosphere, NodeMetadata},
         render::{
             decorators::DecoratorRenderer,
             dynamic_geometry::DynamicModelComponent,
@@ -300,6 +300,7 @@ pub async fn load_map(
                                 Transform::default(),
                                 None,
                                 0,
+                                None,
                             )?;
                         }
                     }
@@ -356,6 +357,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
             ..Default::default()
         };
 
+        let metadata = NodeMetadata {
+            entity_tag: data.entity.hash32(),
+            world_id: data.world_id,
+            source_table: table_hash,
+            source_table_resource_offset: data.data_resource.offset,
+            resource_type: data.data_resource.resource_type,
+        };
+
         match data.data_resource.resource_type {
             // D2Class_C96C8080 (placement)
             0x80806cc9 => {
@@ -375,7 +384,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let transforms = &preheader.instances.transforms
                         [s.instance_start as usize..(s.instance_start + s.instance_count) as usize];
 
-                    let parent = spawn_data_entity(scene, (), parent_entity);
+                    let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
                     let mut instances = vec![];
 
                     for transform in transforms.iter() {
@@ -427,6 +436,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             .context("Failed to load terrain patches")?,
                         TfxFeatureRenderer::TerrainPatch,
                         resource_origin,
+                        metadata.clone(),
                     ),
                     parent_entity,
                 );
@@ -469,6 +479,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             )?,
                             TfxFeatureRenderer::SkyTransparent,
                             resource_origin,
+                            metadata.clone(),
                         ),
                         parent_entity,
                     );
@@ -498,6 +509,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             )?,
                             TfxFeatureRenderer::Water,
                             resource_origin,
+                            metadata.clone(),
                         ),
                         parent_entity,
                     );
@@ -520,7 +532,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 let light_collection: SLightCollection =
                     package_manager().read_tag_struct(tag).unwrap();
 
-                let light_collection_entity = spawn_data_entity(scene, (), parent_entity);
+                let light_collection_entity =
+                    spawn_data_entity(scene, (metadata.clone(),), parent_entity);
                 let mut children = vec![];
                 for (i, (light, transform, bounds)) in multizip((
                     light_collection.unk30.clone(),
@@ -599,6 +612,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         light,
                         TfxFeatureRenderer::DeferredLights,
                         resource_origin,
+                        metadata.clone(),
                     ),
                     parent_entity,
                 );
@@ -620,6 +634,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         MapAtmosphere::load(&renderer.gpu, atmos)
                             .context("Failed to load map atmosphere")?,
                         resource_origin,
+                        metadata.clone(),
                     ),
                     // parent_entity,
                     None,
@@ -672,6 +687,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                     // name: cubemap_volume.cubemap_name.to_string(),
                                     name: "<unknown>".to_string(),
                                 },
+                                metadata.clone(),
                             ),
                             parent_entity,
                         );
@@ -699,6 +715,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         transform,
                         lens_flare,
                         resource_origin,
+                        metadata.clone(),
                     ),
                     parent_entity,
                 );
@@ -727,6 +744,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             },
                             respawn_point.clone(),
                             resource_origin,
+                            metadata.clone(),
                         ),
                         parent_entity,
                     );
@@ -748,6 +766,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 Icon(ICON_TREE),
                                 Label::from(format!("Decorator {header_tag}")),
                                 decorator_renderer,
+                                metadata.clone(),
                             ),
                             parent_entity,
                         );
@@ -775,6 +794,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     transform,
                     if u != u32::MAX { Some(u) } else { None },
                     0,
+                    Some(metadata),
                 )
                 .ok();
             }
@@ -863,8 +883,8 @@ fn load_entity_into_scene(
     transform: Transform,
     u: Option<u32>,
     depth: usize,
+    metadata: Option<NodeMetadata>,
 ) -> anyhow::Result<Entity> {
-    // println!("{entity_hash} depth={depth}");
     // TODO(cohae): Shouldnt be possible, but happens anyways on certain maps like heaven/hell
     if depth > 8 {
         error!("Entity recursion depth exceeded for entity_hash={entity_hash}");
@@ -896,6 +916,9 @@ fn load_entity_into_scene(
         ),
         parent_entity,
     );
+    if let Some(metadata) = metadata {
+        scene.insert_one(scene_entity, metadata).unwrap();
+    }
 
     for e in &header.entity_resources {
         let entres = &e.unk0;
@@ -965,6 +988,7 @@ fn load_entity_into_scene(
                     transform,
                     None,
                     depth + 1,
+                    None,
                 )?;
                 loaded.insert(r.unk0);
             }
