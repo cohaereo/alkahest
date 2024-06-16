@@ -35,6 +35,10 @@ impl TextureView {
     pub fn view_unchecked(&self) -> ID3D11ShaderResourceView {
         self.view().unwrap_or_else(|| unsafe { transmute(0u64) })
     }
+    
+    pub fn is_null(&self) -> bool {
+        matches!(self, TextureView::Null)
+    }
 }
 
 impl Debug for TextureView {
@@ -617,12 +621,14 @@ extern_struct! {
         0x38 => unk38: TextureView,
         0x40 => unk40: TextureView,
         0x48 => unk48: TextureView,
-        // Normalized time of day value, where 0 is midnight, 0.5 is midday, and 1 is midnight again
-        0x50 => time_of_day_normalized: f32 > default(0.5),
+        0x50 => unk50: f32 > default(0.5),
         0x58 => unk58: TextureView > unimplemented(true),
         0x60 => unk60: TextureView > unimplemented(true),
-        0x70 => unk70: Vec4 > unimplemented(true) > default(Vec4::ZERO),
+        // Normalized time of day value, where 0 is midnight, 0.5 is midday, and 1 is midnight again
+        0x70 => time_of_day_normalized: f32 > unimplemented(true) > default(0.5),
+        // 0x70 => unk70: Vec4 > unimplemented(true) > default(Vec4::ZERO),
         0x80 => light_shaft_optical_depth: TextureView > unimplemented(true),
+        0x90 => unk90: Vec4 > unimplemented(true),
         0xa0 => unka0: TextureView > unimplemented(true),
         0xb0 => unkb0: Vec4 > unimplemented(true),
         // Result of sky_lookup_generate_far
@@ -632,36 +638,43 @@ extern_struct! {
         0xd0 => atmos_ss_near_lookup: TextureView,
         0xd8 => atmos_ss_near_lookup_downsampled: TextureView > unimplemented(true),
         0xe0 => unke0: TextureView > unimplemented(true),
-        0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),
+        0xf0 => unkf0: TextureView > unimplemented(true),
+        // 0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),
+        0x110 => unk110: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),
         0x120 => unk120: Vec4 > unimplemented(true),
         0x130 => unk130: f32 > unimplemented(true),
         0x134 => unk134: f32 > unimplemented(true),
-        0x140 => unk140: f32 > unimplemented(true),
-        0x144 => unk144: f32 > unimplemented(true),
-        0x148 => unk148: f32 > unimplemented(true),
-        0x14c => unk14c: f32 > unimplemented(true),
+        0x140 => fog_color: Vec4 > unimplemented(true),
         0x150 => unk150: f32 > unimplemented(true) > default(0.01),
-        0x160 => unk160: Vec4 > unimplemented(true),
+        0x154 => unk154: f32 > unimplemented(true),
+        0x160 => fog_intensity: f32 > unimplemented(true) > default(0.0),
+        0x164 => unk164: f32 > unimplemented(true),
+        0x168 => unk168: f32 > unimplemented(true),
+        0x16c => unk16c: f32 > unimplemented(true),
         0x170 => unk170: f32 > unimplemented(true),
         0x174 => unk174: f32 > unimplemented(true),
         0x178 => unk178: f32 > unimplemented(true) > default(0.01),
-        // Atmosphere rotation
-        0x194 => unk194_rotation: f32 > unimplemented(true) > default(0.0),
-        // Intensity
-        0x198 => unk198_intensity: f32 > unimplemented(true),
-        // Some kind of cutoff
+        0x180 => unk180: Vec4 > unimplemented(true),
+        0x190 => unk190: f32 > unimplemented(true),
+        0x194 => unk194: f32 > unimplemented(true) > default(0.0),
+        0x198 => unk198: f32 > unimplemented(true),
         0x19c => unk19c: f32 > unimplemented(true) > default(0.5),
         0x1a0 => unk1a0: f32 > unimplemented(true),
         0x1a4 => unk1a4: f32 > unimplemented(true),
-        0x1b0 => unk1b0: Vec4 > unimplemented(true) > default(Vec4::ZERO),
+        0x1b0 => unk1b0: f32 > unimplemented(true),
+        0x1b4 => unk1b4: f32 > unimplemented(true),
+        0x1b8 => unk1b8: f32 > unimplemented(true),
+        0x1bc => unk1bc: f32 > unimplemented(true),
         0x1c0 => unk1c0: f32 > unimplemented(true),
         0x1c4 => unk1c4: f32 > unimplemented(true),
         // Another cutoff value
         0x1c8 => unk1c8: f32 > unimplemented(true) > default(0.0),
         0x1cc => unk1cc: f32 > unimplemented(true),
-        0x1d8 => unk1d8: f32 > unimplemented(true),
-        0x1dc => unk1dc: f32 > unimplemented(true),
+        0x1d0 => sky_color: Vec4 > unimplemented(true) > default(Vec4::new(1.0, 1.0, 1.0, 0.0)),
         0x1e0 => unk1e0: f32 > unimplemented(true),
+        0x1e4 => unk1e4: f32 > unimplemented(true),
+        0x1e8 => unk1e8: f32 > unimplemented(true),
+        0x1ec => unk1ec: f32 > unimplemented(true),
         0x1f0 => unk1f0: Vec4 > unimplemented(true),
     }
 }

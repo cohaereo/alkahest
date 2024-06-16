@@ -22,7 +22,7 @@ use alkahest_renderer::{
     icons::ICON_CUBE,
     renderer::{Renderer, RendererShared},
     resources::Resources,
-    tfx::bytecode::opcodes::TfxBytecodeOp,
+    tfx::bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
 };
 use anyhow::Context;
 use binrw::BinReaderExt;
@@ -540,8 +540,15 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
 
                 println!();
                 info!("TFX Disassembly ({stage:?}):");
-                for (i, o) in opcodes.into_iter().enumerate() {
+                for (i, o) in opcodes.iter().enumerate() {
                     info!("  {i}: {}", o.disassemble(Some(constants)));
+                }
+
+                if let Ok(e) = TfxBytecodeDecompiler::decompile(&opcodes, constants).map(|e| e.pretty_print()) {
+                    info!("Decompiled bytecode:");
+                    for l in e.lines() {
+                        info!("  {l}");
+                    }
                 }
             }
         }

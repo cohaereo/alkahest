@@ -71,6 +71,10 @@ impl MapAtmosphere {
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
 
+        // if x.unk58.is_null() {
+        //     x.unk58 = x.unk40.clone();
+        // }
+
         x.unk20 = x.unk30.clone();
         x.unk38 = x.unk48.clone();
     }

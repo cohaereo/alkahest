@@ -272,22 +272,40 @@ impl TfxBytecodeOp {
                 }
             }
             TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
-                format!("push_extern_input_float ({extern_:?}+0x{:X})", offset * 4)
+                format!(
+                    "push_extern_input_float ({extern_:?}+0x{:X})",
+                    (*offset as u32) * 4
+                )
             }
             TfxBytecodeOp::PushExternInputVec4 { extern_, offset } => {
-                format!("push_extern_input_vec4 ({extern_:?}+0x{:X})", offset * 16)
+                format!(
+                    "push_extern_input_vec4 ({extern_:?}+0x{:X})",
+                    (*offset as u32) * 16
+                )
             }
             TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
-                format!("push_extern_input_mat4 ({extern_:?}+0x{:X})", offset * 16)
+                format!(
+                    "push_extern_input_mat4 ({extern_:?}+0x{:X})",
+                    (*offset as u32) * 16
+                )
             }
             TfxBytecodeOp::PushExternInputTextureView { extern_, offset } => {
-                format!("push_extern_input_tex ({extern_:?}+0x{:X})", offset * 8)
+                format!(
+                    "push_extern_input_tex ({extern_:?}+0x{:X})",
+                    (*offset as u32) * 8
+                )
             }
             TfxBytecodeOp::PushExternInputU32 { extern_, offset } => {
-                format!("push_extern_input_u32 ({extern_:?}+0x{:X})", offset * 4)
+                format!(
+                    "push_extern_input_u32 ({extern_:?}+0x{:X})",
+                    (*offset as u32) * 4
+                )
             }
             TfxBytecodeOp::PushExternInputUav { extern_, offset } => {
-                format!("push_extern_input_uav ({extern_:?}+0x{:X})", offset * 8)
+                format!(
+                    "push_extern_input_uav ({extern_:?}+0x{:X})",
+                    (*offset as u32) * 8
+                )
             }
             TfxBytecodeOp::Unk42 => "unk42".to_string(),
             TfxBytecodeOp::PushFromOutput { element } => {
