@@ -214,7 +214,7 @@ impl GuiView for MenuBar {
                         if let Some(map) = maps.current_map_mut() {
                             let camera = resources.get::<Camera>();
                             let e = map.scene.spawn((
-                                Icon(ICON_POKEBALL),
+                                Icon::Unicode(ICON_POKEBALL),
                                 Label::from("Material Ball"),
                                 Transform::from_translation(camera.position()),
                                 ShaderBallComponent::new(&renderer).unwrap(),

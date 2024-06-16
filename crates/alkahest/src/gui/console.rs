@@ -457,7 +457,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                     };
                     scene.spawn((
                         er,
-                        Icon(ICON_CUBE),
+                        Icon::Unicode(ICON_CUBE),
                         Label::from(format!("Static Model {}", tag.hash32())),
                         transform,
                         TfxFeatureRenderer::StaticObjects,
@@ -763,12 +763,15 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                     let range = m.get_range_for_stage(stage);
                     let unique_shaders: FxHashSet<TagHash> =
                         m.parts[range.clone()].iter().map(|p| p.technique).collect();
+                    let unique_flags: FxHashSet<u32> =
+                        m.parts[range.clone()].iter().map(|p| p.flags).collect();
 
                     if !range.is_empty() {
                         println!(
-                            "\t\t\t- {stage:?}: {} parts (techniques: [{}])",
+                            "\t\t\t- {stage:?}: {} parts (techniques: [{}] flags: [{}])",
                             range.len(),
-                            unique_shaders.iter().map(|s| format!("{s}")).join(", ")
+                            unique_shaders.iter().map(|s| format!("{s}")).join(", "),
+                            unique_flags.iter().map(|v| format!("0x{v:X}")).join(", ")
                         );
                     }
                 }
@@ -803,7 +806,7 @@ pub fn load_entity_model(
     renderer: &Renderer,
 ) -> anyhow::Result<impl DynamicBundle> {
     Ok((
-        Icon(ICON_CUBE),
+        Icon::Unicode(ICON_CUBE),
         Label::from("Entity Model"),
         transform,
         DynamicModelComponent::load(
@@ -844,7 +847,7 @@ pub fn load_entity(
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
                 return Ok((
-                    Icon(ICON_CUBE),
+                    Icon::Unicode(ICON_CUBE),
                     Label::from("Entity"),
                     transform,
                     DynamicModelComponent::load(

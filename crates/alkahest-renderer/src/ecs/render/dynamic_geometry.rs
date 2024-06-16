@@ -20,10 +20,8 @@ use crate::{
     gpu_event,
     handle::Handle,
     loaders::AssetManager,
-    renderer::{RenderFeatureVisibility, Renderer},
-    tfx::{
-        externs, scope, scope::ScopeSkinning, technique::Technique, view::RenderStageSubscriptions,
-    },
+    renderer::Renderer,
+    tfx::{externs, scope::ScopeSkinning, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
 
@@ -405,8 +403,7 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
         });
     }
 
-    if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) 
-    {
+    if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) {
         for (e, decorator) in scene
             .query::<&DecoratorRenderer>()
             .without::<&Hidden>()

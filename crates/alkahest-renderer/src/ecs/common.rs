@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use ecolor::Color32;
+
 /// Tiger entity world ID
 #[derive(Copy, Clone)]
 pub struct EntityWorldId(pub u64);
@@ -17,11 +19,27 @@ pub enum ResourceOrigin {
 
 pub struct ActivityGroup(pub u32);
 
-pub struct Icon(pub char);
+#[derive(Clone)]
+pub enum Icon {
+    Unicode(char),
+    Colored(char, Color32),
+    // Image(...)
+}
+
+impl Icon {
+    pub fn color(&self) -> Color32 {
+        match self {
+            Icon::Unicode(_) => Color32::WHITE,
+            Icon::Colored(_, c) => *c,
+        }
+    }
+}
 
 impl Display for Icon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        match self {
+            Icon::Unicode(c) | Icon::Colored(c, _) => write!(f, "{}", c),
+        }
     }
 }
 

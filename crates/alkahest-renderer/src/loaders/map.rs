@@ -19,6 +19,7 @@ use alkahest_pm::package_manager;
 use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
+use ecolor::Color32;
 use glam::{Mat4, Quat, Vec3, Vec4Swizzles};
 use hecs::{DynamicBundle, Entity};
 use itertools::{any, multizip, Itertools};
@@ -396,7 +397,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         };
 
                         let entity = scene.spawn((
-                            Icon(ICON_CUBE_OUTLINE),
+                            Icon::Unicode(ICON_CUBE_OUTLINE),
                             Label::from("Static Instance"),
                             OriginalTransform(transform),
                             transform,
@@ -409,7 +410,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     scene.insert(
                         parent,
                         (
-                            Icon(ICON_SHAPE),
+                            Icon::Unicode(ICON_SHAPE),
                             Label::from(format!("Static Instances {mesh_tag}")),
                             StaticInstances::new(renderer.gpu.clone(), model, instances.len())?,
                             Children::from_slice(&instances),
@@ -430,7 +431,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 spawn_data_entity(
                     scene,
                     (
-                        Icon(ICON_IMAGE_FILTER_HDR),
+                        Icon::Unicode(ICON_IMAGE_FILTER_HDR),
                         Label::from("Terrain Patches"),
                         TerrainPatches::load(renderer, terrain_resource.terrain)
                             .context("Failed to load terrain patches")?,
@@ -462,11 +463,27 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         );
                     }
 
+                    // let thingy = [
+                    //     TagHash(0x80C9E4FD),
+                    //     TagHash(0x80B12BA6),
+                    //     TagHash(0x80DED603),
+                    //     TagHash(0x80DED488),
+                    //     TagHash(0x80DEA0AD),
+                    // ];
+                    // if thingy.contains(&unk8.unk60.entity_model) {
+                    // println!("{}", unk8.unk60.entity_model);
+                    // println!("{unk8:#X?}");
+                    // }
+
+                    if unk8.unk70 == 5 {
+                        continue;
+                    }
+
                     let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
                     spawn_data_entity(
                         scene,
                         (
-                            Icon(ICON_WEATHER_PARTLY_CLOUDY),
+                            Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
                             Label::from("Sky Model"),
                             transform,
                             DynamicModelComponent::load(
@@ -496,7 +513,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     spawn_data_entity(
                         scene,
                         (
-                            Icon(ICON_WAVES),
+                            Icon::Unicode(ICON_WAVES),
                             Label::from("Water"),
                             transform,
                             DynamicModelComponent::load(
@@ -545,7 +562,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let shape = LightShape::from_volume_matrix(light.light_to_world);
                     children.push(
                         scene.spawn((
-                            Icon(shape.icon()),
+                            Icon::Colored(shape.icon(), Color32::YELLOW),
                             Label::from(format!("{} Light {tag}[{i}]", shape.name())),
                             Transform {
                                 translation: transform.translation.xyz(),
@@ -572,7 +589,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     light_collection_entity,
                     (
                         light_collection,
-                        Icon(ICON_LIGHTBULB_GROUP),
+                        Icon::Unicode(ICON_LIGHTBULB_GROUP),
                         Label::from(format!("Light Collection {tag}")),
                         Children::from_slice(&children),
                     ),
@@ -598,7 +615,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 spawn_data_entity(
                     scene,
                     (
-                        Icon(ICON_SPOTLIGHT_BEAM),
+                        Icon::Colored(ICON_SPOTLIGHT_BEAM, Color32::YELLOW),
                         Label::from(format!("Shadowing Spotlight {tag}")),
                         transform,
                         LightRenderer::load_shadowing(
@@ -626,7 +643,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 spawn_data_entity(
                     scene,
                     (
-                        Icon(ICON_WEATHER_FOG),
+                        Icon::Unicode(ICON_WEATHER_FOG),
                         Label::from(format!(
                             "Atmosphere Configuration (table {}@0x{:X})",
                             table_hash, data.data_resource.offset
@@ -663,7 +680,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         spawn_data_entity(
                             scene,
                             (
-                                Icon(ICON_SPHERE),
+                                Icon::Unicode(ICON_SPHERE),
                                 Label::from(format!(
                                     "Cubemap Volume '{}'",
                                     "<unknown>" // cubemap_volume
@@ -710,7 +727,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 spawn_data_entity(
                     scene,
                     (
-                        Icon(ICON_FLARE),
+                        Icon::Unicode(ICON_FLARE),
                         Label::from("Lens Flare"),
                         transform,
                         lens_flare,
@@ -735,7 +752,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     spawn_data_entity(
                         scene,
                         (
-                            Icon(ICON_ACCOUNT_CONVERT),
+                            Icon::Colored(ICON_ACCOUNT_CONVERT, Color32::RED),
                             Label::from("Respawn point"),
                             Transform {
                                 translation: respawn_point.translation.truncate(),
@@ -763,7 +780,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         spawn_data_entity(
                             scene,
                             (
-                                Icon(ICON_TREE),
+                                Icon::Colored(ICON_TREE, Color32::LIGHT_GREEN),
                                 Label::from(format!("Decorator {header_tag}")),
                                 decorator_renderer,
                                 metadata.clone(),
@@ -905,7 +922,7 @@ fn load_entity_into_scene(
     let scene_entity = spawn_data_entity(
         scene,
         (
-            Icon(ICON_CUBE),
+            Icon::Unicode(ICON_CUBE),
             if let Some(u) = u {
                 Label::from(format!("Unknown {u:08X}"))
             } else {

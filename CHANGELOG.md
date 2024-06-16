@@ -103,6 +103,7 @@ received some polish!
 - Fixed some suns turning into black holes
 - Fixed water showing up as a red box
 - Fixed a renderglobals related crash on startup when using pre-lightfall packages
+- Fixed certain special usage sky objects being rendered in the transparents stage
 
 ## 0.4.1 - 2024-03-27
 

@@ -320,10 +320,10 @@ pub struct SUnk80806aa9 {
     pub unk6c: i16,
     pub unk6e: u16,
 
-    pub unk70: f32,
-    pub unk74: u32,
-    pub unk78: TagHash,
-    pub unk7c: u32,
+    pub unk70: u32,
+    pub unk74: f32,
+    pub unk78: u32,
+    pub unk7c: TagHash,
 
     pub unk80: u64,
     pub unk88: u32,

@@ -212,10 +212,10 @@ impl OutlinerPanel {
         } else {
             format!("Entity {}", e.entity().id())
         };
-        let icon = if let Some(icon) = e.get::<&Icon>() {
-            icon.0
+        let (icon, color) = if let Some(icon) = e.get::<&Icon>() {
+            (icon.to_string(), icon.color())
         } else {
-            ' '
+            (" ".to_string(), Color32::WHITE)
         };
 
         ui.horizontal(|ui| {
@@ -227,9 +227,9 @@ impl OutlinerPanel {
                                                           // resolve_entity_name(e, true)
                 ))
                 .color(if visible {
-                    Color32::WHITE
+                    color
                 } else {
-                    Color32::GRAY
+                    color.gamma_multiply(0.5)
                 }),
             );
 

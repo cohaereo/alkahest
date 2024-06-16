@@ -80,7 +80,7 @@ impl GuiView for NodeGizmoOverlay {
                     has_havok_data: bool,
                     origin: Option<ResourceOrigin>,
                     label: String,
-                    icon: char,
+                    icon: Option<Icon>,
                 }
 
                 let mut rp_list = vec![];
@@ -152,7 +152,7 @@ impl GuiView for NodeGizmoOverlay {
                             has_havok_data: false,
                             origin: Some(*origin),
                             label: label.map(|v| v.0.clone()).unwrap_or_default(),
-                            icon: icon.map_or(ICON_HELP, |v| v.0),
+                            icon: icon.cloned(),
                         }, // StrippedResourcePoint {
                            //     resource: res.resource.clone(),
                            //     has_havok_data: res.has_havok_data,
@@ -257,9 +257,10 @@ impl GuiView for NodeGizmoOverlay {
                         ((1.0 - projected_point.y) * 0.5) * screen_size.y,
                     );
 
+                    let icon = node.icon.unwrap_or(Icon::Unicode(ICON_HELP));
                     // let c = res.resource.debug_color();
                     // let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
-                    let color = Color32::WHITE;
+                    let color = icon.color();
                     // if self.debug_overlay.borrow().show_map_resource_label
                     //     || selected_entity == Some(e)
                     if true {
@@ -322,7 +323,7 @@ impl GuiView for NodeGizmoOverlay {
                     painter.text(
                         screen_point.to_array().into(),
                         egui::Align2::CENTER_CENTER,
-                        node.icon.to_string(),
+                        icon.to_string(),
                         egui::FontId::proportional(22.0),
                         color,
                     );

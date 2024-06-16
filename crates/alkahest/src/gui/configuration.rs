@@ -1,6 +1,6 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
-    icons::{ICON_CURSOR_POINTER, ICON_EYE},
+    icons::{ICON_CURSOR_DEFAULT, ICON_CURSOR_POINTER, ICON_EYE},
     renderer::{RenderDebugView, RenderFeatureVisibility, RendererSettings, RendererShared},
     util::text::StringExt,
 };
@@ -195,7 +195,7 @@ fn render_feat_vis_select(ui: &mut egui::Ui, name: &str, mode: &mut RenderFeatur
             if ui
                 .selectable_label(
                     mode.contains(RenderFeatureVisibility::SELECTABLE),
-                    ICON_CURSOR_POINTER.to_string(),
+                    ICON_CURSOR_DEFAULT.to_string(),
                 )
                 .clicked()
             {
