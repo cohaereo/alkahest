@@ -120,15 +120,13 @@ impl GuiView for NodeGizmoOverlay {
                         //     continue;
                         // }
 
-                        let distance = transform.translation.distance(camera.position());
+                        transform.translation.distance(camera.position())
                         // let debug_overlay = self.debug_overlay.borrow();
                         // if debug_overlay.map_resource_distance_limit_enabled
                         //     && distance > self.debug_overlay.borrow().map_resource_distance
                         // {
                         //     continue;
                         // }
-
-                        distance
                     } else {
                         // If the entity is selected, always sort it in front of everything else
                         0.0

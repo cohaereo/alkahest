@@ -20,12 +20,11 @@ use anyhow::Context;
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use ecolor::Color32;
-use glam::{Mat4, Quat, Vec3, Vec4Swizzles};
+use glam::{Mat4, Vec3, Vec4Swizzles};
 use hecs::{DynamicBundle, Entity};
-use itertools::{any, multizip, Itertools};
+use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
-use winit::window::Theme::Light;
 
 use crate::{
     camera::CameraProjection,
@@ -46,11 +45,11 @@ use crate::{
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_GROUP, ICON_LIGHTBULB_ON, ICON_SHAPE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM,
-        ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES,
+        ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
-    util::{scene::SceneExt, text::StringExt},
+    util::scene::SceneExt,
 };
 
 pub async fn load_map(

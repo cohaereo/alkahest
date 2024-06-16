@@ -48,7 +48,7 @@ float4 PSMain(
     float2 noiseScale = target_resolution / 4.0;
 
     float3 fragPosWorld = SampleWorldPos(input.uv);
-    float3 normal = DecodeNormal(RtNormal.Sample(def_point_clamp, input.uv).xyz);
+    float3 normal = normalize(DecodeNormal(RtNormal.Sample(def_point_clamp, input.uv).xyz));
     fragPosWorld += normal * bias;
 
     float3 randDir = NoiseTexture.Sample(def_point_clamp, input.uv * noiseScale).xyz;

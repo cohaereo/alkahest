@@ -8,7 +8,7 @@ use std::{
 
 use alkahest_data::tfx::TfxShaderStage;
 use anyhow::Context;
-use windows::{core::Interface, Win32::Graphics::Direct3D11::*};
+use windows::Win32::Graphics::Direct3D11::*;
 
 use crate::gpu::{GpuContext, SharedGpuContext};
 

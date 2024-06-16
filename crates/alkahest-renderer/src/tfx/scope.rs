@@ -9,7 +9,7 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use alkahest_pm::package_manager;
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use glam::{Mat4, Vec2, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{

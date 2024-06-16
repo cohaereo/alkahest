@@ -17,6 +17,7 @@ use crate::{
         fps_display::FpsDisplayOverlay,
         inspector::InspectorPanel,
         menu::MenuBar,
+        node_gizmos::NodeGizmoOverlay,
         outliner::OutlinerPanel,
         profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
@@ -24,7 +25,6 @@ use crate::{
     resources::Resources,
     util::image::EguiPngLoader,
 };
-use crate::gui::node_gizmos::NodeGizmoOverlay;
 
 pub struct GuiContext {
     pub egui: egui::Context,
@@ -287,20 +287,11 @@ impl GuiResources {
 }
 
 // TODO(cohae): Will be replaced by the panels system with the new UI
+#[derive(Default)]
 pub struct HiddenWindows {
     pub tfx_extern_editor: bool,
     pub tfx_extern_debugger: bool,
     pub cpu_profiler: bool,
-}
-
-impl Default for HiddenWindows {
-    fn default() -> Self {
-        Self {
-            tfx_extern_editor: false,
-            tfx_extern_debugger: false,
-            cpu_profiler: false,
-        }
-    }
 }
 
 mod style {

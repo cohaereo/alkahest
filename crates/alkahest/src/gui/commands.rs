@@ -21,7 +21,7 @@ pub fn load_pkg_entities(
         .package_entry_index
         .iter()
         .filter(|(i, e)| package_manager().package_paths[*i].name.contains(pkg_name))
-        .map(|(pkg_id, entries)| {
+        .flat_map(|(pkg_id, entries)| {
             entries
                 .iter()
                 .enumerate()
@@ -29,14 +29,11 @@ pub fn load_pkg_entities(
                 // .filter(|(_, e)| Some(e.reference) == SDynamicModel::ID)
                 .map(|(i, e)| TagHash::new(*pkg_id, i as u16))
         })
-        .flatten()
         .collect_vec();
 
     let width = (entity_hashes.len() as f32).sqrt().ceil() as usize;
-    let mut index = 0;
-    for hash in entity_hashes {
+    for (index, &hash) in entity_hashes.iter().enumerate() {
         let pos = (index % width, index / width);
-        index += 1;
         let pos = Vec3::new(pos.0 as f32, pos.1 as f32, 0.0) * 10.0;
 
         let transform = Transform {

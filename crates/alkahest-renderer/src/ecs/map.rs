@@ -1,4 +1,4 @@
-use alkahest_data::{map::SMapAtmosphere, Tag};
+use alkahest_data::map::SMapAtmosphere;
 use destiny_pkg::TagHash;
 use glam::Vec3;
 

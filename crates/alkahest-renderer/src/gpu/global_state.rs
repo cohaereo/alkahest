@@ -45,7 +45,7 @@ impl RenderStates {
     pub fn new(device: &ID3D11Device) -> anyhow::Result<Self> {
         let mut blend_states = vec![];
         assert_eq!(BLEND_STATE_DESCS.len(), 90, "Invalid blend state count");
-        for (_i, desc) in BLEND_STATE_DESCS.iter().enumerate() {
+        for desc in BLEND_STATE_DESCS.iter() {
             let mut state = None;
             unsafe {
                 let mut render_targets = desc.RenderTarget.to_vec();
@@ -69,7 +69,7 @@ impl RenderStates {
         }
 
         let mut input_layouts = vec![];
-        for (_i, layout) in INPUT_LAYOUTS.iter().enumerate() {
+        for layout in INPUT_LAYOUTS.iter() {
             input_layouts.push(Self::create_input_layout(device, layout)?);
         }
 

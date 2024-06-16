@@ -8,7 +8,7 @@ use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
-use glam::{Mat4, UVec2, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, UVec2, Vec4, Vec4Swizzles};
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
