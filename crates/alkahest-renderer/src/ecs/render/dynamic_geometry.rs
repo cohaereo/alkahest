@@ -360,8 +360,10 @@ impl DynamicModelComponent {
         //     cbuffer_skinning.bind(1, TfxShaderStage::Vertex);
         //     cbuffer_skinning.bind(1, TfxShaderStage::Pixel);
         // } else {
-        // TODO(cohae): We want to pull the slot number from the `rigid_model` scope
-        self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        self.cbuffer.bind(
+            renderer.render_globals.scopes.rigid_model.vertex_slot() as u32,
+            TfxShaderStage::Vertex,
+        );
         // }
 
         // TODO(cohae): Error reporting

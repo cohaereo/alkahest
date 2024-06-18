@@ -298,7 +298,10 @@ impl StaticModelSingle {
     }
 
     pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) {
-        self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        self.cbuffer.bind(
+            renderer.render_globals.scopes.chunk_model.vertex_slot() as u32,
+            TfxShaderStage::Vertex,
+        );
         self.model.draw(renderer, render_stage, 1);
     }
 }
@@ -349,7 +352,10 @@ impl StaticInstances {
     }
 
     pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) {
-        self.cbuffer.bind(1, TfxShaderStage::Vertex);
+        self.cbuffer.bind(
+            renderer.render_globals.scopes.chunk_model.vertex_slot() as u32,
+            TfxShaderStage::Vertex,
+        );
         self.model
             .draw(renderer, render_stage, self.instance_count as u32);
     }
@@ -430,7 +436,10 @@ pub fn draw_static_instances_individual_system(
         "draw_static_instances_individual_system",
         &format!("render_stage={render_stage:?}")
     );
-    cbuffer.bind(1, TfxShaderStage::Vertex);
+    cbuffer.bind(
+        renderer.render_globals.scopes.chunk_model.vertex_slot() as u32,
+        TfxShaderStage::Vertex,
+    );
     for (e, (transform, _instance, parent)) in scene
         .query::<(&Transform, &StaticInstance, &Parent)>()
         .without::<&Hidden>()

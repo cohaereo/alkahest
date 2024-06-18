@@ -925,7 +925,7 @@ fn load_entity_into_scene(
             if let Some(u) = u {
                 Label::from(format!("Unknown {u:08X}"))
             } else {
-                Label::from("Generic Entity")
+                Label::from(format!("Entity {entity_hash}"))
             },
             transform,
             resource_origin,

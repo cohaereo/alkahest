@@ -61,7 +61,10 @@ pub fn draw_entity(
     {
         if let Ok(model) = scene.get::<&StaticInstances>(parent.0) {
             if let Some(cbuffer) = single_statics_cb {
-                cbuffer.bind(1, TfxShaderStage::Vertex);
+                cbuffer.bind(
+                    renderer.render_globals.scopes.chunk_model.vertex_slot() as u32,
+                    TfxShaderStage::Vertex,
+                );
                 unsafe {
                     cbuffer
                         .write_array(

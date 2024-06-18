@@ -126,7 +126,10 @@ impl DecoratorRenderer {
             };
 
             if let Some(cb) = cb {
-                cb.bind(10, TfxShaderStage::Vertex);
+                cb.bind(
+                    renderer.render_globals.scopes.speedtree.vertex_slot() as u32,
+                    TfxShaderStage::Vertex,
+                );
             } else {
                 unsafe {
                     renderer

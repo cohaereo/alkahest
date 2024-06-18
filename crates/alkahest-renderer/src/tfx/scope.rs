@@ -90,6 +90,10 @@ impl TfxScope {
 
         Ok(())
     }
+    
+    pub fn vertex_slot(&self) -> i32 {
+        self.scope.stage_vertex.constants.constant_buffer_slot
+    }
 }
 
 pub struct TfxScopeStage {

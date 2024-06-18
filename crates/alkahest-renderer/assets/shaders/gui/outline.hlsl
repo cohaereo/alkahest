@@ -6,7 +6,7 @@ cbuffer cb_outline : register(b0) {
     float time_since_selection;
 };
 
-#define OUTLINE_COLOR float3(1.0, 0.6, 0.2)
+#define OUTLINE_COLOR float3(1.0, 0.6, 0.2) * 0.6
 #define OUTLINE_COLOR_BACK (OUTLINE_COLOR * 0.6)
 #define OUTLINE_WIDTH 2
 

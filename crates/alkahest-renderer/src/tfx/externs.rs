@@ -1005,6 +1005,9 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     channels[32] = Vec4::X * 2.0; // diffuse tint 1 intensity
     channels[33] = Vec4::ONE; // diffuse tint 2
     channels[34] = Vec4::X * 2.0; // diffuse tint 2 intensity
+    
+    channels[37] = Vec4::X * 50.0; // Fog start
+    channels[41] = Vec4::X * 50.0; // Fog falloff
 
     // Misc lights
     channels[93] = Vec4::ZERO;
