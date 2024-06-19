@@ -24,13 +24,13 @@ use crate::gui::console::ConsoleLogLayer;
 
 mod app;
 mod config;
-mod data;
 mod game_selector;
 mod gui;
 mod maplist;
 mod resources {
     pub use alkahest_renderer::resources::*;
 }
+mod discord;
 mod updater;
 mod util;
 

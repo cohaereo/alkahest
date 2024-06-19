@@ -169,7 +169,7 @@ impl GpuContext {
             &device,
             1,
             1,
-            &[80, 80, 80, 80],
+            &[127, 127, 127, 127],
             DxgiFormat::R8G8B8A8_UNORM_SRGB,
             Some("Grey Texture"),
         )?;
@@ -203,8 +203,8 @@ impl GpuContext {
 
         let color0_fallback =
             VertexBuffer::load_data(&device, &[0, 0, 255, 255], 4)?.with_name("color0_fallback");
-        let color_ao_fallback = VertexBuffer::load_data(&device, &[255; 128*4], 4)?
-            .with_name("color_ao_fallback");
+        let color_ao_fallback =
+            VertexBuffer::load_data(&device, &[255; 128 * 4], 4)?.with_name("color_ao_fallback");
 
         let sky_hemisphere_placeholder = Texture::load_png(
             &device,

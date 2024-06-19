@@ -1,6 +1,7 @@
 use alkahest_data::{
     activity::{SActivity, SDestination},
     map::{SBubbleParent, SBubbleParentShallow},
+    text::{GlobalStringmap, StringContainer, StringMapShared},
 };
 use alkahest_pm::package_manager;
 use anyhow::Context as _;
@@ -11,7 +12,6 @@ use tiger_parse::{PackageManagerExt, TigerReadable};
 use winit::window::Window;
 
 use crate::{
-    data::text::{GlobalStringmap, StringContainer, StringMapShared},
     gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
     resources::Resources,

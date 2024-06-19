@@ -123,6 +123,7 @@ dependencies = [
  "destiny-pkg",
  "directories",
  "discord-rpc-client",
+ "discord-sdk",
  "egui",
  "egui-directx11",
  "egui-winit",
@@ -179,11 +180,13 @@ name = "alkahest-data"
 version = "0.1.0"
 dependencies = [
  "alkahest-pm",
+ "anyhow",
  "binrw",
  "bitflags 2.5.0",
  "destiny-pkg",
  "glam",
- "nohash-hasher",
+ "rayon",
+ "rustc-hash",
  "tiger-parse",
 ]
 
@@ -353,6 +356,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0952808a6c2afd1aa8947271f3a60f1a6763c7b912d210184c5149b5cf147247"
 
 [[package]]
+name = "app_dirs2"
+version = "2.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7e7b35733e3a8c1ccb90385088dd5b6eaa61325cb4d1ad56e683b5224ff352e"
+dependencies = [
+ "jni",
+ "ndk-context",
+ "winapi",
+ "xdg",
+]
+
+[[package]]
 name = "approx"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -418,6 +433,17 @@ name = "ascii"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d92bec98840b8f03a5ff5413de5293bfcd8bf96467cf5452609f939ec6f5de16"
+
+[[package]]
+name = "async-trait"
+version = "0.1.80"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6fa2087f2753a7da8cc1c0dbfcf89579dd57458e36769de5ac750b4671737ca"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
+]
 
 [[package]]
 name = "atomic-waker"
@@ -1097,6 +1123,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
+
+[[package]]
 name = "ddsfile"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1226,6 +1258,31 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "uuid",
+]
+
+[[package]]
+name = "discord-sdk"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc3d7a4f9bc39006b732a01d63b34ff1518313313d707cb18cf6187d2124f7f4"
+dependencies = [
+ "anyhow",
+ "app_dirs2",
+ "async-trait",
+ "bitflags 2.5.0",
+ "crossbeam-channel",
+ "data-encoding",
+ "num-traits 0.2.18",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "thiserror",
+ "time",
+ "tokio",
+ "tracing",
+ "url",
+ "winreg",
 ]
 
 [[package]]
@@ -3542,6 +3599,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_repr"
+version = "0.1.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c64451ba24fc7a6a2d60fc75dd9c83c90903b19028d4eff35e88fc1e86564e9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5000,6 +5068,12 @@ name = "xcursor"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a0ccd7b4a5345edfcd0c3535718a4e9ff7798ffc536bb5b5a0e26ff84732911"
+
+[[package]]
+name = "xdg"
+version = "2.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213b7324336b53d2414b2db8537e56544d981803139155afa84f76eeebb7a546"
 
 [[package]]
 name = "xkbcommon-dl"

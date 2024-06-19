@@ -38,6 +38,7 @@ parking_lot = "0.12.1"
 png = "0.17.13"
 profiling = { version = "1.0.15", features = ["profile-with-puffin"] }
 raw-window-handle = "0.6.0"
+rayon = "1.7.0"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.113"

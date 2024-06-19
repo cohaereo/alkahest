@@ -127,8 +127,6 @@ impl From<TagHash> for WideHash {
     }
 }
 
-impl nohash_hasher::IsEnabled for WideHash {}
-
 impl BinRead for WideHash {
     type Args<'a> = ();
 

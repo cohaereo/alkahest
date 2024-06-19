@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use alkahest_data::text::{GlobalStringmap, StringMapShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{resources::SelectedEntity, Scene},
@@ -8,8 +9,7 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererSettings, RendererShared},
 };
-use anyhow::Context;
-use egui::{Key, KeyboardShortcut, Modifiers, Widget};
+use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
 use transform_gizmo_egui::{enum_set, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
 use windows::core::HRESULT;
@@ -22,7 +22,6 @@ use winit::{
 
 use crate::{
     config,
-    data::text::{GlobalStringmap, StringMapShared},
     gui::{
         activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager, HiddenWindows},
@@ -57,7 +56,7 @@ impl AlkahestApp {
     pub fn new(
         event_loop: EventLoop<()>,
         icon: &winit::window::Icon,
-        args: crate::ApplicationArgs,
+        args: ApplicationArgs,
     ) -> Self {
         let window = winit::window::WindowBuilder::new()
             .with_title("Alkahest")
@@ -98,7 +97,7 @@ impl AlkahestApp {
         )
         .unwrap();
         resources.insert(renderer.clone());
-        let stringmap = Arc::new(GlobalStringmap::load().expect("Failed to load global strings"));
+        let stringmap = Arc::new(GlobalStringmap::load());
         resources.insert(stringmap);
 
         let gizmo = Gizmo::new(GizmoConfig {
@@ -326,23 +325,22 @@ impl AlkahestApp {
 
                                 {
                                     // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
-                                    let mut update_check =
-                                        resources.get_mut::<UpdateCheck>();
+                                    let mut update_check = resources.get_mut::<UpdateCheck>();
                                     // {
                                     //     let check_running = update_check
                                     //         .0
                                     //         .as_ref()
                                     //         .map_or(false, |v| v.poll().is_pending());
-                                    // 
+                                    //
                                     //     let indicator =
                                     //         loads.entry("update_check".to_string()).or_insert_with(
                                     //             || LoadIndicator::new("Checking for updates"),
                                     //         );
-                                    // 
+                                    //
                                     //     if indicator.active != check_running {
                                     //         indicator.restart();
                                     //     }
-                                    //     
+                                    //
                                     //     indicator.active = check_running;
                                     // }
 
