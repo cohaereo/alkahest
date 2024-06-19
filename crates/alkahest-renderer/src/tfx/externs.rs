@@ -35,7 +35,7 @@ impl TextureView {
     pub fn view_unchecked(&self) -> ID3D11ShaderResourceView {
         self.view().unwrap_or_else(|| unsafe { transmute(0u64) })
     }
-    
+
     pub fn is_null(&self) -> bool {
         matches!(self, TextureView::Null)
     }
@@ -551,17 +551,17 @@ extern_struct! {
 extern_struct! {
     struct DeferredLight("deferred_light") {
         0x40 => unk40: Mat4 > unimplemented(false),
-        0x80 => unk80: Mat4 > unimplemented(false),
-        0xc0 => unkc0: Vec4 > unimplemented(false) > default(Vec4::W),
-        0xd0 => unkd0: Vec4 > unimplemented(false) > default(Vec4::W),
-        0xe0 => unke0: Vec4 > unimplemented(false) > default(Vec4::W),
-        0xf0 => unkf0: Vec4 > unimplemented(false) > default(Vec4::W),
+        0x80 => unk80: Mat4 > unimplemented(true),
+        0xc0 => unkc0: Vec4 > unimplemented(true) > default(Vec4::W),
+        0xd0 => unkd0: Vec4 > unimplemented(true) > default(Vec4::W),
+        0xe0 => unke0: Vec4 > unimplemented(true) > default(Vec4::W),
+        0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::W),
         0x100 => unk100: Vec4,
-        0x110 => unk110: f32 > unimplemented(false),
-        0x114 => unk114: f32 > unimplemented(false) > default(7500.0),
-        0x118 => unk118: f32 > unimplemented(false),
-        0x11c => unk11c: f32 > unimplemented(false),
-        0x120 => unk120: f32 > unimplemented(false),
+        0x110 => unk110: f32 > unimplemented(true),
+        0x114 => unk114: f32 > unimplemented(true) > default(7500.0),
+        0x118 => unk118: f32 > unimplemented(true),
+        0x11c => unk11c: f32 > unimplemented(true),
+        0x120 => unk120: f32 > unimplemented(true),
     }
 }
 
@@ -1005,7 +1005,7 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     channels[32] = Vec4::X * 2.0; // diffuse tint 1 intensity
     channels[33] = Vec4::ONE; // diffuse tint 2
     channels[34] = Vec4::X * 2.0; // diffuse tint 2 intensity
-    
+
     channels[37] = Vec4::X * 50.0; // Fog start
     channels[41] = Vec4::X * 50.0; // Fog falloff
 
