@@ -2,7 +2,7 @@ mod decorator;
 mod light;
 mod util;
 
-use alkahest_data::map::SLightCollection;
+use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
@@ -18,7 +18,7 @@ use alkahest_renderer::{
         utility::{Beacon, Ruler, Sphere},
         Scene,
     },
-    icons::ICON_POKEBALL,
+    icons::{ICON_ACCOUNT_CONVERT, ICON_POKEBALL},
     shader::shader_ball::ShaderBallComponent,
 };
 use egui::{Align2, Color32, FontId, Key, RichText, Ui, Widget};
@@ -229,6 +229,7 @@ fn show_inspector_components(
         CubemapVolume,
         ShaderBallComponent,
         DecoratorRenderer,
+        SRespawnPoint,
         NodeMetadata
     );
 }
@@ -594,6 +595,33 @@ impl ComponentPanel for NodeMetadata {
                 "{:08X} (offset 0x{:X})",
                 self.resource_type, self.source_table_resource_offset
             ));
+        });
+    }
+}
+
+impl ComponentPanel for SRespawnPoint {
+    fn inspector_name() -> &'static str {
+        "Respawn Point"
+    }
+
+    fn inspector_icon() -> char {
+        ICON_ACCOUNT_CONVERT
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn show_inspector_ui<'s>(
+        &mut self,
+        _: &'s Scene,
+        _: EntityRef<'s>,
+        ui: &mut Ui,
+        _: &Resources,
+    ) {
+        ui.strong("Respawn point data");
+        ui.indent("Respawn point data", |ui| {
+            ui.monospace(format!("{self:#X?}"));
         });
     }
 }
