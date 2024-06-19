@@ -141,6 +141,8 @@ async fn main() -> anyhow::Result<()> {
     let mut event_loop = EventLoop::new()?;
     initialize_package_manager(&args, &mut event_loop, &icon)?;
 
+    tokio::spawn(discord::discord_client_loop());
+
     let mut app = AlkahestApp::new(event_loop, &icon, args);
 
     app.run()

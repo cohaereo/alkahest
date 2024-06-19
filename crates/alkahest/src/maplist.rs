@@ -14,7 +14,9 @@ use destiny_pkg::TagHash;
 use itertools::Itertools;
 use poll_promise::Promise;
 
-use crate::{gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs};
+use crate::{
+    discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum MapLoadState {
@@ -217,11 +219,10 @@ impl MapList {
         self.current_map = 0;
         self.previous_map = None;
 
-        // TODO(cohae): Reimplement Discord RPC
-        // #[cfg(feature = "discord_rpc")]
-        // if let Some(map) = self.current_map_mut() {
-        //     discord::set_status_from_mapdata(map);
-        // }
+        #[cfg(feature = "discord_rpc")]
+        if let Some(map) = self.current_map() {
+            discord::set_activity_from_map(map);
+        }
     }
 
     pub fn add_map(&mut self, map_name: String, map_hash: TagHash) {
@@ -263,6 +264,12 @@ impl MapList {
             let dest = &mut self.maps[self.current_map];
             dest.take_globals(&mut source);
             self.maps[previous_map].scene = source;
+        }
+
+
+        #[cfg(feature = "discord_rpc")]
+        if let Some(map) = self.current_map() {
+            discord::set_activity_from_map(map);
         }
     }
 }
