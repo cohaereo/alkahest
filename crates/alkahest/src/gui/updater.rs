@@ -1,15 +1,18 @@
+use alkahest_renderer::icons::{
+    ICON_CANCEL, ICON_DOWNLOAD, ICON_LIGHTNING_BOLT, ICON_SHIELD_HALF_FULL,
+};
 use anyhow::Context;
 use egui::{Align2, Color32, Id, RichText, Rounding, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use poll_promise::Promise;
 
-use super::{load_indicator::LoadingIcon, UiExt};
+use super::UiExt;
 use crate::{
     config,
-    icons::{ICON_CANCEL, ICON_DOWNLOAD, ICON_LIGHTNING_BOLT, ICON_SHIELD_HALF_FULL},
     updater::{self, AvailableUpdate, UpdateChannel, UpdateCheck},
     util::error::{show_error_alert, ErrorAlert},
 };
+use crate::gui::bottom_bar::LoadingIcon;
 
 #[derive(Default)]
 pub struct ChannelSelector {
@@ -29,7 +32,7 @@ impl ChannelSelector {
                 Color32::from_black_alpha(128),
             );
 
-            egui::Area::new("Update Channel")
+            egui::Area::new(egui::Id::new("Update Channel"))
                 .order(egui::Order::Foreground)
                 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
                 .show(ctx, |ui| {
@@ -85,7 +88,6 @@ impl ChannelSelector {
                             self.open = false;
                             resources
                                 .get_mut::<UpdateCheck>()
-                                .unwrap()
                                 .start(config::with(|c| {
                                     c.update_channel.unwrap_or(UpdateChannel::Stable)
                                 }));
@@ -136,7 +138,7 @@ impl UpdateDownload {
 
         let mut close = false;
         if self.download_promise.is_none() {
-            egui::Area::new("Update Available")
+            egui::Area::new(egui::Id::new("Update Available"))
                 .order(egui::Order::Foreground)
                 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
                 .show(ctx, |ui| {
@@ -175,7 +177,7 @@ impl UpdateDownload {
                     });
                 });
         } else {
-            egui::Area::new("Updating")
+            egui::Area::new(egui::Id::new("Updating"))
                 .order(egui::Order::Foreground)
                 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
                 .show(ctx, |ui| {

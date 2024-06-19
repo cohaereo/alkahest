@@ -105,6 +105,7 @@ received some polish!
 - Fixed water showing up as a red box
 - Fixed a renderglobals related crash on startup when using pre-lightfall packages
 - Fixed certain special usage sky objects being rendered in the transparents stage
+- Fixed a bug in the auto updater that caused an error when trying to move the old executable
 
 ## 0.4.1 - 2024-03-27
 

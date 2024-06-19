@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use anyhow::Context;
 use poll_promise::Promise;
 use serde::{Deserialize, Serialize};
@@ -95,6 +97,7 @@ pub async fn check_nightly_release() -> anyhow::Result<Option<AvailableUpdate>> 
         .expect("Failed to parse BUILD_TIMESTAMP");
 
     if run.created_at < (current_build_date + chrono::Duration::minutes(5)) {
+        info!("No updates found");
         return Ok(None);
     }
 
@@ -138,7 +141,7 @@ pub async fn check_nightly_release() -> anyhow::Result<Option<AvailableUpdate>> 
 }
 
 pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     struct ReleasePartial {
         pub tag_name: String,
         pub name: String,
@@ -148,7 +151,7 @@ pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
         pub body: String,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     struct AssetPartial {
         pub name: String,
         pub browser_download_url: String,
@@ -164,6 +167,7 @@ pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
     let current_semver = semver::Version::parse(&version_fixup(consts::VERSION))?;
 
     if release_semver <= current_semver {
+        info!("No updates found");
         return Ok(None);
     }
 
@@ -186,42 +190,43 @@ pub async fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
 pub struct UpdateCheck(pub Option<Promise<Option<AvailableUpdate>>>);
 
 impl UpdateCheck {
-    pub fn start(&mut self, _channel: UpdateChannel) {
-        todo!("Reimplement UpdateCheck")
-        // self.0 = Some(Promise::spawn_async(async move {
-        //     match channel.check_for_updates().await {
-        //         Ok(o) => o,
-        //         Err(e) => {
-        //             error!("Failed to check for updates: {}", e);
-        //             None
-        //         }
-        //     }
-        // }));
+    pub fn start(&mut self, channel: UpdateChannel) {
+        self.0 = Some(Promise::spawn_async(async move {
+            channel.check_for_updates().await.unwrap_or_else(|e| {
+                error!("Failed to check for updates: {}", e);
+                None
+            })
+        }));
     }
 }
 
-// pub fn execute_update(zip_data: Vec<u8>) -> anyhow::Result<()> {
-//     let exe_path = std::env::current_exe().context("Failed to retrieve current executable path")?;
-//     let old_exe_path = exe_path.with_file_name("alkahest_old.exe");
-//
-//     std::fs::rename(&exe_path, old_exe_path)
-//         .context("Failed to move the old alkahest executable")?;
-//
-//     let mut zip_reader = Cursor::new(zip_data);
-//     let exe_dir = exe_path
-//         .parent()
-//         .context("Exe does not have a parent directory??")?;
-//     zip_extract::extract(&mut zip_reader, exe_dir, true)?;
-//
-//     if !exe_path.exists() {
-//         return Err(anyhow::anyhow!("alkahest.exe does not exist in the zip"));
-//     }
-//
-//     // Spawn the new process
-//     std::process::Command::new(exe_path)
-//         .args(std::env::args().skip(1))
-//         .spawn()
-//         .context("Failed to spawn the new alkahest process")?;
-//
-//     std::process::exit(0);
-// }
+pub fn execute_update(zip_data: Vec<u8>) -> anyhow::Result<()> {
+    let exe_path = std::env::current_exe().context("Failed to retrieve current executable path")?;
+    let old_exe_path = exe_path.with_file_name("alkahest.exe.old");
+
+    if old_exe_path.exists() {
+        std::fs::remove_file(&old_exe_path)
+            .context("Failed to remove the old alkahest executable")?;
+    }
+
+    std::fs::rename(&exe_path, old_exe_path)
+        .context("Failed to move the old alkahest executable")?;
+
+    let mut zip_reader = Cursor::new(zip_data);
+    let exe_dir = exe_path
+        .parent()
+        .context("Exe does not have a parent directory??")?;
+    zip_extract::extract(&mut zip_reader, exe_dir, true)?;
+
+    if !exe_path.exists() {
+        return Err(anyhow::anyhow!("alkahest.exe does not exist in the zip"));
+    }
+
+    // Spawn the new process
+    std::process::Command::new(exe_path)
+        .args(std::env::args().skip(1))
+        .spawn()
+        .context("Failed to spawn the new alkahest process")?;
+
+    std::process::exit(0);
+}

@@ -27,10 +27,12 @@ use crate::{
         activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
+        updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
     maplist::MapList,
     resources::Resources,
+    updater::UpdateCheck,
     ApplicationArgs,
 };
 
@@ -45,7 +47,10 @@ pub struct AlkahestApp {
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
     renderer: RendererShared,
-    map_placeholder: Scene,
+    scratch_map: Scene,
+
+    update_channel_gui: ChannelSelector,
+    updater_gui: Option<UpdateDownload>,
 }
 
 impl AlkahestApp {
@@ -107,6 +112,17 @@ impl AlkahestApp {
             .get_mut::<GuiViewManager>()
             .insert(ActivityBrowser::new(&resources.get::<StringMapShared>()));
 
+        resources.insert(UpdateCheck::default());
+        let update_channel_gui = ChannelSelector {
+            open: config::with(|c| c.update_channel.is_none()),
+        };
+
+        let updater_gui: Option<UpdateDownload> = None;
+
+        if let Some(update_channel) = config::with(|c| c.update_channel) {
+            resources.get_mut::<UpdateCheck>().start(update_channel);
+        }
+
         let camera = Camera::new_fps(Viewport {
             size: glam::UVec2::new(1920, 1080),
             origin: glam::UVec2::new(0, 0),
@@ -128,7 +144,9 @@ impl AlkahestApp {
             resources,
             last_cursor_pos: None,
             renderer,
-            map_placeholder: Scene::new(),
+            scratch_map: Scene::new(),
+            update_channel_gui,
+            updater_gui,
         }
     }
 
@@ -141,7 +159,9 @@ impl AlkahestApp {
             resources,
             last_cursor_pos,
             renderer,
-            map_placeholder,
+            scratch_map,
+            update_channel_gui,
+            updater_gui,
             ..
         } = self;
 
@@ -282,10 +302,7 @@ impl AlkahestApp {
                             let mut maps = resources.get_mut::<MapList>();
                             maps.update_maps(resources);
 
-                            let map = maps
-                                .current_map()
-                                .map(|m| &m.scene)
-                                .unwrap_or(map_placeholder);
+                            let map = maps.current_map().map(|m| &m.scene).unwrap_or(scratch_map);
 
                             renderer.render_world(&*resources.get::<Camera>(), map, resources);
                         }
@@ -300,6 +317,56 @@ impl AlkahestApp {
                         renderer.gpu.begin_event("interface_and_hud").scoped(|| {
                             gpu_event!(renderer.gpu, "egui");
                             gui.draw_frame(window, |ctx, ectx| {
+                                update_channel_gui.open =
+                                    config::with(|c| c.update_channel.is_none());
+                                update_channel_gui.show(ectx, resources);
+                                if update_channel_gui.open {
+                                    return;
+                                }
+
+                                {
+                                    // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
+                                    let mut update_check =
+                                        resources.get_mut::<UpdateCheck>();
+                                    // {
+                                    //     let check_running = update_check
+                                    //         .0
+                                    //         .as_ref()
+                                    //         .map_or(false, |v| v.poll().is_pending());
+                                    // 
+                                    //     let indicator =
+                                    //         loads.entry("update_check".to_string()).or_insert_with(
+                                    //             || LoadIndicator::new("Checking for updates"),
+                                    //         );
+                                    // 
+                                    //     if indicator.active != check_running {
+                                    //         indicator.restart();
+                                    //     }
+                                    //     
+                                    //     indicator.active = check_running;
+                                    // }
+
+                                    if update_check
+                                        .0
+                                        .as_ref()
+                                        .map_or(false, |v| v.poll().is_ready())
+                                    {
+                                        let update =
+                                            update_check.0.take().unwrap().block_and_take();
+                                        if let Some(update) = update {
+                                            *updater_gui = Some(UpdateDownload::new(update));
+                                        }
+                                    }
+                                }
+
+                                if let Some(updater_gui_) = updater_gui.as_mut() {
+                                    if !updater_gui_.show(ectx, resources) {
+                                        *updater_gui = None;
+                                    }
+
+                                    return;
+                                }
+
                                 let mut gui_views = resources.get_mut::<GuiViewManager>();
                                 gui_views.draw(ectx, window, resources, ctx);
 

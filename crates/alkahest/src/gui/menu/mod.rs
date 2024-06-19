@@ -27,6 +27,8 @@ use crate::{
     gui::context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
     maplist::MapList,
     resources::Resources,
+    updater,
+    updater::UpdateChannel,
     util::{consts, consts::CHANGELOG_MD},
 };
 
@@ -247,36 +249,36 @@ impl GuiView for MenuBar {
                         self.controls_open = true;
                         ui.close_menu()
                     }
-                    // ui.separator();
-                    // let update_channel = config::with(|c| c.update_channel);
-                    // if ui
-                    //     .add_enabled(
-                    //         update_channel.is_some()
-                    //             && update_channel != Some(UpdateChannel::Disabled),
-                    //         egui::Button::new("Check for updates"),
-                    //     )
-                    //     .clicked()
-                    // {
-                    //     if let Some(update_channel) = update_channel {
-                    //         resources
-                    //             .get_mut::<crate::updater::UpdateCheck>()
-                    //             .start(update_channel);
-                    //     }
-                    //     ui.close_menu();
-                    // }
-                    //
-                    // if ui.button("Change update channel").clicked() {
-                    //     config::with_mut(|c| c.update_channel = None);
-                    //     ui.close_menu();
-                    // }
-                    //
-                    // if let Some(update_channel) = update_channel {
-                    //     ui.label(format!(
-                    //         "Updates: {} {:?}",
-                    //         update_channel.icon(),
-                    //         update_channel
-                    //     ));
-                    // }
+                    ui.separator();
+                    let update_channel = config::with(|c| c.update_channel);
+                    if ui
+                        .add_enabled(
+                            update_channel.is_some()
+                                && update_channel != Some(UpdateChannel::Disabled),
+                            egui::Button::new("Check for updates"),
+                        )
+                        .clicked()
+                    {
+                        if let Some(update_channel) = update_channel {
+                            resources
+                                .get_mut::<updater::UpdateCheck>()
+                                .start(update_channel);
+                        }
+                        ui.close_menu();
+                    }
+
+                    if ui.button("Change update channel").clicked() {
+                        config::with_mut(|c| c.update_channel = None);
+                        ui.close_menu();
+                    }
+
+                    if let Some(update_channel) = update_channel {
+                        ui.label(format!(
+                            "Updates: {} {:?}",
+                            update_channel.icon(),
+                            update_channel
+                        ));
+                    }
 
                     ui.separator();
 
