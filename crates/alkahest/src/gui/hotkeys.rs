@@ -1,4 +1,6 @@
-use crate::resources::Resources;
+use alkahest_renderer::ecs::{common::Hidden, resources::SelectedEntity};
+
+use crate::{maplist::MapList, resources::Resources};
 
 pub const SHORTCUT_DELETE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::Delete);
@@ -31,29 +33,23 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     }
 }
 
-fn hide_unselected(_resources: &mut Resources) {
-    // TODO(cohae): Reimplement once we have maps again
-    // let selected_entity = resources.get::<SelectedEntity>().select;
-    // let mut maps = resources.get_mut::<MapList>();
-    // if let Some(map) = maps.current_map_mut() {
-    //     for (entity, vis) in map.scene.query::<Option<&mut Visible>>().iter() {
-    //         if Some(entity) != selected_entity {
-    //             if let Some(vis) = vis {
-    //                 vis.0 = false;
-    //             } else {
-    //                 map.command_buffer.insert_one(entity, Visible(false));
-    //             }
-    //         }
-    //     }
-    // }
+fn hide_unselected(resources: &mut Resources) {
+    let selected_entity = resources.get::<SelectedEntity>().selected();
+    let mut maps = resources.get_mut::<MapList>();
+    if let Some(map) = maps.current_map_mut() {
+        for e in map.scene.iter() {
+            if Some(e.entity()) != selected_entity {
+                map.command_buffer.insert_one(e.entity(), Hidden);
+            }
+        }
+    }
 }
 
-fn unhide_all(_resources: &mut Resources) {
-    // TODO(cohae): Reimplement once we have maps again
-    // let maps = resources.get::<MapList>();
-    // if let Some(map) = maps.current_map() {
-    //     for (_, vis) in map.scene.query::<&mut Visible>().iter() {
-    //         vis.0 = true;
-    //     }
-    // }
+fn unhide_all(resources: &mut Resources) {
+    let mut maps = resources.get_mut::<MapList>();
+    if let Some(map) = maps.current_map_mut() {
+        for (e, _) in map.scene.query::<&Hidden>().iter() {
+            map.command_buffer.remove_one::<Hidden>(e);
+        }
+    }
 }

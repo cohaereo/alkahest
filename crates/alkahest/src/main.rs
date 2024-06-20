@@ -5,7 +5,7 @@
 #[macro_use]
 extern crate tracing;
 
-use std::{fmt::Write, path::PathBuf, str::FromStr, sync::Arc};
+use std::{fmt::Write, path::PathBuf, process::exit, str::FromStr, sync::Arc};
 
 use alkahest_pm::PACKAGE_MANAGER;
 use alkahest_renderer::util::image::Png;
@@ -145,7 +145,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mut app = AlkahestApp::new(event_loop, &icon, args);
 
-    app.run()
+    app.run()?;
+
+    // cohae: Workaround for a weird freeze when trying to close alkahest normally, might have something to do with the discord client thread
+    drop(app);
+    exit(0);
 }
 
 fn initialize_package_manager(
