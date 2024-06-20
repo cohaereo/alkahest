@@ -9,8 +9,9 @@ use alkahest_data::{
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
-        SShadowingLight, SUnk808068d4, SUnk80806aa7, SUnk80806ef4, SUnk8080714b, SUnk80808cb7,
+        SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection,
+        SMapAtmosphere, SMapDataTable, SShadowingLight, SUnk808068d4, SUnk80806aa7, SUnk80806ef4,
+        SUnk8080714b, SUnk80808cb7,
     },
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
@@ -29,6 +30,7 @@ use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
 use crate::{
     camera::CameraProjection,
     ecs::{
+        audio::AmbientAudio,
         common::{Icon, Label, ResourceOrigin},
         hierarchy::{Children, Parent},
         map::{CubemapVolume, MapAtmosphere, NodeMetadata},
@@ -45,8 +47,8 @@ use crate::{
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES,
-        ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE, ICON_SPOTLIGHT_BEAM,
+        ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::scene::SceneExt,
@@ -441,6 +443,42 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     parent_entity,
                 );
             }
+            // (ambient) sound source
+            0x8080666f => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: WideHash = TigerReadable::read_ds(table_data).unwrap();
+                if tag.hash32().is_none() {
+                    error!(
+                        "Sound source tag is None ({tag}, table {}, offset 0x{:X})",
+                        table_hash, data.data_resource.offset
+                    );
+                    // TODO: should be handled a bit more gracefully, shouldnt drop the whole node
+                    // TODO: do the same for other resources ^
+                    continue;
+                }
+
+                match package_manager().read_tag_struct::<SAudioClipCollection>(tag) {
+                    Ok(header) => {
+                        spawn_data_entity(
+                            scene,
+                            (
+                                Icon::Colored(ICON_SPEAKER, Color32::GREEN),
+                                Label::from(format!("Ambient Audio {}", tag.hash32())),
+                                AmbientAudio::new(header),
+                                transform,
+                                resource_origin,
+                                metadata.clone(),
+                            ),
+                            parent_entity,
+                        );
+                    }
+                    Err(e) => {
+                        error!(error=?e, tag=%tag, "Failed to load ambient audio");
+                    }
+                }
+            }
             0x80806aa3 => {
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
@@ -483,7 +521,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         scene,
                         (
                             Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
-                            Label::from("Sky Model"),
+                            Label::from(format!("Sky Model {}", unk8.unk60.entity_model)),
                             transform,
                             DynamicModelComponent::load(
                                 renderer,

@@ -286,8 +286,8 @@ pub struct SUnk80809164 {
     pub unk20: [u32; 4],
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct SUnk80809802 {
+#[tiger_tag(id = 0x80809738)]
+pub struct SAudioClipCollection {
     pub file_size: u64,
     pub unk8: TagHash,
     pub unkc: TagHash,

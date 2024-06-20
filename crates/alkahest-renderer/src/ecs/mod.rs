@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod common;
 pub mod hierarchy;
 pub mod map;
