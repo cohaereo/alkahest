@@ -1,5 +1,6 @@
 use alkahest_data::{
     entity::{SDynamicMesh, SDynamicMeshPart, SDynamicModel, Unk808072c5},
+    technique::TfxScopeBits,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
@@ -239,10 +240,12 @@ impl DynamicModel {
             let variant_material =
                 self.get_variant_technique(part.variant_shader_index, self.selected_variant);
 
+            let mut all_scopes = TfxScopeBits::empty();
             if let Some(technique) =
                 renderer.get_technique_shared(&self.part_techniques[self.selected_mesh][part_index])
             {
                 technique.bind(renderer).expect("Failed to bind technique");
+                all_scopes |= technique.used_scopes;
                 // } else {
                 //     continue;
             }
@@ -253,9 +256,12 @@ impl DynamicModel {
                 technique
                     .bind(renderer)
                     .expect("Failed to bind variant technique");
+                all_scopes |= technique.used_scopes;
             }
 
-            if stages.contains(RenderStageSubscriptions::COMPUTE_SKINNING) {
+            if stages.contains(RenderStageSubscriptions::COMPUTE_SKINNING)
+                || all_scopes.contains(TfxScopeBits::SKINNING)
+            {
                 unsafe {
                     renderer
                         .gpu

@@ -28,8 +28,8 @@ pub struct STechnique {
     pub unk18: u32,
     pub unk1c: u32,
 
-    pub used_scopes: ScopeBits,
-    pub compatible_scopes: ScopeBits,
+    pub used_scopes: TfxScopeBits,
+    pub compatible_scopes: TfxScopeBits,
 
     pub states: StateSelection,
     pub unk34: [u32; 15],
@@ -118,8 +118,8 @@ pub struct SDynamicConstants {
 }
 
 bitflags::bitflags! {
-    #[derive(Debug, Clone)]
-    pub struct ScopeBits: u64 {
+    #[derive(Debug, Clone, Copy)]
+    pub struct TfxScopeBits: u64 {
         const FRAME                             = 1 << 0;
         const VIEW                              = 1 << 1;
         const RIGID_MODEL                       = 1 << 2;
@@ -165,7 +165,7 @@ bitflags::bitflags! {
 }
 
 // TODO(cohae): tiger-parse doesnt work with bitflags, so we have to implement this manually
-impl TigerReadable for ScopeBits {
+impl TigerReadable for TfxScopeBits {
     fn read_ds_endian<R: Read + Seek>(reader: &mut R, endian: Endian) -> tiger_parse::Result<Self> {
         let bits: u64 = u64::read_ds_endian(reader, endian)?;
         Ok(Self::from_bits_truncate(bits))
