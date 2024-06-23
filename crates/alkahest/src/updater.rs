@@ -193,7 +193,7 @@ impl UpdateCheck {
     pub fn start(&mut self, channel: UpdateChannel) {
         self.0 = Some(Promise::spawn_async(async move {
             channel.check_for_updates().await.unwrap_or_else(|e| {
-                error!("Failed to check for updates: {}", e);
+                error!("Failed to check for updates: {:?}", e);
                 None
             })
         }));

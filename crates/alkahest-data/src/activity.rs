@@ -159,7 +159,15 @@ pub struct Unk808092d8 {
     pub unk84: TagHash,
     pub unk88: u32,
     pub unk8c: u32,
-    pub rotation: glam::Vec4,
+    pub rotation: glam::Quat,
+    pub translation: glam::Vec4,
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0xffffffff)]
+pub struct SUnk8080460c {
+    pub unk0: [u32; 36],
+    pub rotation: glam::Quat,
     pub translation: glam::Vec4,
 }
 

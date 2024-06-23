@@ -4,7 +4,7 @@ use std::{
 };
 
 use alkahest_data::{
-    activity::{SActivity, SEntityResource, Unk80808cef, Unk80808e89, Unk808092d8},
+    activity::{SActivity, SEntityResource, SUnk8080460c, Unk80808cef, Unk80808e89, Unk808092d8},
     common::ResourceHash,
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
@@ -186,14 +186,20 @@ pub async fn load_map(
                 let mut cur = Cursor::new(&data);
                 let res: SEntityResource = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                let mut data_tables = FxHashSet::default();
+                let mut data_tables: FxHashMap<TagHash, Option<Entity>> = FxHashMap::default();
                 match res.unk18.resource_type {
                     0x808092d8 => {
                         cur.seek(SeekFrom::Start(res.unk18.offset))?;
                         let tag: Unk808092d8 =
                             TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+
                         if tag.unk84.is_some() {
-                            data_tables.insert(tag.unk84);
+                            let entity = scene.spawn((
+                                Label::from(format!("Activity Datatable {}", tag.unk84)),
+                                Transform::new(tag.translation.truncate(), tag.rotation, Vec3::ONE),
+                            ));
+
+                            data_tables.insert(tag.unk84, Some(entity));
                         }
                     }
                     0x80808cef => {
@@ -201,7 +207,7 @@ pub async fn load_map(
                         let tag: Unk80808cef =
                             TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
                         if tag.unk58.is_some() {
-                            data_tables.insert(tag.unk58);
+                            data_tables.insert(tag.unk58, None);
                         }
                     }
                     u => {
@@ -229,7 +235,7 @@ pub async fn load_map(
                             .get_entry(hash)
                             .map(|v| v.reference == 0x80809883)
                             .unwrap_or_default()
-                        && !data_tables.contains(&hash)
+                        && !data_tables.contains_key(&hash)
                     {
                         data_tables2.insert(hash);
                     }
@@ -246,7 +252,7 @@ pub async fn load_map(
                     );
                 }
 
-                for table_hash in data_tables {
+                for (table_hash, table_entity) in data_tables {
                     let data = package_manager().read_tag(table_hash)?;
                     let mut cur = Cursor::new(&data);
                     let table: SMapDataTable =
@@ -259,7 +265,7 @@ pub async fn load_map(
                         &mut scene,
                         &renderer,
                         ResourceOrigin::Map,
-                        Some(parent_entity),
+                        table_entity.or(Some(parent_entity)),
                     )
                     .context("Failed to load activity datatable")?;
                 }
@@ -292,6 +298,15 @@ pub async fn load_map(
                 if origin != ResourceOrigin::Ambient {
                     for r in &res.resource_table2 {
                         if r.unk14 != 0xFFFFFFFF && r.unk0.is_some() {
+                            let transform = if res.unk18.resource_type == 0x8080460C {
+                                cur.seek(SeekFrom::Start(res.unk18.offset))?;
+                                let tag: SUnk8080460c =
+                                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                                Transform::new(tag.translation.truncate(), tag.rotation, Vec3::ONE)
+                            } else {
+                                Transform::default()
+                            };
+
                             // SEntity::ID
                             load_entity_into_scene(
                                 r.unk0.hash32(),
@@ -299,7 +314,7 @@ pub async fn load_map(
                                 &renderer,
                                 origin,
                                 None,
-                                Transform::default(),
+                                transform,
                                 None,
                                 0,
                                 None,
@@ -955,7 +970,7 @@ fn load_entity_into_scene(
     let header = package_manager()
         .read_tag_struct::<SEntity>(entity_hash)
         .context("Failed to read SEntity")?;
-    debug!("Loading entity {entity_hash}");
+    debug!("{depth} - Loading entity {entity_hash}");
     let scene_entity = spawn_data_entity(
         scene,
         (
@@ -976,6 +991,7 @@ fn load_entity_into_scene(
 
     for e in &header.entity_resources {
         let entres = &e.unk0;
+
         match entres.unk10.resource_type {
             0x80806d8a => {
                 let mut cur = Cursor::new(package_manager().read_tag(entres.taghash())?);
