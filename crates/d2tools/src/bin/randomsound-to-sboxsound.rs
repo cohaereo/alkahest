@@ -7,7 +7,7 @@ use alkahest_data::sound::SSoundCollection;
 use alkahest_pm::{package_manager, PACKAGE_MANAGER};
 use anyhow::Context;
 use clap::Parser;
-use destiny_pkg::{PackageManager, PackageVersion, TagHash};
+use destiny_pkg::{GameVersion, PackageManager, TagHash};
 use fs_err::File;
 use tiger_parse::dpkg::PackageManagerExt;
 
@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     info!("Initializing package manager");
-    let pm = PackageManager::new(args.packages_path, PackageVersion::Destiny2Lightfall).unwrap();
+    let pm = PackageManager::new(args.packages_path, GameVersion::Destiny2Lightfall).unwrap();
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 
