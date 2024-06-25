@@ -224,6 +224,7 @@ dependencies = [
  "bitflags 2.5.0",
  "bytemuck",
  "crossbeam",
+ "destiny-havok",
  "destiny-pkg",
  "ecolor",
  "fastrand",

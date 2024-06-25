@@ -14,6 +14,11 @@ pub const SHORTCUT_UNHIDE_ALL: egui::KeyboardShortcut =
 pub const SHORTCUT_HIDE_UNSELECTED: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::H);
 
+pub const SHORTCUT_DESELECT: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
+    egui::Modifiers::CTRL.plus(egui::Modifiers::SHIFT),
+    egui::Key::A,
+);
+
 pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F);
 
@@ -30,6 +35,10 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE_UNSELECTED)) {
         hide_unselected(resources);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_DESELECT)) {
+        resources.get_mut::<SelectedEntity>().deselect();
     }
 }
 

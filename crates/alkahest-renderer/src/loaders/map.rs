@@ -292,7 +292,7 @@ pub async fn load_map(
                         },
                         Some(parent_entity),
                     )
-                    .context("Failed to load AB atatable")?;
+                    .context("Failed to load AB datatable")?;
                 }
 
                 if origin != ResourceOrigin::Ambient {

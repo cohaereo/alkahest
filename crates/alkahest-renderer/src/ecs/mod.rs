@@ -1,5 +1,6 @@
 pub mod audio;
 pub mod common;
+mod havok;
 pub mod hierarchy;
 pub mod map;
 pub mod render;

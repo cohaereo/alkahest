@@ -116,6 +116,10 @@ impl CameraController for FpsCamera {
 
         speed *= speed_mul;
 
+        if input.ctrl() && input.shift() {
+            speed = 0.0;
+        }
+
         // Cancel tween if the user moves the camera
         if tween.is_some() && direction.length() > 0.0 {
             *tween = None;

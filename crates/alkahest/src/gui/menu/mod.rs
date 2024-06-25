@@ -243,21 +243,30 @@ impl MenuBar {
                                 "Toggle Hide Selected Object"
                             );
 
-                            // control_description!(
-                            //     ui,
-                            //     format!("Alt + {}", ICON_ALPHA_H_BOX_OUTLINE),
-                            //     "Unhide All Objects"
-                            // );
-                            //
-                            // control_description!(
-                            //     ui,
-                            //     format!(
-                            //         "{} Shift + {}",
-                            //         ICON_APPLE_KEYBOARD_SHIFT, ICON_ALPHA_H_BOX_OUTLINE
-                            //     ),
-                            //     "Hide All Unselected Objects"
-                            // );
-                            //
+                            control_description!(
+                                ui,
+                                format!("Alt + {}", ICON_ALPHA_H_BOX_OUTLINE),
+                                "Unhide All Objects"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "{} Shift + {}",
+                                    ICON_APPLE_KEYBOARD_SHIFT, ICON_ALPHA_H_BOX_OUTLINE
+                                ),
+                                "Hide All Unselected Objects"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!(
+                                    "Ctrl + {} Shift + {}",
+                                    ICON_APPLE_KEYBOARD_SHIFT, ICON_ALPHA_H_BOX_OUTLINE
+                                ),
+                                "Deselect All Objects"
+                            );
+
                             // control_description!(
                             //     ui,
                             //     format!("{} Shift + Delete", ICON_APPLE_KEYBOARD_SHIFT),

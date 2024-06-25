@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 alkahest-data = { path = "../alkahest-data" }
 alkahest-pm = { path = "../alkahest-pm" }
+destiny-havok = { path = "../destiny-havok" }
 
 anyhow.workspace = true
 arc-swap.workspace = true
