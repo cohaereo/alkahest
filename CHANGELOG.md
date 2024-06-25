@@ -56,10 +56,8 @@ received some polish!
 - Decorator rendering (grass, plants, small rocks, etc.)
 - Transform gizmo
 - Compile-time shader compilation
-- Post processing effects
+- Post processing framework
     - Ambient occlusion
-    - ~~Bloom~~ (TODO)
-    - ~~Color grading (WIP, currently set manually)~~ (TODO)
 - Settings panel
 - Fullscreen mode (can be enabled through `--fullscreen` argument or alt+enter)
 - Hide the cursor when moving the camera
