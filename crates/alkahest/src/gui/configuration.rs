@@ -54,7 +54,7 @@ impl GuiView for RenderSettingsPanel {
                 });
             });
 
-            render_feat_vis(ui, "Node Nametags", &mut settings.node_nametags);
+            render_feat_vis(ui, "Node Visualization", &mut settings.node_nametags);
             ui.collapsing("Node filters", |ui| {
                 let mut filters = resources.get_mut::<NodeFilterSet>();
                 for filter in NodeFilter::iter() {

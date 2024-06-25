@@ -3,7 +3,11 @@ use std::sync::Arc;
 use alkahest_data::text::{GlobalStringmap, StringMapShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
-    ecs::{resources::SelectedEntity, Scene},
+    ecs::{
+        resources::SelectedEntity,
+        tags::{NodeFilter, NodeFilterSet},
+        Scene,
+    },
     gpu::GpuContext,
     gpu_event,
     input::InputState,
@@ -20,7 +24,7 @@ use winit::{
     event_loop::EventLoop,
     platform::run_on_demand::EventLoopExtRunOnDemand,
 };
-use alkahest_renderer::ecs::tags::{NodeFilter, NodeFilterSet};
+
 use crate::{
     config,
     gui::{
@@ -137,10 +141,20 @@ impl AlkahestApp {
 
             resources.get_mut::<MapList>().add_map(map_name, maphash);
         }
-        
+
         let mut node_filter_set = NodeFilterSet::default();
         for nf in NodeFilter::iter() {
-            node_filter_set.insert(nf);
+            if !matches!(
+                nf,
+                NodeFilter::PlayerContainmentVolume
+                    | NodeFilter::SlipSurfaceVolume
+                    | NodeFilter::TurnbackBarrier
+                    | NodeFilter::InstakillBarrier
+                    | NodeFilter::Cubemap
+                    | NodeFilter::NamedArea
+            ) {
+                node_filter_set.insert(nf);
+            }
         }
         resources.insert(node_filter_set);
 

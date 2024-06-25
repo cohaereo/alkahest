@@ -814,7 +814,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         (
                             NodeFilter::RespawnPoint,
                             Icon::Colored(ICON_ACCOUNT_CONVERT, Color32::RED),
-                            Label::from("Respawn point"),
+                            Label::from(format!("Respawn point 0x{:X}", respawn_point.unk20)),
                             Transform {
                                 translation: respawn_point.translation.truncate(),
                                 rotation: respawn_point.rotation,
