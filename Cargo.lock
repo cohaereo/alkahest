@@ -134,10 +134,10 @@ dependencies = [
  "fs-err",
  "game-detector",
  "genmesh",
- "glam",
+ "glam 0.28.0",
  "hecs",
  "hex",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "lazy_static",
  "mimalloc",
  "native-dialog",
@@ -154,7 +154,7 @@ dependencies = [
  "reqwest",
  "ringbuffer",
  "ron",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "rustc_version",
  "semver",
  "serde",
@@ -184,9 +184,9 @@ dependencies = [
  "binrw",
  "bitflags 2.5.0",
  "destiny-pkg",
- "glam",
+ "glam 0.28.0",
  "rayon",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "tiger-parse",
 ]
 
@@ -230,13 +230,13 @@ dependencies = [
  "fastrand",
  "field_access",
  "genmesh",
- "glam",
+ "glam 0.28.0",
  "glob",
  "heck 0.5.0",
  "hecs",
  "hex",
  "indexmap",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "lazy_static",
  "num",
  "obj",
@@ -244,7 +244,7 @@ dependencies = [
  "png",
  "profiling",
  "raw-window-handle 0.6.0",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "serde",
  "smallvec",
  "strum",
@@ -1079,7 +1079,7 @@ dependencies = [
  "destiny-pkg",
  "env_logger",
  "fs-err",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "log",
  "serde",
  "serde_json",
@@ -1159,16 +1159,16 @@ dependencies = [
  "bitflags 2.5.0",
  "chull",
  "colored",
- "glam",
- "itertools 0.12.1",
+ "glam 0.28.0",
+ "itertools 0.13.0",
  "parry3d",
 ]
 
 [[package]]
 name = "destiny-pkg"
-version = "0.10.3"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ad9e1b1549273e360856722c042c65159d664ef2e8f5857d00f45e0675edc8a"
+checksum = "8e38129da4d312e83c0c22bc48d2c83358687ea5d8d8e19634d5bbfe2e6a2e09"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -1184,7 +1184,7 @@ dependencies = [
  "libloading",
  "parking_lot",
  "rayon",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "serde",
  "serde_json",
  "tracing",
@@ -1827,6 +1827,15 @@ version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e05e7e6723e3455f4818c7b26e855439f7546cf617ef669d1adedb8669e5cb9"
 dependencies = [
+ "mint",
+]
+
+[[package]]
+name = "glam"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "779ae4bf7e8421cf91c0b3b64e7e8b40b862fba4d393f59150042de7c4965a94"
+dependencies = [
  "bytemuck",
  "mint",
 ]
@@ -2119,15 +2128,6 @@ name = "itertools"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
@@ -2709,9 +2709,9 @@ dependencies = [
 
 [[package]]
 name = "objc-sys"
-version = "0.3.2"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c71324e4180d0899963fc83d9d241ac39e699609fc1025a850aadac8257459"
+checksum = "cdb91bdd390c7ce1a8607f35f3ca7151b65afc0ff5ff3b34fa350f7d7c7e4310"
 
 [[package]]
 name = "objc2"
@@ -2879,7 +2879,7 @@ dependencies = [
  "nalgebra",
  "num-derive",
  "num-traits 0.2.18",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "simba",
  "slab",
  "smallvec",
@@ -3438,6 +3438,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
+name = "rustc-hash"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "583034fd73374156e66797ed8e5b0d5690409c9226b22d87cb7f19821c05d152"
+
+[[package]]
 name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3928,12 +3934,12 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.11"
-source = "git+https://github.com/v4nguard/tiger-parse#0c4d2548ecee88f273d6dbde5fa7bd4d42a10956"
+version = "0.1.12"
+source = "git+https://github.com/v4nguard/tiger-parse#742a1fed5c4210686a64711a63c119dbef9841b6"
 dependencies = [
  "anyhow",
  "destiny-pkg",
- "glam",
+ "glam 0.28.0",
  "tiger-parse-derive",
  "tracing",
 ]
@@ -3941,7 +3947,7 @@ dependencies = [
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#0c4d2548ecee88f273d6dbde5fa7bd4d42a10956"
+source = "git+https://github.com/v4nguard/tiger-parse#742a1fed5c4210686a64711a63c119dbef9841b6"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -4210,7 +4216,7 @@ dependencies = [
  "enum_dispatch",
  "enumset",
  "epaint",
- "glam",
+ "glam 0.27.0",
  "mint",
 ]
 
@@ -4691,11 +4697,11 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows"
-version = "0.56.0"
+version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1de69df01bdf1ead2f4ac895dc77c9351aefff65b2f3db429a343f9cbf05e132"
+checksum = "12342cb4d8e3b046f3d80effd474a7a02447231330ef77d71daa6fbc40681143"
 dependencies = [
- "windows-core 0.56.0",
+ "windows-core 0.57.0",
  "windows-targets 0.52.5",
 ]
 
@@ -4710,9 +4716,9 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.56.0"
+version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4698e52ed2d08f8658ab0c39512a7c00ee5fe2688c65f8c0a4f06750d729f2a6"
+checksum = "d2ed2439a290666cd67ecce2b0ffaad89c2a56b976b736e6ece670297897832d"
 dependencies = [
  "windows-implement",
  "windows-interface",
@@ -4722,9 +4728,9 @@ dependencies = [
 
 [[package]]
 name = "windows-implement"
-version = "0.56.0"
+version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6fc35f58ecd95a9b71c4f2329b911016e6bec66b3f2e6a4aad86bd2e99e2f9b"
+checksum = "9107ddc059d5b6fbfbffdfa7a7fe3e22a226def0b2608f72e9d552763d3e1ad7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4733,9 +4739,9 @@ dependencies = [
 
 [[package]]
 name = "windows-interface"
-version = "0.56.0"
+version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08990546bf4edef8f431fa6326e032865f27138718c587dc21bc0265bbcb57cc"
+checksum = "29bee4b38ea3cde66011baa44dba677c432a78593e202392d1e9070cf2a7fca7"
 dependencies = [
  "proc-macro2",
  "quote",

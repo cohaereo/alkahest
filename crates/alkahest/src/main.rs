@@ -12,7 +12,7 @@ use alkahest_renderer::util::image::Png;
 use anyhow::Context;
 use app::AlkahestApp;
 use clap::Parser;
-use destiny_pkg::{PackageManager, PackageVersion, TagHash};
+use destiny_pkg::{GameVersion, PackageManager, TagHash};
 use mimalloc::MiMalloc;
 use tracing::level_filters::LevelFilter;
 use tracing_log::LogTracer;
@@ -195,7 +195,7 @@ fn initialize_package_manager(
     }
 
     let pm = info_span!("Initializing package manager").in_scope(|| {
-        PackageManager::new(package_dir, PackageVersion::Destiny2TheFinalShape).unwrap()
+        PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape).unwrap()
     });
 
     config::with_mut(|c| c.packages_directory = Some(pm.package_dir.to_string_lossy().to_string()));

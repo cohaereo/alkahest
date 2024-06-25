@@ -2,7 +2,7 @@ name: Build (nightly)
 
 on:
   push:
-    branches: ["lightfall"]
+    branches: [ "main", "lightfall" ]
     paths-ignore:
       - "**/.md"
 
@@ -16,11 +16,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        platform: [windows-latest]
-        toolchain: [nightly]
+        platform: [ windows-latest ]
+        toolchain: [ nightly ]
     steps:
       - uses: actions/checkout@v4
-      
+
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
 
       - uses: Swatinem/rust-cache@v2
