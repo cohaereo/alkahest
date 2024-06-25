@@ -3,6 +3,7 @@ use alkahest_renderer::{
     ecs::{
         common::{Hidden, Icon, Label, ResourceOrigin},
         resources::SelectedEntity,
+        tags::{NodeFilter, NodeFilterSet},
         transform::Transform,
     },
     icons::ICON_HELP,
@@ -82,12 +83,29 @@ impl GuiView for NodeGizmoOverlay {
 
                 let mut rp_list = vec![];
 
-                for (e, (transform, origin, label, icon)) in map
+                let filters = resources.get::<NodeFilterSet>();
+                for (e, (transform, origin, label, icon, filter)) in map
                     .scene
-                    .query::<(&Transform, &ResourceOrigin, Option<&Label>, Option<&Icon>)>()
+                    .query::<(
+                        &Transform,
+                        &ResourceOrigin,
+                        Option<&Label>,
+                        Option<&Icon>,
+                        Option<&NodeFilter>,
+                    )>()
                     .without::<&Hidden>()
                     .iter()
                 {
+                    if let Some(filter) = filter {
+                        if !filters.contains(filter) {
+                            continue;
+                        }
+                    } else {
+                        if !filters.contains(&NodeFilter::Unknown) {
+                            continue;
+                        }
+                    }
+
                     let distance = if selected_entity.selected() != Some(e) {
                         // if !visible.map_or(true, |v| v.0) {
                         //     continue;
@@ -210,12 +228,7 @@ impl GuiView for NodeGizmoOverlay {
                                 Color32::TRANSPARENT,
                                 egui::Stroke::new(
                                     3.0,
-                                    Color32::from_rgba_unmultiplied(
-                                        255,
-                                        150,
-                                        50,
-                                        255,
-                                    ),
+                                    Color32::from_rgba_unmultiplied(255, 150, 50, 255),
                                 ),
                             );
                         }

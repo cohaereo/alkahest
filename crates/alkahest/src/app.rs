@@ -11,6 +11,7 @@ use alkahest_renderer::{
 };
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
+use strum::IntoEnumIterator;
 use transform_gizmo_egui::{enum_set, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
 use windows::core::HRESULT;
 use winit::{
@@ -19,13 +20,14 @@ use winit::{
     event_loop::EventLoop,
     platform::run_on_demand::EventLoopExtRunOnDemand,
 };
-
+use alkahest_renderer::ecs::tags::{NodeFilter, NodeFilterSet};
 use crate::{
     config,
     gui::{
-        activity_select::{get_map_name, ActivityBrowser, CurrentActivity},
+        activity_select::{get_map_name, set_activity, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
+        hotkeys,
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
@@ -34,7 +36,6 @@ use crate::{
     updater::UpdateCheck,
     ApplicationArgs,
 };
-use crate::gui::hotkeys;
 
 pub struct AlkahestApp {
     pub window: winit::window::Window,
@@ -128,13 +129,20 @@ impl AlkahestApp {
             origin: glam::UVec2::new(0, 0),
         });
         resources.insert(camera);
-
-        if let Some(maphash) = resources.get::<ApplicationArgs>().map {
+        if let Some(acthash) = resources.get::<ApplicationArgs>().activity {
+            set_activity(&resources, acthash).ok();
+        } else if let Some(maphash) = resources.get::<ApplicationArgs>().map {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
 
             resources.get_mut::<MapList>().add_map(map_name, maphash);
         }
+        
+        let mut node_filter_set = NodeFilterSet::default();
+        for nf in NodeFilter::iter() {
+            node_filter_set.insert(nf);
+        }
+        resources.insert(node_filter_set);
 
         Self {
             window,

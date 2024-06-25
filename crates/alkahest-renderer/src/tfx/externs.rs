@@ -746,11 +746,11 @@ extern_struct! {
         0x10 => unk10: Vec4 > unimplemented(true),
         0x30 => unk30: Vec4 > unimplemented(true),
         // Light angle, not a quaternion
-        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(0.25, 0.5, 1.0, 1.0)),
+        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 0.0, 1.0)), // default(Vec4::new(0.25, 0.5, 1.0, 1.0)),
         0x70 => unk70: Vec4 > unimplemented(true),
         0x80 => unk80: Vec4 > unimplemented(true),
         0x90 => unk90: f32 > unimplemented(true),
-        0x94 => unk94: f32 > unimplemented(true),
+        0x94 => unk94: f32 > unimplemented(true) > default(0.0),
         0x98 => unk98: f32 > unimplemented(true),
         0x9c => unk9c: f32 > unimplemented(true),
         0xa0 => unka0: f32 > unimplemented(true),
@@ -998,13 +998,13 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     channels[98] = Vec4::ZERO;
     channels[100] = Vec4::ZERO;
 
-    channels[27] = Vec4::X * 2.0; // specular tint intensity
+    channels[27] = Vec4::X * 1.0; // specular tint intensity
     channels[28] = Vec4::ONE; // specular tint
 
     channels[31] = Vec4::ONE; // diffuse tint 1
-    channels[32] = Vec4::X * 2.0; // diffuse tint 1 intensity
+    channels[32] = Vec4::X * 1.0; // diffuse tint 1 intensity
     channels[33] = Vec4::ONE; // diffuse tint 2
-    channels[34] = Vec4::X * 2.0; // diffuse tint 2 intensity
+    channels[34] = Vec4::X * 1.0; // diffuse tint 2 intensity
 
     channels[37] = Vec4::X * 50.0; // Fog start
     channels[41] = Vec4::X * 50.0; // Fog falloff

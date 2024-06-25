@@ -5,7 +5,75 @@ use rustc_hash::FxHashSet;
 use tiger_parse::FnvHash;
 
 use super::Scene;
-use crate::util::color::Color;
+use crate::{
+    icons::{
+        ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_DROPBOX, ICON_HELP, ICON_LIGHTBULB_ON,
+        ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG, ICON_VOLUME_HIGH,
+        ICON_WEATHER_PARTLY_CLOUDY,
+    },
+    util::color::Color,
+};
+
+pub type NodeFilterSet = FxHashSet<NodeFilter>;
+
+#[derive(strum::EnumIter, strum::Display, Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum NodeFilter {
+    Entity,
+    RespawnPoint,
+    Light,
+    Sound,
+    Decorator,
+    SkyObject,
+    Cubemap,
+
+    InstakillBarrier,
+    TurnbackBarrier,
+    PlayerContainmentVolume,
+    NamedArea,
+    SlipSurfaceVolume,
+
+    Unknown,
+}
+
+impl NodeFilter {
+    pub fn icon(&self) -> char {
+        match self {
+            NodeFilter::Entity => ICON_CHESS_PAWN,
+            NodeFilter::RespawnPoint => ICON_ACCOUNT_CONVERT,
+            NodeFilter::Light => ICON_LIGHTBULB_ON,
+            NodeFilter::Sound => ICON_VOLUME_HIGH,
+            NodeFilter::Decorator => ICON_PINE_TREE,
+            NodeFilter::SkyObject => ICON_WEATHER_PARTLY_CLOUDY,
+            NodeFilter::Cubemap => ICON_SPHERE,
+            NodeFilter::InstakillBarrier => ICON_SKULL,
+            NodeFilter::TurnbackBarrier => ICON_REPLY,
+            NodeFilter::PlayerContainmentVolume => ICON_DROPBOX,
+            NodeFilter::NamedArea => ICON_TAG,
+            NodeFilter::SlipSurfaceVolume => ICON_HELP,
+            NodeFilter::Unknown => ICON_HELP,
+        }
+    }
+
+    pub fn color(&self) -> Color {
+        match self {
+            NodeFilter::Entity => Color::WHITE,
+            NodeFilter::RespawnPoint => Color::from_srgba_unmultiplied(220, 20, 20, 255),
+            NodeFilter::Light => Color::from_srgba_unmultiplied(255, 255, 0, 255),
+            NodeFilter::Sound => Color::from_srgba_unmultiplied(0, 192, 0, 255),
+            NodeFilter::Decorator => Color::from_srgba_unmultiplied(80, 210, 80, 255),
+            NodeFilter::SkyObject => Color::from_srgba_unmultiplied(0xAD, 0xD8, 0xE6, 255),
+            NodeFilter::Cubemap => Color::from_srgba_unmultiplied(50, 255, 50, 255),
+            NodeFilter::InstakillBarrier => Color::from_srgba_unmultiplied(220, 60, 60, 255),
+            NodeFilter::TurnbackBarrier => Color::from_srgba_unmultiplied(220, 120, 60, 255),
+            NodeFilter::PlayerContainmentVolume => {
+                Color::from_srgba_unmultiplied(192, 100, 192, 255)
+            }
+            NodeFilter::NamedArea => Color::from_srgba_unmultiplied(0, 127, 0, 255),
+            NodeFilter::SlipSurfaceVolume => Color::from_srgba_unmultiplied(96, 96, 255, 255),
+            NodeFilter::Unknown => Color::from_srgba_unmultiplied(255, 255, 255, 255),
+        }
+    }
+}
 
 #[derive(strum::EnumIter, Hash, PartialEq, Eq)]
 pub enum EntityTag {

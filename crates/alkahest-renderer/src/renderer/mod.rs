@@ -4,7 +4,7 @@ mod immediate;
 mod lighting_pass;
 mod opaque_pass;
 mod pickbuffer;
-mod shader;
+pub mod shader;
 mod shadows;
 mod systems;
 mod transparents_pass;
@@ -31,6 +31,7 @@ use crate::{
             static_geometry::update_static_instances_system,
         },
         resources::SelectedEntity,
+        tags::NodeFilterSet,
         utility::draw_utilities,
         Scene,
     },
@@ -76,6 +77,9 @@ pub struct Renderer {
     last_frame: Instant,
     pub delta_time: f64,
     pub frame_index: usize,
+
+    // Hacky way to obtain these filters for now
+    pub lastfilters: NodeFilterSet,
 }
 
 pub struct RendererData {
@@ -110,6 +114,7 @@ impl Renderer {
             last_frame: Instant::now(),
             delta_time: 0.0,
             frame_index: 0,
+            lastfilters: NodeFilterSet::default(),
         }))
     }
 
@@ -119,6 +124,8 @@ impl Renderer {
     }
 
     pub fn render_world(&self, view: &impl View, scene: &Scene, resources: &Resources) {
+        self.pocus().lastfilters = resources.get::<NodeFilterSet>().clone();
+
         self.begin_world_frame(scene);
 
         update_dynamic_model_system(scene);

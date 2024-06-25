@@ -22,6 +22,7 @@ use crate::{
 
 pub mod decorators;
 pub mod dynamic_geometry;
+pub mod havok;
 pub mod light;
 pub mod static_geometry;
 pub mod terrain;

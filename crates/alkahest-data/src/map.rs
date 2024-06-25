@@ -493,7 +493,7 @@ pub struct SUnk80806d4f {
 // }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80809178)]
 pub struct SUnk80809178 {
     // Points to havok pre-tag
     pub unk0: Pointer<SSlipSurfaceVolume>,
@@ -509,7 +509,7 @@ pub struct SUnk80809178 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x8080917B)]
 pub struct SUnk8080917b {
     // Points to havok pre-tag
     pub unk0: Pointer<SSlipSurfaceVolume>,
@@ -560,7 +560,7 @@ pub struct SUnk80808606 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x80808724)]
 pub struct SUnk80808724 {
     pub file_size: u64,
     pub unk8: Vec<SUnk80808606>,

@@ -1,5 +1,6 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
+    ecs::tags::{NodeFilter, NodeFilterSet},
     icons::{ICON_CURSOR_DEFAULT, ICON_CURSOR_POINTER, ICON_EYE},
     renderer::{RenderDebugView, RenderFeatureVisibility, RendererSettings, RendererShared},
     util::text::StringExt,
@@ -54,6 +55,26 @@ impl GuiView for RenderSettingsPanel {
             });
 
             render_feat_vis(ui, "Node Nametags", &mut settings.node_nametags);
+            ui.collapsing("Node filters", |ui| {
+                let mut filters = resources.get_mut::<NodeFilterSet>();
+                for filter in NodeFilter::iter() {
+                    let filter_text = RichText::new(format!(
+                        "{} {}",
+                        filter.icon(),
+                        filter.to_string().split_pascalcase()
+                    ))
+                    .color(filter.color());
+
+                    let mut checked = filters.contains(&filter);
+                    if ui.checkbox(&mut checked, filter_text).changed() {
+                        if checked {
+                            filters.insert(filter);
+                        } else {
+                            filters.remove(&filter);
+                        }
+                    }
+                }
+            });
 
             egui::ComboBox::from_label("Debug View")
                 .selected_text(settings.debug_view.to_string().split_pascalcase())

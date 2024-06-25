@@ -10,8 +10,9 @@ use alkahest_data::{
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
         SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection,
-        SMapAtmosphere, SMapDataTable, SShadowingLight, SUnk808068d4, SUnk80806aa7, SUnk80806ef4,
-        SUnk8080714b, SUnk80808cb7,
+        SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume, SUnk808068d4,
+        SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246, SUnk80808604,
+        SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
@@ -37,11 +38,12 @@ use crate::{
         render::{
             decorators::DecoratorRenderer,
             dynamic_geometry::DynamicModelComponent,
+            havok::HavokShapeRenderer,
             light::{LightRenderer, LightShape, ShadowMapRenderer},
             static_geometry::{StaticInstance, StaticInstances, StaticModel},
             terrain::TerrainPatches,
         },
-        tags::{insert_tag, EntityTag},
+        tags::{insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
         Scene,
     },
@@ -51,7 +53,7 @@ use crate::{
         ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
-    util::scene::SceneExt,
+    util::{scene::SceneExt, text::StringExt},
 };
 
 pub async fn load_map(
@@ -122,7 +124,7 @@ pub async fn load_map(
             }
         }
 
-        if load_ambient_activity {
+        if load_ambient_activity && activity.ambient_activity.is_some() {
             match package_manager().read_tag_struct::<SActivity>(activity.ambient_activity) {
                 Ok(ambient_activity) => {
                     for u1 in &ambient_activity.unk50 {
@@ -479,6 +481,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         spawn_data_entity(
                             scene,
                             (
+                                NodeFilter::Sound,
                                 Icon::Colored(ICON_SPEAKER, Color32::GREEN),
                                 Label::from(format!("Ambient Audio {}", tag.hash32())),
                                 AmbientAudio::new(header),
@@ -535,6 +538,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     spawn_data_entity(
                         scene,
                         (
+                            NodeFilter::SkyObject,
                             Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
                             Label::from(format!("Sky Model {}", unk8.unk60.entity_model)),
                             transform,
@@ -614,6 +618,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let shape = LightShape::from_volume_matrix(light.light_to_world);
                     children.push(
                         scene.spawn((
+                            NodeFilter::Light,
                             Icon::Colored(shape.icon(), Color32::YELLOW),
                             Label::from(format!("{} Light {tag}[{i}]", shape.name())),
                             Transform {
@@ -667,6 +672,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 spawn_data_entity(
                     scene,
                     (
+                        NodeFilter::Light,
                         Icon::Colored(ICON_SPOTLIGHT_BEAM, Color32::YELLOW),
                         Label::from(format!("Shadowing Spotlight {tag}")),
                         transform,
@@ -732,6 +738,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         spawn_data_entity(
                             scene,
                             (
+                                NodeFilter::Cubemap,
                                 Icon::Unicode(ICON_SPHERE),
                                 Label::from(format!(
                                     "Cubemap Volume '{}'",
@@ -779,6 +786,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 spawn_data_entity(
                     scene,
                     (
+                        NodeFilter::Light,
                         Icon::Unicode(ICON_FLARE),
                         Label::from("Lens Flare"),
                         transform,
@@ -804,6 +812,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     spawn_data_entity(
                         scene,
                         (
+                            NodeFilter::RespawnPoint,
                             Icon::Colored(ICON_ACCOUNT_CONVERT, Color32::RED),
                             Label::from("Respawn point"),
                             Transform {
@@ -832,6 +841,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         spawn_data_entity(
                             scene,
                             (
+                                NodeFilter::Decorator,
                                 Icon::Colored(ICON_TREE, Color32::LIGHT_GREEN),
                                 Label::from(format!("Decorator {header_tag}")),
                                 decorator_renderer,
@@ -843,6 +853,457 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     Err(e) => {
                         error!("Failed to load decorator {header_tag}: {e}");
                     }
+                }
+            }
+            0x80809178 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset))
+                    .unwrap();
+
+                let d: SUnk80809178 = TigerReadable::read_ds(table_data)?;
+                // TODO(cohae): Implement
+                let name = "UNKNOWN"; // stringmap.get(d.area_name);
+
+                let (havok_debugshape, new_transform) =
+                    if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {
+                        let mut cur = Cursor::new(&havok_data);
+                        match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                            Ok(o) => {
+                                if (d.unk0.shape_index as usize) < o.len() {
+                                    let mut shape = o[d.unk0.shape_index as usize].clone();
+
+                                    let center = shape.center();
+                                    shape.apply_transform(Mat4::from_translation(-center));
+
+                                    let new_transform = Transform::from_mat4(
+                                        transform.local_to_world() * Mat4::from_translation(center),
+                                    );
+
+                                    (
+                                        HavokShapeRenderer::new(renderer.gpu.clone(), &shape).ok(),
+                                        Some(new_transform),
+                                    )
+                                } else {
+                                    (None, None)
+                                }
+                            }
+                            Err(e) => {
+                                error!("Failed to read shapes: {e}");
+                                (None, None)
+                            }
+                        }
+                    } else {
+                        (None, None)
+                    };
+
+                if let Some(havok_debugshape) = havok_debugshape {
+                    spawn_data_entity(
+                        scene,
+                        (
+                            transform,
+                            NodeFilter::NamedArea,
+                            Icon::Colored(ICON_TREE, Color32::LIGHT_GREEN),
+                            Label::from(format!("Named Area '{name}'")),
+                            havok_debugshape,
+                            metadata.clone(),
+                        ),
+                        parent_entity,
+                    );
+                }
+            }
+            // 0x80806abb => {
+            //     table_data
+            //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
+            //         .unwrap();
+            //
+            //     let (shape_ptr, shape_index): (TagHash, u32) = TigerReadable::read_ds(table_data)?;
+            //
+            //     println!("Shape: {}: {}", shape_ptr, shape_index);
+            //
+            //     let shapelist: SUnk80806abd = package_manager().read_tag_struct(shape_ptr)?;
+            //
+            //     let (havok_debugshape, new_transform) =
+            //         if let Ok(havok_data) = package_manager().read_tag(shapelist.havok_file) {
+            //             let mut cur = Cursor::new(&havok_data);
+            //             match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+            //                 Ok(o) => {
+            //                     if (shape_index as usize) < o.len() {
+            //                         let mut shape = o[shape_index as usize].clone();
+            //
+            //                         let center = shape.center();
+            //                         shape.apply_transform(Mat4::from_translation(-center));
+            //
+            //                         let new_transform = Transform::from_mat4(
+            //                             transform.to_mat4() * Mat4::from_translation(center),
+            //                         );
+            //
+            //                         (
+            //                             CustomDebugShape::from_havok_shape(&dcs, &shape).ok(),
+            //                             Some(new_transform),
+            //                         )
+            //                     } else {
+            //                         (None, None)
+            //                     }
+            //                 }
+            //                 Err(e) => {
+            //                     error!("Failed to read shapes: {e}");
+            //                     (None, None)
+            //                 }
+            //             }
+            //         } else {
+            //             (None, None)
+            //         };
+            //
+            //     ents.push(scene.spawn((
+            //         new_transform.unwrap_or(transform),
+            //         ResourcePoint {
+            //             resource: MapResource::Unk80806abb(
+            //                 shape_ptr,
+            //                 shape_index,
+            //                 havok_debugshape,
+            //             ),
+            //             has_havok_data: true,
+            //             ..base_rp
+            //         },
+            //         EntityWorldId(data.world_id),
+            //     )));
+            //     spawn_data_entity(
+            //         scene,
+            //         (
+            //             NodeFilter::NamedArea,
+            //             Icon::Colored(ICON_TREE, Color32::LIGHT_GREEN),
+            //             Label::from(format!("Named Area '{name}'")),
+            //             havok_debugshape,
+            //             metadata.clone(),
+            //         ),
+            //         parent_entity,
+            //     );
+            // }
+            0x8080917b => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset))
+                    .unwrap();
+
+                let d: SUnk8080917b = TigerReadable::read_ds(table_data)?;
+
+                let havok_debugshape =
+                    if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {
+                        let mut cur = Cursor::new(&havok_data);
+                        match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                            Ok(o) => {
+                                if (d.unk0.shape_index as usize) < o.len() {
+                                    HavokShapeRenderer::new(
+                                        renderer.gpu.clone(),
+                                        &o[d.unk0.shape_index as usize],
+                                    )
+                                    .ok()
+                                } else {
+                                    None
+                                }
+                            }
+                            Err(e) => {
+                                error!("Failed to read shapes: {e}");
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
+
+                let filter = match d.kind {
+                    0 => NodeFilter::InstakillBarrier,
+                    1 => NodeFilter::TurnbackBarrier,
+                    _ => {
+                        error!("Unknown kill barrier type {}", d.kind);
+                        NodeFilter::InstakillBarrier
+                    }
+                };
+
+                if let Some(havok_debugshape) = havok_debugshape {
+                    spawn_data_entity(
+                        scene,
+                        (
+                            transform,
+                            filter,
+                            Icon::Colored(filter.icon(), filter.color().into()),
+                            Label::from(filter.to_string().split_pascalcase()),
+                            havok_debugshape,
+                            metadata.clone(),
+                        ),
+                        parent_entity,
+                    );
+                }
+            }
+            0x80808604 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset))
+                    .unwrap();
+
+                let d: SUnk80808604 = TigerReadable::read_ds(table_data)?;
+
+                let (havok_debugshape, new_transform) = if let Ok(havok_data) =
+                    package_manager().read_tag(d.unk10.havok_file)
+                {
+                    let mut cur = Cursor::new(&havok_data);
+                    match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                        Ok(shapes) => {
+                            let mut final_shape = destiny_havok::shape_collection::Shape::default();
+
+                            for t in &d.unk10.unk8 {
+                                if t.shape_index as usize >= shapes.len() {
+                                    error!(
+                                        "Shape index out of bounds for Unk80808604 (table {}, {} \
+                                         shapes, index {})",
+                                        table_hash,
+                                        shapes.len(),
+                                        t.shape_index
+                                    );
+                                    continue;
+                                }
+
+                                let transform = Transform {
+                                    translation: t.translation.truncate(),
+                                    rotation: t.rotation,
+                                    ..Default::default()
+                                };
+
+                                let mut shape = shapes[t.shape_index as usize].clone();
+                                shape.apply_transform(transform.local_to_world());
+
+                                final_shape.combine(&shape);
+                            }
+
+                            // Re-center the shape
+                            let center = final_shape.center();
+                            final_shape.apply_transform(Mat4::from_translation(-center));
+
+                            let new_transform = Transform {
+                                translation: center,
+                                ..Default::default()
+                            };
+
+                            (
+                                HavokShapeRenderer::new(renderer.gpu.clone(), &final_shape).ok(),
+                                Some(new_transform),
+                            )
+                        }
+                        Err(e) => {
+                            error!("Failed to read shapes: {e}");
+                            (None, None)
+                        }
+                    }
+                } else {
+                    (None, None)
+                };
+
+                if let Some(havok_debugshape) = havok_debugshape {
+                    let filter = NodeFilter::PlayerContainmentVolume;
+                    spawn_data_entity(
+                        scene,
+                        (
+                            new_transform.unwrap_or(transform),
+                            filter,
+                            Icon::Colored(filter.icon(), filter.color().into()),
+                            Label::from("Player Containment Volume"),
+                            havok_debugshape,
+                            metadata.clone(),
+                        ),
+                        parent_entity,
+                    );
+                }
+            }
+            // 0x80808246 => {
+            //     table_data
+            //         .seek(SeekFrom::Start(data.data_resource.offset))
+            //         .unwrap();
+            //
+            //     let d: SUnk80808246 = TigerReadable::read_ds(table_data)?;
+            //
+            //     match package_manager().read_tag(d.unk10.havok_file) {
+            //         Ok(havok_data) => {
+            //             let mut cur = Cursor::new(&havok_data);
+            //             match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+            //                 Ok(shapes) => {
+            //                     for t in &d.unk10.unk10 {
+            //                         if t.shape_index as usize >= shapes.len() {
+            //                             error!(
+            //                                 "Shape index out of bounds for Unk80808246 (table {}, \
+            //                                  {} shapes, index {})",
+            //                                 table_hash,
+            //                                 shapes.len(),
+            //                                 t.shape_index
+            //                             );
+            //                             continue;
+            //                         }
+            //
+            //                         let transform = Transform {
+            //                             translation: t.translation.truncate(),
+            //                             rotation: t.rotation,
+            //                             ..Default::default()
+            //                         };
+            //                         //
+            //                         // ents.push(
+            //                         //     scene.spawn((
+            //                         //         transform,
+            //                         //         ResourcePoint {
+            //                         //             resource: MapResource::Unk80808246(
+            //                         //                 d.unk10.havok_file,
+            //                         //                 t.shape_index,
+            //                         //                 CustomDebugShape::from_havok_shape(
+            //                         //                     &dcs,
+            //                         //                     &shapes[t.shape_index as usize],
+            //                         //                 )
+            //                         //                 .ok(),
+            //                         //             ),
+            //                         //             has_havok_data: true,
+            //                         //             entity_cbuffer: ConstantBufferCached::create_empty(
+            //                         //                 dcs.clone(),
+            //                         //             )?,
+            //                         //             ..base_rp
+            //                         //         },
+            //                         //         EntityWorldId(data.world_id),
+            //                         //     )),
+            //                         // );
+            //                     }
+            //
+            //                     // let new_transform = Transform {
+            //                     //     translation: center,
+            //                     //     ..Default::default()
+            //                     // };
+            //
+            //                     // (
+            //                     //     CustomDebugShape::from_havok_shape(&dcs, &final_shape).ok(),
+            //                     //     Some(new_transform),
+            //                     // )
+            //                 }
+            //                 Err(e) => {
+            //                     error!("Failed to read shapes: {e}");
+            //                 }
+            //             }
+            //         }
+            //         Err(e) => {
+            //             error!("Failed to read shapes: {e}");
+            //         }
+            //     };
+            // }
+            // 0x80806ac2 => {
+            //     table_data
+            //         .seek(SeekFrom::Start(data.data_resource.offset))
+            //         .unwrap();
+            //
+            //     let d: SUnk80806ac2 = TigerReadable::read_ds(table_data)?;
+            //
+            //     match package_manager().read_tag(d.unk10.havok_file) {
+            //         Ok(havok_data) => {
+            //             let mut cur = Cursor::new(&havok_data);
+            //             match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+            //                 Ok(shapes) => {
+            //                     if let Some(t) = d.unk10.unk10.get(d.array_index as usize) {
+            //                         if t.shape_index as usize >= shapes.len() {
+            //                             error!(
+            //                                 "Shape index out of bounds for Unk80808246 (table {}, \
+            //                                  {} shapes, index {})",
+            //                                 table_hash,
+            //                                 shapes.len(),
+            //                                 t.shape_index
+            //                             );
+            //
+            //                             continue;
+            //                         }
+            //
+            //                         let transform = Transform {
+            //                             translation: t.translation.truncate(),
+            //                             rotation: t.rotation,
+            //                             ..Default::default()
+            //                         };
+            //
+            //                         ents.push(
+            //                             scene.spawn((
+            //                                 transform,
+            //                                 ResourcePoint {
+            //                                     resource: MapResource::Unk80806ac2(
+            //                                         d.unk10.havok_file,
+            //                                         t.shape_index,
+            //                                         CustomDebugShape::from_havok_shape(
+            //                                             &dcs,
+            //                                             &shapes[t.shape_index as usize],
+            //                                         )
+            //                                         .ok(),
+            //                                     ),
+            //                                     has_havok_data: true,
+            //                                     entity_cbuffer: ConstantBufferCached::create_empty(
+            //                                         dcs.clone(),
+            //                                     )?,
+            //                                     ..base_rp
+            //                                 },
+            //                                 EntityWorldId(data.world_id),
+            //                             )),
+            //                         );
+            //                     }
+            //                 }
+            //                 Err(e) => {
+            //                     error!("Failed to read shapes: {e}");
+            //                 }
+            //             }
+            //         }
+            //         Err(e) => {
+            //             error!("Failed to read shapes: {e}");
+            //         }
+            //     };
+            // }
+            0x80809121 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset))
+                    .unwrap();
+
+                let d: SSlipSurfaceVolume = TigerReadable::read_ds(table_data)?;
+
+                let (havok_debugshape, new_transform) =
+                    if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
+                        let mut cur = Cursor::new(&havok_data);
+                        match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                            Ok(o) => {
+                                if (d.shape_index as usize) < o.len() {
+                                    let mut shape = o[d.shape_index as usize].clone();
+
+                                    let center = shape.center();
+                                    shape.apply_transform(Mat4::from_translation(-center));
+
+                                    let new_transform = Transform::from_mat4(
+                                        transform.local_to_world() * Mat4::from_translation(center),
+                                    );
+
+                                    (
+                                        HavokShapeRenderer::new(renderer.gpu.clone(), &shape).ok(),
+                                        Some(new_transform),
+                                    )
+                                } else {
+                                    (None, None)
+                                }
+                            }
+                            Err(e) => {
+                                error!("Failed to read shapes: {e}");
+                                (None, None)
+                            }
+                        }
+                    } else {
+                        (None, None)
+                    };
+
+                if let Some(havok_debugshape) = havok_debugshape {
+                    let filter = NodeFilter::SlipSurfaceVolume;
+                    spawn_data_entity(
+                        scene,
+                        (
+                            transform,
+                            filter,
+                            Icon::Colored(filter.icon(), filter.color().into()),
+                            Label::from("Slip Surface Volume"),
+                            havok_debugshape,
+                            metadata.clone(),
+                        ),
+                        parent_entity,
+                    );
                 }
             }
             u => {
@@ -970,7 +1431,6 @@ fn load_entity_into_scene(
     let header = package_manager()
         .read_tag_struct::<SEntity>(entity_hash)
         .context("Failed to read SEntity")?;
-    debug!("{depth} - Loading entity {entity_hash}");
     let scene_entity = spawn_data_entity(
         scene,
         (
@@ -979,6 +1439,11 @@ fn load_entity_into_scene(
                 Label::from(format!("Unknown {u:08X}"))
             } else {
                 Label::from(format!("Entity {entity_hash}"))
+            },
+            if u.is_some() {
+                NodeFilter::Unknown
+            } else {
+                NodeFilter::Entity
             },
             transform,
             resource_origin,

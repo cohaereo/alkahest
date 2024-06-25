@@ -32,7 +32,10 @@ pub async fn discord_client_loop() {
     .unwrap();
 
     tracing::info!("[discord-sdk] waiting for discord handshake...");
-    user.0.changed().await.unwrap();
+    if let Err(e) = user.0.changed().await {
+        error!("failed to connect to Discord: {}", e);
+        return;
+    }
 
     let user = match &*user.0.borrow() {
         ds::wheel::UserState::Connected(user) => user.clone(),
