@@ -91,14 +91,12 @@ impl HavokShapeRenderer {
         gpu.set_input_layout(0);
         gpu.set_input_topology(EPrimitiveType::Triangles);
         gpu.set_blend_state(12);
-        gpu.flush_states();
         unsafe {
             gpu.context().DrawIndexed(self.index_count, 0, 0);
         }
 
         gpu.set_input_topology(EPrimitiveType::LineList);
         gpu.set_blend_state(1);
-        gpu.flush_states();
         unsafe {
             gpu.context().Draw(self.outline_index_count, 0);
         }
