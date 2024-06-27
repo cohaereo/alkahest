@@ -3,10 +3,10 @@ use alkahest_data::{
     map::{SBubbleParent, SBubbleParentShallow},
     text::{GlobalStringmap, StringContainer, StringMapShared},
 };
-use alkahest_pm::package_manager;
+use alkahest_pm::{is_pkg_redacted, package_manager};
 use anyhow::Context as _;
 use destiny_pkg::TagHash;
-use egui::{ahash::HashMapExt, Context, TextBuffer};
+use egui::{ahash::HashMapExt, Color32, Context, RichText, TextBuffer};
 use rustc_hash::FxHashMap;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use winit::window::Window;
@@ -97,7 +97,10 @@ impl ActivityBrowser {
                             &activity.activity_code.to_string(),
                             SActivity::ID.unwrap(),
                         ) else {
-                            error!("Failed to find activity {activity_code}");
+                            error!(
+                                "Failed to find activity {activity_code} in destination \
+                                 {destination_code}"
+                            );
                             continue;
                         };
 
@@ -179,10 +182,25 @@ impl ActivityBrowser {
                                         continue;
                                     }
                                     let mut activity_name = activity_name.clone();
+                                    let is_redacted = is_pkg_redacted(*activity_hash);
+                                    if is_redacted {
+                                        activity_name.insert_text("🗝 ", 0);
+                                    }
+
                                     if activity_name.contains("_ls_") {
                                         activity_name.insert_text(" ", 0);
                                     }
-                                    if ui.selectable_label(false, &activity_name).clicked() {
+                                    let mut response = ui.selectable_label(false, &activity_name);
+                                    if is_redacted {
+                                        response = response.on_hover_text(
+                                            RichText::new(
+                                                "⚠ This activity is redacted. It will not load \
+                                                 unless you have the right decryption keys",
+                                            )
+                                            .color(Color32::YELLOW),
+                                        );
+                                    }
+                                    if response.clicked() {
                                         if let Err(e) = set_activity(resources, *activity_hash) {
                                             error!(
                                                 "Failed to set activity \
@@ -224,10 +242,24 @@ impl ActivityBrowser {
                 for (package_name, maps) in &self.maps {
                     ui.collapsing(package_name, |ui| {
                         for (map_name, map_hash) in maps {
-                            if ui
-                                .selectable_label(false, format!("{map_name} ({map_hash})"))
-                                .clicked()
-                            {
+                            let mut map_label = format!("{map_name} ({map_hash})");
+                            let is_redacted = is_pkg_redacted(*map_hash);
+                            if is_redacted {
+                                map_label.insert_text("🗝 ", 0);
+                            }
+
+                            let mut response = ui.selectable_label(false, &map_label);
+                            if is_redacted {
+                                response = response.on_hover_text(
+                                    RichText::new(
+                                        "⚠ This map is redacted. It will not load unless you have \
+                                         the right decryption keys",
+                                    )
+                                    .color(Color32::YELLOW),
+                                );
+                            }
+
+                            if response.clicked() {
                                 let mut maplist = resources.get_mut::<MapList>();
 
                                 maplist.add_map(map_name.clone(), *map_hash);
