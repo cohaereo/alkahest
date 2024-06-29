@@ -1,3 +1,7 @@
+use alkahest_renderer::ecs::common::{Global, Mutable};
+use alkahest_renderer::ecs::resources::SelectedEntity;
+use alkahest_renderer::ecs::tags::{EntityTag, Tags};
+use alkahest_renderer::ecs::utility::Route;
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
 
@@ -159,5 +163,39 @@ impl Action for ActivitySwapAction {
 
     fn is_aborted(&self, _: &Resources) -> bool {
         self.aborted
+    }
+}
+
+pub struct SpawnRouteAction {
+    route: Option<Route>,
+}
+
+impl SpawnRouteAction {
+    pub fn new(route: Route) -> Self {
+        Self { route: Some(route) }
+    }
+}
+impl Action for SpawnRouteAction {
+    fn start(&mut self, resources: &Resources) {
+        let mut maps = resources.get_mut::<MapList>();
+
+        if let Some(map) = maps.current_map_mut() {
+            if let Some(route) = self.route.take() {
+                let e = map.scene.spawn((
+                    route,
+                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                    Mutable,
+                    Global,
+                ));
+                resources.get_mut::<SelectedEntity>().select(e);
+            }
+        }
+    }
+    fn is_done(&self, _: &Resources) -> bool {
+        true
+    }
+
+    fn is_aborted(&self, _: &Resources) -> bool {
+        false
     }
 }
