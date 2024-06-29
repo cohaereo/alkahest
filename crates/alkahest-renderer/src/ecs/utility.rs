@@ -97,6 +97,12 @@ impl Default for RouteNode {
     }
 }
 
+// This does not belong here, but not having it in alkahest-renderer means needing to do
+// extra work copying the current map hash into every route, or tracking an extra bool
+// on each node to check their taghash against the current tag hash.
+#[derive(Default)]
+pub struct CurrentMapHash(pub Option<TagHash>);
+
 pub struct Route {
     pub path: Vec<RouteNode>,
     pub color: Color,
@@ -392,7 +398,7 @@ fn draw_route(
         selected.select_fade_color(route.color, entity)
     };
 
-    let current_hash = TagHash(0);//resources.get::<CurrentMapHash>();
+    let current_hash = resources.get::<CurrentMapHash>().0.unwrap_or(TagHash(0));
 
     const BASE_RADIUS: f32 = 0.1;
     let mut prev_is_local = false;

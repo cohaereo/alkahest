@@ -5,14 +5,14 @@ use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
 use alkahest_renderer::ecs::resources::SelectedEntity;
 use alkahest_renderer::ecs::tags::{EntityTag, Tags};
 use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
-use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere};
+use alkahest_renderer::ecs::utility::{Beacon, CurrentMapHash, Route, RouteNode, Ruler, Sphere};
 use alkahest_renderer::icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE};
 use alkahest_renderer::renderer::RendererShared;
 use alkahest_renderer::resources::Resources;
 use alkahest_renderer::shader::shader_ball::ShaderBallComponent;
 use crate::gui::activity_select::get_activity_hash;
 use crate::gui::menu::MenuBar;
-use crate::maplist::{CurrentMapHash, MapList};
+use crate::maplist::MapList;
 
 impl MenuBar {
     pub(super) fn utility_menu(&self, ui: &mut Ui, resources: &Resources) {

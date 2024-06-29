@@ -4,9 +4,7 @@ use alkahest_data::text::{GlobalStringmap, StringMapShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
-        resources::SelectedEntity,
-        tags::{NodeFilter, NodeFilterSet},
-        Scene,
+        resources::SelectedEntity, tags::{NodeFilter, NodeFilterSet}, utility::CurrentMapHash, Scene
     },
     gpu::GpuContext,
     gpu_event,
@@ -35,7 +33,7 @@ use crate::{
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
-    maplist::{CurrentMapHash, MapList},
+    maplist::MapList,
     resources::Resources,
     updater::UpdateCheck,
     util::action::ActionList,
@@ -92,7 +90,7 @@ impl AlkahestApp {
         resources.insert(GuiViewManager::with_default_views());
         resources.insert(InputState::default());
         resources.insert(CurrentActivity(args.activity));
-        resources.insert(CurrentMapHash::default());
+        resources.insert(CurrentMapHash(args.map));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
         resources.insert(config!().renderer.clone());

@@ -2,7 +2,7 @@ use alkahest_renderer::{
     camera::{get_look_angle, tween::Tween, Camera},
     ecs::{
         transform::Transform,
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere},
+        utility::{Beacon, CurrentMapHash, Route, RouteNode, Ruler, Sphere},
         Scene,
     },
     icons::{
@@ -24,7 +24,7 @@ use serde_yaml::value::Tag;
 use crate::{
     gui::inspector::ComponentPanel,
     input_float3,
-    maplist::{CurrentMapHash, MapList},
+    maplist::MapList,
     resources::Resources,
     util::{
         action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},

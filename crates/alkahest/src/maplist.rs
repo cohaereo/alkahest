@@ -1,11 +1,9 @@
 use alkahest_renderer::{
     ecs::{
-        common::Global,
-        render::{
+        common::Global, render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
-        },
-        Scene,
+        }, utility::CurrentMapHash, Scene
     },
     loaders::map::load_map,
     renderer::RendererShared,
@@ -279,5 +277,3 @@ impl MapList {
         }
     }
 }
-#[derive(Default)]
-pub struct CurrentMapHash(pub Option<TagHash>);
