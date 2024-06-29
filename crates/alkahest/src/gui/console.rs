@@ -580,7 +580,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         }
         "clear_maplist" => {
             let mut maps = resources.get_mut::<MapList>();
-            maps.set_maps(&[]);
+            maps.set_maps(resources, &[]);
         }
         // "route" => {
         //     let mut route = Route::default();

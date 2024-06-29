@@ -5,7 +5,7 @@ use alkahest_renderer::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
         },
-        Scene,
+        Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
@@ -203,12 +203,14 @@ impl MapList {
 
     /// Populates the map list and begins loading the first map
     /// Overwrites the current map list
-    pub fn set_maps(&mut self, map_hashes: &[(TagHash, String)]) {
+    pub fn set_maps(&mut self, resources: &Resources, map_hashes: &[(TagHash, String)]) {
+        let activity_hash = resources.get_mut::<CurrentActivity>().0;
         self.maps = map_hashes
             .iter()
             .map(|(hash, name)| Map {
                 hash: *hash,
                 name: name.clone(),
+                scene: Scene::new_with_info(activity_hash, *hash),
                 ..Default::default()
             })
             .collect();
@@ -225,13 +227,15 @@ impl MapList {
         }
     }
 
-    pub fn add_map(&mut self, map_name: String, map_hash: TagHash) {
+    pub fn add_map(&mut self, resources: &Resources, map_name: String, map_hash: TagHash) {
         if self.maps.is_empty() {
-            self.set_maps(&[(map_hash, map_name.clone())])
+            self.set_maps(resources, &[(map_hash, map_name.clone())])
         } else {
+            let activity_hash = resources.get_mut::<CurrentActivity>().0;
             self.maps.push(Map {
                 hash: map_hash,
                 name: map_name,
+                scene: Scene::new_with_info(activity_hash, map_hash),
                 ..Default::default()
             });
         }
@@ -265,7 +269,6 @@ impl MapList {
             dest.take_globals(&mut source);
             self.maps[previous_map].scene = source;
         }
-
 
         #[cfg(feature = "discord_rpc")]
         if let Some(map) = self.current_map() {

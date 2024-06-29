@@ -141,7 +141,9 @@ impl AlkahestApp {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
 
-            resources.get_mut::<MapList>().add_map(map_name, maphash);
+            resources
+                .get_mut::<MapList>()
+                .add_map(&resources, map_name, maphash);
         }
 
         let mut node_filter_set = NodeFilterSet::default();
