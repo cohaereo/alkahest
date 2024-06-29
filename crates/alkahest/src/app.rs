@@ -35,7 +35,7 @@ use crate::{
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
-    maplist::MapList,
+    maplist::{CurrentMapHash, MapList},
     resources::Resources,
     updater::UpdateCheck,
     util::action::ActionList,
@@ -92,6 +92,7 @@ impl AlkahestApp {
         resources.insert(GuiViewManager::with_default_views());
         resources.insert(InputState::default());
         resources.insert(CurrentActivity(args.activity));
+        resources.insert(CurrentMapHash::default());
         resources.insert(SelectedEntity::default());
         resources.insert(args);
         resources.insert(config!().renderer.clone());
@@ -141,7 +142,7 @@ impl AlkahestApp {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
 
-            resources.get_mut::<MapList>().add_map(map_name, maphash);
+            resources.get_mut::<MapList>().add_map(&resources, map_name, maphash);
         }
 
         let mut node_filter_set = NodeFilterSet::default();

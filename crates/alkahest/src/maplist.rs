@@ -149,6 +149,10 @@ impl MapList {
         self.maps.get(self.current_map)
     }
 
+    fn current_map_hash(&self) -> Option<TagHash> {
+        self.maps.get(self.current_map).map(|v| v.hash)
+    }
+
     pub fn current_map_mut(&mut self) -> Option<&mut Map> {
         self.maps.get_mut(self.current_map)
     }
@@ -203,7 +207,7 @@ impl MapList {
 
     /// Populates the map list and begins loading the first map
     /// Overwrites the current map list
-    pub fn set_maps(&mut self, map_hashes: &[(TagHash, String)]) {
+    pub fn set_maps(&mut self, resources: &Resources, map_hashes: &[(TagHash, String)]) {
         self.maps = map_hashes
             .iter()
             .map(|(hash, name)| Map {
@@ -218,6 +222,7 @@ impl MapList {
 
         self.current_map = 0;
         self.previous_map = None;
+        resources.get_mut::<CurrentMapHash>().0 = self.current_map_hash();
 
         #[cfg(feature = "discord_rpc")]
         if let Some(map) = self.current_map() {
@@ -225,9 +230,9 @@ impl MapList {
         }
     }
 
-    pub fn add_map(&mut self, map_name: String, map_hash: TagHash) {
+    pub fn add_map(&mut self, resources: &Resources, map_name: String, map_hash: TagHash) {
         if self.maps.is_empty() {
-            self.set_maps(&[(map_hash, map_name.clone())])
+            self.set_maps(resources,&[(map_hash, map_name.clone())])
         } else {
             self.maps.push(Map {
                 hash: map_hash,
@@ -237,7 +242,7 @@ impl MapList {
         }
     }
 
-    pub fn set_current_map(&mut self, index: usize) {
+    pub fn set_current_map(&mut self, resources: &Resources, index: usize) {
         if index >= self.maps.len() {
             warn!(
                 "Attempted to set current map to index {}, but there are only {} maps",
@@ -249,6 +254,7 @@ impl MapList {
 
         self.previous_map = Some(self.current_map);
         self.current_map = index;
+        resources.get_mut::<CurrentMapHash>().0 = self.current_map_hash();
 
         if let Some(previous_map) = self.previous_map {
             if previous_map >= self.maps.len() {
@@ -273,3 +279,5 @@ impl MapList {
         }
     }
 }
+#[derive(Default)]
+pub struct CurrentMapHash(pub Option<TagHash>);

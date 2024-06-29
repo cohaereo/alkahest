@@ -69,7 +69,7 @@ impl GuiView for BottomBar {
                     ui.checkbox(&mut maplist.load_all_maps, "Load all maps");
 
                     if map_changed {
-                        maplist.set_current_map(current_map);
+                        maplist.set_current_map(resources, current_map);
                     }
                 });
             }
