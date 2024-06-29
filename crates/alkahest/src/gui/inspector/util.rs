@@ -510,10 +510,6 @@ impl ComponentPanel for Route {
             const METERS_PER_SEC: f32 = 18.0;
             action_list.clear_actions();
 
-            if let Some(hash) = self.activity_hash {
-                action_list.add_action(ActivitySwapAction::new(hash));
-            };
-
             if let Some(start_pos) = self.path.get(start_index) {
                 let mut old_pos = start_pos.pos + camera_offset;
                 let mut old_orient = camera.get_look_angle(old_pos);
@@ -562,6 +558,33 @@ impl ComponentPanel for Route {
             }
         }
         ui.checkbox(&mut self.show_all, "Show nodes in all maps");
+
+        if ui
+            .button(format!("{} Copy route command", ICON_CLIPBOARD,))
+            .clicked()
+        {
+            let mut command = String::from("route");
+            if let Some(hash) = self.activity_hash.as_ref() {
+                command = format!("{} hash {}", command, hash.0);
+            }
+            for node in self.path.iter() {
+                command = format!(
+                    "{} node {} {} {}{}{}{}",
+                    command,
+                    node.pos[0],
+                    node.pos[1],
+                    node.pos[2],
+                    if node.is_teleport { " tp" } else { "" },
+                    node.map_hash
+                        .map_or(String::new(), |h| { format!(" hash {}", h.0) }),
+                    node.label.as_ref().map_or(String::new(), |s| {
+                        format!(" label {}", s.replace('\\', r"\\").replace(' ', r"\s"))
+                    })
+                );
+            }
+
+            ui.output_mut(|o| o.copied_text = command);
+        }
 
         ui.horizontal(|ui| {
             ui.strong("Scale");
