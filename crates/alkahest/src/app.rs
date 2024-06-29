@@ -4,9 +4,7 @@ use alkahest_data::text::{GlobalStringmap, StringMapShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
-        resources::SelectedEntity,
-        tags::{NodeFilter, NodeFilterSet},
-        Scene,
+        resources::SelectedEntity, tags::{NodeFilter, NodeFilterSet}, utility::CurrentMapHash, Scene
     },
     gpu::GpuContext,
     gpu_event,
@@ -38,6 +36,7 @@ use crate::{
     maplist::MapList,
     resources::Resources,
     updater::UpdateCheck,
+    util::action::ActionList,
     ApplicationArgs,
 };
 
@@ -91,12 +90,14 @@ impl AlkahestApp {
         resources.insert(GuiViewManager::with_default_views());
         resources.insert(InputState::default());
         resources.insert(CurrentActivity(args.activity));
+        resources.insert(CurrentMapHash(args.map));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
         resources.insert(config!().renderer.clone());
         resources.insert(MapList::default());
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
+        resources.insert(ActionList::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),
@@ -139,7 +140,7 @@ impl AlkahestApp {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
 
-            resources.get_mut::<MapList>().add_map(map_name, maphash);
+            resources.get_mut::<MapList>().add_map(&resources, map_name, maphash);
         }
 
         let mut node_filter_set = NodeFilterSet::default();
@@ -292,6 +293,10 @@ impl AlkahestApp {
                         });
                     }
                     WindowEvent::RedrawRequested => {
+                        {
+                            let mut action_list = resources.get_mut::<ActionList>();
+                            action_list.process(&resources);
+                        }
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
                         {

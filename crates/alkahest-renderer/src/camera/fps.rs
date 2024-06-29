@@ -121,13 +121,19 @@ impl CameraController for FpsCamera {
         }
 
         // Cancel tween if the user moves the camera
-        if tween.is_some() && direction.length() > 0.0 {
-            *tween = None;
+        if direction.length() > 0.0 {
+            if let Some(t) = tween {
+                t.abort();
+            }
         }
 
         if let Some(tween) = tween {
-            self.target_position = tween.update_pos().unwrap_or(self.target_position);
-            self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            if tween.is_aborted() {
+                self.target_position += direction * speed;
+            } else {
+                self.target_position = tween.update_pos().unwrap_or(self.target_position);
+                self.orientation = tween.update_angle().unwrap_or(self.orientation);
+            }
         } else {
             self.target_position += direction * speed;
         }
@@ -192,6 +198,14 @@ impl CameraController for FpsCamera {
 
     fn view_matrix(&self) -> Mat4 {
         Mat4::look_at_rh(self.position, self.position + self.forward, Vec3::Z)
+    }
+
+    fn view_angle(&self) -> Vec2 {
+        self.orientation
+    }
+
+    fn get_look_angle(&self, pos: Vec3) -> Vec2 {
+        super::get_look_angle(self.orientation, self.position, pos)
     }
 
     fn set_position(&mut self, position: Vec3) {
