@@ -55,6 +55,7 @@ use crate::{
     renderer::{Renderer, RendererShared},
     util::{scene::SceneExt, text::StringExt},
 };
+use crate::icons::ICON_LABEL;
 
 pub async fn load_map(
     renderer: RendererShared,
@@ -902,7 +903,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         (
                             transform,
                             NodeFilter::NamedArea,
-                            Icon::Colored(ICON_TREE, Color32::LIGHT_GREEN),
+                            Icon::Colored(ICON_LABEL, Color32::GREEN),
                             Label::from(format!("Named Area '{name}'")),
                             havok_debugshape,
                             metadata.clone(),

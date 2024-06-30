@@ -88,7 +88,7 @@ impl GuiView for NodeGizmoOverlay {
                     .scene
                     .query::<(
                         &Transform,
-                        &ResourceOrigin,
+                        Option<&ResourceOrigin>,
                         Option<&Label>,
                         Option<&Icon>,
                         Option<&NodeFilter>,
@@ -163,7 +163,7 @@ impl GuiView for NodeGizmoOverlay {
                         *transform,
                         NodeDisplayPoint {
                             has_havok_data: false,
-                            origin: Some(*origin),
+                            origin: origin.cloned(),
                             label: label.map(|v| v.0.clone()).unwrap_or_default(),
                             icon: icon.cloned(),
                         }, // StrippedResourcePoint {
