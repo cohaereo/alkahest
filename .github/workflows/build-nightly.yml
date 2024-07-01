@@ -27,6 +27,13 @@ jobs:
         with:
           prefix-key: "rust-build"
 
+      - name: Install cargo-edit
+        run: cargo install cargo-edit --force
+
+      - name: Add nightly version metadata
+        run:
+          cargo set-version --package alkahest --metadata "nightly.$(date +'%Y%m%d%H%M')"
+
       - name: Build
         run: cargo build --verbose --release
 
