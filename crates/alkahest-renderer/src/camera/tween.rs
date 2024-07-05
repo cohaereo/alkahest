@@ -77,3 +77,16 @@ pub fn ease_out_exponential(x: f32) -> f32 {
         1.0 - 2f32.powf(-10. * x)
     }
 }
+
+// https://easings.net/#easeInOutExpo
+pub fn ease_in_out_exponential(x: f32) -> f32 {
+    if x == 0.0 {
+        0.0
+    } else if x == 1.0 {
+        1.0
+    } else if x < 0.5 {
+        2f32.powf(20. * x - 10.) / 2.
+    } else {
+        (2. - 2f32.powf(-20. * x + 10.)) / 2.
+    }
+}
