@@ -1,16 +1,15 @@
 use alkahest_renderer::{
     ecs::{
-        common::Global,
-        render::{
+        common::Global, render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
-        },
-        Scene, SceneInfo,
+        }, resources::SelectedEntity, Scene, SceneInfo
     },
     loaders::map::load_map,
     renderer::RendererShared,
 };
 use destiny_pkg::TagHash;
+use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
 
@@ -39,29 +38,14 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn update(&mut self) {
+    pub fn update(&mut self, resources: &Resources) {
         if let Some(promise) = self.promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
-                    Ok(scene) => {
+                    Ok(mut scene) => {
                         // Move all globals to a temporary scene
-                        let mut scene_tmp = Scene::new();
-                        let ent_list = self
-                            .scene
-                            .query::<&Global>()
-                            .iter()
-                            .map(|(e, _)| e)
-                            .collect_vec();
-
-                        for &entity in &ent_list {
-                            // Use the original entity IDs so we can reuse ent_list
-                            scene_tmp.spawn_at(entity, self.scene.take(entity).ok().unwrap());
-                        }
-
-                        self.scene = scene;
-                        for entity in ent_list {
-                            self.scene.spawn(scene_tmp.take(entity).ok().unwrap());
-                        }
+                        std::mem::swap(&mut self.scene, &mut scene);
+                        self.take_globals(resources, &mut scene);
 
                         // TODO(cohae): Use scheduler for this
                         update_static_instances_system(&self.scene);
@@ -93,15 +77,26 @@ impl Map {
     }
 
     /// Remove global entities from the scene and store them in this one
-    pub fn take_globals(&mut self, source: &mut Scene) {
+    pub fn take_globals(&mut self, resources: &Resources, source: &mut Scene) {
         let ent_list = source
             .query::<&Global>()
             .iter()
             .map(|(e, _)| e)
             .collect_vec();
+        let mut new_selected_entity: Option<Entity> = None;
 
-        for &entity in &ent_list {
-            self.scene.spawn(source.take(entity).ok().unwrap());
+        {
+            let selected_entity = resources.get::<SelectedEntity>().selected();
+            for &entity in &ent_list {
+                let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
+                if selected_entity.is_some_and(|e|e == entity) {
+                    new_selected_entity = Some(new_entity);
+                }
+            }
+        }
+
+        if let Some(new_entity) = new_selected_entity {
+            resources.get_mut::<SelectedEntity>().select(new_entity);
         }
     }
 
@@ -175,7 +170,7 @@ impl MapList {
 impl MapList {
     pub fn update_maps(&mut self, resources: &Resources) {
         for (i, map) in self.maps.iter_mut().enumerate() {
-            map.update();
+            map.update(resources);
             if i == self.current_map && map.load_state == MapLoadState::Unloaded {
                 map.start_load(resources);
             }
@@ -241,7 +236,7 @@ impl MapList {
         }
     }
 
-    pub fn set_current_map(&mut self, index: usize) {
+    pub fn set_current_map(&mut self, resources: &Resources, index: usize) {
         if index >= self.maps.len() {
             warn!(
                 "Attempted to set current map to index {}, but there are only {} maps",
@@ -266,7 +261,7 @@ impl MapList {
 
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
-            dest.take_globals(&mut source);
+            dest.take_globals(resources, &mut source);
             self.maps[previous_map].scene = source;
         }
 

@@ -265,7 +265,7 @@ impl ActivityBrowser {
                                 maplist.add_map(resources, map_name.clone(), *map_hash);
 
                                 let new_map = maplist.maps.len() - 1;
-                                maplist.set_current_map(new_map);
+                                maplist.set_current_map(resources, new_map);
                             }
                         }
                     });

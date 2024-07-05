@@ -113,7 +113,7 @@ impl Action for MapSwapAction {
 
         if let Some(new_map) = maps.maps.iter().position(|f| f.hash == self.hash) {
             if maps.current_map_index() != new_map {
-                maps.set_current_map(new_map);
+                maps.set_current_map(resources, new_map);
             }
         }
     }
