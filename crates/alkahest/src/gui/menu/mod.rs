@@ -1,8 +1,9 @@
 use alkahest_renderer::icons::{
     ICON_ALPHA_A_BOX_OUTLINE, ICON_ALPHA_D_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
-    ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_I_BOX_OUTLINE, ICON_ALPHA_Q_BOX_OUTLINE,
-    ICON_ALPHA_S_BOX_OUTLINE, ICON_ALPHA_W_BOX_OUTLINE, ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL,
-    ICON_KEYBOARD_SPACE, ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE,
+    ICON_ALPHA_G_BOX_OUTLINE, ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_I_BOX_OUTLINE,
+    ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE, ICON_ALPHA_W_BOX_OUTLINE,
+    ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE, ICON_MOUSE_LEFT_CLICK_OUTLINE,
+    ICON_MOUSE_RIGHT_CLICK_OUTLINE,
 };
 use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
@@ -217,11 +218,11 @@ impl MenuBar {
                                 "We're gonna have to go right to... LUDICROUS SPEED"
                             );
 
-                            // control_description!(
-                            //     ui,
-                            //     ICON_ALPHA_G_BOX_OUTLINE,
-                            //     "Move Camera to Position of Gaze"
-                            // );
+                            control_description!(
+                                ui,
+                                ICON_ALPHA_G_BOX_OUTLINE,
+                                "Move Camera to Position of Gaze"
+                            );
 
                             control_section_title!(ui, "Object Interactions");
 
