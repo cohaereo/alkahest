@@ -1,6 +1,6 @@
 use alkahest_renderer::{
     camera::{
-        tween::{ease_out_exponential, Tween},
+        tween::ease_out_exponential,
         Camera,
     },
     ecs::{common::Hidden, resources::SelectedEntity},
