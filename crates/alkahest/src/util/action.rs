@@ -1,7 +1,7 @@
 use alkahest_renderer::ecs::common::{Global, Mutable};
 use alkahest_renderer::ecs::resources::SelectedEntity;
 use alkahest_renderer::ecs::tags::{EntityTag, Tags};
-use alkahest_renderer::ecs::utility::Route;
+use alkahest_renderer::ecs::utility::{Route, Utility};
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
 
@@ -183,6 +183,8 @@ impl Action for SpawnRouteAction {
             if let Some(route) = self.route.take() {
                 let e = map.scene.spawn((
                     route,
+                    Route::icon(),
+                    Route::default_label(),
                     Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
                     Mutable,
                     Global,

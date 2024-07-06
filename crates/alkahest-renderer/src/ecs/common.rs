@@ -33,6 +33,13 @@ impl Icon {
             Icon::Colored(_, c) => *c,
         }
     }
+
+    pub fn char(&self) -> char {
+        match self {
+            Icon::Unicode(c) => *c,
+            Icon::Colored(c, _) => *c,
+        }
+    }
 }
 
 impl Display for Icon {
@@ -43,29 +50,48 @@ impl Display for Icon {
     }
 }
 
-pub struct Label(pub String);
+pub struct Label {
+    pub label: String,
+    pub default: bool,
+}
 
 impl Display for Label {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.label)
+    }
+}
+
+impl Label {
+    pub fn new_default(str: impl AsRef<str>) -> Self {
+        let s = str.as_ref();
+        Self {
+            label: s.to_string(),
+            default: true,
+        }
     }
 }
 
 impl From<&str> for Label {
     fn from(s: &str) -> Self {
-        Self(s.to_string())
+        Self {
+            label: s.to_string(),
+            default: false,
+        }
     }
 }
 
 impl From<String> for Label {
     fn from(s: String) -> Self {
-        Self(s)
+        Self {
+            label: s,
+            default: false,
+        }
     }
 }
 
 impl AsRef<str> for Label {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.label
     }
 }
 

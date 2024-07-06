@@ -6,12 +6,21 @@ use hecs::Entity;
 
 use crate::{
     ecs::{common::Hidden, resources::SelectedEntity, transform::Transform, Scene},
+    icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     renderer::Renderer,
     resources::Resources,
     util::color::{Color, ColorExt, Hsv},
 };
 
-use super::SceneInfo;
+use super::{
+    common::{Icon, Label},
+    SceneInfo,
+};
+
+pub trait Utility {
+    fn icon() -> Icon;
+    fn default_label() -> Label;
+}
 
 pub struct Ruler {
     pub start: Vec3,
@@ -34,6 +43,16 @@ impl Default for Ruler {
             marker_interval: 0.0,
             show_individual_axis: false,
         }
+    }
+}
+
+impl Utility for Ruler {
+    fn icon() -> Icon {
+        Icon::Unicode(ICON_RULER_SQUARE)
+    }
+
+    fn default_label() -> Label {
+        Label::new_default("Ruler")
     }
 }
 
@@ -63,6 +82,16 @@ impl Default for Sphere {
     }
 }
 
+impl Utility for Sphere {
+    fn default_label() -> Label {
+        Label::new_default("Sphere")
+    }
+
+    fn icon() -> Icon {
+        Icon::Unicode(ICON_SPHERE)
+    }
+}
+
 pub struct Beacon {
     pub color: Color,
     pub freq: f32,
@@ -78,6 +107,16 @@ impl Default for Beacon {
             distance: 0.5,
             travel_time: 0.7,
         }
+    }
+}
+
+impl Utility for Beacon {
+    fn default_label() -> Label {
+        Label::new_default("Beacon")
+    }
+
+    fn icon() -> Icon {
+        Icon::Unicode(ICON_SIGN_POLE)
     }
 }
 
@@ -122,6 +161,16 @@ impl Default for Route {
             show_all: false,
             activity_hash: None,
         }
+    }
+}
+
+impl Utility for Route {
+    fn icon() -> Icon {
+        Icon::Unicode(ICON_MAP_MARKER_PATH)
+    }
+
+    fn default_label() -> Label {
+        Label::new_default("Route")
     }
 }
 

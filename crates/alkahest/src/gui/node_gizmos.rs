@@ -164,7 +164,7 @@ impl GuiView for NodeGizmoOverlay {
                         NodeDisplayPoint {
                             has_havok_data: false,
                             origin: origin.cloned(),
-                            label: label.map(|v| v.0.clone()).unwrap_or_default(),
+                            label: label.map(|v| v.label.clone()).unwrap_or_default(),
                             icon: icon.cloned(),
                         }, // StrippedResourcePoint {
                            //     resource: res.resource.clone(),

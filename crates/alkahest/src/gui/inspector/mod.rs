@@ -146,10 +146,13 @@ pub fn show_inspector_panel(
         };
 
         if e.has::<Mutable>() {
-            if let Some(mut label) = e.get::<&mut Label>() {
-                egui::TextEdit::singleline(&mut label.0)
-                    .font(FontId::proportional(22.0))
-                    .ui(ui);
+            let some_label = e.get::<&mut Label>();
+            if some_label.as_ref().is_some_and(|l| !l.default) {
+                if let Some(mut label) = some_label {
+                    egui::TextEdit::singleline(&mut label.label)
+                        .font(FontId::proportional(22.0))
+                        .ui(ui);
+                }
             } else {
                 ui.label(RichText::new(title).size(24.0).strong());
                 if ui
@@ -157,7 +160,11 @@ pub fn show_inspector_panel(
                     .on_hover_text("Add label")
                     .clicked()
                 {
-                    cmd.insert_one(ent, Label(format!("Entity {}", e.entity().id())));
+                    if let Some(mut label) = some_label {
+                        label.default = false;
+                    } else {
+                        cmd.insert_one(ent, Label::from(format!("Entity {}", e.entity().id())));
+                    }
                 }
             }
         } else {

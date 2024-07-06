@@ -2,14 +2,13 @@ use alkahest_renderer::{
     camera::{get_look_angle, tween::Tween, Camera},
     ecs::{
         transform::Transform,
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere},
+        utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
         Scene, SceneInfo,
     },
     icons::{
         ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_CAMERA, ICON_CAMERA_CONTROL,
         ICON_CLIPBOARD, ICON_DELETE, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE,
-        ICON_MAP_MARKER, ICON_MAP_MARKER_PATH, ICON_MAP_MARKER_PLUS, ICON_RULER_SQUARE,
-        ICON_SIGN_POLE, ICON_SPHERE, ICON_TAG,
+        ICON_MAP_MARKER, ICON_MAP_MARKER_PATH, ICON_MAP_MARKER_PLUS, ICON_TAG,
     },
     renderer::RendererShared,
 };
@@ -38,7 +37,7 @@ impl ComponentPanel for Ruler {
     }
 
     fn inspector_icon() -> char {
-        ICON_RULER_SQUARE
+        Ruler::icon().char()
     }
 
     fn has_inspector_ui() -> bool {
@@ -174,7 +173,7 @@ impl ComponentPanel for Sphere {
     }
 
     fn inspector_icon() -> char {
-        ICON_SPHERE
+        Sphere::icon().char()
     }
 
     fn has_inspector_ui() -> bool {
@@ -220,7 +219,7 @@ impl ComponentPanel for Beacon {
     }
 
     fn inspector_icon() -> char {
-        ICON_SIGN_POLE
+        Beacon::icon().char()
     }
 
     fn has_inspector_ui() -> bool {
@@ -329,7 +328,7 @@ impl ComponentPanel for Route {
     }
 
     fn inspector_icon() -> char {
-        ICON_MAP_MARKER_PATH
+        Route::icon().char()
     }
 
     fn has_inspector_ui() -> bool {

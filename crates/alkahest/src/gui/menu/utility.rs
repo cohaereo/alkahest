@@ -1,19 +1,21 @@
-use alkahest_renderer::ecs::SceneInfo;
-use egui::Ui;
-use glam::Vec3;
+use crate::gui::activity_select::get_activity_hash;
+use crate::gui::menu::MenuBar;
+use crate::maplist::MapList;
 use alkahest_renderer::camera::Camera;
 use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
 use alkahest_renderer::ecs::resources::SelectedEntity;
 use alkahest_renderer::ecs::tags::{EntityTag, Tags};
 use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
-use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere};
-use alkahest_renderer::icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE};
+use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility};
+use alkahest_renderer::ecs::SceneInfo;
+use alkahest_renderer::icons::{
+    ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
+};
 use alkahest_renderer::renderer::RendererShared;
 use alkahest_renderer::resources::Resources;
 use alkahest_renderer::shader::shader_ball::ShaderBallComponent;
-use crate::gui::activity_select::get_activity_hash;
-use crate::gui::menu::MenuBar;
-use crate::maplist::MapList;
+use egui::Ui;
+use glam::Vec3;
 
 impl MenuBar {
     pub(super) fn utility_menu(&self, ui: &mut Ui, resources: &Resources) {
@@ -43,6 +45,8 @@ impl MenuBar {
                             ..Default::default()
                         }
                     },
+                    Ruler::icon(),
+                    Ruler::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                 ));
@@ -68,11 +72,12 @@ impl MenuBar {
                     Transform {
                         translation: if distance > 24.0 { position_base } else { pos },
                         scale: Vec3::splat(9.0),
-                        flags: TransformFlags::IGNORE_ROTATION
-                            | TransformFlags::SCALE_IS_RADIUS,
+                        flags: TransformFlags::IGNORE_ROTATION | TransformFlags::SCALE_IS_RADIUS,
                         ..Default::default()
                     },
                     Sphere::default(),
+                    Sphere::icon(),
+                    Sphere::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                 ));
@@ -83,8 +88,7 @@ impl MenuBar {
             }
         }
         if ui.button(format!("{} Beacon", ICON_SIGN_POLE)).clicked() {
-            let mut maps: std::cell::RefMut<'_, MapList> =
-                resources.get_mut::<MapList>();
+            let mut maps: std::cell::RefMut<'_, MapList> = resources.get_mut::<MapList>();
             let renderer = resources.get::<RendererShared>();
             let camera = resources.get::<Camera>();
             let (distance, pos) = renderer
@@ -102,11 +106,12 @@ impl MenuBar {
                         } else {
                             pos
                         },
-                        flags: TransformFlags::IGNORE_ROTATION
-                            | TransformFlags::IGNORE_SCALE,
+                        flags: TransformFlags::IGNORE_ROTATION | TransformFlags::IGNORE_SCALE,
                         ..Default::default()
                     },
                     Beacon::default(),
+                    Beacon::icon(),
+                    Beacon::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                 ));
@@ -136,6 +141,8 @@ impl MenuBar {
                         ..Default::default()
                     },
                     Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                    Route::icon(),
+                    Route::default_label(),
                     Mutable,
                     Global,
                 ));
@@ -152,8 +159,7 @@ impl MenuBar {
             .button(format!("{} Material Ball", ICON_POKEBALL))
             .clicked()
         {
-            let mut maps: std::cell::RefMut<'_, MapList> =
-                resources.get_mut::<MapList>();
+            let mut maps: std::cell::RefMut<'_, MapList> = resources.get_mut::<MapList>();
             let renderer = resources.get::<RendererShared>();
 
             if let Some(map) = maps.current_map_mut() {
