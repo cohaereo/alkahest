@@ -18,10 +18,13 @@ use alkahest_renderer::{
         utility::{Beacon, Route, Ruler, Sphere},
         Scene,
     },
-    icons::{ICON_ACCOUNT_CONVERT, ICON_POKEBALL},
+    icons::{
+        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_POKEBALL,
+    },
+    renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
 };
-use egui::{Align2, Color32, FontId, Key, RichText, Ui, Widget};
+use egui::{Align2, Button, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 use winit::window::Window;
@@ -40,6 +43,7 @@ use crate::{
     input_float3,
     maplist::MapList,
     resources::Resources,
+    util::text::prettify_distance,
 };
 
 pub struct InspectorPanel;
@@ -320,28 +324,28 @@ impl ComponentPanel for Transform {
                             transform_changed |= true;
                         }
 
-                        // TODO(cohae): Re-enable this when the renderer is back
-                        // if let Some(renderer) = resources.get::<RendererShared>() {
-                        //     let (d, pos) = renderer
-                        //         .read()
-                        //         .gbuffer
-                        //         .depth_buffer_distance_pos_center(&camera);
-                        //     if ui
-                        //         .add_enabled(
-                        //             d.is_finite(),
-                        //             Button::new(if d.is_finite() {
-                        //                 ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
-                        //             } else {
-                        //                 ICON_EYE_OFF_OUTLINE.to_string()
-                        //             }),
-                        //         )
-                        //         .on_hover_text("Set position to gaze")
-                        //         .clicked()
-                        //     {
-                        //         self.translation = pos;
-                        //     }
-                        //     ui.label(prettify_distance(d));
-                        // }
+                        let (d, pos) = resources
+                            .get::<RendererShared>()
+                            .data
+                            .lock()
+                            .gbuffers
+                            .depth_buffer_distance_pos_center(&camera);
+                        if ui
+                            .add_enabled(
+                                d.is_finite(),
+                                Button::new(if d.is_finite() {
+                                    ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                                } else {
+                                    ICON_EYE_OFF_OUTLINE.to_string()
+                                }),
+                            )
+                            .on_hover_text("Set position to gaze")
+                            .clicked()
+                        {
+                            self.translation = pos;
+                            transform_changed |= true;
+                        }
+                        ui.label(prettify_distance(d));
                     });
                     ui.end_row();
                 }
