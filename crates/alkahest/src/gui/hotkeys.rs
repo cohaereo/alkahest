@@ -40,6 +40,13 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_DESELECT)) {
         resources.get_mut::<SelectedEntity>().deselect();
     }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_SWAP)) {
+        let mut maplist = resources.get_mut::<MapList>();
+        if let Some(prev) = maplist.previous_map {
+            maplist.set_current_map(resources, prev);
+        }
+    }
 }
 
 fn hide_unselected(resources: &mut Resources) {
