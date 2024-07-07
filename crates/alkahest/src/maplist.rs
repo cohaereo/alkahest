@@ -266,7 +266,6 @@ impl MapList {
             self.maps[previous_map].scene = source;
         }
 
-
         #[cfg(feature = "discord_rpc")]
         if let Some(map) = self.current_map() {
             discord::set_activity_from_map(map);

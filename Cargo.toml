@@ -5,7 +5,7 @@ members = [
     "crates/alkahest-data",
     "crates/alkahest-panic-handler",
     "crates/alkahest-pm",
-    "crates/alkahest-renderer",
+    "crates/alkahest-renderer", "crates/alkahest-test",
     "crates/d2tools",
     "crates/destiny-havok",
     "crates/egui-directx11",

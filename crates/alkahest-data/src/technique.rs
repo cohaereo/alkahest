@@ -14,7 +14,6 @@ use crate::{tfx::TfxShaderStage, WideHash};
 pub struct STechnique {
     pub file_size: u64,
     /// Indicates what to bind
-    ///
     ///     1 - bind vs+ps, unbind gs+hs+ds+cs (also does stuff with gear_dye scopes)
     ///     2 - bind vs, unbind ps+gs+hs+ds+cs
     ///     3 - bind vs+gs+ps, unbind hs+ds+cs

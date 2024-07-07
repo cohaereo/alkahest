@@ -1,17 +1,21 @@
+use alkahest_renderer::{
+    camera::Camera,
+    ecs::{
+        common::{Icon, Label, Mutable},
+        resources::SelectedEntity,
+        tags::{EntityTag, Tags},
+        transform::{Transform, TransformFlags},
+        utility::{Beacon, Ruler, Sphere},
+    },
+    icons::{ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    renderer::RendererShared,
+    resources::Resources,
+    shader::shader_ball::ShaderBallComponent,
+};
 use egui::Ui;
 use glam::Vec3;
-use alkahest_renderer::camera::Camera;
-use alkahest_renderer::ecs::common::{Icon, Label, Mutable};
-use alkahest_renderer::ecs::resources::SelectedEntity;
-use alkahest_renderer::ecs::tags::{EntityTag, Tags};
-use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
-use alkahest_renderer::ecs::utility::{Beacon, Ruler, Sphere};
-use alkahest_renderer::icons::{ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE};
-use alkahest_renderer::renderer::RendererShared;
-use alkahest_renderer::resources::Resources;
-use alkahest_renderer::shader::shader_ball::ShaderBallComponent;
-use crate::gui::menu::MenuBar;
-use crate::maplist::MapList;
+
+use crate::{gui::menu::MenuBar, maplist::MapList};
 
 impl MenuBar {
     pub(super) fn utility_menu(&self, ui: &mut Ui, resources: &Resources) {
@@ -66,8 +70,7 @@ impl MenuBar {
                     Transform {
                         translation: if distance > 24.0 { position_base } else { pos },
                         scale: Vec3::splat(9.0),
-                        flags: TransformFlags::IGNORE_ROTATION
-                            | TransformFlags::SCALE_IS_RADIUS,
+                        flags: TransformFlags::IGNORE_ROTATION | TransformFlags::SCALE_IS_RADIUS,
                         ..Default::default()
                     },
                     Sphere::default(),
@@ -81,8 +84,7 @@ impl MenuBar {
             }
         }
         if ui.button(format!("{} Beacon", ICON_SIGN_POLE)).clicked() {
-            let mut maps: std::cell::RefMut<'_, MapList> =
-                resources.get_mut::<MapList>();
+            let mut maps: std::cell::RefMut<'_, MapList> = resources.get_mut::<MapList>();
             let renderer = resources.get::<RendererShared>();
             let camera = resources.get::<Camera>();
             let (distance, pos) = renderer
@@ -100,8 +102,7 @@ impl MenuBar {
                         } else {
                             pos
                         },
-                        flags: TransformFlags::IGNORE_ROTATION
-                            | TransformFlags::IGNORE_SCALE,
+                        flags: TransformFlags::IGNORE_ROTATION | TransformFlags::IGNORE_SCALE,
                         ..Default::default()
                     },
                     Beacon::default(),
@@ -153,8 +154,7 @@ impl MenuBar {
             .button(format!("{} Material Ball", ICON_POKEBALL))
             .clicked()
         {
-            let mut maps: std::cell::RefMut<'_, MapList> =
-                resources.get_mut::<MapList>();
+            let mut maps: std::cell::RefMut<'_, MapList> = resources.get_mut::<MapList>();
             let renderer = resources.get::<RendererShared>();
 
             if let Some(map) = maps.current_map_mut() {

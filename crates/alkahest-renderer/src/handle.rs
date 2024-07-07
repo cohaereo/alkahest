@@ -206,9 +206,18 @@ type FastHasher = BuildHasherDefault<FxHasher>;
 pub struct AssetRegistry<T: Asset> {
     handle_map: IndexMap<AssetId, AssetStorage<T>, FastHasher>,
     next_id: usize,
+    disabled: bool,
 }
 
 impl<T: Asset + 'static> AssetRegistry<T> {
+    pub fn new(enabled: bool) -> Self {
+        Self {
+            handle_map: IndexMap::with_hasher(FastHasher::default()),
+            next_id: 0,
+            disabled: !enabled,
+        }
+    }
+
     // pub fn reserve_handle(&mut self) -> Handle<T> {
     //     let id = self.next_id;
     //     self.next_id += 1;
@@ -221,7 +230,7 @@ impl<T: Asset + 'static> AssetRegistry<T> {
 
     /// Reserve handle or return the existing handle if it already exists
     pub fn get_handle_tiger(&mut self, taghash: TagHash) -> Handle<T> {
-        if taghash.is_none() {
+        if taghash.is_none() || self.disabled {
             return Handle::none();
         }
         let id = AssetId::new_tiger(taghash);
@@ -252,6 +261,9 @@ impl<T: Asset + 'static> AssetRegistry<T> {
     }
 
     pub fn get_existing_handle_tiger(&self, taghash: TagHash) -> Option<Handle<T>> {
+        if taghash.is_none() || self.disabled {
+            return None;
+        }
         let id = AssetId::new_tiger(taghash);
 
         self.handle_map
@@ -265,11 +277,14 @@ impl<T: Asset + 'static> AssetRegistry<T> {
     }
 
     pub fn exists(&self, asset_id: AssetId) -> bool {
-        self.handle_map.contains_key(&asset_id)
+        self.disabled || self.handle_map.contains_key(&asset_id)
     }
 
     /// Overwrite the asset associated with the handle
     pub fn overwrite(&mut self, handle: RawHandle, asset: T) {
+        if self.disabled {
+            return;
+        }
         let id = handle.id;
         if let Some(storage) = self.handle_map.get_mut(&id) {
             storage.asset.insert(Arc::new(asset));
@@ -279,6 +294,9 @@ impl<T: Asset + 'static> AssetRegistry<T> {
     }
 
     pub fn insert(&mut self, asset: T) -> Handle<T> {
+        if self.disabled {
+            return Handle::none();
+        }
         let id = self.next_id;
         self.next_id += 1;
         let handle = Handle {
@@ -298,7 +316,7 @@ impl<T: Asset + 'static> AssetRegistry<T> {
     }
 
     pub fn get(&self, handle: &Handle<T>) -> Option<&T> {
-        if handle.is_none() {
+        if handle.is_none() || self.disabled {
             return None;
         }
 
@@ -308,7 +326,7 @@ impl<T: Asset + 'static> AssetRegistry<T> {
     }
 
     pub fn get_shared(&self, handle: &Handle<T>) -> Option<Arc<T>> {
-        if handle.is_none() {
+        if handle.is_none() || self.disabled {
             return None;
         }
 
@@ -328,17 +346,5 @@ impl<T: Asset + 'static> AssetRegistry<T> {
         }
 
         removed
-    }
-}
-
-impl<T> Default for AssetRegistry<T>
-where
-    T: Asset,
-{
-    fn default() -> Self {
-        Self {
-            handle_map: IndexMap::with_hasher(FastHasher::default()),
-            next_id: 0,
-        }
     }
 }

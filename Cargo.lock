@@ -255,6 +255,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "alkahest-test"
+version = "0.1.0"
+dependencies = [
+ "alkahest-data",
+ "alkahest-pm",
+ "alkahest-renderer",
+ "anyhow",
+ "clap",
+ "crossbeam",
+ "destiny-pkg",
+ "itertools 0.13.0",
+ "lazy_static",
+ "mimalloc",
+ "parking_lot",
+ "poll-promise",
+ "rayon",
+ "tiger-parse",
+ "tokio",
+ "windows",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"

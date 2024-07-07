@@ -49,13 +49,12 @@ use crate::{
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE, ICON_SPOTLIGHT_BEAM,
-        ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LABEL, ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE,
+        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::{scene::SceneExt, text::StringExt},
 };
-use crate::icons::ICON_LABEL;
 
 pub async fn load_map(
     renderer: RendererShared,

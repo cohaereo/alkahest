@@ -49,7 +49,6 @@ pub struct SDynamicMesh {
     pub parts: Vec<SDynamicMeshPart>, // 0x20
     /// Range of parts to render per render stage
     /// Can be obtained as follows:
-    ///
     ///     - Start = part_range_per_render_stage[stage]
     ///     - End = part_range_per_render_stage[stage + 1]
     pub part_range_per_render_stage: [u16; 25], // 0x30
