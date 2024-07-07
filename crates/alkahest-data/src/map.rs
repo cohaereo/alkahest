@@ -27,7 +27,8 @@ pub struct SBubbleParentShallow {
 #[tiger_tag(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
-    pub child_map: Tag<SBubbleDefinition>,
+    pub child_map: TagHash,
+    // pub child_map: Tag<SBubbleDefinition>,
     pub unkc: u32,
 
     pub unk10: u64,

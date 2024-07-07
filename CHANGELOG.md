@@ -66,6 +66,8 @@ received some polish!
 - Static instances can now be moved, rotated and scaled individually
 - Added a material ball with configurable GBuffer output parameters
 - Added a dim outline when hovering over nametags
+- Added a unit testing framework
+    - Currently used for sanity testing various loaders like maps and activities
 
 ### Changed
 

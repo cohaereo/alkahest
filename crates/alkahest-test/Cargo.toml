@@ -19,14 +19,16 @@ windows.workspace = true
 
 # Parallelism
 crossbeam = "0.8.2"
+futures = "0.3.30"
 lazy_static.workspace = true
 parking_lot.workspace = true
 poll-promise = { version = "0.3.0", features = ["tokio"] }
 rayon.workspace = true
-tokio = { version = "1.32.0", features = ["rt", "macros"] }
 
 # Misc
 anyhow.workspace = true
 clap = { version = "4.4.4", features = ["derive"] }
 itertools.workspace = true
 mimalloc = { version = "0.1", default-features = false }
+tracing.workspace = true
+tracing-subscriber = "0.3.18"

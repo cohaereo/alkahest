@@ -9,10 +9,10 @@ use alkahest_data::{
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection,
-        SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume, SUnk808068d4,
-        SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246, SUnk80808604,
-        SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
+        SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
+        SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
+        SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
@@ -67,9 +67,20 @@ pub async fn load_map(
         .context("Failed to read SBubbleParent")?;
 
     let mut scene = Scene::new();
+    let bubble_definition = if bubble_parent.child_map.is_some() {
+        package_manager()
+            .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map)
+            .context("Failed to read bubble definition")?
+    } else {
+        warn!("Map {map_hash} is missing a bubble definition!");
+        return Ok(scene);
+    };
+    // let Ok(bubble_definition) = package_manager().read_tag::<SBubbleDefinition>(bubble_parent.child_map) else {
+    //     warn!("Failed to load bubble definition for map {}", map_hash);
+    // }
 
     let mut data_tables = FxHashMap::<TagHash, Entity>::default();
-    for map_container in &bubble_parent.child_map.map_resources {
+    for map_container in &bubble_definition.map_resources {
         let parent_entity =
             scene.spawn((Label::from(format!("Map Container {}", map_container.1)),));
         for table in &map_container.data_tables {
