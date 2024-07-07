@@ -296,10 +296,6 @@ impl AlkahestApp {
                         });
                     }
                     WindowEvent::RedrawRequested => {
-                        {
-                            let mut action_list = resources.get_mut::<ActionList>();
-                            action_list.process(&resources);
-                        }
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
                         {
@@ -322,6 +318,11 @@ impl AlkahestApp {
                                 config::with_mut(|c| {
                                     c.window.fullscreen = window.fullscreen().is_some();
                                 });
+                            }
+
+                            {
+                                let mut action_list = resources.get_mut::<ActionList>();
+                                action_list.process(&resources);
                             }
 
                             resources
