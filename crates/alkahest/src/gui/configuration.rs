@@ -11,8 +11,7 @@ use transform_gizmo_egui::{EnumSet, GizmoMode};
 use winit::window::Window;
 
 use crate::{
-    gui::context::{GuiCtx, GuiView, ViewResult},
-    resources::Resources,
+    config, gui::context::{GuiCtx, GuiView, ViewResult}, resources::Resources
 };
 
 pub struct RenderSettingsPanel;
@@ -26,12 +25,12 @@ impl GuiView for RenderSettingsPanel {
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         egui::Window::new("Settings").show(ctx, |ui| {
+            config::with_mut(|c|{
             ui.heading("Graphics");
-            let mut settings = resources.get_mut::<RendererSettings>();
-            ui.checkbox(&mut settings.vsync, "VSync");
-            ui.checkbox(&mut settings.matcap, "Matcap");
-            ui.checkbox(&mut settings.shadows, "Shadows");
-            ui.checkbox(&mut settings.ssao, "SSAO");
+            ui.checkbox(&mut c.renderer.vsync, "VSync");
+            ui.checkbox(&mut c.renderer.matcap, "Matcap");
+            ui.checkbox(&mut c.renderer.shadows, "Shadows");
+            ui.checkbox(&mut c.renderer.ssao, "SSAO");
             ui.collapsing("SSAO Settings", |ui| {
                 let renderer = resources.get::<RendererShared>();
                 let ssao_data = renderer.ssao.scope.data();
@@ -53,8 +52,7 @@ impl GuiView for RenderSettingsPanel {
                         .ui(ui);
                 });
             });
-
-            render_feat_vis(ui, "Node Visualization", &mut settings.node_nametags);
+            render_feat_vis(ui, "Node Visualization", &mut c.visual.node_nametags);
             ui.collapsing("Node filters", |ui| {
                 let mut filters = resources.get_mut::<NodeFilterSet>();
                 for filter in NodeFilter::iter() {
@@ -69,19 +67,21 @@ impl GuiView for RenderSettingsPanel {
                     if ui.checkbox(&mut checked, filter_text).changed() {
                         if checked {
                             filters.insert(filter);
+                            c.visual.node_filters.insert(filter.to_string());
                         } else {
                             filters.remove(&filter);
+                            c.visual.node_filters.remove(&filter.to_string());
                         }
                     }
                 }
             });
 
             egui::ComboBox::from_label("Debug View")
-                .selected_text(settings.debug_view.to_string().split_pascalcase())
+                .selected_text(c.renderer.debug_view.to_string().split_pascalcase())
                 .show_ui(ui, |ui| {
                     for view in RenderDebugView::iter() {
                         ui.selectable_value(
-                            &mut settings.debug_view,
+                            &mut c.renderer.debug_view,
                             view,
                             view.to_string().split_pascalcase(),
                         );
@@ -90,25 +90,25 @@ impl GuiView for RenderSettingsPanel {
 
             ui.separator();
             ui.heading("Feature Renderers");
-            render_feat_vis_select(ui, "Statics", &mut settings.feature_statics);
-            render_feat_vis_select(ui, "Terrain", &mut settings.feature_terrain);
-            render_feat_vis_select(ui, "Dynamics", &mut settings.feature_dynamics);
-            render_feat_vis_select(ui, "Sky Objects", &mut settings.feature_sky);
-            render_feat_vis_select(ui, "Water", &mut settings.feature_water);
-            render_feat_vis_select(ui, "Trees/Decorators", &mut settings.feature_decorators);
-            render_feat_vis(ui, "Atmosphere", &mut settings.feature_atmosphere);
-            render_feat_vis(ui, "Cubemaps", &mut settings.feature_cubemaps);
-            render_feat_vis(ui, "Global Lighting", &mut settings.feature_global_lighting);
+            render_feat_vis_select(ui, "Statics", &mut c.renderer.feature_statics);
+            render_feat_vis_select(ui, "Terrain", &mut c.renderer.feature_terrain);
+            render_feat_vis_select(ui, "Dynamics", &mut c.renderer.feature_dynamics);
+            render_feat_vis_select(ui, "Sky Objects", &mut c.renderer.feature_sky);
+            render_feat_vis_select(ui, "Water", &mut c.renderer.feature_water);
+            render_feat_vis_select(ui, "Trees/Decorators", &mut c.renderer.feature_decorators);
+            render_feat_vis(ui, "Atmosphere", &mut c.renderer.feature_atmosphere);
+            render_feat_vis(ui, "Cubemaps", &mut c.renderer.feature_cubemaps);
+            render_feat_vis(ui, "Global Lighting", &mut c.renderer.feature_global_lighting);
 
             ui.separator();
             ui.heading("Render Stages");
-            ui.checkbox(&mut settings.stage_transparent, "Transparents");
-            ui.checkbox(&mut settings.stage_decals, "Decals");
-            ui.checkbox(&mut settings.stage_decals_additive, "Decals (additive)");
+            ui.checkbox(&mut c.renderer.stage_transparent, "Transparents");
+            ui.checkbox(&mut c.renderer.stage_decals, "Decals");
+            ui.checkbox(&mut c.renderer.stage_decals_additive, "Decals (additive)");
 
             resources
                 .get::<RendererShared>()
-                .set_render_settings(settings.clone());
+                .set_render_settings(c.renderer.clone());
 
             ui.separator();
 
@@ -148,7 +148,7 @@ impl GuiView for RenderSettingsPanel {
                     .ui(ui);
                 ui.label("Smooth look");
             });
-        });
+        })});
 
         None
     }

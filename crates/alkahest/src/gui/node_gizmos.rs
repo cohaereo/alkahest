@@ -7,7 +7,6 @@ use alkahest_renderer::{
         transform::Transform,
     },
     icons::ICON_HELP,
-    renderer::RendererShared,
     resources::Resources,
     ColorExt,
 };
@@ -16,8 +15,7 @@ use glam::Vec2;
 use winit::window::Window;
 
 use crate::{
-    gui::context::{GuiCtx, GuiView, ViewResult},
-    maplist::MapList,
+    config, gui::context::{GuiCtx, GuiView, ViewResult}, maplist::MapList
 };
 
 pub struct NodeGizmoOverlay;
@@ -30,8 +28,7 @@ impl GuiView for NodeGizmoOverlay {
         resources: &Resources,
         gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
-        let renderer = resources.get::<RendererShared>();
-        if !renderer.render_settings.node_nametags {
+        if config::with(|c| !c.visual.node_nametags) {
             return None;
         }
 
