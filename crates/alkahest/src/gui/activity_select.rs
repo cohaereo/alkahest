@@ -262,10 +262,10 @@ impl ActivityBrowser {
                             if response.clicked() {
                                 let mut maplist = resources.get_mut::<MapList>();
 
-                                maplist.add_map(map_name.clone(), *map_hash);
+                                maplist.add_map(resources, map_name.clone(), *map_hash);
 
                                 let new_map = maplist.maps.len() - 1;
-                                maplist.set_current_map(new_map);
+                                maplist.set_current_map(resources, new_map);
                             }
                         }
                     });
@@ -310,8 +310,12 @@ pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Re
     let stringmap = resources.get::<StringMapShared>();
     let maps = query_activity_maps(activity_hash, &stringmap)?;
     resources.get_mut::<CurrentActivity>().0 = Some(activity_hash);
-    maplist.set_maps(&maps);
+    maplist.set_maps(resources, &maps);
     Ok(())
+}
+
+pub fn get_activity_hash(resources: &Resources) -> Option<TagHash> {
+    resources.get_mut::<CurrentActivity>().0
 }
 
 pub fn get_map_name(map_hash: TagHash, stringmap: &GlobalStringmap) -> anyhow::Result<String> {

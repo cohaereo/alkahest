@@ -1,6 +1,13 @@
-use alkahest_renderer::ecs::{common::Hidden, resources::SelectedEntity};
+use alkahest_renderer::{
+    camera::{
+        tween::ease_out_exponential,
+        Camera,
+    },
+    ecs::{common::Hidden, resources::SelectedEntity},
+    renderer::RendererShared,
+};
 
-use crate::{maplist::MapList, resources::Resources};
+use crate::{maplist::MapList, resources::Resources, util::action::{ActionList, TweenAction}};
 
 pub const SHORTCUT_DELETE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::Delete);
@@ -40,6 +47,17 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_DESELECT)) {
         resources.get_mut::<SelectedEntity>().deselect();
     }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_SWAP)) {
+        let mut maplist = resources.get_mut::<MapList>();
+        if let Some(prev) = maplist.previous_map {
+            maplist.set_current_map(resources, prev);
+        }
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
+        goto_gaze(resources);
+    }
 }
 
 fn hide_unselected(resources: &mut Resources) {
@@ -60,5 +78,26 @@ fn unhide_all(resources: &mut Resources) {
         for (e, _) in map.scene.query::<&Hidden>().iter() {
             map.command_buffer.remove_one::<Hidden>(e);
         }
+    }
+}
+
+fn goto_gaze(resources: &mut Resources) {
+    let camera = resources.get_mut::<Camera>();
+    let (d, pos) = resources
+        .get::<RendererShared>()
+        .data
+        .lock()
+        .gbuffers
+        .depth_buffer_distance_pos_center(&camera);
+    if d.is_finite() {
+        let mut action_list = resources.get_mut::<ActionList>();
+        // Avoid potential weird interactions with routes
+        action_list.clear_actions();
+        action_list.add_action(TweenAction::new(
+            ease_out_exponential,
+            Some((camera.position(), pos - camera.forward() * 10.0)),
+            None,
+            0.7,
+        ));
     }
 }

@@ -3,7 +3,7 @@ use std::time::Instant;
 use hecs::Entity;
 
 use crate::{
-    camera::tween::ease_out_exponential,
+    camera::tween::ease_in_out_exponential,
     util::color::{Color, ColorExt},
 };
 
@@ -43,13 +43,15 @@ impl SelectedEntity {
     }
 
     pub fn select_fade_color(&self, base_color: Color, entity: Option<Entity>) -> Color {
-        let select_color = Color::from_rgb(1.0, 0.6, 0.2);
+        let select_color = Color::from_rgb(0.6, 0.36, 0.12);
         let elapsed =
-            ease_out_exponential((self.time_selected.elapsed().as_secs_f32() / 1.4).min(1.0));
+            ease_in_out_exponential((self.time_selected.elapsed().as_secs_f32() / 0.4).min(1.0));
 
         if self.selected() == entity && elapsed < 1.0 {
-            let c = select_color.to_vec4().lerp(base_color.to_vec4(), elapsed);
-            Color::from_rgb(c.x, c.y, c.z)
+            let c = base_color
+                .to_vec4()
+                .lerp(select_color.to_vec4(), 1.0 - elapsed);
+            Color::from_rgba_premultiplied(c.x, c.y, c.z, c.w)
         } else {
             base_color
         }

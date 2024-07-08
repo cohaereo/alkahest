@@ -15,13 +15,16 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
-        utility::{Beacon, Ruler, Sphere},
+        utility::{Beacon, Route, Ruler, Sphere},
         Scene,
     },
-    icons::{ICON_ACCOUNT_CONVERT, ICON_POKEBALL},
+    icons::{
+        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_POKEBALL,
+    },
+    renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
 };
-use egui::{Align2, Color32, FontId, Key, RichText, Ui, Widget};
+use egui::{Align2, Button, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use hecs::{Entity, EntityRef};
 use winit::window::Window;
@@ -40,6 +43,7 @@ use crate::{
     input_float3,
     maplist::MapList,
     resources::Resources,
+    util::text::prettify_distance,
 };
 
 pub struct InspectorPanel;
@@ -142,10 +146,13 @@ pub fn show_inspector_panel(
         };
 
         if e.has::<Mutable>() {
-            if let Some(mut label) = e.get::<&mut Label>() {
-                egui::TextEdit::singleline(&mut label.0)
-                    .font(FontId::proportional(22.0))
-                    .ui(ui);
+            let some_label = e.get::<&mut Label>();
+            if some_label.as_ref().is_some_and(|l| !l.default) {
+                if let Some(mut label) = some_label {
+                    egui::TextEdit::singleline(&mut label.label)
+                        .font(FontId::proportional(22.0))
+                        .ui(ui);
+                }
             } else {
                 ui.label(RichText::new(title).size(24.0).strong());
                 if ui
@@ -153,7 +160,11 @@ pub fn show_inspector_panel(
                     .on_hover_text("Add label")
                     .clicked()
                 {
-                    cmd.insert_one(ent, Label(format!("Entity {}", e.entity().id())));
+                    if let Some(mut label) = some_label {
+                        label.default = false;
+                    } else {
+                        cmd.insert_one(ent, Label::from(format!("Entity {}", e.entity().id())));
+                    }
                 }
             }
         } else {
@@ -172,7 +183,7 @@ pub fn show_inspector_panel(
 
     let mut global = e.has::<Global>();
     let mut global_changed = false;
-    if e.has::<Mutable>() {
+    if e.has::<Mutable>() && !e.has::<Route>() {
         if ui.checkbox(&mut global, "Show in all Maps").changed() {
             global_changed = true;
             if global {
@@ -223,6 +234,7 @@ fn show_inspector_components(
         Ruler,
         Sphere,
         Beacon,
+        Route,
         DynamicModelComponent,
         LightRenderer,
         SLightCollection,
@@ -319,28 +331,28 @@ impl ComponentPanel for Transform {
                             transform_changed |= true;
                         }
 
-                        // TODO(cohae): Re-enable this when the renderer is back
-                        // if let Some(renderer) = resources.get::<RendererShared>() {
-                        //     let (d, pos) = renderer
-                        //         .read()
-                        //         .gbuffer
-                        //         .depth_buffer_distance_pos_center(&camera);
-                        //     if ui
-                        //         .add_enabled(
-                        //             d.is_finite(),
-                        //             Button::new(if d.is_finite() {
-                        //                 ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
-                        //             } else {
-                        //                 ICON_EYE_OFF_OUTLINE.to_string()
-                        //             }),
-                        //         )
-                        //         .on_hover_text("Set position to gaze")
-                        //         .clicked()
-                        //     {
-                        //         self.translation = pos;
-                        //     }
-                        //     ui.label(prettify_distance(d));
-                        // }
+                        let (d, pos) = resources
+                            .get::<RendererShared>()
+                            .data
+                            .lock()
+                            .gbuffers
+                            .depth_buffer_distance_pos_center(&camera);
+                        if ui
+                            .add_enabled(
+                                d.is_finite(),
+                                Button::new(if d.is_finite() {
+                                    ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                                } else {
+                                    ICON_EYE_OFF_OUTLINE.to_string()
+                                }),
+                            )
+                            .on_hover_text("Set position to gaze")
+                            .clicked()
+                        {
+                            self.translation = pos;
+                            transform_changed |= true;
+                        }
+                        ui.label(prettify_distance(d));
                     });
                     ui.end_row();
                 }

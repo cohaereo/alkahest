@@ -143,11 +143,11 @@ impl Renderer {
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
 
+            draw_utilities(self, scene, resources);
+
             if self.pickbuffer.selection_request.load().is_some() {
                 self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
             }
-
-            draw_utilities(self, scene, resources);
 
             if let Some(selected) = resources.get::<SelectedEntity>().selected() {
                 if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {

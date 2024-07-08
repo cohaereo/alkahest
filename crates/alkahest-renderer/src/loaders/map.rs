@@ -45,7 +45,7 @@ use crate::{
         },
         tags::{insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
-        Scene,
+        Scene, SceneInfo,
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
@@ -67,7 +67,7 @@ pub async fn load_map(
         .read_tag_struct::<SBubbleParent>(map_hash)
         .context("Failed to read SBubbleParent")?;
 
-    let mut scene = Scene::new();
+    let mut scene = Scene::new_with_info(activity_hash, map_hash);
 
     let mut data_tables = FxHashMap::<TagHash, Entity>::default();
     for map_container in &bubble_parent.child_map.map_resources {
