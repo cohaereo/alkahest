@@ -18,6 +18,7 @@ use alkahest_renderer::{
         render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
         tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
+        utility::{Route, RouteNode},
     },
     icons::ICON_CUBE,
     renderer::{Renderer, RendererShared},
@@ -48,6 +49,7 @@ use crate::{
         context::{GuiCtx, GuiView, ViewResult},
     },
     maplist::MapList,
+    util::action::{ActionList, ActivitySwapAction, SpawnRouteAction},
 };
 
 lazy_static! {
@@ -582,131 +584,125 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         }
         "clear_maplist" => {
             let mut maps = resources.get_mut::<MapList>();
-            maps.set_maps(&[]);
+            maps.set_maps(resources, &[]);
         }
-        // "route" => {
-        //     let mut route = Route::default();
-        //     let mut i: usize = 0;
-        //     if args[i].to_lowercase().as_str() == "hash" {
-        //         i += 1;
-        //         if args.len() < i {
-        //             error!("missing hash value");
-        //             return;
-        //         }
-        //         let parsed_hash: anyhow::Result<TagHash> = (|| {
-        //             let hash = str::parse(args[i])?;
-        //             i += 1;
-        //             Ok(TagHash(hash))
-        //         })();
-        //         match parsed_hash {
-        //             Ok(new_hash) => {
-        //                 route.activity_hash = Some(new_hash);
-        //             }
-        //             Err(e) => {
-        //                 error!("Invalid hash: {e}");
-        //                 return;
-        //             }
-        //         }
-        //     }
-        //     while i < args.len() {
-        //         let mut node = RouteNode::default();
-        //         match args[i].to_lowercase().as_str() {
-        //             "node" => 'node: {
-        //                 i += 1;
-        //                 if args.len() < 3 + i {
-        //                     error!(
-        //                         "Too few arguments for node coordinates. Expected 3, got {}",
-        //                         args.len() - i
-        //                     );
-        //                     return;
-        //                 }
-        //                 let parsed_pos: anyhow::Result<Vec3> = (|| {
-        //                     let x = str::parse(args[i])?;
-        //                     let y = str::parse(args[i + 1])?;
-        //                     let z = str::parse(args[i + 2])?;
-        //                     i += 3;
-        //
-        //                     Ok(Vec3::new(x, y, z))
-        //                 })();
-        //
-        //                 match parsed_pos {
-        //                     Ok(new_pos) => {
-        //                         node.pos = new_pos;
-        //                     }
-        //                     Err(e) => {
-        //                         error!("Invalid coordinates: {e}");
-        //                         return;
-        //                     }
-        //                 }
-        //
-        //                 if args.len() <= i {
-        //                     break 'node;
-        //                 }
-        //
-        //                 if args[i] == "tp" {
-        //                     i += 1;
-        //                     node.is_teleport = true;
-        //                 }
-        //
-        //                 if args[i] == "hash" {
-        //                     i += 1;
-        //                     if args.len() < i {
-        //                         error!("missing hash value");
-        //                         return;
-        //                     }
-        //                     let parsed_hash: anyhow::Result<TagHash> = (|| {
-        //                         let hash = str::parse(args[i])?;
-        //                         i += 1;
-        //                         Ok(TagHash(hash))
-        //                     })(
-        //                     );
-        //                     match parsed_hash {
-        //                         Ok(new_hash) => {
-        //                             node.map_hash = Some(new_hash);
-        //                         }
-        //                         Err(e) => {
-        //                             error!("Invalid hash: {e}");
-        //                             return;
-        //                         }
-        //                     }
-        //                 }
-        //
-        //                 if args.len() <= i {
-        //                     break 'node;
-        //                 }
-        //
-        //                 if args[i] == "label" {
-        //                     i += 1;
-        //                     if args.len() <= i {
-        //                         error!("label requires a string");
-        //                         return;
-        //                     }
-        //                     node.label = Some(args[i].replace(r"\s", " ").replace(r"\\", r"\"));
-        //                     i += 1;
-        //                 }
-        //             }
-        //             _ => {
-        //                 error!(
-        //                     r"Expected node x y z [hash HASH] [label string\swith\sno\sspace\\single\sslash]"
-        //                 );
-        //                 return;
-        //             }
-        //         }
-        //         route.path.push(node);
-        //     }
-        //     let mut maps = resources.get_mut::<MapList>();
-        //
-        //     if let Some(map) = maps.current_map_mut() {
-        //         let e = map.scene.spawn((
-        //             route,
-        //             Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-        //             Mutable,
-        //             Global,
-        //         ));
-        //
-        //         resources.get_mut::<SelectedEntity>().select(e);
-        //     }
-        // }
+        "route" => {
+            let mut route = Route::default();
+            let mut i: usize = 0;
+            if args[i].to_lowercase().as_str() == "hash" {
+                i += 1;
+                if args.len() < i {
+                    error!("missing hash value");
+                    return;
+                }
+                let parsed_hash: anyhow::Result<TagHash> = (|| {
+                    let hash = str::parse(args[i])?;
+                    i += 1;
+                    Ok(TagHash(hash))
+                })();
+                match parsed_hash {
+                    Ok(new_hash) => {
+                        route.activity_hash = Some(new_hash);
+                    }
+                    Err(e) => {
+                        error!("Invalid hash: {e}");
+                        return;
+                    }
+                }
+            }
+            while i < args.len() {
+                let mut node = RouteNode::default();
+                match args[i].to_lowercase().as_str() {
+                    "node" => 'node: {
+                        i += 1;
+                        if args.len() < 3 + i {
+                            error!(
+                                "Too few arguments for node coordinates. Expected 3, got {}",
+                                args.len() - i
+                            );
+                            return;
+                        }
+                        let parsed_pos: anyhow::Result<Vec3> = (|| {
+                            let x = str::parse(args[i])?;
+                            let y = str::parse(args[i + 1])?;
+                            let z = str::parse(args[i + 2])?;
+                            i += 3;
+
+                            Ok(Vec3::new(x, y, z))
+                        })();
+
+                        match parsed_pos {
+                            Ok(new_pos) => {
+                                node.pos = new_pos;
+                            }
+                            Err(e) => {
+                                error!("Invalid coordinates: {e}");
+                                return;
+                            }
+                        }
+
+                        if args.len() <= i {
+                            break 'node;
+                        }
+
+                        if args[i] == "tp" {
+                            i += 1;
+                            node.is_teleport = true;
+                        }
+
+                        if args[i] == "hash" {
+                            i += 1;
+                            if args.len() < i {
+                                error!("missing hash value");
+                                return;
+                            }
+                            let parsed_hash: anyhow::Result<TagHash> = (|| {
+                                let hash = str::parse(args[i])?;
+                                i += 1;
+                                Ok(TagHash(hash))
+                            })(
+                            );
+                            match parsed_hash {
+                                Ok(new_hash) => {
+                                    node.map_hash = Some(new_hash);
+                                }
+                                Err(e) => {
+                                    error!("Invalid hash: {e}");
+                                    return;
+                                }
+                            }
+                        }
+
+                        if args.len() <= i {
+                            break 'node;
+                        }
+
+                        if args[i] == "label" {
+                            i += 1;
+                            if args.len() <= i {
+                                error!("label requires a string");
+                                return;
+                            }
+                            node.label = Some(args[i].replace(r"\s", " ").replace(r"\\", r"\"));
+                            i += 1;
+                        }
+                    }
+                    _ => {
+                        error!(
+                            r"Expected node x y z [hash HASH] [label string\swith\sno\sspace\\single\sslash]"
+                        );
+                        return;
+                    }
+                }
+                route.path.push(node);
+            }
+
+            let mut action_list = resources.get_mut::<ActionList>();
+            if let Some(hash) = route.activity_hash {
+                action_list.add_action(ActivitySwapAction::new(hash));
+            };
+            action_list.add_action(SpawnRouteAction::new(route));
+        }
         "inspect.mat" => {
             // TODO(cohae): Make some abstraction for this
             if args.len() != 1 {

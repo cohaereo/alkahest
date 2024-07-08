@@ -1,21 +1,20 @@
-use alkahest_renderer::{
-    camera::Camera,
-    ecs::{
-        common::{Icon, Label, Mutable},
-        resources::SelectedEntity,
-        tags::{EntityTag, Tags},
-        transform::{Transform, TransformFlags},
-        utility::{Beacon, Ruler, Sphere},
-    },
-    icons::{ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
-    renderer::RendererShared,
-    resources::Resources,
-    shader::shader_ball::ShaderBallComponent,
+use crate::gui::menu::MenuBar;
+use crate::maplist::MapList;
+use alkahest_renderer::camera::Camera;
+use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
+use alkahest_renderer::ecs::resources::SelectedEntity;
+use alkahest_renderer::ecs::tags::{EntityTag, Tags};
+use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
+use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility};
+use alkahest_renderer::ecs::SceneInfo;
+use alkahest_renderer::icons::{
+    ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
 };
+use alkahest_renderer::renderer::RendererShared;
+use alkahest_renderer::resources::Resources;
+use alkahest_renderer::shader::shader_ball::ShaderBallComponent;
 use egui::Ui;
 use glam::Vec3;
-
-use crate::{gui::menu::MenuBar, maplist::MapList};
 
 impl MenuBar {
     pub(super) fn utility_menu(&self, ui: &mut Ui, resources: &Resources) {
@@ -45,6 +44,8 @@ impl MenuBar {
                             ..Default::default()
                         }
                     },
+                    Ruler::icon(),
+                    Ruler::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                 ));
@@ -74,6 +75,8 @@ impl MenuBar {
                         ..Default::default()
                     },
                     Sphere::default(),
+                    Sphere::icon(),
+                    Sphere::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                 ));
@@ -106,6 +109,8 @@ impl MenuBar {
                         ..Default::default()
                     },
                     Beacon::default(),
+                    Beacon::icon(),
+                    Beacon::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                 ));
@@ -115,38 +120,37 @@ impl MenuBar {
                 ui.close_menu();
             }
         }
-        // if ui
-        //     .button(format!("{} Route", ICON_MAP_MARKER_PATH))
-        //     .clicked()
-        // {
-        //     let mut maps = resources.get_mut::<MapList>();
-        //     let map_hash = maps.current_map_hash();
-        //     let camera = resources.get::<Camera>();
-        //
-        //     if let Some(map) = maps.current_map_mut() {
-        //         let e = map.scene.spawn((
-        //             Route {
-        //                 path: vec![RouteNode {
-        //                     pos: camera.position,
-        //                     map_hash,
-        //                     is_teleport: false,
-        //                     label: None,
-        //                 }],
-        //                 activity_hash: get_activity_hash(resources),
-        //                 ..Default::default()
-        //             },
-        //             Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-        //             Mutable,
-        //             Global(true),
-        //         ));
-        //
-        //         if let Some(mut se) = resources.get_mut::<SelectedEntity>() {
-        //             se.0 = Some(e);
-        //         }
-        //
-        //         ui.close_menu();
-        //     }
-        // }
+        if ui
+            .button(format!("{} Route", ICON_MAP_MARKER_PATH))
+            .clicked()
+        {
+            let mut maps = resources.get_mut::<MapList>();
+            let camera = resources.get::<Camera>();
+
+            if let Some(map) = maps.current_map_mut() {
+                let e = map.scene.spawn((
+                    Route {
+                        path: vec![RouteNode {
+                            pos: camera.position(),
+                            map_hash: map.scene.get_map_hash(),
+                            is_teleport: false,
+                            label: None,
+                        }],
+                        activity_hash: map.scene.get_activity_hash(),
+                        ..Default::default()
+                    },
+                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                    Route::icon(),
+                    Route::default_label(),
+                    Mutable,
+                    Global,
+                ));
+
+                resources.get_mut::<SelectedEntity>().select(e);
+
+                ui.close_menu();
+            }
+        }
 
         ui.separator();
 

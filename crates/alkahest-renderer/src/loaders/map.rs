@@ -9,7 +9,7 @@ use alkahest_data::{
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
+        SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare,
         SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
         SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
         SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
@@ -27,7 +27,7 @@ use hecs::{DynamicBundle, Entity};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
-
+use alkahest_data::map::SBubbleDefinition;
 use crate::{
     camera::CameraProjection,
     ecs::{
@@ -45,7 +45,7 @@ use crate::{
         },
         tags::{insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
-        Scene,
+        Scene, SceneInfo,
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
@@ -66,7 +66,7 @@ pub async fn load_map(
         .read_tag_struct::<SBubbleParent>(map_hash)
         .context("Failed to read SBubbleParent")?;
 
-    let mut scene = Scene::new();
+    let mut scene = Scene::new_with_info(activity_hash, map_hash);
     let bubble_definition = if bubble_parent.child_map.is_some() {
         package_manager()
             .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map)

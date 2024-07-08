@@ -51,8 +51,21 @@ impl Tween {
         new_angle
     }
 
+    pub fn reset(&mut self) {
+        self.start_time = Instant::now();
+    }
+
+    pub fn abort(&mut self) {
+        self.angle_movement = None;
+        self.pos_movement = None;
+    }
+
     pub fn is_finished(&self) -> bool {
         self.start_time.elapsed().as_secs_f32() >= self.duration
+    }
+
+    pub fn is_aborted(&self) -> bool {
+        self.angle_movement.is_none() && self.pos_movement.is_none()
     }
 }
 
@@ -62,5 +75,18 @@ pub fn ease_out_exponential(x: f32) -> f32 {
         1.0
     } else {
         1.0 - 2f32.powf(-10. * x)
+    }
+}
+
+// https://easings.net/#easeInOutExpo
+pub fn ease_in_out_exponential(x: f32) -> f32 {
+    if x == 0.0 {
+        0.0
+    } else if x == 1.0 {
+        1.0
+    } else if x < 0.5 {
+        2f32.powf(20. * x - 10.) / 2.
+    } else {
+        (2. - 2f32.powf(-20. * x + 10.)) / 2.
     }
 }

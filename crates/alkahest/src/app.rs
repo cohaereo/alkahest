@@ -38,6 +38,7 @@ use crate::{
     maplist::MapList,
     resources::Resources,
     updater::UpdateCheck,
+    util::action::ActionList,
     ApplicationArgs,
 };
 
@@ -97,6 +98,7 @@ impl AlkahestApp {
         resources.insert(MapList::default());
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
+        resources.insert(ActionList::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),
@@ -140,7 +142,9 @@ impl AlkahestApp {
             let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
 
-            resources.get_mut::<MapList>().add_map(map_name, maphash);
+            resources
+                .get_mut::<MapList>()
+                .add_map(&resources, map_name, maphash);
         }
 
         let mut node_filter_set = NodeFilterSet::default();
@@ -317,6 +321,11 @@ impl AlkahestApp {
                                 config::with_mut(|c| {
                                     c.window.fullscreen = window.fullscreen().is_some();
                                 });
+                            }
+
+                            {
+                                let mut action_list = resources.get_mut::<ActionList>();
+                                action_list.process(&resources);
                             }
 
                             resources
