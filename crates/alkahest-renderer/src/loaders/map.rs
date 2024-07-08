@@ -476,35 +476,33 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
+
                 let tag: WideHash = TigerReadable::read_ds(table_data).unwrap();
+                let entity = spawn_data_entity(
+                    scene,
+                    (
+                        NodeFilter::Sound,
+                        Icon::Colored(ICON_SPEAKER, Color32::GREEN),
+                        Label::from(format!("Ambient Audio {}", tag.hash32())),
+                        transform,
+                        resource_origin,
+                        metadata.clone(),
+                    ),
+                    parent_entity,
+                );
                 if tag.hash32().is_none() {
-                    error!(
+                    warn!(
                         "Sound source tag is None ({tag}, table {}, offset 0x{:X})",
                         table_hash, data.data_resource.offset
                     );
-                    // TODO: should be handled a bit more gracefully, shouldnt drop the whole node
-                    // TODO: do the same for other resources ^
-                    continue;
-                }
-
-                match package_manager().read_tag_struct::<SAudioClipCollection>(tag) {
-                    Ok(header) => {
-                        spawn_data_entity(
-                            scene,
-                            (
-                                NodeFilter::Sound,
-                                Icon::Colored(ICON_SPEAKER, Color32::GREEN),
-                                Label::from(format!("Ambient Audio {}", tag.hash32())),
-                                AmbientAudio::new(header),
-                                transform,
-                                resource_origin,
-                                metadata.clone(),
-                            ),
-                            parent_entity,
-                        );
-                    }
-                    Err(e) => {
-                        error!(error=?e, tag=%tag, "Failed to load ambient audio");
+                } else {
+                    match package_manager().read_tag_struct::<SAudioClipCollection>(tag) {
+                        Ok(header) => {
+                            scene.insert_one(entity, AmbientAudio::new(header))?;
+                        }
+                        Err(e) => {
+                            error!(error=?e, tag=%tag, "Failed to load ambient audio");
+                        }
                     }
                 }
             }
