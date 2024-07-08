@@ -81,6 +81,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct VisualSettings {
+    pub draw_crosshair: bool,
     pub node_nametags: bool,
     pub node_filters: HashSet<String>,
 }
@@ -88,6 +89,7 @@ pub struct VisualSettings {
 impl Default for VisualSettings {
     fn default() -> Self {
         Self {
+            draw_crosshair: false,
             node_nametags: false,
             node_filters: NodeFilter::iter()
                 .filter_map(|nf| {

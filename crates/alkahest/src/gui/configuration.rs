@@ -52,6 +52,7 @@ impl GuiView for RenderSettingsPanel {
                         .ui(ui);
                 });
             });
+            render_feat_vis(ui, "Crosshair", &mut c.visual.draw_crosshair);
             render_feat_vis(ui, "Node Visualization", &mut c.visual.node_nametags);
             ui.collapsing("Node filters", |ui| {
                 let mut filters = resources.get_mut::<NodeFilterSet>();
