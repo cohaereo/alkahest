@@ -9,10 +9,10 @@ use poll_promise::Promise;
 use super::UiExt;
 use crate::{
     config,
+    gui::bottom_bar::LoadingIcon,
     updater::{self, AvailableUpdate, UpdateChannel, UpdateCheck},
     util::error::{show_error_alert, ErrorAlert},
 };
-use crate::gui::bottom_bar::LoadingIcon;
 
 #[derive(Default)]
 pub struct ChannelSelector {
@@ -86,11 +86,9 @@ impl ChannelSelector {
                         if persist_and_close {
                             config::persist();
                             self.open = false;
-                            resources
-                                .get_mut::<UpdateCheck>()
-                                .start(config::with(|c| {
-                                    c.update_channel.unwrap_or(UpdateChannel::Stable)
-                                }));
+                            resources.get_mut::<UpdateCheck>().start(config::with(|c| {
+                                c.update_channel.unwrap_or(UpdateChannel::Stable)
+                            }));
                         }
                     });
                 });

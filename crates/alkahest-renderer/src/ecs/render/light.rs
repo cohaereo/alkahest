@@ -471,7 +471,7 @@ impl LightShape {
             LightShape::Line => ICON_LIGHTBULB_FLUORESCENT_TUBE,
         }
     }
-    
+
     pub fn name(&self) -> &'static str {
         match self {
             LightShape::Omni => "Omni",

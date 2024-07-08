@@ -46,7 +46,7 @@ pub struct GpuContext {
     context: ID3D11DeviceContext,
     annotation: ID3DUserDefinedAnnotation,
 
-    pub swap_chain: IDXGISwapChain,
+    pub swap_chain: Option<IDXGISwapChain>,
     pub swapchain_target: RwLock<Option<ID3D11RenderTargetView>>,
     pub swapchain_resolution: AtomicCell<(u32, u32)>,
 
@@ -81,7 +81,6 @@ pub struct GpuContext {
 }
 
 impl GpuContext {
-    #[allow(const_item_mutation)]
     pub fn create<Window: HasWindowHandle>(window: &Window) -> anyhow::Result<Self> {
         let mut device: Option<ID3D11Device> = None;
         let mut swap_chain: Option<IDXGISwapChain> = None;
@@ -133,12 +132,39 @@ impl GpuContext {
         let device_context = device_context.unwrap();
         let swap_chain = swap_chain.unwrap();
 
-        let mut swapchain_target = None;
-        unsafe {
-            let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
-            device.CreateRenderTargetView(&buffer, None, Some(&mut swapchain_target))?;
-        };
+        Self::create_inner(device, device_context, Some(swap_chain))
+    }
+    
+    pub fn create_headless() -> anyhow::Result<Self> {
+        let mut device: Option<ID3D11Device> = None;
+        let mut device_context: Option<ID3D11DeviceContext> = None;
 
+        unsafe {
+            D3D11CreateDevice(
+                None,
+                D3D_DRIVER_TYPE_HARDWARE,
+                HINSTANCE::default(),
+                Default::default(),
+                // D3D11_CREATE_DEVICE_DEBUG,
+                Some(&[D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0]),
+                D3D11_SDK_VERSION,
+                Some(&mut device),
+                None,
+                Some(&mut device_context),
+            )?;
+        }
+
+        let device = device.unwrap();
+        let device_context = device_context.unwrap();
+
+        Self::create_inner(device, device_context, None)
+    }
+
+    fn create_inner(
+        device: ID3D11Device,
+        device_context: ID3D11DeviceContext,
+        swap_chain: Option<IDXGISwapChain>,
+    ) -> anyhow::Result<Self> {
         let states = RenderStates::new(&device)?;
 
         let fallback_texture = Texture::load_png(
@@ -213,6 +239,14 @@ impl GpuContext {
             ))?,
             Some("sky_hemisphere_placeholder.png"),
         )?;
+
+        let mut swapchain_target = None;
+        unsafe {
+            if let Some(swap_chain) = &swap_chain {
+                let buffer = swap_chain.GetBuffer::<ID3D11Resource>(0)?;
+                device.CreateRenderTargetView(&buffer, None, Some(&mut swapchain_target))?;
+            }
+        };
 
         Ok(Self {
             main_thread_id: std::thread::current().id(),
@@ -326,17 +360,23 @@ impl GpuContext {
     }
 
     pub fn present(&self, vsync: bool) {
-        unsafe {
-            if self.swap_chain.Present(
-                vsync as u32,
-                self.present_parameters.load(Ordering::Relaxed),
-            ) == DXGI_STATUS_OCCLUDED
-            {
-                self.present_parameters
-                    .store(DXGI_PRESENT_TEST, Ordering::Relaxed);
-                std::thread::sleep(Duration::from_millis(50));
-            } else {
-                self.present_parameters.store(0, Ordering::Relaxed);
+        if let Some(swap_chain) = &self.swap_chain {
+            unsafe {
+                if swap_chain.Present(
+                    vsync as u32,
+                    self.present_parameters.load(Ordering::Relaxed),
+                ) == DXGI_STATUS_OCCLUDED
+                {
+                    self.present_parameters
+                        .store(DXGI_PRESENT_TEST, Ordering::Relaxed);
+                    std::thread::sleep(Duration::from_millis(50));
+                } else {
+                    self.present_parameters.store(0, Ordering::Relaxed);
+                }
+            }
+        } else {
+            if vsync {
+                std::thread::sleep(Duration::from_millis(1000 / 60));
             }
         }
     }
@@ -344,24 +384,26 @@ impl GpuContext {
         let width = width.max(4);
         let height = height.max(4);
 
-        unsafe {
-            drop(self.swapchain_target.write().take());
+        if let Some(swap_chain) = &self.swap_chain {
+            unsafe {
+                drop(self.swapchain_target.write().take());
 
-            self.swap_chain
-                .ResizeBuffers(2, width, height, DXGI_FORMAT_B8G8R8A8_UNORM, 0)
-                .unwrap();
+                swap_chain
+                    .ResizeBuffers(2, width, height, DXGI_FORMAT_B8G8R8A8_UNORM, 0)
+                    .unwrap();
 
-            let bb: ID3D11Texture2D = self.swap_chain.GetBuffer(0).unwrap();
+                let bb: ID3D11Texture2D = swap_chain.GetBuffer(0).unwrap();
 
-            let mut new_rtv = None;
-            self.device
-                .CreateRenderTargetView(&bb, None, Some(&mut new_rtv))
-                .unwrap();
+                let mut new_rtv = None;
+                self.device
+                    .CreateRenderTargetView(&bb, None, Some(&mut new_rtv))
+                    .unwrap();
 
-            self.context()
-                .OMSetRenderTargets(Some(&[new_rtv.clone()]), None);
+                self.context()
+                    .OMSetRenderTargets(Some(&[new_rtv.clone()]), None);
 
-            *self.swapchain_target.write() = new_rtv;
+                *self.swapchain_target.write() = new_rtv;
+            }
         }
 
         self.swapchain_resolution.store((width, height));

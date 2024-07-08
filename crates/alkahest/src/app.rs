@@ -101,6 +101,7 @@ impl AlkahestApp {
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),
+            false,
         )
         .unwrap();
         resources.insert(renderer.clone());
@@ -273,13 +274,15 @@ impl AlkahestApp {
                         }
                     }
                     WindowEvent::Resized(new_dims) => {
-                        let _ = gui
-                            .renderer
-                            .resize_buffers(&gctx.swap_chain, || {
-                                gctx.resize_swapchain(new_dims.width, new_dims.height);
-                                HRESULT(0)
-                            })
-                            .expect("Failed to resize buffers");
+                        if let Some(swap_chain) = gctx.swap_chain.as_ref() {
+                            let _ = gui
+                                .renderer
+                                .resize_buffers(&swap_chain, || {
+                                    gctx.resize_swapchain(new_dims.width, new_dims.height);
+                                    HRESULT(0)
+                                })
+                                .expect("Failed to resize buffers");
+                        }
 
                         renderer.resize_buffers(new_dims.width, new_dims.height);
 

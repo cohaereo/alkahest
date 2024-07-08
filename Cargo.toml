@@ -5,14 +5,13 @@ members = [
     "crates/alkahest-data",
     "crates/alkahest-panic-handler",
     "crates/alkahest-pm",
-    "crates/alkahest-renderer",
+    "crates/alkahest-renderer", "crates/alkahest-test",
     "crates/d2tools",
     "crates/destiny-havok",
     "crates/egui-directx11",
 ]
 
 [workspace.dependencies]
-arc-swap = { version = "1.7.1", features = ["weak"] }
 anyhow = { version = "1.0.71" }
 binrw = "0.13.3"
 bitflags = { version = "2.5.0", features = ["serde"] }
@@ -36,7 +35,6 @@ glam = { version = "0.28", features = ["bytemuck", "mint"] }
 hecs = "0.10.3"
 itertools = "0.13.0"
 lazy_static = "1.4.0"
-heck = "0.5.0"
 num = "0.4.1"
 num-derive = "0.4.0"
 num-traits = "0.2.16"

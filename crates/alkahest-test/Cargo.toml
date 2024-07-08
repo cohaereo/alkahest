@@ -1,0 +1,33 @@
+[package]
+name = "alkahest-test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+alkahest-data = { path = "../alkahest-data" }
+alkahest-pm = { path = "../alkahest-pm" }
+alkahest-renderer = { path = "../alkahest-renderer" }
+
+# (De)serialization
+destiny-pkg.workspace = true
+tiger-parse.workspace = true
+
+# Graphics/GUI
+windows.workspace = true
+
+# Parallelism
+crossbeam = "0.8.2"
+futures = "0.3.30"
+lazy_static.workspace = true
+parking_lot.workspace = true
+rayon.workspace = true
+
+# Misc
+anyhow.workspace = true
+clap = { version = "4.4.4", features = ["derive"] }
+itertools.workspace = true
+mimalloc = { version = "0.1", default-features = false }
+tracing.workspace = true
+tracing-subscriber = "0.3.18"

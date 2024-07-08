@@ -128,6 +128,8 @@ pub fn select_game_installation(
                     unsafe {
                         if dcs
                             .swap_chain
+                            .as_ref()
+                            .unwrap()
                             .Present(DXGI_SWAP_EFFECT_SEQUENTIAL.0 as _, present_parameters)
                             == DXGI_STATUS_OCCLUDED
                         {

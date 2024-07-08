@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/crates/alkahest-data/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/alkahest-panic-handler/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/alkahest-pm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/alkahest-renderer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/alkahest/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/d2tools/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/destiny-havok/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/destiny-havok/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/egui-directx11/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/alkahest-test/src" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/.idea/copilot/chatSessions" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/crates/d2tools/target" />
+      <excludeFolder url="file://$MODULE_DIR$/crates/destiny-havok/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

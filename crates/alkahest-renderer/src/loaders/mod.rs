@@ -19,6 +19,8 @@ pub mod vertex_buffer;
 
 pub struct AssetManager {
     gctx: SharedGpuContext,
+    disabled: bool,
+
     pub textures: AssetRegistry<Texture>,
     pub techniques: AssetRegistry<Technique>,
 
@@ -41,10 +43,11 @@ impl AssetManager {
 
         Self {
             gctx,
-            textures: AssetRegistry::default(),
-            techniques: AssetRegistry::default(),
-            vertex_buffers: AssetRegistry::default(),
-            index_buffers: AssetRegistry::default(),
+            disabled: false,
+            textures: AssetRegistry::new(true),
+            techniques: AssetRegistry::new(true),
+            vertex_buffers: AssetRegistry::new(true),
+            index_buffers: AssetRegistry::new(true),
             request_tx,
             asset_rx,
             workers,
@@ -52,9 +55,27 @@ impl AssetManager {
         }
     }
 
+    pub fn new_disabled(gctx: SharedGpuContext) -> Self {
+        let (request_tx, _request_rx) = crossbeam::channel::unbounded();
+        let (_asset_tx, asset_rx) = crossbeam::channel::unbounded();
+
+        Self {
+            gctx,
+            disabled: true,
+            textures: AssetRegistry::new(false),
+            techniques: AssetRegistry::new(false),
+            vertex_buffers: AssetRegistry::new(false),
+            index_buffers: AssetRegistry::new(false),
+            request_tx,
+            asset_rx,
+            workers: vec![],
+            pending_requests: FxHashSet::default(),
+        }
+    }
+
     // TODO(cohae): Can we do something about the boilerplate?
     pub fn get_or_load_texture(&mut self, hash: TagHash) -> Handle<Texture> {
-        if hash.is_none() {
+        if hash.is_none() || self.disabled {
             return Handle::none();
         }
 
@@ -72,7 +93,7 @@ impl AssetManager {
 
     #[track_caller]
     pub fn get_or_load_technique(&mut self, hash: TagHash) -> Handle<Technique> {
-        if hash.is_none() {
+        if hash.is_none() || self.disabled {
             return Handle::none();
         }
 
@@ -99,7 +120,7 @@ impl AssetManager {
     }
 
     pub fn get_or_load_vertex_buffer(&mut self, hash: TagHash) -> Handle<VertexBuffer> {
-        if hash.is_none() {
+        if hash.is_none() || self.disabled {
             return Handle::none();
         }
 
@@ -116,7 +137,7 @@ impl AssetManager {
     }
 
     pub fn get_or_load_index_buffer(&mut self, hash: TagHash) -> Handle<IndexBuffer> {
-        if hash.is_none() {
+        if hash.is_none() || self.disabled {
             return Handle::none();
         }
 
@@ -133,6 +154,10 @@ impl AssetManager {
     }
 
     pub fn poll(&mut self) {
+        if self.disabled {
+            return;
+        }
+
         profiling::scope!("AssetManager::poll");
         let mut budget = self.asset_rx.len();
         if budget != 0 {
@@ -230,6 +255,10 @@ impl AssetManager {
 
     /// Blocks until all pending requests have been processed.
     pub fn block_until_idle(&mut self) {
+        if self.disabled {
+            return;
+        }
+
         profiling::scope!("AssetManager::block_until_idle");
         while !self.pending_requests.is_empty() {
             self.poll();

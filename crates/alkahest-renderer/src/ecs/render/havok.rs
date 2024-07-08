@@ -8,7 +8,7 @@ use alkahest_pm::package_manager;
 use anyhow::Context;
 use destiny_havok::shape_collection;
 use destiny_pkg::TagHash;
-use glam::Vec3;
+use glam::{Vec3, Vec4Swizzles};
 use itertools::Itertools;
 
 use crate::{
@@ -80,7 +80,7 @@ impl HavokShapeRenderer {
         self.cb_debug_shape
             .write(&HavokShapeScope {
                 local_to_world: transform.local_to_world(),
-                color: color.to_vec4().truncate().extend(0.3),
+                color: color.to_vec4().xyz().extend(0.10),
             })
             .unwrap();
 

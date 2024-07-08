@@ -9,10 +9,10 @@ use alkahest_data::{
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare, SLightCollection,
-        SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume, SUnk808068d4,
-        SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246, SUnk80808604,
-        SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare,
+        SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
+        SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
+        SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
@@ -27,7 +27,7 @@ use hecs::{DynamicBundle, Entity};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
-
+use alkahest_data::map::SBubbleDefinition;
 use crate::{
     camera::CameraProjection,
     ecs::{
@@ -49,13 +49,12 @@ use crate::{
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE, ICON_SPOTLIGHT_BEAM,
-        ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LABEL, ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE,
+        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::{scene::SceneExt, text::StringExt},
 };
-use crate::icons::ICON_LABEL;
 
 pub async fn load_map(
     renderer: RendererShared,
@@ -68,9 +67,20 @@ pub async fn load_map(
         .context("Failed to read SBubbleParent")?;
 
     let mut scene = Scene::new_with_info(activity_hash, map_hash);
+    let bubble_definition = if bubble_parent.child_map.is_some() {
+        package_manager()
+            .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map)
+            .context("Failed to read bubble definition")?
+    } else {
+        warn!("Map {map_hash} is missing a bubble definition!");
+        return Ok(scene);
+    };
+    // let Ok(bubble_definition) = package_manager().read_tag::<SBubbleDefinition>(bubble_parent.child_map) else {
+    //     warn!("Failed to load bubble definition for map {}", map_hash);
+    // }
 
     let mut data_tables = FxHashMap::<TagHash, Entity>::default();
-    for map_container in &bubble_parent.child_map.map_resources {
+    for map_container in &bubble_definition.map_resources {
         let parent_entity =
             scene.spawn((Label::from(format!("Map Container {}", map_container.1)),));
         for table in &map_container.data_tables {
@@ -355,6 +365,19 @@ pub async fn load_map(
         }
     }
 
+    let mut new_entity_names: Vec<(Entity, String)> = vec![];
+    for (entity, meta) in scene.query::<&NodeMetadata>().iter() {
+        if meta.world_id != u64::MAX {
+            if let Some(name) = entity_worldid_name_map.get(&meta.world_id) {
+                new_entity_names.push((entity, name.clone()));
+            }
+        }
+    }
+
+    for (entity, name) in new_entity_names {
+        scene.insert_one(entity, Label::from(name))?;
+    }
+
     Ok(scene)
 }
 
@@ -466,35 +489,33 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
+
                 let tag: WideHash = TigerReadable::read_ds(table_data).unwrap();
+                let entity = spawn_data_entity(
+                    scene,
+                    (
+                        NodeFilter::Sound,
+                        Icon::Colored(ICON_SPEAKER, Color32::GREEN),
+                        Label::from(format!("Ambient Audio {}", tag.hash32())),
+                        transform,
+                        resource_origin,
+                        metadata.clone(),
+                    ),
+                    parent_entity,
+                );
                 if tag.hash32().is_none() {
-                    error!(
+                    warn!(
                         "Sound source tag is None ({tag}, table {}, offset 0x{:X})",
                         table_hash, data.data_resource.offset
                     );
-                    // TODO: should be handled a bit more gracefully, shouldnt drop the whole node
-                    // TODO: do the same for other resources ^
-                    continue;
-                }
-
-                match package_manager().read_tag_struct::<SAudioClipCollection>(tag) {
-                    Ok(header) => {
-                        spawn_data_entity(
-                            scene,
-                            (
-                                NodeFilter::Sound,
-                                Icon::Colored(ICON_SPEAKER, Color32::GREEN),
-                                Label::from(format!("Ambient Audio {}", tag.hash32())),
-                                AmbientAudio::new(header),
-                                transform,
-                                resource_origin,
-                                metadata.clone(),
-                            ),
-                            parent_entity,
-                        );
-                    }
-                    Err(e) => {
-                        error!(error=?e, tag=%tag, "Failed to load ambient audio");
+                } else {
+                    match package_manager().read_tag_struct::<SAudioClipCollection>(tag) {
+                        Ok(header) => {
+                            scene.insert_one(entity, AmbientAudio::new(header))?;
+                        }
+                        Err(e) => {
+                            error!(error=?e, tag=%tag, "Failed to load ambient audio");
+                        }
                     }
                 }
             }

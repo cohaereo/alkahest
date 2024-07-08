@@ -53,7 +53,6 @@ impl MenuBar {
 
             // Spawn the new process
             std::process::Command::new(std::env::current_exe().unwrap())
-                .args(std::env::args().skip(1))
                 .spawn()
                 .expect("Failed to spawn the new alkahest process");
 

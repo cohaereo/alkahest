@@ -1,4 +1,3 @@
-use crate::gui::activity_select::get_activity_hash;
 use crate::gui::menu::MenuBar;
 use crate::maplist::MapList;
 use alkahest_renderer::camera::Camera;

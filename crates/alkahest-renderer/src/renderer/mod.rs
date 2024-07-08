@@ -89,13 +89,21 @@ pub struct RendererData {
 }
 
 impl Renderer {
-    pub fn create(gpu: SharedGpuContext, window_size: (u32, u32)) -> anyhow::Result<Arc<Self>> {
+    pub fn create(
+        gpu: SharedGpuContext,
+        window_size: (u32, u32),
+        disable_asset_loading: bool,
+    ) -> anyhow::Result<Arc<Self>> {
         let render_globals =
             RenderGlobals::load(gpu.clone()).expect("Failed to load render globals");
 
         Ok(Arc::new(Self {
             data: Mutex::new(RendererData {
-                asset_manager: AssetManager::new(gpu.clone()),
+                asset_manager: if disable_asset_loading {
+                    AssetManager::new_disabled(gpu.clone())
+                } else {
+                    AssetManager::new(gpu.clone())
+                },
                 gbuffers: GBuffer::create(window_size, gpu.clone())?,
                 externs: ExternStorage::default(),
             }),
@@ -406,7 +414,7 @@ impl Default for RendererSettings {
     fn default() -> Self {
         Self {
             vsync: true,
-            ssao: true,
+            ssao: false,
             matcap: false,
             shadows: true,
             shadow_updates_per_frame: 2,
