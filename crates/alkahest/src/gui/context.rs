@@ -19,6 +19,7 @@ use crate::{
         inspector::InspectorPanel,
         menu::MenuBar,
         node_gizmos::NodeGizmoOverlay,
+        crosshair::CrosshairOverlay,
         outliner::OutlinerPanel,
         profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
@@ -203,6 +204,7 @@ impl GuiViewManager {
         views.insert(ConsolePanel::default());
         views.insert(PuffinProfiler);
         views.insert(NodeGizmoOverlay);
+        views.insert(CrosshairOverlay);
 
         views.insert_overlay(FpsDisplayOverlay::default());
 

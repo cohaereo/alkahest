@@ -19,6 +19,7 @@ pub mod console;
 pub mod gizmo;
 mod menu;
 mod node_gizmos;
+mod crosshair;
 mod outliner;
 mod profiler;
 pub(crate) mod updater;

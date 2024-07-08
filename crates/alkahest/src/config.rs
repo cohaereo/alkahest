@@ -1,7 +1,9 @@
-use alkahest_renderer::renderer::RendererSettings;
+use alkahest_renderer::{ecs::tags::NodeFilter, renderer::RendererSettings};
 use directories::ProjectDirs;
+use egui::ahash::HashSet;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 
 use crate::{updater::UpdateChannel, util::RwLock};
 
@@ -71,16 +73,43 @@ macro_rules! config {
 pub struct Config {
     pub window: WindowConfig,
     pub renderer: RendererSettings,
-    // pub render_settings: RenderConfig,
+    pub visual: VisualSettings,
     pub update_channel: Option<UpdateChannel>,
     pub packages_directory: Option<String>,
 }
 
-// #[derive(Serialize, Deserialize, Default)]
-// #[serde(default)]
-// pub struct RenderConfig {
-//     pub draw_crosshair: bool,
-// }
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
+pub struct VisualSettings {
+    pub draw_crosshair: bool,
+    pub node_nametags: bool,
+    pub node_filters: HashSet<String>,
+}
+
+impl Default for VisualSettings {
+    fn default() -> Self {
+        Self {
+            draw_crosshair: false,
+            node_nametags: false,
+            node_filters: NodeFilter::iter()
+                .filter_map(|nf| {
+                    if !matches!(
+                        nf,
+                        NodeFilter::PlayerContainmentVolume
+                            | NodeFilter::SlipSurfaceVolume
+                            | NodeFilter::InstakillBarrier
+                            | NodeFilter::Cubemap
+                            | NodeFilter::NamedArea
+                    ) {
+                        Some(nf.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]

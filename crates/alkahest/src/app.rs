@@ -11,7 +11,7 @@ use alkahest_renderer::{
     gpu::GpuContext,
     gpu_event,
     input::InputState,
-    renderer::{Renderer, RendererSettings, RendererShared},
+    renderer::{Renderer, RendererShared},
 };
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
@@ -94,7 +94,6 @@ impl AlkahestApp {
         resources.insert(CurrentActivity(args.activity));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
-        resources.insert(config!().renderer.clone());
         resources.insert(MapList::default());
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
@@ -148,19 +147,13 @@ impl AlkahestApp {
         }
 
         let mut node_filter_set = NodeFilterSet::default();
-        for nf in NodeFilter::iter() {
-            if !matches!(
-                nf,
-                NodeFilter::PlayerContainmentVolume
-                    | NodeFilter::SlipSurfaceVolume
-                    | NodeFilter::TurnbackBarrier
-                    | NodeFilter::InstakillBarrier
-                    | NodeFilter::Cubemap
-                    | NodeFilter::NamedArea
-            ) {
-                node_filter_set.insert(nf);
+        config::with(|c| {
+            for nf in NodeFilter::iter() {
+                if c.visual.node_filters.contains(&nf.to_string()) {
+                    node_filter_set.insert(nf);
+                }
             }
-        }
+        });
         resources.insert(node_filter_set);
 
         Self {
@@ -297,6 +290,10 @@ impl AlkahestApp {
                             size: glam::UVec2::new(new_dims.width, new_dims.height),
                             origin: glam::UVec2::ZERO,
                         });
+
+                        config::with_mut(|c| {
+                            (c.window.width, c.window.height) = (new_dims.width, new_dims.height)
+                        });
                     }
                     WindowEvent::RedrawRequested => {
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
@@ -411,7 +408,7 @@ impl AlkahestApp {
                         });
 
                         window.pre_present_notify();
-                        gctx.present(resources.get::<RendererSettings>().vsync);
+                        gctx.present(config::with(|c| c.renderer.vsync));
 
                         window.request_redraw();
                         profiling::finish_frame!();
