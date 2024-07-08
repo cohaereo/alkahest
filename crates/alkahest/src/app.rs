@@ -287,6 +287,10 @@ impl AlkahestApp {
                             size: glam::UVec2::new(new_dims.width, new_dims.height),
                             origin: glam::UVec2::ZERO,
                         });
+
+                        config::with_mut(|c| {
+                            (c.window.width, c.window.height) = (new_dims.width, new_dims.height)
+                        });
                     }
                     WindowEvent::RedrawRequested => {
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
