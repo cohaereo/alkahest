@@ -23,7 +23,6 @@ tiger-parse.workspace = true
 zip-extract = "0.1.3"
 
 # Graphics/GUI
-ddsfile = "0.5.1"
 egui.workspace = true
 egui_commonmark = "0.15.0"
 egui_extras.workspace = true
@@ -53,9 +52,7 @@ build-time = "0.1.3"
 bytemuck.workspace = true
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.4.4", features = ["derive"] }
-const_format = "0.2.31"
 directories = "5.0.1"
-discord-rpc-client = { version = "0.4.0", optional = true }
 field_access.workspace = true
 fs-err = "2.11.0"
 game-detector = "0.1.3"
@@ -80,17 +77,14 @@ tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 #tracing-tracy = "0.11.0"
 #tracy-client = "0.17.0"
-egui_dock = "0.12.0"
 puffin = "0.19.0"
 discord-sdk = "0.3.6"
 
 [features]
-default = ["discord_rpc"]
+default = []
 #tracy = []
 # Disable sorting the map list
 keep_map_order = []
-# TODO(cohae): This should be a runtime configuration setting
-discord_rpc = ["dep:discord-rpc-client"]
 deadlock_detection = ["parking_lot/deadlock_detection"]
 
 debug_lock = []

@@ -22,7 +22,6 @@ crossbeam = "0.8.2"
 futures = "0.3.30"
 lazy_static.workspace = true
 parking_lot.workspace = true
-poll-promise = { version = "0.3.0", features = ["tokio"] }
 rayon.workspace = true
 
 # Misc
