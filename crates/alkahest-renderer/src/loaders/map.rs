@@ -365,6 +365,19 @@ pub async fn load_map(
         }
     }
 
+    let mut new_entity_names: Vec<(Entity, String)> = vec![];
+    for (entity, meta) in scene.query::<&NodeMetadata>().iter() {
+        if meta.world_id != u64::MAX {
+            if let Some(name) = entity_worldid_name_map.get(&meta.world_id) {
+                new_entity_names.push((entity, name.clone()));
+            }
+        }
+    }
+
+    for (entity, name) in new_entity_names {
+        scene.insert_one(entity, Label::from(name))?;
+    }
+
     Ok(scene)
 }
 

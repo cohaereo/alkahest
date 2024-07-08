@@ -105,7 +105,7 @@ pub struct Unk80809905 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0x8080906b)]
 pub struct Unk8080906b {
     pub file_size: u64,
     pub unk0: Vec<Unk80809d02>,
