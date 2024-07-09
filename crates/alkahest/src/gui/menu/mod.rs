@@ -286,12 +286,17 @@ impl MenuBar {
                             //     "Select 'Previous' Object"
                             // );
 
-                            control_section_title!(ui, "Miscellaneous");
+                            control_section_title!(ui, "Map Changing");
+
                             control_description!(
                                 ui,
                                 ICON_ALPHA_I_BOX_OUTLINE,
                                 "Swap to Previous Map"
                             );
+
+                            control_description!(ui, "Page Up", "Swap to Previous Map in List");
+
+                            control_description!(ui, "Page Down", "Swap to Next Map in List");
                         });
                 });
             });

@@ -270,4 +270,16 @@ impl MapList {
             discord::set_activity_from_map(map);
         }
     }
+
+    pub fn set_current_map_next(&mut self, resources: &Resources) {
+        if self.current_map + 1 < self.maps.len() {
+            self.set_current_map(resources, self.current_map + 1)
+        }
+    }
+
+    pub fn set_current_map_prev(&mut self, resources: &Resources) {
+        if self.current_map > 0 && self.maps.len() >= 1 {
+            self.set_current_map(resources, self.current_map - 1)
+        }
+    }
 }
