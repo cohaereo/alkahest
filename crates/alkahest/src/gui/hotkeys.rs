@@ -35,6 +35,12 @@ pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
 pub const SHORTCUT_MAP_SWAP: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::I);
 
+    pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageUp);
+
+    pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageDown);
+
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);
@@ -53,6 +59,14 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
         if let Some(prev) = maplist.previous_map {
             maplist.set_current_map(resources, prev);
         }
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_PREV)) {
+        resources.get_mut::<MapList>().set_current_map_prev(resources);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_NEXT)) {
+        resources.get_mut::<MapList>().set_current_map_next(resources);
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
