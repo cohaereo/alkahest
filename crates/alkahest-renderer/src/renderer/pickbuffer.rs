@@ -50,10 +50,11 @@ impl Renderer {
     }
 
     // TODO(cohae): move rendering logic to Pickbuffer (where possible)
-    pub(super) fn draw_outline(&self, scene: &Scene, selected: Entity, time_since_select: f32) {
+    pub(super) fn draw_outline(&self, scene: &Scene, selected: Option<Entity>, ghosts: Vec<Entity>, time_since_select: f32) {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
+        self.pickbuffer.ghost_depth.clear(0.0, 0);
 
         unsafe {
             const NO_RT: Option<ID3D11RenderTargetView> = None;
@@ -63,19 +64,40 @@ impl Renderer {
                 .OMGetRenderTargets(Some(&mut rt_backup), None);
 
             // Draw the selected entity into the outline depth buffer
-            self.gpu
+            if let Some(sel) = selected {
+                self.gpu
+                    .context()
+                    .OMSetRenderTargets(None, Some(&self.pickbuffer.outline_depth.view));
+                self.gpu
+                    .context()
+                    .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
+                draw_entity(
+                    scene,
+                    sel,
+                    self,
+                    Some(&self.pickbuffer.static_instance_cb),
+                    TfxRenderStage::GenerateGbuffer,
+                );
+            }
+
+            // Draw the ghost entities into the ghost depth buffer
+            if ghosts.len() > 0 {
+                self.gpu
                 .context()
-                .OMSetRenderTargets(None, Some(&self.pickbuffer.outline_depth.view));
-            self.gpu
-                .context()
-                .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
-            draw_entity(
-                scene,
-                selected,
-                self,
-                Some(&self.pickbuffer.static_instance_cb),
-                TfxRenderStage::GenerateGbuffer,
-            );
+                .OMSetRenderTargets(None, Some(&self.pickbuffer.ghost_depth.view));
+                self.gpu
+                    .context()
+                    .OMSetDepthStencilState(Some(&self.pickbuffer.ghost_depth.state), 0);
+                for ghost in ghosts {
+                    draw_entity(
+                        scene,
+                        ghost,
+                        self,
+                        Some(&self.pickbuffer.static_instance_cb),
+                        TfxRenderStage::GenerateGbuffer,
+                    );
+                }
+            }
 
             // Draw the outline itself
             self.gpu
@@ -90,15 +112,16 @@ impl Renderer {
             self.gpu.set_input_topology(EPrimitiveType::Triangles);
             self.gpu
                 .context()
-                .VSSetShader(&self.pickbuffer.outline_vs, None);
+                .VSSetShader(&self.pickbuffer.outline_vs.clone(), None);
             self.gpu
                 .context()
-                .PSSetShader(&self.pickbuffer.outline_ps, None);
+                .PSSetShader(&self.pickbuffer.outline_ps.clone(), None);
             self.gpu.context().PSSetShaderResources(
                 0,
                 Some(&[
                     Some(self.pickbuffer.outline_depth.texture_view.clone()),
                     Some(self.data.lock().gbuffers.depth.texture_view.clone()),
+                    Some(self.pickbuffer.ghost_depth.texture_view.clone()),
                 ]),
             );
             self.pickbuffer.outline_cb.write(&time_since_select).ok();
@@ -115,6 +138,7 @@ pub struct Pickbuffer {
 
     pub(super) selection_request: AtomicCell<Option<(u32, u32)>>,
     pub outline_depth: DepthState,
+    pub ghost_depth: DepthState,
     pub pick_buffer: RenderTarget,
     pub pick_buffer_staging: CpuStagingBuffer,
     pub static_instance_cb: ConstantBuffer<u8>,
@@ -157,6 +181,8 @@ impl Pickbuffer {
             selection_request: AtomicCell::new(None),
             outline_depth: DepthState::create(gctx.clone(), window_size)
                 .context("Outline Depth")?,
+            ghost_depth: DepthState::create(gctx.clone(), window_size)
+                .context("Ghost Depth")?,
             pick_buffer: RenderTarget::create(
                 window_size,
                 DxgiFormat::R32_UINT,
@@ -193,6 +219,9 @@ impl Pickbuffer {
         self.outline_depth
             .resize(new_size)
             .context("Outline Depth")?;
+        self.ghost_depth
+            .resize(new_size)
+            .context("Ghost Depth")?;
         self.pick_buffer
             .resize(new_size)
             .context("Entity_Pickbuffer")?;

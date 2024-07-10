@@ -18,6 +18,8 @@ use alkahest_data::{
 };
 use anyhow::Context;
 use bitflags::bitflags;
+use glam::Vec3;
+use hecs::Entity;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use strum::{EnumCount, EnumIter};
@@ -25,7 +27,7 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        common::Hidden,
+        common::{Ghost, Hidden},
         render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
@@ -157,18 +159,25 @@ impl Renderer {
                 self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
             }
 
-            if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-                if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
-                    self.draw_outline(
-                        scene,
-                        selected,
-                        resources
-                            .get::<SelectedEntity>()
-                            .time_selected
-                            .elapsed()
-                            .as_secs_f32(),
-                    );
+            let ghosts : Vec<Entity> = scene.query::<&Ghost>().iter().map(|(e, _ )| e).collect();
+            let mut selected = resources.get::<SelectedEntity>().selected();
+            if let Some(sel) = selected {
+                if scene.entity(sel).map_or(true, |v| v.has::<Hidden>()) {
+                    selected = None;
                 }
+            }
+
+            if ghosts.len() > 0 || selected.is_some() {
+                self.draw_outline(
+                    scene,
+                    selected,
+                    ghosts,
+                    resources
+                        .get::<SelectedEntity>()
+                        .time_selected
+                        .elapsed()
+                        .as_secs_f32()
+                );
             }
         }
 

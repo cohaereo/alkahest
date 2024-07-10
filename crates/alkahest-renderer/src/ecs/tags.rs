@@ -80,6 +80,7 @@ pub enum EntityTag {
     Activity,
     Ambient,
     Global,
+    Ghost,
     Havok,
     Utility,
     User,
@@ -116,6 +117,7 @@ impl Display for EntityTag {
             EntityTag::Activity => write!(f, "Activity"),
             EntityTag::Ambient => write!(f, "Ambient"),
             EntityTag::Global => write!(f, "Global"),
+            EntityTag::Ghost => write!(f, "Ghost"),
             EntityTag::Havok => write!(f, "Havok"),
             EntityTag::Utility => write!(f, "Utility"),
             EntityTag::User => write!(f, "User"),
@@ -145,8 +147,6 @@ pub fn insert_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {
         e.insert(tag);
         return;
     }
-
-    scene.insert_one(ent, Tags::from_iter([tag])).ok();
 }
 
 pub fn remove_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {

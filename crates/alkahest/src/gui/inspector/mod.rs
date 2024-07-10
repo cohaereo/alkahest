@@ -6,7 +6,7 @@ use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{EntityWorldId, Global, Hidden, Label, Mutable},
+        common::{EntityWorldId, Ghost, Global, Hidden, Label, Mutable},
         map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
@@ -183,13 +183,30 @@ pub fn show_inspector_panel(
 
     let mut global = e.has::<Global>();
     let mut global_changed = false;
-    if e.has::<Mutable>() && !e.has::<Route>() {
-        if ui.checkbox(&mut global, "Show in all Maps").changed() {
+    let mutable = e.has::<Mutable>();
+    if !e.has::<Route>() {
+        if ui
+            .checkbox(
+                &mut global,
+                if mutable {
+                    "Show in all Maps"
+                } else {
+                    "Show ghost in all Maps"
+                },
+            )
+            .changed()
+        {
             global_changed = true;
             if global {
                 cmd.insert_one(ent, Global);
+                if !mutable {
+                    cmd.insert_one(ent, Ghost);
+                }
             } else {
                 cmd.remove_one::<Global>(ent);
+                if !mutable {
+                    cmd.remove_one::<Ghost>(ent);
+                }
             }
         };
         ui.separator();
@@ -199,8 +216,14 @@ pub fn show_inspector_panel(
     if global_changed {
         if global {
             insert_tag(scene, ent, EntityTag::Global);
+            if !mutable {
+                insert_tag(scene, ent, EntityTag::Ghost);
+            }
         } else {
             remove_tag(scene, ent, EntityTag::Global);
+            if !mutable {
+                remove_tag(scene, ent, EntityTag::Ghost);
+            }
         }
     }
 }

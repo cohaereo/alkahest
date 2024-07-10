@@ -97,6 +97,7 @@ impl AsRef<str> for Label {
 
 pub struct Hidden;
 pub struct Global;
+pub struct Ghost;
 
 /// Marker component to indicate that the entity is allowed to be modified in
 /// potentially destructive ways (e.g. deleting it, changing it's name, etc.)
