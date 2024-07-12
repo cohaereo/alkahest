@@ -104,6 +104,7 @@ impl AlkahestApp {
             false,
         )
         .unwrap();
+        renderer.set_render_settings(config::with(|c|{c.renderer.clone()}));
         resources.insert(renderer.clone());
         let stringmap = Arc::new(GlobalStringmap::load());
         resources.insert(stringmap);
