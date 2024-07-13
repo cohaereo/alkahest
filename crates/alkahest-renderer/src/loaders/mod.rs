@@ -171,7 +171,7 @@ impl AssetManager {
         total_removed += self.index_buffers.remove_all_dead();
 
         if total_removed > 0 {
-            info!("Removed {} dead assets", total_removed);
+            trace!("Removed {total_removed} dead assets");
         }
 
         while budget > 0 {
