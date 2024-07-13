@@ -1,17 +1,23 @@
 use alkahest_renderer::{
     ecs::{
-        common::Global, render::{
+        common::{Ghost, Global, Label, Mutable},
+        render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
-        }, resources::SelectedEntity, Scene, SceneInfo
+        },
+        resources::SelectedEntity,
+        tags::{EntityTag, Tags},
+        Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
 };
 use destiny_pkg::TagHash;
+use egui::ahash::HashMap;
 use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
+use rustc_hash::FxHashMap;
 
 use crate::{
     discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
@@ -45,7 +51,7 @@ impl Map {
                     Ok(mut scene) => {
                         // Move all globals to a temporary scene
                         std::mem::swap(&mut self.scene, &mut scene);
-                        self.take_globals(resources, &mut scene);
+                        self.take_globals(resources, &mut scene, self.hash);
 
                         // TODO(cohae): Use scheduler for this
                         update_static_instances_system(&self.scene);
@@ -77,19 +83,25 @@ impl Map {
     }
 
     /// Remove global entities from the scene and store them in this one
-    pub fn take_globals(&mut self, resources: &Resources, source: &mut Scene) {
+    pub fn take_globals(
+        &mut self,
+        resources: &Resources,
+        source: &mut Scene,
+        source_hash: TagHash,
+    ) {
+        let mut new_selected_entity: Option<Entity> =
+            self.usher_ghosts(resources, source, source_hash);
         let ent_list = source
             .query::<&Global>()
             .iter()
             .map(|(e, _)| e)
             .collect_vec();
-        let mut new_selected_entity: Option<Entity> = None;
 
         {
             let selected_entity = resources.get::<SelectedEntity>().selected();
             for &entity in &ent_list {
                 let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
-                if selected_entity.is_some_and(|e|e == entity) {
+                if selected_entity.is_some_and(|e| e == entity) {
                     new_selected_entity = Some(new_entity);
                 }
             }
@@ -98,6 +110,48 @@ impl Map {
         if let Some(new_entity) = new_selected_entity {
             resources.get_mut::<SelectedEntity>().select(new_entity);
         }
+    }
+
+    /// Remove global entities from the scene and store them in this one
+    pub fn usher_ghosts(
+        &mut self,
+        resources: &Resources,
+        source: &mut Scene,
+        source_hash: TagHash,
+    ) -> Option<Entity> {
+        let mut new_selected_entity: Option<Entity> = None;
+        let mut to_despawn = Vec::new();
+        {
+            let selected_entity = resources.get::<SelectedEntity>().selected();
+            for (ent, (ghost, label)) in source.query_mut::<(&Ghost, Option<&Label>)>() {
+                if source_hash == ghost.hash {
+                    let mut g = ghost.clone();
+                    g.map_name = Some(self.name.clone());
+                    let e = self.scene.spawn((
+                        g,
+                        Global,
+                        Mutable,
+                        Tags::from_iter([EntityTag::Ghost, EntityTag::Global]),
+                    ));
+                    if let Some(l) = label {
+                        self.scene.insert_one(e, Label::from(l.label.as_str())).ok();
+                    }
+                    if selected_entity.is_some_and(|e| e == ent) {
+                        new_selected_entity = Some(e);
+                    }
+                } else if ghost.hash == self.hash {
+                    if selected_entity.is_some_and(|e| e == ent) {
+                        new_selected_entity = Some(ghost.entity);
+                    }
+                    to_despawn.push(ent);
+                }
+            }
+        }
+        for ent in to_despawn {
+            source.despawn(ent).ok();
+        }
+
+        new_selected_entity
     }
 
     fn start_load(&mut self, resources: &Resources) {
@@ -138,6 +192,13 @@ pub struct MapList {
 impl MapList {
     pub fn current_map_index(&self) -> usize {
         self.current_map
+    }
+
+    pub fn scene_hashmap(&self) -> FxHashMap<TagHash, &Scene> {
+        self.maps
+            .iter()
+            .map(|map| (map.hash, &map.scene))
+            .collect::<FxHashMap<_, _>>()
     }
 
     pub fn current_map(&self) -> Option<&Map> {
@@ -246,6 +307,10 @@ impl MapList {
             return;
         }
 
+        if index == self.current_map {
+            return;
+        }
+
         self.previous_map = Some(self.current_map);
         self.current_map = index;
 
@@ -259,9 +324,10 @@ impl MapList {
                 return;
             }
 
+            let source_hash = self.maps[previous_map].hash;
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
-            dest.take_globals(resources, &mut source);
+            dest.take_globals(resources, &mut source, source_hash);
             self.maps[previous_map].scene = source;
         }
 

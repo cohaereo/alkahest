@@ -16,7 +16,7 @@ use alkahest_renderer::{
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Route, Ruler, Sphere},
-        Scene,
+        Scene, SceneInfo,
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_POKEBALL,
@@ -183,47 +183,52 @@ pub fn show_inspector_panel(
 
     let mut global = e.has::<Global>();
     let mut global_changed = false;
-    let mutable = e.has::<Mutable>();
+    let mut ghost = e.has::<Ghost>();
+    let mut ghost_changed = false;
     if !e.has::<Route>() {
-        if ui
-            .checkbox(
-                &mut global,
-                if mutable {
-                    "Show in all Maps"
+        if e.has::<Mutable>() {
+            if ui.checkbox(&mut global, "Show in all Maps").changed() {
+                global_changed = true;
+                if global {
+                    cmd.insert_one(ent, Global);
                 } else {
-                    "Show ghost in all Maps"
-                },
-            )
-            .changed()
-        {
-            global_changed = true;
-            if global {
-                cmd.insert_one(ent, Global);
-                if !mutable {
-                    cmd.insert_one(ent, Ghost);
+                    cmd.remove_one::<Global>(ent);
                 }
-            } else {
-                cmd.remove_one::<Global>(ent);
-                if !mutable {
+            };
+            ui.separator();
+        } else {
+            if ui.checkbox(&mut ghost, "Show ghost in all Maps").changed() {
+                ghost_changed = true;
+                if ghost {
+                    cmd.insert_one(
+                        ent,
+                        Ghost {
+                            hash: scene.get_map_hash().expect("Scene has no hash"),
+                            entity: ent,
+                            map_name: None,
+                        },
+                    );
+                } else {
                     cmd.remove_one::<Ghost>(ent);
                 }
-            }
-        };
-        ui.separator();
+            };
+            ui.separator();
+        }
     }
     show_inspector_components(ui, scene, e, resources);
 
     if global_changed {
         if global {
             insert_tag(scene, ent, EntityTag::Global);
-            if !mutable {
-                insert_tag(scene, ent, EntityTag::Ghost);
-            }
         } else {
             remove_tag(scene, ent, EntityTag::Global);
-            if !mutable {
-                remove_tag(scene, ent, EntityTag::Ghost);
-            }
+        }
+    }
+    if ghost_changed {
+        if global {
+            insert_tag(scene, ent, EntityTag::Ghost);
+        } else {
+            remove_tag(scene, ent, EntityTag::Ghost);
         }
     }
 }
@@ -265,7 +270,8 @@ fn show_inspector_components(
         ShaderBallComponent,
         DecoratorRenderer,
         SRespawnPoint,
-        NodeMetadata
+        NodeMetadata,
+        Ghost
     );
 }
 

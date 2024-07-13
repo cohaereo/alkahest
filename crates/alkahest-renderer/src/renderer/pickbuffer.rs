@@ -8,7 +8,9 @@ use alkahest_data::{
 };
 use anyhow::Context;
 use crossbeam::atomic::AtomicCell;
+use destiny_pkg::TagHash;
 use hecs::Entity;
+use rustc_hash::FxHashMap;
 use windows::Win32::{
     Foundation::RECT,
     Graphics::Direct3D11::{
@@ -18,8 +20,9 @@ use windows::Win32::{
 
 use crate::{
     ecs::{
+        common::Ghost,
         render::{draw_entity, static_geometry::draw_static_instances_individual_system},
-        Scene,
+        Scene, SceneInfo,
     },
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
@@ -50,7 +53,14 @@ impl Renderer {
     }
 
     // TODO(cohae): move rendering logic to Pickbuffer (where possible)
-    pub(super) fn draw_outline(&self, scene: &Scene, selected: Option<Entity>, ghosts: Vec<Entity>, time_since_select: f32) {
+    pub(super) fn draw_outline(
+        &self,
+        scene: &Scene,
+        selected: Option<Entity>,
+        all_scenes: FxHashMap<TagHash, &Scene>,
+        ghosts: Vec<&Ghost>,
+        time_since_select: f32,
+    ) {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
@@ -71,31 +81,59 @@ impl Renderer {
                 self.gpu
                     .context()
                     .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
-                draw_entity(
-                    scene,
-                    sel,
-                    self,
-                    Some(&self.pickbuffer.static_instance_cb),
-                    TfxRenderStage::GenerateGbuffer,
-                );
+
+                let ghost = scene.entity(sel).unwrap().get::<&Ghost>();
+                if ghost
+                    .as_ref()
+                    .is_some_and(|g| scene.get_map_hash().is_some_and(|t| t != g.hash))
+                {
+                    if let Some(g) = ghost {
+                        match all_scenes.get(&g.hash) {
+                            Some(&ghost_scene) => {
+                                draw_entity(
+                                    ghost_scene,
+                                    g.entity,
+                                    self,
+                                    Some(&self.pickbuffer.static_instance_cb),
+                                    TfxRenderStage::GenerateGbuffer,
+                                );
+                            }
+                            None => warn!("Ghost Entity had no home!"),
+                        }
+                    }
+                } else {
+                    draw_entity(
+                        scene,
+                        sel,
+                        self,
+                        Some(&self.pickbuffer.static_instance_cb),
+                        TfxRenderStage::GenerateGbuffer,
+                    );
+                }
             }
 
             // Draw the ghost entities into the ghost depth buffer
             if ghosts.len() > 0 {
                 self.gpu
-                .context()
-                .OMSetRenderTargets(None, Some(&self.pickbuffer.ghost_depth.view));
+                    .context()
+                    .OMSetRenderTargets(None, Some(&self.pickbuffer.ghost_depth.view));
                 self.gpu
                     .context()
                     .OMSetDepthStencilState(Some(&self.pickbuffer.ghost_depth.state), 0);
+
                 for ghost in ghosts {
-                    draw_entity(
-                        scene,
-                        ghost,
-                        self,
-                        Some(&self.pickbuffer.static_instance_cb),
-                        TfxRenderStage::GenerateGbuffer,
-                    );
+                    match all_scenes.get(&ghost.hash) {
+                        Some(&ghost_scene) => {
+                            draw_entity(
+                                ghost_scene,
+                                ghost.entity,
+                                self,
+                                Some(&self.pickbuffer.static_instance_cb),
+                                TfxRenderStage::GenerateGbuffer,
+                            );
+                        }
+                        None => warn!("Ghost Entity had no home!"),
+                    }
                 }
             }
 
@@ -181,8 +219,7 @@ impl Pickbuffer {
             selection_request: AtomicCell::new(None),
             outline_depth: DepthState::create(gctx.clone(), window_size)
                 .context("Outline Depth")?,
-            ghost_depth: DepthState::create(gctx.clone(), window_size)
-                .context("Ghost Depth")?,
+            ghost_depth: DepthState::create(gctx.clone(), window_size).context("Ghost Depth")?,
             pick_buffer: RenderTarget::create(
                 window_size,
                 DxgiFormat::R32_UINT,
@@ -219,9 +256,7 @@ impl Pickbuffer {
         self.outline_depth
             .resize(new_size)
             .context("Outline Depth")?;
-        self.ghost_depth
-            .resize(new_size)
-            .context("Ghost Depth")?;
+        self.ghost_depth.resize(new_size).context("Ghost Depth")?;
         self.pick_buffer
             .resize(new_size)
             .context("Entity_Pickbuffer")?;

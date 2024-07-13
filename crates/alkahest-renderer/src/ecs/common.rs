@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
+use destiny_pkg::TagHash;
 use ecolor::Color32;
+use hecs::Entity;
 
 /// Tiger entity world ID
 #[derive(Copy, Clone)]
@@ -97,7 +99,12 @@ impl AsRef<str> for Label {
 
 pub struct Hidden;
 pub struct Global;
-pub struct Ghost;
+#[derive(Clone)]
+pub struct Ghost {
+    pub hash: TagHash,
+    pub entity: Entity,
+    pub map_name: Option<String>
+}
 
 /// Marker component to indicate that the entity is allowed to be modified in
 /// potentially destructive ways (e.g. deleting it, changing it's name, etc.)

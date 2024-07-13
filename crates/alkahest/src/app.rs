@@ -334,8 +334,9 @@ impl AlkahestApp {
                             maps.update_maps(resources);
 
                             let map = maps.current_map().map(|m| &m.scene).unwrap_or(scratch_map);
+                            let all_maps = maps.scene_hashmap();
 
-                            renderer.render_world(&*resources.get::<Camera>(), map, resources);
+                            renderer.render_world(&*resources.get::<Camera>(), map, all_maps, resources);
                         }
 
                         unsafe {
