@@ -104,7 +104,7 @@ impl AlkahestApp {
             false,
         )
         .unwrap();
-        renderer.set_render_settings(config::with(|c|{c.renderer.clone()}));
+        renderer.set_render_settings(config::with(|c| c.renderer.clone()));
         resources.insert(renderer.clone());
         let stringmap = Arc::new(GlobalStringmap::load());
         resources.insert(stringmap);
@@ -258,20 +258,6 @@ impl AlkahestApp {
                             resources
                                 .get_mut::<Camera>()
                                 .update_mouse(Vec2::ZERO, scroll_y);
-                        }
-                    }
-                    WindowEvent::MouseInput { .. } => {
-                        let input = resources.get::<InputState>();
-                        if input.mouse_left_clicked()
-                            && !gui.egui.wants_pointer_input()
-                            && !resources.get::<SelectedEntity>().changed_this_frame
-                        {
-                            if let Some(mouse_pos) = gui.egui.pointer_interact_pos() {
-                                renderer.pickbuffer.request_selection(
-                                    (mouse_pos.x as f64 * window.scale_factor()).round() as u32,
-                                    (mouse_pos.y as f64 * window.scale_factor()).round() as u32,
-                                );
-                            }
                         }
                     }
                     WindowEvent::Resized(new_dims) => {

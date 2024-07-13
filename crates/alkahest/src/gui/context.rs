@@ -15,11 +15,11 @@ use crate::{
         bottom_bar::BottomBar,
         configuration::RenderSettingsPanel,
         console::ConsolePanel,
+        crosshair::CrosshairOverlay,
         fps_display::FpsDisplayOverlay,
         inspector::InspectorPanel,
         menu::MenuBar,
         node_gizmos::NodeGizmoOverlay,
-        crosshair::CrosshairOverlay,
         outliner::OutlinerPanel,
         profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
@@ -194,6 +194,7 @@ impl GuiViewManager {
     pub fn with_default_views() -> Self {
         let mut views = Self::default();
 
+        views.insert(NodeGizmoOverlay);
         views.insert(TfxErrorViewer::default());
         views.insert(TfxExternEditor::default());
         views.insert(RenderSettingsPanel);
@@ -203,7 +204,6 @@ impl GuiViewManager {
         views.insert(InspectorPanel);
         views.insert(ConsolePanel::default());
         views.insert(PuffinProfiler);
-        views.insert(NodeGizmoOverlay);
         views.insert(CrosshairOverlay);
 
         views.insert_overlay(FpsDisplayOverlay::default());

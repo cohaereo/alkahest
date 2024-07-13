@@ -1,4 +1,7 @@
-use std::mem::size_of;
+use std::{
+    mem::size_of,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use alkahest_data::{
     dxgi::DxgiFormat,
@@ -114,6 +117,8 @@ pub struct Pickbuffer {
     pub is_drawing_selection: bool,
 
     pub(super) selection_request: AtomicCell<Option<(u32, u32)>>,
+    selection_ready: AtomicBool,
+
     pub outline_depth: DepthState,
     pub pick_buffer: RenderTarget,
     pub pick_buffer_staging: CpuStagingBuffer,
@@ -155,6 +160,7 @@ impl Pickbuffer {
         Ok(Self {
             is_drawing_selection: false,
             selection_request: AtomicCell::new(None),
+            selection_ready: AtomicBool::new(false),
             outline_depth: DepthState::create(gctx.clone(), window_size)
                 .context("Outline Depth")?,
             pick_buffer: RenderTarget::create(
@@ -205,6 +211,7 @@ impl Pickbuffer {
 
     pub fn request_selection(&self, x: u32, y: u32) {
         self.pocus().selection_request.store(Some((x, y)));
+        self.selection_ready.store(false, Ordering::Relaxed);
     }
 
     pub fn cancel_request(&self) {
@@ -214,6 +221,9 @@ impl Pickbuffer {
     /// Finish the current selection request and return the entity id at the request coordinates
     /// Must only be called after the current frame has been processed by the GPU
     pub fn finish_request(&self) -> Option<u32> {
+        if !self.selection_ready.load(Ordering::Relaxed) {
+            return None;
+        }
         self.pocus()
             .selection_request
             .take()
@@ -248,6 +258,7 @@ impl Pickbuffer {
     pub fn end(&self, gpu: &GpuContext) {
         self.pick_buffer.copy_to_staging(&self.pick_buffer_staging);
         self.pocus().is_drawing_selection = false;
+        self.selection_ready.store(true, Ordering::Relaxed);
         unsafe {
             gpu.context().RSSetScissorRects(None);
         }

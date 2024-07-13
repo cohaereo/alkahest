@@ -7,15 +7,18 @@ use alkahest_renderer::{
         transform::Transform,
     },
     icons::ICON_HELP,
+    renderer::RendererShared,
     resources::Resources,
     ColorExt,
 };
-use egui::{Color32, Context, Pos2, Rect};
+use egui::{Color32, Context, Frame, Pos2, Rect, Sense, Ui};
 use glam::Vec2;
 use winit::window::Window;
 
 use crate::{
-    config, gui::context::{GuiCtx, GuiView, ViewResult}, maplist::MapList
+    config,
+    gui::context::{GuiCtx, GuiView, ViewResult},
+    maplist::MapList,
 };
 
 pub struct NodeGizmoOverlay;
@@ -35,6 +38,24 @@ impl GuiView for NodeGizmoOverlay {
         let camera = resources.get::<Camera>();
         let screen_size = ctx.screen_rect().size();
         let painter = ctx.layer_painter(egui::LayerId::background());
+
+        // egui::CentralPanel::default()
+        //     .frame(Frame::default())
+        //     .show(ctx, |ui| {
+
+        let mut panel_ui = Ui::new(
+            ctx.clone(),
+            egui::LayerId::background(),
+            "node_nametags".into(),
+            ctx.available_rect(),
+            ctx.screen_rect(),
+        );
+
+        let mut selected_entity = resources.get_mut::<SelectedEntity>();
+        let mut top_hovered = None;
+        let mut rp_list = vec![];
+        let response = panel_ui.allocate_response(panel_ui.available_size(), Sense::click());
+        // let response = panel_ui.allocate_response(egui::vec2(4.0, 4.0), Sense::click());
 
         // {
         //     let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
@@ -67,8 +88,6 @@ impl GuiView for NodeGizmoOverlay {
 
         // if self.debug_overlay.borrow().show_map_resources {
         if true {
-            let mut selected_entity = resources.get_mut::<SelectedEntity>();
-
             let maps = resources.get::<MapList>();
             if let Some(map) = maps.current_map() {
                 struct NodeDisplayPoint {
@@ -77,8 +96,6 @@ impl GuiView for NodeGizmoOverlay {
                     label: String,
                     icon: Option<Icon>,
                 }
-
-                let mut rp_list = vec![];
 
                 let filters = resources.get::<NodeFilterSet>();
                 for (e, (transform, origin, label, icon, filter)) in map
@@ -176,8 +193,6 @@ impl GuiView for NodeGizmoOverlay {
 
                 rp_list.reverse();
 
-                let mut top_hovered = None;
-
                 for (i, (e, _, transform, node)) in rp_list.iter().enumerate() {
                     let projected_point = camera
                         .world_to_projective
@@ -230,9 +245,11 @@ impl GuiView for NodeGizmoOverlay {
                             );
                         }
 
-                        if let Some(mouse_pos) = ctx.input(|i| i.pointer.latest_pos()) {
-                            if debug_string_rect.expand(4.0).contains(mouse_pos) {
-                                top_hovered = Some((i, debug_string_rect));
+                        if response.hovered() {
+                            if let Some(mouse_pos) = ctx.input(|i| i.pointer.latest_pos()) {
+                                if debug_string_rect.expand(4.0).contains(mouse_pos) {
+                                    top_hovered = Some((i, debug_string_rect));
+                                }
                             }
                         }
 
@@ -314,13 +331,14 @@ impl GuiView for NodeGizmoOverlay {
                     }
                 }
 
-                if let Some((top_index, top_rect)) = top_hovered {
-                    let is_hovered = if egui_lmb_clicked(ctx).is_some() {
-                        selected_entity.select(rp_list[top_index].0);
-                        false
-                    } else {
-                        selected_entity.selected() != Some(rp_list[top_index].0)
-                    };
+                if let Some((_top_index, top_rect)) = top_hovered {
+                    // let is_hovered = if egui_lmb_clicked(ctx).is_some() {
+                    //     selected_entity.select(rp_list[top_index].0);
+                    //     false
+                    // } else {
+                    //     selected_entity.selected() != Some(rp_list[top_index].0)
+                    // };
+                    let is_hovered = true;
 
                     painter.rect(
                         top_rect.expand(8.0),
@@ -339,6 +357,21 @@ impl GuiView for NodeGizmoOverlay {
                 }
             }
         }
+
+        if response.clicked() {
+            if let Some((top_index, _top_rect)) = top_hovered {
+                selected_entity.select(rp_list[top_index].0);
+            } else {
+                if let Some(mouse_pos) = ctx.pointer_interact_pos() {
+                    let renderer = resources.get::<RendererShared>();
+                    renderer.pickbuffer.request_selection(
+                        (mouse_pos.x * ctx.pixels_per_point()).round() as u32,
+                        (mouse_pos.y * ctx.pixels_per_point()).round() as u32,
+                    );
+                }
+            }
+        }
+        // });
 
         None
     }
