@@ -3,7 +3,8 @@ use alkahest_renderer::icons::{
     ICON_ALPHA_G_BOX_OUTLINE, ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_I_BOX_OUTLINE,
     ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE, ICON_ALPHA_W_BOX_OUTLINE,
     ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE, ICON_MOUSE_LEFT_CLICK_OUTLINE,
-    ICON_MOUSE_RIGHT_CLICK_OUTLINE,
+    ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_NUMERIC_1_BOX_OUTLINE, ICON_NUMERIC_2_BOX_OUTLINE,
+    ICON_NUMERIC_3_BOX_OUTLINE, ICON_NUMERIC_4_BOX_OUTLINE,
 };
 use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
@@ -231,6 +232,31 @@ impl MenuBar {
                                 ICON_MOUSE_LEFT_CLICK_OUTLINE,
                                 "Select Object"
                             );
+
+                            control_description!(
+                                ui,
+                                format!("{}", ICON_NUMERIC_1_BOX_OUTLINE),
+                                "Selection Tool"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!("{}", ICON_NUMERIC_2_BOX_OUTLINE),
+                                "Translation Tool"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!("{}", ICON_NUMERIC_3_BOX_OUTLINE),
+                                "Rotation Tool"
+                            );
+
+                            control_description!(
+                                ui,
+                                format!("{}", ICON_NUMERIC_4_BOX_OUTLINE),
+                                "Scale Tool"
+                            );
+
                             //
                             // control_description!(
                             //     ui,
