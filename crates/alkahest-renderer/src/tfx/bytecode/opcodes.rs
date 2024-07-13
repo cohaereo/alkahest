@@ -89,7 +89,6 @@ pub enum TfxBytecodeOp {
     /// Pushes an extern u32 to the stack as a u64
     /// Offset is in u32s (4 bytes)
     #[br(magic = 0x40_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
-    // TODO(cohae): Carbon copy of 0x3f???
     /// Pushes an extern UAV to the stack as a u64
     /// Offset is in u64s (8 bytes)
     #[br(magic = 0x41_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },

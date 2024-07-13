@@ -96,8 +96,7 @@ impl SsaoRenderer {
         }
 
         unsafe {
-            const NO_RT: Option<ID3D11RenderTargetView> = None;
-            let mut rt_backup = [NO_RT; 4];
+            let mut rt_backup = [const { None }; 4];
             renderer
                 .gpu
                 .context()

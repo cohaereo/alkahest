@@ -1010,6 +1010,10 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     channels[41] = Vec4::X * 50.0; // Fog falloff
 
     // Misc lights
+    channels[84] = Vec4::new(
+        1.0, // AO intensity
+        1.0, 1.0, 1.0,
+    );
     channels[93] = Vec4::new(1.0, 0.0, 0.0, 0.0);
     channels[127] = Vec4::ZERO;
     channels[131] = Vec4::new(0.5, 0.0, 0.3, 0.0); // Seems related to line lights
