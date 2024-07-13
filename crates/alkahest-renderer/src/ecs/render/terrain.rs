@@ -10,6 +10,7 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
+    ecs::common::Hidden,
     gpu::{buffer::ConstantBuffer, texture::Texture},
     gpu_event,
     handle::Handle,
@@ -188,7 +189,11 @@ pub fn draw_terrain_patches_system(
         return;
     }
 
-    for (e, (terrain,)) in scene.query::<(&TerrainPatches,)>().iter() {
+    for (e, (terrain,)) in scene
+        .query::<(&TerrainPatches,)>()
+        .without::<&Hidden>()
+        .iter()
+    {
         renderer.pickbuffer.with_entity(e, || {
             terrain.draw(renderer, render_stage);
         });
