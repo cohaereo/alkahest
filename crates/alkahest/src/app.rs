@@ -8,7 +8,7 @@ use alkahest_renderer::{
         tags::{NodeFilter, NodeFilterSet},
         Scene,
     },
-    gpu::GpuContext,
+    gpu::{texture::LOW_RES, GpuContext},
     gpu_event,
     input::InputState,
     renderer::{Renderer, RendererShared},
@@ -156,6 +156,11 @@ impl AlkahestApp {
             }
         });
         resources.insert(node_filter_set);
+
+        {
+            let args = resources.get::<ApplicationArgs>();
+            LOW_RES.store(args.low_res, std::sync::atomic::Ordering::Relaxed);
+        }
 
         Self {
             window,
