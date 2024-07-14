@@ -1,6 +1,7 @@
 use alkahest_renderer::{
     camera::{get_look_angle, tween::Tween, Camera},
     ecs::{
+        common::Ghost,
         transform::Transform,
         utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
         Scene, SceneInfo,
@@ -8,7 +9,7 @@ use alkahest_renderer::{
     icons::{
         ICON_ALERT, ICON_ALPHA_A_BOX, ICON_ALPHA_B_BOX, ICON_CAMERA, ICON_CAMERA_CONTROL,
         ICON_CLIPBOARD, ICON_DELETE, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE,
-        ICON_MAP_MARKER, ICON_MAP_MARKER_PATH, ICON_MAP_MARKER_PLUS, ICON_TAG,
+        ICON_GHOST_OUTLINE, ICON_MAP_MARKER, ICON_MAP_MARKER_PATH, ICON_MAP_MARKER_PLUS, ICON_TAG,
     },
     renderer::RendererShared,
 };
@@ -614,6 +615,37 @@ impl ComponentPanel for Route {
             color_edit_button_rgba(ui, &mut self.color, Alpha::Opaque);
 
             ui.label("Color");
+        });
+    }
+}
+
+impl ComponentPanel for Ghost {
+    fn inspector_name() -> &'static str {
+        "Ghost"
+    }
+
+    fn has_inspector_ui() -> bool {
+        true
+    }
+
+    fn inspector_icon() -> char {
+        ICON_GHOST_OUTLINE
+    }
+
+    fn show_inspector_ui<'s>(
+        &mut self,
+        _: &'s Scene,
+        _: EntityRef<'s>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+    ) {
+        ui.horizontal(|ui| {
+            ui.strong("Home Map: ");
+            ui.label(format!("{}({})", self.map_name.as_ref().map_or("", |s|s.as_str()), self.hash.to_string()));
+        });
+        ui.horizontal(|ui| {
+            ui.strong("Entity: ");
+            ui.label(self.entity.id().to_string());
         });
     }
 }

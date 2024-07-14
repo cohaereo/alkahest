@@ -6,7 +6,7 @@ use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{EntityWorldId, Global, Hidden, Label, Mutable},
+        common::{EntityWorldId, Ghost, Global, Hidden, Label, Mutable},
         map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
@@ -16,7 +16,7 @@ use alkahest_renderer::{
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Route, Ruler, Sphere},
-        Scene,
+        Scene, SceneInfo,
     },
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_POKEBALL,
@@ -183,16 +183,37 @@ pub fn show_inspector_panel(
 
     let mut global = e.has::<Global>();
     let mut global_changed = false;
-    if e.has::<Mutable>() && !e.has::<Route>() {
-        if ui.checkbox(&mut global, "Show in all Maps").changed() {
-            global_changed = true;
-            if global {
-                cmd.insert_one(ent, Global);
-            } else {
-                cmd.remove_one::<Global>(ent);
-            }
-        };
-        ui.separator();
+    let mut ghost = e.has::<Ghost>();
+    let mut ghost_changed = false;
+    if !e.has::<Route>() {
+        if e.has::<Mutable>() {
+            if ui.checkbox(&mut global, "Show in all Maps").changed() {
+                global_changed = true;
+                if global {
+                    cmd.insert_one(ent, Global);
+                } else {
+                    cmd.remove_one::<Global>(ent);
+                }
+            };
+            ui.separator();
+        } else {
+            if ui.checkbox(&mut ghost, "Show ghost in all Maps").changed() {
+                ghost_changed = true;
+                if ghost {
+                    cmd.insert_one(
+                        ent,
+                        Ghost {
+                            hash: scene.get_map_hash().expect("Scene has no hash"),
+                            entity: ent,
+                            map_name: None,
+                        },
+                    );
+                } else {
+                    cmd.remove_one::<Ghost>(ent);
+                }
+            };
+            ui.separator();
+        }
     }
     show_inspector_components(ui, scene, e, resources);
 
@@ -201,6 +222,13 @@ pub fn show_inspector_panel(
             insert_tag(scene, ent, EntityTag::Global);
         } else {
             remove_tag(scene, ent, EntityTag::Global);
+        }
+    }
+    if ghost_changed {
+        if global {
+            insert_tag(scene, ent, EntityTag::Ghost);
+        } else {
+            remove_tag(scene, ent, EntityTag::Ghost);
         }
     }
 }
@@ -242,7 +270,8 @@ fn show_inspector_components(
         ShaderBallComponent,
         DecoratorRenderer,
         SRespawnPoint,
-        NodeMetadata
+        NodeMetadata,
+        Ghost
     );
 }
 
