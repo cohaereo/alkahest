@@ -31,10 +31,6 @@ impl GuiView for NodeGizmoOverlay {
         resources: &Resources,
         gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
-        if config::with(|c| !c.visual.node_nametags) {
-            return None;
-        }
-
         let camera = resources.get::<Camera>();
         let screen_size = ctx.screen_rect().size();
         let painter = ctx.layer_painter(egui::LayerId::background());
@@ -87,7 +83,7 @@ impl GuiView for NodeGizmoOverlay {
         // }
 
         // if self.debug_overlay.borrow().show_map_resources {
-        if true {
+        if config::with(|c| c.visual.node_nametags) {
             let maps = resources.get::<MapList>();
             if let Some(map) = maps.current_map() {
                 struct NodeDisplayPoint {
