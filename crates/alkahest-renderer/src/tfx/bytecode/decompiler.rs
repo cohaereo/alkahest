@@ -429,8 +429,7 @@ impl TfxBytecodeDecompiler {
                 // TfxBytecodeOp::Unk50 { unk1 } => todo!(),
                 // TfxBytecodeOp::Unk51 => todo!(),
                 TfxBytecodeOp::Unk52 { unk1, unk2 } => {
-                    let v = stack_top!().clone();
-                    stack_push!(format!("unk52({unk1}, {unk2}, {v})"));
+                    stack_push!(format!("unk52({unk1}, {unk2})"));
                 }
                 // TfxBytecodeOp::Unk53 { unk1, unk2 } => todo!(),
                 // TfxBytecodeOp::Unk54 { unk1, unk2 } => todo!(),

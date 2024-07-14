@@ -332,12 +332,6 @@ impl GuiView for NodeGizmoOverlay {
                 }
 
                 if let Some((_top_index, top_rect)) = top_hovered {
-                    // let is_hovered = if egui_lmb_clicked(ctx).is_some() {
-                    //     selected_entity.select(rp_list[top_index].0);
-                    //     false
-                    // } else {
-                    //     selected_entity.selected() != Some(rp_list[top_index].0)
-                    // };
                     let is_hovered = true;
 
                     painter.rect(
@@ -375,29 +369,4 @@ impl GuiView for NodeGizmoOverlay {
 
         None
     }
-}
-
-fn egui_lmb_clicked(ctx: &Context) -> Option<Pos2> {
-    if let Some(mouse_event) = ctx.input(|i| {
-        i.events
-            .iter()
-            .find(|e| matches!(e, egui::Event::PointerButton { .. }))
-            .cloned()
-    }) {
-        let egui::Event::PointerButton {
-            pos,
-            button,
-            pressed,
-            modifiers,
-        } = mouse_event
-        else {
-            unreachable!();
-        };
-
-        if pressed && button == egui::PointerButton::Primary && modifiers.is_none() {
-            return Some(pos);
-        }
-    }
-
-    None
 }

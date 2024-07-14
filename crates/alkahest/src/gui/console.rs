@@ -25,7 +25,7 @@ use alkahest_renderer::{
     resources::Resources,
     tfx::bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
 };
-use anyhow::Context;
+use anyhow::{Context, Error};
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
@@ -546,12 +546,17 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                     info!("  {i}: {}", o.disassemble(Some(constants)));
                 }
 
-                if let Ok(e) =
-                    TfxBytecodeDecompiler::decompile(&opcodes, constants).map(|e| e.pretty_print())
+                match TfxBytecodeDecompiler::decompile(&opcodes, constants)
+                    .map(|e| e.pretty_print())
                 {
-                    info!("Decompiled bytecode:");
-                    for l in e.lines() {
-                        info!("  {l}");
+                    Ok(e) => {
+                        info!("Decompiled bytecode:");
+                        for l in e.lines() {
+                            info!("  {l}");
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to decompile {stage:?} bytecode: {e}");
                     }
                 }
             }
