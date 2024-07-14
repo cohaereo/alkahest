@@ -7,6 +7,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{EntityWorldId, Global, Hidden, Label, Mutable},
+        hierarchy::{Children, Parent},
         map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
@@ -19,7 +20,8 @@ use alkahest_renderer::{
         Scene,
     },
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_POKEBALL,
+        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_HUMAN_CHILD,
+        ICON_HUMAN_MALE, ICON_HUMAN_MALE_FEMALE_CHILD, ICON_POKEBALL,
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
@@ -60,7 +62,8 @@ impl GuiView for InspectorPanel {
 
         if let Some(map) = maps.current_map_mut() {
             egui::Window::new("Inspector").show(ctx, |ui| {
-                if let Some(ent) = resources.get::<SelectedEntity>().selected() {
+                let selected = resources.get::<SelectedEntity>().selected();
+                if let Some(ent) = selected {
                     show_inspector_panel(
                         ui,
                         &mut map.scene,
@@ -144,32 +147,70 @@ pub fn show_inspector_panel(
         } else {
             format!("Entity {}", e.entity().id())
         };
-
-        if e.has::<Mutable>() {
-            let some_label = e.get::<&mut Label>();
-            if some_label.as_ref().is_some_and(|l| !l.default) {
-                if let Some(mut label) = some_label {
-                    egui::TextEdit::singleline(&mut label.label)
-                        .font(FontId::proportional(22.0))
-                        .ui(ui);
+        ui.horizontal(|ui| {
+            if e.has::<Mutable>() {
+                let some_label = e.get::<&mut Label>();
+                if some_label.as_ref().is_some_and(|l| !l.default) {
+                    if let Some(mut label) = some_label {
+                        egui::TextEdit::singleline(&mut label.label)
+                            .font(FontId::proportional(22.0))
+                            .ui(ui);
+                    }
+                } else {
+                    ui.label(RichText::new(title).size(24.0).strong());
+                    if ui
+                        .button(RichText::new(ICON_TAG.to_string()).size(24.0).strong())
+                        .on_hover_text("Add label")
+                        .clicked()
+                    {
+                        if let Some(mut label) = some_label {
+                            label.default = false;
+                        } else {
+                            cmd.insert_one(ent, Label::from(format!("Entity {}", e.entity().id())));
+                        }
+                    }
                 }
             } else {
                 ui.label(RichText::new(title).size(24.0).strong());
-                if ui
-                    .button(RichText::new(ICON_TAG.to_string()).size(24.0).strong())
-                    .on_hover_text("Add label")
-                    .clicked()
-                {
-                    if let Some(mut label) = some_label {
-                        label.default = false;
+            }
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
+                if let Some(parent) = e.get::<&Parent>() {
+                    let title = if let Ok(label) = scene.get::<&Label>(parent.0) {
+                        format!("{label} (id {})", e.entity().id())
                     } else {
-                        cmd.insert_one(ent, Label::from(format!("Entity {}", e.entity().id())));
+                        format!("Entity {}", e.entity().id())
+                    };
+
+                    if ui
+                        .button(RichText::new(ICON_HUMAN_MALE.to_string()).size(20.0))
+                        .on_hover_text(format!("Parent: {title}"))
+                        .clicked()
+                    {
+                        resources.get_mut::<SelectedEntity>().select(parent.0);
                     }
                 }
-            }
-        } else {
-            ui.label(RichText::new(title).size(24.0).strong());
-        }
+                if let Some(children) = e.get::<&Children>() {
+                    ui.menu_button(
+                        RichText::new(ICON_HUMAN_MALE_FEMALE_CHILD.to_string()).size(20.0),
+                        |ui| {
+                            for c in children.iter() {
+                                let title = if let Ok(label) = scene.get::<&Label>(*c) {
+                                    format!("{label} (id {})", e.entity().id())
+                                } else {
+                                    format!("Entity {}", e.entity().id())
+                                };
+
+                                if ui.selectable_label(false, title).clicked() {
+                                    resources.get_mut::<SelectedEntity>().select(*c);
+                                }
+                            }
+                        },
+                    )
+                    .response
+                    .on_hover_text("Children");
+                }
+            });
+        });
     });
     ui.separator();
 

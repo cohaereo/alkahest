@@ -68,7 +68,9 @@ received some polish!
 - Added a dim outline when hovering over nametags
 - Added a unit testing framework
     - Currently used for sanity testing various loaders like maps and activities
-- Added Page Up/Down to move up and down in the map list @Froggy618157725 in [#31](https://github.com/cohaereo/alkahest/pull/31)
+- Added Page Up/Down to move up and down in the map list @Froggy618157725
+  in [#31](https://github.com/cohaereo/alkahest/pull/31)
+- Added a Children/Parent button in inspector by cohaereo
 
 ### Changed
 
