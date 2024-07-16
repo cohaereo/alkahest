@@ -745,13 +745,13 @@ extern_struct! {
         0x08 => unk08: TextureView > unimplemented(true),
         0x10 => unk10: Vec4 > unimplemented(true),
         // Specular light direction, as a 3 dimensional vector
-        0x30 => unk30: Vec4 > unimplemented(true) > default(Vec4::new(-1.0, -1.0, 1.0, 0.0)),
+        0x30 => unk30: Vec4 > unimplemented(true) > default(Vec4::new(1.0, -1.0, 1.0, 0.0)),
         // Diffuse light direction, as a 3 dimensional vector
-        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(-1.0, -1.0, 1.0, 0.0)),
+        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(1.0, -1.0, 1.0, 0.0)),
         0x70 => unk70: Vec4 > unimplemented(true),
         0x80 => unk80: Vec4 > unimplemented(true),
         0x90 => unk90: f32 > unimplemented(true),
-        0x94 => unk94: f32 > unimplemented(true) > default(0.0),
+        0x94 => unk94: f32 > unimplemented(true) > default(-0.5),
         0x98 => unk98: f32 > unimplemented(true),
         0x9c => unk9c: f32 > unimplemented(true),
         0xa0 => unka0: f32 > unimplemented(true),
@@ -996,6 +996,7 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
 
     // Sun related
     channels[82] = Vec4::ZERO;
+    channels[83] = Vec4::ZERO;
     channels[98] = Vec4::ZERO;
     channels[100] = Vec4::ZERO;
 
