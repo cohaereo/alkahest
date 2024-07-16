@@ -232,18 +232,9 @@ impl AlkahestApp {
                                     new_cursor_pos.1 = 0;
                                 }
 
-                                if new_cursor_pos != cursor_pos {
-                                    window
-                                        .set_cursor_position(PhysicalPosition::new(
-                                            new_cursor_pos.0 as f64,
-                                            new_cursor_pos.1 as f64,
-                                        ))
-                                        .ok();
+                                if delta != (0.0, 0.0) {
+                                    window.set_cursor_position(*p).ok();
                                 }
-                                *last_cursor_pos = Some(PhysicalPosition::new(
-                                    new_cursor_pos.0 as f64,
-                                    new_cursor_pos.1 as f64,
-                                ));
 
                                 window.set_cursor_visible(false);
                             } else {
