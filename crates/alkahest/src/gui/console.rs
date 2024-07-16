@@ -740,6 +740,10 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             for scope in technique.compatible_scopes.iter() {
                 println!("\t\t- {scope:?}");
             }
+            println!("\tTextures (PS):");
+            for texture in technique.shader_pixel.textures.iter() {
+                println!("\t\t- t{}: {:?}", texture.slot, texture.texture);
+            }
         }
         "inspect.model" => {
             // TODO(cohae): Make some abstraction for this
