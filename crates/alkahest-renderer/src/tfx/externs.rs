@@ -1018,7 +1018,8 @@ fn get_global_channel_defaults() -> [Vec4; 256] {
     );
     channels[93] = Vec4::new(1.0, 0.0, 0.0, 0.0);
     channels[127] = Vec4::ZERO;
-    channels[131] = Vec4::new(0.5, 0.0, 0.3, 0.0); // Seems related to line lights
+    // TODO(cohae): this channel is a bit confusing. There is no 1 magic universal value, some lights work, some environments need different values
+    channels[131] = Vec4::new(0.5, 0.5, 0.3, 0.0); // Seems related to line lights
 
     channels
 }
