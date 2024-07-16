@@ -385,10 +385,16 @@ impl Renderer {
     }
 }
 
+// Workaround until we (eventually) get default literals: https://github.com/serde-rs/serde/issues/368
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RendererSettings {
     pub vsync: bool,
     pub ssao: bool,
+    #[serde(skip)]
     pub matcap: bool,
     pub shadows: bool,
     pub shadow_updates_per_frame: usize,
@@ -403,10 +409,14 @@ pub struct RendererSettings {
     pub feature_cubemaps: bool,
     pub feature_global_lighting: bool,
 
+    #[serde(skip, default = "default_true")]
     pub stage_transparent: bool,
+    #[serde(skip, default = "default_true")]
     pub stage_decals: bool,
+    #[serde(skip, default = "default_true")]
     pub stage_decals_additive: bool,
 
+    #[serde(skip)]
     pub debug_view: RenderDebugView,
 }
 
@@ -453,9 +463,19 @@ impl Default for RenderFeatureVisibility {
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter, strum::Display, EnumCount,
+    Default,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    EnumIter,
+    strum::Display,
+    EnumCount,
 )]
 pub enum RenderDebugView {
+    #[default]
     None,
     NoFilmCurve,
 
