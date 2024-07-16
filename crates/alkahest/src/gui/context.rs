@@ -18,6 +18,7 @@ use crate::{
         crosshair::CrosshairOverlay,
         fps_display::FpsDisplayOverlay,
         inspector::InspectorPanel,
+        load_indicator::ResourceLoadIndicatorOverlay,
         menu::MenuBar,
         node_gizmos::NodeGizmoOverlay,
         outliner::OutlinerPanel,
@@ -205,6 +206,7 @@ impl GuiViewManager {
         views.insert(ConsolePanel::default());
         views.insert(PuffinProfiler);
         views.insert(CrosshairOverlay);
+        views.insert(ResourceLoadIndicatorOverlay);
 
         views.insert_overlay(FpsDisplayOverlay::default());
 

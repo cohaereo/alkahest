@@ -268,6 +268,10 @@ impl AssetManager {
     pub fn is_idle(&self) -> bool {
         self.pending_requests.is_empty()
     }
+
+    pub fn remaining_requests(&self) -> usize {
+        self.pending_requests.len()
+    }
 }
 
 #[derive(AsRefStr)]
