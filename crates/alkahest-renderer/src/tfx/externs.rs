@@ -744,9 +744,10 @@ extern_struct! {
     struct GlobalLighting("global_lighting") {
         0x08 => unk08: TextureView > unimplemented(true),
         0x10 => unk10: Vec4 > unimplemented(true),
-        0x30 => unk30: Vec4 > unimplemented(true),
-        // Light angle, not a quaternion
-        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(0.0, 0.0, 0.0, 1.0)), // default(Vec4::new(0.25, 0.5, 1.0, 1.0)),
+        // Specular light direction, as a 3 dimensional vector
+        0x30 => unk30: Vec4 > unimplemented(true) > default(Vec4::new(-1.0, -1.0, 1.0, 0.0)),
+        // Diffuse light direction, as a 3 dimensional vector
+        0x50 => unk50: Vec4 > unimplemented(true) > default(Vec4::new(-1.0, -1.0, 1.0, 0.0)),
         0x70 => unk70: Vec4 > unimplemented(true),
         0x80 => unk80: Vec4 > unimplemented(true),
         0x90 => unk90: f32 > unimplemented(true),

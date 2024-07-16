@@ -185,27 +185,27 @@ impl GuiView for TfxExternEditor {
                                             }
 
                                             if let Some(v) = f.get_mut::<Quat>() {
-                                                let mut rot = v.to_euler(EulerRot::YXZ);
+                                                let mut rot = v.to_euler(EulerRot::XYZ);
+                                                rot.0 = rot.0.to_degrees();
+                                                rot.1 = rot.1.to_degrees();
+                                                rot.2 = rot.2.to_degrees();
                                                 ui.horizontal(|ui| {
                                                     ui.add(
-                                                        egui::DragValue::new(&mut rot.0)
-                                                            .speed(0.01),
+                                                        egui::DragValue::new(&mut rot.0).speed(0.2),
                                                     );
                                                     ui.add(
-                                                        egui::DragValue::new(&mut rot.1)
-                                                            .speed(0.01),
+                                                        egui::DragValue::new(&mut rot.1).speed(0.2),
                                                     );
                                                     ui.add(
-                                                        egui::DragValue::new(&mut rot.2)
-                                                            .speed(0.01),
+                                                        egui::DragValue::new(&mut rot.2).speed(0.2),
                                                     );
                                                 });
 
                                                 *v = Quat::from_euler(
-                                                    EulerRot::YXZ,
-                                                    rot.0,
-                                                    rot.1,
-                                                    rot.2,
+                                                    EulerRot::XYZ,
+                                                    rot.0.to_radians(),
+                                                    rot.1.to_radians(),
+                                                    rot.2.to_radians(),
                                                 );
                                             }
 
