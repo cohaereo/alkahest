@@ -121,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(ConsoleLogLayer)
-            .with(tracing_subscriber::fmt::layer())
+            .with(tracing_subscriber::fmt::layer().without_time())
             .with(
                 EnvFilter::builder()
                     .with_default_directive(LevelFilter::INFO.into())
