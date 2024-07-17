@@ -36,6 +36,7 @@ pub trait CameraController {
     /// Orbit camera will return the position of the view instead of the target
     fn position(&self) -> Vec3;
 
+    fn orientation(&self) -> Vec2;
     fn rotation(&self) -> Quat;
 
     fn forward(&self) -> Vec3;
@@ -191,6 +192,10 @@ impl Camera {
 
     pub fn position(&self) -> Vec3 {
         self.controller.position()
+    }
+
+    pub fn orientation(&self) -> Vec2 {
+        self.controller.orientation()
     }
 
     pub fn rotation(&self) -> Quat {

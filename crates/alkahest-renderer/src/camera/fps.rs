@@ -180,6 +180,9 @@ impl CameraController for FpsCamera {
         self.position
     }
 
+    fn orientation(&self) -> Vec2 {
+        self.orientation
+    }
     fn rotation(&self) -> Quat {
         self.rotation
     }
