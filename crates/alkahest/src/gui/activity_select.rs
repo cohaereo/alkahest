@@ -1,7 +1,7 @@
 use alkahest_data::{
     activity::{SActivity, SDestination},
     map::{SBubbleParent, SBubbleParentShallow},
-    text::{GlobalStringmap, StringContainer, StringMapShared},
+    text::{StringContainer, StringContainerShared},
 };
 use alkahest_pm::{is_pkg_redacted, package_manager};
 use anyhow::Context as _;
@@ -40,7 +40,7 @@ pub struct ActivityBrowser {
 }
 
 impl ActivityBrowser {
-    pub fn new(stringmap_global: &GlobalStringmap) -> Self {
+    pub fn new(stringmap_global: &StringContainer) -> Self {
         let destination_hashes = package_manager().get_all_by_reference(SDestination::ID.unwrap());
         let mut activity_buckets: FxHashMap<String, Vec<ActivitiesForDestination>> =
             FxHashMap::new();
@@ -307,7 +307,7 @@ impl GuiView for ActivityBrowser {
 
 pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Result<()> {
     let mut maplist = resources.get_mut::<MapList>();
-    let stringmap = resources.get::<StringMapShared>();
+    let stringmap = resources.get::<StringContainerShared>();
     let maps = query_activity_maps(activity_hash, &stringmap)?;
     resources.get_mut::<CurrentActivity>().0 = Some(activity_hash);
     maplist.set_maps(resources, &maps);
@@ -318,7 +318,7 @@ pub fn get_activity_hash(resources: &Resources) -> Option<TagHash> {
     resources.get_mut::<CurrentActivity>().0
 }
 
-pub fn get_map_name(map_hash: TagHash, stringmap: &GlobalStringmap) -> anyhow::Result<String> {
+pub fn get_map_name(map_hash: TagHash, stringmap: &StringContainer) -> anyhow::Result<String> {
     let _span = info_span!("Get map name", %map_hash).entered();
     let map_name = match package_manager().read_tag_struct::<SBubbleParentShallow>(map_hash) {
         Ok(m) => m.map_name,
@@ -332,7 +332,7 @@ pub fn get_map_name(map_hash: TagHash, stringmap: &GlobalStringmap) -> anyhow::R
 
 pub fn query_activity_maps(
     activity_hash: TagHash,
-    stringmap: &GlobalStringmap,
+    stringmap: &StringContainer,
 ) -> anyhow::Result<Vec<(TagHash, String)>> {
     let _span = info_span!("Query activity maps").entered();
     let activity: SActivity = package_manager()
@@ -357,13 +357,10 @@ pub fn query_activity_maps(
                 }
             };
 
-            let map_name = string_container
-                .get(&map_name.0)
-                .cloned()
-                .unwrap_or_else(|| {
-                    // Fall back to global stringmap
-                    stringmap.get(map_name)
-                });
+            let map_name = string_container.try_get(map_name.0).unwrap_or_else(|| {
+                // Fall back to global stringmap
+                stringmap.get(map_name)
+            });
 
             maps.push((map.hash32(), map_name));
         }

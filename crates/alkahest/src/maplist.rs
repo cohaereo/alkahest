@@ -12,7 +12,7 @@ use destiny_pkg::TagHash;
 use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
-
+use alkahest_data::text::StringContainerShared;
 use crate::{
     discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
 };
@@ -112,12 +112,14 @@ impl Map {
         let renderer = resources.get::<RendererShared>().clone();
         let cli_args = resources.get::<ApplicationArgs>();
         let activity_hash = resources.get_mut::<CurrentActivity>().0;
+        let global_strings = resources.get::<StringContainerShared>().clone();
 
         info!("Loading map {} '{}'", self.hash, self.name);
         self.promise = Some(Box::new(Promise::spawn_async(load_map(
             renderer,
             self.hash,
             activity_hash,
+            global_strings,
             !cli_args.no_ambient,
         ))));
 

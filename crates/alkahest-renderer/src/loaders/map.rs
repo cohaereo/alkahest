@@ -14,6 +14,7 @@ use alkahest_data::{
         SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
         SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
+    text::{StringContainer, StringContainerShared},
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
 };
@@ -60,6 +61,7 @@ pub async fn load_map(
     renderer: RendererShared,
     map_hash: TagHash,
     activity_hash: Option<TagHash>,
+    stringmap: StringContainerShared,
     load_ambient_activity: bool,
 ) -> anyhow::Result<Scene> {
     let bubble_parent = package_manager()
@@ -101,6 +103,7 @@ pub async fn load_map(
             &renderer,
             ResourceOrigin::Map,
             Some(parent_entity),
+            &stringmap,
         )
         .context("Failed to load map datatable")?;
     }
@@ -279,6 +282,7 @@ pub async fn load_map(
                         &renderer,
                         ResourceOrigin::Map,
                         table_entity.or(Some(parent_entity)),
+                        &stringmap,
                     )
                     .context("Failed to load activity datatable")?;
                 }
@@ -304,6 +308,7 @@ pub async fn load_map(
                             ResourceOrigin::ActivityBruteforce
                         },
                         Some(parent_entity),
+                        &stringmap,
                     )
                     .context("Failed to load AB datatable")?;
                 }
@@ -382,7 +387,6 @@ pub async fn load_map(
     Ok(scene)
 }
 
-// clippy: asset system will fix this lint on it's own (i hope)
 #[allow(clippy::too_many_arguments)]
 fn load_datatable_into_scene<R: Read + Seek>(
     table: &SMapDataTable,
@@ -392,6 +396,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
     renderer: &Renderer,
     resource_origin: ResourceOrigin,
     parent_entity: Option<Entity>,
+    stringmap: &StringContainer,
 ) -> anyhow::Result<()> {
     for data in table.data_entries.iter() {
         let transform = Transform {
@@ -885,8 +890,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let d: SUnk80809178 = TigerReadable::read_ds(table_data)?;
-                // TODO(cohae): Implement
-                let name = "UNKNOWN"; // stringmap.get(d.area_name);
+                let name = stringmap.get(d.area_name);
 
                 let (havok_debugshape, new_transform) =
                     if let Ok(havok_data) = package_manager().read_tag(d.unk0.havok_file) {
@@ -924,7 +928,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     spawn_data_entity(
                         scene,
                         (
-                            transform,
+                            new_transform.unwrap_or(transform),
                             NodeFilter::NamedArea,
                             Icon::Colored(ICON_LABEL, Color32::GREEN),
                             Label::from(format!("Named Area '{name}'")),

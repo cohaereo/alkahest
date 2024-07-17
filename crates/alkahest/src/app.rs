@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use alkahest_data::text::{GlobalStringmap, StringMapShared};
+use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
@@ -106,7 +106,7 @@ impl AlkahestApp {
         .unwrap();
         renderer.set_render_settings(config::with(|c| c.renderer.clone()));
         resources.insert(renderer.clone());
-        let stringmap = Arc::new(GlobalStringmap::load());
+        let stringmap = Arc::new(StringContainer::load_all_global());
         resources.insert(stringmap);
 
         let gizmo = Gizmo::new(GizmoConfig {
@@ -118,7 +118,9 @@ impl AlkahestApp {
 
         resources
             .get_mut::<GuiViewManager>()
-            .insert(ActivityBrowser::new(&resources.get::<StringMapShared>()));
+            .insert(ActivityBrowser::new(
+                &resources.get::<StringContainerShared>(),
+            ));
 
         resources.insert(UpdateCheck::default());
         let update_channel_gui = ChannelSelector {
@@ -139,7 +141,7 @@ impl AlkahestApp {
         if let Some(acthash) = resources.get::<ApplicationArgs>().activity {
             set_activity(&resources, acthash).ok();
         } else if let Some(maphash) = resources.get::<ApplicationArgs>().map {
-            let map_name = get_map_name(maphash, &resources.get::<StringMapShared>())
+            let map_name = get_map_name(maphash, &resources.get::<StringContainerShared>())
                 .unwrap_or_else(|_| format!("Unknown map {maphash}"));
 
             resources

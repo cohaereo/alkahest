@@ -67,6 +67,7 @@ pub struct SStringPart {
     pub _unk3: u32,
 }
 
+pub type StringContainerShared = Arc<StringContainer>;
 #[derive(Default)]
 pub struct StringContainer(pub FxHashMap<u32, String>);
 
@@ -102,6 +103,48 @@ impl StringContainer {
         }
 
         Ok(Self(stringmap))
+    }
+
+    pub fn load_all_global() -> Self {
+        let stringcontainers: Vec<TagHash> = package_manager()
+            .get_all_by_reference(SLocalizedStrings::ID.unwrap())
+            .into_iter()
+            .filter(|(t, _)| {
+                package_manager().package_paths[&t.pkg_id()]
+                    .name
+                    .contains("global")
+            })
+            .map(|(t, _)| t)
+            .collect();
+
+        Self(
+            stringcontainers
+                .par_iter()
+                .flat_map(|t| {
+                    if let Ok(strings) = StringContainer::load(*t) {
+                        strings.0.into_iter().collect()
+                    } else {
+                        vec![]
+                    }
+                })
+                .collect(),
+        )
+    }
+
+    pub fn try_get(&self, hash: impl Into<u32>) -> Option<String> {
+        let hash = hash.into();
+        self.0.get(&hash).cloned()
+    }
+
+    pub fn get(&self, hash: impl Into<u32>) -> String {
+        let hash = hash.into();
+        self.try_get(hash)
+            .unwrap_or_else(|| format!("[MISSING STRING: 0x{hash:08X}]"))
+    }
+
+    pub fn merge(mut self, other: Self) -> Self {
+        self.0.extend(other.0);
+        self
     }
 }
 
@@ -149,44 +192,4 @@ pub fn decode_text(data: &[u8], cipher: u16) -> String {
     }
 
     result
-}
-
-pub type StringMapShared = Arc<GlobalStringmap>;
-pub struct GlobalStringmap(pub FxHashMap<u32, String>);
-
-impl GlobalStringmap {
-    pub fn load() -> Self {
-        // let _span = info_span!("Loading global strings").entered();
-        let stringcontainers: Vec<TagHash> = package_manager()
-            .get_all_by_reference(SLocalizedStrings::ID.unwrap())
-            .into_iter()
-            .filter(|(t, _)| {
-                package_manager().package_paths[&t.pkg_id()]
-                    .name
-                    .contains("global")
-            })
-            .map(|(t, _)| t)
-            .collect();
-
-        Self(
-            stringcontainers
-                .par_iter()
-                .flat_map(|t| {
-                    if let Ok(strings) = StringContainer::load(*t) {
-                        strings.0.into_iter().collect()
-                    } else {
-                        vec![]
-                    }
-                })
-                .collect(),
-        )
-    }
-
-    pub fn get(&self, hash: impl Into<u32>) -> String {
-        let hash = hash.into();
-        self.0
-            .get(&hash)
-            .cloned()
-            .unwrap_or_else(|| format!("[MISSING STRING: 0x{hash:08X}]"))
-    }
 }
