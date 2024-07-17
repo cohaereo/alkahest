@@ -9,7 +9,7 @@ use alkahest_data::{
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SAudioClipCollection, SBubbleParent, SCubemapVolume, SLensFlare,
+        SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
         SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
         SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
         SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
@@ -27,7 +27,7 @@ use hecs::{DynamicBundle, Entity};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
-use alkahest_data::map::SBubbleDefinition;
+
 use crate::{
     camera::CameraProjection,
     ecs::{
@@ -366,10 +366,11 @@ pub async fn load_map(
     }
 
     let mut new_entity_names: Vec<(Entity, String)> = vec![];
-    for (entity, meta) in scene.query::<&NodeMetadata>().iter() {
+    for (entity, meta) in scene.query::<&mut NodeMetadata>().iter() {
         if meta.world_id != u64::MAX {
             if let Some(name) = entity_worldid_name_map.get(&meta.world_id) {
                 new_entity_names.push((entity, name.clone()));
+                meta.name = Some(name.clone());
             }
         }
     }
@@ -406,6 +407,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
             source_table: table_hash,
             source_table_resource_offset: data.data_resource.offset,
             resource_type: data.data_resource.resource_type,
+            name: None,
         };
 
         match data.data_resource.resource_type {

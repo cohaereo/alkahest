@@ -83,6 +83,7 @@ pub struct Config {
 pub struct VisualSettings {
     pub draw_crosshair: bool,
     pub node_nametags: bool,
+    pub node_nametags_named_only: bool,
     pub node_filters: HashSet<String>,
 }
 
@@ -91,6 +92,7 @@ impl Default for VisualSettings {
         Self {
             draw_crosshair: false,
             node_nametags: false,
+            node_nametags_named_only: false,
             node_filters: NodeFilter::iter()
                 .filter_map(|nf| {
                     if !matches!(

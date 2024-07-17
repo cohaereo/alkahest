@@ -101,4 +101,6 @@ pub struct NodeMetadata {
     pub source_table: TagHash,
     pub source_table_resource_offset: u64,
     pub resource_type: u32,
+
+    pub name: Option<String>,
 }

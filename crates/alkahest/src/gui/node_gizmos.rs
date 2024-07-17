@@ -2,6 +2,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Hidden, Icon, Label, ResourceOrigin},
+        map::NodeMetadata,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
         transform::Transform,
@@ -84,6 +85,7 @@ impl GuiView for NodeGizmoOverlay {
 
         // if self.debug_overlay.borrow().show_map_resources {
         if config::with(|c| c.visual.node_nametags) {
+            let named_nodes_only = config::with(|c| c.visual.node_nametags_named_only);
             let maps = resources.get::<MapList>();
             if let Some(map) = maps.current_map() {
                 struct NodeDisplayPoint {
@@ -94,7 +96,7 @@ impl GuiView for NodeGizmoOverlay {
                 }
 
                 let filters = resources.get::<NodeFilterSet>();
-                for (e, (transform, origin, label, icon, filter)) in map
+                for (e, (transform, origin, label, icon, filter, node_meta)) in map
                     .scene
                     .query::<(
                         &Transform,
@@ -102,10 +104,15 @@ impl GuiView for NodeGizmoOverlay {
                         Option<&Label>,
                         Option<&Icon>,
                         Option<&NodeFilter>,
+                        Option<&NodeMetadata>,
                     )>()
                     .without::<&Hidden>()
                     .iter()
                 {
+                    if node_meta.map(|m| m.name.is_none()).unwrap_or(true) && named_nodes_only {
+                        continue;
+                    }
+
                     if let Some(filter) = filter {
                         if !filters.contains(filter) {
                             continue;
