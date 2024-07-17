@@ -59,6 +59,8 @@ impl GuiView for RenderSettingsPanel {
                 ui.output_mut(|o| o.copied_text = command);
             }
 
+            ui.add_space(4.0);
+
             ui.horizontal(|ui| {
                 egui::DragValue::new(&mut camera.speed_mul)
                     .clamp_range(0f32..=25.0)

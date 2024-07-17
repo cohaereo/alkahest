@@ -399,11 +399,17 @@ pub struct RendererSettings {
     pub shadows: bool,
     pub shadow_updates_per_frame: usize,
 
+    #[serde(skip, default = "RenderFeatureVisibility::all")]
     pub feature_statics: RenderFeatureVisibility,
+    #[serde(skip, default = "RenderFeatureVisibility::all")]
     pub feature_terrain: RenderFeatureVisibility,
+    #[serde(skip, default = "RenderFeatureVisibility::all")]
     pub feature_dynamics: RenderFeatureVisibility,
+    #[serde(skip, default = "RenderFeatureVisibility::all")]
     pub feature_sky: RenderFeatureVisibility,
+    #[serde(skip, default = "RenderFeatureVisibility::all")]
     pub feature_decorators: RenderFeatureVisibility,
+    #[serde(skip, default = "RenderFeatureVisibility::all")]
     pub feature_water: RenderFeatureVisibility,
     pub feature_atmosphere: bool,
     pub feature_cubemaps: bool,
