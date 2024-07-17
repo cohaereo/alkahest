@@ -5,6 +5,7 @@ use anyhow::Context;
 use egui::{InputState, Key, KeyboardShortcut, Modifiers};
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
+use indexmap::IndexMap;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use winit::{event::WindowEvent, window::Window};
@@ -186,8 +187,8 @@ pub trait GuiView {
 
 #[derive(Default)]
 pub struct GuiViewManager {
-    views: FxHashMap<TypeId, Box<dyn GuiView>>,
-    views_overlay: FxHashMap<TypeId, Box<dyn GuiView>>,
+    views: IndexMap<TypeId, Box<dyn GuiView>>,
+    views_overlay: IndexMap<TypeId, Box<dyn GuiView>>,
 
     pub hide_views: bool,
 }
@@ -197,12 +198,12 @@ impl GuiViewManager {
         let mut views = Self::default();
 
         views.insert(NodeGizmoOverlay);
+        views.insert(MenuBar::default());
         views.insert(ConsolePanel::default());
         views.insert(TfxErrorViewer::default());
         views.insert(TfxExternEditor::default());
         views.insert(RenderSettingsPanel);
         views.insert(BottomBar);
-        views.insert(MenuBar::default());
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
         views.insert(PuffinProfiler);

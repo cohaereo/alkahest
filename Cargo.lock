@@ -133,6 +133,7 @@ dependencies = [
  "glam 0.28.0",
  "hecs",
  "hex",
+ "indexmap",
  "itertools 0.13.0",
  "lazy_static",
  "mimalloc",
