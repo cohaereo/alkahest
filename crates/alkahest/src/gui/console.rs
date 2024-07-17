@@ -28,7 +28,7 @@ use alkahest_renderer::{
 use anyhow::{Context, Error};
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
-use egui::{Color32, RichText, TextStyle};
+use egui::{Color32, Key, Modifiers, RichText, TextStyle};
 use glam::{Vec2, Vec3};
 use hecs::DynamicBundle;
 use itertools::Itertools;
@@ -196,6 +196,10 @@ impl GuiView for ConsolePanel {
 
                         self.command_buffer.clear();
                         ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
+                    }
+
+                    if ctx.memory(|m| m.has_focus("console_input_line".into())) {
+                        ui.input_mut(|i| i.count_and_consume_key(Modifiers::NONE, Key::H));
                     }
                 });
             });

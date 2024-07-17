@@ -197,6 +197,7 @@ impl GuiViewManager {
         let mut views = Self::default();
 
         views.insert(NodeGizmoOverlay);
+        views.insert(ConsolePanel::default());
         views.insert(TfxErrorViewer::default());
         views.insert(TfxExternEditor::default());
         views.insert(RenderSettingsPanel);
@@ -204,7 +205,6 @@ impl GuiViewManager {
         views.insert(MenuBar::default());
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
-        views.insert(ConsolePanel::default());
         views.insert(PuffinProfiler);
         views.insert(CrosshairOverlay);
         views.insert(ResourceLoadIndicatorOverlay);

@@ -1,6 +1,8 @@
 use std::process::Command;
 
 fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+
     if let Ok(output) = Command::new("git")
         .args(["rev-parse", "--short", "HEAD"])
         .output()
@@ -32,6 +34,4 @@ fn main() {
         res.set_icon("assets/icon2.ico");
         res.compile().unwrap();
     }
-
-    println!("cargo:rerun-if-changed=build.rs");
 }

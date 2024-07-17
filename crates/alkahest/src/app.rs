@@ -331,7 +331,6 @@ impl AlkahestApp {
                         renderer.gpu.begin_event("interface_and_hud").scoped(|| {
                             gpu_event!(renderer.gpu, "egui");
                             gui.draw_frame(window, |ctx, ectx| {
-                                hotkeys::process_hotkeys(ectx, resources);
                                 update_channel_gui.open =
                                     config::with(|c| c.update_channel.is_none());
                                 update_channel_gui.show(ectx, resources);
@@ -388,6 +387,8 @@ impl AlkahestApp {
                                     draw_transform_gizmos(renderer, ectx, resources);
                                 }
                             });
+
+                            hotkeys::process_hotkeys(&gui.egui, resources);
                         });
 
                         window.pre_present_notify();
