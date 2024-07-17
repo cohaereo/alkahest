@@ -4,17 +4,19 @@ use destiny_pkg::TagHash;
 use glam::Vec3;
 use hecs::Entity;
 
+use super::{
+    common::{Icon, Label},
+    SceneInfo,
+};
 use crate::{
-    ecs::{common::Hidden, resources::SelectedEntity, transform::Transform, Scene},
+    ecs::{
+        common::Hidden, render::havok::draw_debugshapes_system, resources::SelectedEntity,
+        transform::Transform, Scene,
+    },
     icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     renderer::Renderer,
     resources::Resources,
     util::color::{Color, ColorExt, Hsv},
-};
-
-use super::{
-    common::{Icon, Label},
-    SceneInfo,
 };
 
 pub trait Utility {
@@ -175,6 +177,8 @@ impl Utility for Route {
 }
 
 pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources) {
+    draw_debugshapes_system(renderer, scene, resources);
+
     for (e, ruler) in scene.query::<&Ruler>().without::<&Hidden>().iter() {
         draw_ruler(renderer, ruler, Some(e), resources);
     }

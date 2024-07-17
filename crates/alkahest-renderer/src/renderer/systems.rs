@@ -22,7 +22,5 @@ impl Renderer {
 
         draw_static_instances_system(self, scene, stage);
         draw_dynamic_model_system(self, scene, stage);
-
-        draw_debugshapes_system(self, scene, stage);
     }
 }

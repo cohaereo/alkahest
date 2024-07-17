@@ -13,13 +13,14 @@ use itertools::Itertools;
 
 use crate::{
     ecs::{
-        common::Hidden, render::static_geometry::StaticInstances, tags::NodeFilter,
-        transform::Transform, Scene,
+        common::Hidden, render::static_geometry::StaticInstances, resources::SelectedEntity,
+        tags::NodeFilter, transform::Transform, Scene,
     },
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::{shader::ShaderProgram, Renderer},
+    resources::Resources,
     tfx::technique::ShaderModule,
     Color, ColorExt,
 };
@@ -167,14 +168,8 @@ pub fn calculate_mesh_normals_flat(
     (new_vertices, new_indices)
 }
 
-pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
-    if render_stage != TfxRenderStage::Transparents
-        || !renderer.should_render(Some(render_stage), None)
-    {
-        return;
-    }
-
-    for (_e, (transform, shape, filter)) in scene
+pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, resources: &Resources) {
+    for (e, (transform, shape, filter)) in scene
         .query::<(&Transform, &HavokShapeRenderer, Option<&NodeFilter>)>()
         .without::<&Hidden>()
         .iter()
@@ -184,7 +179,9 @@ pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, render_stage:
                 continue;
             }
 
-            filter.color()
+            let selected = resources.get::<SelectedEntity>();
+
+            selected.select_fade_color(filter.color(), Some(e))
         } else {
             Color::WHITE
         };

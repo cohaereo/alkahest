@@ -57,6 +57,9 @@ impl Renderer {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
+        self.gpu
+            .current_states
+            .store(StateSelection::new(Some(0), Some(2), Some(2), Some(0)));
 
         unsafe {
             const NO_RT: Option<ID3D11RenderTargetView> = None;
