@@ -6,7 +6,11 @@ fn main() {
         .output()
     {
         let is_dirty = Command::new("git")
-            .args(["diff", "--quiet"])
+            .args([
+                "diff",
+                "--ignore-matching-lines='^version = \".*\"'",
+                "--quiet",
+            ])
             .status()
             .unwrap()
             .code()
