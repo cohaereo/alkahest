@@ -36,6 +36,7 @@ use crate::{
 impl Renderer {
     pub(super) fn draw_pickbuffer(&self, scene: &Scene, selected: Option<Entity>) {
         gpu_event!(self.gpu, "pickbuffer");
+        let dxstate = self.gpu.backup_state();
         self.pickbuffer.start(&self.gpu);
         self.pickbuffer.pick_cb.bind(7, TfxShaderStage::Pixel);
         self.gpu.bind_pixel_shader(&self.pickbuffer.pick_ps);
@@ -50,6 +51,7 @@ impl Renderer {
         );
         *self.gpu.custom_pixel_shader.pocus() = None;
         self.pickbuffer.end(&self.gpu);
+        self.gpu.restore_state(&dxstate);
     }
 
     // TODO(cohae): move rendering logic to Pickbuffer (where possible)
@@ -57,16 +59,9 @@ impl Renderer {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
-        self.gpu
-            .current_states
-            .store(StateSelection::new(Some(0), Some(2), Some(2), Some(0)));
 
         unsafe {
-            const NO_RT: Option<ID3D11RenderTargetView> = None;
-            let mut rt_backup = [const { None }; 4];
-            self.gpu
-                .context()
-                .OMGetRenderTargets(Some(&mut rt_backup), None);
+            let dxstate = self.gpu.backup_state();
 
             // Draw the selected entity into the outline depth buffer
             self.gpu
@@ -84,9 +79,10 @@ impl Renderer {
             );
 
             // Draw the outline itself
+
             self.gpu
                 .context()
-                .OMSetRenderTargets(Some(&rt_backup), None);
+                .OMSetRenderTargets(Some(&dxstate.render_targets), None);
             self.gpu.context().OMSetDepthStencilState(None, 0);
 
             self.gpu.flush_states();
@@ -111,6 +107,8 @@ impl Renderer {
             self.pickbuffer.outline_cb.bind(0, TfxShaderStage::Pixel);
 
             self.gpu.context().Draw(3, 0);
+
+            self.gpu.restore_state(&dxstate);
         }
     }
 }
@@ -164,7 +162,7 @@ impl Pickbuffer {
             is_drawing_selection: false,
             selection_request: AtomicCell::new(None),
             selection_ready: AtomicBool::new(false),
-            outline_depth: DepthState::create(gctx.clone(), window_size)
+            outline_depth: DepthState::create(gctx.clone(), window_size, "pickbuffer_depth")
                 .context("Outline Depth")?,
             pick_buffer: RenderTarget::create(
                 window_size,

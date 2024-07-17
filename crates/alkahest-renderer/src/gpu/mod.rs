@@ -1,4 +1,5 @@
 pub mod buffer;
+mod d3dstate;
 pub mod debug;
 pub mod global_state;
 pub mod texture;
@@ -134,7 +135,7 @@ impl GpuContext {
 
         Self::create_inner(device, device_context, Some(swap_chain))
     }
-    
+
     pub fn create_headless() -> anyhow::Result<Self> {
         let mut device: Option<ID3D11Device> = None;
         let mut device_context: Option<ID3D11DeviceContext> = None;

@@ -151,25 +151,13 @@ impl Renderer {
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
 
-            draw_utilities(self, scene, resources);
-
             if self.pickbuffer.selection_request.load().is_some() {
                 self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
             }
+        }
 
-            if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-                if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
-                    self.draw_outline(
-                        scene,
-                        selected,
-                        resources
-                            .get::<SelectedEntity>()
-                            .time_selected
-                            .elapsed()
-                            .as_secs_f32(),
-                    );
-                }
-            }
+        if self.render_settings.debug_view.is_gamma_converter() {
+            self.draw_view_overlay(scene, resources);
         }
 
         unsafe {
@@ -213,6 +201,10 @@ impl Renderer {
             self.gpu.context().Draw(6, 0);
         }
 
+        if !self.render_settings.debug_view.is_gamma_converter() {
+            self.draw_view_overlay(scene, resources);
+        }
+
         self.gpu.blit_texture(
             &self.data.lock().gbuffers.shading_result.view,
             self.gpu.swapchain_target.read().as_ref().unwrap(),
@@ -231,6 +223,41 @@ impl Renderer {
         }
 
         self.pocus().frame_index = self.frame_index.wrapping_add(1);
+    }
+
+    fn draw_view_overlay(&self, scene: &Scene, resources: &Resources) {
+        gpu_event!(self.gpu, "view_overlay");
+
+        self.gpu
+            .current_states
+            .store(StateSelection::new(Some(0), Some(2), Some(2), Some(1)));
+        self.gpu.flush_states();
+
+        let dxstate = self.gpu.backup_state();
+        unsafe {
+            self.gpu.context().OMSetRenderTargets(
+                Some(&dxstate.render_targets),
+                &self.data.lock().gbuffers.depth.view,
+            );
+        }
+
+        draw_utilities(self, scene, resources);
+
+        if let Some(selected) = resources.get::<SelectedEntity>().selected() {
+            if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
+                self.draw_outline(
+                    scene,
+                    selected,
+                    resources
+                        .get::<SelectedEntity>()
+                        .time_selected
+                        .elapsed()
+                        .as_secs_f32(),
+                );
+            }
+        }
+
+        self.gpu.restore_state(&dxstate);
     }
 
     fn bind_view(&self, view: &impl View) {
@@ -514,4 +541,11 @@ pub enum RenderDebugView {
     DepthEdges,
     DepthGradient,
     DepthWalkable,
+}
+
+impl RenderDebugView {
+    /// Does this view convert gamma/color space?
+    pub fn is_gamma_converter(&self) -> bool {
+        matches!(self, Self::None | Self::NoFilmCurve)
+    }
 }

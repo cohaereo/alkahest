@@ -96,11 +96,7 @@ impl SsaoRenderer {
         }
 
         unsafe {
-            let mut rt_backup = [const { None }; 4];
-            renderer
-                .gpu
-                .context()
-                .OMGetRenderTargets(Some(&mut rt_backup), None);
+            let dxstate = renderer.gpu.backup_state();
 
             renderer
                 .gpu
@@ -123,10 +119,7 @@ impl SsaoRenderer {
                 Some(1),
             ));
             renderer.gpu.set_blend_state(3);
-            renderer
-                .gpu
-                .context()
-                .OMSetRenderTargets(Some(&rt_backup), None);
+            renderer.gpu.restore_state(&dxstate);
             renderer
                 .gpu
                 .context()

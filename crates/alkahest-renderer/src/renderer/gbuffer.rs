@@ -95,7 +95,7 @@ impl GBuffer {
                 "Staging_Clone",
             )
             .context("Staging_Clone")?,
-            depth: DepthState::create(gctx.clone(), size).context("Depth")?,
+            depth: DepthState::create(gctx.clone(), size, "gbuffer_depth").context("Depth")?,
             depth_staging: CpuStagingBuffer::create(
                 size,
                 DxgiFormat::R32_TYPELESS,
@@ -404,10 +404,11 @@ pub struct DepthState {
     pub texture_copy: ID3D11Texture2D,
     pub texture_copy_view: ID3D11ShaderResourceView,
     gctx: SharedGpuContext,
+    name: String,
 }
 
 impl DepthState {
-    pub fn create(gctx: SharedGpuContext, size: (u32, u32)) -> anyhow::Result<Self> {
+    pub fn create(gctx: SharedGpuContext, size: (u32, u32), name: &str) -> anyhow::Result<Self> {
         let size = if size.0 == 0 || size.1 == 0 {
             warn!("Zero size depth state requested, using 1x1");
             (4, 4)
@@ -441,6 +442,7 @@ impl DepthState {
                 .context("Failed to create depth texture")?
         };
         let texture = texture.unwrap();
+        texture.set_debug_name(&format!("{name} (Texture)"));
 
         let mut state = None;
         unsafe {
@@ -520,6 +522,7 @@ impl DepthState {
                 .context("Failed to create depth stencil view")?
         };
         let view = view.unwrap();
+        view.set_debug_name(&format!("{name} (DSV)"));
 
         let mut texture_view = None;
         unsafe {
@@ -539,6 +542,7 @@ impl DepthState {
             )?
         };
         let texture_view = texture_view.unwrap();
+        texture_view.set_debug_name(&format!("{name} (SRV)"));
 
         let mut texture_copy = None;
         unsafe {
@@ -594,6 +598,7 @@ impl DepthState {
             texture_copy,
             texture_copy_view,
             gctx,
+            name: name.to_string(),
         })
     }
 
@@ -615,7 +620,7 @@ impl DepthState {
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) -> anyhow::Result<()> {
-        *self = Self::create(self.gctx.clone(), new_size)?;
+        *self = Self::create(self.gctx.clone(), new_size, &self.name)?;
         Ok(())
     }
 
