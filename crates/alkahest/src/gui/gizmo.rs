@@ -1,16 +1,114 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{render::update_entity_transform, resources::SelectedEntity, transform::Transform},
+    icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_RESIZE, ICON_ROTATE_ORBIT},
     renderer::Renderer,
     resources::Resources,
 };
-use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba};
+use egui::{
+    epaint::Vertex, Context, FontId, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding,
+    Ui,
+};
 use glam::{DQuat, DVec3};
 use transform_gizmo_egui::{
     math::Transform as GTransform, Gizmo, GizmoConfig, GizmoInteraction, GizmoResult,
 };
+use winit::window::Window;
 
-use crate::{gui::configuration::SelectionGizmoMode, maplist::MapList};
+use crate::{
+    gui::{
+        configuration::SelectionGizmoMode,
+        context::{GuiCtx, GuiView, ViewResult},
+    },
+    maplist::MapList,
+};
+
+pub struct GizmoSelector;
+
+impl GuiView for GizmoSelector {
+    fn draw(
+        &mut self,
+        ctx: &Context,
+        _window: &Window,
+        resources: &Resources,
+        _gui: &GuiCtx<'_>,
+    ) -> Option<ViewResult> {
+        let mut ui = Ui::new(
+            ctx.clone(),
+            LayerId::background(),
+            "gizmo_selector_overlay".into(),
+            ctx.available_rect().shrink(16.0),
+            ctx.screen_rect(),
+        );
+
+        ui.horizontal(|ui| {
+            let mut gizmo_mode = resources.get_mut::<SelectionGizmoMode>();
+            let rounding_l = Rounding {
+                ne: 0.0,
+                se: 0.0,
+                nw: 4.0,
+                sw: 4.0,
+            };
+            let rounding_m = Rounding {
+                nw: 0.0,
+                sw: 0.0,
+                ne: 0.0,
+                se: 0.0,
+            };
+            let rounding_r = Rounding {
+                nw: 0.0,
+                sw: 0.0,
+                ne: 4.0,
+                se: 4.0,
+            };
+
+            ui.style_mut().spacing.item_spacing = [0.0; 2].into();
+            ui.style_mut().spacing.button_padding = [4.0, 4.0].into();
+
+            ui.style_mut().visuals.widgets.active.rounding = rounding_l;
+            ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
+            ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+
+            ui.selectable_value(
+                &mut *gizmo_mode,
+                SelectionGizmoMode::Select,
+                RichText::new(ICON_CURSOR_DEFAULT.to_string()).size(16.0),
+            )
+            .on_hover_text("Hotkey: 1");
+
+            ui.style_mut().visuals.widgets.active.rounding = rounding_m;
+            ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
+            ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
+
+            ui.selectable_value(
+                &mut *gizmo_mode,
+                SelectionGizmoMode::Translate,
+                RichText::new(ICON_AXIS_ARROW.to_string()).size(16.0),
+            )
+            .on_hover_text("Hotkey: 2");
+
+            ui.selectable_value(
+                &mut *gizmo_mode,
+                SelectionGizmoMode::Rotate,
+                RichText::new(ICON_ROTATE_ORBIT.to_string()).size(16.0),
+            )
+            .on_hover_text("Hotkey: 3");
+
+            ui.style_mut().visuals.widgets.active.rounding = rounding_r;
+            ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
+            ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+
+            ui.selectable_value(
+                &mut *gizmo_mode,
+                SelectionGizmoMode::Scale,
+                RichText::new(ICON_RESIZE.to_string()).size(16.0),
+            )
+            .on_hover_text("Hotkey: 4");
+        });
+
+        None
+    }
+}
 
 pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &Resources) {
     let Some(selected) = resources.get::<SelectedEntity>().selected() else {

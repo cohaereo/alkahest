@@ -7,18 +7,21 @@ use alkahest_renderer::{
         tags::{NodeFilter, NodeFilterSet},
         transform::Transform,
     },
-    icons::ICON_HELP,
+    icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_HELP, ICON_RESIZE, ICON_ROTATE_ORBIT},
     renderer::RendererShared,
     resources::Resources,
     ColorExt,
 };
-use egui::{Color32, Context, Frame, Pos2, Rect, Sense, Ui};
+use egui::{Color32, Context, Frame, Pos2, Rect, Rounding, Sense, Ui};
 use glam::Vec2;
 use winit::window::Window;
 
 use crate::{
     config,
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::{
+        context::{GuiCtx, GuiView, ViewResult},
+        SelectionGizmoMode,
+    },
     maplist::MapList,
 };
 
@@ -51,7 +54,8 @@ impl GuiView for NodeGizmoOverlay {
         let mut selected_entity = resources.get_mut::<SelectedEntity>();
         let mut top_hovered = None;
         let mut rp_list = vec![];
-        let response = panel_ui.allocate_response(panel_ui.available_size(), Sense::click());
+        let response =
+            panel_ui.interact(panel_ui.max_rect(), "node_interact".into(), Sense::click());
         // let response = panel_ui.allocate_response(egui::vec2(4.0, 4.0), Sense::click());
 
         // {
