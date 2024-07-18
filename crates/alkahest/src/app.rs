@@ -31,13 +31,10 @@ use crate::{
         activity_select::{get_map_name, set_activity, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
-        hotkeys,
-        updater::{ChannelSelector, UpdateDownload},
-        SelectionGizmoMode,
+        hotkeys, SelectionGizmoMode,
     },
     maplist::MapList,
     resources::Resources,
-    updater::UpdateCheck,
     util::action::ActionList,
     ApplicationArgs,
 };
@@ -54,9 +51,8 @@ pub struct AlkahestApp {
 
     renderer: RendererShared,
     scratch_map: Scene,
-
-    update_channel_gui: ChannelSelector,
-    updater_gui: Option<UpdateDownload>,
+    // update_channel_gui: ChannelSelector,
+    // updater_gui: Option<UpdateDownload>,
 }
 
 impl AlkahestApp {
@@ -122,16 +118,16 @@ impl AlkahestApp {
                 &resources.get::<StringContainerShared>(),
             ));
 
-        resources.insert(UpdateCheck::default());
-        let update_channel_gui = ChannelSelector {
-            open: config::with(|c| c.update_channel.is_none()),
-        };
-
-        let updater_gui: Option<UpdateDownload> = None;
-
-        if let Some(update_channel) = config::with(|c| c.update_channel) {
-            resources.get_mut::<UpdateCheck>().start(update_channel);
-        }
+        // resources.insert(UpdateCheck::default());
+        // let update_channel_gui = ChannelSelector {
+        //     open: config::with(|c| c.update_channel.is_none()),
+        // };
+        //
+        // let updater_gui: Option<UpdateDownload> = None;
+        //
+        // if let Some(update_channel) = config::with(|c| c.update_channel) {
+        //     resources.get_mut::<UpdateCheck>().start(update_channel);
+        // }
 
         let camera = Camera::new_fps(Viewport {
             size: glam::UVec2::new(1920, 1080),
@@ -173,8 +169,8 @@ impl AlkahestApp {
             last_cursor_pos: None,
             renderer,
             scratch_map: Scene::new(),
-            update_channel_gui,
-            updater_gui,
+            // update_channel_gui,
+            // updater_gui,
         }
     }
 
@@ -188,8 +184,8 @@ impl AlkahestApp {
             last_cursor_pos,
             renderer,
             scratch_map,
-            update_channel_gui,
-            updater_gui,
+            // update_channel_gui,
+            // updater_gui,
             ..
         } = self;
 
@@ -335,16 +331,16 @@ impl AlkahestApp {
                             gui.draw_frame(window, |ctx, ectx| {
                                 hotkeys::process_hotkeys(ectx, resources);
 
-                                update_channel_gui.open =
-                                    config::with(|c| c.update_channel.is_none());
-                                update_channel_gui.show(ectx, resources);
-                                if update_channel_gui.open {
-                                    return;
-                                }
+                                // update_channel_gui.open =
+                                //     config::with(|c| c.update_channel.is_none());
+                                // update_channel_gui.show(ectx, resources);
+                                // if update_channel_gui.open {
+                                //     return;
+                                // }
 
                                 {
                                     // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
-                                    let mut update_check = resources.get_mut::<UpdateCheck>();
+                                    // let mut update_check = resources.get_mut::<UpdateCheck>();
                                     // {
                                     //     let check_running = update_check
                                     //         .0
@@ -363,26 +359,26 @@ impl AlkahestApp {
                                     //     indicator.active = check_running;
                                     // }
 
-                                    if update_check
-                                        .0
-                                        .as_ref()
-                                        .map_or(false, |v| v.poll().is_ready())
-                                    {
-                                        let update =
-                                            update_check.0.take().unwrap().block_and_take();
-                                        if let Some(update) = update {
-                                            *updater_gui = Some(UpdateDownload::new(update));
-                                        }
-                                    }
+                                    // if update_check
+                                    //     .0
+                                    //     .as_ref()
+                                    //     .map_or(false, |v| v.poll().is_ready())
+                                    // {
+                                    //     let update =
+                                    //         update_check.0.take().unwrap().block_and_take();
+                                    //     if let Some(update) = update {
+                                    //         *updater_gui = Some(UpdateDownload::new(update));
+                                    //     }
+                                    // }
                                 }
 
-                                if let Some(updater_gui_) = updater_gui.as_mut() {
-                                    if !updater_gui_.show(ectx, resources) {
-                                        *updater_gui = None;
-                                    }
-
-                                    return;
-                                }
+                                // if let Some(updater_gui_) = updater_gui.as_mut() {
+                                //     if !updater_gui_.show(ectx, resources) {
+                                //         *updater_gui = None;
+                                //     }
+                                //
+                                //     return;
+                                // }
 
                                 let mut gui_views = resources.get_mut::<GuiViewManager>();
                                 gui_views.draw(ectx, window, resources, ctx);

@@ -31,7 +31,7 @@ mod resources {
     pub use alkahest_renderer::resources::*;
 }
 mod discord;
-mod updater;
+// mod updater;
 mod util;
 
 #[global_allocator]
@@ -195,7 +195,7 @@ fn initialize_package_manager(
     }
 
     let pm = info_span!("Initializing package manager")
-        .in_scope(|| PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape).unwrap());
+        .in_scope(|| PackageManager::new(package_dir, GameVersion::Destiny2Shadowkeep).unwrap());
 
     config::with_mut(|c| c.packages_directory = Some(pm.package_dir.to_string_lossy().to_string()));
     config::persist();

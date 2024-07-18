@@ -5,12 +5,12 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
-use crate::{updater::UpdateChannel, util::RwLock};
+use crate::util::RwLock;
 
 lazy_static! {
     pub static ref CONFIGURATION: RwLock<Config> = RwLock::new(Config::default());
     pub static ref APP_DIRS: ProjectDirs = {
-        let pd = ProjectDirs::from("net", "cohaereo", "Alkahest")
+        let pd = ProjectDirs::from("net", "cohaereo", "AlkahestPrebl")
             .expect("Failed to get application directories");
         std::fs::create_dir_all(pd.config_dir()).expect("Failed to create config directory");
         std::fs::create_dir_all(pd.config_local_dir())
@@ -74,7 +74,6 @@ pub struct Config {
     pub window: WindowConfig,
     pub renderer: RendererSettings,
     pub visual: VisualSettings,
-    pub update_channel: Option<UpdateChannel>,
     pub packages_directory: Option<String>,
 }
 

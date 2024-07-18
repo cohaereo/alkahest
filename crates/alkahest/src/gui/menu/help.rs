@@ -1,11 +1,7 @@
 use alkahest_renderer::resources::Resources;
 use egui::Ui;
 
-use crate::{
-    config,
-    gui::menu::MenuBar,
-    updater::{UpdateChannel, UpdateCheck},
-};
+use crate::{config, gui::menu::MenuBar};
 
 impl MenuBar {
     pub(super) fn help_menu(&mut self, ui: &mut Ui, resources: &Resources) {
@@ -13,33 +9,33 @@ impl MenuBar {
             self.controls_open = true;
             ui.close_menu()
         }
-        ui.separator();
-        let update_channel = config::with(|c| c.update_channel);
-        if ui
-            .add_enabled(
-                update_channel.is_some() && update_channel != Some(UpdateChannel::Disabled),
-                egui::Button::new("Check for updates"),
-            )
-            .clicked()
-        {
-            if let Some(update_channel) = update_channel {
-                resources.get_mut::<UpdateCheck>().start(update_channel);
-            }
-            ui.close_menu();
-        }
-
-        if ui.button("Change update channel").clicked() {
-            config::with_mut(|c| c.update_channel = None);
-            ui.close_menu();
-        }
-
-        if let Some(update_channel) = update_channel {
-            ui.label(format!(
-                "Updates: {} {:?}",
-                update_channel.icon(),
-                update_channel
-            ));
-        }
+        // ui.separator();
+        // let update_channel = config::with(|c| c.update_channel);
+        // if ui
+        //     .add_enabled(
+        //         update_channel.is_some() && update_channel != Some(UpdateChannel::Disabled),
+        //         egui::Button::new("Check for updates"),
+        //     )
+        //     .clicked()
+        // {
+        //     if let Some(update_channel) = update_channel {
+        //         resources.get_mut::<UpdateCheck>().start(update_channel);
+        //     }
+        //     ui.close_menu();
+        // }
+        //
+        // if ui.button("Change update channel").clicked() {
+        //     config::with_mut(|c| c.update_channel = None);
+        //     ui.close_menu();
+        // }
+        //
+        // if let Some(update_channel) = update_channel {
+        //     ui.label(format!(
+        //         "Updates: {} {:?}",
+        //         update_channel.icon(),
+        //         update_channel
+        //     ));
+        // }
 
         ui.separator();
 

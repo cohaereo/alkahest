@@ -38,7 +38,7 @@ pub fn select_game_installation(
     let mut present_parameters = 0;
     let mut selected_path = Err(anyhow::anyhow!("No game installation selected"));
 
-    let mut installations = find_all_installations();
+    // let mut installations = find_all_installations();
 
     #[allow(clippy::single_match)]
     event_loop.run_on_demand(|event, window_target| match &event {
@@ -58,36 +58,36 @@ pub fn select_game_installation(
                 },
                 WindowEvent::RedrawRequested => {
                     gui.draw_frame(&window, |_, ctx| {
-                        if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
-                            installations = find_all_installations();
-                        }
+                        // if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
+                        //     installations = find_all_installations();
+                        // }
 
                         egui::CentralPanel::default().show(ctx, |ui| {
-                            ui.heading("Select Destiny 2 installation");
-                            for i in &installations {
-                                let (icon, store_name, path) = match i {
-                                    InstalledGame::Steam(a) => {
-                                        (ICON_STEAM, "Steam", a.game_path.clone())
-                                    }
-                                    InstalledGame::EpicGames(e) => {
-                                        (ICON_CONTROLLER, "Epic Games", e.install_location.clone())
-                                    }
-                                    InstalledGame::MicrosoftStore(p) => {
-                                        (ICON_MICROSOFT, "Microsoft Store", p.path.clone())
-                                    }
-                                    _ => continue,
-                                };
-
-                                if BigButton::new(icon, store_name)
-                                    .with_subtext(&path)
-                                    .full_width()
-                                    .ui(ui)
-                                    .clicked()
-                                {
-                                    selected_path = Ok(path.clone());
-                                    window_target.exit();
-                                }
-                            }
+                            ui.heading("Select Destiny 2 (Shadowkeep) installation");
+                            // for i in &installations {
+                            //     let (icon, store_name, path) = match i {
+                            //         InstalledGame::Steam(a) => {
+                            //             (ICON_STEAM, "Steam", a.game_path.clone())
+                            //         }
+                            //         InstalledGame::EpicGames(e) => {
+                            //             (ICON_CONTROLLER, "Epic Games", e.install_location.clone())
+                            //         }
+                            //         InstalledGame::MicrosoftStore(p) => {
+                            //             (ICON_MICROSOFT, "Microsoft Store", p.path.clone())
+                            //         }
+                            //         _ => continue,
+                            //     };
+                            // 
+                            //     if BigButton::new(icon, store_name)
+                            //         .with_subtext(&path)
+                            //         .full_width()
+                            //         .ui(ui)
+                            //         .clicked()
+                            //     {
+                            //         selected_path = Ok(path.clone());
+                            //         window_target.exit();
+                            //     }
+                            // }
 
                             if BigButton::new(ICON_FOLDER_OPEN, "Browse")
                                 .full_width()

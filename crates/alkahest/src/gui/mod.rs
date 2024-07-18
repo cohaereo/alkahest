@@ -23,7 +23,7 @@ mod menu;
 mod node_gizmos;
 mod outliner;
 mod profiler;
-pub(crate) mod updater;
+// pub(crate) mod updater;
 mod util;
 
 pub use configuration::SelectionGizmoMode;
