@@ -452,6 +452,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             transform,
                             StaticInstance,
                             Parent(parent),
+                            NodeFilter::Static,
                         ));
                         instances.push(entity);
                     }
@@ -465,6 +466,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             Children::from_slice(&instances),
                             TfxFeatureRenderer::StaticObjects,
                             resource_origin,
+                            NodeFilter::Static,
                         ),
                     )?;
                 }
