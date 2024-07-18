@@ -10,7 +10,7 @@ use tiger_parse::{tiger_tag, Endian, NullString, Pointer, TigerReadable};
 use crate::{tfx::TfxShaderStage, WideHash};
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806DAA)]
+#[tiger_tag(id = 0x808071E8)]
 pub struct STechnique {
     pub file_size: u64,
     /// Indicates what to bind
@@ -24,19 +24,20 @@ pub struct STechnique {
     pub unkc: u32,
     pub unk10: u32,
     pub unk14: u32,
-    pub unk18: u32,
-    pub unk1c: u32,
 
     pub used_scopes: TfxScopeBits,
     pub compatible_scopes: TfxScopeBits,
 
+    pub unk20: u32,
     pub states: StateSelection,
-    pub unk34: [u32; 15],
+    pub unk28: [u32; 8],
 
+    // 0x48
     pub shader_vertex: STechniqueShader,
     pub shader_unk1: STechniqueShader,
     pub shader_unk2: STechniqueShader,
     pub shader_geometry: STechniqueShader,
+    // 0x2c8
     pub shader_pixel: STechniqueShader,
     pub shader_compute: STechniqueShader,
 }
@@ -60,7 +61,7 @@ impl STechnique {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_tag(id = 0xffffffff, size = 0xa0)]
 pub struct STechniqueShader {
     pub shader: TagHash,
     pub unk4: u32,
@@ -103,22 +104,22 @@ pub struct Unk80806cb5 {
 
 pub type Unk80806cb6 = Unk80806cb5;
 
-#[tiger_tag]
+#[tiger_tag(size = 0x68)]
 #[derive(Debug, Clone)]
 pub struct SDynamicConstants {
     pub bytecode: Vec<u8>,
     pub bytecode_constants: Vec<Vec4>,
     pub samplers: Vec<WideHash>,
-    pub unk38: Vec<Vec4>,
-    pub unk48: [u32; 4],
+    pub unk30: Vec<Vec4>,
+    pub unk40: [u32; 8],
 
-    pub constant_buffer_slot: i32,
+    pub constant_buffer_slot: i32, // 0x60
     pub constant_buffer: TagHash,
 }
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
-    pub struct TfxScopeBits: u64 {
+    pub struct TfxScopeBits: u32 {
         const FRAME                             = 1 << 0;
         const VIEW                              = 1 << 1;
         const RIGID_MODEL                       = 1 << 2;
@@ -150,23 +151,14 @@ bitflags::bitflags! {
         const GEAR_DYE_2                        = 1 << 28;
         const GEAR_DYE_DECAL                    = 1 << 29;
         const GENERIC_ARRAY                     = 1 << 30;
-        const GEAR_DYE_SKIN                     = 1 << 31;
-        const GEAR_DYE_LIPS                     = 1 << 32;
-        const GEAR_DYE_HAIR                     = 1 << 33;
-        const GEAR_DYE_FACIAL_LAYER_0_MASK      = 1 << 34;
-        const GEAR_DYE_FACIAL_LAYER_0_MATERIAL  = 1 << 35;
-        const GEAR_DYE_FACIAL_LAYER_1_MASK      = 1 << 36;
-        const GEAR_DYE_FACIAL_LAYER_1_MATERIAL  = 1 << 37;
-        const PLAYER_CENTERED_CASCADED_GRID     = 1 << 38;
-        const GEAR_DYE_012                      = 1 << 39;
-        const COLOR_GRADING_UBERSHADER          = 1 << 40;
+        const WEATHER                           = 1 << 31;
     }
 }
 
 // TODO(cohae): tiger-parse doesnt work with bitflags, so we have to implement this manually
 impl TigerReadable for TfxScopeBits {
     fn read_ds_endian<R: Read + Seek>(reader: &mut R, endian: Endian) -> tiger_parse::Result<Self> {
-        let bits: u64 = u64::read_ds_endian(reader, endian)?;
+        let bits: u32 = u32::read_ds_endian(reader, endian)?;
         Ok(Self::from_bits_truncate(bits))
     }
 

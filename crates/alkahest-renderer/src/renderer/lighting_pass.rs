@@ -206,7 +206,7 @@ impl Renderer {
 
                 self.render_globals
                     .pipelines
-                    .sky_lookup_generate_far
+                    .sky_lookup_generate
                     .bind(self)
                     .unwrap();
 
@@ -218,29 +218,6 @@ impl Renderer {
                 ));
                 self.gpu.flush_states();
                 self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-                self.gpu.context().Draw(6, 0);
-
-                self.gpu.context().OMSetRenderTargets(
-                    Some(&[
-                        Some(
-                            self.data
-                                .lock()
-                                .gbuffers
-                                .atmos_ss_near_lookup
-                                .render_target
-                                .clone(),
-                        ),
-                        None,
-                    ]),
-                    None,
-                );
-
-                self.render_globals
-                    .pipelines
-                    .sky_lookup_generate_near
-                    .bind(self)
-                    .unwrap();
 
                 self.gpu.context().Draw(6, 0);
             }

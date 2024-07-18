@@ -87,7 +87,7 @@ pub fn set_activity_from_map(map: &Map) {
 fn default_activity_builder() -> ds::activity::ActivityBuilder {
     ds::activity::ActivityBuilder::default()
         .assets(ds::activity::Assets::default().large(
-            "alkahest_ng".to_owned(),
+            "alkahest_prebl".to_owned(),
             Some(format!("Alkahest {}", consts::VERSION)),
         ))
         .button(ds::activity::Button {

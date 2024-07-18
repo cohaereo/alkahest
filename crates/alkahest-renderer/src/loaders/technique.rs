@@ -74,10 +74,10 @@ fn load_technique_stage(
             .context("Failed to create constant buffer from data")?;
 
         Some(buf)
-    } else if !shader.constants.unk38.is_empty() {
+    } else if !shader.constants.unk30.is_empty() {
         let buf = ConstantBufferCached::create_array_init(
             gctx.clone(),
-            bytemuck::cast_slice(&shader.constants.unk38),
+            bytemuck::cast_slice(&shader.constants.unk30),
         )
         .context("Failed to create constant buffer from data")?;
 

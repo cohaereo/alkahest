@@ -124,10 +124,10 @@ impl TfxScopeStage {
             let buf = ConstantBufferCached::create_array_init(gctx.clone(), data).unwrap();
 
             Some(buf)
-        } else if !stage.constants.unk38.is_empty() {
+        } else if !stage.constants.unk30.is_empty() {
             let buf = ConstantBufferCached::create_array_init(
                 gctx.clone(),
-                bytemuck::cast_slice(&stage.constants.unk38),
+                bytemuck::cast_slice(&stage.constants.unk30),
             )
             .unwrap();
 

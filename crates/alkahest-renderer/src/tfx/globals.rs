@@ -1,6 +1,6 @@
 use std::mem::MaybeUninit;
 
-use alkahest_data::render_globals::{SRenderGlobals, SUnk808066ae, SUnk808067a8, SUnk8080822d};
+use alkahest_data::render_globals::{SClientBootstrap, SRenderGlobals, SUnk80806b99};
 use alkahest_pm::package_manager;
 use anyhow::Context;
 use field_access::FieldAccess;
@@ -20,20 +20,27 @@ pub struct RenderGlobals {
     pub pipelines: GlobalPipelines,
 
     pub textures: GlobalTextures,
-
-    pub unk34: SUnk8080822d,
 }
 
 impl RenderGlobals {
     pub fn load(gctx: SharedGpuContext) -> anyhow::Result<Self> {
-        let data: SRenderGlobals = package_manager().read_named_tag_struct("render_globals")?;
-        let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
+        let data: SClientBootstrap =
+            package_manager().read_named_tag_struct("client_bootstrap_patchable")?;
+        let globs = &data.render_globals;
+
+        println!("Scopes:");
+        for s in &globs.scopes {
+            println!("{}", s.name.to_string());
+        }
+        println!("Pipelines:");
+        for s in &globs.pipelines {
+            println!("{}", s.name.to_string());
+        }
 
         Ok(Self {
             scopes: GlobalScopes::load(gctx.clone(), globs),
             pipelines: GlobalPipelines::load(gctx.clone(), globs),
             textures: GlobalTextures::load(&gctx, &globs.unk30),
-            unk34: globs.unk34.0.clone(),
         })
     }
 }
@@ -46,7 +53,7 @@ pub struct GlobalTextures {
 }
 
 impl GlobalTextures {
-    pub fn load(gctx: &GpuContext, data: &SUnk808066ae) -> Self {
+    pub fn load(gctx: &GpuContext, data: &SUnk80806b99) -> Self {
         Self {
             specular_tint_lookup: Texture::load(
                 &gctx.device,
@@ -102,20 +109,21 @@ pub struct GlobalScopes {
     pub gear_dye_2: TfxScope,
     pub gear_dye_decal: TfxScope,
     pub generic_array: TfxScope,
-    pub gear_dye_skin: TfxScope,
-    pub gear_dye_lips: TfxScope,
-    pub gear_dye_hair: TfxScope,
-    pub gear_dye_facial_layer_0_mask: TfxScope,
-    pub gear_dye_facial_layer_0_material: TfxScope,
-    pub gear_dye_facial_layer_1_mask: TfxScope,
-    pub gear_dye_facial_layer_1_material: TfxScope,
-    pub player_centered_cascaded_grid: TfxScope,
-    pub gear_dye_012: TfxScope,
-    pub color_grading_ubershader: TfxScope,
+    // cohae: post-BL only
+    // pub gear_dye_skin: TfxScope,
+    // pub gear_dye_lips: TfxScope,
+    // pub gear_dye_hair: TfxScope,
+    // pub gear_dye_facial_layer_0_mask: TfxScope,
+    // pub gear_dye_facial_layer_0_material: TfxScope,
+    // pub gear_dye_facial_layer_1_mask: TfxScope,
+    // pub gear_dye_facial_layer_1_material: TfxScope,
+    // pub player_centered_cascaded_grid: TfxScope,
+    // pub gear_dye_012: TfxScope,
+    // pub color_grading_ubershader: TfxScope,
 }
 
 impl GlobalScopes {
-    pub fn load(gctx: SharedGpuContext, globals: &SUnk808067a8) -> Self {
+    pub fn load(gctx: SharedGpuContext, globals: &SRenderGlobals) -> Self {
         let mut scopes = unsafe { MaybeUninit::<Self>::zeroed().assume_init() };
 
         let fields = scopes
@@ -137,7 +145,9 @@ impl GlobalScopes {
                             TfxScope::load(
                                 package_manager()
                                     .read_tag_struct(p.scope)
-                                    .unwrap_or_else(|_| panic!("Failed to read scope {name}")),
+                                    .unwrap_or_else(|e| {
+                                        panic!("Failed to read scope {name}: {e:?}")
+                                    }),
                                 gctx.clone(),
                             )
                             .expect("Failed to load scope"),
@@ -185,8 +195,7 @@ pub struct GlobalPipelines {
     // Atmosphere/Sky
     pub hemisphere_sky_color_generate: Box<Technique>,
     pub sky: Box<Technique>,
-    pub sky_lookup_generate_far: Box<Technique>,
-    pub sky_lookup_generate_near: Box<Technique>,
+    pub sky_lookup_generate: Box<Technique>,
     pub sky_hemisphere_copy_and_tint: Box<Technique>,
     pub sky_hemisphere_copy_frustum: Box<Technique>,
     pub sky_hemisphere_downsample_filter_ggx: Box<Technique>,
@@ -245,21 +254,18 @@ pub struct GlobalPipelines {
     pub cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_off: Box<Technique>,
     pub cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_on: Box<Technique>,
 
-    pub cubemap_apply_override_hdr_with_sky_mask: Box<Technique>,
-    pub cubemap_apply_override_opaque: Box<Technique>,
-    pub cubemap_apply_override_with_sky_mask: Box<Technique>,
-    pub cubemap_apply_sky_ambient_occlusion: Box<Technique>,
-    pub cubemap_apply_sky_copy_ao_with_skybox_fade: Box<Technique>,
-    pub cubemap_apply_sky_copy_ao: Box<Technique>,
-    pub cubemap_apply_sky_specular_occlusion: Box<Technique>,
-    pub cubemap_apply: Box<Technique>,
+    // pub cubemap_apply_override_hdr_with_sky_mask: Box<Technique>,
+    // pub cubemap_apply_override_opaque: Box<Technique>,
+    // pub cubemap_apply_override_with_sky_mask: Box<Technique>,
+    // pub cubemap_apply_sky_ambient_occlusion: Box<Technique>,
+    // pub cubemap_apply_sky_copy_ao_with_skybox_fade: Box<Technique>,
+    // pub cubemap_apply_sky_copy_ao: Box<Technique>,
+    // pub cubemap_apply_sky_specular_occlusion: Box<Technique>,
+    // pub cubemap_apply: Box<Technique>,
 
     // Debug
     pub debug_ambient_occlusion_source_color: Box<Technique>,
     pub debug_ambient_occlusion: Box<Technique>,
-    pub debug_color_per_ao_status: Box<Technique>,
-    pub debug_color_per_draw_call: Box<Technique>,
-    pub debug_color_per_instance: Box<Technique>,
     pub debug_colored_overcoat_id: Box<Technique>,
     pub debug_colored_overcoat: Box<Technique>,
     pub debug_depth_edges: Box<Technique>,
@@ -285,13 +291,13 @@ pub struct GlobalPipelines {
     pub debug_shader_cloth: Box<Technique>,
     pub debug_shader_decal: Box<Technique>,
     pub debug_shader_decorator: Box<Technique>,
-    pub debug_shader_dq_skinned: Box<Technique>,
-    pub debug_shader_lb_skinned: Box<Technique>,
-    pub debug_shader_per_bone_scaled_lb_skinned: Box<Technique>,
-    pub debug_shader_rigid_model: Box<Technique>,
-    pub debug_shader_road_decal: Box<Technique>,
-    pub debug_shader_terrain_thumbnail: Box<Technique>,
-    pub debug_shader_terrain: Box<Technique>,
+    // pub debug_shader_dq_skinned: Box<Technique>,
+    // pub debug_shader_lb_skinned: Box<Technique>,
+    // pub debug_shader_per_bone_scaled_lb_skinned: Box<Technique>,
+    // pub debug_shader_rigid_model: Box<Technique>,
+    // pub debug_shader_road_decal: Box<Technique>,
+    // pub debug_shader_terrain_thumbnail: Box<Technique>,
+    // pub debug_shader_terrain: Box<Technique>,
     pub debug_source_color_luminance: Box<Technique>,
     pub debug_source_color: Box<Technique>,
     pub debug_specular_color: Box<Technique>,
@@ -299,14 +305,14 @@ pub struct GlobalPipelines {
     pub debug_specular_light: Box<Technique>,
     pub debug_specular_occlusion: Box<Technique>,
     pub debug_specular_only: Box<Technique>,
-    pub debug_specular_smoothness: Box<Technique>,
+    pub debug_specular_roughness: Box<Technique>,
     pub debug_specular_tint: Box<Technique>,
     pub debug_texture_ao: Box<Technique>,
     pub debug_transmission: Box<Technique>,
-    pub debug_valid_smoothness_heatmap: Box<Technique>,
-    pub debug_valid_source_color_brightness: Box<Technique>,
-    pub debug_valid_source_color_saturation: Box<Technique>,
-    pub debug_vertex_color: Box<Technique>,
+    // pub debug_valid_smoothness_heatmap: Box<Technique>,
+    // pub debug_valid_source_color_brightness: Box<Technique>,
+    // pub debug_valid_source_color_saturation: Box<Technique>,
+    // pub debug_vertex_color: Box<Technique>,
     pub debug_world_normal: Box<Technique>,
 
     // Feature renderer debug
@@ -328,7 +334,7 @@ pub enum CubemapShape {
 }
 
 impl GlobalPipelines {
-    pub fn load(gctx: SharedGpuContext, globals: &SUnk808067a8) -> Self {
+    pub fn load(gctx: SharedGpuContext, globals: &SRenderGlobals) -> Self {
         let mut pipelines = unsafe { MaybeUninit::<Self>::zeroed().assume_init() };
 
         let fields = pipelines
@@ -337,7 +343,10 @@ impl GlobalPipelines {
             .collect_vec();
 
         for name in fields {
-            let pipeline = globals.unk20.iter().find(|p| p.name.to_string() == name);
+            let pipeline = globals
+                .pipelines
+                .iter()
+                .find(|p| p.name.to_string() == name);
 
             match pipeline {
                 Some(p) => {
@@ -345,6 +354,7 @@ impl GlobalPipelines {
 
                     // cohae: We're using a pointer so the uninitialized value can't get dropped
                     let ptr = f.get_mut::<Box<Technique>>().unwrap() as *mut Box<Technique>;
+                    println!("ladogin {}", p.name.to_string());
                     let technique = Box::new(
                         load_technique(gctx.clone(), p.technique)
                             .map_err(|e| e.with_d3d_error(&gctx))
@@ -471,7 +481,7 @@ impl GlobalPipelines {
             RenderDebugView::SpecularColor => &self.debug_specular_color,
             RenderDebugView::SpecularLight => &self.debug_specular_light,
             RenderDebugView::SpecularOcclusion => &self.debug_specular_occlusion,
-            RenderDebugView::SpecularSmoothness => &self.debug_specular_smoothness,
+            RenderDebugView::SpecularSmoothness => &self.debug_specular_roughness,
             RenderDebugView::Emissive => &self.debug_emissive,
             RenderDebugView::EmissiveIntensity => &self.debug_emissive_intensity,
             RenderDebugView::EmissiveLuminance => &self.debug_emissive_luminance,
