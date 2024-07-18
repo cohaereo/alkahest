@@ -3,7 +3,7 @@ use crate::maplist::MapList;
 use alkahest_renderer::camera::Camera;
 use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
 use alkahest_renderer::ecs::resources::SelectedEntity;
-use alkahest_renderer::ecs::tags::{EntityTag, Tags};
+use alkahest_renderer::ecs::tags::{EntityTag, NodeFilter, Tags};
 use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
 use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility};
 use alkahest_renderer::ecs::SceneInfo;
@@ -31,6 +31,7 @@ impl MenuBar {
             if let Some(map) = maps.current_map_mut() {
                 let position_base = camera.position() + camera.forward() * 15.0;
                 let e = map.scene.spawn((
+                    NodeFilter::Utility,
                     if pos.is_finite() {
                         Ruler {
                             start: camera.position(),
@@ -68,6 +69,7 @@ impl MenuBar {
                 let camera = resources.get::<Camera>();
                 let position_base = camera.position() + camera.forward() * 24.0;
                 let e = map.scene.spawn((
+                    NodeFilter::Utility,
                     Transform {
                         translation: if distance > 24.0 { position_base } else { pos },
                         scale: Vec3::splat(9.0),
@@ -99,6 +101,7 @@ impl MenuBar {
             if let Some(map) = maps.current_map_mut() {
                 let camera = resources.get::<Camera>();
                 let e = map.scene.spawn((
+                    NodeFilter::Utility,
                     Transform {
                         translation: if distance > 24.0 {
                             camera.position()
@@ -129,6 +132,7 @@ impl MenuBar {
 
             if let Some(map) = maps.current_map_mut() {
                 let e = map.scene.spawn((
+                    NodeFilter::Utility,
                     Route {
                         path: vec![RouteNode {
                             pos: camera.position(),
