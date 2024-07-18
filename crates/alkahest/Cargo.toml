@@ -83,7 +83,8 @@ puffin = "0.19.0"
 discord-sdk = "0.3.6"
 
 [features]
-default = []
+default = ["discord_rpc"]
+discord_rpc = []
 #tracy = []
 # Disable sorting the map list
 keep_map_order = []
