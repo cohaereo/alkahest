@@ -8,8 +8,8 @@ use super::Scene;
 use crate::{
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_DROPBOX, ICON_HELP, ICON_LIGHTBULB_ON,
-        ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG, ICON_VOLUME_HIGH,
-        ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG, ICON_TOOLBOX,
+        ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
     },
     util::color::Color,
 };
@@ -32,6 +32,8 @@ pub enum NodeFilter {
     NamedArea,
     SlipSurfaceVolume,
 
+    Utility,
+
     Unknown,
 }
 
@@ -50,6 +52,7 @@ impl NodeFilter {
             NodeFilter::PlayerContainmentVolume => ICON_DROPBOX,
             NodeFilter::NamedArea => ICON_TAG,
             NodeFilter::SlipSurfaceVolume => ICON_HELP,
+            NodeFilter::Utility => ICON_TOOLBOX,
             NodeFilter::Unknown => ICON_HELP,
         }
     }
@@ -70,6 +73,7 @@ impl NodeFilter {
             }
             NodeFilter::NamedArea => Color::from_srgba_unmultiplied(0, 127, 0, 255),
             NodeFilter::SlipSurfaceVolume => Color::from_srgba_unmultiplied(96, 96, 255, 255),
+            NodeFilter::Utility => Color::from_srgba_unmultiplied(119, 142, 160, 255),
             NodeFilter::Unknown => Color::from_srgba_unmultiplied(255, 255, 255, 255),
         }
     }
