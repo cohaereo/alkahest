@@ -19,21 +19,6 @@ pub fn alk_color_to_egui(c: Color) -> Color32 {
     )
 }
 
-/// Simplifies meters to other metric measurement units (mm, cm, m, km)
-pub fn prettify_distance(meters: f32) -> String {
-    if meters < 0.001 {
-        format!("{:.2} mm", meters * 1000.0)
-    } else if meters < 1.0 {
-        format!("{:.2} cm", meters * 100.0)
-    } else if meters < 1000.0 {
-        format!("{:.2} m", meters)
-    } else if meters.is_finite() {
-        format!("{:.2} km", meters / 1000.0)
-    } else {
-        format!("{:.2}", meters)
-    }
-}
-
 // pub fn split_pascal_case(s: &str) -> String {
 //     let mut result = String::new();
 //     let mut last_upper = false;

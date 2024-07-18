@@ -1,6 +1,7 @@
 mod cubemaps;
 pub mod gbuffer;
 mod immediate;
+pub use immediate::LabelAlign;
 mod lighting_pass;
 mod opaque_pass;
 mod pickbuffer;
@@ -133,6 +134,9 @@ impl Renderer {
 
     pub fn render_world(&self, view: &impl View, scene: &Scene, resources: &Resources) {
         self.pocus().lastfilters = resources.get::<NodeFilterSet>().clone();
+
+        // Make sure immediate labels have been drained completely
+        let _ = self.immediate.drain_labels();
 
         self.begin_world_frame(scene);
 

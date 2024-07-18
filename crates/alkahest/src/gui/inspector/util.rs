@@ -11,6 +11,7 @@ use alkahest_renderer::{
         ICON_MAP_MARKER, ICON_MAP_MARKER_PATH, ICON_MAP_MARKER_PLUS, ICON_TAG,
     },
     renderer::RendererShared,
+    util::text::prettify_distance,
 };
 use egui::{
     color_picker::{color_edit_button_rgba, Alpha},
@@ -25,10 +26,7 @@ use crate::{
     input_float3,
     maplist::MapList,
     resources::Resources,
-    util::{
-        action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},
-        text::prettify_distance,
-    },
+    util::action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},
 };
 
 impl ComponentPanel for Ruler {

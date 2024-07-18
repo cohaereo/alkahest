@@ -8,7 +8,7 @@ use alkahest_renderer::{
         transform::Transform,
     },
     icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_HELP, ICON_RESIZE, ICON_ROTATE_ORBIT},
-    renderer::RendererShared,
+    renderer::{LabelAlign, RendererShared},
     resources::Resources,
     ColorExt,
 };
@@ -39,11 +39,7 @@ impl GuiView for NodeGizmoOverlay {
         let screen_size = ctx.screen_rect().size();
         let painter = ctx.layer_painter(egui::LayerId::background());
 
-        // egui::CentralPanel::default()
-        //     .frame(Frame::default())
-        //     .show(ctx, |ui| {
-
-        let mut panel_ui = Ui::new(
+        let panel_ui = Ui::new(
             ctx.clone(),
             egui::LayerId::background(),
             "node_nametags".into(),
@@ -56,36 +52,36 @@ impl GuiView for NodeGizmoOverlay {
         let mut rp_list = vec![];
         let response =
             panel_ui.interact(panel_ui.max_rect(), "node_interact".into(), Sense::click());
-        // let response = panel_ui.allocate_response(egui::vec2(4.0, 4.0), Sense::click());
 
-        // {
-        //     let mut debugshapes = resources.get_mut::<DebugShapes>().unwrap();
-        //     for (text, point, anchor, color) in debugshapes.label_list() {
-        //         if !camera.is_point_visible(point) {
-        //             continue;
-        //         }
-        //
-        //         let projected_point = camera.projection_view_matrix.project_point3(point);
-        //
-        //         let screen_point = Pos2::new(
-        //             ((projected_point.x + 1.0) * 0.5) * screen_size.x,
-        //             ((1.0 - projected_point.y) * 0.5) * screen_size.y,
-        //         );
-        //
-        //         let color_scaled = color.0 * 255.0;
-        //         painter.text(
-        //             screen_point + anchor.to_sign() * -4.,
-        //             anchor,
-        //             text,
-        //             egui::FontId::monospace(12.0),
-        //             Color32::from_rgb(
-        //                 color_scaled.x as u8,
-        //                 color_scaled.y as u8,
-        //                 color_scaled.z as u8,
-        //             ),
-        //         );
-        //     }
-        // }
+        {
+            let renderer = resources.get_mut::<RendererShared>();
+            for (text, point, align, color) in renderer.immediate.drain_labels() {
+                if !camera.is_point_visible(point) {
+                    continue;
+                }
+
+                let projected_point = camera.world_to_projective.project_point3(point);
+
+                let screen_point = Pos2::new(
+                    ((projected_point.x + 1.0) * 0.5) * screen_size.x,
+                    ((1.0 - projected_point.y) * 0.5) * screen_size.y,
+                );
+
+                let anchor = egui::Align2(align.map(|a| match a {
+                    LabelAlign::Min => egui::Align::Min,
+                    LabelAlign::Center => egui::Align::Center,
+                    LabelAlign::Max => egui::Align::Max,
+                }));
+
+                painter.text(
+                    screen_point + anchor.to_sign() * -4.,
+                    anchor,
+                    text,
+                    egui::FontId::monospace(12.0),
+                    color.into(),
+                );
+            }
+        }
 
         // if self.debug_overlay.borrow().show_map_resources {
         if config::with(|c| c.visual.node_nametags) {
@@ -168,12 +164,6 @@ impl GuiView for NodeGizmoOverlay {
                         0.0
                     };
 
-                    // if visible.map_or(true, |v| v.0) || selected_entity == Some(e) {
-                    //     // Draw the debug shape before we cull the points to prevent shapes from popping in/out when the point goes off/onscreen
-                    //     let mut debug_shapes = resources.get_mut::<DebugShapes>().unwrap();
-                    //     res.resource.draw_debug_shape(transform, &mut debug_shapes);
-                    // }
-
                     if !camera.is_point_visible(transform.translation) {
                         continue;
                     }
@@ -187,12 +177,7 @@ impl GuiView for NodeGizmoOverlay {
                             origin: origin.cloned(),
                             label: label.map(|v| v.label.clone()).unwrap_or_default(),
                             icon: icon.cloned(),
-                        }, // StrippedResourcePoint {
-                           //     resource: res.resource.clone(),
-                           //     has_havok_data: res.has_havok_data,
-                           //     origin: res.origin,
-                           //     label: label.map(|v| v.0.clone()),
-                           // },
+                        },
                     ))
                 }
 
@@ -217,12 +202,6 @@ impl GuiView for NodeGizmoOverlay {
                     // if self.debug_overlay.borrow().show_map_resource_label
                     //     || selected_entity == Some(e)
                     if true {
-                        // let debug_string = res.resource.debug_string();
-                        // let debug_string = if let Some(l) = res.label {
-                        //     format!("{l}\n{debug_string}")
-                        // } else {
-                        //     debug_string
-                        // };
                         let debug_string = &node.label;
 
                         let debug_string_font = egui::FontId::proportional(14.0);
@@ -372,7 +351,6 @@ impl GuiView for NodeGizmoOverlay {
                 }
             }
         }
-        // });
 
         None
     }

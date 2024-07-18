@@ -6,6 +6,7 @@ use genmesh::{
     Triangulate,
 };
 use glam::{Mat4, Vec3, Vec4};
+use parking_lot::{Mutex, RwLock};
 
 use crate::{
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
@@ -14,7 +15,7 @@ use crate::{
     renderer::shader::ShaderProgram,
     util::{
         color::{Color, ColorExt},
-        mat4_scale_translation,
+        mat4_scale_translation, Hocus,
     },
 };
 
@@ -53,6 +54,8 @@ pub struct ImmediateRenderer {
 
     cb_debug_shape: ConstantBuffer<ScopeAlkDebugShape>,
     cb_debug_line: ConstantBuffer<ScopeAlkDebugLine>,
+
+    labels: Mutex<Vec<(String, Vec3, [LabelAlign; 2], Color)>>,
 }
 
 impl ImmediateRenderer {
@@ -130,6 +133,7 @@ impl ImmediateRenderer {
             cb_debug_shape: ConstantBuffer::create(gpu.clone(), None)?,
             cb_debug_line: ConstantBuffer::create(gpu.clone(), None)?,
             gpu,
+            labels: Mutex::new(vec![]),
         })
     }
 
@@ -356,6 +360,42 @@ impl ImmediateRenderer {
         }
         self.line(center + r * next, center + r * va, color, 2.0);
     }
+
+    pub fn label<C: Into<Color>>(
+        &self,
+        label: String,
+        position: Vec3,
+        align: [LabelAlign; 2],
+        color: C,
+    ) {
+        self.labels
+            .lock()
+            .push((label, position, align, color.into()));
+    }
+
+    /// Take all the labels rendered this frame
+    #[must_use]
+    pub fn drain_labels(&self) -> Vec<(String, Vec3, [LabelAlign; 2], Color)> {
+        std::mem::take(&mut self.labels.lock())
+    }
+}
+
+pub enum LabelAlign {
+    Min,
+    Center,
+    Max,
+}
+
+impl LabelAlign {
+    pub const LEFT_BOTTOM: [Self; 2] = [LabelAlign::Min, LabelAlign::Max];
+    pub const LEFT_CENTER: [Self; 2] = [LabelAlign::Min, LabelAlign::Center];
+    pub const LEFT_TOP: [Self; 2] = [LabelAlign::Min, LabelAlign::Min];
+    pub const CENTER_BOTTOM: [Self; 2] = [LabelAlign::Center, LabelAlign::Max];
+    pub const CENTER_CENTER: [Self; 2] = [LabelAlign::Center, LabelAlign::Center];
+    pub const CENTER_TOP: [Self; 2] = [LabelAlign::Center, LabelAlign::Min];
+    pub const RIGHT_BOTTOM: [Self; 2] = [LabelAlign::Max, LabelAlign::Max];
+    pub const RIGHT_CENTER: [Self; 2] = [LabelAlign::Max, LabelAlign::Center];
+    pub const RIGHT_TOP: [Self; 2] = [LabelAlign::Max, LabelAlign::Min];
 }
 
 // #[derive(Clone)]

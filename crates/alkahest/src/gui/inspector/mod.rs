@@ -25,6 +25,7 @@ use alkahest_renderer::{
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
+    util::text::prettify_distance,
 };
 use egui::{Align2, Button, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
@@ -45,7 +46,6 @@ use crate::{
     input_float3,
     maplist::MapList,
     resources::Resources,
-    util::text::prettify_distance,
 };
 
 pub struct InspectorPanel;

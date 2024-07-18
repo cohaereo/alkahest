@@ -14,9 +14,12 @@ use crate::{
         transform::Transform, Scene,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
-    renderer::Renderer,
+    renderer::{LabelAlign, Renderer},
     resources::Resources,
-    util::color::{Color, ColorExt, Hsv},
+    util::{
+        color::{Color, ColorExt, Hsv},
+        text::prettify_distance,
+    },
 };
 
 pub trait Utility {
@@ -236,14 +239,13 @@ fn draw_ruler(
         0.5,
     );
 
-    // let ruler_center = (ruler.start + ruler.end) / 2.0;
-    // TODO
-    // renderer.immediate.text(
-    //     prettify_distance(ruler.length()),
-    //     ruler_center,
-    //     egui::Align2::CENTER_BOTTOM,
-    //     [255, 255, 255],
-    // );
+    let ruler_center = (ruler.start + ruler.end) / 2.0;
+    renderer.immediate.label(
+        prettify_distance(ruler.length()),
+        ruler_center,
+        LabelAlign::CENTER_BOTTOM,
+        Color::WHITE,
+    );
 
     if ruler.show_individual_axis {
         let end_x = Vec3::new(ruler.end.x, ruler.start.y, ruler.start.z);
@@ -254,35 +256,34 @@ fn draw_ruler(
         renderer.immediate.line(ruler.start, end_y, color, 2.0);
         renderer.immediate.line(ruler.start, end_z, color, 2.0);
 
-        // let length_x = (ruler.start - end_x).length();
-        // let length_y = (ruler.start - end_y).length();
-        // let length_z = (ruler.start - end_z).length();
-        //
-        // let center_x = (ruler.start + end_x) / 2.0;
-        // let center_y = (ruler.start + end_y) / 2.0;
-        // let center_z = (ruler.start + end_z) / 2.0;
+        let length_x = (ruler.start - end_x).length();
+        let length_y = (ruler.start - end_y).length();
+        let length_z = (ruler.start - end_z).length();
 
-        // TODO
-        // renderer.immediate.text(
-        //     format!("X: {}", prettify_distance(length_x)),
-        //     center_x,
-        //     egui::Align2::LEFT_CENTER,
-        //     [255, 255, 255],
-        // );
-        //
-        // renderer.immediate.text(
-        //     format!("Y: {}", prettify_distance(length_y)),
-        //     center_y,
-        //     egui::Align2::RIGHT_CENTER,
-        //     [255, 255, 255],
-        // );
-        //
-        // renderer.immediate.text(
-        //     format!("Z: {}", prettify_distance(length_z)),
-        //     center_z,
-        //     egui::Align2::RIGHT_CENTER,
-        //     [255, 255, 255],
-        // );
+        let center_x = (ruler.start + end_x) / 2.0;
+        let center_y = (ruler.start + end_y) / 2.0;
+        let center_z = (ruler.start + end_z) / 2.0;
+
+        renderer.immediate.label(
+            format!("X: {}", prettify_distance(length_x)),
+            center_x,
+            LabelAlign::LEFT_CENTER,
+            Color::WHITE,
+        );
+
+        renderer.immediate.label(
+            format!("Y: {}", prettify_distance(length_y)),
+            center_y,
+            LabelAlign::RIGHT_CENTER,
+            Color::WHITE,
+        );
+
+        renderer.immediate.label(
+            format!("Z: {}", prettify_distance(length_z)),
+            center_z,
+            LabelAlign::RIGHT_CENTER,
+            Color::WHITE,
+        );
     }
 
     if ruler.marker_interval > 0.0 {
@@ -376,12 +377,12 @@ fn draw_sphere(
         color,
     );
 
-    // renderer.immediate.text(
-    //     prettify_distance(transform.radius()),
-    //     transform.translation,
-    //     egui::Align2::CENTER_BOTTOM,
-    //     [255, 255, 255],
-    // );
+    renderer.immediate.label(
+        prettify_distance(transform.radius()),
+        transform.translation,
+        LabelAlign::CENTER_BOTTOM,
+        Color::WHITE,
+    );
     renderer
         .immediate
         .sphere(transform.translation, transform.radius(), color);
@@ -474,17 +475,16 @@ fn draw_route(
                 );
             }
 
-            // TODO (cohae): Fix up once we have text rendering
-            // if node_is_local || prev_is_local || next_is_local {
-            //     if let Some(label) = node.label.as_ref() {
-            //         renderer.immediate.text(
-            //             label.to_string(),
-            //             node.pos + route.scale / 2.0 * Vec3::Z,
-            //             egui::Align2::CENTER_BOTTOM,
-            //             [255, 255, 255],
-            //         );
-            //     }
-            // }
+            if node_is_local || prev_is_local || next_is_local {
+                if let Some(label) = node.label.as_ref() {
+                    renderer.immediate.label(
+                        label.to_string(),
+                        node.pos + route.scale / 2.0 * Vec3::Z,
+                        LabelAlign::CENTER_BOTTOM,
+                        Color::WHITE,
+                    );
+                }
+            }
             prev_is_local = node_is_local;
 
             if next_node.is_some() {

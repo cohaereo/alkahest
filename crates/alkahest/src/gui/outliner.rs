@@ -8,7 +8,7 @@ use alkahest_renderer::{
         transform::Transform,
     },
     resources::Resources,
-    util::color::ColorExt,
+    util::{color::ColorExt, text::prettify_distance},
 };
 use egui::{collapsing_header::CollapsingState, Color32, RichText};
 use hecs::{Entity, EntityRef};
@@ -24,7 +24,7 @@ use crate::{
         icons::{ICON_DELETE, ICON_EYE_OFF},
     },
     maplist::{Map, MapList},
-    util::text::{alk_color_to_egui, prettify_distance},
+    util::text::alk_color_to_egui,
 };
 
 pub struct OutlinerPanel {
