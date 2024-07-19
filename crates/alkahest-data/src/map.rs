@@ -362,26 +362,14 @@ pub struct SLight {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806C71)]
+#[tiger_tag(id = 0x80807140)]
 pub struct SShadowingLight {
     pub unk0: Vec4,
     pub unk10: Vec4,
-    pub unk20: Vec4,
-    pub unk30: Vec4,
-    pub unk40: [u32; 4],
-    pub unk50: Vec4,
-    pub light_to_world: Mat4,
-    pub unka0: u32,
-    pub unka4: u32,
-    pub unka8: u32,
-    pub unkac: f32,
-    pub unkb0: f32,
-    pub unkb4: f32,
-    pub unkb8: f32,
+    pub light_to_world: Mat4, // 0x20
+    pub unk60: [u32; 8],
 
-    pub unkbc: f32,
-
-    pub far_plane: f32,
+    pub far_plane: f32, // 0x80
     pub half_fov: f32,
 
     pub unkc8: u32,
@@ -391,14 +379,10 @@ pub struct SShadowingLight {
     pub technique_shading_shadowing: TagHash,
     pub technique_volumetrics: TagHash,
     pub technique_volumetrics_shadowing: TagHash,
-    pub technique_compute_lightprobe: TagHash,
-    pub technique_compute_lightprobe_shadowing: TagHash,
 
-    pub unke8: TagHash, // Unk80806da1
-    pub unkec: TagHash, // Unk80806da1
+    pub unka0: TagHash, // Unk80806da1
+    pub unka4: TagHash, // Unk80806da1
 
-    pub unkf0: [f32; 5],
-    pub unk104: [u8; 12],
 }
 
 #[derive(Clone, Debug)]

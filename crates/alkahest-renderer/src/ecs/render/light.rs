@@ -193,11 +193,11 @@ impl LightRenderer {
             technique_volumetrics_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_volumetrics_shadowing),
             ),
-            technique_compute_lightprobe: asset_manager
-                .get_or_load_technique(light.technique_compute_lightprobe),
-            technique_compute_lightprobe_shadowing: Some(
-                asset_manager.get_or_load_technique(light.technique_compute_lightprobe_shadowing),
-            ),
+            // technique_compute_lightprobe: asset_manager
+            //     .get_or_load_technique(light.technique_compute_lightprobe),
+            // technique_compute_lightprobe_shadowing: Some(
+            //     asset_manager.get_or_load_technique(light.technique_compute_lightprobe_shadowing),
+            // ),
             debug_label,
             debug_info: format!("{light:X?}"),
             ..Self::new_empty(gctx.clone())?

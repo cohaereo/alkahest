@@ -683,46 +683,46 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ),
                 )?;
             }
-            // 0x80806c5e => {
-            //     table_data
-            //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
-            //         .unwrap();
-            //     let tag: TagHash = table_data.read_le().unwrap();
-            //     let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
-            //
-            //     let shadowmap = ShadowMapRenderer::new(
-            //         &renderer.gpu,
-            //         transform,
-            //         CameraProjection::perspective_bounded(
-            //             (light.half_fov * 2.).to_degrees(),
-            //             0.5,
-            //             light.far_plane,
-            //         ),
-            //     )?;
-            //
-            //     spawn_data_entity(
-            //         scene,
-            //         (
-            //             NodeFilter::Light,
-            //             Icon::Colored(ICON_SPOTLIGHT_BEAM, Color32::YELLOW),
-            //             Label::from(format!("Shadowing Spotlight {tag}")),
-            //             transform,
-            //             LightRenderer::load_shadowing(
-            //                 renderer.gpu.clone(),
-            //                 &mut renderer.data.lock().asset_manager,
-            //                 &light,
-            //                 format!("shadowing_light {tag}"),
-            //             )
-            //             .context("Failed to load shadowing light")?,
-            //             shadowmap,
-            //             light,
-            //             TfxFeatureRenderer::DeferredLights,
-            //             resource_origin,
-            //             metadata.clone(),
-            //         ),
-            //         parent_entity,
-            //     );
-            // }
+            0x80807133 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
+
+                let shadowmap = ShadowMapRenderer::new(
+                    &renderer.gpu,
+                    transform,
+                    CameraProjection::perspective_bounded(
+                        (light.half_fov * 2.).to_degrees(),
+                        0.5,
+                        light.far_plane,
+                    ),
+                )?;
+
+                spawn_data_entity(
+                    scene,
+                    (
+                        NodeFilter::Light,
+                        Icon::Colored(ICON_SPOTLIGHT_BEAM, Color32::YELLOW),
+                        Label::from(format!("Shadowing Spotlight {tag}")),
+                        transform,
+                        LightRenderer::load_shadowing(
+                            renderer.gpu.clone(),
+                            &mut renderer.data.lock().asset_manager,
+                            &light,
+                            format!("shadowing_light {tag}"),
+                        )
+                        .context("Failed to load shadowing light")?,
+                        shadowmap,
+                        light,
+                        TfxFeatureRenderer::DeferredLights,
+                        resource_origin,
+                        metadata.clone(),
+                    ),
+                    parent_entity,
+                );
+            }
             // 0x80806BC1 => {
             //     table_data
             //         .seek(SeekFrom::Start(data.data_resource.offset + 16))

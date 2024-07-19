@@ -463,7 +463,7 @@ impl Default for RendererSettings {
             vsync: true,
             ssao: false,
             matcap: false,
-            shadows: true,
+            shadows: false,
             shadow_updates_per_frame: 2,
 
             feature_statics: RenderFeatureVisibility::all(),

@@ -101,7 +101,9 @@ impl GuiView for RenderSettingsPanel {
                 ui.collapsing(RichText::new("Graphics").heading(), |ui| {
                     ui.checkbox(&mut c.renderer.vsync, "VSync");
                     ui.checkbox(&mut c.renderer.matcap, "Matcap");
-                    ui.checkbox(&mut c.renderer.shadows, "Shadows");
+                    ui.add_enabled_ui(false, |ui| {
+                        ui.checkbox(&mut c.renderer.shadows, "Shadows");
+                    });
                     ui.checkbox(&mut c.renderer.ssao, "SSAO");
                     ui.collapsing("SSAO Settings", |ui| {
                         let renderer = resources.get::<RendererShared>();
@@ -127,7 +129,10 @@ impl GuiView for RenderSettingsPanel {
                     render_feat_vis(ui, "Crosshair", &mut c.visual.draw_crosshair);
                     render_feat_vis(ui, "Node Visualization", &mut c.visual.node_nametags);
                     ui.collapsing("Node filters", |ui| {
-                        ui.checkbox(&mut c.visual.node_nametags_named_only, "Only show named nodes");
+                        ui.checkbox(
+                            &mut c.visual.node_nametags_named_only,
+                            "Only show named nodes",
+                        );
                         let mut filters = resources.get_mut::<NodeFilterSet>();
                         for filter in NodeFilter::iter() {
                             let filter_text = RichText::new(format!(
