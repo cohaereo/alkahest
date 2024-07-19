@@ -168,9 +168,9 @@ impl LightRenderer {
         Ok(Self {
             projection_matrix: light.light_to_world,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
-            technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
-            technique_compute_lightprobe: asset_manager
-                .get_or_load_technique(light.technique_compute_lightprobe),
+            // technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
+            // technique_compute_lightprobe: asset_manager
+            //     .get_or_load_technique(light.technique_compute_lightprobe),
             debug_label,
             debug_info: format!("{light:X?}"),
             ..Self::new_empty(gctx.clone())?
@@ -285,10 +285,8 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
+                unk40: Mat4::IDENTITY, // Transform::from_translation(view.position.xyz()).local_to_world(),
                 unk80: transform_mat,
-                unk100: light.unk50,
-
                 ..existing_deflight
             });
         }
@@ -330,7 +328,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
                 unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
                 unk80: transform_mat,
-                unk100: light.unk50,
+                // unk100: light.unk50,
                 // unk110: 1.0,
                 // unk114: 2000.0,
                 // unk118: 1.0,

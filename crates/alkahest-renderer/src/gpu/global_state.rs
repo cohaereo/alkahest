@@ -36,7 +36,7 @@ use windows::{
     },
 };
 
-use crate::handle::AssetSource::Tiger;
+use crate::{handle::AssetSource::Tiger, util::d3d::D3dResource};
 
 pub struct RenderStates {
     pub blend_states: [ID3D11BlendState; 90],
@@ -73,8 +73,10 @@ impl RenderStates {
         }
 
         let mut input_layouts = vec![None; 255];
-        for layout in BASE_INPUT_LAYOUTS.iter() {
-            input_layouts.push(Some(Self::create_input_layout(device, layout.elements)?));
+        for (i, layout) in BASE_INPUT_LAYOUTS.iter().enumerate() {
+            let layout = Self::create_input_layout(device, layout.elements)?;
+            layout.set_debug_name(&format!("Built-in Input Layout {i}"));
+            input_layouts[i] = Some(layout);
         }
 
         let data: SClientBootstrap =
@@ -106,8 +108,9 @@ impl RenderStates {
                 }
             }
 
-            input_layouts[l.index as usize] =
-                Some(Self::create_input_layout(device, &layout_elements)?);
+            let layout = Self::create_input_layout(device, &layout_elements)?;
+            layout.set_debug_name(&format!("Dynamic Input Layout {}", l.index));
+            input_layouts[l.index as usize] = Some(layout);
         }
 
         let mut rasterizer_states: [[_; 9]; 9] = unsafe { std::mem::zeroed() };

@@ -492,7 +492,7 @@ extern_struct! {
         0x1c0 => target_pixel_to_world: Mat4, // TODO(prebl): WROONG
         0x1e0 => target_pixel_to_camera: Mat4,
         // 0x240 => unk240: Mat4 > unimplemented(true),
-        // 0x280 => tptow_no_proj_w: Mat4,
+        0x260 => tptow_no_proj_w: Mat4,
         // 0x2c0 => unk2c0: Mat4 > unimplemented(true),
     }
 }
@@ -514,16 +514,16 @@ impl View {
         self.position = self.camera_to_world.w_axis;
         self.unk30 = Vec4::Z - self.world_to_projective.w_axis;
 
-        // let ptow_no_proj_w = {
-        //     let ptoc = projective_to_camera;
-        //     let ctow = self.camera_to_world;
-        //     let ctow_mat3 = Mat3::from_mat4(ctow);
-        //     let ctow = Mat4::from_mat3(ctow_mat3);
-        //
-        //     ctow * ptoc
-        // };
-        //
-        // self.tptow_no_proj_w = ptow_no_proj_w * viewport.target_pixel_to_projective();
+        let ptow_no_proj_w = {
+            let ptoc = projective_to_camera;
+            let ctow = self.camera_to_world;
+            let ctow_mat3 = Mat3::from_mat4(ctow);
+            let ctow = Mat4::from_mat3(ctow_mat3);
+
+            ctow * ptoc
+        };
+
+        self.tptow_no_proj_w = ptow_no_proj_w * viewport.target_pixel_to_projective();
     }
 }
 
@@ -550,17 +550,17 @@ extern_struct! {
 
 extern_struct! {
     struct DeferredLight("deferred_light") {
-        0x40 => unk40: Mat4 > unimplemented(false),
-        0x80 => unk80: Mat4 > unimplemented(true),
-        0xc0 => unkc0: Vec4 > unimplemented(true) > default(Vec4::W),
-        0xd0 => unkd0: Vec4 > unimplemented(true) > default(Vec4::W),
-        0xe0 => unke0: Vec4 > unimplemented(true) > default(Vec4::W),
-        0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::W),
-        0x100 => unk100: Vec4,
+        0x80 => unk40: Mat4 > unimplemented(false),
+        0xc0 => unk80: Mat4,
+        // 0xc0 => unkc0: Vec4 > unimplemented(true) > default(Vec4::W),
+        // 0xd0 => unkd0: Vec4 > unimplemented(true) > default(Vec4::W),
+        // 0xe0 => unke0: Vec4 > unimplemented(true) > default(Vec4::W),
+        // 0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::W),
+        0x100 => unk100: f32 > default(1.0),
         0x110 => unk110: f32 > unimplemented(true),
-        0x114 => unk114: f32 > unimplemented(true) > default(7500.0),
-        0x118 => unk118: f32 > unimplemented(true),
-        0x11c => unk11c: f32 > unimplemented(true),
+        // 0x114 => unk114: f32 > unimplemented(true) > default(7500.0),
+        // 0x118 => unk118: f32 > unimplemented(true),
+        // 0x11c => unk11c: f32 > unimplemented(true),
         0x120 => unk120: f32 > unimplemented(true),
     }
 }

@@ -72,7 +72,7 @@ pub fn print_banner() {
         "{}",
         text_gradient(
             Vec4::new(0.0, 1.0, 0.66, 1.0),
-            Vec4::new(0.88, 0.0, 0.88, 1.0),
+            Vec4::new(0.88, 0.11, 0.11, 1.0),
             BANNER
         )
     );

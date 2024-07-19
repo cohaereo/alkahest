@@ -624,65 +624,65 @@ fn load_datatable_into_scene<R: Read + Seek>(
             //         );
             //     }
             // }
-            // 0x80806a63 => {
-            //     table_data
-            //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
-            //         .unwrap();
-            //     let tag: TagHash = table_data.read_le().unwrap();
-            //     if !tag.is_some() {
-            //         continue;
-            //     }
-            //
-            //     let light_collection: SLightCollection =
-            //         package_manager().read_tag_struct(tag).unwrap();
-            //
-            //     let light_collection_entity =
-            //         spawn_data_entity(scene, (metadata.clone(),), parent_entity);
-            //     let mut children = vec![];
-            //     for (i, (light, transform, bounds)) in multizip((
-            //         light_collection.unk30.clone(),
-            //         light_collection.unk40.clone(),
-            //         light_collection.occlusion_bounds.bounds.iter(),
-            //     ))
-            //     .enumerate()
-            //     {
-            //         let shape = LightShape::from_volume_matrix(light.light_to_world);
-            //         children.push(
-            //             scene.spawn((
-            //                 NodeFilter::Light,
-            //                 Icon::Colored(shape.icon(), Color32::YELLOW),
-            //                 Label::from(format!("{} Light {tag}[{i}]", shape.name())),
-            //                 Transform {
-            //                     translation: transform.translation.xyz(),
-            //                     rotation: transform.rotation,
-            //                     ..Default::default()
-            //                 },
-            //                 LightRenderer::load(
-            //                     renderer.gpu.clone(),
-            //                     &mut renderer.data.lock().asset_manager,
-            //                     &light,
-            //                     format!("light {tag}+{i}"),
-            //                 )
-            //                 .context("Failed to load light")?,
-            //                 light,
-            //                 bounds.bb,
-            //                 TfxFeatureRenderer::DeferredLights,
-            //                 resource_origin,
-            //                 Parent(light_collection_entity),
-            //             )),
-            //         );
-            //     }
-            //
-            //     scene.insert(
-            //         light_collection_entity,
-            //         (
-            //             light_collection,
-            //             Icon::Unicode(ICON_LIGHTBULB_GROUP),
-            //             Label::from(format!("Light Collection {tag}")),
-            //             Children::from_slice(&children),
-            //         ),
-            //     )?;
-            // }
+            0x80806F5A => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                if !tag.is_some() {
+                    continue;
+                }
+
+                let light_collection: SLightCollection =
+                    package_manager().read_tag_struct(tag).unwrap();
+
+                let light_collection_entity =
+                    spawn_data_entity(scene, (metadata.clone(),), parent_entity);
+                let mut children = vec![];
+                for (i, (light, transform, bounds)) in multizip((
+                    light_collection.unk30.clone(),
+                    light_collection.unk40.clone(),
+                    light_collection.occlusion_bounds.bounds.iter(),
+                ))
+                .enumerate()
+                {
+                    let shape = LightShape::from_volume_matrix(light.light_to_world);
+                    children.push(
+                        scene.spawn((
+                            NodeFilter::Light,
+                            Icon::Colored(shape.icon(), Color32::YELLOW),
+                            Label::from(format!("{} Light {tag}[{i}]", shape.name())),
+                            Transform {
+                                translation: transform.translation.xyz(),
+                                rotation: transform.rotation,
+                                ..Default::default()
+                            },
+                            LightRenderer::load(
+                                renderer.gpu.clone(),
+                                &mut renderer.data.lock().asset_manager,
+                                &light,
+                                format!("light {tag}+{i}"),
+                            )
+                            .context("Failed to load light")?,
+                            light,
+                            bounds.bb,
+                            TfxFeatureRenderer::DeferredLights,
+                            resource_origin,
+                            Parent(light_collection_entity),
+                        )),
+                    );
+                }
+
+                scene.insert(
+                    light_collection_entity,
+                    (
+                        light_collection,
+                        Icon::Unicode(ICON_LIGHTBULB_GROUP),
+                        Label::from(format!("Light Collection {tag}")),
+                        Children::from_slice(&children),
+                    ),
+                )?;
+            }
             // 0x80806c5e => {
             //     table_data
             //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
@@ -802,32 +802,32 @@ fn load_datatable_into_scene<R: Read + Seek>(
             //         Err(e) => error!("Failed to load cubemap volume: {e:?}"),
             //     }
             // }
-            // 0x808067b5 => {
-            //     table_data
-            //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
-            //         .unwrap();
-            //     let tag: TagHash = table_data.read_le().unwrap();
-            //     if tag.is_none() {
-            //         // cohae: Apparently the lens flare tag is optional?
-            //         continue;
-            //     }
-            //
-            //     let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
-            //
-            //     spawn_data_entity(
-            //         scene,
-            //         (
-            //             NodeFilter::Light,
-            //             Icon::Unicode(ICON_FLARE),
-            //             Label::from("Lens Flare"),
-            //             transform,
-            //             lens_flare,
-            //             resource_origin,
-            //             metadata.clone(),
-            //         ),
-            //         parent_entity,
-            //     );
-            // }
+            0x80806CBF => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                if tag.is_none() {
+                    // cohae: Apparently the lens flare tag is optional?
+                    continue;
+                }
+
+                let lens_flare: SLensFlare = package_manager().read_tag_struct(tag)?;
+
+                spawn_data_entity(
+                    scene,
+                    (
+                        NodeFilter::Light,
+                        Icon::Unicode(ICON_FLARE),
+                        Label::from("Lens Flare"),
+                        transform,
+                        lens_flare,
+                        resource_origin,
+                        metadata.clone(),
+                    ),
+                    parent_entity,
+                );
+            }
             // 0x80808cb5 => {
             //     table_data
             //         .seek(SeekFrom::Start(data.data_resource.offset + 16))

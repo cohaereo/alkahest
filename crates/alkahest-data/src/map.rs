@@ -334,46 +334,31 @@ pub struct SUnk80806aae {
     pub entity_model: TagHash,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806C65)]
+#[tiger_tag(id = 0x8080713A)]
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
     pub bounds: AABB,
     pub unk30: Vec<SLight>,
-    pub unk40: Vec<SUnk80809f4f>,
+    pub unk40: Vec<SRotationTranslation>,
     pub light_count: u32,
     pub unk54: u32,
     pub occlusion_bounds: Tag<SOcclusionBounds>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806C70, size = 240)]
+#[tiger_tag(id = 0x8080713E, size = 160)]
 pub struct SLight {
     pub unk0: Vec4,
     pub unk10: Vec4,
-    pub unk20: Vec4,
-    pub unk30: Vec4,
-    pub unk40: [u32; 4],
-    pub unk50: Vec4,
-    pub light_to_world: Mat4,
-    pub unka0: u32,
-    pub unka4: u32,
-    pub unka8: u32,
-    pub unkac: f32,
-    pub unkb0: f32,
-    pub unkb4: f32,
-    pub unkb8: f32,
-    pub unkbc: f32,
-
-    // TODO(cohae): This field is new in TFS. Taghash-like value such as 9E440E84, purpose unknown
-    pub unkc0: u32,
+    pub light_to_world: Mat4, // 0x20
+    pub unk60: [u32; 8],
 
     pub technique_shading: TagHash,
-    pub technique_volumetrics: TagHash,
-    pub technique_compute_lightprobe: TagHash,
-    pub unkd0: TagHash, // Unk80806da1
-    pub unkd4: TagHash, // Unk80806da1
-    pub unkd8: [u32; 6],
+    pub unk84: TagHash,
+    pub unk88: TagHash, // Unk80806da1
+    pub unk8c: TagHash, // Unk80806da1
+    pub unk90: [u32; 4],
 }
 
 #[derive(Clone, Debug)]
@@ -417,8 +402,8 @@ pub struct SShadowingLight {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80809F4F)]
-pub struct SUnk80809f4f {
+#[tiger_tag(id = 0x80809F75)]
+pub struct SRotationTranslation {
     pub rotation: Quat,
     pub translation: Vec4,
 }
@@ -647,7 +632,7 @@ pub struct SMapAtmosphere {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806A78)]
+#[tiger_tag(id = 0x80806F68)]
 pub struct SLensFlare {
     // TODO(cohae): Placeholder struct
 }
