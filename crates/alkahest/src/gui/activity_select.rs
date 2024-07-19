@@ -158,7 +158,7 @@ impl ActivityBrowser {
             activity_patrols,
             maps,
             show_ambient: false,
-            panel: ActivitySelectPanel::Activities,
+            panel: ActivitySelectPanel::Maps,
         }
     }
 
@@ -284,12 +284,15 @@ impl GuiView for ActivityBrowser {
     ) -> Option<ViewResult> {
         egui::Window::new("Activities").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.selectable_value(
-                    &mut self.panel,
-                    ActivitySelectPanel::Activities,
-                    "Activities",
-                );
-                ui.selectable_value(&mut self.panel, ActivitySelectPanel::Patrols, "Free Roam");
+                ui.add_enabled_ui(false, |ui| {
+                    ui.selectable_value(
+                        &mut self.panel,
+                        ActivitySelectPanel::Activities,
+                        "Activities",
+                    );
+                    ui.selectable_value(&mut self.panel, ActivitySelectPanel::Patrols, "Free Roam");
+                });
+
                 ui.selectable_value(&mut self.panel, ActivitySelectPanel::Maps, "Maps");
             });
             ui.separator();
