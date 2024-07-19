@@ -483,17 +483,17 @@ extern_struct! {
         0x20 => position: Vec4,
         // TODO(cohae): Used for shadow generation it seems
         0x30 => unk30: Vec4 > unimplemented(false),
-        0x40 => world_to_camera: Mat4,
-        0x80 => camera_to_projective: Mat4,
-        0xc0 => camera_to_world: Mat4,
-        0x100 => projective_to_camera: Mat4,
-        0x140 => world_to_projective: Mat4,
+        0x40 => world_to_camera: Mat4, // TODO(prebl): WROONG
+        0x60 => camera_to_projective: Mat4,
+        0xa0 => camera_to_world: Mat4,
+        // 0x100 => projective_to_camera: Mat4,
+        0x120 => world_to_projective: Mat4,
         0x180 => projective_to_world: Mat4,
-        0x1c0 => target_pixel_to_world: Mat4,
-        0x200 => target_pixel_to_camera: Mat4,
-        0x240 => unk240: Mat4 > unimplemented(true),
-        0x280 => tptow_no_proj_w: Mat4,
-        0x2c0 => unk2c0: Mat4 > unimplemented(true),
+        0x1c0 => target_pixel_to_world: Mat4, // TODO(prebl): WROONG
+        0x1e0 => target_pixel_to_camera: Mat4,
+        // 0x240 => unk240: Mat4 > unimplemented(true),
+        // 0x280 => tptow_no_proj_w: Mat4,
+        // 0x2c0 => unk2c0: Mat4 > unimplemented(true),
     }
 }
 
@@ -506,24 +506,24 @@ impl View {
         self.camera_to_world = self.world_to_camera.inverse();
         self.world_to_projective = self.camera_to_projective * self.world_to_camera;
         self.projective_to_world = self.world_to_projective.inverse();
-        self.projective_to_camera = self.camera_to_projective.inverse();
-        self.target_pixel_to_camera =
-            self.projective_to_camera * viewport.target_pixel_to_projective();
+        /* self. */
+        let projective_to_camera = self.camera_to_projective.inverse();
+        self.target_pixel_to_camera = projective_to_camera * viewport.target_pixel_to_projective();
         self.target_pixel_to_world = self.camera_to_world * self.target_pixel_to_camera;
 
         self.position = self.camera_to_world.w_axis;
         self.unk30 = Vec4::Z - self.world_to_projective.w_axis;
 
-        let ptow_no_proj_w = {
-            let ptoc = self.projective_to_camera;
-            let ctow = self.camera_to_world;
-            let ctow_mat3 = Mat3::from_mat4(ctow);
-            let ctow = Mat4::from_mat3(ctow_mat3);
-
-            ctow * ptoc
-        };
-
-        self.tptow_no_proj_w = ptow_no_proj_w * viewport.target_pixel_to_projective();
+        // let ptow_no_proj_w = {
+        //     let ptoc = projective_to_camera;
+        //     let ctow = self.camera_to_world;
+        //     let ctow_mat3 = Mat3::from_mat4(ctow);
+        //     let ctow = Mat4::from_mat3(ctow_mat3);
+        //
+        //     ctow * ptoc
+        // };
+        //
+        // self.tptow_no_proj_w = ptow_no_proj_w * viewport.target_pixel_to_projective();
     }
 }
 

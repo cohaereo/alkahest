@@ -150,7 +150,7 @@ impl TfxScopeStage {
 
         let mut samplers = vec![];
         for sampler in stage.constants.samplers.iter() {
-            samplers.push(crate::loaders::technique::load_sampler(&gctx, sampler.hash32()).ok());
+            samplers.push(crate::loaders::technique::load_sampler(&gctx, sampler.sampler).ok());
         }
 
         Ok(Some(TfxScopeStage {
@@ -284,22 +284,53 @@ impl ScopeInstances {
     pub fn write(&self) -> Vec<u8> {
         let mut buffer = vec![];
 
-        buffer
-            .write_all(bytemuck::cast_slice(&[
-                self.mesh_offset.x,
-                self.mesh_offset.y,
-                self.mesh_offset.z,
-                self.mesh_scale,
-                self.uv_scale.x,
-                self.uv_scale.y,
-                self.uv_offset.x,
-                self.uv_offset.y,
-            ]))
-            .unwrap();
+        for &instance_transform in &self.transforms {
+            let model_transform = Mat4::from_cols(
+                [self.mesh_scale, 0.0, 0.0, self.mesh_offset.x].into(),
+                [0.0, self.mesh_scale, 0.0, self.mesh_offset.y].into(),
+                [0.0, 0.0, self.mesh_scale, self.mesh_offset.z].into(),
+                [0.0, 0.0, 0.0, 1.0].into(),
+            );
 
-        buffer
-            .write_all(bytemuck::cast_slice(&self.transforms))
-            .unwrap();
+            // let instance_transform = Mat4::from_cols(
+            //     t.x_axis.truncate().extend(t.w_axis.x),
+            //     t.y_axis.truncate().extend(t.w_axis.y),
+            //     t.z_axis.truncate().extend(t.w_axis.z),
+            //     t.w_axis,
+            // );
+
+            let matrix = model_transform * instance_transform;
+
+            buffer
+                .write_all(bytemuck::cast_slice(&[
+                    matrix.x_axis,
+                    matrix.y_axis,
+                    matrix.z_axis,
+                    Vec4::new(
+                        self.uv_scale.x,
+                        self.uv_offset.x,
+                        self.uv_offset.y,
+                        f32::from_bits(u32::MAX),
+                    ),
+                ]))
+                .unwrap();
+        }
+        // buffer
+        //     .write_all(bytemuck::cast_slice(&[
+        //         self.mesh_offset.x,
+        //         self.mesh_offset.y,
+        //         self.mesh_offset.z,
+        //         self.mesh_scale,
+        //         self.uv_scale.x,
+        //         self.uv_scale.y,
+        //         self.uv_offset.x,
+        //         self.uv_offset.y,
+        //     ]))
+        //     .unwrap();
+        //
+        // buffer
+        //     .write_all(bytemuck::cast_slice(&self.transforms))
+        //     .unwrap();
 
         buffer
     }
