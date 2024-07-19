@@ -420,8 +420,8 @@ impl TfxBytecodeDecompiler {
                 TfxBytecodeOp::PushSampler { index } => {
                     stack_push!(format!("get_sampler({index})"));
                 }
-                TfxBytecodeOp::PushObjectChannelVector { hash } => {
-                    stack_push!(format!("object_channel({hash:08X})"));
+                TfxBytecodeOp::Unk4d { unk1 } => {
+                    stack_push!(format!("unk4d({unk1})"));
                 }
                 TfxBytecodeOp::PushGlobalChannelVector { unk1 } => {
                     stack_push!(format!("global_channel({unk1})"));

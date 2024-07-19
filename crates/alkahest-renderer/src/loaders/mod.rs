@@ -161,7 +161,7 @@ impl AssetManager {
         profiling::scope!("AssetManager::poll");
         let mut budget = self.asset_rx.len();
         if budget != 0 {
-            debug!("Polling asset manager ({} assets to process)", budget);
+            trace!("Polling asset manager ({} assets to process)", budget);
         }
 
         let mut total_removed = 0;
@@ -177,7 +177,7 @@ impl AssetManager {
         while budget > 0 {
             match self.asset_rx.try_recv() {
                 Ok(asset) => {
-                    debug!(
+                    trace!(
                         "Received loaded asset handle {:?} of type {}",
                         asset.handle().id(),
                         asset.as_ref(),
@@ -203,8 +203,8 @@ impl AssetManager {
                                 for (shader, stage) in t.all_stages_mut() {
                                     if let Some(stage) = stage {
                                         for assignment in shader.textures.iter() {
-                                            let texture = self
-                                                .get_or_load_texture(assignment.texture);
+                                            let texture =
+                                                self.get_or_load_texture(assignment.texture);
                                             stage.textures.push((assignment.slot, texture));
                                         }
                                     }

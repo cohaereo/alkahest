@@ -313,33 +313,33 @@ pub async fn load_map(
                     .context("Failed to load AB datatable")?;
                 }
 
-                if origin != ResourceOrigin::Ambient {
-                    for r in &res.resource_table2 {
-                        if r.unk14 != 0xFFFFFFFF && r.unk0.is_some() {
-                            let transform = if res.unk18.resource_type == 0x8080460C {
-                                cur.seek(SeekFrom::Start(res.unk18.offset))?;
-                                let tag: SUnk8080460c =
-                                    TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-                                Transform::new(tag.translation.truncate(), tag.rotation, Vec3::ONE)
-                            } else {
-                                Transform::default()
-                            };
-
-                            // SEntity::ID
-                            load_entity_into_scene(
-                                r.unk0.hash32(),
-                                &mut scene,
-                                &renderer,
-                                origin,
-                                None,
-                                transform,
-                                None,
-                                0,
-                                None,
-                            )?;
-                        }
-                    }
-                }
+                // if origin != ResourceOrigin::Ambient {
+                //     for r in &res.resource_table2 {
+                //         if r.unk14 != 0xFFFFFFFF && r.unk0.is_some() {
+                //             let transform = if res.unk18.resource_type == 0x8080460C {
+                //                 cur.seek(SeekFrom::Start(res.unk18.offset))?;
+                //                 let tag: SUnk8080460c =
+                //                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
+                //                 Transform::new(tag.translation.truncate(), tag.rotation, Vec3::ONE)
+                //             } else {
+                //                 Transform::default()
+                //             };
+                //
+                //             // SEntity::ID
+                //             load_entity_into_scene(
+                //                 r.unk0.hash32(),
+                //                 &mut scene,
+                //                 &renderer,
+                //                 origin,
+                //                 None,
+                //                 transform,
+                //                 None,
+                //                 0,
+                //                 None,
+                //             )?;
+                //         }
+                //     }
+                // }
             } else {
                 warn!("null entity resource tag in {}", resource.taghash());
             }
@@ -1345,7 +1345,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     continue;
                 }
 
-                load_entity_into_scene(
+                if let Err(e) = load_entity_into_scene(
                     entity_hash,
                     scene,
                     renderer,
@@ -1355,8 +1355,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     if u != u32::MAX { Some(u) } else { None },
                     0,
                     Some(metadata),
-                )
-                .ok();
+                ) {
+                    error!("Failed to load entity {entity_hash}: {e:?}");
+                }
             }
         }
     }
@@ -1488,12 +1489,12 @@ fn load_entity_into_scene(
         let entres = &e.unk0;
 
         match entres.unk10.resource_type {
-            0x80806d8a => {
+            0x808072b8 => {
                 let mut cur = Cursor::new(package_manager().read_tag(entres.taghash())?);
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x224))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x1dc))?;
                 let model_hash: TagHash = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x3c0))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x2d0))?;
                 let entity_material_map: Vec<Unk808072c5> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
@@ -1501,7 +1502,7 @@ fn load_entity_into_scene(
                 // let entity_material_map_pre: Vec<(u16, u16)> =
                 //     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x400))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x310))?;
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
@@ -1530,34 +1531,34 @@ fn load_entity_into_scene(
             }
         }
 
-        let mut loaded = FxHashSet::<WideHash>::default();
-        for r in &entres.resource_table2 {
-            // if matches!(r.unk14, 0 | 0xFFFFFFFF) {
-            if r.unk14 == 0xFFFFFFFF {
-                continue;
-            }
-
-            if loaded.contains(&r.unk0) {
-                continue;
-            }
-
-            // SEntity::ID
-            if r.unk0.is_some() {
-                load_entity_into_scene(
-                    r.unk0.hash32(),
-                    scene,
-                    renderer,
-                    resource_origin,
-                    Some(scene_entity),
-                    // TODO(cohae): transform hierarchy
-                    transform,
-                    None,
-                    depth + 1,
-                    None,
-                )?;
-                loaded.insert(r.unk0);
-            }
-        }
+        // let mut loaded = FxHashSet::<WideHash>::default();
+        // for r in &entres.resource_table2 {
+        //     // if matches!(r.unk14, 0 | 0xFFFFFFFF) {
+        //     if r.unk14 == 0xFFFFFFFF {
+        //         continue;
+        //     }
+        //
+        //     if loaded.contains(&r.unk0) {
+        //         continue;
+        //     }
+        //
+        //     // SEntity::ID
+        //     if r.unk0.is_some() {
+        //         load_entity_into_scene(
+        //             r.unk0.hash32(),
+        //             scene,
+        //             renderer,
+        //             resource_origin,
+        //             Some(scene_entity),
+        //             // TODO(cohae): transform hierarchy
+        //             transform,
+        //             None,
+        //             depth + 1,
+        //             None,
+        //         )?;
+        //         loaded.insert(r.unk0);
+        //     }
+        // }
     }
 
     Ok(scene_entity)

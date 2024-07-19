@@ -127,7 +127,7 @@ pub enum TfxBytecodeOp {
     /// Pushes a sampler on the stack from the technique sampler table
     #[br(magic = 0x4c_u8)] PushSampler { index: u8 },
 
-    #[br(magic = 0x4d_u8)] PushObjectChannelVector { hash: u32 },
+    #[br(magic = 0x4d_u8)] Unk4d { unk1: u8 },
     #[br(magic = 0x4e_u8)] PushGlobalChannelVector { unk1: u8 },
     // #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
     // #[br(magic = 0x51_u8)] Unk51,
@@ -341,8 +341,8 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PushSampler { index } => {
                 format!("push_sampler index={index}")
             }
-            TfxBytecodeOp::PushObjectChannelVector { hash } => {
-                format!("push_object_channel_vector({hash:08X})")
+            TfxBytecodeOp::Unk4d { unk1 } => {
+                format!("unk4d({unk1})")
             }
             TfxBytecodeOp::PushGlobalChannelVector { unk1: index } => {
                 format!("push_global_channel_vector({index})")

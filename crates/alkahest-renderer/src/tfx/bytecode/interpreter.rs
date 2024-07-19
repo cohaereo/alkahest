@@ -269,11 +269,12 @@ impl TfxBytecodeInterpreter {
                     stack_push!(mat.mul_vec4(value));
                 }
 
-                TfxBytecodeOp::PushObjectChannelVector { .. } => {
-                    stack_push!(Vec4::ONE)
-                }
+                // TfxBytecodeOp::PushObjectChannelVector { .. } => {
+                //     stack_push!(Vec4::ONE)
+                // }
                 &TfxBytecodeOp::Unk4c { unk1, .. }
                 // | &TfxBytecodeOp::PushObjectChannelVector { hash }
+                | &TfxBytecodeOp::Unk4d { unk1, .. }
                 | &TfxBytecodeOp::PushGlobalChannelVector { unk1, .. }
                 // | &TfxBytecodeOp::Unk50 { unk1, .. }
                 // | &TfxBytecodeOp::Unk52 { unk1, .. }

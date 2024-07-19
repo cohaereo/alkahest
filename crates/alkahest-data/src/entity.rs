@@ -7,14 +7,15 @@ use super::geometry::{ELodCategory, EPrimitiveType};
 use crate::{activity::SEntityResource, tfx::TfxRenderStage, Tag};
 
 #[derive(Clone)]
-#[tiger_tag(id = 0x80809AD8)]
+#[tiger_tag(id = 0x80809C0F)]
 pub struct SEntity {
     pub file_size: u64,
+    pub unk8: [u32; 2],
     pub entity_resources: Vec<Unk80809c04>,
 }
 
 #[derive(Clone)]
-#[tiger_tag(id = 0x80809ACD)]
+#[tiger_tag(id = 0x80809C04)]
 pub struct Unk80809c04 {
     pub unk0: Tag<SEntityResource>,
     pub unk4: u32,
@@ -22,7 +23,7 @@ pub struct Unk80809c04 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806F07, size = 0x70)]
+#[tiger_tag(id = 0x808073A5, size = 0xa0)]
 pub struct SDynamicModel {
     pub file_size: u64,
     pub unk8: u64,
@@ -36,24 +37,22 @@ pub struct SDynamicModel {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806EC5, size = 0x80)]
+#[tiger_tag(id = 0x80807378, size = 0x88)]
 pub struct SDynamicMesh {
-    pub vertex0_buffer: TagHash,
-    pub vertex1_buffer: TagHash,
-    pub buffer2: TagHash,
-    pub buffer3: TagHash,
-    pub index_buffer: TagHash,
-    pub color_buffer: TagHash,
-    pub skinning_buffer: TagHash,
-    pub unk1c: u32,
-    pub parts: Vec<SDynamicMeshPart>, // 0x20
+    pub vertex0_buffer: TagHash,      // 0x0
+    pub vertex1_buffer: TagHash,      // 0x4
+    pub buffer2: TagHash,             // 0x8
+    pub buffer3: TagHash,             // 0xc
+    pub index_buffer: TagHash,        // 0x10
+    pub unk14: u32,                   // 0x14
+    pub parts: Vec<SDynamicMeshPart>, // 0x18
     /// Range of parts to render per render stage
     /// Can be obtained as follows:
     ///     - Start = part_range_per_render_stage[stage]
     ///     - End = part_range_per_render_stage[stage + 1]
-    pub part_range_per_render_stage: [u16; 25], // 0x30
-    pub input_layout_per_render_stage: [u8; 24], // 0x62
-    _pad7a: [u16; 3],
+    pub part_range_per_render_stage: [u16; 24], // 0x28
+    pub input_layout_per_render_stage: [u16; 23], // 0x58
+    _pad86: [u8; 2],
 }
 
 impl SDynamicMesh {
@@ -63,33 +62,32 @@ impl SDynamicMesh {
         start as usize..end as usize
     }
 
-    pub fn get_input_layout_for_stage(&self, stage: TfxRenderStage) -> u8 {
+    pub fn get_input_layout_for_stage(&self, stage: TfxRenderStage) -> u16 {
         self.input_layout_per_render_stage[stage as usize]
     }
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806ECB)]
+#[tiger_tag(id = 0x8080737E)]
 pub struct SDynamicMeshPart {
-    pub technique: TagHash,
-    pub variant_shader_index: u16,
-    pub primitive_type: EPrimitiveType,
-    pub unk7: u8,
-    pub index_start: u32,
-    pub index_count: u32,
-    pub unk10: u32,
-    pub external_identifier: u16,
-    pub unk16: u16,
-    pub flags: u32,
-    pub gear_dye_change_color_index: u8,
-    pub lod_category: ELodCategory,
-    pub unk1e: u8,
-    pub lod_run: u8,
-    pub unk20: u32,
+    pub technique: TagHash,             // 0x0
+    pub variant_shader_index: u16,      // 0x4
+    pub primitive_type: EPrimitiveType, // 0x6
+    pub unk7: u8,                       // 0x7
+    pub index_start: u32,               // 0x8
+    pub index_count: u32,               // 0xc
+    pub unk10: u32,                     // 0x10
+    pub external_identifier: u16,       // 0x14
+    pub unk16: u16,                     // 0x16
+    pub unk18: u8,                      // 0x18
+    pub unk19: u8,                      // 0x19
+    pub unk1a: u8,                      // 0x1a
+    pub lod_category: ELodCategory,     // 0x1b
+    pub unk1c: u32,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D97)]
+#[tiger_tag(id = 0x808072C4)]
 pub struct Unk808072c5 {
     pub technique_count: u32,
     pub technique_start: u32,

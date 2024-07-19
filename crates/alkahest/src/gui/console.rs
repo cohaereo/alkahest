@@ -781,15 +781,15 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                     let range = m.get_range_for_stage(stage);
                     let unique_shaders: FxHashSet<TagHash> =
                         m.parts[range.clone()].iter().map(|p| p.technique).collect();
-                    let unique_flags: FxHashSet<u32> =
-                        m.parts[range.clone()].iter().map(|p| p.flags).collect();
+                    // let unique_flags: FxHashSet<u32> =
+                    //     m.parts[range.clone()].iter().map(|p| p.flags).collect();
 
                     if !range.is_empty() {
                         println!(
-                            "\t\t\t- {stage:?}: {} parts (techniques: [{}] flags: [{}])",
+                            "\t\t\t- {stage:?}: {} parts (techniques: [{}] flags: [???])",
                             range.len(),
                             unique_shaders.iter().map(|s| format!("{s}")).join(", "),
-                            unique_flags.iter().map(|v| format!("0x{v:X}")).join(", ")
+                            // unique_flags.iter().map(|v| format!("0x{v:X}")).join(", ")
                         );
                     }
                 }

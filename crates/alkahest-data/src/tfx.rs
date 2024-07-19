@@ -31,11 +31,11 @@ pub enum TfxRenderStage {
     Cubemaps = 20,
     PostprocessScreen = 21,
     WorldForces = 22,
-    ComputeSkinning = 23,
+    // ComputeSkinning = 23,
 }
 
 impl TfxRenderStage {
-    pub const VARIANTS: [TfxRenderStage; 24] = [
+    pub const VARIANTS: [TfxRenderStage; 23] = [
         Self::GenerateGbuffer,
         Self::Decals,
         Self::InvestmentDecals,
@@ -59,7 +59,7 @@ impl TfxRenderStage {
         Self::Cubemaps,
         Self::PostprocessScreen,
         Self::WorldForces,
-        Self::ComputeSkinning,
+        // Self::ComputeSkinning,
     ];
 }
 
@@ -89,7 +89,7 @@ impl Display for TfxRenderStage {
             Self::Cubemaps => "cubemaps",
             Self::PostprocessScreen => "postprocess_screen",
             Self::WorldForces => "world_forces",
-            Self::ComputeSkinning => "compute_skinning",
+            // Self::ComputeSkinning => "compute_skinning",
         };
 
         write!(f, "{}", n)

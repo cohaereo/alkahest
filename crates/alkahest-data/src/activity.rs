@@ -132,7 +132,7 @@ pub struct Unk80808943 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80809B06, size = 0x88)]
+#[tiger_tag(id = 0x80809C36, size = 0x88)]
 pub struct SEntityResource {
     pub file_size: u64,
     pub unk8: ResourcePointer,
@@ -141,12 +141,10 @@ pub struct SEntityResource {
 
     pub unk20: Vec<ResourcePointerWithClass>,
 
-    #[tag(offset = 0x40)]
+    #[tag(offset = 0x30)]
     pub resource_table1: Vec<()>,
-
-    #[tag(offset = 0x60)]
-    pub resource_table2: Vec<Pointer<SEntityRef>>,
-
+    // #[tag(offset = 0x60)]
+    // pub resource_table2: Vec<Pointer<SEntityRef>>,
     #[tag(offset = 0x80)]
     pub unk80: TagHash,
     pub unk84: TagHash,

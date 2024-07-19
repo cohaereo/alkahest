@@ -28,8 +28,8 @@ pub struct STechnique {
     pub used_scopes: TfxScopeBits,
     pub compatible_scopes: TfxScopeBits,
 
-    pub unk20: u32,
     pub states: StateSelection,
+    pub unk24: u32,
     pub unk28: [u32; 8],
 
     // 0x48

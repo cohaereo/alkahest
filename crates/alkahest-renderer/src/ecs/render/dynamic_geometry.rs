@@ -258,9 +258,7 @@ impl DynamicModel {
                 all_scopes |= technique.used_scopes;
             }
 
-            if stages.contains(RenderStageSubscriptions::COMPUTE_SKINNING)
-                || all_scopes.contains(TfxScopeBits::SKINNING)
-            {
+            if all_scopes.contains(TfxScopeBits::SKINNING) {
                 unsafe {
                     renderer
                         .gpu
@@ -306,10 +304,11 @@ impl DynamicModelComponent {
 
         let mut d = Self {
             identifier: u16::MAX,
-            cbuffer_skinning: model
-                .subscribed_stages
-                .contains(RenderStageSubscriptions::COMPUTE_SKINNING)
-                .then(|| ConstantBuffer::create(renderer.gpu.clone(), None).unwrap()),
+            cbuffer_skinning: None,
+            // cbuffer_skinning: model
+            //     .subscribed_stages
+            //     .contains(RenderStageSubscriptions::COMPUTE_SKINNING)
+            //     .then(|| ConstantBuffer::create(renderer.gpu.clone(), None).unwrap()),
             model,
             ext: Default::default(),
             cbuffer: ConstantBuffer::create(renderer.gpu.clone(), None)?,
@@ -367,6 +366,7 @@ impl DynamicModelComponent {
         // } else {
         self.cbuffer.bind(
             renderer.render_globals.scopes.rigid_model.vertex_slot() as u32,
+            // 1,
             TfxShaderStage::Vertex,
         );
         // }

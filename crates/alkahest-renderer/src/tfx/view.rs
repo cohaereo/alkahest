@@ -39,7 +39,7 @@ bitflags::bitflags! {
         const CUBEMAPS                          = 1 << TfxRenderStage::Cubemaps as u32;
         const POSTPROCESS_SCREEN                = 1 << TfxRenderStage::PostprocessScreen as u32;
         const WORLD_FORCES                      = 1 << TfxRenderStage::WorldForces as u32;
-        const COMPUTE_SKINNING                  = 1 << TfxRenderStage::ComputeSkinning as u32;
+        // const COMPUTE_SKINNING                  = 1 << TfxRenderStage::ComputeSkinning as u32;
     }
 }
 
@@ -50,7 +50,7 @@ impl RenderStageSubscriptions {
 
     pub fn from_partrange_list(part_ranges: &[u16]) -> Self {
         let mut flags = Self::empty();
-        for i in 0..24 {
+        for i in 0..23 {
             if part_ranges[i] != part_ranges[i + 1] {
                 flags |= Self::from_bits_truncate(1 << i);
             }
