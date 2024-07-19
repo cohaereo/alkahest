@@ -30,8 +30,8 @@ fn main() {
     }
 
     if cfg!(target_os = "windows") {
-        let mut res = winres::WindowsResource::new();
-        res.set_icon("assets/icon2.ico");
+        let mut res = winresource::WindowsResource::new();
+        res.set_icon("icon-prebl.ico");
         res.compile().unwrap();
     }
 }

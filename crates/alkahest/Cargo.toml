@@ -100,4 +100,4 @@ targets = ["x86_64-pc-windows-gnu"]
 targets = ["x86_64-pc-windows-gnu"]
 
 [build-dependencies]
-winres = "0.1.12"
+winresource = "0.1.17"
