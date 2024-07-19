@@ -1,7 +1,7 @@
 use std::{ffi::CStr, fmt::Write};
 
 use alkahest_data::{dxgi::DxgiFormat, render_globals::SClientBootstrap};
-use alkahest_pm::package_manager;
+use alkahest_pm::{package_manager, package_manager_checked};
 use anyhow::Context;
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
@@ -79,38 +79,39 @@ impl RenderStates {
             input_layouts[i] = Some(layout);
         }
 
-        let data: SClientBootstrap =
-            package_manager().read_named_tag_struct("client_bootstrap_patchable")?;
-        let globs = &data.render_globals;
-        let element_set = &globs.input_layouts.elements_c;
-        for l in &globs.input_layouts.mapping.layouts {
-            let mut layout_elements = vec![];
-            for (buffer_index, element_index) in
-                [l.element_0, l.element_1, l.element_2, l.element_3]
-                    .iter()
-                    .enumerate()
-            {
-                if *element_index == u32::MAX {
-                    continue;
+        if let Ok(pm) = package_manager_checked() {
+            let data: SClientBootstrap = pm.read_named_tag_struct("client_bootstrap_patchable")?;
+            let globs = &data.render_globals;
+            let element_set = &globs.input_layouts.elements_c;
+            for l in &globs.input_layouts.mapping.layouts {
+                let mut layout_elements = vec![];
+                for (buffer_index, element_index) in
+                    [l.element_0, l.element_1, l.element_2, l.element_3]
+                        .iter()
+                        .enumerate()
+                {
+                    if *element_index == u32::MAX {
+                        continue;
+                    }
+                    for e in &element_set.sets[*element_index as usize].elements {
+                        let semantic = INPUT_SEMANTICS[e.semantic as usize];
+                        let format = &INPUT_FORMATS[e.format as usize];
+                        layout_elements.push(TigerInputLayoutElement {
+                            hlsl_type: format.hlsl_type,
+                            format: format.format,
+                            stride: format.stride,
+                            semantic_name: semantic,
+                            semantic_index: e.semantic_index as _,
+                            buffer_index: buffer_index as _,
+                            is_instance_data: false,
+                        });
+                    }
                 }
-                for e in &element_set.sets[*element_index as usize].elements {
-                    let semantic = INPUT_SEMANTICS[e.semantic as usize];
-                    let format = &INPUT_FORMATS[e.format as usize];
-                    layout_elements.push(TigerInputLayoutElement {
-                        hlsl_type: format.hlsl_type,
-                        format: format.format,
-                        stride: format.stride,
-                        semantic_name: semantic,
-                        semantic_index: e.semantic_index as _,
-                        buffer_index: buffer_index as _,
-                        is_instance_data: false,
-                    });
-                }
-            }
 
-            let layout = Self::create_input_layout(device, &layout_elements)?;
-            layout.set_debug_name(&format!("Dynamic Input Layout {}", l.index));
-            input_layouts[l.index as usize] = Some(layout);
+                let layout = Self::create_input_layout(device, &layout_elements)?;
+                layout.set_debug_name(&format!("Dynamic Input Layout {}", l.index));
+                input_layouts[l.index as usize] = Some(layout);
+            }
         }
 
         let mut rasterizer_states: [[_; 9]; 9] = unsafe { std::mem::zeroed() };
