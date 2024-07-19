@@ -67,7 +67,6 @@ impl DynamicModel {
             .map(|m| ModelBuffers {
                 vertex0_buffer: am.get_or_load_vertex_buffer(m.vertex0_buffer),
                 vertex1_buffer: am.get_or_load_vertex_buffer(m.vertex1_buffer),
-                color_buffer: am.get_or_load_vertex_buffer(m.color_buffer),
                 index_buffer: am.get_or_load_index_buffer(m.index_buffer),
             })
             .collect_vec();

@@ -185,6 +185,7 @@ dependencies = [
  "rayon",
  "rustc-hash 2.0.0",
  "tiger-parse",
+ "tracing",
 ]
 
 [[package]]

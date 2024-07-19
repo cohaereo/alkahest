@@ -73,12 +73,11 @@ pub struct STechniqueShader {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806DCF)]
+#[tiger_tag(id = 0x80807211)]
 pub struct SMaterialTextureAssignment {
     /// Material slot to assign to
     pub slot: u32,
-    _pad: u32,
-    pub texture: WideHash,
+    pub texture: TagHash,
 }
 
 #[derive(Debug)]

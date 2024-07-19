@@ -70,7 +70,7 @@ pub fn draw_entity(
                     cbuffer
                         .write_array(
                             create_instances_scope(
-                                &model.model.model.opaque_meshes,
+                                &model.model.model,
                                 std::slice::from_ref(transform),
                             )
                             .write()

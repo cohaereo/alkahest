@@ -103,6 +103,7 @@ impl AlkahestApp {
         renderer.set_render_settings(config::with(|c| c.renderer.clone()));
         resources.insert(renderer.clone());
         let stringmap = Arc::new(StringContainer::load_all_global());
+
         resources.insert(stringmap);
 
         let gizmo = Gizmo::new(GizmoConfig {

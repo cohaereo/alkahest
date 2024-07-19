@@ -30,7 +30,6 @@ use crate::{
 pub(super) struct ModelBuffers {
     pub vertex0_buffer: Handle<VertexBuffer>,
     pub vertex1_buffer: Handle<VertexBuffer>,
-    pub color_buffer: Handle<VertexBuffer>,
     pub index_buffer: Handle<IndexBuffer>,
 }
 
@@ -40,7 +39,6 @@ impl ModelBuffers {
             let am = &mut renderer.data.lock().asset_manager;
             let vertex0 = am.vertex_buffers.get(&self.vertex0_buffer)?;
             let vertex1 = am.vertex_buffers.get(&self.vertex1_buffer);
-            let color = am.vertex_buffers.get(&self.color_buffer);
             let index = am.index_buffers.get(&self.index_buffer)?;
 
             let ctx = renderer.gpu.context();
@@ -62,15 +60,6 @@ impl ModelBuffers {
                     Some([0].as_ptr()),
                 );
             }
-
-            let color = color.unwrap_or(&renderer.gpu.color0_fallback);
-            ctx.VSSetShaderResources(
-                0,
-                Some(&[
-                    color.srv.clone(),
-                    renderer.gpu.color_ao_fallback.srv.clone(),
-                ]),
-            );
         }
 
         Some(())
@@ -110,7 +99,6 @@ impl StaticModel {
                 |&(index_buffer, vertex0_buffer, vertex1_buffer, color_buffer)| ModelBuffers {
                     vertex0_buffer: am.get_or_load_vertex_buffer(vertex0_buffer),
                     vertex1_buffer: am.get_or_load_vertex_buffer(vertex1_buffer),
-                    color_buffer: am.get_or_load_vertex_buffer(color_buffer),
                     index_buffer: am.get_or_load_index_buffer(index_buffer),
                 },
             )
@@ -134,7 +122,6 @@ impl StaticModel {
                     buffers: ModelBuffers {
                         vertex0_buffer: am.get_or_load_vertex_buffer(mesh.vertex0_buffer),
                         vertex1_buffer: am.get_or_load_vertex_buffer(mesh.vertex1_buffer),
-                        color_buffer: am.get_or_load_vertex_buffer(mesh.color_buffer),
                         index_buffer: am.get_or_load_index_buffer(mesh.index_buffer),
                     },
                     technique: am.get_or_load_technique(mesh.technique),
@@ -286,10 +273,9 @@ impl StaticModelSingle {
         profiling::scope!("StaticInstances::update_cbuffer");
 
         unsafe {
-            let mesh_data = &self.model.model.opaque_meshes;
             self.cbuffer
                 .write_array(
-                    create_instances_scope(mesh_data, std::slice::from_ref(transform))
+                    create_instances_scope(&self.model.model, std::slice::from_ref(transform))
                         .write()
                         .as_slice(),
                 )
@@ -340,10 +326,9 @@ impl StaticInstances {
         }
 
         unsafe {
-            let mesh_data = &self.model.model.opaque_meshes;
             self.cbuffer
                 .write_array(
-                    create_instances_scope(mesh_data, &transforms)
+                    create_instances_scope(&self.model.model, &transforms)
                         .write()
                         .as_slice(),
                 )
@@ -361,13 +346,12 @@ impl StaticInstances {
     }
 }
 
-pub fn create_instances_scope(mesh: &SStaticMeshData, transforms: &[Transform]) -> ScopeInstances {
+pub fn create_instances_scope(mesh: &SStaticMesh, transforms: &[Transform]) -> ScopeInstances {
     ScopeInstances {
         mesh_offset: mesh.mesh_offset,
         mesh_scale: mesh.mesh_scale,
         uv_scale: mesh.texture_coordinate_scale,
         uv_offset: mesh.texture_coordinate_offset,
-        max_color_index: mesh.max_color_index,
         transforms: transforms
             .iter()
             .map(|t| {
@@ -449,12 +433,9 @@ pub fn draw_static_instances_individual_system(
             unsafe {
                 cbuffer
                     .write_array(
-                        create_instances_scope(
-                            &model.model.model.opaque_meshes,
-                            std::slice::from_ref(transform),
-                        )
-                        .write()
-                        .as_slice(),
+                        create_instances_scope(&model.model.model, std::slice::from_ref(transform))
+                            .write()
+                            .as_slice(),
                     )
                     .unwrap();
             }

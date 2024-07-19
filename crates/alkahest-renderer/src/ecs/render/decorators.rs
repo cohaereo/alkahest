@@ -153,12 +153,12 @@ impl DecoratorRenderer {
                 stage,
                 dyn_id,
                 move |_model, renderer, mesh, part| unsafe {
-                    let layout = mesh.get_input_layout_for_stage(stage);
-                    if !RenderStates::is_input_layout_instanced(layout as usize) {
-                        // TODO(cohae): Error handling so this doesnt clog the log
-                        warn!("Input layout {layout} is not instanced!!");
-                        return;
-                    }
+                    // let layout = mesh.get_input_layout_for_stage(stage);
+                    // if !RenderStates::is_input_layout_instanced(layout as usize) {
+                    //     // TODO(cohae): Error handling so this doesnt clog the log
+                    //     warn!("Input layout {layout} is not instanced!!");
+                    //     return;
+                    // }
 
                     self.instance_buffer.bind_single(&renderer.gpu, 1);
 

@@ -28,14 +28,14 @@ impl RenderGlobals {
             package_manager().read_named_tag_struct("client_bootstrap_patchable")?;
         let globs = &data.render_globals;
 
-        println!("Scopes:");
-        for s in &globs.scopes {
-            println!("{}", s.name.to_string());
-        }
-        println!("Pipelines:");
-        for s in &globs.pipelines {
-            println!("{}", s.name.to_string());
-        }
+        // println!("Scopes:");
+        // for s in &globs.scopes {
+        //     println!("{}", s.name.to_string());
+        // }
+        // println!("Pipelines:");
+        // for s in &globs.pipelines {
+        //     println!("{}", s.name.to_string());
+        // }
 
         Ok(Self {
             scopes: GlobalScopes::load(gctx.clone(), globs),
@@ -354,7 +354,6 @@ impl GlobalPipelines {
 
                     // cohae: We're using a pointer so the uninitialized value can't get dropped
                     let ptr = f.get_mut::<Box<Technique>>().unwrap() as *mut Box<Technique>;
-                    println!("ladogin {}", p.name.to_string());
                     let technique = Box::new(
                         load_technique(gctx.clone(), p.technique)
                             .map_err(|e| e.with_d3d_error(&gctx))

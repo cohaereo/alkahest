@@ -204,7 +204,7 @@ impl AssetManager {
                                     if let Some(stage) = stage {
                                         for assignment in shader.textures.iter() {
                                             let texture = self
-                                                .get_or_load_texture(assignment.texture.hash32());
+                                                .get_or_load_texture(assignment.texture);
                                             stage.textures.push((assignment.slot, texture));
                                         }
                                     }

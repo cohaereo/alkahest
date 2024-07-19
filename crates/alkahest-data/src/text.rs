@@ -13,7 +13,7 @@ use tiger_parse::{tiger_tag, PackageManagerExt, Pointer, TigerReadable};
 use crate::common::ResourceHash;
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808099EF)]
+#[tiger_tag(id = 0x80809A88)]
 pub struct SLocalizedStrings {
     pub file_size: u64,
     pub string_hashes: Vec<ResourceHash>,
@@ -37,21 +37,21 @@ pub struct SLocalizedStrings {
 pub struct SStringData {
     pub file_size: u64,
     pub string_parts: Vec<SStringPart>,
-    // pub _unk1: (u64, u64),
+    pub _unk1: (u64, u64),
     pub _unk2: Vec<()>,
     pub string_data: Vec<u8>,
     pub string_combinations: Vec<SStringCombination>,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808099F5)]
+#[tiger_tag(id = 0x80809A8E)]
 pub struct SStringCombination {
     pub data: Pointer<()>,
     pub part_count: i64,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808099F7)]
+#[tiger_tag(id = 0x80809A90)]
 pub struct SStringPart {
     pub _unk0: u64,
     pub data: Pointer<()>,
@@ -120,10 +120,10 @@ impl StringContainer {
         Self(
             stringcontainers
                 .par_iter()
-                .flat_map(|t| {
-                    if let Ok(strings) = StringContainer::load(*t) {
-                        strings.0.into_iter().collect()
-                    } else {
+                .flat_map(|t| match StringContainer::load(*t) {
+                    Ok(strings) => strings.0.into_iter().collect(),
+                    Err(e) => {
+                        tracing::error!("Failed to load stringcontainer {t}: {e:?}");
                         vec![]
                     }
                 })

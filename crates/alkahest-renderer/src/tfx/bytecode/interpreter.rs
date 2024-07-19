@@ -275,10 +275,11 @@ impl TfxBytecodeInterpreter {
                 &TfxBytecodeOp::Unk4c { unk1, .. }
                 // | &TfxBytecodeOp::PushObjectChannelVector { hash }
                 | &TfxBytecodeOp::PushGlobalChannelVector { unk1, .. }
-                | &TfxBytecodeOp::Unk50 { unk1, .. }
-                | &TfxBytecodeOp::Unk52 { unk1, .. }
-                | &TfxBytecodeOp::Unk53 { unk1, .. }
-                | &TfxBytecodeOp::Unk54 { unk1, .. } => {
+                // | &TfxBytecodeOp::Unk50 { unk1, .. }
+                // | &TfxBytecodeOp::Unk52 { unk1, .. }
+                // | &TfxBytecodeOp::Unk53 { unk1, .. }
+                // | &TfxBytecodeOp::Unk54 { unk1, .. }
+                => {
                     externs.global_channels_used.write()[unk1 as usize] += 1;
                     stack_push!(externs.global_channels[unk1 as usize]);
                 }

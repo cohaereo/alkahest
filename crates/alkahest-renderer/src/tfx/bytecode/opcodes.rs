@@ -93,50 +93,51 @@ pub enum TfxBytecodeOp {
     /// Offset is in u64s (8 bytes)
     #[br(magic = 0x41_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
 
-    // TODO(cohae): Loads a value from render context + 0x44a0
-    #[br(magic = 0x42_u8)] Unk42,
-    #[br(magic = 0x43_u8)] PushFromOutput { element: u8 },
-    #[br(magic = 0x44_u8)] PopOutput { element: u8 },
-    #[br(magic = 0x45_u8)] PopOutputMat4 { element: u8 },
-    #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
-    #[br(magic = 0x47_u8)] PopTemp { slot: u8 },
-    #[br(magic = 0x48_u8)] SetShaderTexture {
+    // // TODO(cohae): Loads a value from render context + 0x44a0
+    // Not present in PreBL
+    // #[br(magic = 0x42_u8)] Unk42,
+    #[br(magic = 0x42_u8)] PushFromOutput { element: u8 },
+    #[br(magic = 0x43_u8)] PopOutput { element: u8 },
+    #[br(magic = 0x44_u8)] PopOutputMat4 { element: u8 },
+    #[br(magic = 0x45_u8)] PushTemp { slot: u8 },
+    #[br(magic = 0x46_u8)] PopTemp { slot: u8 },
+    #[br(magic = 0x47_u8)] SetShaderTexture {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x49_u8)] Unk49 { unk1: u8 },
-    #[br(magic = 0x4a_u8)] SetShaderSampler {
+    #[br(magic = 0x48_u8)] Unk49 { unk1: u8 },
+    #[br(magic = 0x49_u8)] SetShaderSampler {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x4b_u8)] SetShaderUav { 
+    #[br(magic = 0x4a_u8)] SetShaderUav {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
+    #[br(magic = 0x4b_u8)] Unk4c { unk1: u8 },
     /// Pushes a sampler on the stack from the technique sampler table
-    #[br(magic = 0x4d_u8)] PushSampler { index: u8 },
+    #[br(magic = 0x4c_u8)] PushSampler { index: u8 },
 
-    #[br(magic = 0x4e_u8)] PushObjectChannelVector { hash: u32 },
-    #[br(magic = 0x4f_u8)] PushGlobalChannelVector { unk1: u8 },
-    #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
-    #[br(magic = 0x51_u8)] Unk51,
-    #[br(magic = 0x52_u8)] Unk52 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x53_u8)] Unk53 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x54_u8)] Unk54 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x55_u8)] Unk55,
-    #[br(magic = 0x56_u8)] Unk56,
-    #[br(magic = 0x57_u8)] Unk57,
-    #[br(magic = 0x58_u8)] Unk58,
+    #[br(magic = 0x4d_u8)] PushObjectChannelVector { hash: u32 },
+    #[br(magic = 0x4e_u8)] PushGlobalChannelVector { unk1: u8 },
+    // #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
+    // #[br(magic = 0x51_u8)] Unk51,
+    // #[br(magic = 0x52_u8)] Unk52 { unk1: u8, unk2: u8 },
+    // #[br(magic = 0x53_u8)] Unk53 { unk1: u8, unk2: u8 },
+    // #[br(magic = 0x54_u8)] Unk54 { unk1: u8, unk2: u8 },
+    // #[br(magic = 0x55_u8)] Unk55,
+    // #[br(magic = 0x56_u8)] Unk56,
+    // #[br(magic = 0x57_u8)] Unk57,
+    // #[br(magic = 0x58_u8)] Unk58,
 }
 
 impl TfxBytecodeOp {
@@ -306,7 +307,7 @@ impl TfxBytecodeOp {
                     (*offset as u32) * 8
                 )
             }
-            TfxBytecodeOp::Unk42 => "unk42".to_string(),
+            // TfxBytecodeOp::Unk42 => "unk42".to_string(),
             TfxBytecodeOp::PushFromOutput { element } => {
                 format!("push_from_output({element})")
             }
@@ -345,16 +346,15 @@ impl TfxBytecodeOp {
             }
             TfxBytecodeOp::PushGlobalChannelVector { unk1: index } => {
                 format!("push_global_channel_vector({index})")
-            }
-            TfxBytecodeOp::Unk50 { unk1 } => format!("unk50 unk1={unk1}"),
-            TfxBytecodeOp::Unk51 => "unk51".to_string(),
-            TfxBytecodeOp::Unk52 { unk1, unk2 } => format!("unk52 unk1={unk1} unk2={unk2}"),
-            TfxBytecodeOp::Unk53 { unk1, unk2 } => format!("unk53 unk1={unk1} unk2={unk2}"),
-            TfxBytecodeOp::Unk54 { unk1, unk2 } => format!("unk54 unk1={unk1} unk2={unk2}"),
-            TfxBytecodeOp::Unk55 => "unk55".to_string(),
-            TfxBytecodeOp::Unk56 => "unk56".to_string(),
-            TfxBytecodeOp::Unk57 => "unk57".to_string(),
-            TfxBytecodeOp::Unk58 => "unk58".to_string(),
+            } // TfxBytecodeOp::Unk50 { unk1 } => format!("unk50 unk1={unk1}"),
+              // TfxBytecodeOp::Unk51 => "unk51".to_string(),
+              // TfxBytecodeOp::Unk52 { unk1, unk2 } => format!("unk52 unk1={unk1} unk2={unk2}"),
+              // TfxBytecodeOp::Unk53 { unk1, unk2 } => format!("unk53 unk1={unk1} unk2={unk2}"),
+              // TfxBytecodeOp::Unk54 { unk1, unk2 } => format!("unk54 unk1={unk1} unk2={unk2}"),
+              // TfxBytecodeOp::Unk55 => "unk55".to_string(),
+              // TfxBytecodeOp::Unk56 => "unk56".to_string(),
+              // TfxBytecodeOp::Unk57 => "unk57".to_string(),
+              // TfxBytecodeOp::Unk58 => "unk58".to_string(),
         }
     }
 }

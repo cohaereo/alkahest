@@ -44,41 +44,42 @@ impl Renderer {
                 ..existing_transparent
             });
 
-            // TODO(cohae): Write an abstraction for native-initialized scopes
-            if let Some(ta_cb) = self
-                .render_globals
-                .scopes
-                .transparent_advanced
-                .stage_pixel
-                .as_ref()
-                .unwrap()
-                .cbuffer
-                .as_ref()
-            {
-                assert!(
-                    std::mem::size_of_val(ta_cb.data_array())
-                        >= std::mem::size_of::<ScopeTransparentAdvanced>()
-                );
-
-                unsafe {
-                    (ta_cb.data_array().as_ptr() as *mut ScopeTransparentAdvanced)
-                        .write(ScopeTransparentAdvanced::default());
-                    let slot = self
-                        .render_globals
-                        .scopes
-                        .transparent_advanced
-                        .stage_pixel
-                        .as_ref()
-                        .unwrap()
-                        .stage
-                        .constants
-                        .constant_buffer_slot as u32;
-
-                    ta_cb.bind(slot, TfxShaderStage::Pixel);
-                    ta_cb.bind(slot, TfxShaderStage::Vertex);
-                    ta_cb.bind(slot, TfxShaderStage::Compute);
-                }
-            }
+            // TODO(prebl): Fix this, size doesnt match with postbl  
+            // // TODO(cohae): Write an abstraction for native-initialized scopes
+            // if let Some(ta_cb) = self
+            //     .render_globals
+            //     .scopes
+            //     .transparent_advanced
+            //     .stage_pixel
+            //     .as_ref()
+            //     .unwrap()
+            //     .cbuffer
+            //     .as_ref()
+            // {
+            //     assert!(
+            //         std::mem::size_of_val(ta_cb.data_array())
+            //             >= std::mem::size_of::<ScopeTransparentAdvanced>()
+            //     );
+            // 
+            //     unsafe {
+            //         (ta_cb.data_array().as_ptr() as *mut ScopeTransparentAdvanced)
+            //             .write(ScopeTransparentAdvanced::default());
+            //         let slot = self
+            //             .render_globals
+            //             .scopes
+            //             .transparent_advanced
+            //             .stage_pixel
+            //             .as_ref()
+            //             .unwrap()
+            //             .stage
+            //             .constants
+            //             .constant_buffer_slot as u32;
+            // 
+            //         ta_cb.bind(slot, TfxShaderStage::Pixel);
+            //         ta_cb.bind(slot, TfxShaderStage::Vertex);
+            //         ta_cb.bind(slot, TfxShaderStage::Compute);
+            //     }
+            // }
 
             unsafe {
                 self.gpu.context().OMSetRenderTargets(

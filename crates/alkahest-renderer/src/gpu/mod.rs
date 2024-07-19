@@ -471,9 +471,10 @@ impl GpuContext {
 
     pub fn set_input_layout(&self, index: usize) {
         if self.current_input_layout.load(Ordering::Relaxed) != index {
-            unsafe {
-                self.context()
-                    .IASetInputLayout(&self.states.input_layouts[index]);
+            if let Some(layout) = &self.states.input_layouts[index] {
+                unsafe {
+                    self.context().IASetInputLayout(layout);
+                }
             }
             self.current_input_layout.store(index, Ordering::Relaxed);
         }

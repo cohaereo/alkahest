@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x8080891E, size = 0x18)]
+#[tiger_tag(id = 0x80807DAE, size = 0x18)]
 // cohae: Shallow read to avoid too many package calls
 // TODO(cohae): Implement shallow reading in tiger-parse itself
 pub struct SBubbleParentShallow {
@@ -24,7 +24,7 @@ pub struct SBubbleParentShallow {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x8080891E, size = 0x50)]
+#[tiger_tag(id = 0x80807DAE, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
     pub child_map: TagHash,
@@ -35,12 +35,12 @@ pub struct SBubbleParent {
     pub map_name: ResourceHash,
 
     #[tag(offset = 0x40)]
-    pub unk40: Vec<SUnk808096c9>,
+    pub unk40: Vec<SUnk80809644>,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808096C9)]
-pub struct SUnk808096c9 {
+#[tiger_tag(id = 0x80809644)]
+pub struct SUnk80809644 {
     pub unk0: u32,
     pub unk4: u32,
     pub unk8: u32,
@@ -49,14 +49,14 @@ pub struct SUnk808096c9 {
 
 // D2Class_01878080
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808701, size = 0x18)]
+#[tiger_tag(id = 0x808091E0, size = 0x18)]
 pub struct SBubbleDefinition {
     pub file_size: u64,
     pub map_resources: Vec<WideTag<SMapContainer>>,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808707, size = 0x38)]
+#[tiger_tag(id = 0x80808A54, size = 0x38)]
 pub struct SMapContainer {
     pub file_size: u64,
     #[tag(offset = 0x28)]
@@ -64,37 +64,34 @@ pub struct SMapContainer {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80809883)]
+#[tiger_tag(id = 0x808099D6)]
 pub struct SMapDataTable {
     pub file_size: u64,
-    pub data_entries: Vec<SUnk80809885>,
+    pub data_entries: Vec<SMapDataTableEntry>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80809885)]
-pub struct SUnk80809885 {
-    pub rotation: Quat,      // 0x0
-    pub translation: Vec4,   // 0x10
-    pub entity_old: TagHash, // 0x20
-    pub unk24: u32,
-    pub entity: WideHash,
-    pub unk38: [u32; 9], //
+#[tiger_tag(id = 0x808099D8)]
+pub struct SMapDataTableEntry {
+    pub entity: TagHash,
+    pub unk4: [u32; 3],
+    pub rotation: Quat,    // 0x0
+    pub translation: Vec4, // 0x10
+    pub unk30: [u32; 11],
     pub unk5c: f32,
-    pub unk60: f32,
-    pub unk64: TagHash,
-    pub unk68: ResourceHash,
-    pub unk6c: u32,
+    pub unk60: u32,
+    pub unk64: ResourceHash,
+    pub unk68: [u32; 2],
     pub world_id: u64,
     pub data_resource: ResourcePointer,
     pub unk80: [u32; 4],
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806A0D)]
+#[tiger_tag(id = 0x80806EF4, size = 0x24)]
 pub struct SUnk80806ef4 {
     pub unk0: u64,
     pub instances: Tag<SStaticMeshInstances>,
-    pub unkc: [u32; 7],
 }
 
 /// Terrain
