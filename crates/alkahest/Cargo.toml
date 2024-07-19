@@ -4,7 +4,11 @@ version = "0.5.0+prebl"
 rust-version = "1.79"
 edition = "2021"
 authors = ["cohaereo <cohaereo@protonmail.com>"]
-default-run = "alkahest"
+default-run = "alkahest-prebl"
+
+[[bin]]
+name = "alkahest-prebl"
+path = "src/main.rs"
 
 [dependencies]
 alkahest-data = { path = "../alkahest-data" }
