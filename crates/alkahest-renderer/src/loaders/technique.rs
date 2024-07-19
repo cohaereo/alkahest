@@ -120,7 +120,7 @@ fn load_technique_stage(
     for sampler in shader.constants.samplers.iter() {
         stage
             .samplers
-            .push(load_sampler(&gctx, sampler.hash32()).ok());
+            .push(load_sampler(&gctx, sampler.sampler).ok());
     }
 
     Ok(Some(stage))

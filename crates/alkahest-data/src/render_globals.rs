@@ -51,7 +51,7 @@ pub struct SRenderGlobalPipelines {
     pub technique: TagHash,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[tiger_tag(id = 0x808071F3, size = 0x3b8)]
 
 pub struct SScope {
@@ -82,7 +82,7 @@ impl SScope {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[tiger_tag(id = 0xffffffff, size = 0x98)]
 pub struct SScopeStage {
     pub unk0: [u32; 4],

@@ -9,7 +9,7 @@ use tiger_parse::{tiger_tag, Endian, NullString, Pointer, TigerReadable};
 
 use crate::{tfx::TfxShaderStage, WideHash};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[tiger_tag(id = 0x808071E8)]
 pub struct STechnique {
     pub file_size: u64,
@@ -60,7 +60,7 @@ impl STechnique {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[tiger_tag(id = 0xffffffff, size = 0xa0)]
 pub struct STechniqueShader {
     pub shader: TagHash,
@@ -103,17 +103,26 @@ pub struct Unk80806cb5 {
 
 pub type Unk80806cb6 = Unk80806cb5;
 
+#[derive(Clone)]
 #[tiger_tag(size = 0x68)]
-#[derive(Debug, Clone)]
 pub struct SDynamicConstants {
     pub bytecode: Vec<u8>,
     pub bytecode_constants: Vec<Vec4>,
-    pub samplers: Vec<WideHash>,
+    pub samplers: Vec<SSamplerReference>,
     pub unk30: Vec<Vec4>,
     pub unk40: [u32; 8],
 
     pub constant_buffer_slot: i32, // 0x60
     pub constant_buffer: TagHash,
+}
+
+#[derive(Clone)]
+#[tiger_tag(id = 0x808073F3)]
+pub struct SSamplerReference {
+    pub sampler: TagHash,
+    pub unk4: u32,
+    pub unk8: u32,
+    pub unkc: u32,
 }
 
 bitflags::bitflags! {
