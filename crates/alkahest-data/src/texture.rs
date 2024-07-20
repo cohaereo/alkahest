@@ -10,19 +10,17 @@ pub struct STextureHeader {
     pub format: DxgiFormat,
     pub _unk8: u32,
 
-    pub cafe: u16,
+    pub cafe: u16, // 0xc
 
-    pub width: u16,
-    pub height: u16,
-    pub depth: u16,
-    pub array_size: u16,
+    pub width: u16,      // 0xe
+    pub height: u16,     // 0x10
+    pub depth: u16,      // 0x12
+    pub array_size: u16, // 0x14
 
-    pub unk16: u16,
-    pub unk18: u8,
+    pub unk16: u8,
     pub mip_count: u8,
-    pub unk2e: [u8; 10],
+    pub unk18: [u8; 12],
 
     /// Optional
     pub large_buffer: TagHash,
 }
-
