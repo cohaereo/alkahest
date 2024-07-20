@@ -528,67 +528,55 @@ fn load_datatable_into_scene<R: Read + Seek>(
             //         }
             //     }
             // }
-            // 0x80806aa3 => {
-            //     table_data
-            //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
-            //         .unwrap();
-            //     let tag: TagHash = TigerReadable::read_ds(table_data).unwrap();
-            //     if tag.is_none() {
-            //         continue;
-            //     }
-            //
-            //     let header: SUnk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
-            //
-            //     for (unk8, unk18, _unk28) in
-            //         multizip((header.unk8.iter(), header.unk18.iter(), header.unk28.iter()))
-            //     {
-            //         if unk8.bounds != unk18.bb {
-            //             warn!(
-            //                 "Bounds mismatch in Unk80806aa3: {:?} != {:?}",
-            //                 unk8.bounds, unk18.bb
-            //             );
-            //         }
-            //
-            //         // let thingy = [
-            //         //     TagHash(0x80C9E4FD),
-            //         //     TagHash(0x80B12BA6),
-            //         //     TagHash(0x80DED603),
-            //         //     TagHash(0x80DED488),
-            //         //     TagHash(0x80DEA0AD),
-            //         // ];
-            //         // if thingy.contains(&unk8.unk60.entity_model) {
-            //         // println!("{}", unk8.unk60.entity_model);
-            //         // println!("{unk8:#X?}");
-            //         // }
-            //
-            //         if unk8.unk70 == 5 {
-            //             continue;
-            //         }
-            //
-            //         let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
-            //         spawn_data_entity(
-            //             scene,
-            //             (
-            //                 NodeFilter::SkyObject,
-            //                 Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
-            //                 Label::from(format!("Sky Model {}", unk8.unk60.entity_model)),
-            //                 transform,
-            //                 DynamicModelComponent::load(
-            //                     renderer,
-            //                     &transform,
-            //                     unk8.unk60.entity_model,
-            //                     vec![],
-            //                     vec![],
-            //                     TfxFeatureRenderer::SkyTransparent,
-            //                 )?,
-            //                 TfxFeatureRenderer::SkyTransparent,
-            //                 resource_origin,
-            //                 metadata.clone(),
-            //             ),
-            //             parent_entity,
-            //         );
-            //     }
-            // }
+            0x80806f91 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = TigerReadable::read_ds(table_data).unwrap();
+                if tag.is_none() {
+                    continue;
+                }
+
+                let header: SUnk80806aa7 = package_manager().read_tag_struct(tag).unwrap();
+
+                for (unk8, unk18, _unk28) in
+                    multizip((header.unk8.iter(), header.unk18.iter(), header.unk28.iter()))
+                {
+                    if unk8.bounds != unk18.bb {
+                        warn!(
+                            "Bounds mismatch in Unk80806aa3: {:?} != {:?}",
+                            unk8.bounds, unk18.bb
+                        );
+                    }
+
+                    if unk8.unk70 == 5 {
+                        continue;
+                    }
+
+                    let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
+                    spawn_data_entity(
+                        scene,
+                        (
+                            NodeFilter::SkyObject,
+                            Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
+                            Label::from(format!("Sky Model {}", unk8.unk60.entity_model)),
+                            transform,
+                            DynamicModelComponent::load(
+                                renderer,
+                                &transform,
+                                unk8.unk60.entity_model,
+                                vec![],
+                                vec![],
+                                TfxFeatureRenderer::SkyTransparent,
+                            )?,
+                            TfxFeatureRenderer::SkyTransparent,
+                            resource_origin,
+                            metadata.clone(),
+                        ),
+                        parent_entity,
+                    );
+                }
+            }
             // 0x808068d4 => {
             //     table_data
             //         .seek(SeekFrom::Start(data.data_resource.offset))

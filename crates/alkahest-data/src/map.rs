@@ -296,7 +296,7 @@ pub struct SAudioClipCollection {
     pub streams: Vec<TagHash>,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806AA7)]
+#[tiger_tag(id = 0x80806F95)]
 pub struct SUnk80806aa7 {
     pub file_size: u64,
     pub unk8: Vec<SUnk80806aa9>,
@@ -304,7 +304,7 @@ pub struct SUnk80806aa7 {
     pub unk28: Vec<u32>,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806AA9)]
+#[tiger_tag(id = 0x80806F97)]
 pub struct SUnk80806aa9 {
     /// Transformation matrix
     pub transform: [f32; 16],
@@ -314,7 +314,7 @@ pub struct SUnk80806aa9 {
 
     pub unk60: Tag<SUnk80806aae>,
     pub unk64: f32,
-    pub unk68: f32,
+    pub unk68: u32,
     pub unk6c: i16,
     pub unk6e: u16,
 
@@ -322,13 +322,9 @@ pub struct SUnk80806aa9 {
     pub unk74: f32,
     pub unk78: u32,
     pub unk7c: TagHash,
-
-    pub unk80: u64,
-    pub unk88: u32,
-    pub unk8c: u32,
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806AAE)]
+#[tiger_tag(id = 0x80806F9B)]
 pub struct SUnk80806aae {
     pub file_size: u64,
     pub entity_model: TagHash,
@@ -382,7 +378,6 @@ pub struct SShadowingLight {
 
     pub unka0: TagHash, // Unk80806da1
     pub unka4: TagHash, // Unk80806da1
-
 }
 
 #[derive(Clone, Debug)]
