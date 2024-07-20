@@ -11,8 +11,8 @@ use alkahest_data::{
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
         SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
-        SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
-        SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        STerrainPatchesResource, SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4,
+        SUnk80808246, SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     text::{StringContainer, StringContainerShared},
     tfx::TfxFeatureRenderer,
@@ -471,28 +471,29 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     )?;
                 }
             }
-            // // D2Class_7D6C8080 (terrain)
-            // 0x80806c7d => {
-            //     table_data
-            //         .seek(SeekFrom::Start(data.data_resource.offset))
-            //         .unwrap();
-            //
-            //     let terrain_resource: SUnk8080714b = TigerReadable::read_ds(table_data).unwrap();
-            //
-            //     spawn_data_entity(
-            //         scene,
-            //         (
-            //             Icon::Unicode(ICON_IMAGE_FILTER_HDR),
-            //             Label::from("Terrain Patches"),
-            //             TerrainPatches::load(renderer, terrain_resource.terrain)
-            //                 .context("Failed to load terrain patches")?,
-            //             TfxFeatureRenderer::TerrainPatch,
-            //             resource_origin,
-            //             metadata.clone(),
-            //         ),
-            //         parent_entity,
-            //     );
-            // }
+            // D2Class_7D6C8080 (terrain)
+            0x8080714b => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset))
+                    .unwrap();
+
+                let terrain_resource: STerrainPatchesResource =
+                    TigerReadable::read_ds(table_data).unwrap();
+
+                spawn_data_entity(
+                    scene,
+                    (
+                        Icon::Unicode(ICON_IMAGE_FILTER_HDR),
+                        Label::from("Terrain Patches"),
+                        TerrainPatches::load(renderer, terrain_resource.terrain)
+                            .context("Failed to load terrain patches")?,
+                        TfxFeatureRenderer::TerrainPatch,
+                        resource_origin,
+                        metadata.clone(),
+                    ),
+                    parent_entity,
+                );
+            }
             // // (ambient) sound source
             // 0x8080666f => {
             //     table_data

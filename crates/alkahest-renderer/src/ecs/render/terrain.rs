@@ -100,11 +100,11 @@ impl TerrainPatches {
 
         gpu_event!(renderer.gpu, format!("terrain_patch {}", self.hash));
 
-        // Layout 22
+        // Layout 22/60
         //  - int4 v0 : POSITION0, // Format DXGI_FORMAT_R16G16B16A16_SINT size 8
         //  - float4 v1 : NORMAL0, // Format DXGI_FORMAT_R16G16B16A16_SNORM size 8
         //  - float2 v2 : TEXCOORD1, // Format DXGI_FORMAT_R16G16_FLOAT size 4
-        renderer.gpu.set_input_layout(22);
+        renderer.gpu.set_input_layout(60);
         renderer
             .gpu
             .set_input_topology(EPrimitiveType::TriangleStrip);

@@ -96,7 +96,7 @@ pub struct SUnk80806ef4 {
 
 /// Terrain
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806C81, size = 0x88)]
+#[tiger_tag(id = 0x8080714F, size = 0x88)]
 pub struct STerrain {
     pub file_size: u64,
     pub unk8: u64,
@@ -105,7 +105,7 @@ pub struct STerrain {
     pub unk20: Vec4,
     pub unk30: Vec4,
 
-    #[tag(offset = 0x50)]
+    #[tag(offset = 0x58)]
     pub mesh_groups: Vec<SUnk80807154>,
 
     pub vertex0_buffer: TagHash,
@@ -114,12 +114,12 @@ pub struct STerrain {
     pub unk_technique1: TagHash,
     pub unk_technique2: TagHash,
 
-    #[tag(offset = 0x78)]
+    #[tag(offset = 0x80)]
     pub mesh_parts: Vec<SUnk80807152>,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806C86)]
+#[tiger_tag(id = 0x80807154)]
 pub struct SUnk80807154 {
     pub unk0: Vec4,
     pub unk10: f32,
@@ -142,7 +142,7 @@ pub struct SUnk80807154 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806C84)]
+#[tiger_tag(id = 0x80807152)]
 pub struct SUnk80807152 {
     pub technique: TagHash,
     pub index_start: u32,
@@ -154,7 +154,7 @@ pub struct SUnk80807152 {
 /// Terrain resource
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff, size = 0x20)]
-pub struct SUnk8080714b {
+pub struct STerrainPatchesResource {
     #[tag(offset = 0x10)]
     pub unk10: u16,
     pub unk12: u16,

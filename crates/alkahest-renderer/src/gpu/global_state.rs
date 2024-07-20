@@ -108,6 +108,19 @@ impl RenderStates {
                     }
                 }
 
+                // println!("Dynamic Input Layout #{}", l.index);
+                // for (i, e) in layout_elements.iter().enumerate() {
+                //     println!(
+                //         "\t{} v{i} : {}{}, // buffer {}, format {:?}, stride 0x{:X}",
+                //         e.hlsl_type,
+                //         e.semantic_name.to_string_lossy(),
+                //         e.semantic_index,
+                //         e.buffer_index,
+                //         e.format,
+                //         e.stride
+                //     );
+                // }
+
                 let layout = Self::create_input_layout(device, &layout_elements)?;
                 layout.set_debug_name(&format!("Dynamic Input Layout {}", l.index));
                 input_layouts[l.index as usize] = Some(layout);
