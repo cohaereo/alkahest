@@ -491,15 +491,15 @@ impl ComponentPanel for DynamicModelComponent {
         });
         ui.separator();
 
-        let mesh_count = self.model.mesh_count();
-        if mesh_count > 1 {
-            egui::ComboBox::from_label("Mesh").show_index(
-                ui,
-                &mut self.model.selected_mesh,
-                mesh_count,
-                |i| format!("Mesh {i}"),
-            );
-        }
+        // let mesh_count = self.model.mesh_count();
+        // if mesh_count > 1 {
+        //     egui::ComboBox::from_label("Mesh").show_index(
+        //         ui,
+        //         &mut self.model.selected_mesh,
+        //         mesh_count,
+        //         |i| format!("Mesh {i}"),
+        //     );
+        // }
 
         let identifier_count = self.model.identifier_count();
         if identifier_count > 1 {

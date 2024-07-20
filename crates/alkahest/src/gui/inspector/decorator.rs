@@ -38,14 +38,14 @@ impl ComponentPanel for DecoratorRenderer {
             ui.label(format!("{}", self.models.len()));
         });
 
-        let mesh_count = self.models[0].0.mesh_count();
-        if mesh_count > 1 {
-            egui::ComboBox::from_label("Mesh").show_index(
-                ui,
-                &mut self.models[0].0.selected_mesh,
-                mesh_count,
-                |i| format!("Mesh {i}"),
-            );
-        }
+        // let mesh_count = self.models[0].0.mesh_count();
+        // if mesh_count > 1 {
+        //     egui::ComboBox::from_label("Mesh").show_index(
+        //         ui,
+        //         &mut self.models[0].0.selected_mesh,
+        //         mesh_count,
+        //         |i| format!("Mesh {i}"),
+        //     );
+        // }
     }
 }

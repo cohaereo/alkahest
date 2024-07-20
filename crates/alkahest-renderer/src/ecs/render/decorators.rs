@@ -148,9 +148,10 @@ impl DecoratorRenderer {
                 0
             };
 
-            model.draw_wrapped(
+            model.draw_mesh_wrapped(
                 renderer,
                 stage,
+                0,
                 dyn_id,
                 move |_model, renderer, mesh, part| unsafe {
                     // let layout = mesh.get_input_layout_for_stage(stage);

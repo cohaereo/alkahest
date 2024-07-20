@@ -37,7 +37,6 @@ pub struct DynamicModel {
     pub subscribed_stages: RenderStageSubscriptions,
     part_techniques: Vec<Vec<Handle<Technique>>>,
 
-    pub selected_mesh: usize,
     pub selected_variant: usize,
     variant_count: usize,
 
@@ -112,7 +111,6 @@ impl DynamicModel {
         Ok(Self {
             selected_variant: 0,
             variant_count,
-            selected_mesh: 0,
             identifier_count,
             mesh_buffers,
             technique_map,
@@ -161,23 +159,29 @@ impl DynamicModel {
         render_stage: TfxRenderStage,
         identifier: u16,
     ) -> anyhow::Result<()> {
-        self.draw_wrapped(
-            renderer,
-            render_stage,
-            identifier,
-            |_, renderer, _mesh, part| unsafe {
-                renderer
-                    .gpu
-                    .context()
-                    .DrawIndexed(part.index_count, part.index_start, 0);
-            },
-        )
+        for mesh in 0..self.mesh_count() {
+            self.draw_mesh_wrapped(
+                renderer,
+                render_stage,
+                mesh,
+                identifier,
+                |_, renderer, _mesh, part| unsafe {
+                    renderer
+                        .gpu
+                        .context()
+                        .DrawIndexed(part.index_count, part.index_start, 0);
+                },
+            )?;
+        }
+
+        Ok(())
     }
 
-    pub fn draw_wrapped<F>(
+    pub fn draw_mesh_wrapped<F>(
         &self,
         renderer: &Renderer,
         render_stage: TfxRenderStage,
+        mesh_index: usize,
         identifier: u16,
         f: F,
     ) -> anyhow::Result<()>
@@ -209,15 +213,15 @@ impl DynamicModel {
             )
         );
 
-        profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
+        profiling::scope!("DynamicModel::draw", format!("mesh={}", mesh_index));
         // ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
         ensure!(
             self.selected_variant < self.variant_count() || self.variant_count() == 0,
             "Material variant out of range"
         );
 
-        let mesh = &self.model.meshes[self.selected_mesh];
-        let stages = &self.mesh_stages[self.selected_mesh];
+        let mesh = &self.model.meshes[mesh_index];
+        let stages = &self.mesh_stages[mesh_index];
         if !stages.is_subscribed(render_stage) {
             return Ok(());
         }
@@ -225,7 +229,7 @@ impl DynamicModel {
         renderer
             .gpu
             .set_input_layout(mesh.get_input_layout_for_stage(render_stage) as usize);
-        self.mesh_buffers[self.selected_mesh].bind(renderer);
+        self.mesh_buffers[mesh_index].bind(renderer);
         for part_index in mesh.get_range_for_stage(render_stage) {
             let part = &mesh.parts[part_index];
             if identifier != u16::MAX && part.external_identifier != identifier {
@@ -241,7 +245,7 @@ impl DynamicModel {
 
             let mut all_scopes = TfxScopeBits::empty();
             if let Some(technique) =
-                renderer.get_technique_shared(&self.part_techniques[self.selected_mesh][part_index])
+                renderer.get_technique_shared(&self.part_techniques[mesh_index][part_index])
             {
                 technique.bind(renderer).expect("Failed to bind technique");
                 all_scopes |= technique.used_scopes;
