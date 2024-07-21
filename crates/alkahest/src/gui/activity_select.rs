@@ -187,7 +187,7 @@ impl ActivityBrowser {
                                         activity_name.insert_text("🗝 ", 0);
                                     }
 
-                                    if activity_name.contains("_ls_") {
+                                    if activity_name.contains("_ls_") || activity_name.ends_with("_ls") {
                                         activity_name.insert_text(" ", 0);
                                     }
                                     let mut response = ui.selectable_label(false, &activity_name);
