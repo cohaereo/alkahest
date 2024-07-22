@@ -1071,15 +1071,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let d: SUnk80808604 = TigerReadable::read_ds(table_data)?;
 
-                let (havok_debugshape, new_transform) = if let Ok(havok_data) =
-                    package_manager().read_tag(d.unk10.havok_file)
-                {
-                    let mut cur = Cursor::new(&havok_data);
-                    match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
-                        Ok(shapes) => {
-                            let mut final_shape = destiny_havok::shape_collection::Shape::default();
-
-                            for t in &d.unk10.unk8 {
+                let (havok_debugshape, new_transform) =
+                    if let Ok(havok_data) = package_manager().read_tag(d.unk10.havok_file) {
+                        let mut cur = Cursor::new(&havok_data);
+                        match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
+                            Ok(shapes) => {
+                                let t = &d.unk10.unk8[d.index as usize];
                                 if t.shape_index as usize >= shapes.len() {
                                     error!(
                                         "Shape index out of bounds for Unk80808604 (table {}, {} \
@@ -1100,31 +1097,28 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 let mut shape = shapes[t.shape_index as usize].clone();
                                 shape.apply_transform(transform.local_to_world());
 
-                                final_shape.combine(&shape);
+                                // Re-center the shape
+                                let center = shape.center();
+                                shape.apply_transform(Mat4::from_translation(-center));
+
+                                let new_transform = Transform {
+                                    translation: center,
+                                    ..Default::default()
+                                };
+
+                                (
+                                    HavokShapeRenderer::new(renderer.gpu.clone(), &shape).ok(),
+                                    Some(new_transform),
+                                )
                             }
-
-                            // Re-center the shape
-                            let center = final_shape.center();
-                            final_shape.apply_transform(Mat4::from_translation(-center));
-
-                            let new_transform = Transform {
-                                translation: center,
-                                ..Default::default()
-                            };
-
-                            (
-                                HavokShapeRenderer::new(renderer.gpu.clone(), &final_shape).ok(),
-                                Some(new_transform),
-                            )
+                            Err(e) => {
+                                error!("Failed to read shapes: {e}");
+                                (None, None)
+                            }
                         }
-                        Err(e) => {
-                            error!("Failed to read shapes: {e}");
-                            (None, None)
-                        }
-                    }
-                } else {
-                    (None, None)
-                };
+                    } else {
+                        (None, None)
+                    };
 
                 if let Some(havok_debugshape) = havok_debugshape {
                     let filter = NodeFilter::PlayerContainmentVolume;

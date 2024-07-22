@@ -544,6 +544,7 @@ pub struct SUnk808068d4 {
 pub struct SUnk80808604 {
     pub unk0: [u32; 4],
     pub unk10: Tag<SUnk80808724>,
+    pub index: u32,
 }
 
 #[derive(Clone, Debug)]
