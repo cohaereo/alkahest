@@ -30,6 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+## 0.5.0 - 2024-07-24
+
 ### ✨ Highlights
 
 Alkahest has been largely rewritten, improving performance and flexibility, as well as adding (or opening the gates
