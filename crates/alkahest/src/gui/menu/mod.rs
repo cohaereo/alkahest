@@ -2,7 +2,9 @@ use alkahest_renderer::icons::{
     ICON_ALPHA_A_BOX_OUTLINE, ICON_ALPHA_D_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
     ICON_ALPHA_G_BOX_OUTLINE, ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_I_BOX_OUTLINE,
     ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE, ICON_ALPHA_W_BOX_OUTLINE,
-    ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE, ICON_MINUS_BOX_OUTLINE,
+    ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_ARROW_DOWN_BOLD_BOX_OUTLINE,
+    ICON_ARROW_LEFT_BOLD_BOX_OUTLINE, ICON_ARROW_RIGHT_BOLD_BOX_OUTLINE,
+    ICON_ARROW_UP_BOLD_BOX_OUTLINE, ICON_KEYBOARD_SPACE, ICON_MINUS_BOX_OUTLINE,
     ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_NUMERIC_1_BOX_OUTLINE,
     ICON_NUMERIC_2_BOX_OUTLINE, ICON_NUMERIC_3_BOX_OUTLINE, ICON_NUMERIC_4_BOX_OUTLINE,
     ICON_PLUS_BOX_OUTLINE,
@@ -300,6 +302,29 @@ impl MenuBar {
                                 "Deselect All Objects"
                             );
 
+                            control_description!(
+                                ui,
+                                ICON_ARROW_UP_BOLD_BOX_OUTLINE,
+                                "Select Parent"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ARROW_DOWN_BOLD_BOX_OUTLINE,
+                                "Select First Child"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ARROW_LEFT_BOLD_BOX_OUTLINE,
+                                "Select Previous Child"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_ARROW_RIGHT_BOLD_BOX_OUTLINE,
+                                "Select Next Child"
+                            );
                             // control_description!(
                             //     ui,
                             //     format!("{} Shift + Delete", ICON_APPLE_KEYBOARD_SHIFT),

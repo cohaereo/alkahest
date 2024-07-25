@@ -5,10 +5,14 @@ use alkahest_renderer::{
         Camera,
     },
     ecs::{
-        hierarchy::Parent, resources::SelectedEntity, transform::Transform, visibility::Visibility,
+        hierarchy::{Children, Parent},
+        resources::SelectedEntity,
+        transform::Transform,
+        visibility::Visibility,
         Scene,
     },
     renderer::RendererShared,
+    util::scene::SceneExt,
 };
 use bevy_ecs::entity::Entity;
 use rustc_hash::FxHashSet;
@@ -57,6 +61,18 @@ pub const SHORTCUT_ADD_ROUTE_NODE_NEXT: egui::KeyboardShortcut =
 pub const SHORTCUT_ADD_ROUTE_NODE_PREV: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Minus);
 
+pub const SHORTCUT_SELECT_PARENT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::ArrowUp);
+
+pub const SHORTCUT_SELECT_CHILD: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::ArrowDown);
+
+pub const SHORTCUT_SELECT_NEXT_CHILD: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::ArrowRight);
+
+pub const SHORTCUT_SELECT_PREV_CHILD: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::ArrowLeft);
+
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);
@@ -91,6 +107,22 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FOCUS)) {
         focus_selected(resources);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_SELECT_PARENT)) {
+        select_parent(resources);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_SELECT_CHILD)) {
+        select_child(resources);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_SELECT_NEXT_CHILD)) {
+        select_child_offset(resources, true);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_SELECT_PREV_CHILD)) {
+        select_child_offset(resources, false);
     }
 }
 
@@ -200,5 +232,51 @@ fn goto_gaze(resources: &mut AppResources) {
             None,
             0.7,
         ));
+    }
+}
+
+fn select_parent(resources: &mut AppResources) {
+    let mut selected = resources.get_mut::<SelectedEntity>();
+    let mut maps = resources.get_mut::<MapList>();
+    if let Some(current) = selected.selected() {
+        if let Some(map) = maps.current_map_mut() {
+            if let Some(parent) = map.scene.get_parent(current) {
+                selected.select(parent);
+            }
+        }
+    }
+}
+
+fn select_child(resources: &mut AppResources) {
+    let mut selected = resources.get_mut::<SelectedEntity>();
+    let mut maps = resources.get_mut::<MapList>();
+    if let Some(current) = selected.selected() {
+        if let Some(map) = maps.current_map_mut() {
+            if let Some(children) = map.scene.get::<Children>(current) {
+                selected.select(children.0[0]);
+            }
+        }
+    }
+}
+
+fn select_child_offset(resources: &mut AppResources, add: bool) {
+    let mut selected = resources.get_mut::<SelectedEntity>();
+    let mut maps = resources.get_mut::<MapList>();
+    if let Some(current) = selected.selected() {
+        if let Some(map) = maps.current_map_mut() {
+            if let Some(parent) = map.scene.get_parent(current) {
+                if let Some(children) = map.scene.get::<Children>(parent) {
+                    let i = children
+                        .0
+                        .iter()
+                        .position(|&ent| ent == current)
+                        .unwrap_or(0);
+                    let new_i = if add { i + 1 } else { i - 1 };
+                    if let Some(next) = children.0.get(new_i) {
+                        selected.select(*next);
+                    }
+                }
+            }
+        }
     }
 }
