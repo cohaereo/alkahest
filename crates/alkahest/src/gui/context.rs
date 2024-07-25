@@ -1,6 +1,6 @@
 use std::{any::TypeId, mem::transmute, sync::Arc};
 
-use alkahest_renderer::{gpu::GpuContext, util::image::Png};
+use alkahest_renderer::{gpu::GpuContext, util::image::Png, util::d3d::ErrorExt};
 use anyhow::Context;
 use egui::{InputState, Key, KeyboardShortcut, Modifiers};
 use egui_directx11::DirectX11Renderer;
@@ -138,6 +138,8 @@ impl GuiContext {
                     )
                 },
             )
+            .context("Failed to paint egui frame")
+            .map_err(|e| e.with_d3d_error(&self.gctx))
             .unwrap();
 
         self.integration
