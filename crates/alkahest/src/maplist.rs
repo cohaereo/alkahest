@@ -8,12 +8,16 @@ use alkahest_renderer::{
             static_geometry::update_static_instances_system,
         },
         resources::SelectedEntity,
+        utility::Route,
         visibility::propagate_entity_visibility_system,
         Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
-    util::{scene::{EntityWorldMutExt, SceneExt}, Hocus},
+    util::{
+        scene::{EntityWorldMutExt, SceneExt},
+        Hocus,
+    },
 };
 use bevy_ecs::{
     entity::Entity,
@@ -218,6 +222,12 @@ impl Map {
         self.scene.entity_mut(new_parent).insert_one(new_children);
     }
 
+    fn fixup_route_visibility(&mut self) {
+        for (e, r) in self.scene.query::<(Entity, &Route)>().iter(&self.scene) {
+            r.fixup_visiblity(&self.scene, &mut self.commands(), e);
+        }
+    }
+
     fn start_load(&mut self, resources: &AppResources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
@@ -377,6 +387,7 @@ impl MapList {
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
             dest.take_globals(&mut source);
+            dest.fixup_route_visibility();
             self.maps[previous_map].scene = source;
         }
 

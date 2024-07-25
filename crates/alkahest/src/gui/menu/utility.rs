@@ -2,6 +2,7 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Global, Icon, Label, Mutable, RenderCommonBundle},
+        hierarchy::{Children, Parent},
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
@@ -136,27 +137,48 @@ impl MenuBar {
             let camera = resources.get::<Camera>();
 
             if let Some(map) = maps.current_map_mut() {
-                let e = map.scene.spawn((
-                    NodeFilter::Utility,
-                    Route {
-                        path: vec![RouteNode {
-                            pos: camera.position(),
+                let route_id = map
+                    .scene
+                    .spawn((
+                        Route {
+                            activity_hash: map.scene.get_activity_hash(),
+                            ..Default::default()
+                        },
+                        Route::icon(),
+                        Route::default_label(),
+                        NodeFilter::Utility,
+                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                        Mutable,
+                        Global,
+                        RenderCommonBundle::default()
+                    ))
+                    .id();
+                let n = map
+                    .scene
+                    .spawn((
+                        Parent(route_id),
+                        Transform {
+                            translation: camera.position(),
+                            ..Default::default()
+                        },
+                        RouteNode {
                             map_hash: map.scene.get_map_hash(),
-                            is_teleport: false,
-                            label: None,
-                        }],
-                        activity_hash: map.scene.get_activity_hash(),
-                        ..Default::default()
-                    },
-                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                    Route::icon(),
-                    Route::default_label(),
-                    Mutable,
-                    Global,
-                    RenderCommonBundle::default(),
-                ));
+                            ..Default::default()
+                        },
+                        RouteNode::icon(),
+                        RouteNode::default_label(),
+                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                        NodeFilter::Utility,
+                        Mutable,
+                        Global,
+                        RenderCommonBundle::default(),
+                    ))
+                    .id();
+                map.scene
+                    .entity_mut(route_id)
+                    .insert(Children::from_slice(&[n]));
 
-                resources.get_mut::<SelectedEntity>().select(e.id());
+                resources.get_mut::<SelectedEntity>().select(route_id);
 
                 ui.close_menu();
             }

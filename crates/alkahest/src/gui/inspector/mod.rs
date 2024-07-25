@@ -16,7 +16,7 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
-        utility::{Beacon, Route, Ruler, Sphere},
+        utility::{Beacon, Route, RouteNode, Ruler, Sphere},
         visibility::{Visibility, VisibilityHelper},
         Scene,
     },
@@ -139,7 +139,13 @@ pub fn show_inspector_panel(
             cmd.entity(ent).despawn();
         }
 
-        if ui
+        if e.contains::<RouteNode>() {
+            ui.label(
+                RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
+                    .size(24.0)
+                    .strong(),
+            );
+        } else if ui
             .button(
                 RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
                     .size(24.0)
@@ -238,7 +244,7 @@ pub fn show_inspector_panel(
 
     let mut global = e.contains::<Global>();
     let mut global_changed = false;
-    if e.contains::<Mutable>() && !e.contains::<Route>() {
+    if e.contains::<Mutable>() && !e.contains::<Route>() && !e.contains::<RouteNode>() {
         if ui.checkbox(&mut global, "Show in all Maps").changed() {
             global_changed = true;
             if global {
@@ -249,7 +255,7 @@ pub fn show_inspector_panel(
         };
         ui.separator();
     }
-    show_inspector_components(ui, scene.pocus(), e, resources);
+    show_inspector_components(ui, scene.pocus(), &mut cmd, e, resources);
 
     if global_changed {
         if global {
@@ -263,12 +269,13 @@ pub fn show_inspector_panel(
 fn show_inspector_components(
     ui: &mut egui::Ui,
     scene: &mut Scene,
+    cmd: &mut Commands<'_, '_>,
     e: EntityRef<'_>,
     resources: &AppResources,
 ) {
     if let Some(mut t) = e.get_mut::<Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(scene, e, ui, resources);
+            t.show_inspector_ui(scene, cmd, e, ui, resources);
         });
     }
 
@@ -277,7 +284,7 @@ fn show_inspector_components(
 			$(
 				if let Some(mut component) = e.get_mut::<$component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(scene, e, ui, resources);
+						component.show_inspector_ui(scene, cmd, e, ui, resources);
 					});
 				}
 			)*
@@ -290,6 +297,7 @@ fn show_inspector_components(
         Sphere,
         Beacon,
         Route,
+        RouteNode,
         DynamicModelComponent,
         LightRenderer,
         SLightCollection,
@@ -323,6 +331,7 @@ pub(super) trait ComponentPanel {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         _: &mut egui::Ui,
         _: &AppResources,
@@ -342,6 +351,7 @@ impl ComponentPanel for Transform {
     fn show_inspector_ui(
         &mut self,
         _scene: &mut Scene,
+        _: &mut Commands<'_, '_>,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
         resources: &AppResources,
@@ -492,6 +502,7 @@ impl ComponentPanel for DynamicModelComponent {
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
         _: &AppResources,
@@ -569,6 +580,7 @@ impl ComponentPanel for ShaderBallComponent {
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
         _: &AppResources,
@@ -626,6 +638,7 @@ impl ComponentPanel for NodeMetadata {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         ui: &mut Ui,
         _: &AppResources,
@@ -669,6 +682,7 @@ impl ComponentPanel for SRespawnPoint {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         ui: &mut Ui,
         _: &AppResources,
