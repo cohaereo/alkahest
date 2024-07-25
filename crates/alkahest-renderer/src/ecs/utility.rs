@@ -25,6 +25,9 @@ use crate::{
 
 pub trait Utility {
     fn icon() -> Icon;
+    fn label(str: &str) -> Label {
+        Label::from(str)
+    }
     fn default_label() -> Label;
 }
 
@@ -92,7 +95,7 @@ impl Default for Sphere {
 
 impl Utility for Sphere {
     fn default_label() -> Label {
-        Label::new_default("Sphere")
+        Label::new_default("Sphere").with_offset(0.0, 0.0, -1.0)
     }
 
     fn icon() -> Icon {
@@ -121,7 +124,7 @@ impl Default for Beacon {
 
 impl Utility for Beacon {
     fn default_label() -> Label {
-        Label::new_default("Beacon")
+        Label::new_default("Beacon").with_offset(0.0, 0.0, -0.5)
     }
 
     fn icon() -> Icon {
