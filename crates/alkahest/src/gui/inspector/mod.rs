@@ -16,12 +16,12 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
-        utility::{Beacon, Route, Ruler, Sphere},
+        utility::{Beacon, Route, RouteNode, Ruler, Sphere},
         Scene,
     },
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_HUMAN_CHILD,
-        ICON_HUMAN_MALE, ICON_HUMAN_MALE_FEMALE_CHILD, ICON_POKEBALL,
+        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_HUMAN_MALE,
+        ICON_HUMAN_MALE_FEMALE_CHILD, ICON_POKEBALL,
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
@@ -141,7 +141,13 @@ pub fn show_inspector_panel(
             cmd.despawn(ent);
         }
 
-        if ui
+        if e.has::<RouteNode>() {
+            ui.label(
+                RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
+                    .size(24.0)
+                    .strong(),
+            );
+        } else if ui
             .button(
                 RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
                     .size(24.0)
@@ -250,7 +256,7 @@ pub fn show_inspector_panel(
         };
         ui.separator();
     }
-    show_inspector_components(ui, scene, e, resources);
+    show_inspector_components(ui, scene, cmd, e, resources);
 
     if global_changed {
         if global {
@@ -264,12 +270,13 @@ pub fn show_inspector_panel(
 fn show_inspector_components(
     ui: &mut egui::Ui,
     scene: &Scene,
+    cmd: &mut hecs::CommandBuffer,
     e: EntityRef<'_>,
     resources: &Resources,
 ) {
     if let Some(mut t) = e.get::<&mut Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(scene, e, ui, resources);
+            t.show_inspector_ui(scene, cmd, e, ui, resources);
         });
     }
 
@@ -278,7 +285,7 @@ fn show_inspector_components(
 			$(
 				if let Some(mut component) = e.get::<&mut $component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(scene, e, ui, resources);
+						component.show_inspector_ui(scene, cmd, e, ui, resources);
 					});
 				}
 			)*
@@ -291,6 +298,7 @@ fn show_inspector_components(
         Sphere,
         Beacon,
         Route,
+        RouteNode,
         DynamicModelComponent,
         LightRenderer,
         SLightCollection,
@@ -329,6 +337,7 @@ pub(super) trait ComponentPanel {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         _: EntityRef<'s>,
         _: &mut egui::Ui,
         _: &Resources,
@@ -352,6 +361,7 @@ impl ComponentPanel for Transform {
     fn show_inspector_ui(
         &mut self,
         scene: &Scene,
+        _: &mut hecs::CommandBuffer,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
         resources: &Resources,
@@ -499,7 +509,14 @@ impl ComponentPanel for DynamicModelComponent {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &Scene,
+        _: &mut hecs::CommandBuffer,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Hash:");
             ui.label(self.model.hash.to_string());
@@ -574,7 +591,14 @@ impl ComponentPanel for ShaderBallComponent {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &Scene,
+        _: &mut hecs::CommandBuffer,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &Resources,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Color:");
             ui.color_edit_button_rgb(self.color.as_mut());
@@ -636,6 +660,7 @@ impl ComponentPanel for NodeMetadata {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         _: EntityRef<'s>,
         ui: &mut Ui,
         _: &Resources,
@@ -683,6 +708,7 @@ impl ComponentPanel for SRespawnPoint {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         _: EntityRef<'s>,
         ui: &mut Ui,
         _: &Resources,

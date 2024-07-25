@@ -24,6 +24,7 @@ impl ComponentPanel for DecoratorRenderer {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         _: EntityRef<'s>,
         ui: &mut Ui,
         resources: &Resources,

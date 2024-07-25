@@ -11,6 +11,7 @@ use alkahest_renderer::{
             static_geometry::update_static_instances_system,
         },
         resources::SelectedEntity,
+        utility::Route,
         Scene, SceneInfo,
     },
     loaders::map::load_map,
@@ -141,6 +142,12 @@ impl Map {
             self.fixup_children(source, new_entity, &grandchildren, new_selected, selected);
         }
         self.scene.insert_one(new_parent, new_children).unwrap();
+    }
+
+    fn fixup_route_visibility(&mut self) {
+        for (e, r) in self.scene.query::<&Route>().iter() {
+            r.fixup_visiblity(&self.scene, &mut self.command_buffer, e);
+        }
     }
 
     fn start_load(&mut self, resources: &Resources) {
@@ -307,6 +314,7 @@ impl MapList {
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
             dest.take_globals(resources, &mut source);
+            dest.fixup_route_visibility();
             self.maps[previous_map].scene = source;
         }
 

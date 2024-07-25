@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use destiny_pkg::TagHash;
+use ecolor::Rgba;
 use glam::Vec3;
 use hecs::Entity;
 
@@ -10,10 +11,12 @@ use super::{
 };
 use crate::{
     ecs::{
-        common::Hidden, render::havok::draw_debugshapes_system, resources::SelectedEntity,
-        transform::Transform, Scene,
+        common::Hidden, hierarchy::Children, render::havok::draw_debugshapes_system,
+        resources::SelectedEntity, transform::Transform, Scene,
     },
-    icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    icons::{
+        ICON_MAP_MARKER, ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
+    },
     renderer::{LabelAlign, Renderer},
     resources::Resources,
     util::{
@@ -128,14 +131,14 @@ impl Utility for Beacon {
     }
 }
 
-pub struct RouteNode {
+pub struct RouteNodeHolder {
     pub pos: Vec3,
     pub map_hash: Option<TagHash>,
     pub is_teleport: bool,
     pub label: Option<String>,
 }
 
-impl Default for RouteNode {
+impl Default for RouteNodeHolder {
     fn default() -> Self {
         Self {
             pos: Vec3::ZERO,
@@ -145,9 +148,8 @@ impl Default for RouteNode {
         }
     }
 }
-
-pub struct Route {
-    pub path: Vec<RouteNode>,
+pub struct RouteHolder {
+    pub path: Vec<RouteNodeHolder>,
     pub color: Color,
     pub rainbow: bool,
     pub speed_multiplier: f32,
@@ -157,7 +159,7 @@ pub struct Route {
     pub activity_hash: Option<TagHash>,
 }
 
-impl Default for Route {
+impl Default for RouteHolder {
     fn default() -> Self {
         Self {
             path: vec![],
@@ -172,6 +174,116 @@ impl Default for Route {
     }
 }
 
+pub struct RouteNode {
+    pub map_hash: Option<TagHash>,
+    pub is_teleport: bool,
+}
+
+impl Default for RouteNode {
+    fn default() -> Self {
+        Self {
+            map_hash: None,
+            is_teleport: false,
+        }
+    }
+}
+
+pub struct Route {
+    pub color: Color,
+    pub rainbow: bool,
+    pub speed_multiplier: f32,
+    pub scale: f32,
+    pub marker_interval: f32,
+    pub show_all: bool,
+    pub activity_hash: Option<TagHash>,
+}
+
+impl Default for Route {
+    fn default() -> Self {
+        Self {
+            color: Color::WHITE,
+            rainbow: false,
+            speed_multiplier: 1.0,
+            scale: 1.0,
+            marker_interval: 0.0,
+            show_all: false,
+            activity_hash: None,
+        }
+    }
+}
+
+impl Route {
+    pub fn get_command(&self, scene: &Scene, entity: Entity) -> String {
+        let mut command = String::from("route");
+        if let Some(hash) = self.activity_hash.as_ref() {
+            command = format!("{} hash {}", command, hash.0);
+        }
+        if let Ok(children) = scene.get::<&Children>(entity) {
+            for child_ent in &children.0 {
+                let Ok(mut node_q) =
+                    scene.query_one::<(&Transform, &RouteNode, &Label)>(*child_ent)
+                else {
+                    return command;
+                };
+                if let Some((pos, node, label)) = node_q.get() {
+                    command = format!(
+                        "{} node {} {} {}{}{}{}",
+                        command,
+                        pos.translation[0],
+                        pos.translation[1],
+                        pos.translation[2],
+                        if node.is_teleport { " tp" } else { "" },
+                        node.map_hash
+                            .map_or(String::new(), |h| { format!(" hash {}", h.0) }),
+                        if !label.default {
+                            format!(
+                                " label {}",
+                                label.label.replace('\\', r"\\").replace(' ', r"\s")
+                            )
+                        } else {
+                            String::new()
+                        }
+                    );
+                }
+            }
+        }
+        command
+    }
+
+    pub fn fixup_visiblity(&self, scene: &Scene, cmd: &mut hecs::CommandBuffer, entity: Entity) {
+        let mut prev_visible = false;
+        if let Ok(children) = scene.get::<&Children>(entity) {
+            for (i, child_ent) in children.0.iter().enumerate() {
+                let mut next_q = children.0.get(i + 1).map_or(None, |e| {
+                    match scene.query_one::<(&Transform, &RouteNode)>(*e) {
+                        Ok(q) => Some(q),
+                        Err(_) => None,
+                    }
+                });
+                if let Ok(node) = scene.get::<&RouteNode>(*child_ent) {
+                    let current_visible = node.map_hash == scene.get_map_hash();
+                    let next_node = next_q.as_mut().map_or(None, |f| f.get());
+                    let next_visible =
+                        next_node.map_or(false, |(_, n)| n.map_hash == scene.get_map_hash());
+                    let Ok(e) = scene.entity(*child_ent) else {
+                        return;
+                    };
+                    if self.show_all || prev_visible || current_visible || next_visible {
+                        if e.has::<Hidden>() {
+                            cmd.remove_one::<Hidden>(e.entity());
+                        }
+                    } else {
+                        if !e.has::<Hidden>() {
+                            cmd.insert_one(e.entity(), Hidden);
+                        }
+                    }
+                    prev_visible = current_visible;
+                }
+            }
+        }
+    }
+}
+
 impl Utility for Route {
     fn icon() -> Icon {
         Icon::Unicode(ICON_MAP_MARKER_PATH)
@@ -182,11 +294,25 @@ impl Utility for Route {
     }
 }
 
+impl Utility for RouteNode {
+    fn icon() -> Icon {
+        Icon::Unicode(ICON_MAP_MARKER)
+    }
+
+    fn label(str: &str) -> Label {
+        Label::from(str).with_offset(0.0, 0.0, 0.12)
+    }
+
+    fn default_label() -> Label {
+        Label::new_default("").with_offset(0.0, 0.0, 0.12)
+    }
+}
+
 pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources) {
     draw_debugshapes_system(renderer, scene, resources);
 
     for (e, ruler) in scene.query::<&Ruler>().without::<&Hidden>().iter() {
-        draw_ruler(renderer, ruler, Some(e), resources);
+        draw_ruler(renderer, ruler, e, resources);
     }
 
     for (e, (transform, sphere)) in scene
@@ -194,7 +320,7 @@ pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources)
         .without::<&Hidden>()
         .iter()
     {
-        draw_sphere(renderer, transform, sphere, Some(e), resources);
+        draw_sphere(renderer, transform, sphere, e, resources);
     }
 
     for (e, (transform, beacon)) in scene
@@ -202,12 +328,16 @@ pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources)
         .without::<&Hidden>()
         .iter()
     {
-        draw_beacon(renderer, transform, beacon, Some(e), resources);
+        draw_beacon(renderer, transform, beacon, e, resources);
     }
 
-    for (e, route) in scene.query::<&Route>().without::<&Hidden>().iter() {
+    for (e, (route, children)) in scene
+        .query::<(&Route, &Children)>()
+        .without::<&Hidden>()
+        .iter()
+    {
         if let Some(current_hash) = scene.get_map_hash() {
-            draw_route(renderer, route, Some(e), current_hash, resources);
+            draw_route(renderer, scene, route, children, e, current_hash, resources);
         }
     }
 }
@@ -216,7 +346,7 @@ fn draw_ruler(
     renderer: &Renderer,
     ruler: &Ruler,
     // start_time: Instant,
-    entity: Option<Entity>,
+    entity: Entity,
     resources: &Resources,
 ) {
     let selected = resources.get::<SelectedEntity>();
@@ -227,7 +357,7 @@ fn draw_ruler(
         ruler.color
     };
 
-    let color = selected.select_fade_color(color, entity);
+    let color = selected.select_fade_color(color, Some(entity));
 
     renderer.immediate.cross(ruler.start, ruler.scale, color);
     renderer.immediate.cross(ruler.end, ruler.scale, color);
@@ -351,7 +481,7 @@ fn draw_sphere(
     renderer: &Renderer,
     transform: &Transform,
     sphere: &Sphere,
-    entity: Option<Entity>,
+    entity: Entity,
     resources: &Resources,
 ) {
     let selected = resources.get::<SelectedEntity>();
@@ -362,7 +492,7 @@ fn draw_sphere(
         sphere.color
     };
 
-    let color = selected.select_fade_color(color, entity);
+    let color = selected.select_fade_color(color, Some(entity));
 
     let color_opaque = color.to_opaque();
     let cross_color = color_opaque.invert().keep_bright();
@@ -395,7 +525,7 @@ fn draw_beacon(
     renderer: &Renderer,
     transform: &Transform,
     beacon: &Beacon,
-    entity: Option<Entity>,
+    entity: Entity,
     resources: &Resources,
 ) {
     const BEAM_HEIGHT: f32 = 5000.0;
@@ -411,7 +541,7 @@ fn draw_beacon(
             / 255.0,
     );
 
-    let color = selected.select_fade_color(color, entity);
+    let color = selected.select_fade_color(color, Some(entity));
 
     renderer.immediate.sphere(
         transform.translation,
@@ -442,119 +572,153 @@ fn draw_beacon(
 
 fn draw_route(
     renderer: &Renderer,
+    scene: &Scene,
     route: &Route,
-    entity: Option<Entity>,
+    children: &Children,
+    entity: Entity,
     current_hash: TagHash,
     resources: &Resources,
 ) {
     let selected = resources.get::<SelectedEntity>();
     let color = if route.rainbow {
-        selected.select_fade_color(Color::from(*Hsv::rainbow()), entity)
+        selected.select_fade_color(Color::from(*Hsv::rainbow()), Some(entity))
     } else {
-        selected.select_fade_color(route.color, entity)
+        selected.select_fade_color(route.color, Some(entity))
     };
 
-    const BASE_RADIUS: f32 = 0.1;
     let mut prev_is_local = false;
-    for i in 0..route.path.len() {
-        if let Some(node) = route.path.get(i) {
-            let node_is_local = node.map_hash.map_or(true, |h| h == current_hash);
-            let next_node = route.path.get(i + 1);
-            let next_is_local = next_node.map_or(false, |node| {
-                node.map_hash.map_or(false, |h| h == current_hash)
+    for i in 0..children.0.len() {
+        if let Some(node_e) = children.0.get(i) {
+            let Ok(mut current_q) = scene.query_one::<(&Transform, &RouteNode)>(*node_e) else {
+                return;
+            };
+            let mut next_q = children.0.get(i + 1).map_or(None, |e| {
+                match scene.query_one::<(&Transform, &RouteNode)>(*e) {
+                    Ok(q) => Some(q),
+                    Err(_) => None,
+                }
             });
+            if let Some((pos, node)) = current_q.get() {
+                let node_is_local = node.map_hash.map_or(true, |h| h == current_hash);
+                let next_node = next_q.as_mut().map_or(None, |f| f.get());
+                let next_is_local = next_node.map_or(false, |(_, n)| {
+                    n.map_hash.map_or(false, |h| h == current_hash)
+                });
 
-            if !node_is_local {
-                if prev_is_local || next_is_local || route.show_all {
-                    draw_sphere_skeleton(renderer, node.pos, BASE_RADIUS * route.scale, 2, color);
-                }
-            } else {
-                renderer.immediate.sphere(
-                    node.pos,
-                    BASE_RADIUS * route.scale,
-                    color,
-                    //DebugDrawFlags::DRAW_NORMAL,
-                    //None,
-                );
-            }
-
-            if node_is_local || prev_is_local || next_is_local {
-                if let Some(label) = node.label.as_ref() {
-                    renderer.immediate.label(
-                        label.to_string(),
-                        node.pos + route.scale / 2.0 * Vec3::Z,
-                        LabelAlign::CENTER_BOTTOM,
-                        Color::WHITE,
+                if route.show_all || prev_is_local || node_is_local || next_is_local {
+                    draw_route_node(
+                        renderer,
+                        scene,
+                        route,
+                        node,
+                        pos,
+                        color,
+                        *node_e,
+                        current_hash,
+                        resources,
                     );
                 }
-            }
-            prev_is_local = node_is_local;
 
-            if next_node.is_some() {
-                let next_node = next_node.unwrap();
-                let segment_length = (next_node.pos - node.pos).length();
+                prev_is_local = node_is_local;
 
-                if !(route.show_all || node_is_local || next_is_local) {
-                    continue;
-                }
+                if let Some((next_pos, next_node)) = next_node {
+                    let segment_length = (next_pos.translation - pos.translation).length();
 
-                renderer.immediate.line_dotted(
-                    next_node.pos,
-                    node.pos,
-                    color,
-                    color,
-                    1.0,
-                    route.scale,
-                    if next_node.is_teleport { 0.10 } else { 0.75 },
-                    if next_node.is_teleport { 1.5 } else { 0.5 },
-                );
-                if route.marker_interval > 0.0 {
-                    let sphere_color = color.invert().keep_bright();
-                    let sphere_color = Color::from_rgba_premultiplied(
-                        sphere_color[0],
-                        sphere_color[1],
-                        sphere_color[2],
-                        0.75,
-                    );
-
-                    let mut current = 0.0;
-                    while current < segment_length {
-                        if current > 0.0 {
-                            let pos = node.pos + (next_node.pos - node.pos).normalize() * current;
-
-                            renderer.immediate.sphere(
-                                pos,
-                                route.scale * 0.20,
-                                sphere_color,
-                                //DebugDrawFlags::DRAW_NORMAL,
-                                //None,
-                            );
-                        }
-
-                        current += route.marker_interval;
+                    if !(route.show_all || node_is_local || next_is_local) {
+                        continue;
                     }
+
+                    renderer.immediate.line_dotted(
+                        next_pos.translation,
+                        pos.translation,
+                        color,
+                        color,
+                        1.0,
+                        route.scale,
+                        if next_node.is_teleport { 0.10 } else { 0.75 },
+                        if next_node.is_teleport { 1.5 } else { 0.5 },
+                    );
+                    if route.marker_interval > 0.0 {
+                        let sphere_color = color.invert().keep_bright();
+                        let sphere_color = Color::from_rgba_premultiplied(
+                            sphere_color[0],
+                            sphere_color[1],
+                            sphere_color[2],
+                            0.75,
+                        );
+
+                        let mut current = 0.0;
+                        while current < segment_length {
+                            if current > 0.0 {
+                                let pos = pos.translation
+                                    + (next_pos.translation - pos.translation).normalize()
+                                        * current;
+
+                                renderer.immediate.sphere(
+                                    pos,
+                                    route.scale * 0.20,
+                                    sphere_color,
+                                    //DebugDrawFlags::DRAW_NORMAL,
+                                    //None,
+                                );
+                            }
+
+                            current += route.marker_interval;
+                        }
+                    }
+                    //TODO (cohae): Fix this once pick buffer exists
+                    // renderer.immediate.cube_extents(
+                    //     (pos.translation + next_pos.translation) / 2.0,
+                    //     Vec3::new(segment_length / 2.0, route.scale / 2.0, route.scale / 2.0),
+                    //     Quat::from_rotation_arc(Vec3::X, (next_pos.translation - pos.translation).normalize()),
+                    //     color,
+                    //     true,
+                    //     DebugDrawFlags::DRAW_PICK,
+                    //     entity,
+                    // )
+                } else {
+                    // renderer.immediate.cube_extents(
+                    //     pos.translation,
+                    //     Vec3::new(route.scale / 2.0, route.scale / 2.0, route.scale / 2.0),
+                    //     Quat::IDENTITY,
+                    //     color,
+                    //     true,
+                    //     DebugDrawFlags::DRAW_PICK,
+                    //     entity,
+                    // )
                 }
-                //TODO (cohae): Fix this once pick buffer exists
-                // renderer.immediate.cube_extents(
-                //     (node.pos + next_node.pos) / 2.0,
-                //     Vec3::new(segment_length / 2.0, route.scale / 2.0, route.scale / 2.0),
-                //     Quat::from_rotation_arc(Vec3::X, (next_node.pos - node.pos).normalize()),
-                //     color,
-                //     true,
-                //     DebugDrawFlags::DRAW_PICK,
-                //     entity,
-                // )
-            } else {
-                // renderer.immediate.cube_extents(
-                //     node.pos,
-                //     Vec3::new(route.scale / 2.0, route.scale / 2.0, route.scale / 2.0),
-                //     Quat::IDENTITY,
-                //     color,
-                //     true,
-                //     DebugDrawFlags::DRAW_PICK,
-                //     entity,
-                // )
             }
         }
+    }
+}
+
+fn draw_route_node(
+    renderer: &Renderer,
+    _: &Scene,
+    route: &Route,
+    node: &RouteNode,
+    pos: &Transform,
+    color: Rgba,
+    _: Entity,
+    current_hash: TagHash,
+    _: &Resources,
+) {
+    const BASE_RADIUS: f32 = 0.1;
+    if node.map_hash.map_or(true, |h| h == current_hash) {
+        renderer.immediate.sphere(
+            pos.translation,
+            BASE_RADIUS * route.scale,
+            color,
+            //DebugDrawFlags::DRAW_NORMAL,
+            //None,
+        );
+    } else {
+        draw_sphere_skeleton(
+            renderer,
+            pos.translation,
+            BASE_RADIUS * route.scale,
+            2,
+            color,
+        );
     }
 }
