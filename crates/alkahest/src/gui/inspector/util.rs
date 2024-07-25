@@ -24,7 +24,10 @@ use egui::{
 use hecs::EntityRef;
 
 use crate::{
-    gui::inspector::ComponentPanel,
+    gui::{
+        hotkeys::{SHORTCUT_ADD_ROUTE_NODE_NEXT, SHORTCUT_ADD_ROUTE_NODE_PREV},
+        inspector::ComponentPanel,
+    },
     input_float3,
     resources::Resources,
     util::action::{ActionList, FollowAction},
@@ -398,8 +401,9 @@ impl ComponentPanel for Route {
         ui.horizontal(|ui| {
             if ui
                 .button(format!("{}", ICON_MAP_MARKER_PLUS))
-                .on_hover_text("Add Node")
+                .on_hover_text("Hotkey: +")
                 .clicked()
+                || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_ADD_ROUTE_NODE_NEXT))
             {
                 let node = scene.reserve_entity();
                 cmd.insert(
@@ -499,7 +503,9 @@ impl ComponentPanel for RouteNode {
         ui.horizontal(|ui| {
             if ui
                 .button(format!("{}{}", ICON_ARROW_LEFT, ICON_MAP_MARKER_PLUS))
+                .on_hover_text("Hotkey: -")
                 .clicked()
+                || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_ADD_ROUTE_NODE_PREV))
             {
                 if let Some(mut children) = parent.get::<&mut Children>() {
                     let node = scene.reserve_entity();
@@ -538,7 +544,9 @@ impl ComponentPanel for RouteNode {
         ui.horizontal(|ui| {
             if ui
                 .button(format!("{}{}", ICON_MAP_MARKER_PLUS, ICON_ARROW_RIGHT))
+                .on_hover_text("Hotkey: +")
                 .clicked()
+                || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_ADD_ROUTE_NODE_NEXT))
             {
                 if let Some(mut children) = parent.get::<&mut Children>() {
                     let node = scene.reserve_entity();
