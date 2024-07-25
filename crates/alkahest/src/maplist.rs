@@ -1,9 +1,16 @@
+use crate::{
+    discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
+};
+use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
-        common::Global, render::{
+        common::Global,
+        render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
-        }, resources::SelectedEntity, Scene, SceneInfo
+        },
+        resources::SelectedEntity,
+        Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
@@ -12,10 +19,6 @@ use destiny_pkg::TagHash;
 use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
-use alkahest_data::text::StringContainerShared;
-use crate::{
-    discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
-};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum MapLoadState {
@@ -89,7 +92,7 @@ impl Map {
             let selected_entity = resources.get::<SelectedEntity>().selected();
             for &entity in &ent_list {
                 let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
-                if selected_entity.is_some_and(|e|e == entity) {
+                if selected_entity.is_some_and(|e| e == entity) {
                     new_selected_entity = Some(new_entity);
                 }
             }

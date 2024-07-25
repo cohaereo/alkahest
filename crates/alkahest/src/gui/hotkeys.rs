@@ -1,13 +1,14 @@
 use alkahest_renderer::{
-    camera::{
-        tween::ease_out_exponential,
-        Camera,
-    },
+    camera::{tween::ease_out_exponential, Camera},
     ecs::{common::Hidden, resources::SelectedEntity},
     renderer::RendererShared,
 };
 
-use crate::{maplist::MapList, resources::Resources, util::action::{ActionList, TweenAction}};
+use crate::{
+    maplist::MapList,
+    resources::Resources,
+    util::action::{ActionList, TweenAction},
+};
 
 pub const SHORTCUT_DELETE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::Delete);
@@ -35,10 +36,10 @@ pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
 pub const SHORTCUT_MAP_SWAP: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::I);
 
-    pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
+pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageUp);
 
-    pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
+pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageDown);
 
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
@@ -62,11 +63,15 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_PREV)) {
-        resources.get_mut::<MapList>().set_current_map_prev(resources);
+        resources
+            .get_mut::<MapList>()
+            .set_current_map_prev(resources);
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_NEXT)) {
-        resources.get_mut::<MapList>().set_current_map_next(resources);
+        resources
+            .get_mut::<MapList>()
+            .set_current_map_next(resources);
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
