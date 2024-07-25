@@ -123,6 +123,21 @@ pub fn show_inspector_panel(
                 .clicked()
                 || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)))
         {
+            // Remove all children
+            if let Some(children) = e.get::<&Children>() {
+                for child_ent in &children.0 {
+                    cmd.despawn(*child_ent);
+                }
+            }
+            // Remove from parent
+            if let Some(parent) = e.get::<&Parent>() {
+                if let Ok(parent) = scene.entity(parent.0) {
+                    if let Some(mut children) = parent.get::<&mut Children>() {
+                        children.0.retain(|child| *child != e.entity());
+                    }
+                }
+                resources.get_mut::<SelectedEntity>().select(parent.0);
+            }
             cmd.despawn(ent);
         }
 
@@ -195,9 +210,9 @@ pub fn show_inspector_panel(
                         |ui| {
                             for c in children.iter() {
                                 let title = if let Ok(label) = scene.get::<&Label>(*c) {
-                                    format!("{label} (id {})", e.entity().id())
+                                    format!("{label} (id {})", c.id())
                                 } else {
-                                    format!("Entity {}", e.entity().id())
+                                    format!("Entity {}", c.id())
                                 };
 
                                 if ui.selectable_label(false, title).clicked() {

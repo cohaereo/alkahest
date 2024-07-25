@@ -5,6 +5,7 @@ use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
         common::Global,
+        hierarchy::{Children, Parent},
         render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
@@ -19,6 +20,7 @@ use destiny_pkg::TagHash;
 use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
+use smallvec::SmallVec;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum MapLoadState {
@@ -83,6 +85,7 @@ impl Map {
     pub fn take_globals(&mut self, resources: &Resources, source: &mut Scene) {
         let ent_list = source
             .query::<&Global>()
+            .without::<&Parent>()
             .iter()
             .map(|(e, _)| e)
             .collect_vec();
@@ -90,17 +93,54 @@ impl Map {
 
         {
             let selected_entity = resources.get::<SelectedEntity>().selected();
-            for &entity in &ent_list {
+            for entity in ent_list {
                 let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
-                if selected_entity.is_some_and(|e| e == entity) {
+                if new_selected_entity.is_none() && selected_entity.is_some_and(|e| e == entity) {
                     new_selected_entity = Some(new_entity);
                 }
+                let Ok(children) = self.scene.remove_one::<Children>(new_entity) else {
+                    continue;
+                };
+                self.fixup_children(
+                    source,
+                    new_entity,
+                    &children,
+                    &mut new_selected_entity,
+                    &selected_entity,
+                );
             }
         }
 
         if let Some(new_entity) = new_selected_entity {
             resources.get_mut::<SelectedEntity>().select(new_entity);
         }
+    }
+
+    fn fixup_children(
+        &mut self,
+        source: &mut Scene,
+        new_parent: Entity,
+        children: &Children,
+        new_selected: &mut Option<Entity>,
+        selected: &Option<Entity>,
+    ) {
+        let mut new_children = Children(SmallVec::new());
+        for child in children.0.iter() {
+            let new_entity = self.scene.spawn(source.take(*child).ok().unwrap());
+            if new_selected.is_none() && selected.is_some_and(|e| e == *child) {
+                new_selected.replace(new_entity);
+            }
+            new_children.0.push(new_entity);
+            if let Ok(mut parent) = self.scene.get::<&mut Parent>(new_entity) {
+                parent.0 = new_parent;
+            }
+
+            let Ok(grandchildren) = self.scene.remove_one::<Children>(new_entity) else {
+                continue;
+            };
+            self.fixup_children(source, new_entity, &grandchildren, new_selected, selected);
+        }
+        self.scene.insert_one(new_parent, new_children).unwrap();
     }
 
     fn start_load(&mut self, resources: &Resources) {
