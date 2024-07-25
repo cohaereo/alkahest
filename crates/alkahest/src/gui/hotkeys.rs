@@ -51,6 +51,12 @@ pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
 pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageDown);
 
+pub const SHORTCUT_ADD_ROUTE_NODE_NEXT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Plus);
+
+pub const SHORTCUT_ADD_ROUTE_NODE_PREV: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Minus);
+
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);

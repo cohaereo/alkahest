@@ -2,9 +2,10 @@ use alkahest_renderer::icons::{
     ICON_ALPHA_A_BOX_OUTLINE, ICON_ALPHA_D_BOX_OUTLINE, ICON_ALPHA_E_BOX_OUTLINE,
     ICON_ALPHA_G_BOX_OUTLINE, ICON_ALPHA_H_BOX_OUTLINE, ICON_ALPHA_I_BOX_OUTLINE,
     ICON_ALPHA_Q_BOX_OUTLINE, ICON_ALPHA_S_BOX_OUTLINE, ICON_ALPHA_W_BOX_OUTLINE,
-    ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE, ICON_MOUSE_LEFT_CLICK_OUTLINE,
-    ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_NUMERIC_1_BOX_OUTLINE, ICON_NUMERIC_2_BOX_OUTLINE,
-    ICON_NUMERIC_3_BOX_OUTLINE, ICON_NUMERIC_4_BOX_OUTLINE,
+    ICON_APPLE_KEYBOARD_SHIFT, ICON_ARROW_ALL, ICON_KEYBOARD_SPACE, ICON_MINUS_BOX_OUTLINE,
+    ICON_MOUSE_LEFT_CLICK_OUTLINE, ICON_MOUSE_RIGHT_CLICK_OUTLINE, ICON_NUMERIC_1_BOX_OUTLINE,
+    ICON_NUMERIC_2_BOX_OUTLINE, ICON_NUMERIC_3_BOX_OUTLINE, ICON_NUMERIC_4_BOX_OUTLINE,
+    ICON_PLUS_BOX_OUTLINE,
 };
 use egui::{vec2, Color32, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
@@ -328,6 +329,20 @@ impl MenuBar {
                             control_description!(ui, "Page Up", "Swap to Previous Map in List");
 
                             control_description!(ui, "Page Down", "Swap to Next Map in List");
+
+                            control_section_title!(ui, "Route Editing");
+
+                            control_description!(
+                                ui,
+                                ICON_PLUS_BOX_OUTLINE,
+                                "Add node at end of route, or after selected node"
+                            );
+
+                            control_description!(
+                                ui,
+                                ICON_MINUS_BOX_OUTLINE,
+                                "Add node before selected node"
+                            );
                         });
                 });
             });
