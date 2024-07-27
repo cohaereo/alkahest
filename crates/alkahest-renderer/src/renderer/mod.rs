@@ -461,7 +461,7 @@ impl Default for RendererSettings {
     fn default() -> Self {
         Self {
             vsync: true,
-            ssao: false,
+            ssao: true,
             matcap: false,
             shadows: true,
             shadow_updates_per_frame: 2,
