@@ -13,7 +13,7 @@ use alkahest_renderer::{
     ColorExt,
 };
 use egui::{Color32, Context, Frame, Pos2, Rect, Rounding, Sense, Ui};
-use glam::Vec2;
+use glam::{Vec2, Vec3};
 use winit::window::Window;
 
 use crate::{
@@ -109,7 +109,10 @@ impl GuiView for NodeGizmoOverlay {
                     .without::<&Hidden>()
                     .iter()
                 {
-                    if node_meta.map(|m| m.name.is_none()).unwrap_or(true) && named_nodes_only {
+                    if node_meta.map(|m| m.name.is_none()).unwrap_or(true)
+                        && label.is_some_and(|l| l.default == false)
+                        && named_nodes_only
+                    {
                         continue;
                     }
 
@@ -168,10 +171,19 @@ impl GuiView for NodeGizmoOverlay {
                         continue;
                     }
 
+                    let adjustment = match label {
+                        Some(l) => {
+                            camera.forward() * l.offset.x
+                                + camera.right() * l.offset.y
+                                + camera.up() * l.offset.z
+                        }
+                        None => Vec3::new(0.0, 0.0, 0.0),
+                    };
+
                     rp_list.push((
                         e,
                         distance,
-                        *transform,
+                        transform.translation + adjustment,
                         NodeDisplayPoint {
                             has_havok_data: false,
                             origin: origin.cloned(),
@@ -185,10 +197,8 @@ impl GuiView for NodeGizmoOverlay {
 
                 rp_list.reverse();
 
-                for (i, (e, _, transform, node)) in rp_list.iter().enumerate() {
-                    let projected_point = camera
-                        .world_to_projective
-                        .project_point3(transform.translation);
+                for (i, (e, _, translation, node)) in rp_list.iter().enumerate() {
+                    let projected_point = camera.world_to_projective.project_point3(*translation);
 
                     let screen_point = Vec2::new(
                         ((projected_point.x + 1.0) * 0.5) * screen_size.x,

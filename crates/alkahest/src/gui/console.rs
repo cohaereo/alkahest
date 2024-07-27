@@ -18,7 +18,7 @@ use alkahest_renderer::{
         render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
         tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
-        utility::{Route, RouteNode},
+        utility::{RouteHolder, RouteNodeHolder},
     },
     icons::ICON_CUBE,
     renderer::{Renderer, RendererShared},
@@ -596,7 +596,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             maps.set_maps(resources, &[]);
         }
         "route" => {
-            let mut route = Route::default();
+            let mut route = RouteHolder::default();
             let mut i: usize = 0;
             if args[i].to_lowercase().as_str() == "hash" {
                 i += 1;
@@ -620,7 +620,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
                 }
             }
             while i < args.len() {
-                let mut node = RouteNode::default();
+                let mut node = RouteNodeHolder::default();
                 match args[i].to_lowercase().as_str() {
                     "node" => 'node: {
                         i += 1;

@@ -29,6 +29,7 @@ impl ComponentPanel for SLightCollection {
     fn show_inspector_ui<'s>(
         &mut self,
         scene: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         e: EntityRef<'s>,
         _ui: &mut Ui,
         resources: &Resources,
@@ -74,6 +75,7 @@ impl ComponentPanel for LightRenderer {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         e: EntityRef<'s>,
         ui: &mut Ui,
         resources: &Resources,
@@ -152,6 +154,7 @@ impl ComponentPanel for CubemapVolume {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s Scene,
+        _: &mut hecs::CommandBuffer,
         e: EntityRef<'s>,
         _: &mut Ui,
         resources: &Resources,

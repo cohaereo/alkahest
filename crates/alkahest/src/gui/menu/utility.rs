@@ -2,6 +2,7 @@ use crate::gui::menu::MenuBar;
 use crate::maplist::MapList;
 use alkahest_renderer::camera::Camera;
 use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
+use alkahest_renderer::ecs::hierarchy::{Children, Parent};
 use alkahest_renderer::ecs::resources::SelectedEntity;
 use alkahest_renderer::ecs::tags::{EntityTag, NodeFilter, Tags};
 use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
@@ -131,26 +132,42 @@ impl MenuBar {
             let camera = resources.get::<Camera>();
 
             if let Some(map) = maps.current_map_mut() {
-                let e = map.scene.spawn((
-                    NodeFilter::Utility,
-                    Route {
-                        path: vec![RouteNode {
-                            pos: camera.position(),
-                            map_hash: map.scene.get_map_hash(),
-                            is_teleport: false,
-                            label: None,
-                        }],
-                        activity_hash: map.scene.get_activity_hash(),
+                let route_id = map.scene.reserve_entity();
+                let n = map.scene.spawn((
+                    Parent(route_id),
+                    Transform {
+                        translation: camera.position(),
                         ..Default::default()
                     },
+                    RouteNode {
+                        map_hash: map.scene.get_map_hash(),
+                        ..Default::default()
+                    },
+                    RouteNode::icon(),
+                    RouteNode::default_label(),
                     Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                    Route::icon(),
-                    Route::default_label(),
+                    NodeFilter::Utility,
                     Mutable,
                     Global,
                 ));
+                map.scene.spawn_at(
+                    route_id,
+                    (
+                        Children::from_slice(&[n]),
+                        Route {
+                            activity_hash: map.scene.get_activity_hash(),
+                            ..Default::default()
+                        },
+                        Route::icon(),
+                        Route::default_label(),
+                        NodeFilter::Utility,
+                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                        Mutable,
+                        Global,
+                    ),
+                );
 
-                resources.get_mut::<SelectedEntity>().select(e);
+                resources.get_mut::<SelectedEntity>().select(route_id);
 
                 ui.close_menu();
             }

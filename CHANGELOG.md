@@ -30,6 +30,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### Added
+- Added Arrow Hotkeys to navigate selected object heirarchies @Froggy618157725
+  in [#36](https://github.com/cohaereo/alkahest/pull/36)
+- Added hotkeys to add to current route. + adds at the end of the route, or after current node, - adds before the selected node
+
+### Changed
+- Improved Route UI. Can now use translation gizmo for small adjustments
+
+## 0.5.0 - 2024-07-22
+
 ### ✨ Highlights
 
 Alkahest has been largely rewritten, improving performance and flexibility, as well as adding (or opening the gates
