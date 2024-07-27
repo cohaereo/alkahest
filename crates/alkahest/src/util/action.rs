@@ -248,7 +248,7 @@ impl Action for SpawnRouteAction {
                 );
                 resources.get_mut::<SelectedEntity>().select(parent);
                 if let Ok(route) = map.scene.get::<&Route>(parent) {
-                    route.fixup_visiblity(&map.scene, &mut map.command_buffer, parent);
+                    route.fixup_visiblity(&map.scene, &mut map.command_buffer, parent, None);
                 }
             }
         }

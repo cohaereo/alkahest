@@ -146,7 +146,7 @@ impl Map {
 
     fn fixup_route_visibility(&mut self) {
         for (e, r) in self.scene.query::<&Route>().iter() {
-            r.fixup_visiblity(&self.scene, &mut self.command_buffer, e);
+            r.fixup_visiblity(&self.scene, &mut self.command_buffer, e, None);
         }
     }
 

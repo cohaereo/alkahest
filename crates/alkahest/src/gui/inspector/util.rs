@@ -393,7 +393,7 @@ impl ComponentPanel for Route {
         let old_value = self.show_all;
         ui.checkbox(&mut self.show_all, "Show nodes in all maps");
         if old_value != self.show_all {
-            self.fixup_visiblity(scene, cmd, e.entity());
+            self.fixup_visiblity(scene, cmd, e.entity(), None);
         }
 
         ui.separator();

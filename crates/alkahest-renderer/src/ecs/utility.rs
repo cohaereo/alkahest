@@ -250,7 +250,17 @@ impl Route {
         command
     }
 
-    pub fn fixup_visiblity(&self, scene: &Scene, cmd: &mut hecs::CommandBuffer, entity: Entity) {
+    pub fn fixup_visiblity(
+        &self,
+        scene: &Scene,
+        cmd: &mut hecs::CommandBuffer,
+        entity: Entity,
+        hidden: Option<bool>,
+    ) {
+        let hide_all = hidden.unwrap_or(match scene.entity(entity) {
+            Ok(e) => e.has::<Hidden>(),
+            Err(_) => false,
+        });
         let mut prev_visible = false;
         if let Ok(children) = scene.get::<&Children>(entity) {
             for (i, child_ent) in children.0.iter().enumerate() {
@@ -268,7 +278,9 @@ impl Route {
                     let Ok(e) = scene.entity(*child_ent) else {
                         return;
                     };
-                    if self.show_all || prev_visible || current_visible || next_visible {
+                    if !hide_all
+                        && (self.show_all || prev_visible || current_visible || next_visible)
+                    {
                         if e.has::<Hidden>() {
                             cmd.remove_one::<Hidden>(e.entity());
                         }

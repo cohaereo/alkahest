@@ -161,6 +161,11 @@ pub fn show_inspector_panel(
             } else {
                 cmd.remove_one::<Hidden>(ent);
             }
+            if e.has::<Route>() {
+                if let Some(route) = e.get::<&Route>() {
+                    route.fixup_visiblity(scene, cmd, ent, Some(visible));
+                }
+            }
         }
 
         let title = if let Some(label) = e.get::<&Label>() {
