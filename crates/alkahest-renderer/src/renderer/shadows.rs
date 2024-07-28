@@ -6,9 +6,14 @@ use alkahest_data::{
 };
 
 use crate::{
-    ecs::{render::light::ShadowMapRenderer, transform::Transform, Scene},
+    ecs::{
+        render::light::{ShadowGenerationMode, ShadowMapRenderer},
+        transform::Transform,
+        Scene,
+    },
     gpu_event,
     renderer::Renderer,
+    util::Hocus,
 };
 
 impl Renderer {
@@ -22,6 +27,11 @@ impl Renderer {
             .store(true, Ordering::Relaxed);
 
         gpu_event!(self.gpu, "update_shadow_maps");
+        self.gpu
+            .current_states
+            .store(StateSelection::new(Some(0), Some(2), Some(2), Some(6)));
+        self.gpu.flush_states();
+
         let mut shadow_renderers = vec![];
         for (e, (_transform, shadow)) in
             scene.query::<(&Transform, &mut ShadowMapRenderer)>().iter()
@@ -40,17 +50,26 @@ impl Renderer {
             shadow.last_update = self.frame_index;
             let transform = er.get::<&Transform>().unwrap();
 
-            shadow.bind_for_generation(&transform, self);
-            self.bind_view(&*shadow);
-
-            self.gpu
-                .current_states
-                .store(StateSelection::new(Some(0), Some(2), Some(2), Some(6)));
-            self.gpu.flush_states();
 
             self.gpu
                 .shadowmap_vs_t2
                 .bind(&self.gpu, 2, TfxShaderStage::Vertex);
+
+            self.bind_view(&*shadow);
+
+            if shadow.stationary_needs_update {
+                self.pocus().active_shadow_generation_mode = ShadowGenerationMode::StationaryOnly;
+                shadow.bind_for_generation(&transform, self, ShadowGenerationMode::StationaryOnly);
+
+                self.run_renderstage_systems(scene, TfxRenderStage::ShadowGenerate);
+
+                if !self.data.lock().asset_manager.is_idle() {
+                    shadow.stationary_needs_update = true;
+                }
+            }
+
+            self.pocus().active_shadow_generation_mode = ShadowGenerationMode::MovingOnly;
+            shadow.bind_for_generation(&transform, self, ShadowGenerationMode::MovingOnly);
             self.run_renderstage_systems(scene, TfxRenderStage::ShadowGenerate);
         }
 

@@ -1,8 +1,9 @@
 use alkahest_data::geometry::EPrimitiveType;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11ComputeShader, ID3D11Device, ID3D11PixelShader, ID3D11RenderTargetView,
-    ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11VertexShader, D3D11_COMPARISON_NEVER,
-    D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_CLAMP,
+    ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11VertexShader,
+    D3D11_COMPARISON_NEVER, D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_SAMPLER_DESC,
+    D3D11_TEXTURE_ADDRESS_CLAMP,
 };
 
 use crate::{gpu::GpuContext, gpu_event, include_dxbc};
@@ -89,6 +90,12 @@ impl GpuContext {
                 .PSSetShaderResources(0, Some(&[Some(texture_view.clone())]));
 
             self.context.Draw(3, 0);
+        }
+    }
+
+    pub fn copy_texture(&self, source: &ID3D11Texture2D, dest: &ID3D11Texture2D) {
+        unsafe {
+            self.context().CopyResource(dest, source);
         }
     }
 }

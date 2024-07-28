@@ -26,6 +26,7 @@ use crate::{
     tfx::{scope::ScopeInstances, technique::Technique, view::RenderStageSubscriptions},
     util::packages::TagHashExt,
 };
+use crate::ecs::render::light::ShadowGenerationMode;
 
 pub(super) struct ModelBuffers {
     pub vertex0_buffer: Handle<VertexBuffer>,
@@ -188,6 +189,14 @@ impl StaticModel {
             .enumerate()
             .filter(|(_, g)| g.render_stage == render_stage)
         {
+            if group.render_stage == TfxRenderStage::ShadowGenerate {
+                if group.unk6 == 2 && renderer.active_shadow_generation_mode != ShadowGenerationMode::MovingOnly {
+                    continue;
+                } else if group.unk6 == 1 && renderer.active_shadow_generation_mode != ShadowGenerationMode::StationaryOnly {
+                    continue;
+                }
+            }
+
             profiling::scope!("StaticModel::draw::group", format!("group_{}", i));
             let part = &self.model.opaque_meshes.parts[group.part_index as usize];
             if !part.lod_category.is_highest_detail() {
@@ -453,8 +462,8 @@ pub fn draw_static_instances_individual_system(
                             &model.model.model.opaque_meshes,
                             std::slice::from_ref(transform),
                         )
-                        .write()
-                        .as_slice(),
+                            .write()
+                            .as_slice(),
                     )
                     .unwrap();
             }

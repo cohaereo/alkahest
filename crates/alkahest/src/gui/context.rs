@@ -1,6 +1,9 @@
 use std::{any::TypeId, mem::transmute, sync::Arc};
 
-use alkahest_renderer::{gpu::GpuContext, util::image::Png, util::d3d::ErrorExt};
+use alkahest_renderer::{
+    gpu::GpuContext,
+    util::{d3d::ErrorExt, image::Png},
+};
 use anyhow::Context;
 use egui::{InputState, Key, KeyboardShortcut, Modifiers};
 use egui_directx11::DirectX11Renderer;

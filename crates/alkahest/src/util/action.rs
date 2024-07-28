@@ -1,17 +1,22 @@
-use alkahest_renderer::ecs::common::{Global, Mutable};
-use alkahest_renderer::ecs::resources::SelectedEntity;
-use alkahest_renderer::ecs::tags::{EntityTag, Tags};
-use alkahest_renderer::ecs::utility::{Route, Utility};
+use std::collections::VecDeque;
+
+use alkahest_renderer::{
+    camera::{tween::Tween, Camera},
+    ecs::{
+        common::{Global, Mutable},
+        resources::SelectedEntity,
+        tags::{EntityTag, Tags},
+        utility::{Route, Utility},
+    },
+    resources::Resources,
+};
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
 
-use crate::gui::activity_select::{get_activity_hash, set_activity};
-use crate::maplist::{MapList, MapLoadState};
-use alkahest_renderer::camera::tween::Tween;
-use alkahest_renderer::camera::Camera;
-use alkahest_renderer::resources::Resources;
-
-use std::collections::VecDeque;
+use crate::{
+    gui::activity_select::{get_activity_hash, set_activity},
+    maplist::{MapList, MapLoadState},
+};
 
 pub trait Action {
     fn start(&mut self, resources: &Resources);

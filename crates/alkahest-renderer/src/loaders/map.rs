@@ -1491,10 +1491,6 @@ fn load_entity_into_scene(
                 let entity_material_map: Vec<Unk808072c5> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                // cur.seek(SeekFrom::Start(entref.unk18.offset + 0x3f0))?;
-                // let entity_material_map_pre: Vec<(u16, u16)> =
-                //     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
                 cur.seek(SeekFrom::Start(entres.unk18.offset + 0x400))?;
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;

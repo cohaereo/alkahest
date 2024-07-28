@@ -1,20 +1,22 @@
-use crate::gui::menu::MenuBar;
-use crate::maplist::MapList;
-use alkahest_renderer::camera::Camera;
-use alkahest_renderer::ecs::common::{Global, Icon, Label, Mutable};
-use alkahest_renderer::ecs::resources::SelectedEntity;
-use alkahest_renderer::ecs::tags::{EntityTag, NodeFilter, Tags};
-use alkahest_renderer::ecs::transform::{Transform, TransformFlags};
-use alkahest_renderer::ecs::utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility};
-use alkahest_renderer::ecs::SceneInfo;
-use alkahest_renderer::icons::{
-    ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE,
+use alkahest_renderer::{
+    camera::Camera,
+    ecs::{
+        common::{Global, Icon, Label, Mutable},
+        resources::SelectedEntity,
+        tags::{EntityTag, NodeFilter, Tags},
+        transform::{Transform, TransformFlags},
+        utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
+        SceneInfo,
+    },
+    icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    renderer::RendererShared,
+    resources::Resources,
+    shader::shader_ball::ShaderBallComponent,
 };
-use alkahest_renderer::renderer::RendererShared;
-use alkahest_renderer::resources::Resources;
-use alkahest_renderer::shader::shader_ball::ShaderBallComponent;
 use egui::Ui;
 use glam::Vec3;
+
+use crate::{gui::menu::MenuBar, maplist::MapList};
 
 impl MenuBar {
     pub(super) fn utility_menu(&self, ui: &mut Ui, resources: &Resources) {

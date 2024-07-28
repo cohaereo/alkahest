@@ -215,25 +215,6 @@ impl AlkahestApp {
                                     .get_mut::<Camera>()
                                     .update_mouse((delta.0 as f32, delta.1 as f32).into(), 0.0);
 
-                                // Wrap the cursor around if it goes out of bounds
-                                let window_dims = window.inner_size();
-                                let window_dims =
-                                    (window_dims.width as i32, window_dims.height as i32);
-                                let cursor_pos = (position.x as i32, position.y as i32);
-                                let mut new_cursor_pos = cursor_pos;
-
-                                if cursor_pos.0 <= 0 {
-                                    new_cursor_pos.0 = window_dims.0;
-                                } else if cursor_pos.0 >= (window_dims.0 - 1) {
-                                    new_cursor_pos.0 = 0;
-                                }
-
-                                if cursor_pos.1 <= 0 {
-                                    new_cursor_pos.1 = window_dims.1;
-                                } else if cursor_pos.1 >= window_dims.1 {
-                                    new_cursor_pos.1 = 0;
-                                }
-
                                 if delta != (0.0, 0.0) {
                                     window.set_cursor_position(*p).ok();
                                 }

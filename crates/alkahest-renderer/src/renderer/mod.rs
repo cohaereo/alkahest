@@ -28,7 +28,7 @@ use crate::{
     ecs::{
         common::Hidden,
         render::{
-            dynamic_geometry::update_dynamic_model_system,
+            dynamic_geometry::update_dynamic_model_system, light::ShadowGenerationMode,
             static_geometry::update_static_instances_system,
         },
         resources::SelectedEntity,
@@ -81,6 +81,7 @@ pub struct Renderer {
 
     // Hacky way to obtain these filters for now
     pub lastfilters: NodeFilterSet,
+    pub active_shadow_generation_mode: ShadowGenerationMode,
 }
 
 pub struct RendererData {
@@ -123,6 +124,7 @@ impl Renderer {
             last_frame: Instant::now(),
             delta_time: 0.0,
             frame_index: 0,
+            active_shadow_generation_mode: ShadowGenerationMode::StationaryOnly,
             lastfilters: NodeFilterSet::default(),
         }))
     }
@@ -398,12 +400,30 @@ impl Renderer {
             RenderFeatureVisibility::VISIBLE
         };
 
-        stage.map_or(true, |v| match v {
+        // Can we render based on stages?
+        let mut stages_ok = stage.map_or(true, |v| match v {
             TfxRenderStage::Transparents => self.render_settings.stage_transparent,
             TfxRenderStage::Decals => self.render_settings.stage_decals,
             TfxRenderStage::DecalsAdditive => self.render_settings.stage_decals_additive,
             _ => true,
-        }) && feature.map_or(true, |v| match v {
+        });
+
+        if stages_ok &&
+            stage == Some(TfxRenderStage::ShadowGenerate)
+        {
+            // If we're drawing terrain patches, we should only generate shadows in stationary only mode
+            // StaticObjects may generate stationary as well as moving shadows, so it's not checked here
+            if feature == Some(TfxFeatureRenderer::TerrainPatch) && self.active_shadow_generation_mode != ShadowGenerationMode::StationaryOnly {
+                stages_ok = false;
+            }
+
+            // If we're not drawing statics (static objects/terrain), we should only generate shadows in moving only mode
+            if !matches!(feature, Some(TfxFeatureRenderer::TerrainPatch) | Some(TfxFeatureRenderer::StaticObjects)) && self.active_shadow_generation_mode != ShadowGenerationMode::MovingOnly {
+                stages_ok = false;
+            }
+        }
+
+        let features_ok = feature.map_or(true, |v| match v {
             TfxFeatureRenderer::StaticObjects => self.render_settings.feature_statics.contains(flags_to_check),
             TfxFeatureRenderer::TerrainPatch => self.render_settings.feature_terrain.contains(flags_to_check),
             TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.render_settings.feature_dynamics.contains(flags_to_check),
@@ -412,7 +432,9 @@ impl Renderer {
             TfxFeatureRenderer::SpeedtreeTrees => self.render_settings.feature_decorators.contains(flags_to_check),
             TfxFeatureRenderer::Cubemaps => self.render_settings.feature_cubemaps,
             _ => true,
-        })
+        });
+
+        stages_ok && features_ok
     }
 }
 

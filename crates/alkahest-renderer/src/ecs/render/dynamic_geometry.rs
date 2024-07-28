@@ -212,10 +212,10 @@ impl DynamicModel {
 
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
         // ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
-        ensure!(
-            self.selected_variant < self.variant_count() || self.variant_count() == 0,
-            "Material variant out of range"
-        );
+        // ensure!(
+        //     self.selected_variant < self.variant_count() || self.variant_count() == 0,
+        //     "Material variant out of range"
+        // );
 
         let mesh = &self.model.meshes[self.selected_mesh];
         let stages = &self.mesh_stages[self.selected_mesh];

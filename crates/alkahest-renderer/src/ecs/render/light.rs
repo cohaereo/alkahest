@@ -370,12 +370,26 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
 
 pub struct ShadowMapRenderer {
     pub last_update: usize,
+    pub stationary_needs_update: bool,
 
+    depth_stationary: ShadowDepthMap,
     depth: ShadowDepthMap,
     viewport: Viewport,
 
     world_to_camera: Mat4,
     camera_to_projective: Mat4,
+}
+
+/// What geometry to render shadows for
+#[derive(PartialEq)]
+pub enum ShadowGenerationMode {
+    /// Only render stationary static geometry. Will clear the stationary depth buffer
+    StationaryOnly,
+
+    /// Only render dynamic geometry/animated static geometry. Will copy the depth buffer from the stationary pass to the main depth buffer
+    MovingOnly,
+    // /// Render both stationary and dynamic geometry. Clears the main depth buffer
+    // Both,
 }
 
 impl ShadowMapRenderer {
@@ -386,6 +400,8 @@ impl ShadowMapRenderer {
         projection: CameraProjection,
     ) -> anyhow::Result<Self> {
         let depth = ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
+        let depth_stationary =
+            ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
 
         let viewport = Viewport {
             origin: UVec2::ZERO,
@@ -397,6 +413,8 @@ impl ShadowMapRenderer {
 
         Ok(Self {
             last_update: 0,
+            stationary_needs_update: true,
+            depth_stationary,
             depth,
             viewport,
             world_to_camera,
@@ -404,20 +422,37 @@ impl ShadowMapRenderer {
         })
     }
 
-    pub fn bind_for_generation(&mut self, transform: &Transform, renderer: &Renderer) {
+    /// Binds the shadowmap
+    pub fn bind_for_generation(
+        &mut self,
+        transform: &Transform,
+        renderer: &Renderer,
+        mode: ShadowGenerationMode,
+    ) {
         self.world_to_camera = transform.view_matrix();
 
         unsafe {
-            renderer.gpu.context().ClearDepthStencilView(
-                &self.depth.views[0],
-                (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
-                1.0,
-                0,
-            );
-            renderer
-                .gpu
-                .context()
-                .OMSetRenderTargets(None, &self.depth.views[0]);
+            let view = match mode {
+                ShadowGenerationMode::StationaryOnly => {
+                    renderer.gpu.context().ClearDepthStencilView(
+                        &self.depth_stationary.views[0],
+                        (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
+                        1.0,
+                        0,
+                    );
+                    self.stationary_needs_update = false;
+                    &self.depth_stationary.views[0]
+                }
+                ShadowGenerationMode::MovingOnly => {
+                    renderer
+                        .gpu
+                        .copy_texture(&self.depth_stationary.texture, &self.depth.texture);
+
+                    &self.depth.views[0]
+                }
+            };
+
+            renderer.gpu.context().OMSetRenderTargets(None, view);
         }
     }
 }
