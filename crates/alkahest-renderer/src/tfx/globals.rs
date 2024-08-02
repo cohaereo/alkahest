@@ -301,8 +301,10 @@ pub struct GlobalPipelines {
     pub debug_specular_only: Box<Technique>,
     pub debug_specular_smoothness: Box<Technique>,
     pub debug_specular_tint: Box<Technique>,
+    pub debug_specular_lobe: Box<Technique>,
     pub debug_texture_ao: Box<Technique>,
     pub debug_transmission: Box<Technique>,
+    pub debug_valid_layered_metalness: Box<Technique>,
     pub debug_valid_smoothness_heatmap: Box<Technique>,
     pub debug_valid_source_color_brightness: Box<Technique>,
     pub debug_valid_source_color_saturation: Box<Technique>,
@@ -464,22 +466,34 @@ impl GlobalPipelines {
             RenderDebugView::AmbientOcclusion => &self.debug_ambient_occlusion,
             RenderDebugView::TextureAo => &self.debug_texture_ao,
             RenderDebugView::Transmission => &self.debug_transmission,
+
             RenderDebugView::ColoredOvercoatId => &self.debug_colored_overcoat_id,
             RenderDebugView::ColoredOvercoat => &self.debug_colored_overcoat,
+
             RenderDebugView::DiffuseColor => &self.debug_diffuse_color,
             RenderDebugView::DiffuseLight => &self.debug_diffuse_light,
+
             RenderDebugView::SpecularColor => &self.debug_specular_color,
             RenderDebugView::SpecularLight => &self.debug_specular_light,
             RenderDebugView::SpecularOcclusion => &self.debug_specular_occlusion,
             RenderDebugView::SpecularSmoothness => &self.debug_specular_smoothness,
+            RenderDebugView::SpecularOnly => &self.debug_specular_only,
+
             RenderDebugView::Emissive => &self.debug_emissive,
             RenderDebugView::EmissiveIntensity => &self.debug_emissive_intensity,
             RenderDebugView::EmissiveLuminance => &self.debug_emissive_luminance,
+
             RenderDebugView::GreyDiffuse => &self.debug_grey_diffuse,
+
             RenderDebugView::Depth => &self.debug_depth,
             RenderDebugView::DepthEdges => &self.debug_depth_edges,
             RenderDebugView::DepthGradient => &self.debug_depth_gradient,
             RenderDebugView::DepthWalkable => &self.debug_depth_walkable,
+
+            RenderDebugView::ValidLayeredMetalness => &self.debug_valid_layered_metalness,
+            RenderDebugView::ValidSmoothnessHeatmap => &self.debug_valid_smoothness_heatmap,
+            RenderDebugView::ValidSourceColorBrightness => &self.debug_valid_source_color_brightness,
+            RenderDebugView::ValidSourceColorSaturation => &self.debug_valid_source_color_saturation,
         }
     }
 }
