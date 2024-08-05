@@ -1,4 +1,5 @@
 use alkahest_data::map::SMapAtmosphere;
+use bevy_ecs::{prelude::Component, system::Resource};
 use destiny_pkg::TagHash;
 use glam::Vec3;
 
@@ -9,6 +10,8 @@ use crate::{
     tfx::externs,
 };
 
+// TODO(cohae): This should probably be a resource, since there can only be one per map
+#[derive(Resource)]
 pub struct MapAtmosphere {
     data: SMapAtmosphere,
     lookup_0: Option<Texture>,
@@ -80,6 +83,7 @@ impl MapAtmosphere {
     }
 }
 
+#[derive(Component)]
 pub struct CubemapVolume {
     pub specular_ibl: Handle<Texture>,
     pub voxel_diffuse: Option<Handle<Texture>>,
@@ -94,7 +98,7 @@ impl CubemapVolume {
     }
 }
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub struct NodeMetadata {
     pub entity_tag: TagHash,
     pub world_id: u64,

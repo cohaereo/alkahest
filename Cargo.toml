@@ -5,7 +5,8 @@ members = [
     "crates/alkahest-data",
     "crates/alkahest-panic-handler",
     "crates/alkahest-pm",
-    "crates/alkahest-renderer", "crates/alkahest-test",
+    "crates/alkahest-renderer",
+    "crates/alkahest-test",
     "crates/d2tools",
     "crates/destiny-havok",
     "crates/egui-directx11",
@@ -13,6 +14,7 @@ members = [
 
 [workspace.dependencies]
 anyhow = { version = "1.0.71" }
+bevy_ecs = "0.14.0"
 binrw = "0.13.3"
 bitflags = { version = "2.5.0", features = ["serde"] }
 bytemuck = "1.7.0"
@@ -32,7 +34,6 @@ egui_extras = "0.27.2"
 
 field_access = "0.1.6"
 glam = { version = "0.28", features = ["bytemuck", "mint"] }
-hecs = "0.10.3"
 itertools = "0.13.0"
 lazy_static = "1.4.0"
 num = "0.4.1"

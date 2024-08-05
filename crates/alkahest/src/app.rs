@@ -4,6 +4,7 @@ use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
+        new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
         Scene,
@@ -36,7 +37,7 @@ use crate::{
         SelectionGizmoMode,
     },
     maplist::MapList,
-    resources::Resources,
+    resources::AppResources,
     updater::UpdateCheck,
     util::action::ActionList,
     ApplicationArgs,
@@ -48,7 +49,7 @@ pub struct AlkahestApp {
 
     pub gctx: Arc<GpuContext>,
     pub gui: GuiContext,
-    pub resources: Resources,
+    pub resources: AppResources,
 
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
@@ -88,7 +89,7 @@ impl AlkahestApp {
 
         let gctx = Arc::new(GpuContext::create(&window).unwrap());
         let gui = GuiContext::create(&window, gctx.clone());
-        let mut resources = Resources::default();
+        let mut resources = AppResources::default();
         resources.insert(GuiViewManager::with_default_views());
         resources.insert(InputState::default());
         resources.insert(CurrentActivity(args.activity));
@@ -172,7 +173,7 @@ impl AlkahestApp {
             resources,
             last_cursor_pos: None,
             renderer,
-            scratch_map: Scene::new(),
+            scratch_map: new_scene(),
             update_channel_gui,
             updater_gui,
         }
@@ -299,7 +300,10 @@ impl AlkahestApp {
                             let mut maps = resources.get_mut::<MapList>();
                             maps.update_maps(resources);
 
-                            let map = maps.current_map().map(|m| &m.scene).unwrap_or(scratch_map);
+                            let map = maps
+                                .current_map_mut()
+                                .map(|m| &mut m.scene)
+                                .unwrap_or(scratch_map);
 
                             renderer.render_world(&*resources.get::<Camera>(), map, resources);
                         }
@@ -380,19 +384,23 @@ impl AlkahestApp {
                         window.request_redraw();
                         profiling::finish_frame!();
 
+                        // Slow the app to 10fps when it's window is out of focus
                         if !window.has_focus() {
-                            // Slow the app down when it's not in focus
                             std::thread::sleep(std::time::Duration::from_millis(100));
                         }
 
-                        if let Some(e) = renderer.pickbuffer.finish_request() {
+                        if let Some(picked_id) = renderer.pickbuffer.finish_request() {
                             let mut selected = resources.get_mut::<SelectedEntity>();
                             if !selected.changed_this_frame {
-                                if e != u32::MAX {
+                                if picked_id != u32::MAX {
                                     let maps = resources.get::<MapList>();
                                     if let Some(map) = maps.current_map() {
-                                        selected
-                                            .select(unsafe { map.scene.find_entity_from_id(e) });
+                                        selected.select_option(unsafe {
+                                            map.scene
+                                                .iter_entities()
+                                                .find(|er| er.id().index() == picked_id)
+                                                .map(|er| er.id())
+                                        });
                                     }
                                 } else {
                                     selected.deselect();

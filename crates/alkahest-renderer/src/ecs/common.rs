@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
+use bevy_ecs::component::Component;
 use ecolor::Color32;
 
 /// Tiger entity world ID
-#[derive(Copy, Clone)]
+#[derive(Component, Copy, Clone)]
 pub struct EntityWorldId(pub u64);
 
-#[derive(strum::Display, Copy, Clone, PartialEq, Eq)]
+#[derive(Component, strum::Display, Copy, Clone, PartialEq, Eq)]
 pub enum ResourceOrigin {
     Map,
 
@@ -19,7 +20,7 @@ pub enum ResourceOrigin {
 
 pub struct ActivityGroup(pub u32);
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub enum Icon {
     Unicode(char),
     Colored(char, Color32),
@@ -50,6 +51,7 @@ impl Display for Icon {
     }
 }
 
+#[derive(Component)]
 pub struct Label {
     pub label: String,
     pub default: bool,
@@ -95,11 +97,15 @@ impl AsRef<str> for Label {
     }
 }
 
+#[derive(Component)]
 pub struct Hidden;
+#[derive(Component)]
 pub struct Global;
 
 /// Marker component to indicate that the entity is allowed to be modified in
 /// potentially destructive ways (e.g. deleting it, changing it's name, etc.)
+#[derive(Component)]
 pub struct Mutable;
 
+#[derive(Component)]
 pub struct Water;

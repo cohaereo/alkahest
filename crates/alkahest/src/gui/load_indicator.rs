@@ -1,4 +1,4 @@
-use alkahest_renderer::{renderer::RendererShared, resources::Resources};
+use alkahest_renderer::{renderer::RendererShared, resources::AppResources};
 use egui::{Color32, Context, RichText};
 use winit::window::Window;
 
@@ -17,7 +17,7 @@ impl GuiView for ResourceLoadIndicatorOverlay {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let renderer = resources.get::<RendererShared>();

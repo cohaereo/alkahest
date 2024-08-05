@@ -11,7 +11,7 @@ use alkahest_renderer::{
         map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
-            light::LightRenderer, update_entity_transform,
+            light::LightRenderer,
         },
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -25,11 +25,11 @@ use alkahest_renderer::{
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
-    util::text::prettify_distance,
+    util::{black_magic::EntityRefDarkMagic, text::prettify_distance, Hocus},
 };
+use bevy_ecs::{entity::Entity, prelude::EntityRef, system::Commands, world::EntityMut};
 use egui::{Align2, Button, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
-use hecs::{Entity, EntityRef};
 use winit::window::Window;
 
 use crate::{
@@ -45,7 +45,7 @@ use crate::{
     },
     input_float3,
     maplist::MapList,
-    resources::Resources,
+    resources::AppResources,
 };
 
 pub struct InspectorPanel;
@@ -55,7 +55,7 @@ impl GuiView for InspectorPanel {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let mut maps = resources.get_mut::<MapList>();
@@ -66,8 +66,8 @@ impl GuiView for InspectorPanel {
                 if let Some(ent) = selected {
                     show_inspector_panel(
                         ui,
-                        &mut map.scene,
-                        &mut map.command_buffer,
+                        &mut map.pocus().scene,
+                        map.commands(),
                         ent,
                         resources,
                     );
@@ -106,24 +106,24 @@ impl GuiView for InspectorPanel {
 pub fn show_inspector_panel(
     ui: &mut egui::Ui,
     scene: &mut Scene,
-    cmd: &mut hecs::CommandBuffer,
+    mut cmd: Commands,
     ent: Entity,
-    resources: &Resources,
+    resources: &AppResources,
 ) {
-    let Ok(e) = scene.entity(ent) else {
+    let Some(e) = scene.get_entity(ent) else {
         return;
     };
 
     ui.horizontal(|ui| {
-        let visible = !e.has::<Hidden>();
+        let visible = !e.contains::<Hidden>();
 
-        if e.has::<Mutable>()
+        if e.contains::<Mutable>()
             && (ui
                 .button(RichText::new(ICON_DELETE).size(24.0).strong())
                 .clicked()
                 || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)))
         {
-            cmd.despawn(ent);
+            cmd.entity(ent).despawn();
         }
 
         if ui
@@ -136,20 +136,20 @@ pub fn show_inspector_panel(
             || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE))
         {
             if visible {
-                cmd.insert_one(ent, Hidden);
+                cmd.entity(ent).insert((Hidden,));
             } else {
-                cmd.remove_one::<Hidden>(ent);
+                cmd.entity(ent).remove::<Hidden>();
             }
         }
 
-        let title = if let Some(label) = e.get::<&Label>() {
-            format!("{label} (id {})", e.entity().id())
+        let title = if let Some(label) = e.get::<Label>() {
+            format!("{label} (id {})", ent)
         } else {
-            format!("Entity {}", e.entity().id())
+            format!("Entity {}", ent)
         };
         ui.horizontal(|ui| {
-            if e.has::<Mutable>() {
-                let some_label = e.get::<&mut Label>();
+            if e.contains::<Mutable>() {
+                let some_label = e.get_mut::<Label>();
                 if some_label.as_ref().is_some_and(|l| !l.default) {
                     if let Some(mut label) = some_label {
                         egui::TextEdit::singleline(&mut label.label)
@@ -166,7 +166,8 @@ pub fn show_inspector_panel(
                         if let Some(mut label) = some_label {
                             label.default = false;
                         } else {
-                            cmd.insert_one(ent, Label::from(format!("Entity {}", e.entity().id())));
+                            cmd.entity(ent)
+                                .insert((Label::from(format!("Entity {}", e.id())),));
                         }
                     }
                 }
@@ -174,11 +175,11 @@ pub fn show_inspector_panel(
                 ui.label(RichText::new(title).size(24.0).strong());
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
-                if let Some(parent) = e.get::<&Parent>() {
-                    let title = if let Ok(label) = scene.get::<&Label>(parent.0) {
-                        format!("{label} (id {})", e.entity().id())
+                if let Some(parent) = e.get::<Parent>() {
+                    let title = if let Some(label) = scene.get::<Label>(parent.0) {
+                        format!("{label} (id {})", e.id())
                     } else {
-                        format!("Entity {}", e.entity().id())
+                        format!("Entity {}", e.id())
                     };
 
                     if ui
@@ -189,15 +190,15 @@ pub fn show_inspector_panel(
                         resources.get_mut::<SelectedEntity>().select(parent.0);
                     }
                 }
-                if let Some(children) = e.get::<&Children>() {
+                if let Some(children) = e.get::<Children>() {
                     ui.menu_button(
                         RichText::new(ICON_HUMAN_MALE_FEMALE_CHILD.to_string()).size(20.0),
                         |ui| {
                             for c in children.iter() {
-                                let title = if let Ok(label) = scene.get::<&Label>(*c) {
-                                    format!("{label} (id {})", e.entity().id())
+                                let title = if let Some(label) = scene.get::<Label>(*c) {
+                                    format!("{label} (id {})", e.id())
                                 } else {
-                                    format!("Entity {}", e.entity().id())
+                                    format!("Entity {}", e.id())
                                 };
 
                                 if ui.selectable_label(false, title).clicked() {
@@ -214,7 +215,7 @@ pub fn show_inspector_panel(
     });
     ui.separator();
 
-    if let Some(tags) = e.get::<&Tags>() {
+    if let Some(tags) = e.get::<Tags>() {
         ui.horizontal(|ui| {
             ui.label(RichText::new("Tags: ").color(Color32::WHITE).strong());
             tags.ui_chips(ui);
@@ -222,20 +223,20 @@ pub fn show_inspector_panel(
         ui.separator();
     }
 
-    let mut global = e.has::<Global>();
+    let mut global = e.contains::<Global>();
     let mut global_changed = false;
-    if e.has::<Mutable>() && !e.has::<Route>() {
+    if e.contains::<Mutable>() && !e.contains::<Route>() {
         if ui.checkbox(&mut global, "Show in all Maps").changed() {
             global_changed = true;
             if global {
-                cmd.insert_one(ent, Global);
+                cmd.entity(ent).insert((Global,));
             } else {
-                cmd.remove_one::<Global>(ent);
+                cmd.entity(ent).remove::<Global>();
             }
         };
         ui.separator();
     }
-    show_inspector_components(ui, scene, e, resources);
+    show_inspector_components(ui, scene.pocus(), e, resources);
 
     if global_changed {
         if global {
@@ -248,11 +249,11 @@ pub fn show_inspector_panel(
 
 fn show_inspector_components(
     ui: &mut egui::Ui,
-    scene: &Scene,
+    scene: &mut Scene,
     e: EntityRef<'_>,
-    resources: &Resources,
+    resources: &AppResources,
 ) {
-    if let Some(mut t) = e.get::<&mut Transform>() {
+    if let Some(mut t) = e.get_mut::<Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
             t.show_inspector_ui(scene, e, ui, resources);
         });
@@ -261,7 +262,7 @@ fn show_inspector_components(
     macro_rules! component_views {
 		($($component:ty),+) => {
 			$(
-				if let Some(mut component) = e.get::<&mut $component>() {
+				if let Some(mut component) = e.get_mut::<$component>() {
 					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
 						component.show_inspector_ui(scene, e, ui, resources);
 					});
@@ -313,10 +314,10 @@ pub(super) trait ComponentPanel {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        _: &'s Scene,
+        _: &'s mut Scene,
         _: EntityRef<'s>,
         _: &mut egui::Ui,
-        _: &Resources,
+        _: &AppResources,
     ) {
     }
 }
@@ -336,10 +337,10 @@ impl ComponentPanel for Transform {
 
     fn show_inspector_ui(
         &mut self,
-        scene: &Scene,
+        scene: &mut Scene,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let mut rotation_euler: Vec3 = self.rotation.to_euler(glam::EulerRot::XYZ).into();
         rotation_euler.x = rotation_euler.x.to_degrees();
@@ -447,7 +448,7 @@ impl ComponentPanel for Transform {
             );
         }
 
-        if let Some(ot) = e.get::<&OriginalTransform>() {
+        if let Some(ot) = e.get::<OriginalTransform>() {
             // Has the entity moved from it's original position?
             let has_moved = *self != ot.0;
             ui.add_enabled_ui(has_moved, |ui: &mut egui::Ui| {
@@ -465,9 +466,9 @@ impl ComponentPanel for Transform {
             });
         }
 
-        if transform_changed {
-            update_entity_transform(scene, e.entity());
-        }
+        // if transform_changed {
+        //     update_entity_transform(scene, e.id());
+        // }
     }
 }
 
@@ -484,7 +485,13 @@ impl ComponentPanel for DynamicModelComponent {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &mut Scene,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &AppResources,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Hash:");
             ui.label(self.model.hash.to_string());
@@ -559,7 +566,13 @@ impl ComponentPanel for ShaderBallComponent {
         true
     }
 
-    fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
+    fn show_inspector_ui(
+        &mut self,
+        _: &mut Scene,
+        _: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _: &AppResources,
+    ) {
         ui.horizontal(|ui| {
             ui.strong("Color:");
             ui.color_edit_button_rgb(self.color.as_mut());
@@ -620,10 +633,10 @@ impl ComponentPanel for NodeMetadata {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        _: &'s Scene,
+        _: &'s mut Scene,
         _: EntityRef<'s>,
         ui: &mut Ui,
-        _: &Resources,
+        _: &AppResources,
     ) {
         ui.horizontal(|ui| {
             ui.strong("Entity:");
@@ -667,10 +680,10 @@ impl ComponentPanel for SRespawnPoint {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        _: &'s Scene,
+        _: &'s mut Scene,
         _: EntityRef<'s>,
         ui: &mut Ui,
-        _: &Resources,
+        _: &AppResources,
     ) {
         ui.strong("Respawn point data");
         ui.indent("Respawn point data", |ui| {

@@ -4,6 +4,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::ensure;
+use bevy_ecs::component::Component;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
@@ -17,6 +18,7 @@ use crate::{
     tfx::externs,
 };
 
+#[derive(Component)]
 pub struct DecoratorRenderer {
     pub data: SDecorator,
     pub hash: TagHash,

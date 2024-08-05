@@ -337,6 +337,7 @@ pub struct SUnk80806aae {
     pub entity_model: TagHash,
 }
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806C65)]
 pub struct SLightCollection {
     pub file_size: u64,
@@ -350,6 +351,7 @@ pub struct SLightCollection {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806C70, size = 240)]
 pub struct SLight {
     pub unk0: Vec4,
@@ -380,6 +382,7 @@ pub struct SLight {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806C71)]
 pub struct SShadowingLight {
     pub unk0: Vec4,
@@ -434,6 +437,7 @@ pub struct SUnk80808cb7 {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80808CB9)]
 pub struct SRespawnPoint {
     pub rotation: Quat,
@@ -651,6 +655,7 @@ pub struct SMapAtmosphere {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806A78)]
 pub struct SLensFlare {
     // TODO(cohae): Placeholder struct

@@ -1,4 +1,4 @@
-use alkahest_renderer::resources::Resources;
+use alkahest_renderer::resources::AppResources;
 use egui::{Color32, Context, Stroke};
 use winit::window::Window;
 
@@ -15,7 +15,7 @@ impl GuiView for CrosshairOverlay {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let maps = resources.get::<MapList>();

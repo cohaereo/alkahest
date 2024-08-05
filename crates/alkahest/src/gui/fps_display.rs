@@ -9,7 +9,7 @@ use crate::{
         context::{GuiCtx, GuiView, ViewResult},
         util::PainterExt,
     },
-    resources::Resources,
+    resources::AppResources,
 };
 
 pub struct FpsDisplayOverlay {
@@ -31,7 +31,7 @@ impl GuiView for FpsDisplayOverlay {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        _resources: &Resources,
+        _resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;

@@ -20,7 +20,7 @@ pub struct ChannelSelector {
 }
 
 impl ChannelSelector {
-    pub fn show(&mut self, ctx: &egui::Context, resources: &mut crate::resources::Resources) {
+    pub fn show(&mut self, ctx: &egui::Context, resources: &mut crate::resources::AppResources) {
         if self.open {
             ctx.layer_painter(egui::LayerId::new(
                 egui::Order::Middle,
@@ -122,7 +122,7 @@ impl UpdateDownload {
     pub fn show(
         &mut self,
         ctx: &egui::Context,
-        _resources: &mut crate::resources::Resources,
+        _resources: &mut crate::resources::AppResources,
     ) -> bool {
         ctx.layer_painter(egui::LayerId::new(
             egui::Order::Middle,

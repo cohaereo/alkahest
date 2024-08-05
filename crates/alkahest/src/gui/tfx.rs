@@ -14,7 +14,7 @@ use crate::{
         context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
         UiExt,
     },
-    resources::Resources,
+    resources::AppResources,
 };
 
 pub struct TfxErrorViewer {
@@ -34,7 +34,7 @@ impl GuiView for TfxErrorViewer {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let renderer = resources.get::<RendererShared>();
@@ -121,7 +121,7 @@ impl GuiView for TfxExternEditor {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         // cohae: When adding externs to this list, make sure the static values don't get reset each frame

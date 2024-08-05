@@ -13,7 +13,7 @@ use winit::window::Window;
 use crate::{
     config,
     gui::context::{GuiCtx, GuiView, ViewResult},
-    resources::Resources,
+    resources::AppResources,
 };
 
 pub struct RenderSettingsPanel;
@@ -23,7 +23,7 @@ impl GuiView for RenderSettingsPanel {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         egui::Window::new("Settings").show(ctx, |ui| {

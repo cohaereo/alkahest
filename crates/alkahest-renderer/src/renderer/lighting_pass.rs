@@ -1,9 +1,9 @@
 use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
 
 use crate::{
-    ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
+    ecs::{map::MapAtmosphere, Scene},
     gpu_event,
-    renderer::{cubemaps::draw_cubemap_system, Renderer},
+    renderer::Renderer,
     tfx::{
         externs,
         externs::{ExternDefault, ShadowMask},
@@ -52,26 +52,26 @@ impl Renderer {
                 gpu_event!(self.gpu, "matcap");
                 self.matcap.draw(self);
             } else {
-                {
-                    gpu_event!(self.gpu, "deferred_lights");
-                    draw_light_system(self, scene)
-                }
+                // {
+                //     gpu_event!(self.gpu, "deferred_lights");
+                //     draw_light_system(self, scene)
+                // }
 
-                if self.render_settings.feature_cubemaps {
-                    unsafe {
-                        let data = &mut self.data.lock();
-                        self.gpu.context().OMSetRenderTargets(
-                            Some(&[
-                                Some(data.gbuffers.light_diffuse.render_target.clone()),
-                                Some(data.gbuffers.light_ibl_specular.render_target.clone()),
-                            ]),
-                            None,
-                        );
-                    }
-
-                    gpu_event!(self.gpu, "cubemaps");
-                    draw_cubemap_system(self, scene);
-                }
+                // if self.render_settings.feature_cubemaps {
+                //     unsafe {
+                //         let data = &mut self.data.lock();
+                //         self.gpu.context().OMSetRenderTargets(
+                //             Some(&[
+                //                 Some(data.gbuffers.light_diffuse.render_target.clone()),
+                //                 Some(data.gbuffers.light_ibl_specular.render_target.clone()),
+                //             ]),
+                //             None,
+                //         );
+                //     }
+                //
+                //     gpu_event!(self.gpu, "cubemaps");
+                //     draw_cubemap_system(self, scene);
+                // }
 
                 if self.render_settings.feature_global_lighting {
                     gpu_event!(self.gpu, "global_lighting");
@@ -122,7 +122,7 @@ impl Renderer {
 
         unsafe {
             gpu_event!(self.gpu, "deferred_shading");
-            let pipeline = if scene.query::<&MapAtmosphere>().iter().next().is_some()
+            let pipeline = if scene.get_resource::<MapAtmosphere>().is_some()
                 && self.render_settings.feature_atmosphere
             {
                 &self.render_globals.pipelines.deferred_shading
@@ -179,7 +179,7 @@ impl Renderer {
                     ..atmos_existing
                 };
 
-                if let Some((_, map_atmos)) = scene.query::<&MapAtmosphere>().iter().next() {
+                if let Some(map_atmos) = scene.get_resource::<MapAtmosphere>() {
                     map_atmos.update_extern(&mut atmos);
                 }
 
@@ -187,7 +187,7 @@ impl Renderer {
             });
         }
 
-        if scene.query::<&MapAtmosphere>().iter().next().is_some() {
+        if scene.get_resource::<MapAtmosphere>().is_some() {
             unsafe {
                 self.gpu.context().OMSetRenderTargets(
                     Some(&[

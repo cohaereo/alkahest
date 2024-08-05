@@ -3,7 +3,6 @@ use alkahest_data::tfx::TfxRenderStage;
 use crate::{
     ecs::{
         render::{
-            dynamic_geometry::draw_dynamic_model_system, havok::draw_debugshapes_system,
             static_geometry::draw_static_instances_system, terrain::draw_terrain_patches_system,
         },
         Scene,
@@ -14,13 +13,13 @@ use crate::{
 };
 
 impl Renderer {
-    pub(super) fn run_renderstage_systems(&self, scene: &Scene, stage: TfxRenderStage) {
+    pub(super) fn run_renderstage_systems(&self, scene: &mut Scene, stage: TfxRenderStage) {
         gpu_event!(self.gpu, stage.to_string());
 
         draw_terrain_patches_system(self, scene, stage);
         draw_shaderball_system(self, scene, stage);
 
         draw_static_instances_system(self, scene, stage);
-        draw_dynamic_model_system(self, scene, stage);
+        // draw_dynamic_model_system(self, scene, stage);
     }
 }

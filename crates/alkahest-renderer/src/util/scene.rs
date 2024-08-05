@@ -1,4 +1,4 @@
-use hecs::Entity;
+use bevy_ecs::{component::Component, entity::Entity, prelude::EntityWorldMut};
 use smallvec::smallvec;
 
 use crate::ecs::{
@@ -18,16 +18,27 @@ impl SceneExt for Scene {
             return;
         }
 
-        self.insert_one(child, Parent(parent)).unwrap();
-        if let Ok(mut children) = self.get::<&mut Children>(parent) {
+        self.entity_mut(child).insert_one(Parent(parent));
+        if let Some(mut children) = self.entity_mut(parent).get_mut::<Children>() {
             children.0.push(child);
             return;
         }
 
-        self.insert_one(parent, Children(smallvec![child])).unwrap();
+        self.entity_mut(parent)
+            .insert_one(Children(smallvec![child]));
     }
 
     fn get_parent(&self, child: Entity) -> Option<Entity> {
-        self.get::<&Parent>(child).ok().map(|p| p.0)
+        self.get::<Parent>(child).map(|parent| parent.0)
+    }
+}
+
+pub trait EntityWorldMutExt {
+    fn insert_one<T: Component>(&mut self, component: T) -> &mut Self;
+}
+
+impl<'w> EntityWorldMutExt for EntityWorldMut<'w> {
+    fn insert_one<T: Component>(&mut self, component: T) -> &mut Self {
+        self.insert((component,))
     }
 }

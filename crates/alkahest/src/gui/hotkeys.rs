@@ -6,7 +6,7 @@ use alkahest_renderer::{
 
 use crate::{
     maplist::MapList,
-    resources::Resources,
+    resources::AppResources,
     util::action::{ActionList, TweenAction},
 };
 
@@ -42,14 +42,14 @@ pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
 pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageDown);
 
-pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
-    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
-        unhide_all(resources);
-    }
+pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
+    // if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
+    //     unhide_all(resources);
+    // }
 
-    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE_UNSELECTED)) {
-        hide_unselected(resources);
-    }
+    // if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE_UNSELECTED)) {
+    //     hide_unselected(resources);
+    // }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_DESELECT)) {
         resources.get_mut::<SelectedEntity>().deselect();
@@ -58,7 +58,7 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_SWAP)) {
         let mut maplist = resources.get_mut::<MapList>();
         if let Some(prev) = maplist.previous_map {
-            maplist.set_current_map(resources, prev);
+            maplist.set_current_map(prev);
         }
     }
 
@@ -79,28 +79,28 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     }
 }
 
-fn hide_unselected(resources: &mut Resources) {
-    let selected_entity = resources.get::<SelectedEntity>().selected();
-    let mut maps = resources.get_mut::<MapList>();
-    if let Some(map) = maps.current_map_mut() {
-        for e in map.scene.iter() {
-            if Some(e.entity()) != selected_entity {
-                map.command_buffer.insert_one(e.entity(), Hidden);
-            }
-        }
-    }
-}
+// fn hide_unselected(resources: &mut AppResources) {
+//     let selected_entity = resources.get::<SelectedEntity>().selected();
+//     let mut maps = resources.get_mut::<MapList>();
+//     if let Some(map) = maps.current_map_mut() {
+//         for e in map.scene.iter() {
+//             if Some(e.entity()) != selected_entity {
+//                 map.command_buffer.insert_one(e.entity(), Hidden);
+//             }
+//         }
+//     }
+// }
 
-fn unhide_all(resources: &mut Resources) {
-    let mut maps = resources.get_mut::<MapList>();
-    if let Some(map) = maps.current_map_mut() {
-        for (e, _) in map.scene.query::<&Hidden>().iter() {
-            map.command_buffer.remove_one::<Hidden>(e);
-        }
-    }
-}
+// fn unhide_all(resources: &mut AppResources) {
+//     let mut maps = resources.get_mut::<MapList>();
+//     if let Some(map) = maps.current_map_mut() {
+//         for (e, _) in map.scene.query::<&Hidden>().iter() {
+//             map.command_buffer.remove_one::<Hidden>(e);
+//         }
+//     }
+// }
 
-fn goto_gaze(resources: &mut Resources) {
+fn goto_gaze(resources: &mut AppResources) {
     let camera = resources.get_mut::<Camera>();
     let (d, pos) = resources
         .get::<RendererShared>()

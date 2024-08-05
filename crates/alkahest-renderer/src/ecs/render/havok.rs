@@ -6,6 +6,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
+use bevy_ecs::prelude::Component;
 use destiny_havok::shape_collection;
 use destiny_pkg::TagHash;
 use glam::{Vec3, Vec4Swizzles};
@@ -20,7 +21,7 @@ use crate::{
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::{shader::ShaderProgram, Renderer},
-    resources::Resources,
+    resources::AppResources,
     tfx::technique::ShaderModule,
     Color, ColorExt,
 };
@@ -31,6 +32,7 @@ struct HavokShapeScope {
     color: glam::Vec4,
 }
 
+#[derive(Component)]
 pub struct HavokShapeRenderer {
     shader: ShaderProgram,
 
@@ -168,24 +170,24 @@ pub fn calculate_mesh_normals_flat(
     (new_vertices, new_indices)
 }
 
-pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, resources: &Resources) {
-    for (e, (transform, shape, filter)) in scene
-        .query::<(&Transform, &HavokShapeRenderer, Option<&NodeFilter>)>()
-        .without::<&Hidden>()
-        .iter()
-    {
-        let color = if let Some(filter) = filter {
-            if !renderer.lastfilters.contains(&filter) {
-                continue;
-            }
+// pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, resources: &AppResources) {
+//     for (e, (transform, shape, filter)) in scene
+//         .query::<(&Transform, &HavokShapeRenderer, Option<&NodeFilter>)>()
+//         .without::<&Hidden>()
+//         .iter()
+//     {
+//         let color = if let Some(filter) = filter {
+//             if !renderer.lastfilters.contains(&filter) {
+//                 continue;
+//             }
 
-            let selected = resources.get::<SelectedEntity>();
+//             let selected = resources.get::<SelectedEntity>();
 
-            selected.select_fade_color(filter.color(), Some(e))
-        } else {
-            Color::WHITE
-        };
+//             selected.select_fade_color(filter.color(), Some(e))
+//         } else {
+//             Color::WHITE
+//         };
 
-        shape.draw(&renderer.gpu, transform, color);
-    }
-}
+//         shape.draw(&renderer.gpu, transform, color);
+//     }
+// }

@@ -4,6 +4,7 @@ use windows::Win32::Graphics::Direct3D11::{
 
 use crate::gpu::GpuContext;
 
+// TODO(cohae): This needs to be reworked and moved to the gpu module
 pub struct ShaderProgram {
     pub vs: ID3D11VertexShader,
     pub gs: Option<ID3D11GeometryShader>,

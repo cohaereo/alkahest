@@ -1,9 +1,9 @@
 use alkahest_renderer::{
     camera::Camera,
-    ecs::{render::update_entity_transform, resources::SelectedEntity, transform::Transform},
+    ecs::{resources::SelectedEntity, transform::Transform},
     icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_RESIZE, ICON_ROTATE_ORBIT},
     renderer::Renderer,
-    resources::Resources,
+    resources::AppResources,
 };
 use egui::{
     epaint::Vertex, Context, FontId, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding,
@@ -30,7 +30,7 @@ impl GuiView for GizmoSelector {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let mut ui = Ui::new(
@@ -110,7 +110,7 @@ impl GuiView for GizmoSelector {
     }
 }
 
-pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &Resources) {
+pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &AppResources) {
     let Some(selected) = resources.get::<SelectedEntity>().selected() else {
         return;
     };
@@ -127,37 +127,38 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
     }
 
     let maplist = resources.get::<MapList>();
-    if let Some(map) = maplist.current_map() {
-        let Ok(mut transform) = map.scene.get::<&mut Transform>(selected) else {
-            return;
-        };
-        let camera = resources.get::<Camera>();
+    // if let Some(map) = maplist.current_map() {
+    //     let Ok(mut transform) = map.scene.get::<&mut Transform>(selected) else {
+    //         return;
+    //     };
+    //     let camera = resources.get::<Camera>();
 
-        let mut gizmo = resources.get_mut::<Gizmo>();
-        let old_config = *gizmo.config();
-        gizmo.update_config(GizmoConfig {
-            view_matrix: camera.world_to_camera.as_dmat4().into(),
-            projection_matrix: camera.camera_to_projective.as_dmat4().into(),
-            modes: gizmo_mode.to_enumset(),
-            ..old_config
-        });
+    //     let mut gizmo = resources.get_mut::<Gizmo>();
+    //     let old_config = *gizmo.config();
+    //     gizmo.update_config(GizmoConfig {
+    //         view_matrix: camera.world_to_camera.as_dmat4().into(),
+    //         projection_matrix: camera.camera_to_projective.as_dmat4().into(),
+    //         modes: gizmo_mode.to_enumset(),
+    //         ..old_config
+    //     });
 
-        if let Some((_result, new_transform)) = gizmo_interact(
-            &mut gizmo,
-            ctx,
-            &[GTransform {
-                scale: transform.scale.as_dvec3().into(),
-                rotation: transform.rotation.as_dquat().into(),
-                translation: transform.translation.as_dvec3().into(),
-            }],
-        ) {
-            renderer.pickbuffer.cancel_request();
-            transform.translation = DVec3::from(new_transform[0].translation).as_vec3();
-            transform.rotation = DQuat::from(new_transform[0].rotation).as_quat().normalize();
-            transform.scale = DVec3::from(new_transform[0].scale).as_vec3();
-            update_entity_transform(&map.scene, selected);
-        }
-    }
+    //     if let Some((_result, new_transform)) = gizmo_interact(
+    //         &mut gizmo,
+    //         ctx,
+    //         &[GTransform {
+    //             scale: transform.scale.as_dvec3().into(),
+    //             rotation: transform.rotation.as_dquat().into(),
+    //             translation: transform.translation.as_dvec3().into(),
+    //         }],
+    //     ) {
+    //         renderer.pickbuffer.cancel_request();
+    //         transform.translation = DVec3::from(new_transform[0].translation).as_vec3();
+    //         transform.rotation = DQuat::from(new_transform[0].rotation).as_quat().normalize();
+    //         transform.scale = DVec3::from(new_transform[0].scale).as_vec3();
+
+    //         // update_entity_transform(&map.scene, selected);
+    //     }
+    // }
 }
 
 #[must_use]

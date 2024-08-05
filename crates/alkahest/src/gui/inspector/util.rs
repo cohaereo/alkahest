@@ -13,19 +13,19 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::text::prettify_distance,
 };
+use bevy_ecs::prelude::EntityRef;
 use egui::{
     color_picker::{color_edit_button_rgba, Alpha},
     Button,
 };
 use glam::Vec3;
-use hecs::EntityRef;
 use serde_yaml::value::Tag;
 
 use crate::{
     gui::inspector::ComponentPanel,
     input_float3,
     maplist::MapList,
-    resources::Resources,
+    resources::AppResources,
     util::action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},
 };
 
@@ -44,10 +44,10 @@ impl ComponentPanel for Ruler {
 
     fn show_inspector_ui(
         &mut self,
-        _: &Scene,
+        _: &mut Scene,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let camera = resources.get::<Camera>();
         egui::Grid::new("transform_input_grid")
@@ -180,12 +180,12 @@ impl ComponentPanel for Sphere {
 
     fn show_inspector_ui(
         &mut self,
-        _: &Scene,
+        _: &mut Scene,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
-        _resources: &Resources,
+        _resources: &AppResources,
     ) {
-        if !e.has::<Transform>() {
+        if !e.contains::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
                 ICON_ALERT
@@ -226,12 +226,12 @@ impl ComponentPanel for Beacon {
 
     fn show_inspector_ui(
         &mut self,
-        _: &Scene,
+        _: &mut Scene,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
-        if !e.has::<Transform>() {
+        if !e.contains::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
                 ICON_ALERT
@@ -280,7 +280,7 @@ impl ComponentPanel for Beacon {
         ui.separator();
 
         let mut camera = resources.get_mut::<Camera>();
-        if let Some(transform) = e.get::<&Transform>() {
+        if let Some(transform) = e.get::<Transform>() {
             ui.label(format!(
                 "Distance to Beacon: {:.2} m",
                 (transform.translation - camera.position()).length()
@@ -335,10 +335,10 @@ impl ComponentPanel for Route {
 
     fn show_inspector_ui(
         &mut self,
-        scene: &Scene,
+        scene: &mut Scene,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let mut camera = resources.get_mut::<Camera>();
         let current_hash = scene.get_map_hash();

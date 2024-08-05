@@ -11,7 +11,7 @@ use crate::{
         icons::{ICON_ALERT_CIRCLE_OUTLINE, ICON_CHECK_CIRCLE, ICON_CIRCLE, ICON_CIRCLE_OUTLINE},
     },
     maplist::{MapList, MapLoadState},
-    resources::Resources,
+    resources::AppResources,
 };
 
 pub struct BottomBar;
@@ -21,7 +21,7 @@ impl GuiView for BottomBar {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
@@ -69,7 +69,7 @@ impl GuiView for BottomBar {
                     ui.checkbox(&mut maplist.load_all_maps, "Load all maps");
 
                     if map_changed {
-                        maplist.set_current_map(resources, current_map);
+                        maplist.set_current_map(current_map);
                     }
                 });
             }

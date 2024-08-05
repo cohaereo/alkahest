@@ -1,4 +1,4 @@
-use alkahest_renderer::resources::Resources;
+use alkahest_renderer::resources::AppResources;
 use egui::Ui;
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl MenuBar {
-    pub(super) fn help_menu(&mut self, ui: &mut Ui, resources: &Resources) {
+    pub(super) fn help_menu(&mut self, ui: &mut Ui, resources: &AppResources) {
         if ui.button("Controls").clicked() {
             self.controls_open = true;
             ui.close_menu()

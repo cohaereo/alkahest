@@ -17,6 +17,7 @@ pub struct SObjectOcclusionBounds {
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[repr(C, align(16))]
 pub struct AABB {
     pub min: Vec3,

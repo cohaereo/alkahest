@@ -30,7 +30,7 @@ use crate::{
         profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
-    resources::Resources,
+    resources::AppResources,
     util::image::EguiPngLoader,
 };
 
@@ -183,11 +183,11 @@ pub trait GuiView {
         &mut self,
         ctx: &egui::Context,
         window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         gui: &GuiCtx<'_>,
     ) -> Option<ViewResult>;
 
-    fn dispose(&mut self, _ctx: &egui::Context, _resources: &Resources, _gui: &GuiCtx<'_>) {}
+    fn dispose(&mut self, _ctx: &egui::Context, _resources: &AppResources, _gui: &GuiCtx<'_>) {}
 }
 
 #[derive(Default)]
@@ -236,7 +236,7 @@ impl GuiViewManager {
         &mut self,
         ctx: &egui::Context,
         window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         gui: &GuiCtx<'_>,
     ) {
         if ctx.input_mut(|input| {

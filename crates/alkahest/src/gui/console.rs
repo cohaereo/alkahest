@@ -22,15 +22,15 @@ use alkahest_renderer::{
     },
     icons::ICON_CUBE,
     renderer::{Renderer, RendererShared},
-    resources::Resources,
+    resources::AppResources,
     tfx::bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
 };
 use anyhow::{Context, Error};
+use bevy_ecs::{bundle::Bundle, entity::Entity, query::With};
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, Key, Modifiers, RichText, TextStyle};
 use glam::{Vec2, Vec3};
-use hecs::DynamicBundle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -123,7 +123,7 @@ impl GuiView for ConsolePanel {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let request_focus = if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
@@ -218,7 +218,7 @@ impl GuiView for ConsolePanel {
     }
 }
 
-fn execute_command(command: &str, args: &[&str], resources: &Resources) {
+fn execute_command(command: &str, args: &[&str], resources: &AppResources) {
     match command.to_lowercase().as_str() {
         "goto" => {
             if args.len() < 3 {
@@ -354,7 +354,7 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
         "clear_map" => {
             let mut maps = resources.get_mut::<MapList>();
             if let Some(map) = maps.current_map_mut() {
-                map.scene.clear();
+                map.scene.clear_entities();
             }
         }
         "sem" | "spawn_entity_model" => {
@@ -566,12 +566,12 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             }
         }
         "reset_all_to_original_pos" => {
-            let maps = resources.get::<MapList>();
-            if let Some(map) = maps.current_map() {
-                for (_, (t, ot)) in map
+            let mut maps = resources.get_mut::<MapList>();
+            if let Some(map) = maps.current_map_mut() {
+                for (mut t, ot) in map
                     .scene
                     .query::<(&mut Transform, &OriginalTransform)>()
-                    .iter()
+                    .iter_mut(&mut map.scene)
                 {
                     *t = ot.0;
                 }
@@ -582,12 +582,11 @@ fn execute_command(command: &str, args: &[&str], resources: &Resources) {
             if let Some(map) = maps.current_map_mut() {
                 let entities = map
                     .scene
-                    .query::<&Hidden>()
-                    .iter()
-                    .map(|(e, _)| e)
+                    .query_filtered::<Entity, With<Hidden>>()
+                    .iter(&mut map.scene)
                     .collect_vec();
                 for e in entities {
-                    map.scene.remove_one::<Hidden>(e).ok();
+                    map.scene.entity_mut(e).remove::<Hidden>();
                 }
             }
         }
@@ -822,7 +821,7 @@ pub fn load_entity_model(
     t: WideHash,
     transform: Transform,
     renderer: &Renderer,
-) -> anyhow::Result<impl DynamicBundle> {
+) -> anyhow::Result<impl Bundle> {
     Ok((
         Icon::Unicode(ICON_CUBE),
         Label::from("Entity Model"),
@@ -845,7 +844,7 @@ pub fn load_entity(
     entity_hash: WideHash,
     transform: Transform,
     renderer: &Renderer,
-) -> anyhow::Result<impl DynamicBundle> {
+) -> anyhow::Result<impl Bundle> {
     let header = package_manager()
         .read_tag_struct::<SEntity>(entity_hash)
         .context("Failed to read SEntity")?;

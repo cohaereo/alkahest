@@ -10,8 +10,8 @@ use alkahest_data::{
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use anyhow::Context;
+use bevy_ecs::entity::Entity;
 use crossbeam::atomic::AtomicCell;
-use hecs::Entity;
 use windows::Win32::{
     Foundation::RECT,
     Graphics::Direct3D11::{
@@ -20,10 +20,7 @@ use windows::Win32::{
 };
 
 use crate::{
-    ecs::{
-        render::{draw_entity, static_geometry::draw_static_instances_individual_system},
-        Scene,
-    },
+    ecs::{render::static_geometry::draw_static_instances_individual_system, Scene},
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     renderer::{
@@ -34,7 +31,7 @@ use crate::{
 };
 
 impl Renderer {
-    pub(super) fn draw_pickbuffer(&self, scene: &Scene, selected: Option<Entity>) {
+    pub(super) fn draw_pickbuffer(&self, scene: &mut Scene, selected: Option<Entity>) {
         gpu_event!(self.gpu, "pickbuffer");
         let dxstate = self.gpu.backup_state();
         self.pickbuffer.start(&self.gpu);
@@ -70,13 +67,13 @@ impl Renderer {
             self.gpu
                 .context()
                 .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
-            draw_entity(
-                scene,
-                selected,
-                self,
-                Some(&self.pickbuffer.static_instance_cb),
-                TfxRenderStage::GenerateGbuffer,
-            );
+            // draw_entity(
+            //     scene,
+            //     selected,
+            //     self,
+            //     Some(&self.pickbuffer.static_instance_cb),
+            //     TfxRenderStage::GenerateGbuffer,
+            // );
 
             // Draw the outline itself
 
@@ -273,12 +270,12 @@ impl Pickbuffer {
 
     fn set_entity(&self, mut entity: Entity) {
         if Some(entity) == self.selected_entity {
-            entity = Entity::DANGLING;
+            entity = Entity::PLACEHOLDER;
         }
 
         if Some(entity) != self.active_entity {
             self.pocus().active_entity = Some(entity);
-            self.pick_cb.write(&entity.id()).ok();
+            self.pick_cb.write(&entity.index()).ok();
         }
     }
 

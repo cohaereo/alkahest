@@ -1,4 +1,6 @@
+use bevy_ecs::{prelude::Component, system::Resource};
 use destiny_pkg::TagHash;
+use resources::SelectedEntity;
 
 pub mod audio;
 pub mod common;
@@ -6,12 +8,20 @@ pub mod hierarchy;
 pub mod map;
 pub mod render;
 pub mod resources;
-pub mod scene_ext;
 pub mod tags;
 pub mod transform;
 pub mod utility;
 
-pub type Scene = hecs::World;
+pub type Scene = bevy_ecs::world::World;
+
+/// Creates a new scene with some default resources (Camera, SelectedEntity, etc)
+pub fn new_scene() -> Scene {
+    let mut scene = Scene::new();
+    scene.insert_resource(SelectedEntity::default());
+    scene
+}
+
+#[derive(Resource)]
 pub struct MapInfo {
     pub activity_hash: Option<TagHash>,
     pub map_hash: TagHash,
@@ -25,29 +35,23 @@ pub trait SceneInfo {
 }
 impl SceneInfo for Scene {
     fn new_with_info(activity_hash: Option<TagHash>, map_hash: TagHash) -> Self {
-        let mut scene = Scene::new();
+        let mut scene = new_scene();
 
         scene.add_map_info(activity_hash, map_hash);
         scene
     }
     fn add_map_info(&mut self, activity_hash: Option<TagHash>, map_hash: TagHash) {
-        if self.query::<&MapInfo>().iter().next().is_none() {
-            self.spawn((MapInfo {
+        if self.get_resource::<MapInfo>().is_none() {
+            self.insert_resource(MapInfo {
                 activity_hash,
                 map_hash,
-            },));
+            });
         }
     }
     fn get_map_hash(&self) -> Option<TagHash> {
-        self.query::<&MapInfo>()
-            .iter()
-            .next()
-            .map(|(_, i)| i.map_hash)
+        self.get_resource::<MapInfo>().map(|i| i.map_hash)
     }
     fn get_activity_hash(&self) -> Option<TagHash> {
-        self.query::<&MapInfo>()
-            .iter()
-            .next()
-            .and_then(|(_, i)| i.activity_hash)
+        self.get_resource::<MapInfo>().and_then(|i| i.activity_hash)
     }
 }

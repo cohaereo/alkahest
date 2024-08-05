@@ -4,13 +4,18 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
+use bevy_ecs::{
+    entity::Entity,
+    prelude::Component,
+    query::{With, Without},
+};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::common::Hidden,
+    ecs::{common::Hidden, Scene},
     gpu::{buffer::ConstantBuffer, texture::Texture},
     gpu_event,
     handle::Handle,
@@ -19,6 +24,7 @@ use crate::{
     tfx::technique::Technique,
 };
 
+#[derive(Component)]
 pub struct TerrainPatches {
     terrain: STerrain,
     techniques: Vec<Handle<Technique>>,
@@ -182,17 +188,16 @@ impl TerrainPatches {
 
 pub fn draw_terrain_patches_system(
     renderer: &Renderer,
-    scene: &hecs::World,
+    scene: &mut Scene,
     render_stage: TfxRenderStage,
 ) {
     if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::TerrainPatch)) {
         return;
     }
 
-    for (e, (terrain,)) in scene
-        .query::<(&TerrainPatches,)>()
-        .without::<&Hidden>()
-        .iter()
+    for (e, terrain) in scene
+        .query_filtered::<(Entity, &TerrainPatches), Without<Hidden>>()
+        .iter(scene)
     {
         renderer.pickbuffer.with_entity(e, || {
             terrain.draw(renderer, render_stage);

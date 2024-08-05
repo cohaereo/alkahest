@@ -5,6 +5,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::ensure;
+use bevy_ecs::{component::Component, system::Query};
 use destiny_pkg::TagHash;
 use glam::Vec4;
 use itertools::Itertools;
@@ -279,6 +280,7 @@ impl DynamicModel {
     }
 }
 
+#[derive(Component)]
 pub struct DynamicModelComponent {
     pub model: DynamicModel,
     pub ext: externs::RigidModel,
@@ -377,57 +379,56 @@ impl DynamicModelComponent {
     }
 }
 
-pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
-    profiling::scope!(
-        "draw_dynamic_model_system",
-        &format!("render_stage={render_stage:?}")
-    );
+// pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
+//     profiling::scope!(
+//         "draw_dynamic_model_system",
+//         &format!("render_stage={render_stage:?}")
+//     );
 
-    let mut entities = Vec::new();
-    for (e, dynamic) in scene
-        .query::<&DynamicModelComponent>()
-        .without::<&Hidden>()
-        .iter()
-    {
-        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type)) {
-            entities.push((e, dynamic.model.feature_type));
-        }
-    }
+//     let mut entities = Vec::new();
+//     for (e, dynamic) in scene
+//         .query::<&DynamicModelComponent>()
+//         .without::<&Hidden>()
+//         .iter()
+//     {
+//         if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type)) {
+//             entities.push((e, dynamic.model.feature_type));
+//         }
+//     }
 
-    entities.sort_by_key(|(_, feature_type)| match feature_type {
-        TfxFeatureRenderer::Water => 0,
-        TfxFeatureRenderer::SkyTransparent => 1,
-        TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
-        _ => 99,
-    });
+//     entities.sort_by_key(|(_, feature_type)| match feature_type {
+//         TfxFeatureRenderer::Water => 0,
+//         TfxFeatureRenderer::SkyTransparent => 1,
+//         TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
+//         _ => 99,
+//     });
 
-    for (e, _feature_type) in entities {
-        let dynamic = scene.get::<&DynamicModelComponent>(e).unwrap();
+//     for (e, _feature_type) in entities {
+//         let dynamic = scene.get::<&DynamicModelComponent>(e).unwrap();
 
-        renderer.pickbuffer.with_entity(e, || {
-            dynamic.draw(renderer, render_stage).unwrap();
-        });
-    }
+//         renderer.pickbuffer.with_entity(e, || {
+//             dynamic.draw(renderer, render_stage).unwrap();
+//         });
+//     }
 
-    if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) {
-        for (e, decorator) in scene
-            .query::<&DecoratorRenderer>()
-            .without::<&Hidden>()
-            .iter()
-        {
-            renderer.pickbuffer.with_entity(e, || {
-                decorator.draw(renderer, render_stage).unwrap();
-            });
-        }
-    }
-}
+//     if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) {
+//         for (e, decorator) in scene
+//             .query::<&DecoratorRenderer>()
+//             .without::<&Hidden>()
+//             .iter()
+//         {
+//             renderer.pickbuffer.with_entity(e, || {
+//                 decorator.draw(renderer, render_stage).unwrap();
+//             });
+//         }
+//     }
+// }
 
-pub fn update_dynamic_model_system(scene: &Scene) {
+pub fn update_dynamic_model_system(
+    mut q_dynamic_model: Query<(&Transform, &mut DynamicModelComponent)>,
+) {
     profiling::scope!("update_dynamic_model_system");
-    for (_, (transform, model)) in scene
-        .query::<(&Transform, &mut DynamicModelComponent)>()
-        .iter()
-    {
+    for (transform, mut model) in q_dynamic_model.iter_mut() {
         if model.cbuffer_dirty {
             model.update_cbuffer(transform);
             model.cbuffer_dirty = false;

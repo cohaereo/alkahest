@@ -86,6 +86,7 @@ impl TestHarness {
             Arc::new(GpuContext::create_headless().expect("Failed to create headless GPU context"));
         let renderer =
             Renderer::create(gpu, (4, 4), true).expect("Failed to create headless renderer");
+
         Self { renderer }
     }
 }

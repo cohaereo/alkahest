@@ -10,7 +10,7 @@ mod shadows;
 mod systems;
 mod transparents_pass;
 
-use std::{sync::Arc, time::Instant};
+use std::{ops::Deref, sync::Arc, time::Instant};
 
 use alkahest_data::{
     geometry::EPrimitiveType,
@@ -18,6 +18,7 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use anyhow::Context;
+use bevy_ecs::system::{Resource, RunSystemOnce};
 use bitflags::bitflags;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -27,13 +28,10 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 use crate::{
     ecs::{
         common::Hidden,
-        render::{
-            dynamic_geometry::update_dynamic_model_system, light::ShadowGenerationMode,
-            static_geometry::update_static_instances_system,
-        },
+        render::{light::ShadowGenerationMode, static_geometry::update_static_instances_system},
         resources::SelectedEntity,
         tags::NodeFilterSet,
-        utility::draw_utilities,
+        utility::draw_utilities_system,
         Scene,
     },
     gpu::SharedGpuContext,
@@ -45,7 +43,7 @@ use crate::{
         cubemaps::CubemapRenderer, gbuffer::GBuffer, immediate::ImmediateRenderer,
         pickbuffer::Pickbuffer,
     },
-    resources::Resources,
+    resources::AppResources,
     shader::matcap::MatcapRenderer,
     tfx::{
         externs,
@@ -58,7 +56,22 @@ use crate::{
     util::Hocus,
 };
 
-pub type RendererShared = Arc<Renderer>;
+#[derive(Resource)]
+pub struct RendererShared(Arc<Renderer>);
+
+impl Clone for RendererShared {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl Deref for RendererShared {
+    type Target = Arc<Renderer>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub struct Renderer {
     pub gpu: SharedGpuContext,
@@ -95,11 +108,11 @@ impl Renderer {
         gpu: SharedGpuContext,
         window_size: (u32, u32),
         disable_asset_loading: bool,
-    ) -> anyhow::Result<Arc<Self>> {
+    ) -> anyhow::Result<RendererShared> {
         let render_globals =
             RenderGlobals::load(gpu.clone()).expect("Failed to load render globals");
 
-        Ok(Arc::new(Self {
+        Ok(RendererShared(Arc::new(Self {
             data: Mutex::new(RendererData {
                 asset_manager: if disable_asset_loading {
                     AssetManager::new_disabled(gpu.clone())
@@ -126,7 +139,7 @@ impl Renderer {
             frame_index: 0,
             active_shadow_generation_mode: ShadowGenerationMode::StationaryOnly,
             lastfilters: NodeFilterSet::default(),
-        }))
+        })))
     }
 
     pub fn get_technique_shared(&self, handle: &Handle<Technique>) -> Option<Arc<Technique>> {
@@ -134,7 +147,7 @@ impl Renderer {
         data.asset_manager.techniques.get_shared(handle)
     }
 
-    pub fn render_world(&self, view: &impl View, scene: &Scene, resources: &Resources) {
+    pub fn render_world(&self, view: &impl View, scene: &mut Scene, resources: &AppResources) {
         self.pocus().lastfilters = resources.get::<NodeFilterSet>().clone();
 
         // Make sure immediate labels have been drained completely
@@ -142,10 +155,10 @@ impl Renderer {
 
         self.begin_world_frame(scene);
 
-        update_dynamic_model_system(scene);
-        update_static_instances_system(scene);
+        // update_dynamic_model_system(scene);
+        // update_static_instances_system(scene);
 
-        self.update_shadow_maps(scene);
+        // self.update_shadow_maps(scene);
 
         {
             gpu_event!(self.gpu, "view_0");
@@ -231,7 +244,7 @@ impl Renderer {
         self.pocus().frame_index = self.frame_index.wrapping_add(1);
     }
 
-    fn draw_view_overlay(&self, scene: &Scene, resources: &Resources) {
+    fn draw_view_overlay(&self, scene: &mut Scene, resources: &AppResources) {
         gpu_event!(self.gpu, "view_overlay");
 
         self.gpu
@@ -247,10 +260,17 @@ impl Renderer {
             );
         }
 
-        draw_utilities(self, scene, resources);
+        // draw_utilities_system.run(scene, resources, self);
+        scene.run_system_once_with(
+            resources.get::<RendererShared>().clone(),
+            draw_utilities_system,
+        );
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-            if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
+            if !scene
+                .get_entity(selected)
+                .map_or(true, |v| v.contains::<Hidden>())
+            {
                 self.draw_outline(
                     scene,
                     selected,

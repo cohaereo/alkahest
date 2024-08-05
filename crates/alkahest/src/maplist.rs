@@ -2,6 +2,7 @@ use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
         common::Global,
+        new_scene,
         render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
@@ -11,14 +12,19 @@ use alkahest_renderer::{
     },
     loaders::map::load_map,
     renderer::RendererShared,
+    util::Hocus,
+};
+use bevy_ecs::{
+    entity::Entity,
+    system::{Commands, RunSystemOnce},
+    world::CommandQueue,
 };
 use destiny_pkg::TagHash;
-use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
 
 use crate::{
-    discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
+    discord, gui::activity_select::CurrentActivity, resources::AppResources, ApplicationArgs,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -30,35 +36,43 @@ pub enum MapLoadState {
     Error(String),
 }
 
-#[derive(Default)]
 pub struct Map {
     pub hash: TagHash,
     pub name: String,
-    pub promise: Option<Box<Promise<anyhow::Result<Scene>>>>,
+    pub load_promise: Option<Box<Promise<anyhow::Result<Scene>>>>,
     pub load_state: MapLoadState,
 
-    pub command_buffer: hecs::CommandBuffer,
+    pub command_queue: CommandQueue,
     pub scene: Scene,
 }
 
+impl Default for Map {
+    fn default() -> Self {
+        Self {
+            hash: Default::default(),
+            name: Default::default(),
+            load_promise: Default::default(),
+            load_state: Default::default(),
+            command_queue: Default::default(),
+            scene: new_scene(),
+        }
+    }
+}
+
 impl Map {
-    pub fn update(&mut self, resources: &Resources) {
-        if let Some(promise) = self.promise.take() {
+    pub fn update(&mut self) {
+        if let Some(promise) = self.load_promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
                     Ok(mut scene) => {
                         // Move all globals to a temporary scene
                         std::mem::swap(&mut self.scene, &mut scene);
-                        self.take_globals(resources, &mut scene);
-
-                        // TODO(cohae): Use scheduler for this
-                        update_static_instances_system(&self.scene);
-                        update_dynamic_model_system(&self.scene);
+                        self.take_globals(&mut scene);
 
                         info!(
                             "Loaded map {} with {} entities",
                             self.name,
-                            self.scene.iter().count()
+                            self.scene.entities().len()
                         );
 
                         self.load_state = MapLoadState::Loaded;
@@ -69,42 +83,43 @@ impl Map {
                     }
                 }
             } else {
-                self.promise = Some(promise);
+                self.load_promise = Some(promise);
                 self.load_state = MapLoadState::Loading;
             }
         }
-        // else {
-        //     self.load_state = MapLoadState::Unloaded;
-        // }
 
-        self.command_buffer.run_on(&mut self.scene);
+        // TODO(cohae): Use scheduler for this?
+        self.scene.run_system_once(update_static_instances_system);
+        self.scene.run_system_once(update_dynamic_model_system);
+
+        self.command_queue.apply(&mut self.scene);
     }
 
     /// Remove global entities from the scene and store them in this one
-    pub fn take_globals(&mut self, resources: &Resources, source: &mut Scene) {
-        let ent_list = source
-            .query::<&Global>()
-            .iter()
-            .map(|(e, _)| e)
-            .collect_vec();
-        let mut new_selected_entity: Option<Entity> = None;
-
-        {
-            let selected_entity = resources.get::<SelectedEntity>().selected();
-            for &entity in &ent_list {
-                let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
-                if selected_entity.is_some_and(|e| e == entity) {
-                    new_selected_entity = Some(new_entity);
-                }
-            }
-        }
-
-        if let Some(new_entity) = new_selected_entity {
-            resources.get_mut::<SelectedEntity>().select(new_entity);
-        }
+    pub fn take_globals(&mut self, source: &mut Scene) {
+        // let ent_list = source
+        //     .query::<&Global>()
+        //     .iter()
+        //     .map(|(e, _)| e)
+        //     .collect_vec();
+        // let mut new_selected_entity: Option<Entity> = None;
+        //
+        // {
+        //     let selected_entity = source..get::<SelectedEntity>().selected();
+        //     for &entity in &ent_list {
+        //         let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
+        //         if selected_entity.is_some_and(|e| e == entity) {
+        //             new_selected_entity = Some(new_entity);
+        //         }
+        //     }
+        // }
+        //
+        // if let Some(new_entity) = new_selected_entity {
+        //     resources.get_mut::<SelectedEntity>().select(new_entity);
+        // }
     }
 
-    fn start_load(&mut self, resources: &Resources) {
+    fn start_load(&mut self, resources: &AppResources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
                 "Attempted to load map {}, but it is already loading or loaded",
@@ -119,7 +134,7 @@ impl Map {
         let global_strings = resources.get::<StringContainerShared>().clone();
 
         info!("Loading map {} '{}'", self.hash, self.name);
-        self.promise = Some(Box::new(Promise::spawn_async(load_map(
+        self.load_promise = Some(Box::new(Promise::spawn_async(load_map(
             renderer,
             self.hash,
             activity_hash,
@@ -128,6 +143,10 @@ impl Map {
         ))));
 
         self.load_state = MapLoadState::Loading;
+    }
+
+    pub fn commands<'m>(&'m self) -> Commands<'m, 'm> {
+        Commands::new(&mut self.pocus().command_queue, &self.scene)
     }
 }
 
@@ -174,9 +193,9 @@ impl MapList {
 }
 
 impl MapList {
-    pub fn update_maps(&mut self, resources: &Resources) {
+    pub fn update_maps(&mut self, resources: &AppResources) {
         for (i, map) in self.maps.iter_mut().enumerate() {
-            map.update(resources);
+            map.update();
             if i == self.current_map && map.load_state == MapLoadState::Unloaded {
                 map.start_load(resources);
             }
@@ -204,7 +223,7 @@ impl MapList {
 
     /// Populates the map list and begins loading the first map
     /// Overwrites the current map list
-    pub fn set_maps(&mut self, resources: &Resources, map_hashes: &[(TagHash, String)]) {
+    pub fn set_maps(&mut self, resources: &AppResources, map_hashes: &[(TagHash, String)]) {
         let activity_hash = resources.get_mut::<CurrentActivity>().0;
         self.maps = map_hashes
             .iter()
@@ -228,7 +247,7 @@ impl MapList {
         }
     }
 
-    pub fn add_map(&mut self, resources: &Resources, map_name: String, map_hash: TagHash) {
+    pub fn add_map(&mut self, resources: &AppResources, map_name: String, map_hash: TagHash) {
         if self.maps.is_empty() {
             self.set_maps(resources, &[(map_hash, map_name.clone())])
         } else {
@@ -242,7 +261,7 @@ impl MapList {
         }
     }
 
-    pub fn set_current_map(&mut self, resources: &Resources, index: usize) {
+    pub fn set_current_map(&mut self, index: usize) {
         if index >= self.maps.len() {
             warn!(
                 "Attempted to set current map to index {}, but there are only {} maps",
@@ -267,7 +286,7 @@ impl MapList {
 
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
-            dest.take_globals(resources, &mut source);
+            dest.take_globals(&mut source);
             self.maps[previous_map].scene = source;
         }
 
@@ -277,15 +296,15 @@ impl MapList {
         }
     }
 
-    pub fn set_current_map_next(&mut self, resources: &Resources) {
+    pub fn set_current_map_next(&mut self, resources: &AppResources) {
         if self.current_map + 1 < self.maps.len() {
-            self.set_current_map(resources, self.current_map + 1)
+            self.set_current_map(self.current_map + 1)
         }
     }
 
-    pub fn set_current_map_prev(&mut self, resources: &Resources) {
+    pub fn set_current_map_prev(&mut self, resources: &AppResources) {
         if self.current_map > 0 && self.maps.len() >= 1 {
-            self.set_current_map(resources, self.current_map - 1)
+            self.set_current_map(self.current_map - 1)
         }
     }
 }

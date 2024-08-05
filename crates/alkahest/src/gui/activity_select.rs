@@ -14,7 +14,7 @@ use winit::window::Window;
 use crate::{
     gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
-    resources::Resources,
+    resources::AppResources,
 };
 
 #[derive(Debug)]
@@ -162,7 +162,12 @@ impl ActivityBrowser {
         }
     }
 
-    fn activities_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &Resources) {
+    fn activities_panel(
+        &mut self,
+        ctx: &egui::Context,
+        ui: &mut egui::Ui,
+        resources: &AppResources,
+    ) {
         ui.checkbox(&mut self.show_ambient, "Show ambient activities")
             .on_hover_text(
                 "Show ambient activities in the list\nAmbient activities are not accessible \
@@ -218,7 +223,7 @@ impl ActivityBrowser {
             });
     }
 
-    fn patrols_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &Resources) {
+    fn patrols_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &AppResources) {
         egui::ScrollArea::vertical()
             .max_height(ctx.available_rect().height() * 0.9)
             .auto_shrink([false; 2])
@@ -236,7 +241,7 @@ impl ActivityBrowser {
             });
     }
 
-    fn maps_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &Resources) {
+    fn maps_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, resources: &AppResources) {
         egui::ScrollArea::vertical()
             .max_height(ctx.available_rect().height() * 0.9)
             .auto_shrink([false; 2])
@@ -267,7 +272,7 @@ impl ActivityBrowser {
                                 maplist.add_map(resources, map_name.clone(), *map_hash);
 
                                 let new_map = maplist.maps.len() - 1;
-                                maplist.set_current_map(resources, new_map);
+                                maplist.set_current_map(new_map);
                             }
                         }
                     });
@@ -281,7 +286,7 @@ impl GuiView for ActivityBrowser {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         egui::Window::new("Activities").show(ctx, |ui| {
@@ -307,7 +312,7 @@ impl GuiView for ActivityBrowser {
     }
 }
 
-pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Result<()> {
+pub fn set_activity(resources: &AppResources, activity_hash: TagHash) -> anyhow::Result<()> {
     let mut maplist = resources.get_mut::<MapList>();
     let stringmap = resources.get::<StringContainerShared>();
     let maps = query_activity_maps(activity_hash, &stringmap)?;
@@ -316,7 +321,7 @@ pub fn set_activity(resources: &Resources, activity_hash: TagHash) -> anyhow::Re
     Ok(())
 }
 
-pub fn get_activity_hash(resources: &Resources) -> Option<TagHash> {
+pub fn get_activity_hash(resources: &AppResources) -> Option<TagHash> {
     resources.get_mut::<CurrentActivity>().0
 }
 

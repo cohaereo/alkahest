@@ -110,6 +110,7 @@ impl TigerReadable for TfxRenderStage {
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 pub enum TfxFeatureRenderer {
     StaticObjects = 0,
     DynamicObjects = 1,

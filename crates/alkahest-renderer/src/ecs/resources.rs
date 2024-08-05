@@ -1,12 +1,13 @@
 use std::time::Instant;
 
-use hecs::Entity;
+use bevy_ecs::{entity::Entity, prelude::Resource};
 
 use crate::{
     camera::tween::ease_in_out_exponential,
     util::color::{Color, ColorExt},
 };
 
+#[derive(Resource)]
 pub struct SelectedEntity {
     selected: Option<Entity>,
     /// Has an entity been selected this frame?
@@ -26,16 +27,18 @@ impl Default for SelectedEntity {
 }
 
 impl SelectedEntity {
-    pub fn select(&mut self, entity: Entity) {
-        self.selected = Some(entity);
+    pub fn select_option(&mut self, entity: Option<Entity>) {
+        self.selected = entity;
         self.changed_this_frame = true;
         self.time_selected = Instant::now();
     }
 
+    pub fn select(&mut self, entity: Entity) {
+        self.select_option(Some(entity));
+    }
+
     pub fn deselect(&mut self) {
-        self.selected = None;
-        self.changed_this_frame = true;
-        self.time_selected = Instant::now();
+        self.select_option(None);
     }
 
     pub fn selected(&self) -> Option<Entity> {
