@@ -1,17 +1,14 @@
 use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
 
 use crate::{
-    ecs::{map::MapAtmosphere, Scene},
+    ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
     gpu_event,
     renderer::Renderer,
-    tfx::{
-        externs,
-        externs::{ExternDefault, ShadowMask},
-    },
+    tfx::externs::{self, ExternDefault, ShadowMask},
 };
 
 impl Renderer {
-    pub fn draw_lighting_pass(&self, scene: &Scene) {
+    pub fn draw_lighting_pass(&self, scene: &mut Scene) {
         gpu_event!(self.gpu, "lighting_pass");
 
         unsafe {
@@ -52,10 +49,10 @@ impl Renderer {
                 gpu_event!(self.gpu, "matcap");
                 self.matcap.draw(self);
             } else {
-                // {
-                //     gpu_event!(self.gpu, "deferred_lights");
-                //     draw_light_system(self, scene)
-                // }
+                {
+                    gpu_event!(self.gpu, "deferred_lights");
+                    draw_light_system(self, scene)
+                }
 
                 // if self.render_settings.feature_cubemaps {
                 //     unsafe {

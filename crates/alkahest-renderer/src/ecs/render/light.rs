@@ -4,7 +4,7 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use anyhow::Context;
-use bevy_ecs::component::Component;
+use bevy_ecs::{component::Component, query::Without};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -258,117 +258,115 @@ pub enum ShadowPcfSamples {
     Samples21 = 2,
 }
 
-// pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
-//     profiling::scope!("draw_light_system");
-//     for (_, (transform, light_renderer, light)) in scene
-//         .query::<(&Transform, &LightRenderer, &SLight)>()
-//         .without::<&Hidden>()
-//         .iter()
-//     {
-//         {
-//             let externs = &mut renderer.data.lock().externs;
-//             let Some(view) = &externs.view else {
-//                 error!("No view extern bound for light rendering");
-//                 return;
-//             };
+pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
+    profiling::scope!("draw_light_system");
+    for (transform, light_renderer, light) in scene
+        .query_filtered::<(&Transform, &LightRenderer, &SLight), Without<Hidden>>()
+        .iter(scene)
+    {
+        {
+            let externs = &mut renderer.data.lock().externs;
+            let Some(view) = &externs.view else {
+                error!("No view extern bound for light rendering");
+                return;
+            };
 
-//             let transform_relative = Transform {
-//                 translation: transform.translation - view.position.xyz(),
-//                 // translation: Vec3::ZERO,
-//                 ..*transform
-//             };
+            let transform_relative = Transform {
+                translation: transform.translation - view.position.xyz(),
+                // translation: Vec3::ZERO,
+                ..*transform
+            };
 
-//             let transform_mat = transform_relative.local_to_world();
-//             let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
+            let transform_mat = transform_relative.local_to_world();
+            let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
 
-//             externs.simple_geometry = Some(externs::SimpleGeometry {
-//                 transform: view.world_to_projective * transform_mat_scaled,
-//             });
-//             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
-//             externs.deferred_light = Some(externs::DeferredLight {
-//                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-//                 unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
-//                 unk80: transform_mat,
-//                 unk100: light.unk50,
+            externs.simple_geometry = Some(externs::SimpleGeometry {
+                transform: view.world_to_projective * transform_mat_scaled,
+            });
+            let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
+            externs.deferred_light = Some(externs::DeferredLight {
+                // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
+                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
+                unk80: transform_mat,
+                unk100: light.unk50,
 
-//                 ..existing_deflight
-//             });
-//         }
+                ..existing_deflight
+            });
+        }
 
-//         light_renderer.draw(renderer, false);
-//     }
+        light_renderer.draw(renderer, false);
+    }
 
-//     for (_, (transform, light_renderer, light, shadowmap)) in scene
-//         .query::<(
-//             &Transform,
-//             &LightRenderer,
-//             &SShadowingLight,
-//             Option<&ShadowMapRenderer>,
-//         )>()
-//         .without::<&Hidden>()
-//         .iter()
-//     {
-//         {
-//             let externs = &mut renderer.data.lock().externs;
-//             let Some(view) = &externs.view else {
-//                 error!("No view extern bound for light rendering");
-//                 return;
-//             };
-//             let transform_relative = Transform {
-//                 translation: transform.translation - view.position.xyz(),
-//                 // translation: Vec3::ZERO,
-//                 ..*transform
-//             };
+    for (transform, light_renderer, light, shadowmap) in scene
+        .query_filtered::<(
+            &Transform,
+            &LightRenderer,
+            &SShadowingLight,
+            Option<&ShadowMapRenderer>,
+        ), Without<Hidden>>()
+        .iter(scene)
+    {
+        {
+            let externs = &mut renderer.data.lock().externs;
+            let Some(view) = &externs.view else {
+                error!("No view extern bound for light rendering");
+                return;
+            };
+            let transform_relative = Transform {
+                translation: transform.translation - view.position.xyz(),
+                // translation: Vec3::ZERO,
+                ..*transform
+            };
 
-//             let transform_mat = transform_relative.local_to_world();
-//             let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
+            let transform_mat = transform_relative.local_to_world();
+            let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
 
-//             externs.simple_geometry = Some(externs::SimpleGeometry {
-//                 transform: view.world_to_projective * transform_mat_scaled,
-//             });
+            externs.simple_geometry = Some(externs::SimpleGeometry {
+                transform: view.world_to_projective * transform_mat_scaled,
+            });
 
-//             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
-//             externs.deferred_light = Some(externs::DeferredLight {
-//                 // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-//                 unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
-//                 unk80: transform_mat,
-//                 unk100: light.unk50,
-//                 // unk110: 1.0,
-//                 // unk114: 2000.0,
-//                 // unk118: 1.0,
-//                 // unk11c: 1.0,
-//                 // unk120: 1.0,
-//                 ..existing_deflight
-//             });
+            let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
+            externs.deferred_light = Some(externs::DeferredLight {
+                // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
+                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
+                unk80: transform_mat,
+                unk100: light.unk50,
+                // unk110: 1.0,
+                // unk114: 2000.0,
+                // unk118: 1.0,
+                // unk11c: 1.0,
+                // unk120: 1.0,
+                ..existing_deflight
+            });
 
-//             if let Some(shadowmap) = shadowmap {
-//                 // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
-//                 renderer
-//                     .gpu
-//                     .shadowmap_vs_t2
-//                     .bind(&renderer.gpu, 2, TfxShaderStage::Vertex);
-//                 let existing_shadowmap = externs
-//                     .deferred_shadow
-//                     .as_ref()
-//                     .cloned()
-//                     .unwrap_or_default();
-//                 externs.deferred_shadow = Some(externs::DeferredShadow {
-//                     unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
-//                     resolution_width: ShadowMapRenderer::RESOLUTION as f32,
-//                     resolution_height: ShadowMapRenderer::RESOLUTION as f32,
-//                     unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
-//                     unk180: ShadowPcfSamples::Samples21 as u8 as f32,
-//                     ..existing_shadowmap
-//                 })
-//             }
-//         }
+            if let Some(shadowmap) = shadowmap {
+                // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
+                renderer
+                    .gpu
+                    .shadowmap_vs_t2
+                    .bind(&renderer.gpu, 2, TfxShaderStage::Vertex);
+                let existing_shadowmap = externs
+                    .deferred_shadow
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_default();
+                externs.deferred_shadow = Some(externs::DeferredShadow {
+                    unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
+                    resolution_width: ShadowMapRenderer::RESOLUTION as f32,
+                    resolution_height: ShadowMapRenderer::RESOLUTION as f32,
+                    unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
+                    unk180: ShadowPcfSamples::Samples21 as u8 as f32,
+                    ..existing_shadowmap
+                })
+            }
+        }
 
-//         light_renderer.draw(
-//             renderer,
-//             shadowmap.is_some() && renderer.render_settings.shadows,
-//         );
-//     }
-// }
+        light_renderer.draw(
+            renderer,
+            shadowmap.is_some() && renderer.render_settings.shadows,
+        );
+    }
+}
 
 #[derive(Component)]
 pub struct ShadowMapRenderer {
