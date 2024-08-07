@@ -117,10 +117,20 @@ async fn main() -> anyhow::Result<()> {
         .build_global()
         .unwrap();
 
+    // Remove the original log, if it exists
+    std::fs::remove_file("./alkahest.log").ok();
+    let file_appender = tracing_appender::rolling::never("./", "alkahest.log");
+
     LogTracer::init()?;
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(ConsoleLogLayer)
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .without_time()
+                    .with_ansi(false)
+                    .with_writer(file_appender),
+            )
             .with(tracing_subscriber::fmt::layer().without_time())
             .with(
                 EnvFilter::builder()
