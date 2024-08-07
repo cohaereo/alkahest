@@ -49,6 +49,27 @@ impl Renderer {
                 gpu_event!(self.gpu, "matcap");
                 self.matcap.draw(self);
             } else {
+                if self.render_settings.feature_global_lighting {
+                    gpu_event!(self.gpu, "global_lighting");
+
+                    self.gpu.current_states.store(StateSelection::new(
+                        Some(0),
+                        Some(0),
+                        Some(0),
+                        Some(0),
+                    ));
+
+                    let pipeline = &self.render_globals.pipelines.global_lighting;
+                    self.execute_global_pipeline(pipeline, "global_lighting");
+                }
+
+                self.gpu.current_states.store(StateSelection::new(
+                    Some(8),
+                    Some(0),
+                    Some(2),
+                    Some(2),
+                ));
+
                 {
                     gpu_event!(self.gpu, "deferred_lights");
                     draw_light_system(self, scene)
@@ -68,31 +89,6 @@ impl Renderer {
 
                     gpu_event!(self.gpu, "cubemaps");
                     draw_cubemap_system(self, scene);
-                }
-
-                if self.render_settings.feature_global_lighting {
-                    gpu_event!(self.gpu, "global_lighting");
-
-                    let pipeline = &self.render_globals.pipelines.global_lighting;
-                    if let Err(e) = pipeline.bind(self) {
-                        error!("Failed to run global_lighting: {e}");
-                        return;
-                    }
-
-                    // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
-                    self.gpu.current_states.store(StateSelection::new(
-                        Some(8),
-                        Some(0),
-                        Some(0),
-                        Some(0),
-                    ));
-                    self.gpu.flush_states();
-                    self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-                    // TODO(cohae): 4 vertices doesn't work...
-                    unsafe {
-                        self.gpu.context().Draw(6, 0);
-                    }
                 }
             }
         }
@@ -117,7 +113,7 @@ impl Renderer {
             );
         }
 
-        unsafe {
+        {
             gpu_event!(self.gpu, "deferred_shading");
             let pipeline = if scene.get_resource::<MapAtmosphere>().is_some()
                 && self.render_settings.feature_atmosphere
@@ -126,20 +122,11 @@ impl Renderer {
             } else {
                 &self.render_globals.pipelines.deferred_shading_no_atm
             };
-            if let Err(e) = pipeline.bind(self) {
-                error!("Failed to run deferred_shading: {e}");
-                return;
-            }
 
-            // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
             self.gpu
                 .current_states
                 .store(StateSelection::new(Some(0), Some(0), Some(0), Some(0)));
-            self.gpu.flush_states();
-            self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-            // TODO(cohae): 4 vertices doesn't work...
-            self.gpu.context().Draw(6, 0);
+            self.execute_global_pipeline(pipeline, "deferred_shading");
         }
     }
 

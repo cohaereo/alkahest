@@ -9,6 +9,7 @@ pub mod shader;
 mod shadows;
 mod systems;
 mod transparents_pass;
+mod util;
 
 use std::{ops::Deref, sync::Arc, time::Instant};
 
@@ -200,20 +201,11 @@ impl Renderer {
                 .render_globals
                 .pipelines
                 .get_debug_view_pipeline(self.render_settings.debug_view);
-            if let Err(e) = pipeline.bind(self) {
-                error!("Failed to run deferred_shading: {e}");
-                return;
-            }
 
-            // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
             self.gpu
                 .current_states
                 .store(StateSelection::new(Some(0), Some(0), Some(0), Some(0)));
-            self.gpu.flush_states();
-            self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-            // TODO(cohae): 4 vertices doesn't work...
-            self.gpu.context().Draw(6, 0);
+            self.execute_global_pipeline(pipeline, "final_or_debug_view");
         }
 
         if !self.render_settings.debug_view.is_gamma_converter() {
