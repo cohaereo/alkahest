@@ -7,6 +7,7 @@ use alkahest_renderer::{
 };
 use egui::{
     epaint::Vertex, Context, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding, Ui,
+    UiStackInfo,
 };
 use glam::{DQuat, DVec3};
 use transform_gizmo_egui::{
@@ -38,6 +39,7 @@ impl GuiView for GizmoSelector {
             "gizmo_selector_overlay".into(),
             ctx.available_rect().shrink(16.0),
             ctx.screen_rect(),
+            UiStackInfo::default(),
         );
 
         ui.horizontal(|ui| {

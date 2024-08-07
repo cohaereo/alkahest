@@ -45,7 +45,7 @@ impl Renderer {
         shadow_renderers.truncate(self.render_settings.shadow_updates_per_frame);
 
         for (e, _) in shadow_renderers {
-            gpu_event!(self.gpu, format!("update_shadow_map_{}", e.index()));
+            gpu_event!(self.gpu, "update_shadow_map", e.index().to_string());
 
             let er = scene.entity(e);
             let mut shadow = er.get_mut::<ShadowMapRenderer>().unwrap();

@@ -11,7 +11,7 @@ destiny-havok = { path = "../destiny-havok" }
 
 anyhow.workspace = true
 bevy_ecs.workspace = true
-binrw = "0.13.3" # TODO(cohae): Remove this once we have custom parsing for TfxBytecodeOp
+binrw = "0.13.3"                                      # TODO(cohae): Remove this once we have custom parsing for TfxBytecodeOp
 bitflags.workspace = true
 bytemuck.workspace = true
 crossbeam.workspace = true
@@ -28,6 +28,7 @@ obj = "0.10.2"
 parking_lot.workspace = true
 png.workspace = true
 profiling.workspace = true
+puffin.workspace = true
 raw-window-handle.workspace = true
 rustc-hash.workspace = true
 serde.workspace = true

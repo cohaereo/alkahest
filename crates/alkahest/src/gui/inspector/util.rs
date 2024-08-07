@@ -120,7 +120,7 @@ impl ComponentPanel for Ruler {
             ui.add(
                 egui::DragValue::new(&mut self.scale)
                     .speed(0.1)
-                    .clamp_range(0f32..=100f32)
+                    .range(0f32..=100f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
@@ -131,7 +131,7 @@ impl ComponentPanel for Ruler {
             ui.add(
                 egui::DragValue::new(&mut self.marker_interval)
                     .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
+                    .range(0f32..=f32::INFINITY)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" m"),
@@ -195,7 +195,7 @@ impl ComponentPanel for Sphere {
             ui.add(
                 egui::DragValue::new(&mut self.detail)
                     .speed(0.1)
-                    .clamp_range(2..=32),
+                    .range(2..=32),
             )
         });
 
@@ -241,7 +241,7 @@ impl ComponentPanel for Beacon {
             ui.add(
                 egui::DragValue::new(&mut self.distance)
                     .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
+                    .range(0f32..=f32::INFINITY)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" m"),
@@ -253,7 +253,7 @@ impl ComponentPanel for Beacon {
             ui.add(
                 egui::DragValue::new(&mut self.travel_time)
                     .speed(0.1)
-                    .clamp_range(0f32..=60.0)
+                    .range(0f32..=60.0)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" s"),
@@ -265,7 +265,7 @@ impl ComponentPanel for Beacon {
             ui.add(
                 egui::DragValue::new(&mut self.freq)
                     .speed(0.1)
-                    .clamp_range(0.0..=20.0),
+                    .range(0.0..=20.0),
             )
         });
 
@@ -493,7 +493,7 @@ impl ComponentPanel for Route {
             ui.add(
                 egui::DragValue::new(&mut self.speed_multiplier)
                     .speed(0.1)
-                    .clamp_range(0.01f32..=30f32)
+                    .range(0.01f32..=30f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
@@ -586,7 +586,7 @@ impl ComponentPanel for Route {
             ui.add(
                 egui::DragValue::new(&mut self.scale)
                     .speed(0.1)
-                    .clamp_range(0f32..=100f32)
+                    .range(0f32..=100f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
@@ -597,7 +597,7 @@ impl ComponentPanel for Route {
             ui.add(
                 egui::DragValue::new(&mut self.marker_interval)
                     .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
+                    .range(0f32..=f32::INFINITY)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" m"),

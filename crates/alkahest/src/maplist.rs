@@ -300,13 +300,13 @@ impl MapList {
         }
     }
 
-    pub fn set_current_map_next(&mut self, resources: &AppResources) {
+    pub fn set_current_map_next(&mut self) {
         if self.current_map + 1 < self.maps.len() {
             self.set_current_map(self.current_map + 1)
         }
     }
 
-    pub fn set_current_map_prev(&mut self, resources: &AppResources) {
+    pub fn set_current_map_prev(&mut self) {
         if self.current_map > 0 && !self.maps.is_empty() {
             self.set_current_map(self.current_map - 1)
         }

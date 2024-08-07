@@ -13,7 +13,7 @@ use alkahest_renderer::{
     ColorExt,
 };
 use bevy_ecs::{entity::Entity, query::Without};
-use egui::{Color32, Context, Pos2, Rect, Sense, Ui};
+use egui::{Color32, Context, Pos2, Rect, Sense, Ui, UiStackInfo};
 use glam::Vec2;
 use winit::window::Window;
 
@@ -43,6 +43,7 @@ impl GuiView for NodeGizmoOverlay {
             "node_nametags".into(),
             ctx.available_rect(),
             ctx.screen_rect(),
+            UiStackInfo::default(),
         );
 
         let mut selected_entity = resources.get_mut::<SelectedEntity>();

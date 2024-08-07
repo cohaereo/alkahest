@@ -178,7 +178,8 @@ impl StaticModel {
 
         gpu_event!(
             renderer.gpu,
-            format!("static_model {}", self.hash.prepend_package_name())
+            "static_model",
+            self.hash.prepend_package_name()
         );
 
         profiling::scope!("StaticModel::draw");

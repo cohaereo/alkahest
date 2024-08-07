@@ -412,7 +412,7 @@ impl ComponentPanel for Transform {
                         ui.label(format!("{ICON_RADIUS_OUTLINE} Radius"));
                         transform_changed |= egui::DragValue::new(&mut self.scale.x)
                             .speed(0.1)
-                            .clamp_range(0f32..=f32::INFINITY)
+                            .range(0f32..=f32::INFINITY)
                             .min_decimals(2)
                             .max_decimals(2)
                             .ui(ui)

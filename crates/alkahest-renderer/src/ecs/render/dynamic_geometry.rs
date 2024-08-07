@@ -204,11 +204,8 @@ impl DynamicModel {
 
         gpu_event!(
             renderer.gpu,
-            format!(
-                "{} {}",
-                self.feature_type.short(),
-                self.hash.prepend_package_name()
-            )
+            self.feature_type.short(),
+            self.hash.prepend_package_name()
         );
 
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));

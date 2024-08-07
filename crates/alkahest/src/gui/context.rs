@@ -509,7 +509,7 @@ mod style {
                 },
                 resize_corner_size: 12.0,
                 // text_cursor_width: 2.0,
-                text_cursor_preview: false,
+                // text_cursor_preview: false,
                 clip_rect_margin: 3.0,
                 button_frame: true,
                 collapsing_header_frame: false,

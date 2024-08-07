@@ -100,7 +100,7 @@ impl TerrainPatches {
             return;
         }
 
-        gpu_event!(renderer.gpu, format!("terrain_patch {}", self.hash));
+        gpu_event!(renderer.gpu, "terrain_patch", self.hash.to_string());
 
         // Layout 22
         //  - int4 v0 : POSITION0, // Format DXGI_FORMAT_R16G16B16A16_SINT size 8

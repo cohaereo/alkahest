@@ -16,7 +16,7 @@ use crate::{
 
 impl Renderer {
     pub(super) fn run_renderstage_systems(&self, scene: &mut Scene, stage: TfxRenderStage) {
-        gpu_event!(self.gpu, stage.to_string());
+        gpu_event!(self.gpu, stage.as_str());
 
         draw_terrain_patches_system(self, scene, stage);
         draw_shaderball_system(self, scene, stage);

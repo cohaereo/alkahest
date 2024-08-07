@@ -17,7 +17,7 @@ use alkahest_renderer::{
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
 use strum::IntoEnumIterator;
-use transform_gizmo_egui::{enum_set, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
+use transform_gizmo_egui::{enum_set, EnumSet, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
 use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -85,7 +85,7 @@ impl AlkahestApp {
             .build(&event_loop)
             .unwrap();
 
-        puffin::set_scopes_on(false);
+        puffin::set_scopes_on(cfg!(feature = "profiler"));
 
         let gctx = Arc::new(GpuContext::create(&window).unwrap());
         let gui = GuiContext::create(&window, gctx.clone());
@@ -111,7 +111,7 @@ impl AlkahestApp {
         resources.insert(stringmap);
 
         let gizmo = Gizmo::new(GizmoConfig {
-            modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate | GizmoMode::Scale),
+            modes: EnumSet::all(),
             orientation: GizmoOrientation::Local,
             ..Default::default()
         });
@@ -315,68 +315,71 @@ impl AlkahestApp {
                             );
                         }
 
-                        renderer.gpu.begin_event("interface_and_hud").scoped(|| {
-                            gpu_event!(renderer.gpu, "egui");
-                            gui.draw_frame(window, |ctx, ectx| {
-                                hotkeys::process_hotkeys(ectx, resources);
+                        renderer
+                            .gpu
+                            .begin_event("interface_and_hud", "")
+                            .scoped(|| {
+                                gpu_event!(renderer.gpu, "egui");
+                                gui.draw_frame(window, |ctx, ectx| {
+                                    hotkeys::process_hotkeys(ectx, resources);
 
-                                update_channel_gui.open =
-                                    config::with(|c| c.update_channel.is_none());
-                                update_channel_gui.show(ectx, resources);
-                                if update_channel_gui.open {
-                                    return;
-                                }
+                                    update_channel_gui.open =
+                                        config::with(|c| c.update_channel.is_none());
+                                    update_channel_gui.show(ectx, resources);
+                                    if update_channel_gui.open {
+                                        return;
+                                    }
 
-                                {
-                                    // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
-                                    let mut update_check = resources.get_mut::<UpdateCheck>();
-                                    // {
-                                    //     let check_running = update_check
-                                    //         .0
-                                    //         .as_ref()
-                                    //         .map_or(false, |v| v.poll().is_pending());
-                                    //
-                                    //     let indicator =
-                                    //         loads.entry("update_check".to_string()).or_insert_with(
-                                    //             || LoadIndicator::new("Checking for updates"),
-                                    //         );
-                                    //
-                                    //     if indicator.active != check_running {
-                                    //         indicator.restart();
-                                    //     }
-                                    //
-                                    //     indicator.active = check_running;
-                                    // }
-
-                                    if update_check
-                                        .0
-                                        .as_ref()
-                                        .map_or(false, |v| v.poll().is_ready())
                                     {
-                                        let update =
-                                            update_check.0.take().unwrap().block_and_take();
-                                        if let Some(update) = update {
-                                            *updater_gui = Some(UpdateDownload::new(update));
+                                        // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
+                                        let mut update_check = resources.get_mut::<UpdateCheck>();
+                                        // {
+                                        //     let check_running = update_check
+                                        //         .0
+                                        //         .as_ref()
+                                        //         .map_or(false, |v| v.poll().is_pending());
+                                        //
+                                        //     let indicator =
+                                        //         loads.entry("update_check".to_string()).or_insert_with(
+                                        //             || LoadIndicator::new("Checking for updates"),
+                                        //         );
+                                        //
+                                        //     if indicator.active != check_running {
+                                        //         indicator.restart();
+                                        //     }
+                                        //
+                                        //     indicator.active = check_running;
+                                        // }
+
+                                        if update_check
+                                            .0
+                                            .as_ref()
+                                            .map_or(false, |v| v.poll().is_ready())
+                                        {
+                                            let update =
+                                                update_check.0.take().unwrap().block_and_take();
+                                            if let Some(update) = update {
+                                                *updater_gui = Some(UpdateDownload::new(update));
+                                            }
                                         }
                                     }
-                                }
 
-                                if let Some(updater_gui_) = updater_gui.as_mut() {
-                                    if !updater_gui_.show(ectx, resources) {
-                                        *updater_gui = None;
+                                    if let Some(updater_gui_) = updater_gui.as_mut() {
+                                        if !updater_gui_.show(ectx, resources) {
+                                            *updater_gui = None;
+                                        }
+
+                                        return;
                                     }
 
-                                    return;
-                                }
+                                    let mut gui_views = resources.get_mut::<GuiViewManager>();
+                                    gui_views.draw(ectx, window, resources, ctx);
 
-                                let mut gui_views = resources.get_mut::<GuiViewManager>();
-                                gui_views.draw(ectx, window, resources, ctx);
-
-                                if !gui_views.hide_views {
-                                    draw_transform_gizmos(renderer, ectx, resources);
-                                }
+                                    if !gui_views.hide_views {
+                                        draw_transform_gizmos(renderer, ectx, resources);
+                                    }
+                                });
                             });
-                        });
 
                         window.pre_present_notify();
                         gctx.present(config::with(|c| c.renderer.vsync));

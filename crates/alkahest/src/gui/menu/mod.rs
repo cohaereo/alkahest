@@ -69,9 +69,14 @@ impl GuiView for MenuBar {
                     windows.tfx_extern_editor ^= ui
                         .selectable_label(windows.tfx_extern_editor, "TFX Extern Editor")
                         .clicked();
-                    windows.cpu_profiler ^= ui
-                        .selectable_label(windows.cpu_profiler, "Profiler")
-                        .clicked();
+
+                    if cfg!(feature = "profiler") {
+                        windows.cpu_profiler ^= ui
+                            .selectable_label(windows.cpu_profiler, "Profiler")
+                            .clicked();
+                    } else {
+                        windows.cpu_profiler = false;
+                    }
                 });
 
                 ui.menu_button("Help", |ui| {

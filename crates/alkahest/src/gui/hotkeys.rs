@@ -64,15 +64,11 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_PREV)) {
-        resources
-            .get_mut::<MapList>()
-            .set_current_map_prev(resources);
+        resources.get_mut::<MapList>().set_current_map_prev();
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_NEXT)) {
-        resources
-            .get_mut::<MapList>()
-            .set_current_map_next(resources);
+        resources.get_mut::<MapList>().set_current_map_next();
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {

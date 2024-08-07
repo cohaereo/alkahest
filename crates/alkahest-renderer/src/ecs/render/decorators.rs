@@ -90,7 +90,7 @@ impl DecoratorRenderer {
     }
 
     pub fn draw(&self, renderer: &Renderer, stage: TfxRenderStage) -> anyhow::Result<()> {
-        gpu_event!(renderer.gpu, format!("decorator {}", self.hash));
+        gpu_event!(renderer.gpu, "decorator", self.hash.to_string());
 
         {
             let mut data = renderer.data.lock();
