@@ -14,13 +14,14 @@ use bevy_ecs::entity::Entity;
 use crossbeam::atomic::AtomicCell;
 use windows::Win32::{
     Foundation::RECT,
-    Graphics::Direct3D11::{
-        ID3D11PixelShader, ID3D11RenderTargetView, ID3D11VertexShader, D3D11_MAP_READ,
-    },
+    Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_MAP_READ},
 };
 
 use crate::{
-    ecs::{render::static_geometry::draw_static_instances_individual_system, Scene},
+    ecs::{
+        render::{draw_entity, static_geometry::draw_static_instances_individual_system},
+        Scene,
+    },
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     renderer::{
@@ -52,7 +53,7 @@ impl Renderer {
     }
 
     // TODO(cohae): move rendering logic to Pickbuffer (where possible)
-    pub(super) fn draw_outline(&self, scene: &Scene, selected: Entity, time_since_select: f32) {
+    pub(super) fn draw_outline(&self, scene: &mut Scene, selected: Entity, time_since_select: f32) {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
@@ -67,13 +68,13 @@ impl Renderer {
             self.gpu
                 .context()
                 .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
-            // draw_entity(
-            //     scene,
-            //     selected,
-            //     self,
-            //     Some(&self.pickbuffer.static_instance_cb),
-            //     TfxRenderStage::GenerateGbuffer,
-            // );
+            draw_entity(
+                scene,
+                selected,
+                self,
+                Some(&self.pickbuffer.static_instance_cb),
+                TfxRenderStage::GenerateGbuffer,
+            );
 
             // Draw the outline itself
 

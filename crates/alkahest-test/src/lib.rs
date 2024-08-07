@@ -14,7 +14,6 @@ use anyhow::Context;
 use clap::Parser;
 use destiny_pkg::{GameVersion, PackageManager};
 use mimalloc::MiMalloc;
-use tracing::instrument::WithSubscriber;
 use tracing_subscriber::{
     filter::filter_fn, fmt::Subscriber, layer::SubscriberExt, util::SubscriberInitExt,
 };
@@ -64,6 +63,12 @@ fn initialize_package_manager(/* args: &TestArgs*/) -> anyhow::Result<()> {
 pub struct TestHarness {
     /// Headless renderer
     pub renderer: RendererShared,
+}
+
+impl Default for TestHarness {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TestHarness {

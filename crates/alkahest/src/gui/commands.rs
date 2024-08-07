@@ -1,16 +1,15 @@
-use alkahest_data::entity::{SDynamicModel, SEntity};
+use alkahest_data::entity::SEntity;
 use alkahest_pm::package_manager;
 use alkahest_renderer::{
     ecs::{transform::Transform, Scene},
     renderer::RendererShared,
 };
-use anyhow::Context;
 use destiny_pkg::TagHash;
 use glam::Vec3;
 use itertools::Itertools;
 use tiger_parse::TigerReadable;
 
-use crate::gui::console::{load_entity, load_entity_model};
+use crate::gui::console::load_entity;
 
 pub fn load_pkg_entities(
     pkg_name: &str,

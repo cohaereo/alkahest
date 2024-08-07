@@ -25,7 +25,7 @@ use alkahest_renderer::{
     resources::AppResources,
     tfx::bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
 };
-use anyhow::{Context, Error};
+use anyhow::Context;
 use bevy_ecs::{bundle::Bundle, entity::Entity, query::With};
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
@@ -809,7 +809,7 @@ fn execute_command(command: &str, args: &[&str], resources: &AppResources) {
 
             let renderer = resources.get_mut::<RendererShared>();
 
-            if let Err(e) = load_pkg_entities(&args[0], renderer.clone(), scene) {
+            if let Err(e) = load_pkg_entities(args[0], renderer.clone(), scene) {
                 error!("Failed to load entities from package {}: {e}", args[0]);
             }
         }

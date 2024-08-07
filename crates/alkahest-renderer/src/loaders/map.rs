@@ -1,7 +1,4 @@
-use std::{
-    io::{Cursor, Read, Seek, SeekFrom},
-    ops::Deref,
-};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 
 use alkahest_data::{
     activity::{SActivity, SEntityResource, SUnk8080460c, Unk80808cef, Unk80808e89, Unk808092d8},
@@ -11,8 +8,8 @@ use alkahest_data::{
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
         SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
-        SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
-        SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        SUnk808068d4, SUnk80806aa7, SUnk80806ef4, SUnk8080714b, SUnk80808604, SUnk80808cb7,
+        SUnk80809178, SUnk8080917b,
     },
     text::{StringContainer, StringContainerShared},
     tfx::TfxFeatureRenderer,
@@ -51,7 +48,7 @@ use crate::{
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
         ICON_LABEL, ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE,
-        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::{
@@ -355,7 +352,7 @@ pub async fn load_map(
     let mut tags: Vec<(Entity, Vec<EntityTag>)> = vec![];
     for e in scene.iter_entities() {
         let mut tag_list = vec![];
-        if let Some(origin) = e.get::<ResourceOrigin>().as_deref().cloned() {
+        if let Some(origin) = e.get::<ResourceOrigin>().cloned() {
             match origin {
                 ResourceOrigin::Map => {}
                 ResourceOrigin::Activity => tag_list.push(EntityTag::Activity),

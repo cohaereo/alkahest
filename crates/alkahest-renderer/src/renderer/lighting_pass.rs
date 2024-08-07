@@ -3,7 +3,7 @@ use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
 use crate::{
     ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
     gpu_event,
-    renderer::Renderer,
+    renderer::{cubemaps::draw_cubemap_system, Renderer},
     tfx::externs::{self, ExternDefault, ShadowMask},
 };
 
@@ -54,21 +54,21 @@ impl Renderer {
                     draw_light_system(self, scene)
                 }
 
-                // if self.render_settings.feature_cubemaps {
-                //     unsafe {
-                //         let data = &mut self.data.lock();
-                //         self.gpu.context().OMSetRenderTargets(
-                //             Some(&[
-                //                 Some(data.gbuffers.light_diffuse.render_target.clone()),
-                //                 Some(data.gbuffers.light_ibl_specular.render_target.clone()),
-                //             ]),
-                //             None,
-                //         );
-                //     }
-                //
-                //     gpu_event!(self.gpu, "cubemaps");
-                //     draw_cubemap_system(self, scene);
-                // }
+                if self.render_settings.feature_cubemaps {
+                    unsafe {
+                        let data = &mut self.data.lock();
+                        self.gpu.context().OMSetRenderTargets(
+                            Some(&[
+                                Some(data.gbuffers.light_diffuse.render_target.clone()),
+                                Some(data.gbuffers.light_ibl_specular.render_target.clone()),
+                            ]),
+                            None,
+                        );
+                    }
+
+                    gpu_event!(self.gpu, "cubemaps");
+                    draw_cubemap_system(self, scene);
+                }
 
                 if self.render_settings.feature_global_lighting {
                     gpu_event!(self.gpu, "global_lighting");

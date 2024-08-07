@@ -16,6 +16,7 @@ use alkahest_renderer::{
 };
 use bevy_ecs::{
     entity::Entity,
+    query::With,
     system::{Commands, RunSystemOnce},
     world::CommandQueue,
 };
@@ -98,24 +99,27 @@ impl Map {
     /// Remove global entities from the scene and store them in this one
     pub fn take_globals(&mut self, source: &mut Scene) {
         // let ent_list = source
-        //     .query::<&Global>()
-        //     .iter()
-        //     .map(|(e, _)| e)
+        //     .query_filtered::<Entity, With<Global>>()
+        //     .iter(source)
         //     .collect_vec();
         // let mut new_selected_entity: Option<Entity> = None;
-        //
+
         // {
-        //     let selected_entity = source..get::<SelectedEntity>().selected();
+        //     let selected_entity = source.resource::<SelectedEntity>().selected();
         //     for &entity in &ent_list {
-        //         let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
-        //         if selected_entity.is_some_and(|e| e == entity) {
-        //             new_selected_entity = Some(new_entity);
+        //         let new_entity = self
+        //             .scene
+        //             .spawn(source.entity_mut(entity).take(entity).ok().unwrap());
+        //         if selected_entity == Some(entity) {
+        //             new_selected_entity = Some(new_entity.id());
         //         }
         //     }
         // }
-        //
+
         // if let Some(new_entity) = new_selected_entity {
-        //     resources.get_mut::<SelectedEntity>().select(new_entity);
+        //     self.scene
+        //         .resource_mut::<SelectedEntity>()
+        //         .select(new_entity);
         // }
     }
 
@@ -145,7 +149,7 @@ impl Map {
         self.load_state = MapLoadState::Loading;
     }
 
-    pub fn commands<'m>(&'m self) -> Commands<'m, 'm> {
+    pub fn commands(&self) -> Commands<'_, '_> {
         Commands::new(&mut self.pocus().command_queue, &self.scene)
     }
 }
@@ -303,7 +307,7 @@ impl MapList {
     }
 
     pub fn set_current_map_prev(&mut self, resources: &AppResources) {
-        if self.current_map > 0 && self.maps.len() >= 1 {
+        if self.current_map > 0 && !self.maps.is_empty() {
             self.set_current_map(self.current_map - 1)
         }
     }

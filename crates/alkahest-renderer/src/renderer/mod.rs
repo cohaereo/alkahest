@@ -28,7 +28,7 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 use crate::{
     ecs::{
         common::Hidden,
-        render::{light::ShadowGenerationMode, static_geometry::update_static_instances_system},
+        render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
         utility::draw_utilities_system,
@@ -46,8 +46,7 @@ use crate::{
     resources::AppResources,
     shader::matcap::MatcapRenderer,
     tfx::{
-        externs,
-        externs::{ExternStorage, Frame},
+        externs::{self, ExternStorage, Frame},
         globals::RenderGlobals,
         scope::ScopeFrame,
         technique::Technique,
@@ -155,10 +154,7 @@ impl Renderer {
 
         self.begin_world_frame(scene);
 
-        // update_dynamic_model_system(scene);
-        // update_static_instances_system(scene);
-
-        // self.update_shadow_maps(scene);
+        self.update_shadow_maps(scene);
 
         {
             gpu_event!(self.gpu, "view_0");
@@ -260,7 +256,11 @@ impl Renderer {
             );
         }
 
-        // draw_utilities_system.run(scene, resources, self);
+        // TODO(cohae): Move debug shapes to a separate system
+        scene.run_system_once_with(
+            resources.get::<RendererShared>().clone(),
+            draw_debugshapes_system,
+        );
         scene.run_system_once_with(
             resources.get::<RendererShared>().clone(),
             draw_utilities_system,

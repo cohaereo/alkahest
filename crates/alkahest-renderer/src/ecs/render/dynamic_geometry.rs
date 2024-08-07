@@ -4,7 +4,6 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
-use anyhow::ensure;
 use bevy_ecs::{component::Component, entity::Entity, query::Without, system::Query};
 use destiny_pkg::TagHash;
 use glam::Vec4;
@@ -145,14 +144,15 @@ impl DynamicModel {
     fn get_variant_technique(&self, index: u16, variant: usize) -> Option<Handle<Technique>> {
         if index == u16::MAX {
             None
-        } else if let Some(variant_range) = &self.technique_map.get(index as usize) {
-            Some(
-                self.techniques[variant_range.technique_start as usize
-                    + (variant % variant_range.technique_count as usize)]
-                    .clone(),
-            )
         } else {
-            None
+            self.technique_map
+                .get(index as usize)
+                .as_ref()
+                .map(|variant_range| {
+                    self.techniques[variant_range.technique_start as usize
+                        + (variant % variant_range.technique_count as usize)]
+                        .clone()
+                })
         }
     }
 

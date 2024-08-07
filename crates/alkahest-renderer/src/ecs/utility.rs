@@ -4,20 +4,19 @@ use bevy_ecs::{
     entity::Entity,
     prelude::Component,
     query::Without,
-    system::{In, Query, Res, ResMut, Resource},
+    system::{In, Query, Res, ResMut},
 };
 use destiny_pkg::TagHash;
 use glam::Vec3;
 
 use super::{
     common::{Icon, Label},
-    MapInfo, SceneInfo,
+    MapInfo,
 };
 use crate::{
-    ecs::{common::Hidden, resources::SelectedEntity, transform::Transform, Scene},
+    ecs::{common::Hidden, resources::SelectedEntity, transform::Transform},
     icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     renderer::{LabelAlign, Renderer, RendererShared},
-    resources::AppResources,
     util::{
         color::{Color, ColorExt, Hsv},
         text::prettify_distance,
@@ -194,9 +193,6 @@ pub fn draw_utilities_system(
     q_beacon: Query<(Entity, &Transform, &Beacon), Without<Hidden>>,
     q_route: Query<(Entity, &Route), Without<Hidden>>,
 ) {
-    // TODO(cohae): Move debug shapes to a separate system
-    // draw_debugshapes_system(&renderer, scene, resources);
-
     for (e, ruler) in q_ruler.iter() {
         draw_ruler(&renderer, ruler, Some(e), &selected);
     }

@@ -7,22 +7,19 @@ use alkahest_renderer::{
         tags::{NodeFilter, NodeFilterSet},
         transform::Transform,
     },
-    icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_HELP, ICON_RESIZE, ICON_ROTATE_ORBIT},
+    icons::ICON_HELP,
     renderer::{LabelAlign, RendererShared},
     resources::AppResources,
     ColorExt,
 };
 use bevy_ecs::{entity::Entity, query::Without};
-use egui::{Color32, Context, Frame, Pos2, Rect, Rounding, Sense, Ui};
+use egui::{Color32, Context, Pos2, Rect, Sense, Ui};
 use glam::Vec2;
 use winit::window::Window;
 
 use crate::{
     config,
-    gui::{
-        context::{GuiCtx, GuiView, ViewResult},
-        SelectionGizmoMode,
-    },
+    gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
 };
 

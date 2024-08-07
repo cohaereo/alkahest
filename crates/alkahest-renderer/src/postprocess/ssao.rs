@@ -2,9 +2,7 @@ use alkahest_data::{
     dxgi::DxgiFormat, geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage,
 };
 use glam::{FloatExt, Mat4, Vec3, Vec4};
-use windows::Win32::Graphics::Direct3D11::{
-    ID3D11PixelShader, ID3D11RenderTargetView, ID3D11VertexShader,
-};
+use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
 
 use crate::{
     gpu::{buffer::ConstantBufferCached, texture::Texture, util::DxDeviceExt, SharedGpuContext},

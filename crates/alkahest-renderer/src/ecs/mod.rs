@@ -1,4 +1,4 @@
-use bevy_ecs::{prelude::Component, system::Resource};
+use bevy_ecs::system::Resource;
 use destiny_pkg::TagHash;
 use resources::SelectedEntity;
 

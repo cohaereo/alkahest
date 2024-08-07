@@ -6,7 +6,7 @@ use genmesh::{
     Triangulate,
 };
 use glam::{Mat4, Vec3, Vec4};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 
 use crate::{
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
@@ -15,7 +15,7 @@ use crate::{
     renderer::shader::ShaderProgram,
     util::{
         color::{Color, ColorExt},
-        mat4_scale_translation, Hocus,
+        mat4_scale_translation,
     },
 };
 

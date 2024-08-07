@@ -12,37 +12,37 @@ use crate::{
     include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::Renderer,
-    tfx::externs,
+    tfx::{externs, globals::CubemapShape},
 };
 
-// pub fn draw_cubemap_system(renderer: &Renderer, scene: &Scene) {
-//     {
-//         renderer.data.lock().externs.cubemaps = Some(externs::Cubemaps {
-//             temp_ao: renderer.gpu.white_texture.view.clone().into(),
-//         });
-//     }
-//
-//     for (_e, (transform, cubemap)) in scene.query::<(&Transform, &CubemapVolume)>().iter() {
-//         //     let alpha = false;
-//         //     let probes = cubemap.voxel_diffuse.is_some();
-//         //     let relighting = false;
-//         //
-//         //     let pipeline = renderer
-//         //         .render_globals
-//         //         .pipelines
-//         //         .get_specialized_cubemap_pipeline(CubemapShape::Cube, alpha, probes, relighting);
-//         //
-//         //     if let Err(e) = pipeline.bind(renderer) {
-//         //         error!(
-//         //             "Failed to run cubemap pipeline (alpha={alpha}, probes={probes}, \
-//         //              relighting={relighting}): {e:?}"
-//         //         );
-//         //         return;
-//         //     }
-//
-//         renderer.cubemap_renderer.draw(renderer, transform, cubemap);
-//     }
-// }
+pub fn draw_cubemap_system(renderer: &Renderer, scene: &mut Scene) {
+    {
+        renderer.data.lock().externs.cubemaps = Some(externs::Cubemaps {
+            temp_ao: renderer.gpu.white_texture.view.clone().into(),
+        });
+    }
+
+    for (transform, cubemap) in scene.query::<(&Transform, &CubemapVolume)>().iter(scene) {
+        let alpha = false;
+        let probes = cubemap.voxel_diffuse.is_some();
+        let relighting = false;
+
+        let pipeline = renderer
+            .render_globals
+            .pipelines
+            .get_specialized_cubemap_pipeline(CubemapShape::Cube, alpha, probes, relighting);
+
+        if let Err(e) = pipeline.bind(renderer) {
+            error!(
+                "Failed to run cubemap pipeline (alpha={alpha}, probes={probes}, \
+                 relighting={relighting}): {e:?}"
+            );
+            return;
+        }
+
+        renderer.cubemap_renderer.draw(renderer, transform, cubemap);
+    }
+}
 
 pub struct CubemapRenderer {
     shader_vs: ID3D11VertexShader,

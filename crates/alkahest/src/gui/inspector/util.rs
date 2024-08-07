@@ -19,14 +19,12 @@ use egui::{
     Button,
 };
 use glam::Vec3;
-use serde_yaml::value::Tag;
 
 use crate::{
     gui::inspector::ComponentPanel,
     input_float3,
-    maplist::MapList,
     resources::AppResources,
-    util::action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},
+    util::action::{ActionList, MapSwapAction, TweenAction},
 };
 
 impl ComponentPanel for Ruler {

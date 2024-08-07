@@ -1,28 +1,21 @@
-use std::io::Cursor;
-
-use alkahest_data::{
-    geometry::EPrimitiveType,
-    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
-};
-use alkahest_pm::package_manager;
+use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use anyhow::Context;
-use bevy_ecs::prelude::Component;
+use bevy_ecs::{
+    entity::Entity,
+    prelude::Component,
+    query::Without,
+    system::{In, Query, Res},
+};
 use destiny_havok::shape_collection;
-use destiny_pkg::TagHash;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::Itertools;
 
 use crate::{
-    ecs::{
-        common::Hidden, render::static_geometry::StaticInstances, resources::SelectedEntity,
-        tags::NodeFilter, transform::Transform, Scene,
-    },
+    ecs::{common::Hidden, resources::SelectedEntity, tags::NodeFilter, transform::Transform},
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
-    renderer::{shader::ShaderProgram, Renderer},
-    resources::AppResources,
-    tfx::technique::ShaderModule,
+    renderer::{shader::ShaderProgram, RendererShared},
     Color, ColorExt,
 };
 
@@ -170,24 +163,22 @@ pub fn calculate_mesh_normals_flat(
     (new_vertices, new_indices)
 }
 
-// pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, resources: &AppResources) {
-//     for (e, (transform, shape, filter)) in scene
-//         .query::<(&Transform, &HavokShapeRenderer, Option<&NodeFilter>)>()
-//         .without::<&Hidden>()
-//         .iter()
-//     {
-//         let color = if let Some(filter) = filter {
-//             if !renderer.lastfilters.contains(&filter) {
-//                 continue;
-//             }
+pub fn draw_debugshapes_system(
+    In(renderer): In<RendererShared>,
+    selected: Res<SelectedEntity>,
+    q_ruler: Query<(Entity, &Transform, &HavokShapeRenderer, Option<&NodeFilter>), Without<Hidden>>,
+) {
+    for (e, transform, shape, filter) in q_ruler.iter() {
+        let color = if let Some(filter) = filter {
+            if !renderer.lastfilters.contains(filter) {
+                continue;
+            }
 
-//             let selected = resources.get::<SelectedEntity>();
+            selected.select_fade_color(filter.color(), Some(e))
+        } else {
+            Color::WHITE
+        };
 
-//             selected.select_fade_color(filter.color(), Some(e))
-//         } else {
-//             Color::WHITE
-//         };
-
-//         shape.draw(&renderer.gpu, transform, color);
-//     }
-// }
+        shape.draw(&renderer.gpu, transform, color);
+    }
+}

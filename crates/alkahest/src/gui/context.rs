@@ -9,7 +9,6 @@ use egui::{InputState, Key, KeyboardShortcut, Modifiers};
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
 use indexmap::IndexMap;
-use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use winit::{event::WindowEvent, window::Window};
 

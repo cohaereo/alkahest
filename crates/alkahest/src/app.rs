@@ -244,7 +244,7 @@ impl AlkahestApp {
                         if let Some(swap_chain) = gctx.swap_chain.as_ref() {
                             let _ = gui
                                 .renderer
-                                .resize_buffers(&swap_chain, || {
+                                .resize_buffers(swap_chain, || {
                                     gctx.resize_swapchain(new_dims.width, new_dims.height);
                                     HRESULT(0)
                                 })
@@ -289,7 +289,7 @@ impl AlkahestApp {
 
                             {
                                 let mut action_list = resources.get_mut::<ActionList>();
-                                action_list.process(&resources);
+                                action_list.process(resources);
                             }
 
                             resources

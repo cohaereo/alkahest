@@ -1,8 +1,8 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
     ecs::tags::{NodeFilter, NodeFilterSet},
-    icons::{ICON_CLIPBOARD, ICON_CURSOR_DEFAULT, ICON_CURSOR_POINTER, ICON_EYE},
-    renderer::{RenderDebugView, RenderFeatureVisibility, RendererSettings, RendererShared},
+    icons::{ICON_CLIPBOARD, ICON_CURSOR_DEFAULT, ICON_EYE},
+    renderer::{RenderDebugView, RenderFeatureVisibility, RendererShared},
     util::text::StringExt,
 };
 use egui::{Context, RichText, Rounding, Widget};

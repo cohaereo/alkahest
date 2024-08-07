@@ -9,7 +9,7 @@ use alkahest_renderer::{
     util::color::Color,
 };
 use bevy_ecs::prelude::EntityRef;
-use egui::{Color32, RichText, Ui, Widget};
+use egui::{Color32, RichText, Ui};
 
 use crate::{gui::inspector::ComponentPanel, resources::AppResources};
 

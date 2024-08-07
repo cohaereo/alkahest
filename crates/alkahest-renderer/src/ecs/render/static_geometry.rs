@@ -5,12 +5,7 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
-use bevy_ecs::{
-    entity::Entity,
-    prelude::Component,
-    query::{self, Without},
-    system::Query,
-};
+use bevy_ecs::{entity::Entity, prelude::Component, query::Without, system::Query};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use itertools::Itertools;
@@ -359,7 +354,7 @@ impl StaticInstances {
             let mesh_data = &self.model.model.opaque_meshes;
             self.cbuffer
                 .write_array(
-                    create_instances_scope(mesh_data, &transforms)
+                    create_instances_scope(mesh_data, transforms)
                         .write()
                         .as_slice(),
                 )

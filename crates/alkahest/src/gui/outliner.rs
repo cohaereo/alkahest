@@ -151,7 +151,7 @@ impl OutlinerPanel {
         let mut commands = map.commands();
         let e = map.scene.entity(ent);
 
-        let children = e.get::<Children>().as_deref().cloned();
+        let children = e.get::<Children>().cloned();
 
         if let Some(children) = children {
             CollapsingState::load_with_default_open(

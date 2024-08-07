@@ -6,12 +6,12 @@ use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{EntityWorldId, Global, Hidden, Label, Mutable},
+        common::{Global, Hidden, Label, Mutable},
         hierarchy::{Children, Parent},
         map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
-            light::LightRenderer,
+            light::LightRenderer, update_entity_transform,
         },
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -20,14 +20,14 @@ use alkahest_renderer::{
         Scene,
     },
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_HUMAN_CHILD,
-        ICON_HUMAN_MALE, ICON_HUMAN_MALE_FEMALE_CHILD, ICON_POKEBALL,
+        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_HUMAN_MALE,
+        ICON_HUMAN_MALE_FEMALE_CHILD, ICON_POKEBALL,
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
     util::{black_magic::EntityRefDarkMagic, text::prettify_distance, Hocus},
 };
-use bevy_ecs::{entity::Entity, prelude::EntityRef, system::Commands, world::EntityMut};
+use bevy_ecs::{entity::Entity, prelude::EntityRef, system::Commands};
 use egui::{Align2, Button, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use winit::window::Window;
@@ -39,8 +39,7 @@ use crate::{
         hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
         icons::{
             ICON_AXIS_ARROW, ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
-            ICON_EYE_OFF, ICON_IDENTIFIER, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT,
-            ICON_TAG,
+            ICON_EYE_OFF, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_TAG,
         },
     },
     input_float3,
@@ -466,9 +465,9 @@ impl ComponentPanel for Transform {
             });
         }
 
-        // if transform_changed {
-        //     update_entity_transform(scene, e.id());
-        // }
+        if transform_changed {
+            update_entity_transform(scene, e.id());
+        }
     }
 }
 
