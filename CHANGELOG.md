@@ -30,9 +30,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### Added
+
+- Write tracing events to alkahest.log by @cohaereo
+
 ### Changed
 
 - Enable SSAO by default by @cohaereo
+- Abstract global/fullscreen pipelines by @cohaereo
+- Replace `hecs` with `bevy-ecs` by @cohaereo
 
 ## 0.5.0 - 2024-07-24
 
