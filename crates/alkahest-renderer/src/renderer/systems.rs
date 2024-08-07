@@ -3,8 +3,9 @@ use alkahest_data::tfx::TfxRenderStage;
 use crate::{
     ecs::{
         render::{
-            dynamic_geometry::draw_dynamic_model_system,
-            static_geometry::draw_static_instances_system, terrain::draw_terrain_patches_system,
+            dynamic_geometry::{draw_dynamic_model_system, draw_sky_objects_system},
+            static_geometry::draw_static_instances_system,
+            terrain::draw_terrain_patches_system,
         },
         Scene,
     },
@@ -20,6 +21,7 @@ impl Renderer {
         draw_terrain_patches_system(self, scene, stage);
         draw_shaderball_system(self, scene, stage);
 
+        draw_sky_objects_system(self, scene, stage);
         draw_static_instances_system(self, scene, stage);
         draw_dynamic_model_system(self, scene, stage);
     }

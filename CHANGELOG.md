@@ -19,7 +19,7 @@ Change types:
     - `Changed` for changes in existing functionality.
     - `Deprecated` for soon-to-be removed features.
     - `Removed` for now removed features.
-    - `Fixed` for any bug fixes.
+    - `Fixed` for any bug/small visual fixes.
     - `Security` in case of vulnerabilities.
 
 -->
@@ -39,6 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Enable SSAO by default by @cohaereo
 - Abstract global/fullscreen pipelines by @cohaereo
 - Replace `hecs` with `bevy-ecs` by @cohaereo
+
+### Fixed
+
+- Fix static transparents rendering in front of sky objects by @cohaereo
 
 ## 0.5.0 - 2024-07-24
 

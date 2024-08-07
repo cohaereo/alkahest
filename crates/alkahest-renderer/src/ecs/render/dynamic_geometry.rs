@@ -394,14 +394,16 @@ pub fn draw_dynamic_model_system(
         .query_filtered::<(Entity, &DynamicModelComponent), Without<Hidden>>()
         .iter(scene)
     {
-        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type)) {
+        // Sky objects are rendered by a separate system, so we filter them out here
+        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
+            && dynamic.model.feature_type != TfxFeatureRenderer::SkyTransparent
+        {
             entities.push((e, dynamic.model.feature_type));
         }
     }
 
     entities.sort_by_key(|(_, feature_type)| match feature_type {
-        TfxFeatureRenderer::Water => 0,
-        TfxFeatureRenderer::SkyTransparent => 1,
+        TfxFeatureRenderer::Water => 1,
         TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
         _ => 99,
     });
@@ -422,6 +424,29 @@ pub fn draw_dynamic_model_system(
             renderer.pickbuffer.with_entity(e, || {
                 decorator.draw(renderer, render_stage).unwrap();
             });
+        }
+    }
+}
+
+pub fn draw_sky_objects_system(
+    renderer: &Renderer,
+    scene: &mut Scene,
+    render_stage: TfxRenderStage,
+) {
+    if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SkyTransparent)) {
+        return;
+    }
+    profiling::scope!(
+        "draw_sky_object_system",
+        &format!("render_stage={render_stage:?}")
+    );
+
+    for dynamic in scene
+        .query_filtered::<&DynamicModelComponent, Without<Hidden>>()
+        .iter(scene)
+    {
+        if dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent {
+            dynamic.draw(renderer, render_stage).unwrap();
         }
     }
 }
