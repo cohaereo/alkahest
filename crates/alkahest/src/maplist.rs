@@ -1,13 +1,10 @@
 use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
-        common::Global,
-        new_scene,
         render::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
         },
-        resources::SelectedEntity,
         Scene, SceneInfo,
     },
     loaders::map::load_map,
@@ -15,9 +12,8 @@ use alkahest_renderer::{
     util::Hocus,
 };
 use bevy_ecs::{
-    entity::Entity,
-    query::With,
-    system::{Commands, RunSystemOnce},
+    schedule::{Schedule, ScheduleLabel},
+    system::Commands,
     world::CommandQueue,
 };
 use destiny_pkg::TagHash;
@@ -45,29 +41,53 @@ pub struct Map {
 
     pub command_queue: CommandQueue,
     pub scene: Scene,
+
+    systems: Systems,
 }
 
-impl Default for Map {
-    fn default() -> Self {
-        Self {
-            hash: Default::default(),
-            name: Default::default(),
-            load_promise: Default::default(),
-            load_state: Default::default(),
-            command_queue: Default::default(),
-            scene: new_scene(),
-        }
+#[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
+struct PreUpdate;
+
+// TODO: Trash, fix and move to alkahest_renderer
+struct Systems {
+    /// Schedule ran before the main update
+    pub(crate) schedule_pre: Schedule,
+}
+
+impl Systems {
+    fn create(world: &mut Scene) -> Self {
+        let mut schedule_pre = Schedule::new(PreUpdate);
+        schedule_pre.add_systems((update_static_instances_system, update_dynamic_model_system));
+        schedule_pre.initialize(world).unwrap();
+
+        Self { schedule_pre }
     }
 }
 
 impl Map {
-    pub fn update(&mut self) {
+    pub fn create(name: impl AsRef<str>, hash: TagHash, activity_hash: Option<TagHash>) -> Self {
+        let mut scene = Scene::new_with_info(activity_hash, hash);
+
+        Self {
+            hash,
+            name: name.as_ref().to_string(),
+            load_promise: Default::default(),
+            load_state: Default::default(),
+
+            systems: Systems::create(&mut scene),
+            scene,
+            command_queue: Default::default(),
+        }
+    }
+
+    pub(super) fn update_load(&mut self) {
         if let Some(promise) = self.load_promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
                     Ok(mut scene) => {
                         // Move all globals to a temporary scene
                         std::mem::swap(&mut self.scene, &mut scene);
+                        self.systems = Systems::create(&mut self.scene);
                         self.take_globals(&mut scene);
 
                         info!(
@@ -88,12 +108,14 @@ impl Map {
                 self.load_state = MapLoadState::Loading;
             }
         }
+    }
 
-        // TODO(cohae): Use scheduler for this?
-        self.scene.run_system_once(update_static_instances_system);
-        self.scene.run_system_once(update_dynamic_model_system);
-
+    pub fn update(&mut self) {
         self.command_queue.apply(&mut self.scene);
+        self.scene.clear_trackers();
+        self.scene.check_change_ticks();
+
+        self.systems.schedule_pre.run(&mut self.scene);
     }
 
     /// Remove global entities from the scene and store them in this one
@@ -199,7 +221,7 @@ impl MapList {
 impl MapList {
     pub fn update_maps(&mut self, resources: &AppResources) {
         for (i, map) in self.maps.iter_mut().enumerate() {
-            map.update();
+            map.update_load();
             if i == self.current_map && map.load_state == MapLoadState::Unloaded {
                 map.start_load(resources);
             }
@@ -231,12 +253,7 @@ impl MapList {
         let activity_hash = resources.get_mut::<CurrentActivity>().0;
         self.maps = map_hashes
             .iter()
-            .map(|(hash, name)| Map {
-                hash: *hash,
-                name: name.clone(),
-                scene: Scene::new_with_info(activity_hash, *hash),
-                ..Default::default()
-            })
+            .map(|(hash, name)| Map::create(name, *hash, activity_hash))
             .collect();
 
         #[cfg(not(feature = "keep_map_order"))]
@@ -256,12 +273,8 @@ impl MapList {
             self.set_maps(resources, &[(map_hash, map_name.clone())])
         } else {
             let activity_hash = resources.get_mut::<CurrentActivity>().0;
-            self.maps.push(Map {
-                hash: map_hash,
-                name: map_name,
-                scene: Scene::new_with_info(activity_hash, map_hash),
-                ..Default::default()
-            });
+            self.maps
+                .push(Map::create(map_name, map_hash, activity_hash))
         }
     }
 

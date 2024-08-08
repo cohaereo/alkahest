@@ -11,7 +11,7 @@ use alkahest_renderer::{
         map::{CubemapVolume, NodeMetadata},
         render::{
             decorators::DecoratorRenderer, dynamic_geometry::DynamicModelComponent,
-            light::LightRenderer, update_entity_transform,
+            light::LightRenderer,
         },
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
@@ -346,7 +346,6 @@ impl ComponentPanel for Transform {
         rotation_euler.y = rotation_euler.y.to_degrees();
         rotation_euler.z = rotation_euler.z.to_degrees();
 
-        let mut transform_changed = false;
         let mut rotation_changed = false;
         egui::Grid::new("transform_input_grid")
             .num_columns(2)
@@ -354,7 +353,7 @@ impl ComponentPanel for Transform {
             .striped(true)
             .show(ui, |ui| {
                 if !self.flags.contains(TransformFlags::IGNORE_TRANSLATION) {
-                    transform_changed |= input_float3!(
+                    input_float3!(
                         ui,
                         format!("{ICON_AXIS_ARROW} Translation"),
                         &mut self.translation
@@ -369,7 +368,6 @@ impl ComponentPanel for Transform {
                             .clicked()
                         {
                             self.translation = camera.position_target();
-                            transform_changed |= true;
                         }
 
                         let (d, pos) = resources
@@ -391,7 +389,6 @@ impl ComponentPanel for Transform {
                             .clicked()
                         {
                             self.translation = pos;
-                            transform_changed |= true;
                         }
                         ui.label(prettify_distance(d));
                     });
@@ -404,13 +401,12 @@ impl ComponentPanel for Transform {
                         &mut rotation_euler
                     )
                     .inner;
-                    transform_changed |= rotation_changed;
                     ui.end_row();
                 }
                 if !self.flags.contains(TransformFlags::IGNORE_SCALE) {
                     if self.flags.contains(TransformFlags::SCALE_IS_RADIUS) {
                         ui.label(format!("{ICON_RADIUS_OUTLINE} Radius"));
-                        transform_changed |= egui::DragValue::new(&mut self.scale.x)
+                        egui::DragValue::new(&mut self.scale.x)
                             .speed(0.1)
                             .range(0f32..=f32::INFINITY)
                             .min_decimals(2)
@@ -427,12 +423,9 @@ impl ComponentPanel for Transform {
                             self.scale = Vec3::splat(
                                 (self.translation - camera.position()).length().max(0.1),
                             );
-                            transform_changed |= true;
                         }
                     } else {
-                        transform_changed |=
-                            input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale)
-                                .inner;
+                        input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale).inner;
                     }
                     ui.end_row();
                 }
@@ -459,14 +452,9 @@ impl ComponentPanel for Transform {
                     )
                     .clicked()
                 {
-                    transform_changed = true;
                     *self = ot.0;
                 }
             });
-        }
-
-        if transform_changed {
-            update_entity_transform(scene, e.id());
         }
     }
 }

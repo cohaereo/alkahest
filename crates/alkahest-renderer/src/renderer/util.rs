@@ -1,4 +1,4 @@
-use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
+use alkahest_data::geometry::EPrimitiveType;
 
 use super::Renderer;
 use crate::tfx::technique::Technique;

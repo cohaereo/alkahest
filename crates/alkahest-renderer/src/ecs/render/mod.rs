@@ -18,7 +18,6 @@ use crate::{
     gpu::buffer::ConstantBuffer,
     renderer::Renderer,
     shader::shader_ball::ShaderBallComponent,
-    util::black_magic::EntityRefDarkMagic,
 };
 
 pub mod decorators;
@@ -86,22 +85,5 @@ pub fn draw_entity(
                 });
             }
         }
-    }
-}
-
-pub fn update_entity_transform(scene: &mut Scene, entity: Entity) {
-    if let Ok((_static_instances, parent)) = scene
-        .query::<(&StaticInstance, &Parent)>()
-        .get(scene, entity)
-    {
-        if let Some(parent) = scene.get_entity(parent.0) {
-            if let Some(mut static_instances) = parent.get_mut::<StaticInstances>() {
-                static_instances.mark_dirty();
-            }
-        }
-    }
-
-    if let Some(mut dynamic) = scene.get_mut::<DynamicModelComponent>(entity) {
-        dynamic.mark_dirty();
     }
 }

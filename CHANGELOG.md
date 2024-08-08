@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Enable SSAO by default by @cohaereo
 - Abstract global/fullscreen pipelines by @cohaereo
 - Replace `hecs` with `bevy-ecs` by @cohaereo
+- Use bevy-ecs change detection to update cbuffers by @cohaereo
 
 ### Fixed
 

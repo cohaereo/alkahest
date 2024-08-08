@@ -4,7 +4,10 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
-use bevy_ecs::{component::Component, entity::Entity, query::Without, system::Query};
+use bevy_ecs::{
+    change_detection::DetectChanges, component::Component, entity::Entity, query::Without,
+    system::Query, world::Ref,
+};
 use destiny_pkg::TagHash;
 use glam::Vec4;
 use itertools::Itertools;
@@ -449,13 +452,12 @@ pub fn draw_sky_objects_system(
 }
 
 pub fn update_dynamic_model_system(
-    mut q_dynamic_model: Query<(&Transform, &mut DynamicModelComponent)>,
+    mut q_dynamic_model: Query<(Ref<Transform>, &mut DynamicModelComponent)>,
 ) {
     profiling::scope!("update_dynamic_model_system");
     for (transform, mut model) in q_dynamic_model.iter_mut() {
-        if model.cbuffer_dirty {
-            model.update_cbuffer(transform);
-            model.cbuffer_dirty = false;
+        if transform.is_changed() {
+            model.update_cbuffer(&transform);
         }
     }
 }

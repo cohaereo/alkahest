@@ -14,7 +14,6 @@ mod util;
 use std::{ops::Deref, sync::Arc, time::Instant};
 
 use alkahest_data::{
-    geometry::EPrimitiveType,
     technique::StateSelection,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };

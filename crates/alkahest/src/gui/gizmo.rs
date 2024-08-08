@@ -1,6 +1,6 @@
 use alkahest_renderer::{
     camera::Camera,
-    ecs::{render::update_entity_transform, resources::SelectedEntity, transform::Transform},
+    ecs::{resources::SelectedEntity, transform::Transform},
     icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_RESIZE, ICON_ROTATE_ORBIT},
     renderer::Renderer,
     resources::AppResources,
@@ -156,8 +156,6 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
             transform.translation = DVec3::from(new_transform[0].translation).as_vec3();
             transform.rotation = DQuat::from(new_transform[0].rotation).as_quat().normalize();
             transform.scale = DVec3::from(new_transform[0].scale).as_vec3();
-
-            update_entity_transform(&mut map.scene, selected);
         }
     }
 }

@@ -60,7 +60,7 @@ impl Renderer {
 
             if shadow.stationary_needs_update {
                 self.pocus().active_shadow_generation_mode = ShadowGenerationMode::StationaryOnly;
-                shadow.bind_for_generation(&transform, self, ShadowGenerationMode::StationaryOnly);
+                shadow.bind_for_generation(transform, self, ShadowGenerationMode::StationaryOnly);
 
                 self.run_renderstage_systems(scene.pocus(), TfxRenderStage::ShadowGenerate);
 
@@ -70,7 +70,7 @@ impl Renderer {
             }
 
             self.pocus().active_shadow_generation_mode = ShadowGenerationMode::MovingOnly;
-            shadow.bind_for_generation(&transform, self, ShadowGenerationMode::MovingOnly);
+            shadow.bind_for_generation(transform, self, ShadowGenerationMode::MovingOnly);
             self.run_renderstage_systems(scene, TfxRenderStage::ShadowGenerate);
         }
 

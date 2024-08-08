@@ -17,7 +17,7 @@ use alkahest_renderer::{
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
 use strum::IntoEnumIterator;
-use transform_gizmo_egui::{enum_set, EnumSet, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
+use transform_gizmo_egui::{EnumSet, Gizmo, GizmoConfig, GizmoOrientation};
 use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -287,6 +287,8 @@ impl AlkahestApp {
                                 });
                             }
 
+                            gctx.begin_frame();
+
                             {
                                 let mut action_list = resources.get_mut::<ActionList>();
                                 action_list.process(resources);
@@ -296,16 +298,19 @@ impl AlkahestApp {
                                 .get_mut::<Camera>()
                                 .update(&resources.get::<InputState>(), renderer.delta_time as f32);
 
-                            gctx.begin_frame();
                             let mut maps = resources.get_mut::<MapList>();
                             maps.update_maps(resources);
 
-                            let map = maps
+                            if let Some(map) = maps.current_map_mut() {
+                                map.update();
+                            }
+
+                            let scene = maps
                                 .current_map_mut()
                                 .map(|m| &mut m.scene)
                                 .unwrap_or(scratch_map);
 
-                            renderer.render_world(&*resources.get::<Camera>(), map, resources);
+                            renderer.render_world(&*resources.get::<Camera>(), scene, resources);
                         }
 
                         unsafe {
@@ -398,12 +403,12 @@ impl AlkahestApp {
                                 if picked_id != u32::MAX {
                                     let maps = resources.get::<MapList>();
                                     if let Some(map) = maps.current_map() {
-                                        selected.select_option(unsafe {
+                                        selected.select_option(
                                             map.scene
                                                 .iter_entities()
                                                 .find(|er| er.id().index() == picked_id)
-                                                .map(|er| er.id())
-                                        });
+                                                .map(|er| er.id()),
+                                        );
                                     }
                                 } else {
                                     selected.deselect();

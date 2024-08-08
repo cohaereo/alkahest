@@ -5,7 +5,10 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
-use bevy_ecs::{entity::Entity, prelude::Component, query::Without, system::Query};
+use bevy_ecs::{
+    change_detection::DetectChanges, entity::Entity, prelude::Component, query::Without,
+    system::Query, world::Ref,
+};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use itertools::Itertools;
@@ -329,7 +332,6 @@ pub struct StaticInstances {
     pub model: StaticModel,
     pub instance_count: usize,
     pub cbuffer: ConstantBuffer<u8>,
-    cbuffer_dirty: bool,
 }
 
 impl StaticInstances {
@@ -340,12 +342,7 @@ impl StaticInstances {
             model,
             instance_count: instances,
             cbuffer,
-            cbuffer_dirty: true,
         })
-    }
-
-    pub fn mark_dirty(&mut self) {
-        self.cbuffer_dirty = true;
     }
 
     pub fn update_cbuffer(&self, transforms: &[Transform]) {
@@ -475,48 +472,34 @@ pub fn draw_static_instances_individual_system(
     }
 }
 
-// pub fn update_static_instances_system(scene: &mut Scene) {
-//     profiling::scope!("update_static_instances_system");
-
-//     for (mut instances, children) in scene
-//         .query::<(&mut StaticInstances, &Children)>()
-//         .iter_mut(scene)
-//     {
-//         if instances.cbuffer_dirty {
-//             instances.update_cbuffer(scene, children);
-//             instances.cbuffer_dirty = false;
-//             instances.instance_count = children.len();
-//         }
-//     }
-
-//     for (transform, model) in scene
-//         .query::<(&Transform, &StaticModelSingle)>()
-//         .iter(scene)
-//     {
-//         model.update_cbuffer(transform);
-//     }
-// }
-
 pub fn update_static_instances_system(
     mut q_static_instances: Query<(&mut StaticInstances, &Children)>,
-    q_static_model_single: Query<(&Transform, &StaticModelSingle)>,
-    q_instance_transform: Query<&Transform>,
+    q_static_model_single: Query<(Ref<Transform>, &StaticModelSingle)>,
+    q_instance_transform: Query<Ref<Transform>>,
 ) {
     profiling::scope!("update_static_instances_system");
 
     for (mut instances, children) in q_static_instances.iter_mut() {
-        if instances.cbuffer_dirty {
-            let transforms = children
-                .iter()
-                .filter_map(|e| q_instance_transform.get(*e).ok().cloned())
-                .collect_vec();
+        let mut transforms = Vec::with_capacity(children.len());
+        let mut changed = false;
+        for e in children.iter() {
+            if let Ok(transform) = q_instance_transform.get(*e) {
+                transforms.push(*transform);
+                if transform.is_changed() {
+                    changed = true;
+                }
+            }
+        }
+
+        if changed {
             instances.update_cbuffer(&transforms);
-            instances.cbuffer_dirty = false;
             instances.instance_count = children.len();
         }
     }
 
     for (transform, model) in q_static_model_single.iter() {
-        model.update_cbuffer(transform);
+        if transform.is_changed() {
+            model.update_cbuffer(&transform);
+        }
     }
 }
