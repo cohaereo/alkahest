@@ -11,7 +11,12 @@ use glam::{Vec3, Vec4Swizzles};
 use itertools::Itertools;
 
 use crate::{
-    ecs::{common::Hidden, resources::SelectedEntity, tags::NodeFilter, transform::Transform},
+    ecs::{
+        resources::SelectedEntity,
+        tags::NodeFilter,
+        transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
+    },
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
@@ -166,9 +171,18 @@ pub fn calculate_mesh_normals_flat(
 pub fn draw_debugshapes_system(
     In(renderer): In<RendererShared>,
     selected: Res<SelectedEntity>,
-    q_ruler: Query<(Entity, &Transform, &HavokShapeRenderer, Option<&NodeFilter>), Without<Hidden>>,
+    q_ruler: Query<(
+        Entity,
+        &Transform,
+        &HavokShapeRenderer,
+        Option<&NodeFilter>,
+        Option<&ViewVisibility>,
+    )>,
 ) {
-    for (e, transform, shape, filter) in q_ruler.iter() {
+    for (e, transform, shape, filter, vis) in q_ruler.iter() {
+        if !vis.is_visible() {
+            continue;
+        }
         let color = if let Some(filter) = filter {
             if !renderer.lastfilters.contains(filter) {
                 continue;

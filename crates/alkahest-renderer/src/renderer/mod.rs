@@ -27,11 +27,11 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        common::Hidden,
         render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
         utility::draw_utilities_system,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::SharedGpuContext,
@@ -258,9 +258,9 @@ impl Renderer {
         );
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-            if !scene
+            if scene
                 .get_entity(selected)
-                .map_or(true, |v| v.contains::<Hidden>())
+                .map_or(true, |v| v.get::<ViewVisibility>().is_visible())
             {
                 self.draw_outline(
                     scene,

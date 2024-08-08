@@ -17,10 +17,10 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
     ecs::{
-        common::Hidden,
         hierarchy::{Children, Parent},
         render::light::ShadowGenerationMode,
         transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
@@ -410,22 +410,26 @@ pub fn draw_static_instances_system(
         "draw_static_instances_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (e, instances) in scene
-        .query_filtered::<(Entity, &StaticInstances), Without<Hidden>>()
+    for (e, instances, vis) in scene
+        .query::<(Entity, &StaticInstances, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            instances.draw(renderer, render_stage);
-        });
+        if vis.is_visible() {
+            renderer.pickbuffer.with_entity(e, || {
+                instances.draw(renderer, render_stage);
+            });
+        }
     }
 
-    for (e, instances) in scene
-        .query_filtered::<(Entity, &StaticModelSingle), Without<Hidden>>()
+    for (e, instances, vis) in scene
+        .query::<(Entity, &StaticModelSingle, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            instances.draw(renderer, render_stage);
-        });
+        if vis.is_visible() {
+            renderer.pickbuffer.with_entity(e, || {
+                instances.draw(renderer, render_stage);
+            });
+        }
     }
 }
 
@@ -448,10 +452,20 @@ pub fn draw_static_instances_individual_system(
         renderer.render_globals.scopes.chunk_model.vertex_slot() as u32,
         TfxShaderStage::Vertex,
     );
-    for (e, transform, _instance, parent) in scene
-        .query_filtered::<(Entity, &Transform, &StaticInstance, &Parent), Without<Hidden>>()
+    for (e, transform, _instance, parent, vis) in scene
+        .query::<(
+            Entity,
+            &Transform,
+            &StaticInstance,
+            &Parent,
+            Option<&ViewVisibility>,
+        )>()
         .iter(scene)
     {
+        if !vis.is_visible() {
+            continue;
+        }
+
         if let Some(model) = scene.get::<StaticInstances>(parent.0) {
             unsafe {
                 cbuffer

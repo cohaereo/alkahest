@@ -5,6 +5,7 @@ use alkahest_renderer::{
             dynamic_geometry::update_dynamic_model_system,
             static_geometry::update_static_instances_system,
         },
+        visibility::{calculate_view_visibility_system, propagate_entity_visibility_system},
         Scene, SceneInfo,
     },
     loaders::map::load_map,
@@ -57,7 +58,12 @@ struct Systems {
 impl Systems {
     fn create(world: &mut Scene) -> Self {
         let mut schedule_pre = Schedule::new(PreUpdate);
-        schedule_pre.add_systems((update_static_instances_system, update_dynamic_model_system));
+        schedule_pre.add_systems((
+            update_static_instances_system,
+            update_dynamic_model_system,
+            propagate_entity_visibility_system,
+            calculate_view_visibility_system,
+        ));
         schedule_pre.initialize(world).unwrap();
 
         Self { schedule_pre }

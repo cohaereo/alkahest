@@ -11,6 +11,7 @@ pub mod resources;
 pub mod tags;
 pub mod transform;
 pub mod utility;
+pub mod visibility;
 
 pub type Scene = bevy_ecs::world::World;
 

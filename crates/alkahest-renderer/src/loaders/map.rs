@@ -43,6 +43,7 @@ use crate::{
         },
         tags::{insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
+        visibility::VisibilityBundle,
         Scene, SceneInfo,
     },
     icons::{
@@ -458,6 +459,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             StaticInstance,
                             Parent(parent),
                             NodeFilter::Static,
+                            VisibilityBundle::default(),
                         ));
                         instances.push(entity.id());
                     }
@@ -1370,6 +1372,7 @@ fn spawn_data_entity(scene: &mut Scene, components: impl Bundle, parent: Option<
     if let Some(transform) = child.get::<Transform>().cloned() {
         child.insert((OriginalTransform(transform),));
     }
+    child.insert(VisibilityBundle::default());
 
     let child_id = child.id();
 

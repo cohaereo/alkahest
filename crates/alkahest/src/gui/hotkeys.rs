@@ -1,6 +1,6 @@
 use alkahest_renderer::{
     camera::{tween::ease_out_exponential, Camera},
-    ecs::{common::Hidden, resources::SelectedEntity},
+    ecs::{resources::SelectedEntity, visibility::Visibility},
     renderer::RendererShared,
 };
 use bevy_ecs::{entity::Entity, query::With};
@@ -82,7 +82,7 @@ fn hide_unselected(resources: &mut AppResources) {
     if let Some(map) = maps.current_map_mut() {
         for e in map.scene.iter_entities() {
             if Some(e.id()) != selected_entity {
-                map.commands().entity(e.id()).insert((Hidden,));
+                map.commands().entity(e.id()).insert((Visibility::Hidden,));
             }
         }
     }
@@ -91,13 +91,10 @@ fn hide_unselected(resources: &mut AppResources) {
 fn unhide_all(resources: &mut AppResources) {
     let mut maps = resources.get_mut::<MapList>();
     if let Some(map) = maps.current_map_mut() {
-        for e in map
-            .scene
-            .query_filtered::<Entity, With<Hidden>>()
-            .iter(&map.scene)
-        {
-            map.commands().entity(e).remove::<Hidden>();
-        }
+        map.scene
+            .query::<&mut Visibility>()
+            .iter_mut(&mut map.scene)
+            .for_each(|mut v| *v = Visibility::Visible);
     }
 }
 

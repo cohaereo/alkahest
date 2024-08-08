@@ -1,11 +1,12 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Icon, Label, Mutable},
+        common::{Icon, Label, Mutable},
         hierarchy::{Children, Parent},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::Transform,
+        visibility::{Visibility, VisibilityHelper},
     },
     resources::AppResources,
     util::{color::ColorExt, text::prettify_distance},
@@ -200,7 +201,7 @@ impl OutlinerPanel {
             postfix
         };
 
-        let visible = !e.contains::<Hidden>();
+        let visible = e.get::<Visibility>().is_visible();
         let prefix_vis = if visible {
             "".to_string()
         } else {

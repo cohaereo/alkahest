@@ -23,7 +23,11 @@ use windows::Win32::Graphics::{
 
 use crate::{
     camera::{CameraProjection, Viewport},
-    ecs::{common::Hidden, transform::Transform, Scene},
+    ecs::{
+        transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
+        Scene,
+    },
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
@@ -31,8 +35,7 @@ use crate::{
     loaders::AssetManager,
     renderer::{gbuffer::ShadowDepthMap, Renderer},
     tfx::{
-        externs,
-        externs::TextureView,
+        externs::{self, TextureView},
         technique::Technique,
         view::{RenderStageSubscriptions, View},
     },
@@ -260,10 +263,14 @@ pub enum ShadowPcfSamples {
 
 pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
     profiling::scope!("draw_light_system");
-    for (transform, light_renderer, light) in scene
-        .query_filtered::<(&Transform, &LightRenderer, &SLight), Without<Hidden>>()
+    for (transform, light_renderer, light, vis) in scene
+        .query::<(&Transform, &LightRenderer, &SLight, Option<&ViewVisibility>)>()
         .iter(scene)
     {
+        if !vis.is_visible() {
+            continue;
+        }
+
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -297,15 +304,20 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
         light_renderer.draw(renderer, false);
     }
 
-    for (transform, light_renderer, light, shadowmap) in scene
-        .query_filtered::<(
+    for (transform, light_renderer, light, shadowmap, vis) in scene
+        .query::<(
             &Transform,
             &LightRenderer,
             &SShadowingLight,
             Option<&ShadowMapRenderer>,
-        ), Without<Hidden>>()
+            Option<&ViewVisibility>,
+        )>()
         .iter(scene)
     {
+        if !vis.is_visible() {
+            continue;
+        }
+
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {

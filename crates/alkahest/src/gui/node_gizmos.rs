@@ -1,18 +1,19 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Icon, Label, ResourceOrigin},
+        common::{Icon, Label, ResourceOrigin},
         map::NodeMetadata,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
         transform::Transform,
+        visibility::{Visibility, VisibilityHelper as _},
     },
     icons::ICON_HELP,
     renderer::{LabelAlign, RendererShared},
     resources::AppResources,
     ColorExt,
 };
-use bevy_ecs::{entity::Entity, query::Without};
+use bevy_ecs::entity::Entity;
 use egui::{Color32, Context, Pos2, Rect, Sense, Ui, UiStackInfo};
 use glam::Vec2;
 use winit::window::Window;
@@ -95,9 +96,9 @@ impl GuiView for NodeGizmoOverlay {
                 }
 
                 let filters = resources.get::<NodeFilterSet>();
-                for (e, transform, origin, label, icon, filter, node_meta) in map
+                for (e, transform, origin, label, icon, filter, node_meta, vis) in map
                     .scene
-                    .query_filtered::<(
+                    .query::<(
                         Entity,
                         &Transform,
                         Option<&ResourceOrigin>,
@@ -105,9 +106,13 @@ impl GuiView for NodeGizmoOverlay {
                         Option<&Icon>,
                         Option<&NodeFilter>,
                         Option<&NodeMetadata>,
-                    ), Without<Hidden>>()
+                        Option<&Visibility>,
+                    )>()
                     .iter(&mut map.scene)
                 {
+                    if !vis.is_visible() {
+                        continue;
+                    }
                     if node_meta.map(|m| m.name.is_none()).unwrap_or(true) && named_nodes_only {
                         continue;
                     }

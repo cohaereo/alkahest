@@ -15,9 +15,9 @@ use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::{
-        common::Hidden,
         render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
         transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::buffer::ConstantBuffer,
@@ -390,12 +390,13 @@ pub fn draw_dynamic_model_system(
     );
 
     let mut entities = Vec::new();
-    for (e, dynamic) in scene
-        .query_filtered::<(Entity, &DynamicModelComponent), Without<Hidden>>()
+    for (e, dynamic, vis) in scene
+        .query::<(Entity, &DynamicModelComponent, Option<&ViewVisibility>)>()
         .iter(scene)
     {
         // Sky objects are rendered by a separate system, so we filter them out here
-        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
+        if vis.is_visible()
+            && renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
             && dynamic.model.feature_type != TfxFeatureRenderer::SkyTransparent
         {
             entities.push((e, dynamic.model.feature_type));
@@ -417,13 +418,15 @@ pub fn draw_dynamic_model_system(
     }
 
     if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) {
-        for (e, decorator) in scene
-            .query_filtered::<(Entity, &DecoratorRenderer), Without<Hidden>>()
+        for (e, decorator, vis) in scene
+            .query::<(Entity, &DecoratorRenderer, Option<&ViewVisibility>)>()
             .iter(scene)
         {
-            renderer.pickbuffer.with_entity(e, || {
-                decorator.draw(renderer, render_stage).unwrap();
-            });
+            if vis.is_visible() {
+                renderer.pickbuffer.with_entity(e, || {
+                    decorator.draw(renderer, render_stage).unwrap();
+                });
+            }
         }
     }
 }
@@ -441,11 +444,11 @@ pub fn draw_sky_objects_system(
         &format!("render_stage={render_stage:?}")
     );
 
-    for dynamic in scene
-        .query_filtered::<&DynamicModelComponent, Without<Hidden>>()
+    for (dynamic, vis) in scene
+        .query::<(&DynamicModelComponent, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        if dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent {
+        if vis.is_visible() && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent {
             dynamic.draw(renderer, render_stage).unwrap();
         }
     }
