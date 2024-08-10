@@ -292,14 +292,17 @@ pub struct StaticModelSingle {
 }
 
 impl StaticModelSingle {
+    pub fn new(gctx: SharedGpuContext, model: StaticModel) -> anyhow::Result<Self> {
+        let cbuffer = ConstantBuffer::create_array_init(gctx, &[0u8; 32 + 64])?;
+        Ok(Self { model, cbuffer })
+    }
+
     pub fn load(
         gctx: SharedGpuContext,
         am: &mut AssetManager,
         tag: TagHash,
     ) -> anyhow::Result<Self> {
-        let model = StaticModel::load(am, tag)?;
-        let cbuffer = ConstantBuffer::create_array_init(gctx, &[0u8; 32 + 64])?;
-        Ok(Self { model, cbuffer })
+        Self::new(gctx, StaticModel::load(am, tag)?)
     }
 
     pub fn update_cbuffer(&self, transform: &Transform) {

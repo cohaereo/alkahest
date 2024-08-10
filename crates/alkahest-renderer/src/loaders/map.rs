@@ -38,7 +38,7 @@ use crate::{
             dynamic_geometry::DynamicModelComponent,
             havok::HavokShapeRenderer,
             light::{LightRenderer, LightShape, ShadowMapRenderer},
-            static_geometry::{StaticInstance, StaticInstances, StaticModel},
+            static_geometry::{StaticInstance, StaticInstances, StaticModel, StaticModelSingle},
             terrain::TerrainPatches,
         },
         tags::{insert_tag, EntityTag, NodeFilter},
@@ -440,38 +440,59 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let transforms = &preheader.instances.transforms
                         [s.instance_start as usize..(s.instance_start + s.instance_count) as usize];
 
-                    let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
-                    let mut instances = vec![];
-
-                    for transform in transforms.iter() {
+                    // Load model as a single entity if it only has one instance
+                    if transforms.len() == 1 {
                         let transform = Transform {
-                            translation: transform.translation,
-                            rotation: transform.rotation,
-                            scale: Vec3::splat(transform.scale.x),
+                            translation: transforms[0].translation,
+                            rotation: transforms[0].rotation,
+                            scale: Vec3::splat(transforms[0].scale.x),
                             flags: TransformFlags::empty(),
                         };
 
-                        let entity = scene.spawn((
-                            Icon::Unicode(ICON_CUBE_OUTLINE),
-                            Label::from("Static Instance"),
-                            OriginalTransform(transform),
+                        let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
+                        scene.entity_mut(parent).insert((
+                            Icon::Unicode(ICON_SHAPE),
+                            Label::from(format!("Static Model {mesh_tag}")),
                             transform,
-                            StaticInstance,
-                            Parent(parent),
+                            StaticModelSingle::new(renderer.gpu.clone(), model)?,
+                            TfxFeatureRenderer::StaticObjects,
+                            resource_origin,
                             NodeFilter::Static,
-                            VisibilityBundle::default(),
                         ));
-                        instances.push(entity.id());
+                    } else {
+                        let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
+                        let mut instances = vec![];
+
+                        for transform in transforms.iter() {
+                            let transform = Transform {
+                                translation: transform.translation,
+                                rotation: transform.rotation,
+                                scale: Vec3::splat(transform.scale.x),
+                                flags: TransformFlags::empty(),
+                            };
+
+                            let entity = scene.spawn((
+                                Icon::Unicode(ICON_CUBE_OUTLINE),
+                                Label::from("Static Instance"),
+                                OriginalTransform(transform),
+                                transform,
+                                StaticInstance,
+                                Parent(parent),
+                                NodeFilter::Static,
+                                VisibilityBundle::default(),
+                            ));
+                            instances.push(entity.id());
+                        }
+                        scene.entity_mut(parent).insert((
+                            Icon::Unicode(ICON_SHAPE),
+                            Label::from(format!("Static Instances {mesh_tag}")),
+                            StaticInstances::new(renderer.gpu.clone(), model, instances.len())?,
+                            Children::from_slice(&instances),
+                            TfxFeatureRenderer::StaticObjects,
+                            resource_origin,
+                            NodeFilter::Static,
+                        ));
                     }
-                    scene.entity_mut(parent).insert((
-                        Icon::Unicode(ICON_SHAPE),
-                        Label::from(format!("Static Instances {mesh_tag}")),
-                        StaticInstances::new(renderer.gpu.clone(), model, instances.len())?,
-                        Children::from_slice(&instances),
-                        TfxFeatureRenderer::StaticObjects,
-                        resource_origin,
-                        NodeFilter::Static,
-                    ));
                 }
             }
             // D2Class_7D6C8080 (terrain)
