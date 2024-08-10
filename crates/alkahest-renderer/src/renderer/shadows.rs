@@ -10,6 +10,7 @@ use crate::{
     ecs::{
         render::light::{ShadowGenerationMode, ShadowMapRenderer},
         transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu_event,
@@ -34,11 +35,15 @@ impl Renderer {
         self.gpu.flush_states();
 
         let mut shadow_renderers = vec![];
-        for (e, shadow) in scene
-            .query::<(Entity, &mut ShadowMapRenderer)>()
+        for (e, shadow, view_vis) in scene
+            .query::<(Entity, &mut ShadowMapRenderer, Option<&ViewVisibility>)>()
             .iter(scene)
         {
-            shadow_renderers.push((e, shadow.last_update));
+            // TODO(cohae): view visibility might change a bit, since shadow maps are technically views as well
+            // Only update shadow maps for visible lights
+            if view_vis.is_visible() || !self.data.lock().asset_manager.is_idle() {
+                shadow_renderers.push((e, shadow.last_update));
+            }
         }
 
         shadow_renderers.sort_by_key(|(_, last_update)| *last_update);
