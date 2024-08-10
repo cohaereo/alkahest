@@ -3,7 +3,7 @@ use tiger_parse::tiger_tag;
 
 use crate::{
     geometry::{ELodCategory, EPrimitiveType},
-    occlusion::SOcclusionBounds,
+    occlusion::{Aabb, SOcclusionBounds},
     tag::Tag,
     tfx::TfxRenderStage,
 };
@@ -77,6 +77,8 @@ pub struct SStaticMeshInstances {
     pub unk58: [u64; 4],
     pub statics: Vec<TagHash>,
     pub instance_groups: Vec<SStaticMeshInstanceGroup>,
+    pub unk98: [u32; 2],
+    pub bounds: Aabb,
 }
 
 #[derive(Debug, Clone)]

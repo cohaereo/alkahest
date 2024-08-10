@@ -1,17 +1,23 @@
 use std::process::Child;
 
+use alkahest_data::occlusion::Aabb;
 use bevy_ecs::{
     bundle::Bundle,
     change_detection::DetectChangesMut,
     component::Component,
     entity::Entity,
-    query::{With, Without},
-    system::Query,
+    query::{Has, With, Without},
+    system::{In, Query},
     world::Ref,
 };
 
-use super::hierarchy::{Children, Parent};
-use crate::util::Hocus;
+use super::{
+    culling::Frustum,
+    hierarchy::{Children, Parent},
+    render::static_geometry::StaticInstance,
+    transform::Transform,
+};
+use crate::{ecs::culling::Sphere, util::Hocus};
 
 #[derive(Bundle, Default)]
 pub struct VisibilityBundle {
@@ -129,14 +135,45 @@ fn propagate_entity_visibility_recursive(
 }
 
 pub fn calculate_view_visibility_system(
-    mut q_visibility: Query<(Option<&Visibility>, &mut ViewVisibility)>,
+    In(frustum): In<Frustum>,
+    mut q_visibility: Query<(
+        Option<&Visibility>,
+        &mut ViewVisibility,
+        Option<&Aabb>,
+        Option<&Transform>,
+        Has<StaticInstance>,
+    )>,
 ) {
     puffin::profile_function!();
-    for (vis, mut view_vis) in q_visibility.iter_mut() {
-        if vis.is_visible() {
-            view_vis.set();
-        } else {
+    q_visibility.par_iter_mut().for_each(
+        |(vis, mut view_vis, aabb, transform, is_static_instance)| {
             view_vis.reset();
-        }
-    }
+
+            // TODO(cohae): Individual static instances should be culled on the GPU
+            if is_static_instance {
+                return;
+            }
+
+            if vis.is_visible() {
+                if let Some(bb) = aabb {
+                    let mut sphere = Sphere {
+                        center: bb.center(),
+                        radius: bb.radius(),
+                    };
+
+                    if let Some(transform) = transform {
+                        sphere = sphere.transform(transform.local_to_world());
+                    }
+
+                    if frustum.contains_sphere(sphere) {
+                        view_vis.set();
+                    } else {
+                        return;
+                    }
+                } else {
+                    view_vis.set();
+                }
+            }
+        },
+    );
 }

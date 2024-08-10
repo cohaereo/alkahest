@@ -11,6 +11,7 @@ pub use viewport::Viewport;
 
 use self::{fps::FpsCamera, tween::Tween};
 use crate::{
+    ecs::culling::Frustum,
     input::InputState,
     tfx::view::{RenderStageSubscriptions, View},
 };
@@ -87,6 +88,8 @@ pub struct Camera {
     pub world_to_projective: Mat4,
     pub projective_to_world: Mat4,
 
+    pub frustum: Frustum,
+
     pub target_pixel_to_projective: Mat4,
 
     pub speed_mul: f32,
@@ -125,6 +128,8 @@ impl Camera {
             world_to_projective: Mat4::IDENTITY,
             projective_to_world: Mat4::IDENTITY,
             target_pixel_to_projective: Mat4::IDENTITY,
+
+            frustum: Frustum::default(),
 
             speed_mul: 1.0,
             smooth_movement: 1.0,
@@ -175,6 +180,8 @@ impl Camera {
         self.projective_to_world = self.world_to_projective.inverse();
 
         self.target_pixel_to_projective = self.viewport.target_pixel_to_projective();
+
+        self.frustum = Frustum::from_matrix(self.world_to_projective);
     }
 
     pub fn is_point_visible(&self, point: Vec3) -> bool {

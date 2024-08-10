@@ -1,13 +1,18 @@
 use std::sync::Arc;
 
 use alkahest_data::{
+    occlusion::Aabb,
     statics::{SStaticMesh, SStaticMeshData, SStaticSpecialMesh},
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
 use bevy_ecs::{
-    change_detection::DetectChanges, entity::Entity, prelude::Component, query::Without,
-    system::Query, world::Ref,
+    change_detection::DetectChanges,
+    entity::Entity,
+    prelude::Component,
+    query::Without,
+    system::{Commands, Query},
+    world::Ref,
 };
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
@@ -490,18 +495,24 @@ pub fn draw_static_instances_individual_system(
 }
 
 pub fn update_static_instances_system(
-    mut q_static_instances: Query<(&mut StaticInstances, &Children)>,
+    mut q_static_instances: Query<(Entity, &mut StaticInstances, &Children)>,
     q_static_model_single: Query<(Ref<Transform>, &StaticModelSingle)>,
-    q_instance_transform: Query<Ref<Transform>>,
+    q_instance_transform: Query<(Ref<Transform>, Option<&Aabb>)>,
+    mut commands: Commands,
 ) {
     profiling::scope!("update_static_instances_system");
 
-    for (mut instances, children) in q_static_instances.iter_mut() {
+    for (entity, mut instances, children) in q_static_instances.iter_mut() {
         let mut transforms = Vec::with_capacity(children.len());
+        let mut obbs = Vec::with_capacity(children.len());
         let mut changed = false;
         for e in children.iter() {
-            if let Ok(transform) = q_instance_transform.get(*e) {
+            if let Ok((transform, bounds)) = q_instance_transform.get(*e) {
                 transforms.push(*transform);
+                obbs.push((
+                    transform.local_to_world(),
+                    bounds.cloned().unwrap_or(Aabb::ZERO),
+                ));
                 if transform.is_changed() {
                     changed = true;
                 }
@@ -511,6 +522,8 @@ pub fn update_static_instances_system(
         if changed {
             instances.update_cbuffer(&transforms);
             instances.instance_count = children.len();
+
+            commands.entity(entity).insert((Aabb::from_obbs(obbs),));
         }
     }
 

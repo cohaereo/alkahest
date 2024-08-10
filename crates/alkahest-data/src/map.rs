@@ -4,7 +4,7 @@ use tiger_parse::{tiger_tag, Pointer, ResourcePointer};
 
 use crate::{
     common::ResourceHash,
-    occlusion::{SObjectOcclusionBounds, SOcclusionBounds, AABB},
+    occlusion::{Aabb, SObjectOcclusionBounds, SOcclusionBounds},
     statics::SStaticMeshInstances,
     Tag, WideHash, WideTag,
 };
@@ -213,7 +213,7 @@ pub struct SUnk80806e68 {
     pub unk30: [u32; 2],
     pub occlusion_bounds: Tag<SOcclusionBounds>,
     _pad3c: u32,
-    pub bounds: AABB,
+    pub bounds: Aabb,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806963)]
@@ -313,7 +313,7 @@ pub struct SUnk80806aa9 {
     pub transform: [f32; 16],
 
     /// Same as the bounding box from the SObjectOcclusionBounds array
-    pub bounds: AABB,
+    pub bounds: Aabb,
 
     pub unk60: Tag<SUnk80806aae>,
     pub unk64: f32,
@@ -342,7 +342,7 @@ pub struct SUnk80806aae {
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
-    pub bounds: AABB,
+    pub bounds: Aabb,
     pub unk30: Vec<SLight>,
     pub unk40: Vec<SUnk80809f4f>,
     pub light_count: u32,

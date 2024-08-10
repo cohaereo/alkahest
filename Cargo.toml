@@ -14,7 +14,7 @@ members = [
 
 [workspace.dependencies]
 anyhow = { version = "1.0.71" }
-bevy_ecs = "0.14.0"
+bevy_ecs = { version = "0.14.0", features = ["multi_threaded"] }
 binrw = "0.13.3"
 bitflags = { version = "2.5.0", features = ["serde"] }
 bytemuck = "1.7.0"

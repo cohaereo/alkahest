@@ -7,6 +7,7 @@ use alkahest_renderer::{
         new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
+        visibility::calculate_view_visibility_system,
         Scene,
     },
     gpu::{texture::LOW_RES, GpuContext},
@@ -14,6 +15,7 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
+use bevy_ecs::system::RunSystemOnce;
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
 use strum::IntoEnumIterator;
@@ -303,6 +305,12 @@ impl AlkahestApp {
 
                             if let Some(map) = maps.current_map_mut() {
                                 map.update();
+
+                                let frustum = resources.get::<Camera>().frustum.clone();
+                                map.scene.run_system_once_with(
+                                    frustum,
+                                    calculate_view_visibility_system,
+                                );
                             }
 
                             let scene = maps

@@ -27,6 +27,7 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
+        culling::draw_aabb_system,
         render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
@@ -256,6 +257,7 @@ impl Renderer {
             resources.get::<RendererShared>().clone(),
             draw_utilities_system,
         );
+        // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
             if scene

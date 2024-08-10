@@ -11,6 +11,7 @@ use alkahest_data::{
         SUnk808068d4, SUnk80806aa7, SUnk80806ef4, SUnk8080714b, SUnk80808604, SUnk80808cb7,
         SUnk80809178, SUnk8080917b,
     },
+    occlusion::Aabb,
     text::{StringContainer, StringContainerShared},
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
@@ -30,7 +31,7 @@ use crate::{
     camera::CameraProjection,
     ecs::{
         audio::AmbientAudio,
-        common::{Icon, Label, ResourceOrigin},
+        common::{Icon, Label, RenderCommonBundle, ResourceOrigin},
         hierarchy::{Children, Parent},
         map::{CubemapVolume, MapAtmosphere, NodeMetadata},
         render::{
@@ -390,6 +391,15 @@ pub async fn load_map(
         scene.entity_mut(entity).insert_one(Label::from(name));
     }
 
+    let mut entity_ogtransforms: Vec<(Entity, OriginalTransform)> = vec![];
+    for (entity, transform) in scene.query::<(Entity, &Transform)>().iter(&mut scene) {
+        entity_ogtransforms.push((entity, OriginalTransform(transform.clone())));
+    }
+
+    for (entity, transform) in entity_ogtransforms {
+        scene.entity_mut(entity).insert_one(transform);
+    }
+
     Ok(scene)
 }
 
@@ -440,6 +450,15 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let transforms = &preheader.instances.transforms
                         [s.instance_start as usize..(s.instance_start + s.instance_count) as usize];
 
+                    let bounds = if ((s.instance_start + s.instance_count) as usize)
+                        < preheader.instances.occlusion_bounds.bounds.len()
+                    {
+                        &preheader.instances.occlusion_bounds.bounds[s.instance_start as usize
+                            ..(s.instance_start + s.instance_count) as usize]
+                    } else {
+                        &[]
+                    };
+
                     // Load model as a single entity if it only has one instance
                     if transforms.len() == 1 {
                         let transform = Transform {
@@ -459,11 +478,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             resource_origin,
                             NodeFilter::Static,
                         ));
+
+                        if let Some(bounds) = bounds.get(0) {
+                            scene
+                                .entity_mut(parent)
+                                .insert_one(bounds.bb.untransform(transform.local_to_world()));
+                        }
                     } else {
                         let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
                         let mut instances = vec![];
 
-                        for transform in transforms.iter() {
+                        for (i, transform) in transforms.iter().enumerate() {
                             let transform = Transform {
                                 translation: transform.translation,
                                 rotation: transform.rotation,
@@ -471,16 +496,21 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 flags: TransformFlags::empty(),
                             };
 
-                            let entity = scene.spawn((
+                            let mut entity = scene.spawn((
                                 Icon::Unicode(ICON_CUBE_OUTLINE),
                                 Label::from("Static Instance"),
-                                OriginalTransform(transform),
                                 transform,
                                 StaticInstance,
                                 Parent(parent),
                                 NodeFilter::Static,
-                                VisibilityBundle::default(),
+                                RenderCommonBundle::default(),
                             ));
+
+                            if let Some(bounds) = bounds.get(i) {
+                                entity
+                                    .insert_one(bounds.bb.untransform(transform.local_to_world()));
+                            }
+
                             instances.push(entity.id());
                         }
                         scene.entity_mut(parent).insert((
@@ -491,6 +521,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             TfxFeatureRenderer::StaticObjects,
                             resource_origin,
                             NodeFilter::Static,
+                            RenderCommonBundle::default(),
                         ));
                     }
                 }
@@ -673,17 +704,18 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 .enumerate()
                 {
                     let shape = LightShape::from_volume_matrix(light.light_to_world);
+                    let transform = Transform {
+                        translation: transform.translation.xyz(),
+                        rotation: transform.rotation,
+                        ..Default::default()
+                    };
                     children.push(
                         scene
                             .spawn((
                                 NodeFilter::Light,
                                 Icon::Colored(shape.icon(), Color32::YELLOW),
                                 Label::from(format!("{} Light {tag}[{i}]", shape.name())),
-                                Transform {
-                                    translation: transform.translation.xyz(),
-                                    rotation: transform.rotation,
-                                    ..Default::default()
-                                },
+                                transform,
                                 LightRenderer::load(
                                     renderer.gpu.clone(),
                                     &mut renderer.data.lock().asset_manager,
@@ -692,7 +724,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 )
                                 .context("Failed to load light")?,
                                 light,
-                                bounds.bb,
+                                bounds.bb.untransform(transform.local_to_world()),
                                 TfxFeatureRenderer::DeferredLights,
                                 resource_origin,
                                 Parent(light_collection_entity),
@@ -1390,9 +1422,6 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
 fn spawn_data_entity(scene: &mut Scene, components: impl Bundle, parent: Option<Entity>) -> Entity {
     let mut child = scene.spawn(components);
-    if let Some(transform) = child.get::<Transform>().cloned() {
-        child.insert((OriginalTransform(transform),));
-    }
     child.insert(VisibilityBundle::default());
 
     let child_id = child.id();
