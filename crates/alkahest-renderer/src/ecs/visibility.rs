@@ -1,4 +1,17 @@
-use bevy_ecs::{bundle::Bundle, component::Component, entity::Entity, system::Query, world::Ref};
+use std::process::Child;
+
+use bevy_ecs::{
+    bundle::Bundle,
+    change_detection::DetectChangesMut,
+    component::Component,
+    entity::Entity,
+    query::{With, Without},
+    system::Query,
+    world::Ref,
+};
+
+use super::hierarchy::{Children, Parent};
+use crate::util::Hocus;
 
 #[derive(Bundle, Default)]
 pub struct VisibilityBundle {
@@ -9,7 +22,7 @@ pub struct VisibilityBundle {
 /// Describe the visibility of an entity
 ///
 /// ⚠ If you need to query the visibility of an entity for rendering purposes, use `ViewVisibility` instead
-#[derive(Component, Copy, Clone, PartialEq, Default)]
+#[derive(Component, Copy, Clone, PartialEq, Default, Debug)]
 pub enum Visibility {
     /// The entity is explicitly marked as visible
     #[default]
@@ -23,6 +36,24 @@ pub enum Visibility {
 impl Visibility {
     pub fn is_visible(&self) -> bool {
         self == &Visibility::Visible
+    }
+
+    /// Compare this visibility with that of a child, returning a value if the child visibility should be updated to that value
+    pub fn compare(&self, other: &Self) -> Option<Self> {
+        if self == other || self == &Visibility::Hidden && other == &Visibility::InheritedHidden {
+            return None;
+        }
+
+        match other {
+            Visibility::Visible | Visibility::InheritedHidden => {
+                if self.is_visible() {
+                    Some(Visibility::Visible)
+                } else {
+                    Some(Visibility::InheritedHidden)
+                }
+            }
+            Visibility::Hidden => None,
+        }
     }
 }
 
@@ -60,12 +91,48 @@ impl VisibilityHelper for Option<&ViewVisibility> {
     }
 }
 
-pub fn propagate_entity_visibility_system(q_entities: Query<(Entity, Option<&Visibility>)>) {}
+pub fn propagate_entity_visibility_system(
+    q_root: Query<(&Children, Option<&Visibility>), Without<Parent>>,
+    q_visibility: Query<(Option<&Children>, Option<&Visibility>), With<Parent>>,
+) {
+    puffin::profile_function!();
+
+    for (children, vis) in q_root.iter() {
+        let vis = vis.cloned().unwrap_or_default();
+        for child in children.iter() {
+            propagate_entity_visibility_recursive(*child, vis, &q_visibility);
+        }
+    }
+}
+
+fn propagate_entity_visibility_recursive(
+    entity: Entity,
+    parent_visibility: Visibility,
+    q_visibility: &Query<(Option<&Children>, Option<&Visibility>), With<Parent>>,
+) {
+    let Ok((children, vis)) = q_visibility.get(entity) else {
+        return;
+    };
+
+    if let Some(vis) = vis.as_ref() {
+        if let Some(new_vis) = parent_visibility.compare(vis) {
+            *(*vis).pocus() = new_vis;
+        }
+    }
+
+    let vis = vis.map(|v| v.clone()).unwrap_or_default();
+    if let Some(children) = &children {
+        for child in children.iter() {
+            propagate_entity_visibility_recursive(*child, vis, q_visibility);
+        }
+    }
+}
 
 pub fn calculate_view_visibility_system(
-    mut q_entities: Query<(Option<&Visibility>, &mut ViewVisibility)>,
+    mut q_visibility: Query<(Option<&Visibility>, &mut ViewVisibility)>,
 ) {
-    for (vis, mut view_vis) in q_entities.iter_mut() {
+    puffin::profile_function!();
+    for (vis, mut view_vis) in q_visibility.iter_mut() {
         if vis.is_visible() {
             view_vis.set();
         } else {
