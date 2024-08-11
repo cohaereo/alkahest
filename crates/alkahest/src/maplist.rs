@@ -2,7 +2,7 @@ use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
         render::{
-            dynamic_geometry::update_dynamic_model_system,
+            dynamic_geometry::update_dynamic_model_system, light::update_shadowrenderer_system,
             static_geometry::update_static_instances_system,
         },
         visibility::{calculate_view_visibility_system, propagate_entity_visibility_system},
@@ -68,7 +68,11 @@ impl Systems {
 
         let mut schedule_pre_threadsafe = Schedule::new(PreUpdate);
         schedule_pre_threadsafe
-            .add_systems((propagate_entity_visibility_system,))
+            .add_systems((
+                update_shadowrenderer_system,
+                propagate_entity_visibility_system,
+            ))
+            .set_executor_kind(ExecutorKind::MultiThreaded)
             .initialize(world)
             .unwrap();
 

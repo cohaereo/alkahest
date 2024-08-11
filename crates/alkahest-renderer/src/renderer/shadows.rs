@@ -4,13 +4,13 @@ use alkahest_data::{
     technique::StateSelection,
     tfx::{TfxRenderStage, TfxShaderStage},
 };
-use bevy_ecs::entity::Entity;
+use bevy_ecs::{entity::Entity, system::RunSystemOnce, world::Ref};
 
 use crate::{
     ecs::{
         render::light::{ShadowGenerationMode, ShadowMapRenderer},
         transform::Transform,
-        visibility::{ViewVisibility, VisibilityHelper},
+        visibility::{reset_view_visibility_system, ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu_event,
@@ -41,7 +41,7 @@ impl Renderer {
         {
             // TODO(cohae): view visibility might change a bit, since shadow maps are technically views as well
             // Only update shadow maps for visible lights
-            if view_vis.is_visible() || !self.data.lock().asset_manager.is_idle() {
+            if view_vis.is_visible(0) || !self.data.lock().asset_manager.is_idle() {
                 shadow_renderers.push((e, shadow.last_update));
             }
         }
@@ -61,7 +61,7 @@ impl Renderer {
                 .shadowmap_vs_t2
                 .bind(&self.gpu, 2, TfxShaderStage::Vertex);
 
-            self.bind_view(&*shadow);
+            self.bind_view(&*shadow, e.index() as usize);
 
             if shadow.stationary_needs_update {
                 self.pocus().active_shadow_generation_mode = ShadowGenerationMode::StationaryOnly;

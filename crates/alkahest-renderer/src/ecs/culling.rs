@@ -6,11 +6,15 @@ use bevy_ecs::{
 use glam::{Mat4, Vec3};
 
 use super::{
-    render::static_geometry::{StaticInstances, StaticModelSingle},
+    render::{
+        light::{LightRenderer, ShadowMapRenderer},
+        static_geometry::{StaticInstances, StaticModelSingle},
+    },
     tags::NodeFilter,
     transform::Transform,
+    visibility::ViewVisibility,
 };
-use crate::{gpu_event, renderer::RendererShared, Color};
+use crate::{ecs::visibility::VisibilityHelper, gpu_event, renderer::RendererShared, Color};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Sphere {
@@ -131,13 +135,18 @@ impl Frustum {
 pub fn draw_aabb_system(
     In(renderer): In<RendererShared>,
     q_aabb: Query<
-        (&Aabb, Option<&Transform>, Option<&NodeFilter>),
-        Or<(With<StaticInstances>, With<StaticModelSingle>)>,
+        (
+            &Aabb,
+            Option<&Transform>,
+            Option<&NodeFilter>,
+            Option<&ViewVisibility>,
+        ),
+        Or<(With<ShadowMapRenderer>, With<StaticModelSingle>)>,
     >,
 ) {
     gpu_event!(renderer.gpu, "draw_aabb_system");
 
-    for (aabb, transform, filter) in &q_aabb {
+    for (aabb, transform, filter, view_vis) in &q_aabb {
         let mut aabb_transform = Transform {
             translation: aabb.center(),
             scale: aabb.extents(),
@@ -148,17 +157,20 @@ pub fn draw_aabb_system(
             aabb_transform = transform.local_to_world() * aabb_transform;
         }
 
-        renderer.immediate.cube_extents(
-            aabb_transform,
-            filter.map(|f| f.color()).unwrap_or(Color::WHITE),
-            false,
-        );
+        let mut color = filter.map(|f| f.color()).unwrap_or(Color::WHITE);
+        if !view_vis.is_visible(0) {
+            color = Color::from_rgba_premultiplied(color.r(), color.g(), color.b(), 0.2);
+        }
 
-        // let c = filter.map(|f| f.color()).unwrap_or(Color::WHITE);
-        // renderer.immediate.sphere(
-        //     aabb_transform.to_scale_rotation_translation().2,
-        //     aabb.radius(),
-        //     Color::from_rgba_premultiplied(c.r(), c.g(), c.b(), 0.2),
-        // )
+        renderer
+            .immediate
+            .cube_extents(aabb_transform, color, false);
+
+        let c = filter.map(|f| f.color()).unwrap_or(Color::WHITE);
+        renderer.immediate.sphere(
+            aabb_transform.to_scale_rotation_translation().2,
+            aabb.radius(),
+            Color::from_rgba_premultiplied(c.r(), c.g(), c.b(), 0.1),
+        )
     }
 }

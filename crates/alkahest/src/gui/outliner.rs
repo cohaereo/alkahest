@@ -201,7 +201,7 @@ impl OutlinerPanel {
             postfix
         };
 
-        let visible = e.get::<Visibility>().is_visible();
+        let visible = e.get::<Visibility>().is_visible(0);
         let prefix_vis = if visible {
             "".to_string()
         } else {

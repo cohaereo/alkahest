@@ -68,8 +68,12 @@ impl Visibility {
 pub struct ViewVisibility(bool);
 
 impl ViewVisibility {
-    pub fn is_visible(&self) -> bool {
-        self.0
+    pub fn is_visible(&self, view: usize) -> bool {
+        if view == 0 {
+            self.0
+        } else {
+            true
+        }
     }
 
     pub fn set(&mut self) {
@@ -82,18 +86,18 @@ impl ViewVisibility {
 }
 
 pub trait VisibilityHelper {
-    fn is_visible(&self) -> bool;
+    fn is_visible(&self, view: usize) -> bool;
 }
 
 impl VisibilityHelper for Option<&Visibility> {
-    fn is_visible(&self) -> bool {
+    fn is_visible(&self, _view: usize) -> bool {
         self.map_or(true, |v| v.is_visible())
     }
 }
 
 impl VisibilityHelper for Option<&ViewVisibility> {
-    fn is_visible(&self) -> bool {
-        self.map_or(true, |v| v.is_visible())
+    fn is_visible(&self, view: usize) -> bool {
+        self.map_or(true, |v| v.is_visible(view))
     }
 }
 
@@ -134,6 +138,13 @@ fn propagate_entity_visibility_recursive(
     }
 }
 
+/// Reset the view visibility of all entities to visible
+pub fn reset_view_visibility_system(mut q_visibility: Query<&mut ViewVisibility>) {
+    for mut view_vis in q_visibility.iter_mut() {
+        view_vis.set();
+    }
+}
+
 pub fn calculate_view_visibility_system(
     In(frustum): In<Frustum>,
     mut q_visibility: Query<(
@@ -151,10 +162,11 @@ pub fn calculate_view_visibility_system(
 
             // TODO(cohae): Individual static instances should be culled on the GPU
             if is_static_instance {
+                view_vis.set();
                 return;
             }
 
-            if vis.is_visible() {
+            if vis.is_visible(0) {
                 if let Some(bb) = aabb {
                     let mut sphere = Sphere {
                         center: bb.center(),

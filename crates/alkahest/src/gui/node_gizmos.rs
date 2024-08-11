@@ -110,7 +110,7 @@ impl GuiView for NodeGizmoOverlay {
                     )>()
                     .iter(&mut map.scene)
                 {
-                    if !vis.is_visible() {
+                    if !vis.is_visible(0) {
                         continue;
                     }
                     if node_meta.map(|m| m.name.is_none()).unwrap_or(true) && named_nodes_only {

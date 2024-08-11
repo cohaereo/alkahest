@@ -422,7 +422,7 @@ pub fn draw_static_instances_system(
         .query::<(Entity, &StaticInstances, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             renderer.pickbuffer.with_entity(e, || {
                 instances.draw(renderer, render_stage);
             });
@@ -433,7 +433,7 @@ pub fn draw_static_instances_system(
         .query::<(Entity, &StaticModelSingle, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             renderer.pickbuffer.with_entity(e, || {
                 instances.draw(renderer, render_stage);
             });
@@ -470,7 +470,7 @@ pub fn draw_static_instances_individual_system(
         )>()
         .iter(scene)
     {
-        if !vis.is_visible() {
+        if !vis.is_visible(renderer.active_view) {
             continue;
         }
 

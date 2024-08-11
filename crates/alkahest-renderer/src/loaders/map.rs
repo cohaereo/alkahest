@@ -728,6 +728,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                                 TfxFeatureRenderer::DeferredLights,
                                 resource_origin,
                                 Parent(light_collection_entity),
+                                RenderCommonBundle::default(),
                             ))
                             .id(),
                     );
@@ -757,6 +758,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ),
                 )?;
 
+                let bb = Aabb::from_projection_matrix(light.light_to_world);
+
                 spawn_data_entity(
                     scene,
                     (
@@ -772,10 +775,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         )
                         .context("Failed to load shadowing light")?,
                         shadowmap,
+                        bb,
                         light,
                         TfxFeatureRenderer::DeferredLights,
                         resource_origin,
                         metadata.clone(),
+                        RenderCommonBundle::default(),
                     ),
                     parent_entity,
                 );

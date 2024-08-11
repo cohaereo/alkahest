@@ -115,7 +115,7 @@ pub fn show_inspector_panel(
     };
 
     ui.horizontal(|ui| {
-        let visible = e.get::<Visibility>().is_visible();
+        let visible = e.get::<Visibility>().is_visible(0);
 
         if e.contains::<Mutable>()
             && (ui

@@ -259,6 +259,10 @@ impl View for Camera {
         "Camera".to_string()
     }
 
+    fn frustum(&self) -> Frustum {
+        self.frustum
+    }
+
     fn update_extern(&self, x: &mut crate::tfx::externs::View) {
         x.world_to_camera = self.world_to_camera;
         x.camera_to_projective = self.camera_to_projective;

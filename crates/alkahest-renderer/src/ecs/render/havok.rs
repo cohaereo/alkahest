@@ -180,7 +180,7 @@ pub fn draw_debugshapes_system(
     )>,
 ) {
     for (e, transform, shape, filter, vis) in q_ruler.iter() {
-        if !vis.is_visible() {
+        if !vis.is_visible(renderer.active_view) {
             continue;
         }
         let color = if let Some(filter) = filter {

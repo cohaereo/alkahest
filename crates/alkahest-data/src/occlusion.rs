@@ -57,6 +57,21 @@ impl Aabb {
         Aabb::from_points(points)
     }
 
+    pub fn from_projection_matrix(local_to_world: Mat4) -> Aabb {
+        let points = [
+            Vec3::new(-1.0, -1.0, -1.0),
+            Vec3::new(-1.0, -1.0, 1.0),
+            Vec3::new(-1.0, 1.0, -1.0),
+            Vec3::new(-1.0, 1.0, 1.0),
+            Vec3::new(1.0, -1.0, -1.0),
+            Vec3::new(1.0, -1.0, 1.0),
+            Vec3::new(1.0, 1.0, -1.0),
+            Vec3::new(1.0, 1.0, 1.0),
+        ];
+
+        Aabb::from_points(points.iter().map(|p| local_to_world.project_point3(*p)))
+    }
+
     pub fn contains_point_oriented(&self, point: Vec3, orientation: Quat) -> bool {
         let mut matrix =
             Mat4::from_scale_rotation_translation(self.extents(), orientation, self.center());

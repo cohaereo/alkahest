@@ -198,7 +198,7 @@ pub fn draw_terrain_patches_system(
         .query::<(Entity, &TerrainPatches, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             renderer.pickbuffer.with_entity(e, || {
                 terrain.draw(renderer, render_stage);
             });

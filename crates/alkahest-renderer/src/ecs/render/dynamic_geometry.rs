@@ -395,7 +395,7 @@ pub fn draw_dynamic_model_system(
         .iter(scene)
     {
         // Sky objects are rendered by a separate system, so we filter them out here
-        if vis.is_visible()
+        if vis.is_visible(renderer.active_view)
             && renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
             && dynamic.model.feature_type != TfxFeatureRenderer::SkyTransparent
         {
@@ -422,7 +422,7 @@ pub fn draw_dynamic_model_system(
             .query::<(Entity, &DecoratorRenderer, Option<&ViewVisibility>)>()
             .iter(scene)
         {
-            if vis.is_visible() {
+            if vis.is_visible(renderer.active_view) {
                 renderer.pickbuffer.with_entity(e, || {
                     decorator.draw(renderer, render_stage).unwrap();
                 });
@@ -448,7 +448,9 @@ pub fn draw_sky_objects_system(
         .query::<(&DynamicModelComponent, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        if vis.is_visible() && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent {
+        if vis.is_visible(renderer.active_view)
+            && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
+        {
             dynamic.draw(renderer, render_stage).unwrap();
         }
     }

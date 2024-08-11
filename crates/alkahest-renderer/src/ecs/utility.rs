@@ -195,25 +195,25 @@ pub fn draw_utilities_system(
     q_route: Query<(Entity, &Route, Option<&ViewVisibility>)>,
 ) {
     for (e, ruler, vis) in q_ruler.iter() {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             draw_ruler(&renderer, ruler, Some(e), &selected);
         }
     }
 
     for (e, transform, sphere, vis) in q_sphere.iter() {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             draw_sphere(&renderer, transform, sphere, Some(e), &selected);
         }
     }
 
     for (e, transform, beacon, vis) in q_beacon.iter() {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             draw_beacon(&renderer, transform, beacon, Some(e), &selected);
         }
     }
 
     for (e, route, vis) in q_route.iter() {
-        if vis.is_visible() {
+        if vis.is_visible(renderer.active_view) {
             if let Some(map_info) = &map_info {
                 draw_route(&renderer, route, Some(e), map_info.map_hash, &selected);
             }
