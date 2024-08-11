@@ -7,6 +7,7 @@ use glam::{Mat4, Vec3};
 
 use super::{
     render::{
+        dynamic_geometry::DynamicModelComponent,
         light::{LightRenderer, ShadowMapRenderer},
         static_geometry::{StaticInstances, StaticModelSingle},
     },
@@ -141,7 +142,11 @@ pub fn draw_aabb_system(
             Option<&NodeFilter>,
             Option<&ViewVisibility>,
         ),
-        Or<(With<ShadowMapRenderer>, With<StaticModelSingle>)>,
+        Or<(
+            With<ShadowMapRenderer>,
+            With<StaticModelSingle>,
+            With<DynamicModelComponent>,
+        )>,
     >,
 ) {
     gpu_event!(renderer.gpu, "draw_aabb_system");

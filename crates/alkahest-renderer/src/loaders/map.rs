@@ -622,6 +622,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
+                    let model = DynamicModelComponent::load(
+                        renderer,
+                        &transform,
+                        unk8.unk60.entity_model,
+                        vec![],
+                        vec![],
+                        TfxFeatureRenderer::SkyTransparent,
+                    )?;
                     let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
                     spawn_data_entity(
                         scene,
@@ -630,14 +638,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
                             Label::from(format!("Sky Model {}", unk8.unk60.entity_model)),
                             transform,
-                            DynamicModelComponent::load(
-                                renderer,
-                                &transform,
-                                unk8.unk60.entity_model,
-                                vec![],
-                                vec![],
-                                TfxFeatureRenderer::SkyTransparent,
-                            )?,
+                            model.model.occlusion_bounds(),
+                            model,
                             TfxFeatureRenderer::SkyTransparent,
                             resource_origin,
                             metadata.clone(),
@@ -653,6 +655,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let d: SUnk808068d4 = TigerReadable::read_ds(table_data)?;
 
+                let model = DynamicModelComponent::load(
+                    renderer,
+                    &transform,
+                    d.entity_model,
+                    vec![],
+                    vec![],
+                    TfxFeatureRenderer::Water,
+                )?;
                 if d.entity_model.is_some() {
                     spawn_data_entity(
                         scene,
@@ -660,14 +670,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             Icon::Unicode(ICON_WAVES),
                             Label::from("Water"),
                             transform,
-                            DynamicModelComponent::load(
-                                renderer,
-                                &transform,
-                                d.entity_model,
-                                vec![],
-                                vec![],
-                                TfxFeatureRenderer::Water,
-                            )?,
+                            model.model.occlusion_bounds(),
+                            model,
                             TfxFeatureRenderer::Water,
                             resource_origin,
                             metadata.clone(),
@@ -1557,15 +1561,17 @@ fn load_entity_into_scene(
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
+                let model = DynamicModelComponent::load(
+                    renderer,
+                    &transform,
+                    model_hash,
+                    entity_material_map,
+                    materials,
+                    TfxFeatureRenderer::DynamicObjects,
+                )?;
                 scene.entity_mut(scene_entity).insert((
-                    DynamicModelComponent::load(
-                        renderer,
-                        &transform,
-                        model_hash,
-                        entity_material_map,
-                        materials,
-                        TfxFeatureRenderer::DynamicObjects,
-                    )?,
+                    model.model.occlusion_bounds(),
+                    model,
                     TfxFeatureRenderer::DynamicObjects,
                 ));
             }

@@ -265,7 +265,7 @@ impl Renderer {
             resources.get::<RendererShared>().clone(),
             draw_utilities_system,
         );
-        scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
+        // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
             if scene

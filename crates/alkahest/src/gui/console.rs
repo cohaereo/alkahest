@@ -14,7 +14,7 @@ use alkahest_pm::package_manager;
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Icon, Label, Mutable},
+        common::{Icon, Label, Mutable, RenderCommonBundle},
         render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
         tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
@@ -819,18 +819,20 @@ pub fn load_entity_model(
     transform: Transform,
     renderer: &Renderer,
 ) -> anyhow::Result<impl Bundle> {
+    let model = DynamicModelComponent::load(
+        renderer,
+        &transform,
+        t.into(),
+        vec![],
+        vec![],
+        TfxFeatureRenderer::DynamicObjects,
+    )?;
     Ok((
         Icon::Unicode(ICON_CUBE),
         Label::from("Entity Model"),
         transform,
-        DynamicModelComponent::load(
-            renderer,
-            &transform,
-            t.into(),
-            vec![],
-            vec![],
-            TfxFeatureRenderer::DynamicObjects,
-        )?,
+        model.model.occlusion_bounds(),
+        model,
         TfxFeatureRenderer::DynamicObjects,
         Mutable,
         Tags::from_iter([EntityTag::User]),
@@ -860,21 +862,24 @@ pub fn load_entity(
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
+                let model = DynamicModelComponent::load(
+                    renderer,
+                    &transform,
+                    model_hash,
+                    entity_material_map,
+                    materials,
+                    TfxFeatureRenderer::DynamicObjects,
+                )?;
                 return Ok((
                     Icon::Unicode(ICON_CUBE),
                     Label::from("Entity"),
                     transform,
-                    DynamicModelComponent::load(
-                        renderer,
-                        &transform,
-                        model_hash,
-                        entity_material_map,
-                        materials,
-                        TfxFeatureRenderer::DynamicObjects,
-                    )?,
+                    model.model.occlusion_bounds(),
+                    model,
                     TfxFeatureRenderer::DynamicObjects,
                     Mutable,
                     Tags::from_iter([EntityTag::User]),
+                    RenderCommonBundle::default(),
                 ));
             }
             u => {

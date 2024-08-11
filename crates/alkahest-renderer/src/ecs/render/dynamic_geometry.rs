@@ -1,5 +1,6 @@
 use alkahest_data::{
     entity::{SDynamicMesh, SDynamicMeshPart, SDynamicModel, Unk808072c5},
+    occlusion::Aabb,
     technique::TfxScopeBits,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
@@ -9,7 +10,7 @@ use bevy_ecs::{
     system::Query, world::Ref,
 };
 use destiny_pkg::TagHash;
-use glam::Vec4;
+use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
@@ -277,6 +278,11 @@ impl DynamicModel {
         }
 
         Ok(())
+    }
+
+    // TODO(cohae): These bounds are a bit bloated, but it's fine for now
+    pub fn occlusion_bounds(&self) -> Aabb {
+        Aabb::from_center_extents(self.model.model_offset.xyz(), self.model.model_scale.xyz())
     }
 }
 
