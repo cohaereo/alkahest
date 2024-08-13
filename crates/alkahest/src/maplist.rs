@@ -2,9 +2,10 @@ use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
         render::{
-            dynamic_geometry::update_dynamic_model_system,
+            dynamic_geometry::update_dynamic_model_system, light::update_shadowrenderer_system,
             static_geometry::update_static_instances_system,
         },
+        visibility::{calculate_view_visibility_system, propagate_entity_visibility_system},
         Scene, SceneInfo,
     },
     loaders::map::load_map,
@@ -12,7 +13,7 @@ use alkahest_renderer::{
     util::Hocus,
 };
 use bevy_ecs::{
-    schedule::{Schedule, ScheduleLabel},
+    schedule::{ExecutorKind, IntoSystemConfigs, Schedule, ScheduleLabel},
     system::Commands,
     world::CommandQueue,
 };
@@ -52,15 +53,33 @@ struct PreUpdate;
 struct Systems {
     /// Schedule ran before the main update
     pub(crate) schedule_pre: Schedule,
+    pub(crate) schedule_pre_threadsafe: Schedule,
 }
 
 impl Systems {
     fn create(world: &mut Scene) -> Self {
         let mut schedule_pre = Schedule::new(PreUpdate);
-        schedule_pre.add_systems((update_static_instances_system, update_dynamic_model_system));
-        schedule_pre.initialize(world).unwrap();
 
-        Self { schedule_pre }
+        schedule_pre
+            .add_systems((update_static_instances_system, update_dynamic_model_system))
+            .set_executor_kind(ExecutorKind::SingleThreaded)
+            .initialize(world)
+            .unwrap();
+
+        let mut schedule_pre_threadsafe = Schedule::new(PreUpdate);
+        schedule_pre_threadsafe
+            .add_systems((
+                update_shadowrenderer_system,
+                propagate_entity_visibility_system,
+            ))
+            .set_executor_kind(ExecutorKind::MultiThreaded)
+            .initialize(world)
+            .unwrap();
+
+        Self {
+            schedule_pre,
+            schedule_pre_threadsafe,
+        }
     }
 }
 
@@ -116,6 +135,7 @@ impl Map {
         self.scene.check_change_ticks();
 
         self.systems.schedule_pre.run(&mut self.scene);
+        self.systems.schedule_pre_threadsafe.run(&mut self.scene);
     }
 
     /// Remove global entities from the scene and store them in this one

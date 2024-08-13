@@ -11,10 +11,11 @@ use glam::Vec3;
 
 use super::{
     common::{Icon, Label},
+    visibility::VisibilityHelper,
     MapInfo,
 };
 use crate::{
-    ecs::{common::Hidden, resources::SelectedEntity, transform::Transform},
+    ecs::{resources::SelectedEntity, transform::Transform, visibility::ViewVisibility},
     icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     renderer::{LabelAlign, Renderer, RendererShared},
     util::{
@@ -188,26 +189,34 @@ pub fn draw_utilities_system(
     In(renderer): In<RendererShared>,
     map_info: Option<Res<MapInfo>>,
     selected: ResMut<SelectedEntity>,
-    q_ruler: Query<(Entity, &Ruler), Without<Hidden>>,
-    q_sphere: Query<(Entity, &Transform, &Sphere), Without<Hidden>>,
-    q_beacon: Query<(Entity, &Transform, &Beacon), Without<Hidden>>,
-    q_route: Query<(Entity, &Route), Without<Hidden>>,
+    q_ruler: Query<(Entity, &Ruler, Option<&ViewVisibility>)>,
+    q_sphere: Query<(Entity, &Transform, &Sphere, Option<&ViewVisibility>)>,
+    q_beacon: Query<(Entity, &Transform, &Beacon, Option<&ViewVisibility>)>,
+    q_route: Query<(Entity, &Route, Option<&ViewVisibility>)>,
 ) {
-    for (e, ruler) in q_ruler.iter() {
-        draw_ruler(&renderer, ruler, Some(e), &selected);
+    for (e, ruler, vis) in q_ruler.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_ruler(&renderer, ruler, Some(e), &selected);
+        }
     }
 
-    for (e, transform, sphere) in q_sphere.iter() {
-        draw_sphere(&renderer, transform, sphere, Some(e), &selected);
+    for (e, transform, sphere, vis) in q_sphere.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_sphere(&renderer, transform, sphere, Some(e), &selected);
+        }
     }
 
-    for (e, transform, beacon) in q_beacon.iter() {
-        draw_beacon(&renderer, transform, beacon, Some(e), &selected);
+    for (e, transform, beacon, vis) in q_beacon.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_beacon(&renderer, transform, beacon, Some(e), &selected);
+        }
     }
 
-    for (e, route) in q_route.iter() {
-        if let Some(map_info) = &map_info {
-            draw_route(&renderer, route, Some(e), map_info.map_hash, &selected);
+    for (e, route, vis) in q_route.iter() {
+        if vis.is_visible(renderer.active_view) {
+            if let Some(map_info) = &map_info {
+                draw_route(&renderer, route, Some(e), map_info.map_hash, &selected);
+            }
         }
     }
 }

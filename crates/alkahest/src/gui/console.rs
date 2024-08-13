@@ -14,11 +14,12 @@ use alkahest_pm::package_manager;
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Icon, Label, Mutable},
+        common::{Icon, Label, Mutable, RenderCommonBundle},
         render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
         tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
         utility::{Route, RouteNode},
+        visibility::Visibility,
     },
     icons::ICON_CUBE,
     renderer::{Renderer, RendererShared},
@@ -580,14 +581,10 @@ fn execute_command(command: &str, args: &[&str], resources: &AppResources) {
         "unhide_all" | "show_all" => {
             let mut maps = resources.get_mut::<MapList>();
             if let Some(map) = maps.current_map_mut() {
-                let entities = map
-                    .scene
-                    .query_filtered::<Entity, With<Hidden>>()
-                    .iter(&mut map.scene)
-                    .collect_vec();
-                for e in entities {
-                    map.scene.entity_mut(e).remove::<Hidden>();
-                }
+                map.scene
+                    .query::<&mut Visibility>()
+                    .iter_mut(&mut map.scene)
+                    .for_each(|mut v| *v = Visibility::Visible);
             }
         }
         "clear_maplist" => {
@@ -822,18 +819,20 @@ pub fn load_entity_model(
     transform: Transform,
     renderer: &Renderer,
 ) -> anyhow::Result<impl Bundle> {
+    let model = DynamicModelComponent::load(
+        renderer,
+        &transform,
+        t.into(),
+        vec![],
+        vec![],
+        TfxFeatureRenderer::DynamicObjects,
+    )?;
     Ok((
         Icon::Unicode(ICON_CUBE),
         Label::from("Entity Model"),
         transform,
-        DynamicModelComponent::load(
-            renderer,
-            &transform,
-            t.into(),
-            vec![],
-            vec![],
-            TfxFeatureRenderer::DynamicObjects,
-        )?,
+        model.model.occlusion_bounds(),
+        model,
         TfxFeatureRenderer::DynamicObjects,
         Mutable,
         Tags::from_iter([EntityTag::User]),
@@ -863,21 +862,24 @@ pub fn load_entity(
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
+                let model = DynamicModelComponent::load(
+                    renderer,
+                    &transform,
+                    model_hash,
+                    entity_material_map,
+                    materials,
+                    TfxFeatureRenderer::DynamicObjects,
+                )?;
                 return Ok((
                     Icon::Unicode(ICON_CUBE),
                     Label::from("Entity"),
                     transform,
-                    DynamicModelComponent::load(
-                        renderer,
-                        &transform,
-                        model_hash,
-                        entity_material_map,
-                        materials,
-                        TfxFeatureRenderer::DynamicObjects,
-                    )?,
+                    model.model.occlusion_bounds(),
+                    model,
                     TfxFeatureRenderer::DynamicObjects,
                     Mutable,
                     Tags::from_iter([EntityTag::User]),
+                    RenderCommonBundle::default(),
                 ));
             }
             u => {

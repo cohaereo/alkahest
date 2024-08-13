@@ -4,6 +4,7 @@ use resources::SelectedEntity;
 
 pub mod audio;
 pub mod common;
+pub mod culling;
 pub mod hierarchy;
 pub mod map;
 pub mod render;
@@ -11,6 +12,7 @@ pub mod resources;
 pub mod tags;
 pub mod transform;
 pub mod utility;
+pub mod visibility;
 
 pub type Scene = bevy_ecs::world::World;
 

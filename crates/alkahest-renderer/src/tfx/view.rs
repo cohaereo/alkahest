@@ -3,12 +3,13 @@ use std::ops::{BitOr, BitOrAssign};
 use alkahest_data::tfx::TfxRenderStage;
 
 use super::externs;
-use crate::camera::Viewport;
+use crate::{camera::Viewport, ecs::culling::Frustum};
 
 pub trait View {
     fn viewport(&self) -> Viewport;
     fn subscribed_views(&self) -> RenderStageSubscriptions;
     fn name(&self) -> String;
+    fn frustum(&self) -> Frustum;
 
     fn update_extern(&self, x: &mut externs::View);
 }

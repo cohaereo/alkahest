@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use alkahest_data::{geometry::EPrimitiveType, occlusion::AABB, tfx::TfxShaderStage};
+use alkahest_data::{geometry::EPrimitiveType, occlusion::Aabb, tfx::TfxShaderStage};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -303,7 +303,7 @@ impl ImmediateRenderer {
         }
     }
 
-    pub fn cube_outline_aabb<C: Into<Color>>(&self, aabb: &AABB, color: C) {
+    pub fn cube_outline_aabb<C: Into<Color>>(&self, aabb: &Aabb, color: C) {
         let center = aabb.center();
         let extents = aabb.extents();
         self.cube_outline(mat4_scale_translation(extents, center), color);

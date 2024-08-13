@@ -4,7 +4,10 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use anyhow::Context;
-use bevy_ecs::{component::Component, query::Without};
+use bevy_ecs::{
+    change_detection::DetectChanges, component::Component, query::Without, system::Query,
+    world::Ref,
+};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -23,7 +26,12 @@ use windows::Win32::Graphics::{
 
 use crate::{
     camera::{CameraProjection, Viewport},
-    ecs::{common::Hidden, transform::Transform, Scene},
+    ecs::{
+        culling::Frustum,
+        transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
+        Scene,
+    },
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
@@ -31,8 +39,7 @@ use crate::{
     loaders::AssetManager,
     renderer::{gbuffer::ShadowDepthMap, Renderer},
     tfx::{
-        externs,
-        externs::TextureView,
+        externs::{self, TextureView},
         technique::Technique,
         view::{RenderStageSubscriptions, View},
     },
@@ -260,10 +267,14 @@ pub enum ShadowPcfSamples {
 
 pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
     profiling::scope!("draw_light_system");
-    for (transform, light_renderer, light) in scene
-        .query_filtered::<(&Transform, &LightRenderer, &SLight), Without<Hidden>>()
+    for (transform, light_renderer, light, vis) in scene
+        .query::<(&Transform, &LightRenderer, &SLight, Option<&ViewVisibility>)>()
         .iter(scene)
     {
+        if !vis.is_visible(renderer.active_view) {
+            continue;
+        }
+
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -297,15 +308,20 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
         light_renderer.draw(renderer, false);
     }
 
-    for (transform, light_renderer, light, shadowmap) in scene
-        .query_filtered::<(
+    for (transform, light_renderer, light, shadowmap, vis) in scene
+        .query::<(
             &Transform,
             &LightRenderer,
             &SShadowingLight,
             Option<&ShadowMapRenderer>,
-        ), Without<Hidden>>()
+            Option<&ViewVisibility>,
+        )>()
         .iter(scene)
     {
+        if !vis.is_visible(renderer.active_view) {
+            continue;
+        }
+
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -480,6 +496,10 @@ impl View for ShadowMapRenderer {
         // Only known values are (0, 1, 0, 0) and (0, 3.428143, 0, 0)
         x.view_miscellaneous = Vec4::new(0., 1., 0., 0.);
     }
+
+    fn frustum(&self) -> crate::ecs::culling::Frustum {
+        Frustum::from_matrix(self.camera_to_projective * self.world_to_camera)
+    }
 }
 
 pub enum LightShape {
@@ -513,6 +533,17 @@ impl LightShape {
             LightShape::Omni => "Omni",
             LightShape::Spot => "Spot",
             LightShape::Line => "Line",
+        }
+    }
+}
+
+pub fn update_shadowrenderer_system(
+    mut q_shadowrenderer: Query<(Ref<Transform>, &mut ShadowMapRenderer)>,
+) {
+    profiling::scope!("update_shadowrenderer_system");
+    for (transform, mut shadow) in q_shadowrenderer.iter_mut() {
+        if transform.is_changed() {
+            shadow.stationary_needs_update = true;
         }
     }
 }

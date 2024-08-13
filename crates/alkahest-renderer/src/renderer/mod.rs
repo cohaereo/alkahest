@@ -27,11 +27,15 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        common::Hidden,
+        culling::draw_aabb_system,
         render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
         utility::draw_utilities_system,
+        visibility::{
+            calculate_view_visibility_system, reset_view_visibility_system, ViewVisibility,
+            VisibilityHelper,
+        },
         Scene,
     },
     gpu::SharedGpuContext,
@@ -91,6 +95,7 @@ pub struct Renderer {
     pub delta_time: f64,
     pub frame_index: usize,
 
+    pub active_view: usize,
     // Hacky way to obtain these filters for now
     pub lastfilters: NodeFilterSet,
     pub active_shadow_generation_mode: ShadowGenerationMode,
@@ -138,6 +143,7 @@ impl Renderer {
             frame_index: 0,
             active_shadow_generation_mode: ShadowGenerationMode::StationaryOnly,
             lastfilters: NodeFilterSet::default(),
+            active_view: 0,
         })))
     }
 
@@ -154,11 +160,14 @@ impl Renderer {
 
         self.begin_world_frame(scene);
 
+        let frustum = view.frustum();
+        scene.run_system_once_with(frustum, calculate_view_visibility_system);
+
         self.update_shadow_maps(scene);
 
         {
             gpu_event!(self.gpu, "view_0");
-            self.bind_view(view);
+            self.bind_view(view, 0);
 
             self.draw_atmosphere(scene);
             self.draw_opaque_pass(scene);
@@ -256,11 +265,12 @@ impl Renderer {
             resources.get::<RendererShared>().clone(),
             draw_utilities_system,
         );
+        // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-            if !scene
+            if scene
                 .get_entity(selected)
-                .map_or(true, |v| v.contains::<Hidden>())
+                .map_or(true, |v| v.get::<ViewVisibility>().is_visible(0))
             {
                 self.draw_outline(
                     scene,
@@ -277,7 +287,8 @@ impl Renderer {
         self.gpu.restore_state(&dxstate);
     }
 
-    fn bind_view(&self, view: &impl View) {
+    fn bind_view(&self, view: &impl View, index: usize) {
+        *self.active_view.pocus() = index;
         self.data.lock().externs.view = Some({
             let mut e = externs::View::default();
             view.update_extern(&mut e);

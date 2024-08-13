@@ -7,6 +7,7 @@ use alkahest_renderer::{
         new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
+        visibility::calculate_view_visibility_system,
         Scene,
     },
     gpu::{texture::LOW_RES, GpuContext},
@@ -14,6 +15,8 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
+use bevy_ecs::system::RunSystemOnce;
+use bevy_tasks::{ComputeTaskPool, TaskPool};
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
 use strum::IntoEnumIterator;
@@ -164,6 +167,8 @@ impl AlkahestApp {
             let args = resources.get::<ApplicationArgs>();
             LOW_RES.store(args.low_res, std::sync::atomic::Ordering::Relaxed);
         }
+
+        ComputeTaskPool::get_or_init(TaskPool::default);
 
         Self {
             window,

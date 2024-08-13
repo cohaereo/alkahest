@@ -1,7 +1,9 @@
 use std::fmt::Display;
 
-use bevy_ecs::component::Component;
+use bevy_ecs::{bundle::Bundle, component::Component};
 use ecolor::Color32;
+
+use super::visibility::VisibilityBundle;
 
 /// Tiger entity world ID
 #[derive(Component, Copy, Clone)]
@@ -98,8 +100,6 @@ impl AsRef<str> for Label {
 }
 
 #[derive(Component)]
-pub struct Hidden;
-#[derive(Component)]
 pub struct Global;
 
 /// Marker component to indicate that the entity is allowed to be modified in
@@ -109,3 +109,9 @@ pub struct Mutable;
 
 #[derive(Component)]
 pub struct Water;
+
+/// Components common to objects that can be rendered
+#[derive(Bundle, Default)]
+pub struct RenderCommonBundle {
+    visibility: VisibilityBundle,
+}

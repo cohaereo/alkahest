@@ -11,7 +11,10 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::{common::Hidden, Scene},
+    ecs::{
+        visibility::{ViewVisibility, VisibilityHelper},
+        Scene,
+    },
     gpu::{buffer::ConstantBuffer, texture::Texture},
     gpu_event,
     handle::Handle,
@@ -191,12 +194,14 @@ pub fn draw_terrain_patches_system(
         return;
     }
 
-    for (e, terrain) in scene
-        .query_filtered::<(Entity, &TerrainPatches), Without<Hidden>>()
+    for (e, terrain, vis) in scene
+        .query::<(Entity, &TerrainPatches, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            terrain.draw(renderer, render_stage);
-        });
+        if vis.is_visible(renderer.active_view) {
+            renderer.pickbuffer.with_entity(e, || {
+                terrain.draw(renderer, render_stage);
+            });
+        }
     }
 }

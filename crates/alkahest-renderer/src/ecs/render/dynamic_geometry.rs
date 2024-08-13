@@ -1,5 +1,6 @@
 use alkahest_data::{
     entity::{SDynamicMesh, SDynamicMeshPart, SDynamicModel, Unk808072c5},
+    occlusion::Aabb,
     technique::TfxScopeBits,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
@@ -9,15 +10,15 @@ use bevy_ecs::{
     system::Query, world::Ref,
 };
 use destiny_pkg::TagHash;
-use glam::Vec4;
+use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::{
-        common::Hidden,
         render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
         transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::buffer::ConstantBuffer,
@@ -278,6 +279,11 @@ impl DynamicModel {
 
         Ok(())
     }
+
+    // TODO(cohae): These bounds are a bit bloated, but it's fine for now
+    pub fn occlusion_bounds(&self) -> Aabb {
+        Aabb::from_center_extents(self.model.model_offset.xyz(), self.model.model_scale.xyz())
+    }
 }
 
 #[derive(Component)]
@@ -390,12 +396,13 @@ pub fn draw_dynamic_model_system(
     );
 
     let mut entities = Vec::new();
-    for (e, dynamic) in scene
-        .query_filtered::<(Entity, &DynamicModelComponent), Without<Hidden>>()
+    for (e, dynamic, vis) in scene
+        .query::<(Entity, &DynamicModelComponent, Option<&ViewVisibility>)>()
         .iter(scene)
     {
         // Sky objects are rendered by a separate system, so we filter them out here
-        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
+        if vis.is_visible(renderer.active_view)
+            && renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
             && dynamic.model.feature_type != TfxFeatureRenderer::SkyTransparent
         {
             entities.push((e, dynamic.model.feature_type));
@@ -417,13 +424,15 @@ pub fn draw_dynamic_model_system(
     }
 
     if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) {
-        for (e, decorator) in scene
-            .query_filtered::<(Entity, &DecoratorRenderer), Without<Hidden>>()
+        for (e, decorator, vis) in scene
+            .query::<(Entity, &DecoratorRenderer, Option<&ViewVisibility>)>()
             .iter(scene)
         {
-            renderer.pickbuffer.with_entity(e, || {
-                decorator.draw(renderer, render_stage).unwrap();
-            });
+            if vis.is_visible(renderer.active_view) {
+                renderer.pickbuffer.with_entity(e, || {
+                    decorator.draw(renderer, render_stage).unwrap();
+                });
+            }
         }
     }
 }
@@ -441,11 +450,13 @@ pub fn draw_sky_objects_system(
         &format!("render_stage={render_stage:?}")
     );
 
-    for dynamic in scene
-        .query_filtered::<&DynamicModelComponent, Without<Hidden>>()
+    for (dynamic, vis) in scene
+        .query::<(&DynamicModelComponent, Option<&ViewVisibility>)>()
         .iter(scene)
     {
-        if dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent {
+        if vis.is_visible(renderer.active_view)
+            && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
+        {
             dynamic.draw(renderer, render_stage).unwrap();
         }
     }

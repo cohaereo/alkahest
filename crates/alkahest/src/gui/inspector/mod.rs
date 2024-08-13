@@ -6,7 +6,7 @@ use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Global, Hidden, Label, Mutable},
+        common::{Global, Label, Mutable},
         hierarchy::{Children, Parent},
         map::{CubemapVolume, NodeMetadata},
         render::{
@@ -17,6 +17,7 @@ use alkahest_renderer::{
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
         utility::{Beacon, Route, Ruler, Sphere},
+        visibility::{Visibility, VisibilityHelper},
         Scene,
     },
     icons::{
@@ -114,7 +115,7 @@ pub fn show_inspector_panel(
     };
 
     ui.horizontal(|ui| {
-        let visible = !e.contains::<Hidden>();
+        let visible = e.get::<Visibility>().is_visible(0);
 
         if e.contains::<Mutable>()
             && (ui
@@ -135,9 +136,9 @@ pub fn show_inspector_panel(
             || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE))
         {
             if visible {
-                cmd.entity(ent).insert((Hidden,));
+                cmd.entity(ent).insert((Visibility::Hidden,));
             } else {
-                cmd.entity(ent).remove::<Hidden>();
+                cmd.entity(ent).insert((Visibility::Visible,));
             }
         }
 
