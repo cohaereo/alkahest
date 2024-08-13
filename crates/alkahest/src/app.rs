@@ -16,6 +16,7 @@ use alkahest_renderer::{
     renderer::{Renderer, RendererShared},
 };
 use bevy_ecs::system::RunSystemOnce;
+use bevy_tasks::{ComputeTaskPool, TaskPool};
 use egui::{Key, KeyboardShortcut, Modifiers};
 use glam::Vec2;
 use strum::IntoEnumIterator;
@@ -166,6 +167,8 @@ impl AlkahestApp {
             let args = resources.get::<ApplicationArgs>();
             LOW_RES.store(args.low_res, std::sync::atomic::Ordering::Relaxed);
         }
+
+        ComputeTaskPool::get_or_init(TaskPool::default);
 
         Self {
             window,

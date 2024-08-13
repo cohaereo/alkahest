@@ -111,6 +111,7 @@ dependencies = [
  "alkahest-renderer",
  "anyhow",
  "bevy_ecs",
+ "bevy_tasks",
  "binrw",
  "bitflags 2.6.0",
  "build-time",
