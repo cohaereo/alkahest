@@ -652,6 +652,7 @@ pub struct SMapAtmosphere {
     pub lookup_texture_1: WideHash,
     pub lookup_texture_2: WideHash,
     pub lookup_texture_3: WideHash,
+    pub unkd0: WideHash,
 }
 
 #[derive(Debug)]
