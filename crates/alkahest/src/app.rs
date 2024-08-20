@@ -18,6 +18,7 @@ use alkahest_renderer::{
 use bevy_ecs::system::RunSystemOnce;
 use bevy_tasks::{ComputeTaskPool, TaskPool};
 use egui::{Key, KeyboardShortcut, Modifiers};
+use gilrs::{EventType, Gilrs};
 use glam::Vec2;
 use strum::IntoEnumIterator;
 use transform_gizmo_egui::{EnumSet, Gizmo, GizmoConfig, GizmoOrientation};
@@ -54,6 +55,7 @@ pub struct AlkahestApp {
     pub gui: GuiContext,
     pub resources: AppResources,
 
+    gilrs: Gilrs,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
     renderer: RendererShared,
@@ -176,6 +178,7 @@ impl AlkahestApp {
             gctx,
             gui,
             resources,
+            gilrs: Gilrs::new().unwrap(),
             last_cursor_pos: None,
             renderer,
             scratch_map: new_scene(),
@@ -196,8 +199,11 @@ impl AlkahestApp {
             scratch_map,
             update_channel_gui,
             updater_gui,
+            gilrs,
             ..
         } = self;
+
+        let mut active_gamepad = None;
 
         event_loop.run_on_demand(move |event, target| {
             if let winit::event::Event::WindowEvent { event, .. } = event {
@@ -302,6 +308,64 @@ impl AlkahestApp {
                             resources
                                 .get_mut::<Camera>()
                                 .update(&resources.get::<InputState>(), renderer.delta_time as f32);
+
+                            // Process gamepad input
+                            {
+                                // Examine new events
+                                while let Some(gilrs::Event { id, event, time }) =
+                                    gilrs.next_event()
+                                {
+                                    active_gamepad = Some(id);
+
+                                    match event {
+                                        EventType::ButtonPressed {
+                                            0: gilrs::Button::Start,
+                                            ..
+                                        } => {
+                                            let mut gui_views =
+                                                resources.get_mut::<GuiViewManager>();
+                                            gui_views.hide_views = !gui_views.hide_views;
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                let mut camera = resources.get_mut::<Camera>();
+                                // You can also use cached gamepad state
+                                if let Some(gamepad) = active_gamepad.map(|id| gilrs.gamepad(id)) {
+                                    let left_x = gamepad
+                                        .axis_data(gilrs::Axis::LeftStickX)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+                                    let left_y = gamepad
+                                        .axis_data(gilrs::Axis::LeftStickY)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+                                    let right_x = gamepad
+                                        .axis_data(gilrs::Axis::RightStickX)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+                                    let right_y = gamepad
+                                        .axis_data(gilrs::Axis::RightStickY)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+
+                                    camera.update_gamepad(
+                                        (left_x, left_y).into(),
+                                        (right_x, right_y).into(),
+                                        1.0 + if gamepad.is_pressed(gilrs::Button::LeftTrigger2) {
+                                            3.0
+                                        } else {
+                                            0.0
+                                        } + if gamepad.is_pressed(gilrs::Button::RightTrigger2) {
+                                            10.0
+                                        } else {
+                                            0.0
+                                        },
+                                        renderer.delta_time as f32,
+                                    );
+                                }
+                            }
 
                             let mut maps = resources.get_mut::<MapList>();
                             maps.update_maps(resources);

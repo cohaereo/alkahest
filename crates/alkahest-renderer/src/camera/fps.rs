@@ -1,4 +1,4 @@
-use glam::{Mat4, Quat, Vec2, Vec3};
+use glam::{Mat4, Quat, Vec2, Vec2Swizzles, Vec3};
 
 use super::{tween::Tween, CameraController};
 use crate::{input::Key, util::Vec3Ext};
@@ -161,13 +161,23 @@ impl CameraController for FpsCamera {
                 * Quat::from_rotation_y(self.orientation.x.to_radians());
     }
 
-    fn update_mouse(&mut self, tween: &mut Option<Tween>, delta: Vec2, _scroll_y: f32) {
+    fn update_mouse(&mut self, delta: Vec2, _scroll_y: f32) {
         self.orientation += Vec2::new(delta.y * 0.8, delta.x) * 0.15;
 
-        // Cancel angle tween if the user rotates the camera
-        if tween.as_ref().map_or(false, |t| t.angle_movement.is_some()) {
-            *tween = None;
-        }
+        self.update_vectors();
+    }
+
+    fn update_gamepad(&mut self, movement: Vec2, look: Vec2, speed_mul: f32, delta_time: f32) {
+        let mut direction = Vec3::ZERO;
+
+        direction += self.forward * movement.y;
+        direction += self.right * movement.x;
+
+        let mut speed = delta_time * 25.0;
+        speed *= speed_mul;
+        self.target_position += direction * speed;
+
+        self.orientation += (look.yx() * Vec2::new(-1., 1.)) * 1.5;
 
         self.update_vectors();
     }
