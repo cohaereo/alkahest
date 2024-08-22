@@ -25,7 +25,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x0b_u8)] Dot,
     #[br(magic = 0x0c_u8)] Merge1_3,
     #[br(magic = 0x0d_u8)] Merge2_2,
-    #[br(magic = 0x0e_u8)] Unk0e,
+    #[br(magic = 0x0e_u8)] Merge3_1,
     #[br(magic = 0x0f_u8)] Unk0f,
     #[br(magic = 0x10_u8)] Lerp,
     #[br(magic = 0x11_u8)] LerpSaturated,
@@ -72,7 +72,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
     #[br(magic = 0x3a_u8)] Unk3a { unk1: u8 },
     #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
-    
+
     // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
     /// Offset is in single floats (4 bytes)
@@ -115,7 +115,7 @@ pub enum TfxBytecodeOp {
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x4b_u8)] SetShaderUav { 
+    #[br(magic = 0x4b_u8)] SetShaderUav {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
@@ -168,7 +168,7 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Dot => "dot".to_string(),
             TfxBytecodeOp::Merge1_3 => "merge_1_3".to_string(),
             TfxBytecodeOp::Merge2_2 => "merge_2_2".to_string(),
-            TfxBytecodeOp::Unk0e => "unk0e".to_string(),
+            TfxBytecodeOp::Merge3_1 => "merge_3_1".to_string(),
             TfxBytecodeOp::Unk0f => "unk0f".to_string(),
             TfxBytecodeOp::Lerp => "lerp".to_string(),
             TfxBytecodeOp::LerpSaturated => "lerp_saturated".to_string(), // not really used in regular bytecode
