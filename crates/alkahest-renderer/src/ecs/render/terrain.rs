@@ -25,7 +25,7 @@ use crate::{
 
 #[derive(Component)]
 pub struct TerrainPatches {
-    terrain: STerrain,
+    pub terrain: STerrain,
     techniques: Vec<Handle<Technique>>,
     dyemaps: Vec<Handle<Texture>>,
     group_cbuffers: Vec<ConstantBuffer<Mat4>>,
@@ -38,7 +38,7 @@ pub struct TerrainPatches {
 }
 
 impl TerrainPatches {
-    pub fn load(renderer: &Renderer, hash: TagHash) -> anyhow::Result<Self> {
+    pub fn load_from_tag(renderer: &Renderer, hash: TagHash) -> anyhow::Result<Self> {
         let terrain: STerrain = package_manager().read_tag_struct(hash)?;
 
         let mut render_data = renderer.data.lock();

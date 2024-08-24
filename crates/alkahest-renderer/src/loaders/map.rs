@@ -533,14 +533,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let terrain_resource: SUnk8080714b = TigerReadable::read_ds(table_data).unwrap();
+                let terrain_renderer =
+                    TerrainPatches::load_from_tag(renderer, terrain_resource.terrain)
+                        .context("Failed to load terrain patches")?;
 
                 spawn_data_entity(
                     scene,
                     (
                         Icon::Unicode(ICON_IMAGE_FILTER_HDR),
                         Label::from("Terrain Patches"),
-                        TerrainPatches::load(renderer, terrain_resource.terrain)
-                            .context("Failed to load terrain patches")?,
+                        terrain_renderer.terrain.bounds,
+                        terrain_renderer,
                         TfxFeatureRenderer::TerrainPatch,
                         resource_origin,
                         metadata.clone(),
