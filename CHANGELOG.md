@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - Fix static transparents rendering in front of sky objects by @cohaereo
 - Fix atmosphere rendering for TFS by @cohaereo
+- Rewrote TFX bytecode op 0xe to merge_3_1 by @cohaereo
 - Fix cross-compilation on Linux by using FXC instead of D3DCompile by @cohaereo
 
 ## 0.5.0 - 2024-07-24

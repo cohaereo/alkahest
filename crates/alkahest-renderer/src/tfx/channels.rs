@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use glam::Vec4;
 
 #[derive(Clone)]
@@ -32,6 +34,7 @@ pub enum ChannelType {
     Vec4,
     /// Uses the first value of the Vec4
     Float,
+    FloatSlider(RangeInclusive<f32>),
     /// Linear color-space. Usage of the alpha channel is different per channel
     Color,
 }

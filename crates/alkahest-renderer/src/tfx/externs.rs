@@ -990,6 +990,9 @@ fn get_global_channel_defaults() -> [GlobalChannel; 256] {
     channels[10].value = Vec4::ZERO;
     channels[97].value = Vec4::ZERO;
 
+    channels[75] = GlobalChannel::new("unk75 (verity dark/light)", ChannelType::FloatSlider(0f32..=1f32), Vec4::ZERO);
+    channels[76] = GlobalChannel::new("unk76 (verity dark/light, cancels out unk75)", ChannelType::FloatSlider(0f32..=1f32), Vec4::ZERO);
+
     // Sun related
     channels[82].value = Vec4::ZERO;
     channels[83].value = Vec4::ZERO;
