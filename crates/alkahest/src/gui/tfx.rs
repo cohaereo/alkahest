@@ -3,7 +3,7 @@ use alkahest_renderer::{
     tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
     ColorExt,
 };
-use egui::{Color32, Context, RichText};
+use egui::{Color32, Context, RichText, Widget};
 use egui_extras::{Column, TableBuilder};
 use glam::{EulerRot, Quat, Vec4};
 use itertools::Itertools;
@@ -229,15 +229,40 @@ impl GuiView for TfxExternEditor {
 
                     ui.collapsing("Global Channels", |ui| {
                         ui.checkbox(&mut self.only_show_used, "Only show used");
-                        for (i, value) in externs.global_channels.iter_mut().enumerate() {
+                        for (i, channel) in externs.global_channels.iter_mut().enumerate() {
                             let times_used = externs.global_channels_used.read()[i];
                             if self.only_show_used && times_used == 0 {
                                 continue;
                             }
 
                             ui.horizontal(|ui| {
-                                ui.strong(format!("channel {i}: "));
-                                ui.vec4_input(value);
+                                ui.strong(
+                                    channel
+                                        .name
+                                        .clone()
+                                        .unwrap_or_else(|| format!("unknown #{i}: ")),
+                                );
+
+                                match channel.editor_type {
+                                    alkahest_renderer::tfx::channels::ChannelType::Vec4 => {
+                                        ui.vec4_input(&mut channel.value);
+                                    }
+                                    alkahest_renderer::tfx::channels::ChannelType::Float => {
+                                        egui::DragValue::new(&mut channel.value.x)
+                                            .speed(0.01)
+                                            .ui(ui);
+                                    }
+                                    alkahest_renderer::tfx::channels::ChannelType::Color => {
+                                        let mut c = channel.value.truncate().to_array();
+
+                                        if ui.color_edit_button_rgb(&mut c).changed() {
+                                            channel.value.x = c[0];
+                                            channel.value.y = c[1];
+                                            channel.value.z = c[2];
+                                        }
+                                    }
+                                }
+
                                 ui.label(format!("(used {times_used} times)"))
                             });
                         }

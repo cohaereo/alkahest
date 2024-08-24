@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Cull static/dynamic geometry outside of the view frustum by @cohaereo
 - Write tracing events to alkahest.log by @cohaereo
 - Basic controller support by @cohaereo
+- Global channel labels/input field types
 
 ### Changed
 
@@ -47,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - Fix static transparents rendering in front of sky objects by @cohaereo
 - Fix atmosphere rendering for TFS by @cohaereo
+- Fix cross-compilation on Linux by using FXC instead of D3DCompile by @cohaereo
 
 ## 0.5.0 - 2024-07-24
 

@@ -280,7 +280,7 @@ impl TfxBytecodeInterpreter {
                 | &TfxBytecodeOp::Unk53 { unk1, .. }
                 | &TfxBytecodeOp::Unk54 { unk1, .. } => {
                     externs.global_channels_used.write()[unk1 as usize] += 1;
-                    stack_push!(externs.global_channels[unk1 as usize]);
+                    stack_push!(externs.global_channels[unk1 as usize].value);
                 }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
