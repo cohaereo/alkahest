@@ -1,9 +1,10 @@
 use alkahest_renderer::{
     camera::{tween::ease_out_exponential, Camera},
-    ecs::{resources::SelectedEntity, visibility::Visibility},
+    ecs::{hierarchy::Parent, resources::SelectedEntity, visibility::Visibility, Scene},
     renderer::RendererShared,
 };
 use bevy_ecs::{entity::Entity, query::With};
+use rustc_hash::FxHashSet;
 
 use crate::{
     maplist::MapList,
@@ -77,14 +78,34 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
 }
 
 fn hide_unselected(resources: &mut AppResources) {
-    let selected_entity = resources.get::<SelectedEntity>().selected();
     let mut maps = resources.get_mut::<MapList>();
-    if let Some(map) = maps.current_map_mut() {
-        for e in map.scene.iter_entities() {
-            if Some(e.id()) != selected_entity {
-                map.commands().entity(e.id()).insert((Visibility::Hidden,));
-            }
+    let Some(map) = maps.current_map_mut() else {
+        return;
+    };
+
+    let selected_entity = resources.get::<SelectedEntity>().selected();
+    if selected_entity.is_none() {
+        return;
+    }
+    let selected_entity = selected_entity.unwrap();
+
+    let entity_parents: FxHashSet<Entity> = get_ancestors(&map.scene, selected_entity)
+        .into_iter()
+        .collect();
+    for e in map.scene.iter_entities() {
+        if e.id() != selected_entity && !entity_parents.contains(&e.id()) {
+            map.commands().entity(e.id()).insert((Visibility::Hidden,));
         }
+    }
+}
+
+fn get_ancestors(scene: &Scene, entity: Entity) -> Vec<Entity> {
+    if let Some(parent) = scene.get::<Parent>(entity) {
+        let mut parents = vec![parent.0];
+        parents.append(&mut get_ancestors(scene, parent.0));
+        parents
+    } else {
+        vec![]
     }
 }
 
