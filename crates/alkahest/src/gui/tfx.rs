@@ -111,9 +111,16 @@ impl GuiView for TfxErrorViewer {
     }
 }
 
-#[derive(Default)]
 pub struct TfxExternEditor {
     only_show_used: bool,
+}
+
+impl Default for TfxExternEditor {
+    fn default() -> Self {
+        Self {
+            only_show_used: true,
+        }
+    }
 }
 
 impl GuiView for TfxExternEditor {
