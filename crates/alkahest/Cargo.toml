@@ -59,6 +59,7 @@ directories = "5.0.1"
 field_access.workspace = true
 fs-err = "2.11.0"
 game-detector = "0.1.3"
+gilrs = "0.10.9"
 hex = "0.4.3"
 indexmap = "2.2.6"
 itertools.workspace = true

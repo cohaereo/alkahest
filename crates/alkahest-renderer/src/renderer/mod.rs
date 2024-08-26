@@ -1,6 +1,7 @@
 mod cubemaps;
 pub mod gbuffer;
 mod immediate;
+use glam::{Mat4, Quat};
 pub use immediate::LabelAlign;
 mod lighting_pass;
 mod opaque_pass;
@@ -14,6 +15,7 @@ mod util;
 use std::{ops::Deref, sync::Arc, time::Instant};
 
 use alkahest_data::{
+    occlusion::Aabb,
     technique::StateSelection,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
@@ -31,6 +33,7 @@ use crate::{
         render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
+        transform::Transform,
         utility::draw_utilities_system,
         visibility::{
             calculate_view_visibility_system, reset_view_visibility_system, ViewVisibility,
@@ -57,6 +60,7 @@ use crate::{
         view::View,
     },
     util::Hocus,
+    Color,
 };
 
 #[derive(Resource)]
@@ -280,6 +284,23 @@ impl Renderer {
                         .time_selected
                         .elapsed()
                         .as_secs_f32(),
+                );
+            }
+
+            if let Some(bounds) = scene.get::<Aabb>(selected) {
+                let transform =
+                    if let Some(t) = scene.get::<Transform>(selected) {
+                        t.local_to_world()
+                    } else {
+                        Mat4::IDENTITY
+                    } * Transform::new(bounds.center(), Quat::IDENTITY, bounds.extents())
+                        .local_to_world();
+
+                self.immediate.cube_outline(
+                    transform,
+                    resources
+                        .get::<SelectedEntity>()
+                        .select_fade_color(Color::from_rgb(0.5, 0.26, 0.06), None),
                 );
             }
         }

@@ -104,8 +104,7 @@ pub struct STerrain {
     pub file_size: u64,
     pub unk8: u64,
 
-    pub unk10: Vec4,
-    pub unk20: Vec4,
+    pub bounds: Aabb,
     pub unk30: Vec4,
 
     #[tag(offset = 0x50)]
@@ -652,6 +651,7 @@ pub struct SMapAtmosphere {
     pub lookup_texture_1: WideHash,
     pub lookup_texture_2: WideHash,
     pub lookup_texture_3: WideHash,
+    pub unkd0: WideHash,
 }
 
 #[derive(Debug)]

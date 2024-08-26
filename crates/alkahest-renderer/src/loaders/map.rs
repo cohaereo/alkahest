@@ -50,7 +50,7 @@ use crate::{
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
         ICON_LABEL, ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE,
-        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::{
@@ -533,14 +533,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let terrain_resource: SUnk8080714b = TigerReadable::read_ds(table_data).unwrap();
+                let terrain_renderer =
+                    TerrainPatches::load_from_tag(renderer, terrain_resource.terrain)
+                        .context("Failed to load terrain patches")?;
 
                 spawn_data_entity(
                     scene,
                     (
                         Icon::Unicode(ICON_IMAGE_FILTER_HDR),
                         Label::from("Terrain Patches"),
-                        TerrainPatches::load(renderer, terrain_resource.terrain)
-                            .context("Failed to load terrain patches")?,
+                        terrain_renderer.terrain.bounds,
+                        terrain_renderer,
                         TfxFeatureRenderer::TerrainPatch,
                         resource_origin,
                         metadata.clone(),
@@ -800,22 +803,16 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         .context("Failed to load map atmosphere")?,
                 );
 
-                // spawn_data_entity(
-                //     scene,
-                //     (
-                //         Icon::Unicode(ICON_WEATHER_FOG),
-                //         Label::from(format!(
-                //             "Atmosphere Configuration (table {}@0x{:X})",
-                //             table_hash, data.data_resource.offset
-                //         )),
-                //         MapAtmosphere::load(&renderer.gpu, atmos)
-                //             .context("Failed to load map atmosphere")?,
-                //         resource_origin,
-                //         metadata.clone(),
-                //     ),
-                //     // parent_entity,
-                //     None,
-                // );
+                // Load as entity for ease of debugging
+                scene.spawn((
+                    Icon::Unicode(ICON_WEATHER_FOG),
+                    Label::from(format!(
+                        "Atmosphere Configuration (table {}@0x{:X})",
+                        table_hash, data.data_resource.offset
+                    )),
+                    resource_origin,
+                    metadata.clone(),
+                ));
             }
             // Cubemap volume
             0x80806695 => {

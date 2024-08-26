@@ -4,7 +4,7 @@ use std::{
 };
 
 use alkahest_data::tfx::TfxShaderStage;
-use glam::{Mat4, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use smallvec::SmallVec;
 use windows::Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResourceView};
 
@@ -154,9 +154,9 @@ impl TfxBytecodeInterpreter {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(Vec4::new(t1.x, t1.y, t0.x, t0.y));
                 }
-                TfxBytecodeOp::Unk0e => {
-                    let v = stack_pop!(2);
-                    stack_push!(fast_impls::byteop_0e(v))
+                TfxBytecodeOp::Merge3_1 => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(Vec4::new(t1.x, t1.y, t1.z, t0.x));
                 }
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t0] = stack_pop!(2);
@@ -280,7 +280,7 @@ impl TfxBytecodeInterpreter {
                 | &TfxBytecodeOp::Unk53 { unk1, .. }
                 | &TfxBytecodeOp::Unk54 { unk1, .. } => {
                     externs.global_channels_used.write()[unk1 as usize] += 1;
-                    stack_push!(externs.global_channels[unk1 as usize]);
+                    stack_push!(externs.global_channels[unk1 as usize].value);
                 }
                 TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
@@ -493,41 +493,6 @@ impl TfxBytecodeInterpreter {
             }
         }
         forget(sampler);
-    }
-}
-
-#[allow(non_snake_case)]
-mod fast_impls {
-    use std::arch::x86_64::*;
-
-    use glam::Vec4;
-
-    pub fn byteop_0e([t1, t0]: [Vec4; 2]) -> Vec4 {
-        unsafe {
-            let xmmword_7FF7B2E5E4F0 = _mm_castsi128_ps(_mm_setr_epi32(
-                u32::MAX as _,
-                u32::MAX as _,
-                u32::MAX as _,
-                0,
-            ));
-            let xmmword_7FF7B2E5E5C0 = _mm_castsi128_ps(_mm_setr_epi32(0, 0, 0, u32::MAX as _));
-            let xmmword_7FF7B2E5E4E0 = _mm_set1_ps(f32::NAN);
-
-            _mm_add_ps(
-                _mm_or_ps(
-                    _mm_and_ps(
-                        _mm_and_ps(
-                            _mm_shuffle_ps::<0>(t0.into(), t0.into()),
-                            xmmword_7FF7B2E5E5C0,
-                        ),
-                        xmmword_7FF7B2E5E4E0,
-                    ),
-                    _mm_andnot_ps(xmmword_7FF7B2E5E4E0, _mm_set1_ps(1.0)),
-                ),
-                _mm_and_ps(t1.into(), xmmword_7FF7B2E5E4F0),
-            )
-            .into()
-        }
     }
 }
 

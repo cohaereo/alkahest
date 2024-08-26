@@ -158,7 +158,7 @@ impl Renderer {
                 let mut atmos = externs::Atmosphere {
                     atmos_ss_far_lookup: data.gbuffers.atmos_ss_far_lookup.view.clone().into(),
                     atmos_ss_near_lookup: data.gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                    unke0: self.gpu.dark_grey_texture.view.clone().into(),
+                    unk100: self.gpu.dark_grey_texture.view.clone().into(),
 
                     ..atmos_existing
                 };

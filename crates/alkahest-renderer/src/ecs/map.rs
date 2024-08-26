@@ -7,7 +7,7 @@ use crate::{
     gpu::{texture::Texture, GpuContext},
     handle::Handle,
     loaders::texture::load_texture,
-    tfx::externs,
+    tfx::externs::{self, TextureView},
 };
 
 // TODO(cohae): This should probably be a resource, since there can only be one per map
@@ -18,6 +18,7 @@ pub struct MapAtmosphere {
     lookup_1: Option<Texture>,
     lookup_2: Option<Texture>,
     lookup_3: Option<Texture>,
+    unkd0: Option<Texture>,
 }
 
 impl MapAtmosphere {
@@ -42,6 +43,11 @@ impl MapAtmosphere {
             .hash32_checked()
             .map(|hash| load_texture(gctx, hash))
             .transpose()?;
+        let unkd0 = data
+            .unkd0
+            .hash32_checked()
+            .map(|hash| load_texture(gctx, hash))
+            .transpose()?;
 
         Ok(MapAtmosphere {
             data,
@@ -49,27 +55,33 @@ impl MapAtmosphere {
             lookup_1,
             lookup_2,
             lookup_3,
+            unkd0,
         })
     }
 
     pub fn update_extern(&self, x: &mut externs::Atmosphere) {
-        x.unk30 = self
+        let lf_unk30: TextureView = self
             .lookup_0
             .as_ref()
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
-        x.unk40 = self
+        let lf_unk40: TextureView = self
             .lookup_1
             .as_ref()
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
-        x.unk48 = self
+        let lf_unk48: TextureView = self
             .lookup_2
             .as_ref()
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
-        x.unk58 = self
+        let lf_unk58: TextureView = self
             .lookup_3
+            .as_ref()
+            .map(|l| l.view.clone().into())
+            .unwrap_or_default();
+        let unkd0: TextureView = self
+            .unkd0
             .as_ref()
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
@@ -78,8 +90,9 @@ impl MapAtmosphere {
         //     x.unk58 = x.unk40.clone();
         // }
 
-        x.unk20 = x.unk30.clone();
-        x.unk38 = x.unk48.clone();
+        x.unk40 = lf_unk30.clone();
+        x.unk58 = lf_unk48.clone();
+        x.light_shaft_optical_depth = unkd0.clone();
     }
 }
 

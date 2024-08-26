@@ -2,12 +2,13 @@ use std::{fmt::Debug, mem::transmute};
 
 use binrw::binread;
 use field_access::FieldAccess;
-use glam::{Mat3, Mat4, Quat, Vec4};
+use glam::{Mat3, Mat4, Quat, Vec3, Vec4};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use strum::EnumIter;
 use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
 
+use super::channels::{ChannelType, GlobalChannel};
 use crate::{camera::Viewport, util::short_type_name};
 
 #[derive(Default, Clone)]
@@ -83,7 +84,7 @@ pub struct ExternStorage {
     pub postprocess: Option<Postprocess>,
     pub shadow_mask: Option<ShadowMask>,
 
-    pub global_channels: [Vec4; 256],
+    pub global_channels: [GlobalChannel; 256],
     pub global_channels_used: RwLock<[usize; 256]>,
 
     pub errors: RwLock<FxHashMap<String, TfxExpressionError>>,
@@ -616,66 +617,60 @@ extern_struct! {
         0x08 => unk08: TextureView > unimplemented(true),
         0x10 => unk10: TextureView > unimplemented(true),
         0x18 => unk18: TextureView > unimplemented(true),
-        0x20 => unk20: TextureView,
-        0x30 => unk30: TextureView,
-        0x38 => unk38: TextureView,
-        0x40 => unk40: TextureView,
-        0x48 => unk48: TextureView,
-        0x50 => unk50: f32 > default(0.5),
-        0x58 => unk58: TextureView > unimplemented(true),
-        0x60 => unk60: TextureView > unimplemented(true),
+
+        // cohae: Everything below got shifted by 0x20 bytes in TFS
+        0x40 => unk40: TextureView > unimplemented(true), // lightfall = 0x20
+        0x58 => unk58: TextureView > unimplemented(true), // lightfall = 0x38
         // Normalized time of day value, where 0 is midnight, 0.5 is midday, and 1 is midnight again
-        0x70 => time_of_day_normalized: f32 > unimplemented(true) > default(0.5),
-        // 0x70 => unk70: Vec4 > unimplemented(true) > default(Vec4::ZERO),
-        0x80 => light_shaft_optical_depth: TextureView > unimplemented(true),
+        0x70 => time_of_day_normalized: f32 > default(0.5),
+        0x74 => unk74: f32 > unimplemented(true),
+        0x78 => unk78: f32 > unimplemented(true),
+        0x80 => unk80: TextureView > unimplemented(true),
+        0x88 => unk88: TextureView > unimplemented(true),
         0x90 => unk90: Vec4 > unimplemented(true),
-        0xa0 => unka0: TextureView > unimplemented(true),
-        0xb0 => unkb0: Vec4 > unimplemented(true),
+        0xa0 => light_shaft_optical_depth: TextureView > unimplemented(true),
+        0xc0 => unkc0: TextureView > unimplemented(true),
+        0xd0 => unkd0: Vec4 > unimplemented(true),
+
         // Result of sky_lookup_generate_far
-        0xc0 => atmos_ss_far_lookup: TextureView,
-        0xc8 => atmos_ss_far_lookup_downsampled: TextureView > unimplemented(true),
+        0xe0 => atmos_ss_far_lookup: TextureView, // lightfall = 0xc0
+        0xe8 => atmos_ss_far_lookup_downsampled: TextureView > unimplemented(true),
         // Result of sky_lookup_generate_near
-        0xd0 => atmos_ss_near_lookup: TextureView,
-        0xd8 => atmos_ss_near_lookup_downsampled: TextureView > unimplemented(true),
-        0xe0 => unke0: TextureView > unimplemented(true),
-        0xf0 => unkf0: TextureView > unimplemented(true),
-        // 0xf0 => unkf0: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),
+        0xf0 => atmos_ss_near_lookup: TextureView, // lightfall = 0xd0
+        0xf8 => atmos_ss_near_lookup_downsampled: TextureView > unimplemented(true),
+
+        0x100 => unk100: TextureView > unimplemented(true),
         0x110 => unk110: Vec4 > unimplemented(true) > default(Vec4::Z * -1.5),
-        0x120 => unk120: Vec4 > unimplemented(true),
-        0x130 => unk130: f32 > unimplemented(true),
-        0x134 => unk134: f32 > unimplemented(true),
-        0x140 => fog_color: Vec4 > unimplemented(true),
-        0x150 => unk150: f32 > unimplemented(true) > default(0.01),
+        0x140 => fog_color: Vec4 > unimplemented(true), // lightfall = 0x120
+        0x150 => unk150: f32 > unimplemented(true),
         0x154 => unk154: f32 > unimplemented(true),
-        0x160 => fog_intensity: f32 > unimplemented(true) > default(0.0),
+        0x160 => fog_intensity: f32 > unimplemented(true),
         0x164 => unk164: f32 > unimplemented(true),
         0x168 => unk168: f32 > unimplemented(true),
         0x16c => unk16c: f32 > unimplemented(true),
-        0x170 => unk170: f32 > unimplemented(true),
-        0x174 => unk174: f32 > unimplemented(true),
-        0x178 => unk178: f32 > unimplemented(true) > default(0.01),
+        0x170 => unk170: f32 > unimplemented(true) > default(0.0001),
         0x180 => unk180: Vec4 > unimplemented(true),
         0x190 => unk190: f32 > unimplemented(true),
-        0x194 => unk194: f32 > unimplemented(true) > default(0.0),
-        0x198 => unk198: f32 > unimplemented(true),
-        0x19c => unk19c: f32 > unimplemented(true) > default(0.5),
-        0x1a0 => unk1a0: f32 > unimplemented(true),
-        0x1a4 => unk1a4: f32 > unimplemented(true),
-        0x1b0 => unk1b0: f32 > unimplemented(true),
-        0x1b4 => unk1b4: f32 > unimplemented(true),
-        0x1b8 => unk1b8: f32 > unimplemented(true),
-        0x1bc => unk1bc: f32 > unimplemented(true),
+        0x194 => unk194: f32 > unimplemented(true),
+        0x198 => unk198: f32 > unimplemented(true) > default(0.0001),
+        // Atmosphere rotation
+        0x1b4 => unk1b4_rotation: f32 > unimplemented(true) > default(0.0),
+        // Intensity
+        0x1b8 => unk1b8_intensity: f32 > unimplemented(true),
+        // Some kind of cutoff
+        0x1bc => unk1bc: f32 > unimplemented(true) > default(0.5),
         0x1c0 => unk1c0: f32 > unimplemented(true),
         0x1c4 => unk1c4: f32 > unimplemented(true),
-        // Another cutoff value
-        0x1c8 => unk1c8: f32 > unimplemented(true) > default(0.0),
-        0x1cc => unk1cc: f32 > unimplemented(true),
-        0x1d0 => sky_color: Vec4 > unimplemented(true) > default(Vec4::new(1.0, 1.0, 1.0, 0.0)),
+        0x1d0 => unk1d0: Vec4 > unimplemented(true) > default(Vec4::ZERO),
         0x1e0 => unk1e0: f32 > unimplemented(true),
         0x1e4 => unk1e4: f32 > unimplemented(true),
-        0x1e8 => unk1e8: f32 > unimplemented(true),
+        // Another cutoff value
+        0x1e8 => unk1e8: f32 > unimplemented(true) > default(0.0),
         0x1ec => unk1ec: f32 > unimplemented(true),
-        0x1f0 => unk1f0: Vec4 > unimplemented(true),
+        0x1f8 => unk1f8: f32 > unimplemented(true),
+        0x1fc => unk1fc: f32 > unimplemented(true),
+        0x208 => unk208: f32 > unimplemented(true),
+        0x210 => unk210: Vec4 > unimplemented(true),
     }
 }
 
@@ -839,7 +834,7 @@ fn test_externs() {
     assert_eq!(view.get_field::<f32>(0x04), ExternValue::Value(1080.0));
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, EnumIter)]
+#[derive(Clone, Copy, Debug, PartialEq, EnumIter, Hash, Eq)]
 #[binread]
 #[br(repr(u8))]
 pub enum TfxExtern {
@@ -988,38 +983,39 @@ impl ExternDefault for f32 {
     }
 }
 
-fn get_global_channel_defaults() -> [Vec4; 256] {
-    let mut channels = [Vec4::ONE; 256];
+#[rustfmt::skip]
+fn get_global_channel_defaults() -> [GlobalChannel; 256] {
+    let mut channels: [GlobalChannel; 256] = core::array::from_fn(|_| GlobalChannel::default());
 
-    channels[10] = Vec4::ZERO;
-    channels[97] = Vec4::ZERO;
+    channels[10].value = Vec4::ZERO;
+    channels[97].value = Vec4::ZERO;
 
     // Sun related
-    channels[82] = Vec4::ZERO;
-    channels[83] = Vec4::ZERO;
-    channels[98] = Vec4::ZERO;
-    channels[100] = Vec4::ZERO;
+    channels[82].value = Vec4::ZERO;
+    channels[83].value = Vec4::ZERO;
+    channels[98].value = Vec4::ZERO;
+    channels[100].value = Vec4::ZERO;
 
-    channels[27] = Vec4::X * 1.0; // specular tint intensity
-    channels[28] = Vec4::ONE; // specular tint
+    channels[27] = GlobalChannel::new("global specular intensity", ChannelType::Float, Vec4::ONE);
+    channels[28] = GlobalChannel::new("global specular tint", ChannelType::Color, Vec4::ONE);
 
-    channels[31] = Vec4::ONE; // diffuse tint 1
-    channels[32] = Vec4::X * 1.0; // diffuse tint 1 intensity
-    channels[33] = Vec4::ONE; // diffuse tint 2
-    channels[34] = Vec4::X * 1.0; // diffuse tint 2 intensity
+    channels[31] = GlobalChannel::new("global diffuse direct tint", ChannelType::Color, Vec4::ONE);
+    channels[32] = GlobalChannel::new("global diffuse direct intensity", ChannelType::Float, Vec4::ONE);
+    channels[33] = GlobalChannel::new("global diffuse penumbra tint", ChannelType::Color, Vec4::ONE);
+    channels[34] = GlobalChannel::new("global diffuse penumbra intensity", ChannelType::Float, Vec4::ONE);
 
-    channels[37] = Vec4::X * 50.0; // Fog start
-    channels[41] = Vec4::X * 50.0; // Fog falloff
+    channels[37] = GlobalChannel::new("fog start", ChannelType::Float, Vec4::X * 50.0);
+    channels[41] = GlobalChannel::new("fog falloff", ChannelType::Float, Vec4::X * 50.0);
 
     // Misc lights
-    channels[84] = Vec4::new(
-        1.0, // AO intensity
-        1.0, 1.0, 1.0,
-    );
-    channels[93] = Vec4::new(1.0, 0.0, 0.0, 0.0);
-    channels[127] = Vec4::ZERO;
+    channels[84] = GlobalChannel::new("ao intensity", ChannelType::Float, Vec4::ONE);
+
+    channels[93].value = Vec4::new(1.0, 0.0, 0.0, 0.0);
+    channels[113].value = Vec4::ZERO;
+    channels[127].value = Vec4::ZERO;
+
     // TODO(cohae): this channel is a bit confusing. There is no 1 magic universal value, some lights work, some environments need different values
-    channels[131] = Vec4::new(0.5, 0.5, 0.3, 0.0); // Seems related to line lights
+    channels[131].value = Vec4::new(0.5, 0.5, 0.3, 0.0); // Seems related to line lights
 
     channels
 }
