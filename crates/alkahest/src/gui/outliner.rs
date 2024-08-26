@@ -64,14 +64,11 @@ impl GuiView for OutlinerPanel {
 
             fn search(entity: Entity, s: &str, sce: &Scene) -> bool {
                 let e = sce.entity(entity);
-                let label = if let Some(label) = e.get::<Label>() {
-                    format!("{label}")
-                } else {
+                let Some(label) = e.get::<Label>().map(Label::to_string) else {
                     return false;
                 };
 
-                let children = e.get::<Children>();
-                if let Some(children) = children {
+                if let Some(children) = e.get::<Children>() {
                     for child in children.iter() {
                         if search(*child, s, sce) {
                             return true;

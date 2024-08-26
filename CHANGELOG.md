@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - Cull static/dynamic geometry outside of the view frustum by @cohaereo
 - Write tracing events to alkahest.log by @cohaereo
+- Add a search bar to the outliner by @AndrisBorbas
 
 ### Changed
 
