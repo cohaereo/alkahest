@@ -32,25 +32,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- Cull static/dynamic geometry outside of the view frustum by @cohaereo
-- Write tracing events to alkahest.log by @cohaereo
+- Cull static/dynamic geometry outside of the view frustum
+- Write tracing events to alkahest.log
 - Add a search bar to the outliner by @AndrisBorbas in [#41](https://github.com/cohaereo/alkahest/pull/41)
-- Basic controller support by @cohaereo
-- Global channel labels/input field types by @cohaereo
+- Basic controller support
+- Global channel labels/input field types
 
 ### Changed
 
-- Enable SSAO by default by @cohaereo
-- Abstract global/fullscreen pipelines by @cohaereo
-- Replace `hecs` with `bevy-ecs` by @cohaereo
-- Use bevy-ecs change detection to update cbuffers by @cohaereo
+- Enable SSAO by default
+- Abstract global/fullscreen pipelines
+- Replace `hecs` with `bevy-ecs`
+- Use bevy-ecs change detection to update cbuffers
 
 ### Fixed
 
-- Fix static transparents rendering in front of sky objects by @cohaereo
-- Fix atmosphere rendering for TFS by @cohaereo
-- Rewrote TFX bytecode op 0xe to merge_3_1 by @cohaereo
-- Fix cross-compilation on Linux by using FXC instead of D3DCompile by @cohaereo
+- Fix static transparents rendering in front of sky objects
+- Fix atmosphere rendering for TFS
+- Rewrote TFX bytecode op 0xe to merge_3_1
+- Fix cross-compilation on Linux by using FXC instead of D3DCompile
 
 ## 0.5.0 - 2024-07-24
 
