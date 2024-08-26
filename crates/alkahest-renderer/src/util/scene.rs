@@ -1,4 +1,9 @@
-use bevy_ecs::{component::Component, entity::Entity, prelude::EntityWorldMut};
+use bevy_ecs::{
+    component::{BoxedComponent, Component},
+    entity::Entity,
+    prelude::EntityWorldMut,
+};
+use itertools::Itertools;
 use smallvec::smallvec;
 
 use crate::ecs::{
@@ -9,6 +14,9 @@ use crate::ecs::{
 pub trait SceneExt {
     fn set_parent(&mut self, child: Entity, parent: Entity);
     fn get_parent(&self, child: Entity) -> Option<Entity>;
+
+    fn take_boxed(&mut self, entity: Entity) -> Option<Vec<BoxedComponent>>;
+    fn spawn_boxed(&mut self, components: impl IntoIterator<Item = BoxedComponent>) -> Entity;
 }
 
 impl SceneExt for Scene {
@@ -30,6 +38,38 @@ impl SceneExt for Scene {
 
     fn get_parent(&self, child: Entity) -> Option<Entity> {
         self.get::<Parent>(child).map(|parent| parent.0)
+    }
+
+    fn take_boxed(&mut self, entity: Entity) -> Option<Vec<BoxedComponent>> {
+        let mut er = self.get_entity_mut(entity)?;
+        let component_ids = er.archetype().components().collect_vec();
+        let mut components = vec![];
+        for c in component_ids {
+            let component = unsafe { er.take_by_id(c) }.unwrap();
+            components.push(component);
+        }
+
+        er.despawn();
+
+        Some(components)
+    }
+
+    fn spawn_boxed(&mut self, components: impl IntoIterator<Item = BoxedComponent>) -> Entity {
+        let mut new_component_ids = vec![];
+        for c in components.into_iter() {
+            let new_component_id = self.init_component_with_descriptor(c.descriptor().clone());
+
+            new_component_ids.push((new_component_id, c));
+        }
+
+        let mut new_entity = self.spawn_empty();
+        for (new_component_id, component) in new_component_ids {
+            unsafe {
+                new_entity.insert_by_id(new_component_id, component.to_ptr());
+            }
+        }
+
+        new_entity.id()
     }
 }
 

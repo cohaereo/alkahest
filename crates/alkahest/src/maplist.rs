@@ -1,19 +1,23 @@
 use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
+        common::Global,
         render::{
             dynamic_geometry::update_dynamic_model_system, light::update_shadowrenderer_system,
             static_geometry::update_static_instances_system,
         },
-        visibility::{calculate_view_visibility_system, propagate_entity_visibility_system},
+        resources::SelectedEntity,
+        visibility::propagate_entity_visibility_system,
         Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
-    util::Hocus,
+    util::{scene::SceneExt, Hocus},
 };
 use bevy_ecs::{
-    schedule::{ExecutorKind, IntoSystemConfigs, Schedule, ScheduleLabel},
+    entity::Entity,
+    query::With,
+    schedule::{ExecutorKind, Schedule, ScheduleLabel},
     system::Commands,
     world::CommandQueue,
 };
@@ -140,29 +144,30 @@ impl Map {
 
     /// Remove global entities from the scene and store them in this one
     pub fn take_globals(&mut self, source: &mut Scene) {
-        // let ent_list = source
-        //     .query_filtered::<Entity, With<Global>>()
-        //     .iter(source)
-        //     .collect_vec();
-        // let mut new_selected_entity: Option<Entity> = None;
+        let ent_list = source
+            .query_filtered::<Entity, With<Global>>()
+            .iter(source)
+            .collect_vec();
+        let mut new_selected_entity: Option<Entity> = None;
 
-        // {
-        //     let selected_entity = source.resource::<SelectedEntity>().selected();
-        //     for &entity in &ent_list {
-        //         let new_entity = self
-        //             .scene
-        //             .spawn(source.entity_mut(entity).take(entity).ok().unwrap());
-        //         if selected_entity == Some(entity) {
-        //             new_selected_entity = Some(new_entity.id());
-        //         }
-        //     }
-        // }
+        {
+            // TODO(cohae): selected_entity always appears to be None, and thus the selected entity isn't carried over
+            let selected_entity = source.resource::<SelectedEntity>().selected();
+            for &entity in &ent_list {
+                let old_entity_components = source.take_boxed(entity).unwrap();
+                let new_entity = self.scene.spawn_boxed(old_entity_components);
 
-        // if let Some(new_entity) = new_selected_entity {
-        //     self.scene
-        //         .resource_mut::<SelectedEntity>()
-        //         .select(new_entity);
-        // }
+                if selected_entity == Some(entity) {
+                    new_selected_entity = Some(new_entity);
+                }
+            }
+        }
+
+        if let Some(new_entity) = new_selected_entity {
+            self.scene
+                .resource_mut::<SelectedEntity>()
+                .select(new_entity);
+        }
     }
 
     fn start_load(&mut self, resources: &AppResources) {

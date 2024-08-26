@@ -111,7 +111,7 @@ dependencies = [
  "alkahest-renderer",
  "anyhow",
  "bevy_ecs",
- "bevy_tasks",
+ "bevy_tasks 0.14.1",
  "binrw",
  "bitflags 2.6.0",
  "build-time",
@@ -541,15 +541,14 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "bevy_ecs"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a3eed7f144811946ebfa1c740da9e3bcd6dd2dd4da844eda085249d29bc9fef"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "arrayvec",
  "bevy_ecs_macros",
  "bevy_ptr",
  "bevy_reflect",
- "bevy_tasks",
+ "bevy_tasks 0.15.0-dev",
  "bevy_utils",
  "bitflags 2.6.0",
  "concurrent-queue",
@@ -561,9 +560,8 @@ dependencies = [
 
 [[package]]
 name = "bevy_ecs_macros"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d523630f2eb9fde6727e6c5ea48fa708079c5345da21ffeb1a4bd8ca761830da"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "bevy_macro_utils",
  "proc-macro2",
@@ -573,9 +571,8 @@ dependencies = [
 
 [[package]]
 name = "bevy_macro_utils"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ec4a585ec2a6dedd4f4143c07219d120ae142121929f0d83e68d82a452cdc9b"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -585,15 +582,13 @@ dependencies = [
 
 [[package]]
 name = "bevy_ptr"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ed72afbb6249a6803a3ed7bd2f68ff080d9392f550475e050b34c1e1c1e3e8f"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 
 [[package]]
 name = "bevy_reflect"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb37e8fc3c61d04da480c95cc8c303aa7781afed6be01dae333b336af493c38e"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "bevy_ptr",
  "bevy_reflect_derive",
@@ -607,9 +602,8 @@ dependencies = [
 
 [[package]]
 name = "bevy_reflect_derive"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc00d5086f5bf534b4c2dbeba549a6b8d3223515f3cb5ba4fdaabe953ec6cea"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "bevy_macro_utils",
  "proc-macro2",
@@ -632,10 +626,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_tasks"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
+dependencies = [
+ "async-channel",
+ "async-executor",
+ "concurrent-queue",
+ "futures-channel",
+ "futures-lite",
+ "pin-project",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "bevy_utils"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6efbe5a621b56cc4ffa41074929eca84107e242302496b9bb7550675e6bf2e7"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "ahash",
  "bevy_utils_proc_macros",
@@ -648,9 +655,8 @@ dependencies = [
 
 [[package]]
 name = "bevy_utils_proc_macros"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36a1e91b4294cad2d08620ac062509395d4f65247b636946d6497eaeccf4dbfd"
+version = "0.15.0-dev"
+source = "git+https://github.com/cohaereo/bevy.git#8c44b5699853a694e63347a8d3f3b2a14fa4fed0"
 dependencies = [
  "proc-macro2",
  "quote",
