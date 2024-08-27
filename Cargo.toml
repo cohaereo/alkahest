@@ -17,7 +17,9 @@ anyhow = { version = "1.0.71" }
 bevy_ecs = { git = "https://github.com/cohaereo/bevy.git", features = [
     "multi_threaded",
 ] }
-bevy_tasks = { version = "0.14.0", features = ["multi_threaded"] }
+bevy_tasks = { git = "https://github.com/cohaereo/bevy.git", features = [
+    "multi_threaded",
+] }
 binrw = "0.13.3"
 bitflags = { version = "2.5.0", features = ["serde"] }
 bytemuck = "1.7.0"

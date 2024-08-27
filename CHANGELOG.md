@@ -42,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - Enable SSAO by default
 - Abstract global/fullscreen pipelines
-- Replace `hecs` with `bevy-ecs`
+- Replaced `hecs` with `bevy-ecs`
 - Use bevy-ecs change detection to update cbuffers
 
 ### Fixed

@@ -111,7 +111,7 @@ dependencies = [
  "alkahest-renderer",
  "anyhow",
  "bevy_ecs",
- "bevy_tasks 0.14.1",
+ "bevy_tasks",
  "binrw",
  "bitflags 2.6.0",
  "build-time",
@@ -548,7 +548,7 @@ dependencies = [
  "bevy_ecs_macros",
  "bevy_ptr",
  "bevy_reflect",
- "bevy_tasks 0.15.0-dev",
+ "bevy_tasks",
  "bevy_utils",
  "bitflags 2.6.0",
  "concurrent-queue",
@@ -610,19 +610,6 @@ dependencies = [
  "quote",
  "syn 2.0.72",
  "uuid",
-]
-
-[[package]]
-name = "bevy_tasks"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84f5414c3f49c96e02ceccf5fa12fb6cfbf8b271d2a820902d6f622e9c2fa681"
-dependencies = [
- "async-channel",
- "async-executor",
- "concurrent-queue",
- "futures-lite",
- "wasm-bindgen-futures",
 ]
 
 [[package]]
