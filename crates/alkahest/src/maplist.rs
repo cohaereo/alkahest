@@ -88,6 +88,13 @@ impl Systems {
 }
 
 impl Map {
+    pub fn create_empty(name: impl AsRef<str>) -> Self {
+        Self {
+            load_state: MapLoadState::Loaded,
+            ..Self::create(name, TagHash::NONE, None)
+        }
+    }
+
     pub fn create(name: impl AsRef<str>, hash: TagHash, activity_hash: Option<TagHash>) -> Self {
         let mut scene = Scene::new_with_info(activity_hash, hash);
 

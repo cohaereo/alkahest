@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add a search bar to the outliner by @AndrisBorbas in [#41](https://github.com/cohaereo/alkahest/pull/41)
 - Basic controller support
 - Global channel labels/input field types
+- Added an empty map instead of a scratch scene
 
 ### Changed
 

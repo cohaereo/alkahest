@@ -17,6 +17,7 @@ use alkahest_renderer::{
 };
 use bevy_ecs::system::RunSystemOnce;
 use bevy_tasks::{ComputeTaskPool, TaskPool};
+use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers};
 use gilrs::{EventType, Gilrs};
 use glam::Vec2;
@@ -40,7 +41,7 @@ use crate::{
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
-    maplist::MapList,
+    maplist::{Map, MapList},
     resources::AppResources,
     updater::UpdateCheck,
     util::action::ActionList,
@@ -100,7 +101,10 @@ impl AlkahestApp {
         resources.insert(CurrentActivity(args.activity));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
-        resources.insert(MapList::default());
+
+        let mut maps = MapList::default();
+        maps.maps.push(Map::create_empty("Empty Map"));
+        resources.insert(maps);
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
         resources.insert(ActionList::default());
@@ -152,7 +156,7 @@ impl AlkahestApp {
 
             resources
                 .get_mut::<MapList>()
-                .add_map(&resources, map_name, maphash);
+                .set_maps(&resources, &[(maphash, map_name)]);
         }
 
         let mut node_filter_set = NodeFilterSet::default();
