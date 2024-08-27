@@ -1,0 +1,40 @@
+name: Manual Build
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (manual, ${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [windows-latest]
+        toolchain: [stable]
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "rust-build"
+
+      - name: Add nightly version metadata
+        run: ./.github/cargo-set-version.exe set-version --package alkahest --metadata "dev.$(date +'%Y%m%d%H%M')"
+
+      - name: Build
+        run: cargo build --verbose --release
+
+      - name: Publish artifact
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkahest
+          path: |
+            ./target/release/*.exe
+            ./target/release/*.pdb
