@@ -6,11 +6,11 @@ use std::{
 use rustc_hash::FxHashMap;
 
 #[derive(Default)]
-pub struct Resources {
+pub struct AppResources {
     resources: FxHashMap<TypeId, RefCell<Box<dyn Any>>>,
 }
 
-impl Resources {
+impl AppResources {
     pub fn insert<T: Any>(&mut self, v: T) {
         self.resources
             .insert(TypeId::of::<T>(), RefCell::new(Box::new(v)));

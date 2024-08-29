@@ -1,7 +1,4 @@
-use std::{
-    io::{Cursor, Read, Seek, SeekFrom},
-    ops::Deref,
-};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 
 use alkahest_data::{
     activity::{SActivity, SEntityResource, SUnk8080460c, Unk80808cef, Unk80808e89, Unk808092d8},
@@ -11,20 +8,21 @@ use alkahest_data::{
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
         SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
-        SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4, SUnk8080714b, SUnk80808246,
-        SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        SUnk808068d4, SUnk80806aa7, SUnk80806ef4, SUnk8080714b, SUnk80808604, SUnk80808cb7,
+        SUnk80809178, SUnk8080917b,
     },
+    occlusion::Aabb,
     text::{StringContainer, StringContainerShared},
     tfx::TfxFeatureRenderer,
     Tag, WideHash,
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
+use bevy_ecs::{bundle::Bundle, entity::Entity};
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use ecolor::Color32;
 use glam::{Mat4, Vec3, Vec4Swizzles};
-use hecs::{DynamicBundle, Entity};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
@@ -33,7 +31,7 @@ use crate::{
     camera::CameraProjection,
     ecs::{
         audio::AmbientAudio,
-        common::{Icon, Label, ResourceOrigin},
+        common::{Icon, Label, RenderCommonBundle, ResourceOrigin},
         hierarchy::{Children, Parent},
         map::{CubemapVolume, MapAtmosphere, NodeMetadata},
         render::{
@@ -41,11 +39,12 @@ use crate::{
             dynamic_geometry::DynamicModelComponent,
             havok::HavokShapeRenderer,
             light::{LightRenderer, LightShape, ShadowMapRenderer},
-            static_geometry::{StaticInstance, StaticInstances, StaticModel},
+            static_geometry::{StaticInstance, StaticInstances, StaticModel, StaticModelSingle},
             terrain::TerrainPatches,
         },
         tags::{insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
+        visibility::VisibilityBundle,
         Scene, SceneInfo,
     },
     icons::{
@@ -54,7 +53,10 @@ use crate::{
         ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
-    util::{scene::SceneExt, text::StringExt},
+    util::{
+        scene::{EntityWorldMutExt, SceneExt},
+        text::StringExt,
+    },
 };
 
 pub async fn load_map(
@@ -86,7 +88,7 @@ pub async fn load_map(
         let parent_entity =
             scene.spawn((Label::from(format!("Map Container {}", map_container.1)),));
         for table in &map_container.data_tables {
-            data_tables.insert(*table, parent_entity);
+            data_tables.insert(*table, parent_entity.id());
         }
     }
 
@@ -190,10 +192,12 @@ pub async fn load_map(
     let mut phase_entities = FxHashMap::<ResourceHash, Entity>::default();
     for (e, phase_name2, origin) in activity_entrefs {
         let parent_entity = *phase_entities.entry(phase_name2).or_insert_with(|| {
-            scene.spawn((Label::from(format!(
-                "Activity Phase 0x{:08X}",
-                phase_name2.0
-            )),))
+            scene
+                .spawn((Label::from(format!(
+                    "Activity Phase 0x{:08X}",
+                    phase_name2.0
+                )),))
+                .id()
         });
 
         for resource in &e.unk18.entity_resources {
@@ -215,7 +219,7 @@ pub async fn load_map(
                                 Transform::new(tag.translation.truncate(), tag.rotation, Vec3::ONE),
                             ));
 
-                            data_tables.insert(tag.unk84, Some(entity));
+                            data_tables.insert(tag.unk84, Some(entity.id()));
                         }
                     }
                     0x80808cef => {
@@ -348,9 +352,9 @@ pub async fn load_map(
 
     // TODO(cohae): The persistent tag system is used exlusively for filtering, it's otherwise entirely redundant and should be replaced by components where possible
     let mut tags: Vec<(Entity, Vec<EntityTag>)> = vec![];
-    for e in scene.iter() {
+    for e in scene.iter_entities() {
         let mut tag_list = vec![];
-        if let Some(origin) = e.get::<&ResourceOrigin>().as_deref().cloned() {
+        if let Some(origin) = e.get::<ResourceOrigin>().cloned() {
             match origin {
                 ResourceOrigin::Map => {}
                 ResourceOrigin::Activity => tag_list.push(EntityTag::Activity),
@@ -361,7 +365,7 @@ pub async fn load_map(
 
         // TODO(cohae): Havok tags
 
-        tags.push((e.entity(), tag_list));
+        tags.push((e.id(), tag_list));
     }
 
     for (e, tags) in tags {
@@ -371,7 +375,10 @@ pub async fn load_map(
     }
 
     let mut new_entity_names: Vec<(Entity, String)> = vec![];
-    for (entity, meta) in scene.query::<&mut NodeMetadata>().iter() {
+    for (entity, mut meta) in scene
+        .query::<(Entity, &mut NodeMetadata)>()
+        .iter_mut(&mut scene)
+    {
         if meta.world_id != u64::MAX {
             if let Some(name) = entity_worldid_name_map.get(&meta.world_id) {
                 new_entity_names.push((entity, name.clone()));
@@ -381,7 +388,16 @@ pub async fn load_map(
     }
 
     for (entity, name) in new_entity_names {
-        scene.insert_one(entity, Label::from(name))?;
+        scene.entity_mut(entity).insert_one(Label::from(name));
+    }
+
+    let mut entity_ogtransforms: Vec<(Entity, OriginalTransform)> = vec![];
+    for (entity, transform) in scene.query::<(Entity, &Transform)>().iter(&mut scene) {
+        entity_ogtransforms.push((entity, OriginalTransform(transform.clone())));
+    }
+
+    for (entity, transform) in entity_ogtransforms {
+        scene.entity_mut(entity).insert_one(transform);
     }
 
     Ok(scene)
@@ -434,32 +450,70 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     let transforms = &preheader.instances.transforms
                         [s.instance_start as usize..(s.instance_start + s.instance_count) as usize];
 
-                    let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
-                    let mut instances = vec![];
+                    let bounds = if ((s.instance_start + s.instance_count) as usize)
+                        < preheader.instances.occlusion_bounds.bounds.len()
+                    {
+                        &preheader.instances.occlusion_bounds.bounds[s.instance_start as usize
+                            ..(s.instance_start + s.instance_count) as usize]
+                    } else {
+                        &[]
+                    };
 
-                    for transform in transforms.iter() {
+                    // Load model as a single entity if it only has one instance
+                    if transforms.len() == 1 {
                         let transform = Transform {
-                            translation: transform.translation,
-                            rotation: transform.rotation,
-                            scale: Vec3::splat(transform.scale.x),
+                            translation: transforms[0].translation,
+                            rotation: transforms[0].rotation,
+                            scale: Vec3::splat(transforms[0].scale.x),
                             flags: TransformFlags::empty(),
                         };
 
-                        let entity = scene.spawn((
-                            Icon::Unicode(ICON_CUBE_OUTLINE),
-                            Label::from("Static Instance"),
-                            OriginalTransform(transform),
+                        let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
+                        scene.entity_mut(parent).insert((
+                            Icon::Unicode(ICON_SHAPE),
+                            Label::from(format!("Static Model {mesh_tag}")),
                             transform,
-                            StaticInstance,
-                            Parent(parent),
+                            StaticModelSingle::new(renderer.gpu.clone(), model)?,
+                            TfxFeatureRenderer::StaticObjects,
+                            resource_origin,
                             NodeFilter::Static,
                         ));
-                        instances.push(entity);
-                    }
 
-                    scene.insert(
-                        parent,
-                        (
+                        if let Some(bounds) = bounds.get(0) {
+                            scene
+                                .entity_mut(parent)
+                                .insert_one(bounds.bb.untransform(transform.local_to_world()));
+                        }
+                    } else {
+                        let parent = spawn_data_entity(scene, (metadata.clone(),), parent_entity);
+                        let mut instances = vec![];
+
+                        for (i, transform) in transforms.iter().enumerate() {
+                            let transform = Transform {
+                                translation: transform.translation,
+                                rotation: transform.rotation,
+                                scale: Vec3::splat(transform.scale.x),
+                                flags: TransformFlags::empty(),
+                            };
+
+                            let mut entity = scene.spawn((
+                                Icon::Unicode(ICON_CUBE_OUTLINE),
+                                Label::from("Static Instance"),
+                                transform,
+                                StaticInstance,
+                                Parent(parent),
+                                NodeFilter::Static,
+                                RenderCommonBundle::default(),
+                            ));
+
+                            if let Some(bounds) = bounds.get(i) {
+                                entity
+                                    .insert_one(bounds.bb.untransform(transform.local_to_world()));
+                            }
+
+                            instances.push(entity.id());
+                        }
+                        scene.entity_mut(parent).insert((
                             Icon::Unicode(ICON_SHAPE),
                             Label::from(format!("Static Instances {mesh_tag}")),
                             StaticInstances::new(renderer.gpu.clone(), model, instances.len())?,
@@ -467,8 +521,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             TfxFeatureRenderer::StaticObjects,
                             resource_origin,
                             NodeFilter::Static,
-                        ),
-                    )?;
+                            RenderCommonBundle::default(),
+                        ));
+                    }
                 }
             }
             // D2Class_7D6C8080 (terrain)
@@ -478,14 +533,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let terrain_resource: SUnk8080714b = TigerReadable::read_ds(table_data).unwrap();
+                let terrain_renderer =
+                    TerrainPatches::load_from_tag(renderer, terrain_resource.terrain)
+                        .context("Failed to load terrain patches")?;
 
                 spawn_data_entity(
                     scene,
                     (
                         Icon::Unicode(ICON_IMAGE_FILTER_HDR),
                         Label::from("Terrain Patches"),
-                        TerrainPatches::load(renderer, terrain_resource.terrain)
-                            .context("Failed to load terrain patches")?,
+                        terrain_renderer.terrain.bounds,
+                        terrain_renderer,
                         TfxFeatureRenderer::TerrainPatch,
                         resource_origin,
                         metadata.clone(),
@@ -520,7 +578,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 } else {
                     match package_manager().read_tag_struct::<SAudioClipCollection>(tag) {
                         Ok(header) => {
-                            scene.insert_one(entity, AmbientAudio::new(header))?;
+                            scene
+                                .entity_mut(entity)
+                                .insert_one(AmbientAudio::new(header));
                         }
                         Err(e) => {
                             error!(error=?e, tag=%tag, "Failed to load ambient audio");
@@ -565,6 +625,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         continue;
                     }
 
+                    let model = DynamicModelComponent::load(
+                        renderer,
+                        &transform,
+                        unk8.unk60.entity_model,
+                        vec![],
+                        vec![],
+                        TfxFeatureRenderer::SkyTransparent,
+                    )?;
                     let transform = Transform::from_mat4(Mat4::from_cols_array(&unk8.transform));
                     spawn_data_entity(
                         scene,
@@ -573,14 +641,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             Icon::Colored(ICON_WEATHER_PARTLY_CLOUDY, Color32::LIGHT_BLUE),
                             Label::from(format!("Sky Model {}", unk8.unk60.entity_model)),
                             transform,
-                            DynamicModelComponent::load(
-                                renderer,
-                                &transform,
-                                unk8.unk60.entity_model,
-                                vec![],
-                                vec![],
-                                TfxFeatureRenderer::SkyTransparent,
-                            )?,
+                            model.model.occlusion_bounds(),
+                            model,
                             TfxFeatureRenderer::SkyTransparent,
                             resource_origin,
                             metadata.clone(),
@@ -596,6 +658,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let d: SUnk808068d4 = TigerReadable::read_ds(table_data)?;
 
+                let model = DynamicModelComponent::load(
+                    renderer,
+                    &transform,
+                    d.entity_model,
+                    vec![],
+                    vec![],
+                    TfxFeatureRenderer::Water,
+                )?;
                 if d.entity_model.is_some() {
                     spawn_data_entity(
                         scene,
@@ -603,14 +673,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             Icon::Unicode(ICON_WAVES),
                             Label::from("Water"),
                             transform,
-                            DynamicModelComponent::load(
-                                renderer,
-                                &transform,
-                                d.entity_model,
-                                vec![],
-                                vec![],
-                                TfxFeatureRenderer::Water,
-                            )?,
+                            model.model.occlusion_bounds(),
+                            model,
                             TfxFeatureRenderer::Water,
                             resource_origin,
                             metadata.clone(),
@@ -647,41 +711,42 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 .enumerate()
                 {
                     let shape = LightShape::from_volume_matrix(light.light_to_world);
+                    let transform = Transform {
+                        translation: transform.translation.xyz(),
+                        rotation: transform.rotation,
+                        ..Default::default()
+                    };
                     children.push(
-                        scene.spawn((
-                            NodeFilter::Light,
-                            Icon::Colored(shape.icon(), Color32::YELLOW),
-                            Label::from(format!("{} Light {tag}[{i}]", shape.name())),
-                            Transform {
-                                translation: transform.translation.xyz(),
-                                rotation: transform.rotation,
-                                ..Default::default()
-                            },
-                            LightRenderer::load(
-                                renderer.gpu.clone(),
-                                &mut renderer.data.lock().asset_manager,
-                                &light,
-                                format!("light {tag}+{i}"),
-                            )
-                            .context("Failed to load light")?,
-                            light,
-                            bounds.bb,
-                            TfxFeatureRenderer::DeferredLights,
-                            resource_origin,
-                            Parent(light_collection_entity),
-                        )),
+                        scene
+                            .spawn((
+                                NodeFilter::Light,
+                                Icon::Colored(shape.icon(), Color32::YELLOW),
+                                Label::from(format!("{} Light {tag}[{i}]", shape.name())),
+                                transform,
+                                LightRenderer::load(
+                                    renderer.gpu.clone(),
+                                    &mut renderer.data.lock().asset_manager,
+                                    &light,
+                                    format!("light {tag}+{i}"),
+                                )
+                                .context("Failed to load light")?,
+                                light,
+                                bounds.bb.untransform(transform.local_to_world()),
+                                TfxFeatureRenderer::DeferredLights,
+                                resource_origin,
+                                Parent(light_collection_entity),
+                                RenderCommonBundle::default(),
+                            ))
+                            .id(),
                     );
                 }
 
-                scene.insert(
-                    light_collection_entity,
-                    (
-                        light_collection,
-                        Icon::Unicode(ICON_LIGHTBULB_GROUP),
-                        Label::from(format!("Light Collection {tag}")),
-                        Children::from_slice(&children),
-                    ),
-                )?;
+                scene.entity_mut(light_collection_entity).insert((
+                    light_collection,
+                    Icon::Unicode(ICON_LIGHTBULB_GROUP),
+                    Label::from(format!("Light Collection {tag}")),
+                    Children::from_slice(&children),
+                ));
             }
             0x80806c5e => {
                 table_data
@@ -700,6 +765,8 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ),
                 )?;
 
+                let bb = Aabb::from_projection_matrix(light.light_to_world);
+
                 spawn_data_entity(
                     scene,
                     (
@@ -715,10 +782,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         )
                         .context("Failed to load shadowing light")?,
                         shadowmap,
+                        bb,
                         light,
                         TfxFeatureRenderer::DeferredLights,
                         resource_origin,
                         metadata.clone(),
+                        RenderCommonBundle::default(),
                     ),
                     parent_entity,
                 );
@@ -729,22 +798,21 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let atmos: SMapAtmosphere = TigerReadable::read_ds(table_data)?;
-                spawn_data_entity(
-                    scene,
-                    (
-                        Icon::Unicode(ICON_WEATHER_FOG),
-                        Label::from(format!(
-                            "Atmosphere Configuration (table {}@0x{:X})",
-                            table_hash, data.data_resource.offset
-                        )),
-                        MapAtmosphere::load(&renderer.gpu, atmos)
-                            .context("Failed to load map atmosphere")?,
-                        resource_origin,
-                        metadata.clone(),
-                    ),
-                    // parent_entity,
-                    None,
+                scene.insert_resource(
+                    MapAtmosphere::load(&renderer.gpu, atmos)
+                        .context("Failed to load map atmosphere")?,
                 );
+
+                // Load as entity for ease of debugging
+                scene.spawn((
+                    Icon::Unicode(ICON_WEATHER_FOG),
+                    Label::from(format!(
+                        "Atmosphere Configuration (table {}@0x{:X})",
+                        table_hash, data.data_resource.offset
+                    )),
+                    resource_origin,
+                    metadata.clone(),
+                ));
             }
             // Cubemap volume
             0x80806695 => {
@@ -1358,22 +1426,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
     Ok(())
 }
 
-fn spawn_data_entity(
-    scene: &mut Scene,
-    components: impl DynamicBundle,
-    parent: Option<Entity>,
-) -> Entity {
-    let child = scene.spawn(components);
+fn spawn_data_entity(scene: &mut Scene, components: impl Bundle, parent: Option<Entity>) -> Entity {
+    let mut child = scene.spawn(components);
+    child.insert(VisibilityBundle::default());
+
+    let child_id = child.id();
+
     if let Some(parent) = parent {
-        scene.set_parent(child, parent);
-    }
-    if let Ok(transform) = scene.get::<&Transform>(child).map(|t| *t.deref()) {
-        scene
-            .insert_one(child, OriginalTransform(transform))
-            .unwrap();
+        scene.set_parent(child_id, parent);
     }
 
-    child
+    child_id
 }
 
 fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
@@ -1449,7 +1512,7 @@ fn load_entity_into_scene(
         .get_entry(entity_hash)
         .map_or(true, |v| Some(v.reference) != SEntity::ID)
     {
-        return Ok(Entity::DANGLING);
+        return Ok(Entity::PLACEHOLDER);
     }
 
     let header = package_manager()
@@ -1475,7 +1538,7 @@ fn load_entity_into_scene(
         parent_entity,
     );
     if let Some(metadata) = metadata {
-        scene.insert_one(scene_entity, metadata).unwrap();
+        scene.entity_mut(scene_entity).insert_one(metadata);
     }
 
     for e in &header.entity_resources {
@@ -1491,28 +1554,23 @@ fn load_entity_into_scene(
                 let entity_material_map: Vec<Unk808072c5> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                // cur.seek(SeekFrom::Start(entref.unk18.offset + 0x3f0))?;
-                // let entity_material_map_pre: Vec<(u16, u16)> =
-                //     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
-
                 cur.seek(SeekFrom::Start(entres.unk18.offset + 0x400))?;
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                scene.insert(
-                    scene_entity,
-                    (
-                        DynamicModelComponent::load(
-                            renderer,
-                            &transform,
-                            model_hash,
-                            entity_material_map,
-                            materials,
-                            TfxFeatureRenderer::DynamicObjects,
-                        )?,
-                        TfxFeatureRenderer::DynamicObjects,
-                    ),
+                let model = DynamicModelComponent::load(
+                    renderer,
+                    &transform,
+                    model_hash,
+                    entity_material_map,
+                    materials,
+                    TfxFeatureRenderer::DynamicObjects,
                 )?;
+                scene.entity_mut(scene_entity).insert((
+                    model.model.occlusion_bounds(),
+                    model,
+                    TfxFeatureRenderer::DynamicObjects,
+                ));
             }
             u => {
                 debug!(

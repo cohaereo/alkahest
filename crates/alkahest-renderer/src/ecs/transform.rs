@@ -1,7 +1,8 @@
+use bevy_ecs::prelude::Component;
 use bitflags::bitflags;
 use glam::{Mat4, Quat, Vec3};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Component, Debug, Copy, Clone, PartialEq)]
 #[repr(C, align(16))]
 pub struct Transform {
     pub translation: Vec3,
@@ -121,5 +122,5 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Component, Debug, Copy, Clone, PartialEq)]
 pub struct OriginalTransform(pub Transform);

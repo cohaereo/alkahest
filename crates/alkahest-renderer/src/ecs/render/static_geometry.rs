@@ -1,21 +1,31 @@
 use std::sync::Arc;
 
 use alkahest_data::{
+    occlusion::Aabb,
     statics::{SStaticMesh, SStaticMeshData, SStaticSpecialMesh},
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
+use bevy_ecs::{
+    change_detection::DetectChanges,
+    entity::Entity,
+    prelude::Component,
+    query::Without,
+    system::{Commands, Query},
+    world::Ref,
+};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
-use hecs::Entity;
+use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
     ecs::{
-        common::Hidden,
         hierarchy::{Children, Parent},
+        render::light::ShadowGenerationMode,
         transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
@@ -176,7 +186,8 @@ impl StaticModel {
 
         gpu_event!(
             renderer.gpu,
-            format!("static_model {}", self.hash.prepend_package_name())
+            "static_model",
+            self.hash.prepend_package_name()
         );
 
         profiling::scope!("StaticModel::draw");
@@ -188,6 +199,19 @@ impl StaticModel {
             .enumerate()
             .filter(|(_, g)| g.render_stage == render_stage)
         {
+            if group.render_stage == TfxRenderStage::ShadowGenerate {
+                if group.unk6 == 2
+                    && renderer.active_shadow_generation_mode != ShadowGenerationMode::MovingOnly
+                {
+                    continue;
+                } else if group.unk6 == 1
+                    && renderer.active_shadow_generation_mode
+                        != ShadowGenerationMode::StationaryOnly
+                {
+                    continue;
+                }
+            }
+
             profiling::scope!("StaticModel::draw::group", format!("group_{}", i));
             let part = &self.model.opaque_meshes.parts[group.part_index as usize];
             if !part.lod_category.is_highest_detail() {
@@ -266,20 +290,24 @@ impl StaticModel {
 
 // TODO(cohae): With children separated into it's own component we can probably merge singular and instances staticmodels
 /// Singular static model
+#[derive(Component)]
 pub struct StaticModelSingle {
     pub model: StaticModel,
     pub cbuffer: ConstantBuffer<u8>,
 }
 
 impl StaticModelSingle {
+    pub fn new(gctx: SharedGpuContext, model: StaticModel) -> anyhow::Result<Self> {
+        let cbuffer = ConstantBuffer::create_array_init(gctx, &[0u8; 32 + 64])?;
+        Ok(Self { model, cbuffer })
+    }
+
     pub fn load(
         gctx: SharedGpuContext,
         am: &mut AssetManager,
         tag: TagHash,
     ) -> anyhow::Result<Self> {
-        let model = StaticModel::load(am, tag)?;
-        let cbuffer = ConstantBuffer::create_array_init(gctx, &[0u8; 32 + 64])?;
-        Ok(Self { model, cbuffer })
+        Self::new(gctx, StaticModel::load(am, tag)?)
     }
 
     pub fn update_cbuffer(&self, transform: &Transform) {
@@ -307,11 +335,11 @@ impl StaticModelSingle {
 }
 
 /// Parent of all static instances for a model
+#[derive(Component)]
 pub struct StaticInstances {
     pub model: StaticModel,
     pub instance_count: usize,
     pub cbuffer: ConstantBuffer<u8>,
-    cbuffer_dirty: bool,
 }
 
 impl StaticInstances {
@@ -322,28 +350,17 @@ impl StaticInstances {
             model,
             instance_count: instances,
             cbuffer,
-            cbuffer_dirty: true,
         })
     }
 
-    pub fn mark_dirty(&mut self) {
-        self.cbuffer_dirty = true;
-    }
-
-    pub fn update_cbuffer(&self, scene: &Scene, instances: &[Entity]) {
+    pub fn update_cbuffer(&self, transforms: &[Transform]) {
         profiling::scope!("StaticInstances::update_cbuffer");
-        let mut transforms = Vec::with_capacity(instances.len());
-        for &instance in instances {
-            if let Ok(transform) = scene.get::<&Transform>(instance) {
-                transforms.push(*transform.clone());
-            }
-        }
 
         unsafe {
             let mesh_data = &self.model.model.opaque_meshes;
             self.cbuffer
                 .write_array(
-                    create_instances_scope(mesh_data, &transforms)
+                    create_instances_scope(mesh_data, transforms)
                         .write()
                         .as_slice(),
                 )
@@ -385,11 +402,12 @@ pub fn create_instances_scope(mesh: &SStaticMeshData, transforms: &[Transform]) 
 
 /// A single instance of a static model, can be manipulated individually
 /// Rendered by [`StaticInstances`]
+#[derive(Component)]
 pub struct StaticInstance;
 
 pub fn draw_static_instances_system(
     renderer: &Renderer,
-    scene: &Scene,
+    scene: &mut Scene,
     render_stage: TfxRenderStage,
 ) {
     if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::StaticObjects)) {
@@ -400,31 +418,33 @@ pub fn draw_static_instances_system(
         "draw_static_instances_system",
         &format!("render_stage={render_stage:?}")
     );
-    for (e, instances) in scene
-        .query::<&StaticInstances>()
-        .without::<&Hidden>()
-        .iter()
+    for (e, instances, vis) in scene
+        .query::<(Entity, &StaticInstances, Option<&ViewVisibility>)>()
+        .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            instances.draw(renderer, render_stage);
-        });
+        if vis.is_visible(renderer.active_view) {
+            renderer.pickbuffer.with_entity(e, || {
+                instances.draw(renderer, render_stage);
+            });
+        }
     }
 
-    for (e, instances) in scene
-        .query::<&StaticModelSingle>()
-        .without::<&Hidden>()
-        .iter()
+    for (e, instances, vis) in scene
+        .query::<(Entity, &StaticModelSingle, Option<&ViewVisibility>)>()
+        .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            instances.draw(renderer, render_stage);
-        });
+        if vis.is_visible(renderer.active_view) {
+            renderer.pickbuffer.with_entity(e, || {
+                instances.draw(renderer, render_stage);
+            });
+        }
     }
 }
 
 /// Draws all static instance collection children individually
 pub fn draw_static_instances_individual_system(
     renderer: &Renderer,
-    scene: &Scene,
+    scene: &mut Scene,
     cbuffer: &ConstantBuffer<u8>,
     render_stage: TfxRenderStage,
 ) {
@@ -440,12 +460,21 @@ pub fn draw_static_instances_individual_system(
         renderer.render_globals.scopes.chunk_model.vertex_slot() as u32,
         TfxShaderStage::Vertex,
     );
-    for (e, (transform, _instance, parent)) in scene
-        .query::<(&Transform, &StaticInstance, &Parent)>()
-        .without::<&Hidden>()
-        .iter()
+    for (e, transform, _instance, parent, vis) in scene
+        .query::<(
+            Entity,
+            &Transform,
+            &StaticInstance,
+            &Parent,
+            Option<&ViewVisibility>,
+        )>()
+        .iter(scene)
     {
-        if let Ok(model) = scene.get::<&StaticInstances>(parent.0) {
+        if !vis.is_visible(renderer.active_view) {
+            continue;
+        }
+
+        if let Some(model) = scene.get::<StaticInstances>(parent.0) {
             unsafe {
                 cbuffer
                     .write_array(
@@ -465,17 +494,42 @@ pub fn draw_static_instances_individual_system(
     }
 }
 
-pub fn update_static_instances_system(scene: &Scene) {
+pub fn update_static_instances_system(
+    mut q_static_instances: Query<(Entity, &mut StaticInstances, &Children)>,
+    q_static_model_single: Query<(Ref<Transform>, &StaticModelSingle)>,
+    q_instance_transform: Query<(Ref<Transform>, Option<&Aabb>)>,
+    mut commands: Commands,
+) {
     profiling::scope!("update_static_instances_system");
-    for (_, (instances, children)) in scene.query::<(&mut StaticInstances, &Children)>().iter() {
-        if instances.cbuffer_dirty {
-            instances.update_cbuffer(scene, children);
-            instances.cbuffer_dirty = false;
+
+    for (entity, mut instances, children) in q_static_instances.iter_mut() {
+        let mut transforms = Vec::with_capacity(children.len());
+        let mut obbs = Vec::with_capacity(children.len());
+        let mut changed = false;
+        for e in children.iter() {
+            if let Ok((transform, bounds)) = q_instance_transform.get(*e) {
+                transforms.push(*transform);
+                obbs.push((
+                    transform.local_to_world(),
+                    bounds.cloned().unwrap_or(Aabb::ZERO),
+                ));
+                if transform.is_changed() {
+                    changed = true;
+                }
+            }
+        }
+
+        if changed {
+            instances.update_cbuffer(&transforms);
             instances.instance_count = children.len();
+
+            commands.entity(entity).insert((Aabb::from_obbs(obbs),));
         }
     }
 
-    for (_, (transform, model)) in scene.query::<(&Transform, &StaticModelSingle)>().iter() {
-        model.update_cbuffer(transform);
+    for (transform, model) in q_static_model_single.iter() {
+        if transform.is_changed() {
+            model.update_cbuffer(&transform);
+        }
     }
 }

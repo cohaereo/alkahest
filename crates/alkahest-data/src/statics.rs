@@ -3,7 +3,7 @@ use tiger_parse::tiger_tag;
 
 use crate::{
     geometry::{ELodCategory, EPrimitiveType},
-    occlusion::SOcclusionBounds,
+    occlusion::{Aabb, SOcclusionBounds},
     tag::Tag,
     tfx::TfxRenderStage,
 };
@@ -20,8 +20,8 @@ pub struct SStaticMesh {
     pub special_meshes: Vec<SStaticSpecialMesh>,
     pub unk30: [u32; 2],
     pub unk38: [f32; 6],
-    pub unk50: glam::Vec4, // ? Similar to model_offset, but not quite right...
-    pub unk60: glam::Vec4,
+    pub unk50: [u32; 4],
+    pub unk60: [u32; 4],
 }
 
 #[derive(Debug)]
@@ -31,6 +31,7 @@ pub struct SStaticMeshData {
     pub mesh_groups: Vec<SStaticMeshGroup>,
     pub parts: Vec<SStaticMeshPart>,
     pub buffers: Vec<(TagHash, TagHash, TagHash, TagHash)>,
+    pub unk38: u32,
 
     #[tag(offset = 0x40)]
     pub mesh_offset: glam::Vec3,
@@ -57,7 +58,11 @@ pub struct SStaticMeshGroup {
     pub part_index: u16,
     pub render_stage: TfxRenderStage,
     pub input_layout_index: u8,
-    pub unk5: u16,
+    pub unk5: u8,
+    /// Usually 1.
+    /// If 2, at least for render_stage=ShadowGenerate, the geometry in this group has some kind of vertex animation
+    /// This can be used to differentiate stationary static geometry from moving/animated statics
+    pub unk6: u8,
 }
 
 #[derive(Debug, Clone)]
@@ -72,6 +77,8 @@ pub struct SStaticMeshInstances {
     pub unk58: [u64; 4],
     pub statics: Vec<TagHash>,
     pub instance_groups: Vec<SStaticMeshInstanceGroup>,
+    pub unk98: [u32; 2],
+    pub bounds: Aabb,
 }
 
 #[derive(Debug, Clone)]

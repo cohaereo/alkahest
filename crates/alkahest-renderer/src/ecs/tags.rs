@@ -1,22 +1,22 @@
 use std::fmt::Display;
 
-use hecs::Entity;
+use bevy_ecs::{component::Component, entity::Entity};
 use rustc_hash::FxHashSet;
 use tiger_parse::FnvHash;
 
 use super::Scene;
 use crate::{
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_CUBE, ICON_DROPBOX, ICON_HELP, ICON_LIGHTBULB_ON,
-        ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG, ICON_TOOLBOX,
-        ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_CUBE, ICON_DROPBOX, ICON_HELP,
+        ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG,
+        ICON_TOOLBOX, ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
     },
-    util::color::Color,
+    util::{color::Color, scene::EntityWorldMutExt},
 };
 
 pub type NodeFilterSet = FxHashSet<NodeFilter>;
 
-#[derive(strum::EnumIter, strum::Display, Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Component, strum::EnumIter, strum::Display, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum NodeFilter {
     Entity,
     RespawnPoint,
@@ -130,7 +130,7 @@ impl Display for EntityTag {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Component)]
 pub struct Tags(pub FxHashSet<EntityTag>);
 
 impl Tags {
@@ -148,16 +148,20 @@ impl Tags {
 }
 
 pub fn insert_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {
-    if let Ok(Some(mut e)) = scene.entity(ent).map(|e| e.get::<&mut Tags>()) {
-        e.insert(tag);
-        return;
-    }
+    if let Some(mut e) = scene.get_entity_mut(ent) {
+        if let Some(mut tags) = e.get_mut::<Tags>() {
+            tags.insert(tag);
+            return;
+        }
 
-    scene.insert_one(ent, Tags::from_iter([tag])).ok();
+        scene.entity_mut(ent).insert_one(Tags::from_iter([tag]));
+    }
 }
 
 pub fn remove_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {
-    if let Ok(Some(mut e)) = scene.entity(ent).map(|e| e.get::<&mut Tags>()) {
-        e.0.remove(&tag);
+    if let Some(mut e) = scene.get_entity_mut(ent) {
+        if let Some(mut tags) = e.get_mut::<Tags>() {
+            tags.0.remove(&tag);
+        }
     }
 }

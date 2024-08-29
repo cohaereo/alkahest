@@ -1,4 +1,4 @@
-use alkahest_renderer::resources::Resources;
+use alkahest_renderer::resources::AppResources;
 use egui::Context;
 use winit::window::Window;
 
@@ -11,7 +11,7 @@ impl GuiView for PuffinProfiler {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let mut windows = resources.get_mut::<HiddenWindows>();

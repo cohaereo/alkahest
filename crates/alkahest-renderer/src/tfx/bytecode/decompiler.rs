@@ -145,9 +145,9 @@ impl TfxBytecodeDecompiler {
                     let [t1, t2] = stack_pop!(2);
                     stack_push!(format!("float4({t1}.xy, {t2}.xy)"));
                 }
-                TfxBytecodeOp::Unk0e => {
+                TfxBytecodeOp::Merge3_1 => {
                     let [t1, t2] = stack_pop!(2);
-                    stack_push!(format!("unk0e({t1}, {t2})"));
+                    stack_push!(format!("float4({t1}.xyz, {t2}.x)"));
                 }
                 TfxBytecodeOp::Unk0f => {
                     let [t1, t2] = stack_pop!(2);

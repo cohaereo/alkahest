@@ -15,3 +15,7 @@ glam.workspace = true
 tiger-parse.workspace = true
 rustc-hash.workspace = true
 rayon.workspace = true
+bevy_ecs = { workspace = true, optional = true }
+
+[features]
+bevy = ["bevy_ecs"]

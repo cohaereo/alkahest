@@ -1,27 +1,26 @@
-use std::io::Cursor;
-
-use alkahest_data::{
-    geometry::EPrimitiveType,
-    tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
-};
-use alkahest_pm::package_manager;
+use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use anyhow::Context;
+use bevy_ecs::{
+    entity::Entity,
+    prelude::Component,
+    query::Without,
+    system::{In, Query, Res},
+};
 use destiny_havok::shape_collection;
-use destiny_pkg::TagHash;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::Itertools;
 
 use crate::{
     ecs::{
-        common::Hidden, render::static_geometry::StaticInstances, resources::SelectedEntity,
-        tags::NodeFilter, transform::Transform, Scene,
+        resources::SelectedEntity,
+        tags::NodeFilter,
+        transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
     },
     gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
-    renderer::{shader::ShaderProgram, Renderer},
-    resources::Resources,
-    tfx::technique::ShaderModule,
+    renderer::{shader::ShaderProgram, RendererShared},
     Color, ColorExt,
 };
 
@@ -31,6 +30,7 @@ struct HavokShapeScope {
     color: glam::Vec4,
 }
 
+#[derive(Component)]
 pub struct HavokShapeRenderer {
     shader: ShaderProgram,
 
@@ -168,18 +168,25 @@ pub fn calculate_mesh_normals_flat(
     (new_vertices, new_indices)
 }
 
-pub fn draw_debugshapes_system(renderer: &Renderer, scene: &Scene, resources: &Resources) {
-    for (e, (transform, shape, filter)) in scene
-        .query::<(&Transform, &HavokShapeRenderer, Option<&NodeFilter>)>()
-        .without::<&Hidden>()
-        .iter()
-    {
+pub fn draw_debugshapes_system(
+    In(renderer): In<RendererShared>,
+    selected: Res<SelectedEntity>,
+    q_ruler: Query<(
+        Entity,
+        &Transform,
+        &HavokShapeRenderer,
+        Option<&NodeFilter>,
+        Option<&ViewVisibility>,
+    )>,
+) {
+    for (e, transform, shape, filter, vis) in q_ruler.iter() {
+        if !vis.is_visible(renderer.active_view) {
+            continue;
+        }
         let color = if let Some(filter) = filter {
-            if !renderer.lastfilters.contains(&filter) {
+            if !renderer.lastfilters.contains(filter) {
                 continue;
             }
-
-            let selected = resources.get::<SelectedEntity>();
 
             selected.select_fade_color(filter.color(), Some(e))
         } else {

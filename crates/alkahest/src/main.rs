@@ -7,13 +7,21 @@ extern crate tracing;
 
 use std::{fmt::Write, path::PathBuf, process::exit, str::FromStr, sync::Arc};
 
-use alkahest_pm::PACKAGE_MANAGER;
-use alkahest_renderer::util::image::Png;
+use alkahest_data::{render_globals::SScope, technique::STechnique};
+use alkahest_pm::{package_manager, PACKAGE_MANAGER};
+use alkahest_renderer::{
+    tfx::{bytecode::opcodes::TfxBytecodeOp, externs::TfxExtern},
+    util::image::Png,
+};
 use anyhow::Context;
 use app::AlkahestApp;
 use clap::Parser;
 use destiny_pkg::{GameVersion, PackageManager, TagHash};
+use itertools::Itertools;
 use mimalloc::MiMalloc;
+use rustc_hash::FxHashSet;
+use strum::IntoEnumIterator;
+use tiger_parse::PackageManagerExt;
 use tracing::level_filters::LevelFilter;
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -117,10 +125,20 @@ async fn main() -> anyhow::Result<()> {
         .build_global()
         .unwrap();
 
+    // Remove the original log, if it exists
+    std::fs::remove_file("./alkahest.log").ok();
+    let file_appender = tracing_appender::rolling::never("./", "alkahest.log");
+
     LogTracer::init()?;
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(ConsoleLogLayer)
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .without_time()
+                    .with_ansi(false)
+                    .with_writer(file_appender),
+            )
             .with(tracing_subscriber::fmt::layer().without_time())
             .with(
                 EnvFilter::builder()
@@ -140,6 +158,8 @@ async fn main() -> anyhow::Result<()> {
 
     let mut event_loop = EventLoop::new()?;
     initialize_package_manager(&args, &mut event_loop, &icon)?;
+
+    // extract_tfx_externs()?;
 
     tokio::spawn(discord::discord_client_loop());
 
@@ -218,4 +238,128 @@ pub fn parse_taghash(s: &str) -> Result<TagHash, String> {
     .map(|v| TagHash(u32::from_be(v)));
 
     result.map_err(|e| e.to_string())
+}
+
+fn extract_tfx_externs() -> anyhow::Result<()> {
+    use tiger_parse::TigerReadable;
+    #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+    pub enum ExternFieldType {
+        Float,
+        Vec4,
+        Mat4,
+        U32,
+        Texture,
+        Uav,
+    }
+
+    let mut fields: FxHashSet<(TfxExtern, ExternFieldType, usize)> = Default::default();
+
+    for (t, _) in package_manager()
+        .get_all_by_reference(SScope::ID.unwrap())
+        .into_iter()
+    {
+        let scope: SScope = package_manager().read_tag_struct(t)?;
+        for s in scope.iter_stages() {
+            if let Ok(opcodes) =
+                TfxBytecodeOp::parse_all(&s.constants.bytecode, binrw::Endian::Little)
+            {
+                for op in opcodes {
+                    match op {
+                        TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Float, offset as usize * 4));
+                        }
+                        TfxBytecodeOp::PushExternInputVec4 { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Vec4, offset as usize * 16));
+                        }
+                        TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Mat4, offset as usize * 16));
+                        }
+                        TfxBytecodeOp::PushExternInputTextureView { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Texture, offset as usize * 8));
+                        }
+                        TfxBytecodeOp::PushExternInputU32 { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::U32, offset as usize * 4));
+                        }
+                        TfxBytecodeOp::PushExternInputUav { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Uav, offset as usize * 8));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    for (t, _) in package_manager()
+        .get_all_by_reference(STechnique::ID.unwrap())
+        .into_iter()
+    {
+        let Ok(technique): anyhow::Result<STechnique> = package_manager().read_tag_struct(t) else {
+            continue;
+        };
+        for (_, s) in technique.all_shaders() {
+            if let Ok(opcodes) =
+                TfxBytecodeOp::parse_all(&s.constants.bytecode, binrw::Endian::Little)
+            {
+                for op in opcodes {
+                    match op {
+                        TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Float, offset as usize * 4));
+                        }
+                        TfxBytecodeOp::PushExternInputVec4 { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Vec4, offset as usize * 16));
+                        }
+                        TfxBytecodeOp::PushExternInputMat4 { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Mat4, offset as usize * 16));
+                        }
+                        TfxBytecodeOp::PushExternInputTextureView { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Texture, offset as usize * 8));
+                        }
+                        TfxBytecodeOp::PushExternInputU32 { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::U32, offset as usize * 4));
+                        }
+                        TfxBytecodeOp::PushExternInputUav { extern_, offset } => {
+                            fields.insert((extern_, ExternFieldType::Uav, offset as usize * 8));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    // println!("Fields: {fields:#?}");
+
+    for ext in TfxExtern::iter() {
+        let mut sfields = fields
+            .iter()
+            .filter(|(e, _, _)| *e == ext)
+            .map(|(_, a, b)| (*a, *b))
+            .collect_vec();
+
+        sfields.sort_by_key(|(_, offset)| *offset);
+
+        if sfields.is_empty() {
+            continue;
+        }
+
+        println!("struct {ext:?} {{");
+
+        for (ty, offset) in sfields {
+            let ty_str = match ty {
+                ExternFieldType::Float => "f32",
+                ExternFieldType::Vec4 => "Vec4",
+                ExternFieldType::Mat4 => "Mat4",
+                ExternFieldType::U32 => "u32",
+                ExternFieldType::Texture => "TextureView",
+                ExternFieldType::Uav => "UnorderedAccessView",
+            };
+
+            println!("\tpub unk{offset:02x}: {ty_str},");
+        }
+
+        println!("}}\n");
+    }
+
+    Ok(())
 }

@@ -4,6 +4,10 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use anyhow::Context;
+use bevy_ecs::{
+    change_detection::DetectChanges, component::Component, query::Without, system::Query,
+    world::Ref,
+};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -22,7 +26,12 @@ use windows::Win32::Graphics::{
 
 use crate::{
     camera::{CameraProjection, Viewport},
-    ecs::{common::Hidden, transform::Transform, Scene},
+    ecs::{
+        culling::Frustum,
+        transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
+        Scene,
+    },
     gpu::{GpuContext, SharedGpuContext},
     gpu_event,
     handle::Handle,
@@ -30,13 +39,13 @@ use crate::{
     loaders::AssetManager,
     renderer::{gbuffer::ShadowDepthMap, Renderer},
     tfx::{
-        externs,
-        externs::TextureView,
+        externs::{self, TextureView},
         technique::Technique,
         view::{RenderStageSubscriptions, View},
     },
 };
 
+#[derive(Component)]
 pub struct LightRenderer {
     pub projection_matrix: Mat4,
 
@@ -256,13 +265,16 @@ pub enum ShadowPcfSamples {
     Samples21 = 2,
 }
 
-pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
+pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
     profiling::scope!("draw_light_system");
-    for (_, (transform, light_renderer, light)) in scene
-        .query::<(&Transform, &LightRenderer, &SLight)>()
-        .without::<&Hidden>()
-        .iter()
+    for (transform, light_renderer, light, vis) in scene
+        .query::<(&Transform, &LightRenderer, &SLight, Option<&ViewVisibility>)>()
+        .iter(scene)
     {
+        if !vis.is_visible(renderer.active_view) {
+            continue;
+        }
+
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -296,16 +308,20 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
         light_renderer.draw(renderer, false);
     }
 
-    for (_, (transform, light_renderer, light, shadowmap)) in scene
+    for (transform, light_renderer, light, shadowmap, vis) in scene
         .query::<(
             &Transform,
             &LightRenderer,
             &SShadowingLight,
             Option<&ShadowMapRenderer>,
+            Option<&ViewVisibility>,
         )>()
-        .without::<&Hidden>()
-        .iter()
+        .iter(scene)
     {
+        if !vis.is_visible(renderer.active_view) {
+            continue;
+        }
+
         {
             let externs = &mut renderer.data.lock().externs;
             let Some(view) = &externs.view else {
@@ -368,14 +384,29 @@ pub fn draw_light_system(renderer: &Renderer, scene: &Scene) {
     }
 }
 
+#[derive(Component)]
 pub struct ShadowMapRenderer {
     pub last_update: usize,
+    pub stationary_needs_update: bool,
 
+    depth_stationary: ShadowDepthMap,
     depth: ShadowDepthMap,
     viewport: Viewport,
 
     world_to_camera: Mat4,
     camera_to_projective: Mat4,
+}
+
+/// What geometry to render shadows for
+#[derive(PartialEq)]
+pub enum ShadowGenerationMode {
+    /// Only render stationary static geometry. Will clear the stationary depth buffer
+    StationaryOnly,
+
+    /// Only render dynamic geometry/animated static geometry. Will copy the depth buffer from the stationary pass to the main depth buffer
+    MovingOnly,
+    // /// Render both stationary and dynamic geometry. Clears the main depth buffer
+    // Both,
 }
 
 impl ShadowMapRenderer {
@@ -386,6 +417,8 @@ impl ShadowMapRenderer {
         projection: CameraProjection,
     ) -> anyhow::Result<Self> {
         let depth = ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
+        let depth_stationary =
+            ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
 
         let viewport = Viewport {
             origin: UVec2::ZERO,
@@ -397,6 +430,8 @@ impl ShadowMapRenderer {
 
         Ok(Self {
             last_update: 0,
+            stationary_needs_update: true,
+            depth_stationary,
             depth,
             viewport,
             world_to_camera,
@@ -404,20 +439,37 @@ impl ShadowMapRenderer {
         })
     }
 
-    pub fn bind_for_generation(&mut self, transform: &Transform, renderer: &Renderer) {
+    /// Binds the shadowmap
+    pub fn bind_for_generation(
+        &mut self,
+        transform: &Transform,
+        renderer: &Renderer,
+        mode: ShadowGenerationMode,
+    ) {
         self.world_to_camera = transform.view_matrix();
 
         unsafe {
-            renderer.gpu.context().ClearDepthStencilView(
-                &self.depth.views[0],
-                (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
-                1.0,
-                0,
-            );
-            renderer
-                .gpu
-                .context()
-                .OMSetRenderTargets(None, &self.depth.views[0]);
+            let view = match mode {
+                ShadowGenerationMode::StationaryOnly => {
+                    renderer.gpu.context().ClearDepthStencilView(
+                        &self.depth_stationary.views[0],
+                        (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
+                        1.0,
+                        0,
+                    );
+                    self.stationary_needs_update = false;
+                    &self.depth_stationary.views[0]
+                }
+                ShadowGenerationMode::MovingOnly => {
+                    renderer
+                        .gpu
+                        .copy_texture(&self.depth_stationary.texture, &self.depth.texture);
+
+                    &self.depth.views[0]
+                }
+            };
+
+            renderer.gpu.context().OMSetRenderTargets(None, view);
         }
     }
 }
@@ -443,6 +495,10 @@ impl View for ShadowMapRenderer {
 
         // Only known values are (0, 1, 0, 0) and (0, 3.428143, 0, 0)
         x.view_miscellaneous = Vec4::new(0., 1., 0., 0.);
+    }
+
+    fn frustum(&self) -> crate::ecs::culling::Frustum {
+        Frustum::from_matrix(self.camera_to_projective * self.world_to_camera)
     }
 }
 
@@ -477,6 +533,17 @@ impl LightShape {
             LightShape::Omni => "Omni",
             LightShape::Spot => "Spot",
             LightShape::Line => "Line",
+        }
+    }
+}
+
+pub fn update_shadowrenderer_system(
+    mut q_shadowrenderer: Query<(Ref<Transform>, &mut ShadowMapRenderer)>,
+) {
+    profiling::scope!("update_shadowrenderer_system");
+    for (transform, mut shadow) in q_shadowrenderer.iter_mut() {
+        if transform.is_changed() {
+            shadow.stationary_needs_update = true;
         }
     }
 }

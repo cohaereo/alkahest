@@ -3,10 +3,10 @@ use alkahest_renderer::{
     icons::ICON_TREE,
     renderer::RendererShared,
 };
+use bevy_ecs::prelude::EntityRef;
 use egui::{Color32, Ui};
-use hecs::EntityRef;
 
-use crate::{gui::inspector::ComponentPanel, resources::Resources};
+use crate::{gui::inspector::ComponentPanel, resources::AppResources};
 
 impl ComponentPanel for DecoratorRenderer {
     fn inspector_name() -> &'static str {
@@ -23,10 +23,10 @@ impl ComponentPanel for DecoratorRenderer {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        _: &'s Scene,
+        _: &'s mut Scene,
         _: EntityRef<'s>,
         ui: &mut Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let renderer = resources.get::<RendererShared>();
         renderer

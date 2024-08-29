@@ -375,10 +375,8 @@ impl GpuContext {
                     self.present_parameters.store(0, Ordering::Relaxed);
                 }
             }
-        } else {
-            if vsync {
-                std::thread::sleep(Duration::from_millis(1000 / 60));
-            }
+        } else if vsync {
+            std::thread::sleep(Duration::from_millis(1000 / 60));
         }
     }
     pub fn resize_swapchain(&self, width: u32, height: u32) {

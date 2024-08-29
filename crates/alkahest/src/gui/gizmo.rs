@@ -1,13 +1,13 @@
 use alkahest_renderer::{
     camera::Camera,
-    ecs::{render::update_entity_transform, resources::SelectedEntity, transform::Transform},
+    ecs::{resources::SelectedEntity, transform::Transform},
     icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_RESIZE, ICON_ROTATE_ORBIT},
     renderer::Renderer,
-    resources::Resources,
+    resources::AppResources,
 };
 use egui::{
-    epaint::Vertex, Context, FontId, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding,
-    Ui,
+    epaint::Vertex, Context, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding, Ui,
+    UiStackInfo,
 };
 use glam::{DQuat, DVec3};
 use transform_gizmo_egui::{
@@ -30,7 +30,7 @@ impl GuiView for GizmoSelector {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let mut ui = Ui::new(
@@ -39,6 +39,7 @@ impl GuiView for GizmoSelector {
             "gizmo_selector_overlay".into(),
             ctx.available_rect().shrink(16.0),
             ctx.screen_rect(),
+            UiStackInfo::default(),
         );
 
         ui.horizontal(|ui| {
@@ -110,7 +111,7 @@ impl GuiView for GizmoSelector {
     }
 }
 
-pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &Resources) {
+pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &AppResources) {
     let Some(selected) = resources.get::<SelectedEntity>().selected() else {
         return;
     };
@@ -126,9 +127,9 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
         *gizmo_mode = SelectionGizmoMode::Scale;
     }
 
-    let maplist = resources.get::<MapList>();
-    if let Some(map) = maplist.current_map() {
-        let Ok(mut transform) = map.scene.get::<&mut Transform>(selected) else {
+    let mut maplist = resources.get_mut::<MapList>();
+    if let Some(map) = maplist.current_map_mut() {
+        let Some(mut transform) = map.scene.get_mut::<Transform>(selected) else {
             return;
         };
         let camera = resources.get::<Camera>();
@@ -155,7 +156,6 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
             transform.translation = DVec3::from(new_transform[0].translation).as_vec3();
             transform.rotation = DQuat::from(new_transform[0].rotation).as_quat().normalize();
             transform.scale = DVec3::from(new_transform[0].scale).as_vec3();
-            update_entity_transform(&map.scene, selected);
         }
     }
 }

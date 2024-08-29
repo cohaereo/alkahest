@@ -3,7 +3,7 @@ use glam::Vec4;
 use tiger_parse::tiger_tag;
 
 use crate::{
-    occlusion::{SOcclusionBounds, AABB},
+    occlusion::{Aabb, SOcclusionBounds},
     Tag,
 };
 
@@ -19,7 +19,7 @@ pub struct SDecorator {
     pub unk4c: Tag<SOcclusionBounds>,
     pub unk50: Vec<u32>,
     pub unk60: [u32; 4],
-    pub bounds: AABB,
+    pub bounds: Aabb,
 }
 
 #[derive(Clone, Debug)]
@@ -68,7 +68,7 @@ pub struct SUnk80806CB2 {
     pub file_size: u64,
     pub entity_model: TagHash,
     pub unk8: u32,
-    pub bb: AABB,
+    pub bb: Aabb,
     pub unk30: TagHash,
     pub unk34: TagHash,
     // ...

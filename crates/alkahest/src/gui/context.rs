@@ -1,12 +1,14 @@
 use std::{any::TypeId, mem::transmute, sync::Arc};
 
-use alkahest_renderer::{gpu::GpuContext, util::image::Png, util::d3d::ErrorExt};
+use alkahest_renderer::{
+    gpu::GpuContext,
+    util::{d3d::ErrorExt, image::Png},
+};
 use anyhow::Context;
 use egui::{InputState, Key, KeyboardShortcut, Modifiers};
 use egui_directx11::DirectX11Renderer;
 use egui_winit::EventResponse;
 use indexmap::IndexMap;
-use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use winit::{event::WindowEvent, window::Window};
 
@@ -27,7 +29,7 @@ use crate::{
         profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
-    resources::Resources,
+    resources::AppResources,
     util::image::EguiPngLoader,
 };
 
@@ -180,11 +182,11 @@ pub trait GuiView {
         &mut self,
         ctx: &egui::Context,
         window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         gui: &GuiCtx<'_>,
     ) -> Option<ViewResult>;
 
-    fn dispose(&mut self, _ctx: &egui::Context, _resources: &Resources, _gui: &GuiCtx<'_>) {}
+    fn dispose(&mut self, _ctx: &egui::Context, _resources: &AppResources, _gui: &GuiCtx<'_>) {}
 }
 
 #[derive(Default)]
@@ -233,7 +235,7 @@ impl GuiViewManager {
         &mut self,
         ctx: &egui::Context,
         window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         gui: &GuiCtx<'_>,
     ) {
         if ctx.input_mut(|input| {
@@ -507,7 +509,7 @@ mod style {
                 },
                 resize_corner_size: 12.0,
                 // text_cursor_width: 2.0,
-                text_cursor_preview: false,
+                // text_cursor_preview: false,
                 clip_rect_margin: 3.0,
                 button_frame: true,
                 collapsing_header_frame: false,

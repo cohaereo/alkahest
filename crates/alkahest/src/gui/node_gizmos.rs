@@ -1,27 +1,26 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Icon, Label, ResourceOrigin},
+        common::{Icon, Label, ResourceOrigin},
         map::NodeMetadata,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
         transform::Transform,
+        visibility::{Visibility, VisibilityHelper as _},
     },
-    icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_HELP, ICON_RESIZE, ICON_ROTATE_ORBIT},
+    icons::ICON_HELP,
     renderer::{LabelAlign, RendererShared},
-    resources::Resources,
+    resources::AppResources,
     ColorExt,
 };
-use egui::{Color32, Context, Frame, Pos2, Rect, Rounding, Sense, Ui};
+use bevy_ecs::entity::Entity;
+use egui::{Color32, Context, Pos2, Rect, Sense, Ui, UiStackInfo};
 use glam::Vec2;
 use winit::window::Window;
 
 use crate::{
     config,
-    gui::{
-        context::{GuiCtx, GuiView, ViewResult},
-        SelectionGizmoMode,
-    },
+    gui::context::{GuiCtx, GuiView, ViewResult},
     maplist::MapList,
 };
 
@@ -32,7 +31,7 @@ impl GuiView for NodeGizmoOverlay {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let camera = resources.get::<Camera>();
@@ -45,6 +44,7 @@ impl GuiView for NodeGizmoOverlay {
             "node_nametags".into(),
             ctx.available_rect(),
             ctx.screen_rect(),
+            UiStackInfo::default(),
         );
 
         let mut selected_entity = resources.get_mut::<SelectedEntity>();
@@ -86,8 +86,8 @@ impl GuiView for NodeGizmoOverlay {
         // if self.debug_overlay.borrow().show_map_resources {
         if config::with(|c| c.visual.node_nametags) {
             let named_nodes_only = config::with(|c| c.visual.node_nametags_named_only);
-            let maps = resources.get::<MapList>();
-            if let Some(map) = maps.current_map() {
+            let mut maps = resources.get_mut::<MapList>();
+            if let Some(map) = maps.current_map_mut() {
                 struct NodeDisplayPoint {
                     has_havok_data: bool,
                     origin: Option<ResourceOrigin>,
@@ -96,19 +96,23 @@ impl GuiView for NodeGizmoOverlay {
                 }
 
                 let filters = resources.get::<NodeFilterSet>();
-                for (e, (transform, origin, label, icon, filter, node_meta)) in map
+                for (e, transform, origin, label, icon, filter, node_meta, vis) in map
                     .scene
                     .query::<(
+                        Entity,
                         &Transform,
                         Option<&ResourceOrigin>,
                         Option<&Label>,
                         Option<&Icon>,
                         Option<&NodeFilter>,
                         Option<&NodeMetadata>,
+                        Option<&Visibility>,
                     )>()
-                    .without::<&Hidden>()
-                    .iter()
+                    .iter(&mut map.scene)
                 {
+                    if !vis.is_visible(0) {
+                        continue;
+                    }
                     if node_meta.map(|m| m.name.is_none()).unwrap_or(true) && named_nodes_only {
                         continue;
                     }

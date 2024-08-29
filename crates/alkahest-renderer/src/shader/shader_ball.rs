@@ -4,6 +4,7 @@ use alkahest_data::{
     geometry::EPrimitiveType,
     tfx::{TfxRenderStage, TfxShaderStage},
 };
+use bevy_ecs::{component::Component, entity::Entity};
 use glam::{Mat4, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
 
@@ -82,6 +83,7 @@ impl ShaderBallRenderer {
     }
 }
 
+#[derive(Component)]
 pub struct ShaderBallComponent {
     renderer: ShaderBallRenderer,
 
@@ -160,8 +162,11 @@ impl ShaderBallComponent {
     }
 }
 
-pub fn draw_shaderball_system(renderer: &Renderer, scene: &Scene, stage: TfxRenderStage) {
-    for (e, (transform, ball)) in scene.query::<(&Transform, &ShaderBallComponent)>().iter() {
+pub fn draw_shaderball_system(renderer: &Renderer, scene: &mut Scene, stage: TfxRenderStage) {
+    for (e, transform, ball) in scene
+        .query::<(Entity, &Transform, &ShaderBallComponent)>()
+        .iter(scene)
+    {
         renderer.pickbuffer.with_entity(e, || {
             ball.draw(renderer, transform, stage);
         });

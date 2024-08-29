@@ -11,6 +11,7 @@ pub use viewport::Viewport;
 
 use self::{fps::FpsCamera, tween::Tween};
 use crate::{
+    ecs::culling::Frustum,
     input::InputState,
     tfx::view::{RenderStageSubscriptions, View},
 };
@@ -25,7 +26,8 @@ pub trait CameraController {
         smooth_movement: f32,
         smooth_look: f32,
     );
-    fn update_mouse(&mut self, tween: &mut Option<Tween>, delta: Vec2, scroll: f32);
+    fn update_mouse(&mut self, delta: Vec2, scroll: f32);
+    fn update_gamepad(&mut self, movement: Vec2, look: Vec2, speed: f32, delta_time: f32);
 
     // TODO(cohae): These might be a bit confusing
     /// Returns the position of the camera
@@ -87,6 +89,8 @@ pub struct Camera {
     pub world_to_projective: Mat4,
     pub projective_to_world: Mat4,
 
+    pub frustum: Frustum,
+
     pub target_pixel_to_projective: Mat4,
 
     pub speed_mul: f32,
@@ -126,6 +130,8 @@ impl Camera {
             projective_to_world: Mat4::IDENTITY,
             target_pixel_to_projective: Mat4::IDENTITY,
 
+            frustum: Frustum::default(),
+
             speed_mul: 1.0,
             smooth_movement: 1.0,
             smooth_look: 0.0,
@@ -147,8 +153,16 @@ impl Camera {
     }
 
     pub fn update_mouse(&mut self, delta: Vec2, scroll: f32) {
+        if delta.length() > 0.0
+            && self
+                .tween
+                .as_ref()
+                .map_or(false, |t| t.angle_movement.is_some())
+        {
+            self.tween = None;
+        }
         self.speed_mul = (self.speed_mul + scroll * 0.05).clamp(0.0, 25.0);
-        self.controller.update_mouse(&mut self.tween, delta, scroll);
+        self.controller.update_mouse(delta, scroll);
         self.update_matrices();
     }
 
@@ -164,6 +178,16 @@ impl Camera {
         self.update_matrices();
     }
 
+    pub fn update_gamepad(&mut self, movement: Vec2, look: Vec2, speed: f32, delta_time: f32) {
+        if movement.length() > 0.0 || look.length() > 0.0 {
+            self.tween = None;
+        }
+
+        self.controller
+            .update_gamepad(movement, look, self.speed_mul * speed, delta_time);
+        self.update_matrices();
+    }
+
     pub fn update_matrices(&mut self) {
         self.world_to_camera = self.controller.view_matrix();
         self.camera_to_world = self.world_to_camera.inverse();
@@ -175,6 +199,8 @@ impl Camera {
         self.projective_to_world = self.world_to_projective.inverse();
 
         self.target_pixel_to_projective = self.viewport.target_pixel_to_projective();
+
+        self.frustum = Frustum::from_matrix(self.world_to_projective);
     }
 
     pub fn is_point_visible(&self, point: Vec3) -> bool {
@@ -250,6 +276,10 @@ impl View for Camera {
 
     fn name(&self) -> String {
         "Camera".to_string()
+    }
+
+    fn frustum(&self) -> Frustum {
+        self.frustum
     }
 
     fn update_extern(&self, x: &mut crate::tfx::externs::View) {

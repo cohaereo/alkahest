@@ -1,12 +1,12 @@
 use std::f32::consts::PI;
 
-use alkahest_data::{geometry::EPrimitiveType, occlusion::AABB, tfx::TfxShaderStage};
+use alkahest_data::{geometry::EPrimitiveType, occlusion::Aabb, tfx::TfxShaderStage};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
 use glam::{Mat4, Vec3, Vec4};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 
 use crate::{
     gpu::{buffer::ConstantBuffer, SharedGpuContext},
@@ -15,7 +15,7 @@ use crate::{
     renderer::shader::ShaderProgram,
     util::{
         color::{Color, ColorExt},
-        mat4_scale_translation, Hocus,
+        mat4_scale_translation,
     },
 };
 
@@ -303,7 +303,7 @@ impl ImmediateRenderer {
         }
     }
 
-    pub fn cube_outline_aabb<C: Into<Color>>(&self, aabb: &AABB, color: C) {
+    pub fn cube_outline_aabb<C: Into<Color>>(&self, aabb: &Aabb, color: C) {
         let center = aabb.center();
         let extents = aabb.extents();
         self.cube_outline(mat4_scale_translation(extents, center), color);

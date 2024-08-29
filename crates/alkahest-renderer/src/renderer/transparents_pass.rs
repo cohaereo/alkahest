@@ -11,7 +11,7 @@ use crate::{
 };
 
 impl Renderer {
-    pub fn draw_transparents_pass(&self, scene: &Scene) {
+    pub fn draw_transparents_pass(&self, scene: &mut Scene) {
         gpu_event!(self.gpu, "transparents_pass");
 
         {

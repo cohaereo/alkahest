@@ -1,22 +1,27 @@
-use alkahest_renderer::ecs::common::{Global, Mutable};
-use alkahest_renderer::ecs::resources::SelectedEntity;
-use alkahest_renderer::ecs::tags::{EntityTag, Tags};
-use alkahest_renderer::ecs::utility::{Route, Utility};
+use std::collections::VecDeque;
+
+use alkahest_renderer::{
+    camera::{tween::Tween, Camera},
+    ecs::{
+        common::{Global, Mutable},
+        resources::SelectedEntity,
+        tags::{EntityTag, Tags},
+        utility::{Route, Utility},
+    },
+    resources::AppResources,
+};
 use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
 
-use crate::gui::activity_select::{get_activity_hash, set_activity};
-use crate::maplist::{MapList, MapLoadState};
-use alkahest_renderer::camera::tween::Tween;
-use alkahest_renderer::camera::Camera;
-use alkahest_renderer::resources::Resources;
-
-use std::collections::VecDeque;
+use crate::{
+    gui::activity_select::{get_activity_hash, set_activity},
+    maplist::{MapList, MapLoadState},
+};
 
 pub trait Action {
-    fn start(&mut self, resources: &Resources);
-    fn is_done(&self, resources: &Resources) -> bool;
-    fn is_aborted(&self, resources: &Resources) -> bool;
+    fn start(&mut self, resources: &AppResources);
+    fn is_done(&self, resources: &AppResources) -> bool;
+    fn is_aborted(&self, resources: &AppResources) -> bool;
 }
 
 #[derive(Default)]
@@ -34,7 +39,7 @@ impl ActionList {
         self.action_queue.push_back(Box::new(action));
     }
 
-    pub fn process(&mut self, resources: &Resources) {
+    pub fn process(&mut self, resources: &AppResources) {
         if let Some(action) = self.current_action.take() {
             if action.is_aborted(resources) {
                 self.current_action = None;
@@ -73,7 +78,7 @@ impl TweenAction {
 }
 
 impl Action for TweenAction {
-    fn start(&mut self, resources: &Resources) {
+    fn start(&mut self, resources: &AppResources) {
         let mut camera = resources.get_mut::<Camera>();
 
         if let Some(t) = self.t.as_mut() {
@@ -82,13 +87,13 @@ impl Action for TweenAction {
         camera.tween = self.t.take();
     }
 
-    fn is_done(&self, resources: &Resources) -> bool {
+    fn is_done(&self, resources: &AppResources) -> bool {
         let camera = resources.get::<Camera>();
 
         camera.tween.as_ref().map_or(true, |t| t.is_finished())
     }
 
-    fn is_aborted(&self, resources: &Resources) -> bool {
+    fn is_aborted(&self, resources: &AppResources) -> bool {
         resources
             .get::<Camera>()
             .tween
@@ -108,24 +113,24 @@ impl MapSwapAction {
 }
 
 impl Action for MapSwapAction {
-    fn start(&mut self, resources: &Resources) {
+    fn start(&mut self, resources: &AppResources) {
         let mut maps = resources.get_mut::<MapList>();
 
         if let Some(new_map) = maps.maps.iter().position(|f| f.hash == self.hash) {
             if maps.current_map_index() != new_map {
-                maps.set_current_map(resources, new_map);
+                maps.set_current_map(new_map);
             }
         }
     }
 
-    fn is_done(&self, resources: &Resources) -> bool {
+    fn is_done(&self, resources: &AppResources) -> bool {
         let maps = resources.get::<MapList>();
 
         maps.current_map()
             .map_or(false, |f| f.load_state == MapLoadState::Loaded)
     }
 
-    fn is_aborted(&self, resources: &Resources) -> bool {
+    fn is_aborted(&self, resources: &AppResources) -> bool {
         let maps = resources.get::<MapList>();
 
         maps.current_map()
@@ -148,20 +153,20 @@ impl ActivitySwapAction {
 }
 
 impl Action for ActivitySwapAction {
-    fn start(&mut self, resources: &Resources) {
+    fn start(&mut self, resources: &AppResources) {
         if get_activity_hash(resources).is_some_and(|f| f.0 == self.hash.0) {
             return;
         }
         self.aborted = set_activity(resources, self.hash).is_err();
     }
 
-    fn is_done(&self, resources: &Resources) -> bool {
+    fn is_done(&self, resources: &AppResources) -> bool {
         let map_list = resources.get::<MapList>();
 
         map_list.count_loaded() > 0 || map_list.count_loading() == 0
     }
 
-    fn is_aborted(&self, _: &Resources) -> bool {
+    fn is_aborted(&self, _: &AppResources) -> bool {
         self.aborted
     }
 }
@@ -176,7 +181,7 @@ impl SpawnRouteAction {
     }
 }
 impl Action for SpawnRouteAction {
-    fn start(&mut self, resources: &Resources) {
+    fn start(&mut self, resources: &AppResources) {
         let mut maps = resources.get_mut::<MapList>();
 
         if let Some(map) = maps.current_map_mut() {
@@ -189,15 +194,15 @@ impl Action for SpawnRouteAction {
                     Mutable,
                     Global,
                 ));
-                resources.get_mut::<SelectedEntity>().select(e);
+                resources.get_mut::<SelectedEntity>().select(e.id());
             }
         }
     }
-    fn is_done(&self, _: &Resources) -> bool {
+    fn is_done(&self, _: &AppResources) -> bool {
         true
     }
 
-    fn is_aborted(&self, _: &Resources) -> bool {
+    fn is_aborted(&self, _: &AppResources) -> bool {
         false
     }
 }

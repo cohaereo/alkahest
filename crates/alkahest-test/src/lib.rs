@@ -14,7 +14,6 @@ use anyhow::Context;
 use clap::Parser;
 use destiny_pkg::{GameVersion, PackageManager};
 use mimalloc::MiMalloc;
-use tracing::instrument::WithSubscriber;
 use tracing_subscriber::{
     filter::filter_fn, fmt::Subscriber, layer::SubscriberExt, util::SubscriberInitExt,
 };
@@ -66,6 +65,12 @@ pub struct TestHarness {
     pub renderer: RendererShared,
 }
 
+impl Default for TestHarness {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestHarness {
     pub fn new() -> Self {
         // Using try_init() instead of init() to avoid panicking if the logger is already initialized by another test thread
@@ -86,6 +91,7 @@ impl TestHarness {
             Arc::new(GpuContext::create_headless().expect("Failed to create headless GPU context"));
         let renderer =
             Renderer::create(gpu, (4, 4), true).expect("Failed to create headless renderer");
+
         Self { renderer }
     }
 }

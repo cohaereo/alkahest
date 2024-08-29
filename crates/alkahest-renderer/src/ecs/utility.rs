@@ -1,21 +1,23 @@
 use std::f32::consts::PI;
 
+use bevy_ecs::{
+    entity::Entity,
+    prelude::Component,
+    query::Without,
+    system::{In, Query, Res, ResMut},
+};
 use destiny_pkg::TagHash;
 use glam::Vec3;
-use hecs::Entity;
 
 use super::{
     common::{Icon, Label},
-    SceneInfo,
+    visibility::VisibilityHelper,
+    MapInfo,
 };
 use crate::{
-    ecs::{
-        common::Hidden, render::havok::draw_debugshapes_system, resources::SelectedEntity,
-        transform::Transform, Scene,
-    },
+    ecs::{resources::SelectedEntity, transform::Transform, visibility::ViewVisibility},
     icons::{ICON_MAP_MARKER_PATH, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
-    renderer::{LabelAlign, Renderer},
-    resources::Resources,
+    renderer::{LabelAlign, Renderer, RendererShared},
     util::{
         color::{Color, ColorExt, Hsv},
         text::prettify_distance,
@@ -27,6 +29,7 @@ pub trait Utility {
     fn default_label() -> Label;
 }
 
+#[derive(Component)]
 pub struct Ruler {
     pub start: Vec3,
     pub end: Vec3,
@@ -71,6 +74,7 @@ impl Ruler {
     }
 }
 
+#[derive(Component)]
 pub struct Sphere {
     pub detail: u8,
     pub color: Color,
@@ -97,6 +101,7 @@ impl Utility for Sphere {
     }
 }
 
+#[derive(Component)]
 pub struct Beacon {
     pub color: Color,
     pub freq: f32,
@@ -143,6 +148,7 @@ impl Default for RouteNode {
     }
 }
 
+#[derive(Component)]
 pub struct Route {
     pub path: Vec<RouteNode>,
     pub color: Color,
@@ -179,32 +185,38 @@ impl Utility for Route {
     }
 }
 
-pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources) {
-    draw_debugshapes_system(renderer, scene, resources);
-
-    for (e, ruler) in scene.query::<&Ruler>().without::<&Hidden>().iter() {
-        draw_ruler(renderer, ruler, Some(e), resources);
+pub fn draw_utilities_system(
+    In(renderer): In<RendererShared>,
+    map_info: Option<Res<MapInfo>>,
+    selected: ResMut<SelectedEntity>,
+    q_ruler: Query<(Entity, &Ruler, Option<&ViewVisibility>)>,
+    q_sphere: Query<(Entity, &Transform, &Sphere, Option<&ViewVisibility>)>,
+    q_beacon: Query<(Entity, &Transform, &Beacon, Option<&ViewVisibility>)>,
+    q_route: Query<(Entity, &Route, Option<&ViewVisibility>)>,
+) {
+    for (e, ruler, vis) in q_ruler.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_ruler(&renderer, ruler, Some(e), &selected);
+        }
     }
 
-    for (e, (transform, sphere)) in scene
-        .query::<(&Transform, &Sphere)>()
-        .without::<&Hidden>()
-        .iter()
-    {
-        draw_sphere(renderer, transform, sphere, Some(e), resources);
+    for (e, transform, sphere, vis) in q_sphere.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_sphere(&renderer, transform, sphere, Some(e), &selected);
+        }
     }
 
-    for (e, (transform, beacon)) in scene
-        .query::<(&Transform, &Beacon)>()
-        .without::<&Hidden>()
-        .iter()
-    {
-        draw_beacon(renderer, transform, beacon, Some(e), resources);
+    for (e, transform, beacon, vis) in q_beacon.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_beacon(&renderer, transform, beacon, Some(e), &selected);
+        }
     }
 
-    for (e, route) in scene.query::<&Route>().without::<&Hidden>().iter() {
-        if let Some(current_hash) = scene.get_map_hash() {
-            draw_route(renderer, route, Some(e), current_hash, resources);
+    for (e, route, vis) in q_route.iter() {
+        if vis.is_visible(renderer.active_view) {
+            if let Some(map_info) = &map_info {
+                draw_route(&renderer, route, Some(e), map_info.map_hash, &selected);
+            }
         }
     }
 }
@@ -212,12 +224,9 @@ pub fn draw_utilities(renderer: &Renderer, scene: &Scene, resources: &Resources)
 fn draw_ruler(
     renderer: &Renderer,
     ruler: &Ruler,
-    // start_time: Instant,
     entity: Option<Entity>,
-    resources: &Resources,
+    selected: &SelectedEntity,
 ) {
-    let selected = resources.get::<SelectedEntity>();
-
     let color = if ruler.rainbow {
         Color::from(*Hsv::rainbow())
     } else {
@@ -349,10 +358,8 @@ fn draw_sphere(
     transform: &Transform,
     sphere: &Sphere,
     entity: Option<Entity>,
-    resources: &Resources,
+    selected: &SelectedEntity,
 ) {
-    let selected = resources.get::<SelectedEntity>();
-
     let color = if sphere.rainbow {
         Color::from(*Hsv::rainbow())
     } else {
@@ -393,12 +400,10 @@ fn draw_beacon(
     transform: &Transform,
     beacon: &Beacon,
     entity: Option<Entity>,
-    resources: &Resources,
+    selected: &SelectedEntity,
 ) {
     const BEAM_HEIGHT: f32 = 5000.0;
     const BASE_RADIUS: f32 = 0.1;
-
-    let selected = resources.get::<SelectedEntity>();
 
     let color = Color::from_rgba_premultiplied(
         beacon.color[0],
@@ -442,9 +447,8 @@ fn draw_route(
     route: &Route,
     entity: Option<Entity>,
     current_hash: TagHash,
-    resources: &Resources,
+    selected: &SelectedEntity,
 ) {
-    let selected = resources.get::<SelectedEntity>();
     let color = if route.rainbow {
         selected.select_fade_color(Color::from(*Hsv::rainbow()), entity)
     } else {

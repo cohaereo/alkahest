@@ -10,13 +10,11 @@ use alkahest_data::{
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use anyhow::Context;
+use bevy_ecs::entity::Entity;
 use crossbeam::atomic::AtomicCell;
-use hecs::Entity;
 use windows::Win32::{
     Foundation::RECT,
-    Graphics::Direct3D11::{
-        ID3D11PixelShader, ID3D11RenderTargetView, ID3D11VertexShader, D3D11_MAP_READ,
-    },
+    Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader, D3D11_MAP_READ},
 };
 
 use crate::{
@@ -34,7 +32,7 @@ use crate::{
 };
 
 impl Renderer {
-    pub(super) fn draw_pickbuffer(&self, scene: &Scene, selected: Option<Entity>) {
+    pub(super) fn draw_pickbuffer(&self, scene: &mut Scene, selected: Option<Entity>) {
         gpu_event!(self.gpu, "pickbuffer");
         let dxstate = self.gpu.backup_state();
         self.pickbuffer.start(&self.gpu);
@@ -55,7 +53,7 @@ impl Renderer {
     }
 
     // TODO(cohae): move rendering logic to Pickbuffer (where possible)
-    pub(super) fn draw_outline(&self, scene: &Scene, selected: Entity, time_since_select: f32) {
+    pub(super) fn draw_outline(&self, scene: &mut Scene, selected: Entity, time_since_select: f32) {
         gpu_event!(self.gpu, "selection_outline");
 
         self.pickbuffer.outline_depth.clear(0.0, 0);
@@ -273,12 +271,12 @@ impl Pickbuffer {
 
     fn set_entity(&self, mut entity: Entity) {
         if Some(entity) == self.selected_entity {
-            entity = Entity::DANGLING;
+            entity = Entity::PLACEHOLDER;
         }
 
         if Some(entity) != self.active_entity {
             self.pocus().active_entity = Some(entity);
-            self.pick_cb.write(&entity.id()).ok();
+            self.pick_cb.write(&entity.index()).ok();
         }
     }
 

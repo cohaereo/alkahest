@@ -19,7 +19,7 @@ Change types:
     - `Changed` for changes in existing functionality.
     - `Deprecated` for soon-to-be removed features.
     - `Removed` for now removed features.
-    - `Fixed` for any bug fixes.
+    - `Fixed` for any bug/small visual fixes.
     - `Security` in case of vulnerabilities.
 
 -->
@@ -32,11 +32,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views by @cohaereo
+- Cull static/dynamic geometry outside of the view frustum
+- Write tracing events to alkahest.log
+- Add a search bar to the outliner by @AndrisBorbas in [#41](https://github.com/cohaereo/alkahest/pull/41)
+- Basic controller support
+- Global channel labels/input field types
+- Added an empty map instead of a scratch scene
+- Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
 
 ### Changed
 
-- Enable SSAO by default by @cohaereo
+- Enable SSAO by default
+- Abstract global/fullscreen pipelines
+- Replaced `hecs` with `bevy-ecs`
+- Use bevy-ecs change detection to update cbuffers
+
+### Fixed
+
+- Fix static transparents rendering in front of sky objects
+- Fix atmosphere rendering for TFS
+- Rewrote TFX bytecode op 0xe to merge_3_1
+- Fix cross-compilation on Linux by using FXC instead of D3DCompile
 
 ## 0.5.0 - 2024-07-24
 

@@ -285,7 +285,7 @@ impl RenderTarget {
     }
 
     pub fn copy_to(&self, dest: &RenderTarget) {
-        gpu_event!(self.gctx, format!("copy {}->{}", self.name, dest.name));
+        gpu_event!(self.gctx, "copy", format!("{}->{}", self.name, dest.name));
         unsafe {
             self.gctx
                 .context()
@@ -294,7 +294,11 @@ impl RenderTarget {
     }
 
     pub fn copy_to_staging(&self, dest: &CpuStagingBuffer) {
-        gpu_event!(self.gctx, format!("copy_cpu {}->{}", self.name, dest.name));
+        gpu_event!(
+            self.gctx,
+            "copy_to_cpu",
+            format!("{}->{}", self.name, dest.name)
+        );
         unsafe {
             self.gctx
                 .context()

@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
                 }
             };
 
-            if let Ok(mut f) = File::create(&format!("sounds/extracted/{stream}.wav")) {
+            if let Ok(mut f) = File::create(format!("sounds/extracted/{stream}.wav")) {
                 wav::write(
                     wav::Header {
                         audio_format: wav::WAV_FORMAT_PCM,

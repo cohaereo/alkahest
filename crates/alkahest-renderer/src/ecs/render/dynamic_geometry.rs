@@ -1,20 +1,24 @@
 use alkahest_data::{
     entity::{SDynamicMesh, SDynamicMeshPart, SDynamicModel, Unk808072c5},
+    occlusion::Aabb,
     technique::TfxScopeBits,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
-use anyhow::ensure;
+use bevy_ecs::{
+    change_detection::DetectChanges, component::Component, entity::Entity, query::Without,
+    system::Query, world::Ref,
+};
 use destiny_pkg::TagHash;
-use glam::Vec4;
+use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
     ecs::{
-        common::Hidden,
         render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
         transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::buffer::ConstantBuffer,
@@ -144,14 +148,15 @@ impl DynamicModel {
     fn get_variant_technique(&self, index: u16, variant: usize) -> Option<Handle<Technique>> {
         if index == u16::MAX {
             None
-        } else if let Some(variant_range) = &self.technique_map.get(index as usize) {
-            Some(
-                self.techniques[variant_range.technique_start as usize
-                    + (variant % variant_range.technique_count as usize)]
-                    .clone(),
-            )
         } else {
-            None
+            self.technique_map
+                .get(index as usize)
+                .as_ref()
+                .map(|variant_range| {
+                    self.techniques[variant_range.technique_start as usize
+                        + (variant % variant_range.technique_count as usize)]
+                        .clone()
+                })
         }
     }
 
@@ -203,19 +208,16 @@ impl DynamicModel {
 
         gpu_event!(
             renderer.gpu,
-            format!(
-                "{} {}",
-                self.feature_type.short(),
-                self.hash.prepend_package_name()
-            )
+            self.feature_type.short(),
+            self.hash.prepend_package_name()
         );
 
         profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
         // ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
-        ensure!(
-            self.selected_variant < self.variant_count() || self.variant_count() == 0,
-            "Material variant out of range"
-        );
+        // ensure!(
+        //     self.selected_variant < self.variant_count() || self.variant_count() == 0,
+        //     "Material variant out of range"
+        // );
 
         let mesh = &self.model.meshes[self.selected_mesh];
         let stages = &self.mesh_stages[self.selected_mesh];
@@ -277,8 +279,14 @@ impl DynamicModel {
 
         Ok(())
     }
+
+    // TODO(cohae): These bounds are a bit bloated, but it's fine for now
+    pub fn occlusion_bounds(&self) -> Aabb {
+        Aabb::from_center_extents(self.model.model_offset.xyz(), self.model.model_scale.xyz())
+    }
 }
 
+#[derive(Component)]
 pub struct DynamicModelComponent {
     pub model: DynamicModel,
     pub ext: externs::RigidModel,
@@ -377,32 +385,38 @@ impl DynamicModelComponent {
     }
 }
 
-pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stage: TfxRenderStage) {
+pub fn draw_dynamic_model_system(
+    renderer: &Renderer,
+    scene: &mut Scene,
+    render_stage: TfxRenderStage,
+) {
     profiling::scope!(
         "draw_dynamic_model_system",
         &format!("render_stage={render_stage:?}")
     );
 
     let mut entities = Vec::new();
-    for (e, dynamic) in scene
-        .query::<&DynamicModelComponent>()
-        .without::<&Hidden>()
-        .iter()
+    for (e, dynamic, vis) in scene
+        .query::<(Entity, &DynamicModelComponent, Option<&ViewVisibility>)>()
+        .iter(scene)
     {
-        if renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type)) {
+        // Sky objects are rendered by a separate system, so we filter them out here
+        if vis.is_visible(renderer.active_view)
+            && renderer.should_render(Some(render_stage), Some(dynamic.model.feature_type))
+            && dynamic.model.feature_type != TfxFeatureRenderer::SkyTransparent
+        {
             entities.push((e, dynamic.model.feature_type));
         }
     }
 
     entities.sort_by_key(|(_, feature_type)| match feature_type {
-        TfxFeatureRenderer::Water => 0,
-        TfxFeatureRenderer::SkyTransparent => 1,
+        TfxFeatureRenderer::Water => 1,
         TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => 2,
         _ => 99,
     });
 
     for (e, _feature_type) in entities {
-        let dynamic = scene.get::<&DynamicModelComponent>(e).unwrap();
+        let dynamic = scene.get::<DynamicModelComponent>(e).unwrap();
 
         renderer.pickbuffer.with_entity(e, || {
             dynamic.draw(renderer, render_stage).unwrap();
@@ -410,27 +424,51 @@ pub fn draw_dynamic_model_system(renderer: &Renderer, scene: &Scene, render_stag
     }
 
     if renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SpeedtreeTrees)) {
-        for (e, decorator) in scene
-            .query::<&DecoratorRenderer>()
-            .without::<&Hidden>()
-            .iter()
+        for (e, decorator, vis) in scene
+            .query::<(Entity, &DecoratorRenderer, Option<&ViewVisibility>)>()
+            .iter(scene)
         {
-            renderer.pickbuffer.with_entity(e, || {
-                decorator.draw(renderer, render_stage).unwrap();
-            });
+            if vis.is_visible(renderer.active_view) {
+                renderer.pickbuffer.with_entity(e, || {
+                    decorator.draw(renderer, render_stage).unwrap();
+                });
+            }
         }
     }
 }
 
-pub fn update_dynamic_model_system(scene: &Scene) {
-    profiling::scope!("update_dynamic_model_system");
-    for (_, (transform, model)) in scene
-        .query::<(&Transform, &mut DynamicModelComponent)>()
-        .iter()
+pub fn draw_sky_objects_system(
+    renderer: &Renderer,
+    scene: &mut Scene,
+    render_stage: TfxRenderStage,
+) {
+    if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::SkyTransparent)) {
+        return;
+    }
+    profiling::scope!(
+        "draw_sky_object_system",
+        &format!("render_stage={render_stage:?}")
+    );
+
+    for (dynamic, vis) in scene
+        .query::<(&DynamicModelComponent, Option<&ViewVisibility>)>()
+        .iter(scene)
     {
-        if model.cbuffer_dirty {
-            model.update_cbuffer(transform);
-            model.cbuffer_dirty = false;
+        if vis.is_visible(renderer.active_view)
+            && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
+        {
+            dynamic.draw(renderer, render_stage).unwrap();
+        }
+    }
+}
+
+pub fn update_dynamic_model_system(
+    mut q_dynamic_model: Query<(Ref<Transform>, &mut DynamicModelComponent)>,
+) {
+    profiling::scope!("update_dynamic_model_system");
+    for (transform, mut model) in q_dynamic_model.iter_mut() {
+        if transform.is_changed() {
+            model.update_cbuffer(&transform);
         }
     }
 }

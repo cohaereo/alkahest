@@ -4,14 +4,11 @@ use crate::{
     ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
     gpu_event,
     renderer::{cubemaps::draw_cubemap_system, Renderer},
-    tfx::{
-        externs,
-        externs::{ExternDefault, ShadowMask},
-    },
+    tfx::externs::{self, ExternDefault, ShadowMask},
 };
 
 impl Renderer {
-    pub fn draw_lighting_pass(&self, scene: &Scene) {
+    pub fn draw_lighting_pass(&self, scene: &mut Scene) {
         gpu_event!(self.gpu, "lighting_pass");
 
         unsafe {
@@ -52,6 +49,27 @@ impl Renderer {
                 gpu_event!(self.gpu, "matcap");
                 self.matcap.draw(self);
             } else {
+                if self.render_settings.feature_global_lighting {
+                    gpu_event!(self.gpu, "global_lighting");
+
+                    self.gpu.current_states.store(StateSelection::new(
+                        Some(0),
+                        Some(0),
+                        Some(0),
+                        Some(0),
+                    ));
+
+                    let pipeline = &self.render_globals.pipelines.global_lighting;
+                    self.execute_global_pipeline(pipeline, "global_lighting");
+                }
+
+                self.gpu.current_states.store(StateSelection::new(
+                    Some(8),
+                    Some(0),
+                    Some(2),
+                    Some(2),
+                ));
+
                 {
                     gpu_event!(self.gpu, "deferred_lights");
                     draw_light_system(self, scene)
@@ -71,31 +89,6 @@ impl Renderer {
 
                     gpu_event!(self.gpu, "cubemaps");
                     draw_cubemap_system(self, scene);
-                }
-
-                if self.render_settings.feature_global_lighting {
-                    gpu_event!(self.gpu, "global_lighting");
-
-                    let pipeline = &self.render_globals.pipelines.global_lighting;
-                    if let Err(e) = pipeline.bind(self) {
-                        error!("Failed to run global_lighting: {e}");
-                        return;
-                    }
-
-                    // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
-                    self.gpu.current_states.store(StateSelection::new(
-                        Some(8),
-                        Some(0),
-                        Some(0),
-                        Some(0),
-                    ));
-                    self.gpu.flush_states();
-                    self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-                    // TODO(cohae): 4 vertices doesn't work...
-                    unsafe {
-                        self.gpu.context().Draw(6, 0);
-                    }
                 }
             }
         }
@@ -120,29 +113,20 @@ impl Renderer {
             );
         }
 
-        unsafe {
+        {
             gpu_event!(self.gpu, "deferred_shading");
-            let pipeline = if scene.query::<&MapAtmosphere>().iter().next().is_some()
+            let pipeline = if scene.get_resource::<MapAtmosphere>().is_some()
                 && self.render_settings.feature_atmosphere
             {
                 &self.render_globals.pipelines.deferred_shading
             } else {
                 &self.render_globals.pipelines.deferred_shading_no_atm
             };
-            if let Err(e) = pipeline.bind(self) {
-                error!("Failed to run deferred_shading: {e}");
-                return;
-            }
 
-            // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
             self.gpu
                 .current_states
                 .store(StateSelection::new(Some(0), Some(0), Some(0), Some(0)));
-            self.gpu.flush_states();
-            self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-            // TODO(cohae): 4 vertices doesn't work...
-            self.gpu.context().Draw(6, 0);
+            self.execute_global_pipeline(pipeline, "deferred_shading");
         }
     }
 
@@ -174,12 +158,12 @@ impl Renderer {
                 let mut atmos = externs::Atmosphere {
                     atmos_ss_far_lookup: data.gbuffers.atmos_ss_far_lookup.view.clone().into(),
                     atmos_ss_near_lookup: data.gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                    unke0: self.gpu.dark_grey_texture.view.clone().into(),
+                    unk100: self.gpu.dark_grey_texture.view.clone().into(),
 
                     ..atmos_existing
                 };
 
-                if let Some((_, map_atmos)) = scene.query::<&MapAtmosphere>().iter().next() {
+                if let Some(map_atmos) = scene.get_resource::<MapAtmosphere>() {
                     map_atmos.update_extern(&mut atmos);
                 }
 
@@ -187,7 +171,7 @@ impl Renderer {
             });
         }
 
-        if scene.query::<&MapAtmosphere>().iter().next().is_some() {
+        if scene.get_resource::<MapAtmosphere>().is_some() {
             unsafe {
                 self.gpu.context().OMSetRenderTargets(
                     Some(&[

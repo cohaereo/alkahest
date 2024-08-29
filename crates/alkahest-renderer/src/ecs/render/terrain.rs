@@ -4,13 +4,17 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
+use bevy_ecs::{entity::Entity, prelude::Component, query::Without};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
-    ecs::common::Hidden,
+    ecs::{
+        visibility::{ViewVisibility, VisibilityHelper},
+        Scene,
+    },
     gpu::{buffer::ConstantBuffer, texture::Texture},
     gpu_event,
     handle::Handle,
@@ -19,8 +23,9 @@ use crate::{
     tfx::technique::Technique,
 };
 
+#[derive(Component)]
 pub struct TerrainPatches {
-    terrain: STerrain,
+    pub terrain: STerrain,
     techniques: Vec<Handle<Technique>>,
     dyemaps: Vec<Handle<Texture>>,
     group_cbuffers: Vec<ConstantBuffer<Mat4>>,
@@ -33,7 +38,7 @@ pub struct TerrainPatches {
 }
 
 impl TerrainPatches {
-    pub fn load(renderer: &Renderer, hash: TagHash) -> anyhow::Result<Self> {
+    pub fn load_from_tag(renderer: &Renderer, hash: TagHash) -> anyhow::Result<Self> {
         let terrain: STerrain = package_manager().read_tag_struct(hash)?;
 
         let mut render_data = renderer.data.lock();
@@ -98,7 +103,7 @@ impl TerrainPatches {
             return;
         }
 
-        gpu_event!(renderer.gpu, format!("terrain_patch {}", self.hash));
+        gpu_event!(renderer.gpu, "terrain_patch", self.hash.to_string());
 
         // Layout 22
         //  - int4 v0 : POSITION0, // Format DXGI_FORMAT_R16G16B16A16_SINT size 8
@@ -182,20 +187,21 @@ impl TerrainPatches {
 
 pub fn draw_terrain_patches_system(
     renderer: &Renderer,
-    scene: &hecs::World,
+    scene: &mut Scene,
     render_stage: TfxRenderStage,
 ) {
     if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::TerrainPatch)) {
         return;
     }
 
-    for (e, (terrain,)) in scene
-        .query::<(&TerrainPatches,)>()
-        .without::<&Hidden>()
-        .iter()
+    for (e, terrain, vis) in scene
+        .query::<(Entity, &TerrainPatches, Option<&ViewVisibility>)>()
+        .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            terrain.draw(renderer, render_stage);
-        });
+        if vis.is_visible(renderer.active_view) {
+            renderer.pickbuffer.with_entity(e, || {
+                terrain.draw(renderer, render_stage);
+            });
+        }
     }
 }

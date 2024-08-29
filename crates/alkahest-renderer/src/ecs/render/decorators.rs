@@ -4,6 +4,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::ensure;
+use bevy_ecs::component::Component;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
@@ -17,6 +18,7 @@ use crate::{
     tfx::externs,
 };
 
+#[derive(Component)]
 pub struct DecoratorRenderer {
     pub data: SDecorator,
     pub hash: TagHash,
@@ -88,7 +90,7 @@ impl DecoratorRenderer {
     }
 
     pub fn draw(&self, renderer: &Renderer, stage: TfxRenderStage) -> anyhow::Result<()> {
-        gpu_event!(renderer.gpu, format!("decorator {}", self.hash));
+        gpu_event!(renderer.gpu, "decorator", self.hash.to_string());
 
         {
             let mut data = renderer.data.lock();

@@ -4,8 +4,10 @@ use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
+        new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
+        visibility::calculate_view_visibility_system,
         Scene,
     },
     gpu::{texture::LOW_RES, GpuContext},
@@ -13,10 +15,14 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
+use bevy_ecs::system::RunSystemOnce;
+use bevy_tasks::{ComputeTaskPool, TaskPool};
+use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers};
+use gilrs::{EventType, Gilrs};
 use glam::Vec2;
 use strum::IntoEnumIterator;
-use transform_gizmo_egui::{enum_set, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
+use transform_gizmo_egui::{EnumSet, Gizmo, GizmoConfig, GizmoOrientation};
 use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -35,8 +41,8 @@ use crate::{
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
-    maplist::MapList,
-    resources::Resources,
+    maplist::{Map, MapList},
+    resources::AppResources,
     updater::UpdateCheck,
     util::action::ActionList,
     ApplicationArgs,
@@ -48,8 +54,9 @@ pub struct AlkahestApp {
 
     pub gctx: Arc<GpuContext>,
     pub gui: GuiContext,
-    pub resources: Resources,
+    pub resources: AppResources,
 
+    gilrs: Gilrs,
     last_cursor_pos: Option<PhysicalPosition<f64>>,
 
     renderer: RendererShared,
@@ -84,17 +91,20 @@ impl AlkahestApp {
             .build(&event_loop)
             .unwrap();
 
-        puffin::set_scopes_on(false);
+        puffin::set_scopes_on(cfg!(feature = "profiler"));
 
         let gctx = Arc::new(GpuContext::create(&window).unwrap());
         let gui = GuiContext::create(&window, gctx.clone());
-        let mut resources = Resources::default();
+        let mut resources = AppResources::default();
         resources.insert(GuiViewManager::with_default_views());
         resources.insert(InputState::default());
         resources.insert(CurrentActivity(args.activity));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
-        resources.insert(MapList::default());
+
+        let mut maps = MapList::default();
+        maps.maps.push(Map::create_empty("Empty Map"));
+        resources.insert(maps);
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
         resources.insert(ActionList::default());
@@ -110,7 +120,7 @@ impl AlkahestApp {
         resources.insert(stringmap);
 
         let gizmo = Gizmo::new(GizmoConfig {
-            modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate | GizmoMode::Scale),
+            modes: EnumSet::all(),
             orientation: GizmoOrientation::Local,
             ..Default::default()
         });
@@ -146,7 +156,7 @@ impl AlkahestApp {
 
             resources
                 .get_mut::<MapList>()
-                .add_map(&resources, map_name, maphash);
+                .set_maps(&resources, &[(maphash, map_name)]);
         }
 
         let mut node_filter_set = NodeFilterSet::default();
@@ -164,15 +174,18 @@ impl AlkahestApp {
             LOW_RES.store(args.low_res, std::sync::atomic::Ordering::Relaxed);
         }
 
+        ComputeTaskPool::get_or_init(TaskPool::default);
+
         Self {
             window,
             event_loop,
             gctx,
             gui,
             resources,
+            gilrs: Gilrs::new().unwrap(),
             last_cursor_pos: None,
             renderer,
-            scratch_map: Scene::new(),
+            scratch_map: new_scene(),
             update_channel_gui,
             updater_gui,
         }
@@ -190,8 +203,11 @@ impl AlkahestApp {
             scratch_map,
             update_channel_gui,
             updater_gui,
+            gilrs,
             ..
         } = self;
+
+        let mut active_gamepad = None;
 
         event_loop.run_on_demand(move |event, target| {
             if let winit::event::Event::WindowEvent { event, .. } = event {
@@ -214,25 +230,6 @@ impl AlkahestApp {
                                 resources
                                     .get_mut::<Camera>()
                                     .update_mouse((delta.0 as f32, delta.1 as f32).into(), 0.0);
-
-                                // Wrap the cursor around if it goes out of bounds
-                                let window_dims = window.inner_size();
-                                let window_dims =
-                                    (window_dims.width as i32, window_dims.height as i32);
-                                let cursor_pos = (position.x as i32, position.y as i32);
-                                let mut new_cursor_pos = cursor_pos;
-
-                                if cursor_pos.0 <= 0 {
-                                    new_cursor_pos.0 = window_dims.0;
-                                } else if cursor_pos.0 >= (window_dims.0 - 1) {
-                                    new_cursor_pos.0 = 0;
-                                }
-
-                                if cursor_pos.1 <= 0 {
-                                    new_cursor_pos.1 = window_dims.1;
-                                } else if cursor_pos.1 >= window_dims.1 {
-                                    new_cursor_pos.1 = 0;
-                                }
 
                                 if delta != (0.0, 0.0) {
                                     window.set_cursor_position(*p).ok();
@@ -262,7 +259,7 @@ impl AlkahestApp {
                         if let Some(swap_chain) = gctx.swap_chain.as_ref() {
                             let _ = gui
                                 .renderer
-                                .resize_buffers(&swap_chain, || {
+                                .resize_buffers(swap_chain, || {
                                     gctx.resize_swapchain(new_dims.width, new_dims.height);
                                     HRESULT(0)
                                 })
@@ -305,22 +302,88 @@ impl AlkahestApp {
                                 });
                             }
 
+                            gctx.begin_frame();
+
                             {
                                 let mut action_list = resources.get_mut::<ActionList>();
-                                action_list.process(&resources);
+                                action_list.process(resources);
                             }
 
                             resources
                                 .get_mut::<Camera>()
                                 .update(&resources.get::<InputState>(), renderer.delta_time as f32);
 
-                            gctx.begin_frame();
+                            // Process gamepad input
+                            {
+                                // Examine new events
+                                while let Some(gilrs::Event { id, event, time }) =
+                                    gilrs.next_event()
+                                {
+                                    active_gamepad = Some(id);
+
+                                    match event {
+                                        EventType::ButtonPressed {
+                                            0: gilrs::Button::Start,
+                                            ..
+                                        } => {
+                                            let mut gui_views =
+                                                resources.get_mut::<GuiViewManager>();
+                                            gui_views.hide_views = !gui_views.hide_views;
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                let mut camera = resources.get_mut::<Camera>();
+                                // You can also use cached gamepad state
+                                if let Some(gamepad) = active_gamepad.map(|id| gilrs.gamepad(id)) {
+                                    let left_x = gamepad
+                                        .axis_data(gilrs::Axis::LeftStickX)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+                                    let left_y = gamepad
+                                        .axis_data(gilrs::Axis::LeftStickY)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+                                    let right_x = gamepad
+                                        .axis_data(gilrs::Axis::RightStickX)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+                                    let right_y = gamepad
+                                        .axis_data(gilrs::Axis::RightStickY)
+                                        .map(|v| v.value())
+                                        .unwrap_or_default();
+
+                                    camera.update_gamepad(
+                                        (left_x, left_y).into(),
+                                        (right_x, right_y).into(),
+                                        1.0 + if gamepad.is_pressed(gilrs::Button::LeftTrigger2) {
+                                            3.0
+                                        } else {
+                                            0.0
+                                        } + if gamepad.is_pressed(gilrs::Button::RightTrigger2) {
+                                            10.0
+                                        } else {
+                                            0.0
+                                        },
+                                        renderer.delta_time as f32,
+                                    );
+                                }
+                            }
+
                             let mut maps = resources.get_mut::<MapList>();
                             maps.update_maps(resources);
 
-                            let map = maps.current_map().map(|m| &m.scene).unwrap_or(scratch_map);
+                            if let Some(map) = maps.current_map_mut() {
+                                map.update();
+                            }
 
-                            renderer.render_world(&*resources.get::<Camera>(), map, resources);
+                            let scene = maps
+                                .current_map_mut()
+                                .map(|m| &mut m.scene)
+                                .unwrap_or(scratch_map);
+
+                            renderer.render_world(&*resources.get::<Camera>(), scene, resources);
                         }
 
                         unsafe {
@@ -330,68 +393,71 @@ impl AlkahestApp {
                             );
                         }
 
-                        renderer.gpu.begin_event("interface_and_hud").scoped(|| {
-                            gpu_event!(renderer.gpu, "egui");
-                            gui.draw_frame(window, |ctx, ectx| {
-                                hotkeys::process_hotkeys(ectx, resources);
+                        renderer
+                            .gpu
+                            .begin_event("interface_and_hud", "")
+                            .scoped(|| {
+                                gpu_event!(renderer.gpu, "egui");
+                                gui.draw_frame(window, |ctx, ectx| {
+                                    hotkeys::process_hotkeys(ectx, resources);
 
-                                update_channel_gui.open =
-                                    config::with(|c| c.update_channel.is_none());
-                                update_channel_gui.show(ectx, resources);
-                                if update_channel_gui.open {
-                                    return;
-                                }
+                                    update_channel_gui.open =
+                                        config::with(|c| c.update_channel.is_none());
+                                    update_channel_gui.show(ectx, resources);
+                                    if update_channel_gui.open {
+                                        return;
+                                    }
 
-                                {
-                                    // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
-                                    let mut update_check = resources.get_mut::<UpdateCheck>();
-                                    // {
-                                    //     let check_running = update_check
-                                    //         .0
-                                    //         .as_ref()
-                                    //         .map_or(false, |v| v.poll().is_pending());
-                                    //
-                                    //     let indicator =
-                                    //         loads.entry("update_check".to_string()).or_insert_with(
-                                    //             || LoadIndicator::new("Checking for updates"),
-                                    //         );
-                                    //
-                                    //     if indicator.active != check_running {
-                                    //         indicator.restart();
-                                    //     }
-                                    //
-                                    //     indicator.active = check_running;
-                                    // }
-
-                                    if update_check
-                                        .0
-                                        .as_ref()
-                                        .map_or(false, |v| v.poll().is_ready())
                                     {
-                                        let update =
-                                            update_check.0.take().unwrap().block_and_take();
-                                        if let Some(update) = update {
-                                            *updater_gui = Some(UpdateDownload::new(update));
+                                        // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
+                                        let mut update_check = resources.get_mut::<UpdateCheck>();
+                                        // {
+                                        //     let check_running = update_check
+                                        //         .0
+                                        //         .as_ref()
+                                        //         .map_or(false, |v| v.poll().is_pending());
+                                        //
+                                        //     let indicator =
+                                        //         loads.entry("update_check".to_string()).or_insert_with(
+                                        //             || LoadIndicator::new("Checking for updates"),
+                                        //         );
+                                        //
+                                        //     if indicator.active != check_running {
+                                        //         indicator.restart();
+                                        //     }
+                                        //
+                                        //     indicator.active = check_running;
+                                        // }
+
+                                        if update_check
+                                            .0
+                                            .as_ref()
+                                            .map_or(false, |v| v.poll().is_ready())
+                                        {
+                                            let update =
+                                                update_check.0.take().unwrap().block_and_take();
+                                            if let Some(update) = update {
+                                                *updater_gui = Some(UpdateDownload::new(update));
+                                            }
                                         }
                                     }
-                                }
 
-                                if let Some(updater_gui_) = updater_gui.as_mut() {
-                                    if !updater_gui_.show(ectx, resources) {
-                                        *updater_gui = None;
+                                    if let Some(updater_gui_) = updater_gui.as_mut() {
+                                        if !updater_gui_.show(ectx, resources) {
+                                            *updater_gui = None;
+                                        }
+
+                                        return;
                                     }
 
-                                    return;
-                                }
+                                    let mut gui_views = resources.get_mut::<GuiViewManager>();
+                                    gui_views.draw(ectx, window, resources, ctx);
 
-                                let mut gui_views = resources.get_mut::<GuiViewManager>();
-                                gui_views.draw(ectx, window, resources, ctx);
-
-                                if !gui_views.hide_views {
-                                    draw_transform_gizmos(renderer, ectx, resources);
-                                }
+                                    if !gui_views.hide_views {
+                                        draw_transform_gizmos(renderer, ectx, resources);
+                                    }
+                                });
                             });
-                        });
 
                         window.pre_present_notify();
                         gctx.present(config::with(|c| c.renderer.vsync));
@@ -399,19 +465,23 @@ impl AlkahestApp {
                         window.request_redraw();
                         profiling::finish_frame!();
 
+                        // Slow the app to 10fps when it's window is out of focus
                         if !window.has_focus() {
-                            // Slow the app down when it's not in focus
                             std::thread::sleep(std::time::Duration::from_millis(100));
                         }
 
-                        if let Some(e) = renderer.pickbuffer.finish_request() {
+                        if let Some(picked_id) = renderer.pickbuffer.finish_request() {
                             let mut selected = resources.get_mut::<SelectedEntity>();
                             if !selected.changed_this_frame {
-                                if e != u32::MAX {
+                                if picked_id != u32::MAX {
                                     let maps = resources.get::<MapList>();
                                     if let Some(map) = maps.current_map() {
-                                        selected
-                                            .select(unsafe { map.scene.find_entity_from_id(e) });
+                                        selected.select_option(
+                                            map.scene
+                                                .iter_entities()
+                                                .find(|er| er.id().index() == picked_id)
+                                                .map(|er| er.id()),
+                                        );
                                     }
                                 } else {
                                     selected.deselect();

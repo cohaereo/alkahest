@@ -1,13 +1,16 @@
 use alkahest_renderer::{
-    camera::{
-        tween::ease_out_exponential,
-        Camera,
-    },
-    ecs::{common::Hidden, resources::SelectedEntity},
+    camera::{tween::ease_out_exponential, Camera},
+    ecs::{hierarchy::Parent, resources::SelectedEntity, visibility::Visibility, Scene},
     renderer::RendererShared,
 };
+use bevy_ecs::{entity::Entity, query::With};
+use rustc_hash::FxHashSet;
 
-use crate::{maplist::MapList, resources::Resources, util::action::{ActionList, TweenAction}};
+use crate::{
+    maplist::MapList,
+    resources::AppResources,
+    util::action::{ActionList, TweenAction},
+};
 
 pub const SHORTCUT_DELETE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::Delete);
@@ -35,13 +38,13 @@ pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
 pub const SHORTCUT_MAP_SWAP: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::I);
 
-    pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
+pub const SHORTCUT_MAP_PREV: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageUp);
 
-    pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
+pub const SHORTCUT_MAP_NEXT: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::PageDown);
 
-pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
+pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);
     }
@@ -57,16 +60,16 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_SWAP)) {
         let mut maplist = resources.get_mut::<MapList>();
         if let Some(prev) = maplist.previous_map {
-            maplist.set_current_map(resources, prev);
+            maplist.set_current_map(prev);
         }
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_PREV)) {
-        resources.get_mut::<MapList>().set_current_map_prev(resources);
+        resources.get_mut::<MapList>().set_current_map_prev();
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_NEXT)) {
-        resources.get_mut::<MapList>().set_current_map_next(resources);
+        resources.get_mut::<MapList>().set_current_map_next();
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
@@ -74,28 +77,49 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut Resources) {
     }
 }
 
-fn hide_unselected(resources: &mut Resources) {
+fn hide_unselected(resources: &mut AppResources) {
+    let mut maps = resources.get_mut::<MapList>();
+    let Some(map) = maps.current_map_mut() else {
+        return;
+    };
+
     let selected_entity = resources.get::<SelectedEntity>().selected();
-    let mut maps = resources.get_mut::<MapList>();
-    if let Some(map) = maps.current_map_mut() {
-        for e in map.scene.iter() {
-            if Some(e.entity()) != selected_entity {
-                map.command_buffer.insert_one(e.entity(), Hidden);
-            }
+    if selected_entity.is_none() {
+        return;
+    }
+    let selected_entity = selected_entity.unwrap();
+
+    let entity_parents: FxHashSet<Entity> = get_ancestors(&map.scene, selected_entity)
+        .into_iter()
+        .collect();
+    for e in map.scene.iter_entities() {
+        if e.id() != selected_entity && !entity_parents.contains(&e.id()) {
+            map.commands().entity(e.id()).insert((Visibility::Hidden,));
         }
     }
 }
 
-fn unhide_all(resources: &mut Resources) {
-    let mut maps = resources.get_mut::<MapList>();
-    if let Some(map) = maps.current_map_mut() {
-        for (e, _) in map.scene.query::<&Hidden>().iter() {
-            map.command_buffer.remove_one::<Hidden>(e);
-        }
+fn get_ancestors(scene: &Scene, entity: Entity) -> Vec<Entity> {
+    if let Some(parent) = scene.get::<Parent>(entity) {
+        let mut parents = vec![parent.0];
+        parents.append(&mut get_ancestors(scene, parent.0));
+        parents
+    } else {
+        vec![]
     }
 }
 
-fn goto_gaze(resources: &mut Resources) {
+fn unhide_all(resources: &mut AppResources) {
+    let mut maps = resources.get_mut::<MapList>();
+    if let Some(map) = maps.current_map_mut() {
+        map.scene
+            .query::<&mut Visibility>()
+            .iter_mut(&mut map.scene)
+            .for_each(|mut v| *v = Visibility::Visible);
+    }
+}
+
+fn goto_gaze(resources: &mut AppResources) {
     let camera = resources.get_mut::<Camera>();
     let (d, pos) = resources
         .get::<RendererShared>()

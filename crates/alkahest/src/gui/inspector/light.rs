@@ -8,10 +8,10 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::color::Color,
 };
-use egui::{Color32, RichText, Ui, Widget};
-use hecs::EntityRef;
+use bevy_ecs::prelude::EntityRef;
+use egui::{Color32, RichText, Ui};
 
-use crate::{gui::inspector::ComponentPanel, resources::Resources};
+use crate::{gui::inspector::ComponentPanel, resources::AppResources};
 
 impl ComponentPanel for SLightCollection {
     fn inspector_name() -> &'static str {
@@ -28,21 +28,21 @@ impl ComponentPanel for SLightCollection {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        scene: &'s Scene,
+        scene: &'s mut Scene,
         e: EntityRef<'s>,
         _ui: &mut Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let renderer = resources.get::<RendererShared>();
-        let Some(children) = e.get::<&Children>() else {
+        let Some(children) = e.get::<Children>() else {
             return;
         };
 
         for child in &children.0 {
-            let Ok(mut q) = scene.query_one::<(&LightRenderer, &Transform)>(*child) else {
-                continue;
-            };
-            if let Some((light, transform)) = q.get() {
+            if let Ok((light, transform)) = scene
+                .query::<(&LightRenderer, &Transform)>()
+                .get(scene, *child)
+            {
                 renderer.immediate.cube_outline(
                     transform.local_to_world() * light.projection_matrix,
                     Color::from_rgb(1.0, 1.0, 0.0),
@@ -73,13 +73,13 @@ impl ComponentPanel for LightRenderer {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        _: &'s Scene,
+        _: &'s mut Scene,
         e: EntityRef<'s>,
         ui: &mut Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let renderer = resources.get::<RendererShared>();
-        if !e.has::<SLight>() && !e.has::<SShadowingLight>() {
+        if !e.contains::<SLight>() && !e.contains::<SShadowingLight>() {
             ui.label(
                 RichText::new("⚠ This light renderer is missing a (shadowing)light component")
                     .strong()
@@ -88,7 +88,7 @@ impl ComponentPanel for LightRenderer {
             return;
         }
 
-        let is_shadowing = e.has::<SShadowingLight>();
+        let is_shadowing = e.contains::<SShadowingLight>();
         ui.horizontal(|ui| {
             ui.strong("Type:");
             ui.label(if is_shadowing {
@@ -103,7 +103,7 @@ impl ComponentPanel for LightRenderer {
             ui.label(&self.debug_info);
         });
 
-        if let Some(shadowing) = e.get::<&SShadowingLight>() {
+        if let Some(shadowing) = e.get::<SShadowingLight>() {
             ui.separator();
             ui.horizontal(|ui| {
                 ui.strong("FoV:");
@@ -115,7 +115,7 @@ impl ComponentPanel for LightRenderer {
             });
         }
 
-        if let Some(transform) = e.get::<&Transform>() {
+        if let Some(transform) = e.get::<Transform>() {
             renderer.immediate.cube_outline(
                 transform.local_to_world() * self.projection_matrix,
                 Color::from_rgb(1.0, 1.0, 0.0),
@@ -151,13 +151,13 @@ impl ComponentPanel for CubemapVolume {
 
     fn show_inspector_ui<'s>(
         &mut self,
-        _: &'s Scene,
+        _: &'s mut Scene,
         e: EntityRef<'s>,
         _: &mut Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let renderer = resources.get::<RendererShared>();
-        let transform = e.get::<&Transform>().expect("Volume missing Transform");
+        let transform = e.get::<Transform>().expect("Volume missing Transform");
         renderer.immediate.cube_outline(
             Transform {
                 scale: self.extents,

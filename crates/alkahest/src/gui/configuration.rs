@@ -1,8 +1,8 @@
 use alkahest_renderer::{
     camera::{Camera, CameraProjection},
     ecs::tags::{NodeFilter, NodeFilterSet},
-    icons::{ICON_CLIPBOARD, ICON_CURSOR_DEFAULT, ICON_CURSOR_POINTER, ICON_EYE},
-    renderer::{RenderDebugView, RenderFeatureVisibility, RendererSettings, RendererShared},
+    icons::{ICON_CLIPBOARD, ICON_CURSOR_DEFAULT, ICON_EYE},
+    renderer::{RenderDebugView, RenderFeatureVisibility, RendererShared},
     util::text::StringExt,
 };
 use egui::{Context, RichText, Rounding, Widget};
@@ -13,7 +13,7 @@ use winit::window::Window;
 use crate::{
     config,
     gui::context::{GuiCtx, GuiView, ViewResult},
-    resources::Resources,
+    resources::AppResources,
 };
 
 pub struct RenderSettingsPanel;
@@ -23,7 +23,7 @@ impl GuiView for RenderSettingsPanel {
         &mut self,
         ctx: &Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         egui::Window::new("Settings").show(ctx, |ui| {
@@ -63,7 +63,7 @@ impl GuiView for RenderSettingsPanel {
 
             ui.horizontal(|ui| {
                 egui::DragValue::new(&mut camera.speed_mul)
-                    .clamp_range(0f32..=25.0)
+                    .range(0f32..=25.0)
                     .speed(0.05)
                     .ui(ui);
                 ui.label("Speed");
@@ -72,7 +72,7 @@ impl GuiView for RenderSettingsPanel {
             if let CameraProjection::Perspective { fov, .. } = &mut camera.projection {
                 ui.horizontal(|ui| {
                     egui::DragValue::new(fov)
-                        .clamp_range(5f32..=120.0)
+                        .range(5f32..=120.0)
                         .speed(0.05)
                         .ui(ui);
                     ui.label("FOV");
@@ -81,7 +81,7 @@ impl GuiView for RenderSettingsPanel {
 
             ui.horizontal(|ui| {
                 egui::DragValue::new(&mut camera.smooth_movement)
-                    .clamp_range(0f32..=5.0)
+                    .range(0f32..=5.0)
                     .speed(0.05)
                     .ui(ui);
                 ui.label("Smooth movement");
@@ -89,7 +89,7 @@ impl GuiView for RenderSettingsPanel {
 
             ui.horizontal(|ui| {
                 egui::DragValue::new(&mut camera.smooth_look)
-                    .clamp_range(0f32..=5.0)
+                    .range(0f32..=5.0)
                     .speed(0.05)
                     .ui(ui);
                 ui.label("Smooth look");
@@ -110,7 +110,7 @@ impl GuiView for RenderSettingsPanel {
                             ui.label("Radius");
                             egui::DragValue::new(&mut ssao_data.radius)
                                 .speed(0.01)
-                                .clamp_range(0.0..=10.0)
+                                .range(0.0..=10.0)
                                 .suffix("m")
                                 .ui(ui);
                         });
@@ -119,7 +119,7 @@ impl GuiView for RenderSettingsPanel {
                             ui.label("Bias");
                             egui::DragValue::new(&mut ssao_data.bias)
                                 .speed(0.01)
-                                .clamp_range(0.0..=10.0)
+                                .range(0.0..=10.0)
                                 .suffix("m")
                                 .ui(ui);
                         });
@@ -127,7 +127,10 @@ impl GuiView for RenderSettingsPanel {
                     render_feat_vis(ui, "Crosshair", &mut c.visual.draw_crosshair);
                     render_feat_vis(ui, "Node Visualization", &mut c.visual.node_nametags);
                     ui.collapsing("Node filters", |ui| {
-                        ui.checkbox(&mut c.visual.node_nametags_named_only, "Only show named nodes");
+                        ui.checkbox(
+                            &mut c.visual.node_nametags_named_only,
+                            "Only show named nodes",
+                        );
                         let mut filters = resources.get_mut::<NodeFilterSet>();
                         for filter in NodeFilter::iter() {
                             let filter_text = RichText::new(format!(
@@ -214,9 +217,9 @@ impl SelectionGizmoMode {
     pub fn to_enumset(&self) -> EnumSet<GizmoMode> {
         match self {
             SelectionGizmoMode::Select => EnumSet::empty(),
-            SelectionGizmoMode::Translate => EnumSet::only(GizmoMode::Translate),
-            SelectionGizmoMode::Rotate => EnumSet::only(GizmoMode::Rotate),
-            SelectionGizmoMode::Scale => EnumSet::only(GizmoMode::Scale),
+            SelectionGizmoMode::Translate => GizmoMode::all_translate(),
+            SelectionGizmoMode::Rotate => GizmoMode::all_rotate(),
+            SelectionGizmoMode::Scale => GizmoMode::all_scale(),
         }
     }
 }

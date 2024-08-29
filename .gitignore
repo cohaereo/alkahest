@@ -1,6 +1,7 @@
 **/target
 **/.vscode
 
+*.log
 imgui.ini
 *.tag
 package_cache.json

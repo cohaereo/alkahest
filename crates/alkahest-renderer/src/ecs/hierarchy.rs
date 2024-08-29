@@ -1,10 +1,11 @@
 use std::ops::Deref;
 
-use hecs::Entity;
+use bevy_ecs::{entity::Entity, prelude::Component};
 use smallvec::SmallVec;
 
+#[derive(Component)]
 pub struct Parent(pub Entity);
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub struct Children(pub SmallVec<[Entity; 8]>);
 
 impl Children {

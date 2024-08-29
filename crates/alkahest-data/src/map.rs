@@ -4,7 +4,7 @@ use tiger_parse::{tiger_tag, Pointer, ResourcePointer};
 
 use crate::{
     common::ResourceHash,
-    occlusion::{SObjectOcclusionBounds, SOcclusionBounds, AABB},
+    occlusion::{Aabb, SObjectOcclusionBounds, SOcclusionBounds},
     statics::SStaticMeshInstances,
     Tag, WideHash, WideTag,
 };
@@ -104,8 +104,7 @@ pub struct STerrain {
     pub file_size: u64,
     pub unk8: u64,
 
-    pub unk10: Vec4,
-    pub unk20: Vec4,
+    pub bounds: Aabb,
     pub unk30: Vec4,
 
     #[tag(offset = 0x50)]
@@ -213,7 +212,7 @@ pub struct SUnk80806e68 {
     pub unk30: [u32; 2],
     pub occlusion_bounds: Tag<SOcclusionBounds>,
     _pad3c: u32,
-    pub bounds: AABB,
+    pub bounds: Aabb,
 }
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806963)]
@@ -313,7 +312,7 @@ pub struct SUnk80806aa9 {
     pub transform: [f32; 16],
 
     /// Same as the bounding box from the SObjectOcclusionBounds array
-    pub bounds: AABB,
+    pub bounds: Aabb,
 
     pub unk60: Tag<SUnk80806aae>,
     pub unk64: f32,
@@ -337,11 +336,12 @@ pub struct SUnk80806aae {
     pub entity_model: TagHash,
 }
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806C65)]
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
-    pub bounds: AABB,
+    pub bounds: Aabb,
     pub unk30: Vec<SLight>,
     pub unk40: Vec<SUnk80809f4f>,
     pub light_count: u32,
@@ -350,6 +350,7 @@ pub struct SLightCollection {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806C70, size = 240)]
 pub struct SLight {
     pub unk0: Vec4,
@@ -380,6 +381,7 @@ pub struct SLight {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806C71)]
 pub struct SShadowingLight {
     pub unk0: Vec4,
@@ -434,6 +436,7 @@ pub struct SUnk80808cb7 {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80808CB9)]
 pub struct SRespawnPoint {
     pub rotation: Quat,
@@ -648,9 +651,11 @@ pub struct SMapAtmosphere {
     pub lookup_texture_1: WideHash,
     pub lookup_texture_2: WideHash,
     pub lookup_texture_3: WideHash,
+    pub unkd0: WideHash,
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[tiger_tag(id = 0x80806A78)]
 pub struct SLensFlare {
     // TODO(cohae): Placeholder struct

@@ -1,3 +1,4 @@
+pub mod black_magic;
 pub mod color;
 pub mod d3d;
 pub mod image;

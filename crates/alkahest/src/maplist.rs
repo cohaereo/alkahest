@@ -1,20 +1,32 @@
+use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
-        common::Global, render::{
-            dynamic_geometry::update_dynamic_model_system,
+        common::Global,
+        render::{
+            dynamic_geometry::update_dynamic_model_system, light::update_shadowrenderer_system,
             static_geometry::update_static_instances_system,
-        }, resources::SelectedEntity, Scene, SceneInfo
+        },
+        resources::SelectedEntity,
+        visibility::propagate_entity_visibility_system,
+        Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
+    util::{scene::SceneExt, Hocus},
+};
+use bevy_ecs::{
+    entity::Entity,
+    query::With,
+    schedule::{ExecutorKind, Schedule, ScheduleLabel},
+    system::Commands,
+    world::CommandQueue,
 };
 use destiny_pkg::TagHash;
-use hecs::Entity;
 use itertools::Itertools;
 use poll_promise::Promise;
-use alkahest_data::text::StringContainerShared;
+
 use crate::{
-    discord, gui::activity_select::CurrentActivity, resources::Resources, ApplicationArgs,
+    discord, gui::activity_select::CurrentActivity, resources::AppResources, ApplicationArgs,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -26,35 +38,92 @@ pub enum MapLoadState {
     Error(String),
 }
 
-#[derive(Default)]
 pub struct Map {
     pub hash: TagHash,
     pub name: String,
-    pub promise: Option<Box<Promise<anyhow::Result<Scene>>>>,
+    pub load_promise: Option<Box<Promise<anyhow::Result<Scene>>>>,
     pub load_state: MapLoadState,
 
-    pub command_buffer: hecs::CommandBuffer,
+    pub command_queue: CommandQueue,
     pub scene: Scene,
+
+    systems: Systems,
+}
+
+#[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
+struct PreUpdate;
+
+// TODO: Trash, fix and move to alkahest_renderer
+struct Systems {
+    /// Schedule ran before the main update
+    pub(crate) schedule_pre: Schedule,
+    pub(crate) schedule_pre_threadsafe: Schedule,
+}
+
+impl Systems {
+    fn create(world: &mut Scene) -> Self {
+        let mut schedule_pre = Schedule::new(PreUpdate);
+
+        schedule_pre
+            .add_systems((update_static_instances_system, update_dynamic_model_system))
+            .set_executor_kind(ExecutorKind::SingleThreaded)
+            .initialize(world)
+            .unwrap();
+
+        let mut schedule_pre_threadsafe = Schedule::new(PreUpdate);
+        schedule_pre_threadsafe
+            .add_systems((
+                update_shadowrenderer_system,
+                propagate_entity_visibility_system,
+            ))
+            .set_executor_kind(ExecutorKind::MultiThreaded)
+            .initialize(world)
+            .unwrap();
+
+        Self {
+            schedule_pre,
+            schedule_pre_threadsafe,
+        }
+    }
 }
 
 impl Map {
-    pub fn update(&mut self, resources: &Resources) {
-        if let Some(promise) = self.promise.take() {
+    pub fn create_empty(name: impl AsRef<str>) -> Self {
+        Self {
+            load_state: MapLoadState::Loaded,
+            ..Self::create(name, TagHash::NONE, None)
+        }
+    }
+
+    pub fn create(name: impl AsRef<str>, hash: TagHash, activity_hash: Option<TagHash>) -> Self {
+        let mut scene = Scene::new_with_info(activity_hash, hash);
+
+        Self {
+            hash,
+            name: name.as_ref().to_string(),
+            load_promise: Default::default(),
+            load_state: Default::default(),
+
+            systems: Systems::create(&mut scene),
+            scene,
+            command_queue: Default::default(),
+        }
+    }
+
+    pub(super) fn update_load(&mut self) {
+        if let Some(promise) = self.load_promise.take() {
             if promise.ready().is_some() {
                 match promise.block_and_take() {
                     Ok(mut scene) => {
                         // Move all globals to a temporary scene
                         std::mem::swap(&mut self.scene, &mut scene);
-                        self.take_globals(resources, &mut scene);
-
-                        // TODO(cohae): Use scheduler for this
-                        update_static_instances_system(&self.scene);
-                        update_dynamic_model_system(&self.scene);
+                        self.systems = Systems::create(&mut self.scene);
+                        self.take_globals(&mut scene);
 
                         info!(
                             "Loaded map {} with {} entities",
                             self.name,
-                            self.scene.iter().count()
+                            self.scene.entities().len()
                         );
 
                         self.load_state = MapLoadState::Loaded;
@@ -65,42 +134,50 @@ impl Map {
                     }
                 }
             } else {
-                self.promise = Some(promise);
+                self.load_promise = Some(promise);
                 self.load_state = MapLoadState::Loading;
             }
         }
-        // else {
-        //     self.load_state = MapLoadState::Unloaded;
-        // }
+    }
 
-        self.command_buffer.run_on(&mut self.scene);
+    pub fn update(&mut self) {
+        self.command_queue.apply(&mut self.scene);
+        self.scene.clear_trackers();
+        self.scene.check_change_ticks();
+
+        self.systems.schedule_pre.run(&mut self.scene);
+        self.systems.schedule_pre_threadsafe.run(&mut self.scene);
     }
 
     /// Remove global entities from the scene and store them in this one
-    pub fn take_globals(&mut self, resources: &Resources, source: &mut Scene) {
+    pub fn take_globals(&mut self, source: &mut Scene) {
         let ent_list = source
-            .query::<&Global>()
-            .iter()
-            .map(|(e, _)| e)
+            .query_filtered::<Entity, With<Global>>()
+            .iter(source)
             .collect_vec();
         let mut new_selected_entity: Option<Entity> = None;
 
         {
-            let selected_entity = resources.get::<SelectedEntity>().selected();
+            // TODO(cohae): selected_entity always appears to be None, and thus the selected entity isn't carried over
+            let selected_entity = source.resource::<SelectedEntity>().selected();
             for &entity in &ent_list {
-                let new_entity = self.scene.spawn(source.take(entity).ok().unwrap());
-                if selected_entity.is_some_and(|e|e == entity) {
+                let old_entity_components = source.take_boxed(entity).unwrap();
+                let new_entity = self.scene.spawn_boxed(old_entity_components);
+
+                if selected_entity == Some(entity) {
                     new_selected_entity = Some(new_entity);
                 }
             }
         }
 
         if let Some(new_entity) = new_selected_entity {
-            resources.get_mut::<SelectedEntity>().select(new_entity);
+            self.scene
+                .resource_mut::<SelectedEntity>()
+                .select(new_entity);
         }
     }
 
-    fn start_load(&mut self, resources: &Resources) {
+    fn start_load(&mut self, resources: &AppResources) {
         if self.load_state != MapLoadState::Unloaded {
             warn!(
                 "Attempted to load map {}, but it is already loading or loaded",
@@ -115,7 +192,7 @@ impl Map {
         let global_strings = resources.get::<StringContainerShared>().clone();
 
         info!("Loading map {} '{}'", self.hash, self.name);
-        self.promise = Some(Box::new(Promise::spawn_async(load_map(
+        self.load_promise = Some(Box::new(Promise::spawn_async(load_map(
             renderer,
             self.hash,
             activity_hash,
@@ -124,6 +201,10 @@ impl Map {
         ))));
 
         self.load_state = MapLoadState::Loading;
+    }
+
+    pub fn commands(&self) -> Commands<'_, '_> {
+        Commands::new(&mut self.pocus().command_queue, &self.scene)
     }
 }
 
@@ -170,9 +251,9 @@ impl MapList {
 }
 
 impl MapList {
-    pub fn update_maps(&mut self, resources: &Resources) {
+    pub fn update_maps(&mut self, resources: &AppResources) {
         for (i, map) in self.maps.iter_mut().enumerate() {
-            map.update(resources);
+            map.update_load();
             if i == self.current_map && map.load_state == MapLoadState::Unloaded {
                 map.start_load(resources);
             }
@@ -200,16 +281,11 @@ impl MapList {
 
     /// Populates the map list and begins loading the first map
     /// Overwrites the current map list
-    pub fn set_maps(&mut self, resources: &Resources, map_hashes: &[(TagHash, String)]) {
+    pub fn set_maps(&mut self, resources: &AppResources, map_hashes: &[(TagHash, String)]) {
         let activity_hash = resources.get_mut::<CurrentActivity>().0;
         self.maps = map_hashes
             .iter()
-            .map(|(hash, name)| Map {
-                hash: *hash,
-                name: name.clone(),
-                scene: Scene::new_with_info(activity_hash, *hash),
-                ..Default::default()
-            })
+            .map(|(hash, name)| Map::create(name, *hash, activity_hash))
             .collect();
 
         #[cfg(not(feature = "keep_map_order"))]
@@ -224,21 +300,17 @@ impl MapList {
         }
     }
 
-    pub fn add_map(&mut self, resources: &Resources, map_name: String, map_hash: TagHash) {
+    pub fn add_map(&mut self, resources: &AppResources, map_name: String, map_hash: TagHash) {
         if self.maps.is_empty() {
             self.set_maps(resources, &[(map_hash, map_name.clone())])
         } else {
             let activity_hash = resources.get_mut::<CurrentActivity>().0;
-            self.maps.push(Map {
-                hash: map_hash,
-                name: map_name,
-                scene: Scene::new_with_info(activity_hash, map_hash),
-                ..Default::default()
-            });
+            self.maps
+                .push(Map::create(map_name, map_hash, activity_hash))
         }
     }
 
-    pub fn set_current_map(&mut self, resources: &Resources, index: usize) {
+    pub fn set_current_map(&mut self, index: usize) {
         if index >= self.maps.len() {
             warn!(
                 "Attempted to set current map to index {}, but there are only {} maps",
@@ -263,7 +335,7 @@ impl MapList {
 
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
-            dest.take_globals(resources, &mut source);
+            dest.take_globals(&mut source);
             self.maps[previous_map].scene = source;
         }
 
@@ -273,15 +345,15 @@ impl MapList {
         }
     }
 
-    pub fn set_current_map_next(&mut self, resources: &Resources) {
+    pub fn set_current_map_next(&mut self) {
         if self.current_map + 1 < self.maps.len() {
-            self.set_current_map(resources, self.current_map + 1)
+            self.set_current_map(self.current_map + 1)
         }
     }
 
-    pub fn set_current_map_prev(&mut self, resources: &Resources) {
-        if self.current_map > 0 && self.maps.len() >= 1 {
-            self.set_current_map(resources, self.current_map - 1)
+    pub fn set_current_map_prev(&mut self) {
+        if self.current_map > 0 && !self.maps.is_empty() {
+            self.set_current_map(self.current_map - 1)
         }
     }
 }

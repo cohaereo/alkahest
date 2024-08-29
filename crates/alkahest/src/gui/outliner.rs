@@ -1,22 +1,23 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Hidden, Icon, Label, Mutable},
+        common::{Icon, Label, Mutable},
         hierarchy::{Children, Parent},
         resources::SelectedEntity,
         tags::{EntityTag, Tags},
         transform::Transform,
+        visibility::{Visibility, VisibilityHelper},
     },
-    resources::Resources,
+    resources::AppResources,
     util::{color::ColorExt, text::prettify_distance},
 };
+use bevy_ecs::{entity::Entity, query::Without, system::Commands, world::EntityRef};
 use egui::{collapsing_header::CollapsingState, Color32, RichText};
-use hecs::{Entity, EntityRef};
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use strum::IntoEnumIterator;
 use winit::window::Window;
-
+use alkahest_renderer::ecs::Scene;
 use crate::{
     gui::{
         chip::EcsTagsExt,
@@ -31,6 +32,8 @@ pub struct OutlinerPanel {
     sort_by_distance: bool,
 
     filters: FxHashMap<EntityTag, bool>,
+
+    search: String,
 }
 
 impl Default for OutlinerPanel {
@@ -40,6 +43,7 @@ impl Default for OutlinerPanel {
             filters: EntityTag::iter()
                 .map(|tag| (tag, false))
                 .collect::<FxHashMap<_, _>>(),
+            search: "".to_string(),
         }
     }
 }
@@ -49,7 +53,7 @@ impl GuiView for OutlinerPanel {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         let mut maps = resources.get_mut::<MapList>();
@@ -58,12 +62,40 @@ impl GuiView for OutlinerPanel {
 
             let camera = resources.get::<Camera>();
 
+            fn search(entity: Entity, s: &str, sce: &Scene) -> bool {
+                let e = sce.entity(entity);
+                let Some(label) = e.get::<Label>().map(Label::to_string) else {
+                    return false;
+                };
+
+                if let Some(children) = e.get::<Children>() {
+                    for child in children.iter() {
+                        if search(*child, s, sce) {
+                            return true;
+                        }
+                    }
+                }
+
+                if !label.to_lowercase().contains(&s) {
+                    return false;
+                }
+
+                true
+            }
+
             let enabled_filters = self.filters.iter().filter(|(_, v)| **v).count();
             let mut entities = scene
-                .query::<(Option<&Transform>, Option<&Tags>)>()
-                .without::<&Parent>()
-                .iter()
-                .filter(|(_, (_, tags))| {
+                .query_filtered::<(Entity, Option<&Transform>, Option<&Tags>), Without<Parent>>()
+                .iter(scene)
+                .filter(|(e, _, tags)| {
+                    // Match search string
+                    if !self.search.is_empty() {
+                        let s = self.search.to_lowercase();
+                        if !search(*e, &s, scene){
+                            return false;
+                        }
+                    }
+
                     if enabled_filters == 0 {
                         return true;
                     }
@@ -76,7 +108,7 @@ impl GuiView for OutlinerPanel {
                             .all(|(tag, _)| tags.0.contains(tag))
                     })
                 })
-                .map(|(e, (transform, _tags))| {
+                .map(|(e, transform, _tags)| {
                     let distance = if let Some(transform) = transform {
                         (transform.translation - camera.position()).length()
                     } else {
@@ -87,7 +119,7 @@ impl GuiView for OutlinerPanel {
                 })
                 .collect_vec();
 
-            entities.sort_by_key(|(e, _)| e.id());
+            entities.sort_by_key(|(e, _)| *e);
 
             if self.sort_by_distance {
                 entities.sort_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
@@ -97,6 +129,11 @@ impl GuiView for OutlinerPanel {
             // let mut delete_entity = None;
 
             egui::Window::new("Outliner").show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Search:");
+                    ui.add(egui::TextEdit::singleline(&mut self.search).hint_text("Search"));
+                });
+
                 ui.horizontal(|ui| {
                     ui.checkbox(&mut self.sort_by_distance, "Sort by distance");
 
@@ -147,11 +184,12 @@ impl OutlinerPanel {
         ui: &mut egui::Ui,
         ent: Entity,
         map: &mut Map,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
-        let e = map.scene.entity(ent).unwrap();
+        let mut commands = map.commands();
+        let e = map.scene.entity(ent);
 
-        let children = e.get::<&Children>().as_deref().cloned();
+        let children = e.get::<Children>().cloned();
 
         if let Some(children) = children {
             CollapsingState::load_with_default_open(
@@ -160,7 +198,7 @@ impl OutlinerPanel {
                 false,
             )
             .show_header(ui, |ui| {
-                self.draw_entity_entry(ui, resources, e, &mut map.command_buffer)
+                self.draw_entity_entry(ui, resources, e, &mut commands)
             })
             .body_unindented(|ui| {
                 ui.style_mut().spacing.indent = 16.0 * 2.;
@@ -171,24 +209,24 @@ impl OutlinerPanel {
                 });
             });
         } else {
-            self.draw_entity_entry(ui, resources, e, &mut map.command_buffer);
+            self.draw_entity_entry(ui, resources, e, &mut commands);
         }
     }
 
     fn draw_entity_entry(
         &self,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
         e: EntityRef<'_>,
-        cmd: &mut hecs::CommandBuffer,
+        cmd: &mut Commands,
     ) {
-        let distance = if let Some(transform) = e.get::<&Transform>() {
+        let distance = if let Some(transform) = e.get::<Transform>() {
             (transform.translation - resources.get::<Camera>().position()).length()
         } else {
             f32::INFINITY
         };
 
-        let postfix = if let Some(children) = e.get::<&Children>() {
+        let postfix = if let Some(children) = e.get::<Children>() {
             format!(" ({})", children.0.len())
         } else {
             "".to_string()
@@ -200,19 +238,19 @@ impl OutlinerPanel {
             postfix
         };
 
-        let visible = !e.has::<Hidden>();
+        let visible = e.get::<Visibility>().is_visible(0);
         let prefix_vis = if visible {
             "".to_string()
         } else {
             format!("{} ", ICON_EYE_OFF)
         };
 
-        let label = if let Some(label) = e.get::<&Label>() {
-            format!("{label} (id {})", e.entity().id())
+        let label = if let Some(label) = e.get::<Label>() {
+            format!("{label} (id {})", e.id())
         } else {
-            format!("Entity {}", e.entity().id())
+            format!("Entity {}", e.id())
         };
-        let (icon, color) = if let Some(icon) = e.get::<&Icon>() {
+        let (icon, color) = if let Some(icon) = e.get::<Icon>() {
             (icon.to_string(), icon.color())
         } else {
             (" ".to_string(), Color32::WHITE)
@@ -220,7 +258,7 @@ impl OutlinerPanel {
 
         ui.horizontal(|ui| {
             let response = ui.selectable_label(
-                Some(e.entity()) == resources.get::<SelectedEntity>().selected(),
+                Some(e.id()) == resources.get::<SelectedEntity>().selected(),
                 RichText::new(format!(
                     "{prefix_vis}{icon} {label}{postfix}" // "{} {}{postfix}",
                                                           // resolve_entity_icon(e).unwrap_or(ICON_CHESS_PAWN),
@@ -234,20 +272,20 @@ impl OutlinerPanel {
             );
 
             response.context_menu(|ui| {
-                ui.add_enabled_ui(e.has::<Mutable>(), |ui| {
+                ui.add_enabled_ui(e.contains::<Mutable>(), |ui| {
                     // Delete button
                     if ui.button(format!("{} Delete", ICON_DELETE)).clicked() {
                         resources.get_mut::<SelectedEntity>().deselect();
-                        cmd.despawn(e.entity());
+                        cmd.entity(e.id()).despawn();
                     }
                 });
             });
 
             if response.clicked() {
-                resources.get_mut::<SelectedEntity>().select(e.entity());
+                resources.get_mut::<SelectedEntity>().select(e.id());
             }
 
-            if let Some(tags) = e.get::<&Tags>() {
+            if let Some(tags) = e.get::<Tags>() {
                 tags.ui_chips(ui);
             }
         });

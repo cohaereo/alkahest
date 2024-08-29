@@ -9,7 +9,7 @@ use crate::{
 };
 
 impl Renderer {
-    pub fn draw_opaque_pass(&self, scene: &Scene) {
+    pub fn draw_opaque_pass(&self, scene: &mut Scene) {
         gpu_event!(self.gpu, "generate_gbuffer");
 
         self.gpu

@@ -1,6 +1,7 @@
 mod cubemaps;
 pub mod gbuffer;
 mod immediate;
+use glam::{Mat4, Quat};
 pub use immediate::LabelAlign;
 mod lighting_pass;
 mod opaque_pass;
@@ -9,15 +10,17 @@ pub mod shader;
 mod shadows;
 mod systems;
 mod transparents_pass;
+mod util;
 
-use std::{sync::Arc, time::Instant};
+use std::{ops::Deref, sync::Arc, time::Instant};
 
 use alkahest_data::{
-    geometry::EPrimitiveType,
+    occlusion::Aabb,
     technique::StateSelection,
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use anyhow::Context;
+use bevy_ecs::system::{Resource, RunSystemOnce};
 use bitflags::bitflags;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -26,14 +29,17 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        common::Hidden,
-        render::{
-            dynamic_geometry::update_dynamic_model_system,
-            static_geometry::update_static_instances_system,
-        },
+        common::Label,
+        culling::draw_aabb_system,
+        render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
-        utility::draw_utilities,
+        transform::Transform,
+        utility::draw_utilities_system,
+        visibility::{
+            calculate_view_visibility_system, reset_view_visibility_system, ViewVisibility,
+            VisibilityHelper,
+        },
         Scene,
     },
     gpu::SharedGpuContext,
@@ -45,20 +51,35 @@ use crate::{
         cubemaps::CubemapRenderer, gbuffer::GBuffer, immediate::ImmediateRenderer,
         pickbuffer::Pickbuffer,
     },
-    resources::Resources,
+    resources::AppResources,
     shader::matcap::MatcapRenderer,
     tfx::{
-        externs,
-        externs::{ExternStorage, Frame},
+        externs::{self, ExternStorage, Frame},
         globals::RenderGlobals,
         scope::ScopeFrame,
         technique::Technique,
         view::View,
     },
     util::Hocus,
+    Color,
 };
 
-pub type RendererShared = Arc<Renderer>;
+#[derive(Resource)]
+pub struct RendererShared(Arc<Renderer>);
+
+impl Clone for RendererShared {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl Deref for RendererShared {
+    type Target = Arc<Renderer>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub struct Renderer {
     pub gpu: SharedGpuContext,
@@ -79,8 +100,10 @@ pub struct Renderer {
     pub delta_time: f64,
     pub frame_index: usize,
 
+    pub active_view: usize,
     // Hacky way to obtain these filters for now
     pub lastfilters: NodeFilterSet,
+    pub active_shadow_generation_mode: ShadowGenerationMode,
 }
 
 pub struct RendererData {
@@ -94,11 +117,11 @@ impl Renderer {
         gpu: SharedGpuContext,
         window_size: (u32, u32),
         disable_asset_loading: bool,
-    ) -> anyhow::Result<Arc<Self>> {
+    ) -> anyhow::Result<RendererShared> {
         let render_globals =
             RenderGlobals::load(gpu.clone()).expect("Failed to load render globals");
 
-        Ok(Arc::new(Self {
+        Ok(RendererShared(Arc::new(Self {
             data: Mutex::new(RendererData {
                 asset_manager: if disable_asset_loading {
                     AssetManager::new_disabled(gpu.clone())
@@ -123,8 +146,10 @@ impl Renderer {
             last_frame: Instant::now(),
             delta_time: 0.0,
             frame_index: 0,
+            active_shadow_generation_mode: ShadowGenerationMode::StationaryOnly,
             lastfilters: NodeFilterSet::default(),
-        }))
+            active_view: 0,
+        })))
     }
 
     pub fn get_technique_shared(&self, handle: &Handle<Technique>) -> Option<Arc<Technique>> {
@@ -132,7 +157,7 @@ impl Renderer {
         data.asset_manager.techniques.get_shared(handle)
     }
 
-    pub fn render_world(&self, view: &impl View, scene: &Scene, resources: &Resources) {
+    pub fn render_world(&self, view: &impl View, scene: &mut Scene, resources: &AppResources) {
         self.pocus().lastfilters = resources.get::<NodeFilterSet>().clone();
 
         // Make sure immediate labels have been drained completely
@@ -140,14 +165,14 @@ impl Renderer {
 
         self.begin_world_frame(scene);
 
-        update_dynamic_model_system(scene);
-        update_static_instances_system(scene);
+        let frustum = view.frustum();
+        scene.run_system_once_with(frustum, calculate_view_visibility_system);
 
         self.update_shadow_maps(scene);
 
         {
             gpu_event!(self.gpu, "view_0");
-            self.bind_view(view);
+            self.bind_view(view, 0);
 
             self.draw_atmosphere(scene);
             self.draw_opaque_pass(scene);
@@ -189,20 +214,11 @@ impl Renderer {
                 .render_globals
                 .pipelines
                 .get_debug_view_pipeline(self.render_settings.debug_view);
-            if let Err(e) = pipeline.bind(self) {
-                error!("Failed to run deferred_shading: {e}");
-                return;
-            }
 
-            // TODO(cohae): Try to reduce the boilerplate for screen space pipelines like this one
             self.gpu
                 .current_states
                 .store(StateSelection::new(Some(0), Some(0), Some(0), Some(0)));
-            self.gpu.flush_states();
-            self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
-
-            // TODO(cohae): 4 vertices doesn't work...
-            self.gpu.context().Draw(6, 0);
+            self.execute_global_pipeline(pipeline, "final_or_debug_view");
         }
 
         if !self.render_settings.debug_view.is_gamma_converter() {
@@ -229,7 +245,7 @@ impl Renderer {
         self.pocus().frame_index = self.frame_index.wrapping_add(1);
     }
 
-    fn draw_view_overlay(&self, scene: &Scene, resources: &Resources) {
+    fn draw_view_overlay(&self, scene: &mut Scene, resources: &AppResources) {
         gpu_event!(self.gpu, "view_overlay");
 
         self.gpu
@@ -245,10 +261,22 @@ impl Renderer {
             );
         }
 
-        draw_utilities(self, scene, resources);
+        // TODO(cohae): Move debug shapes to a separate system
+        scene.run_system_once_with(
+            resources.get::<RendererShared>().clone(),
+            draw_debugshapes_system,
+        );
+        scene.run_system_once_with(
+            resources.get::<RendererShared>().clone(),
+            draw_utilities_system,
+        );
+        // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-            if !scene.entity(selected).map_or(true, |v| v.has::<Hidden>()) {
+            if scene
+                .get_entity(selected)
+                .map_or(true, |v| v.get::<ViewVisibility>().is_visible(0))
+            {
                 self.draw_outline(
                     scene,
                     selected,
@@ -259,12 +287,30 @@ impl Renderer {
                         .as_secs_f32(),
                 );
             }
+
+            if let Some(bounds) = scene.get::<Aabb>(selected) {
+                let transform =
+                    if let Some(t) = scene.get::<Transform>(selected) {
+                        t.local_to_world()
+                    } else {
+                        Mat4::IDENTITY
+                    } * Transform::new(bounds.center(), Quat::IDENTITY, bounds.extents())
+                        .local_to_world();
+
+                self.immediate.cube_outline(
+                    transform,
+                    resources
+                        .get::<SelectedEntity>()
+                        .select_fade_color(Color::from_rgb(0.5, 0.26, 0.06), None),
+                );
+            }
         }
 
         self.gpu.restore_state(&dxstate);
     }
 
-    fn bind_view(&self, view: &impl View) {
+    fn bind_view(&self, view: &impl View, index: usize) {
+        *self.active_view.pocus() = index;
         self.data.lock().externs.view = Some({
             let mut e = externs::View::default();
             view.update_extern(&mut e);
@@ -398,12 +444,30 @@ impl Renderer {
             RenderFeatureVisibility::VISIBLE
         };
 
-        stage.map_or(true, |v| match v {
+        // Can we render based on stages?
+        let mut stages_ok = stage.map_or(true, |v| match v {
             TfxRenderStage::Transparents => self.render_settings.stage_transparent,
             TfxRenderStage::Decals => self.render_settings.stage_decals,
             TfxRenderStage::DecalsAdditive => self.render_settings.stage_decals_additive,
             _ => true,
-        }) && feature.map_or(true, |v| match v {
+        });
+
+        if stages_ok &&
+            stage == Some(TfxRenderStage::ShadowGenerate)
+        {
+            // If we're drawing terrain patches, we should only generate shadows in stationary only mode
+            // StaticObjects may generate stationary as well as moving shadows, so it's not checked here
+            if feature == Some(TfxFeatureRenderer::TerrainPatch) && self.active_shadow_generation_mode != ShadowGenerationMode::StationaryOnly {
+                stages_ok = false;
+            }
+
+            // If we're not drawing statics (static objects/terrain), we should only generate shadows in moving only mode
+            if !matches!(feature, Some(TfxFeatureRenderer::TerrainPatch) | Some(TfxFeatureRenderer::StaticObjects)) && self.active_shadow_generation_mode != ShadowGenerationMode::MovingOnly {
+                stages_ok = false;
+            }
+        }
+
+        let features_ok = feature.map_or(true, |v| match v {
             TfxFeatureRenderer::StaticObjects => self.render_settings.feature_statics.contains(flags_to_check),
             TfxFeatureRenderer::TerrainPatch => self.render_settings.feature_terrain.contains(flags_to_check),
             TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.render_settings.feature_dynamics.contains(flags_to_check),
@@ -412,7 +476,9 @@ impl Renderer {
             TfxFeatureRenderer::SpeedtreeTrees => self.render_settings.feature_decorators.contains(flags_to_check),
             TfxFeatureRenderer::Cubemaps => self.render_settings.feature_cubemaps,
             _ => true,
-        })
+        });
+
+        stages_ok && features_ok
     }
 }
 

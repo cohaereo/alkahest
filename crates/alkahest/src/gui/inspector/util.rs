@@ -13,20 +13,18 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::text::prettify_distance,
 };
+use bevy_ecs::prelude::EntityRef;
 use egui::{
     color_picker::{color_edit_button_rgba, Alpha},
     Button,
 };
 use glam::Vec3;
-use hecs::EntityRef;
-use serde_yaml::value::Tag;
 
 use crate::{
     gui::inspector::ComponentPanel,
     input_float3,
-    maplist::MapList,
-    resources::Resources,
-    util::action::{ActionList, ActivitySwapAction, MapSwapAction, TweenAction},
+    resources::AppResources,
+    util::action::{ActionList, MapSwapAction, TweenAction},
 };
 
 impl ComponentPanel for Ruler {
@@ -44,10 +42,10 @@ impl ComponentPanel for Ruler {
 
     fn show_inspector_ui(
         &mut self,
-        _: &Scene,
+        _: &mut Scene,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let camera = resources.get::<Camera>();
         egui::Grid::new("transform_input_grid")
@@ -122,7 +120,7 @@ impl ComponentPanel for Ruler {
             ui.add(
                 egui::DragValue::new(&mut self.scale)
                     .speed(0.1)
-                    .clamp_range(0f32..=100f32)
+                    .range(0f32..=100f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
@@ -133,7 +131,7 @@ impl ComponentPanel for Ruler {
             ui.add(
                 egui::DragValue::new(&mut self.marker_interval)
                     .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
+                    .range(0f32..=f32::INFINITY)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" m"),
@@ -180,12 +178,12 @@ impl ComponentPanel for Sphere {
 
     fn show_inspector_ui(
         &mut self,
-        _: &Scene,
+        _: &mut Scene,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
-        _resources: &Resources,
+        _resources: &AppResources,
     ) {
-        if !e.has::<Transform>() {
+        if !e.contains::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
                 ICON_ALERT
@@ -197,7 +195,7 @@ impl ComponentPanel for Sphere {
             ui.add(
                 egui::DragValue::new(&mut self.detail)
                     .speed(0.1)
-                    .clamp_range(2..=32),
+                    .range(2..=32),
             )
         });
 
@@ -226,12 +224,12 @@ impl ComponentPanel for Beacon {
 
     fn show_inspector_ui(
         &mut self,
-        _: &Scene,
+        _: &mut Scene,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
-        if !e.has::<Transform>() {
+        if !e.contains::<Transform>() {
             ui.label(format!(
                 "{} This entity has no transform component",
                 ICON_ALERT
@@ -243,7 +241,7 @@ impl ComponentPanel for Beacon {
             ui.add(
                 egui::DragValue::new(&mut self.distance)
                     .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
+                    .range(0f32..=f32::INFINITY)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" m"),
@@ -255,7 +253,7 @@ impl ComponentPanel for Beacon {
             ui.add(
                 egui::DragValue::new(&mut self.travel_time)
                     .speed(0.1)
-                    .clamp_range(0f32..=60.0)
+                    .range(0f32..=60.0)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" s"),
@@ -267,7 +265,7 @@ impl ComponentPanel for Beacon {
             ui.add(
                 egui::DragValue::new(&mut self.freq)
                     .speed(0.1)
-                    .clamp_range(0.0..=20.0),
+                    .range(0.0..=20.0),
             )
         });
 
@@ -280,7 +278,7 @@ impl ComponentPanel for Beacon {
         ui.separator();
 
         let mut camera = resources.get_mut::<Camera>();
-        if let Some(transform) = e.get::<&Transform>() {
+        if let Some(transform) = e.get::<Transform>() {
             ui.label(format!(
                 "Distance to Beacon: {:.2} m",
                 (transform.translation - camera.position()).length()
@@ -335,10 +333,10 @@ impl ComponentPanel for Route {
 
     fn show_inspector_ui(
         &mut self,
-        scene: &Scene,
+        scene: &mut Scene,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
-        resources: &Resources,
+        resources: &AppResources,
     ) {
         let mut camera = resources.get_mut::<Camera>();
         let current_hash = scene.get_map_hash();
@@ -495,7 +493,7 @@ impl ComponentPanel for Route {
             ui.add(
                 egui::DragValue::new(&mut self.speed_multiplier)
                     .speed(0.1)
-                    .clamp_range(0.01f32..=30f32)
+                    .range(0.01f32..=30f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
@@ -588,7 +586,7 @@ impl ComponentPanel for Route {
             ui.add(
                 egui::DragValue::new(&mut self.scale)
                     .speed(0.1)
-                    .clamp_range(0f32..=100f32)
+                    .range(0f32..=100f32)
                     .min_decimals(2)
                     .max_decimals(2),
             )
@@ -599,7 +597,7 @@ impl ComponentPanel for Route {
             ui.add(
                 egui::DragValue::new(&mut self.marker_interval)
                     .speed(0.1)
-                    .clamp_range(0f32..=f32::INFINITY)
+                    .range(0f32..=f32::INFINITY)
                     .min_decimals(2)
                     .max_decimals(2)
                     .suffix(" m"),

@@ -63,9 +63,9 @@ impl TfxRenderStage {
     ];
 }
 
-impl Display for TfxRenderStage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let n = match self {
+impl TfxRenderStage {
+    pub fn as_str(&self) -> &'static str {
+        match self {
             Self::GenerateGbuffer => "generate_gbuffer",
             Self::Decals => "decals",
             Self::InvestmentDecals => "investment_decals",
@@ -90,9 +90,13 @@ impl Display for TfxRenderStage {
             Self::PostprocessScreen => "postprocess_screen",
             Self::WorldForces => "world_forces",
             Self::ComputeSkinning => "compute_skinning",
-        };
+        }
+    }
+}
 
-        write!(f, "{}", n)
+impl Display for TfxRenderStage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -110,6 +114,7 @@ impl TigerReadable for TfxRenderStage {
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 pub enum TfxFeatureRenderer {
     StaticObjects = 0,
     DynamicObjects = 1,

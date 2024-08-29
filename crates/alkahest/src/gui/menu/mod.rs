@@ -12,7 +12,7 @@ use winit::window::Window;
 
 use crate::{
     gui::context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
-    resources::Resources,
+    resources::AppResources,
     util::{consts, consts::CHANGELOG_MD},
 };
 
@@ -52,7 +52,7 @@ impl GuiView for MenuBar {
         &mut self,
         ctx: &egui::Context,
         _window: &Window,
-        resources: &Resources,
+        resources: &AppResources,
         _gui: &GuiCtx<'_>,
     ) -> Option<ViewResult> {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
@@ -69,9 +69,14 @@ impl GuiView for MenuBar {
                     windows.tfx_extern_editor ^= ui
                         .selectable_label(windows.tfx_extern_editor, "TFX Extern Editor")
                         .clicked();
-                    windows.cpu_profiler ^= ui
-                        .selectable_label(windows.cpu_profiler, "Profiler")
-                        .clicked();
+
+                    if cfg!(feature = "profiler") {
+                        windows.cpu_profiler ^= ui
+                            .selectable_label(windows.cpu_profiler, "Profiler")
+                            .clicked();
+                    } else {
+                        windows.cpu_profiler = false;
+                    }
                 });
 
                 ui.menu_button("Help", |ui| {
