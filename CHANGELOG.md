@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Basic controller support
 - Global channel labels/input field types
 - Added an empty map instead of a scratch scene
+- Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
 
 ### Changed
 

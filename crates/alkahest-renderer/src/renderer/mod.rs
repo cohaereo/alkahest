@@ -600,6 +600,7 @@ pub enum RenderDebugView {
     SpecularLight,
     SpecularOcclusion,
     SpecularSmoothness,
+    SpecularOnly,
 
     Emissive,
     EmissiveIntensity,
@@ -611,6 +612,11 @@ pub enum RenderDebugView {
     DepthEdges,
     DepthGradient,
     DepthWalkable,
+
+    ValidLayeredMetalness,
+    ValidSmoothnessHeatmap,
+    ValidSourceColorBrightness,
+    ValidSourceColorSaturation,
 }
 
 impl RenderDebugView {
