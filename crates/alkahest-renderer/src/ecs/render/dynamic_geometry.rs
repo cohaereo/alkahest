@@ -6,8 +6,8 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use bevy_ecs::{
-    change_detection::DetectChanges, component::Component, entity::Entity, query::Without,
-    system::Query, world::Ref,
+    change_detection::DetectChanges, component::Component, entity::Entity, system::Query,
+    world::Ref,
 };
 use destiny_pkg::TagHash;
 use glam::{Vec4, Vec4Swizzles};

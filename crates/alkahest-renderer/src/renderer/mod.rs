@@ -29,17 +29,12 @@ use windows::Win32::Graphics::Direct3D11::D3D11_VIEWPORT;
 
 use crate::{
     ecs::{
-        common::Label,
-        culling::draw_aabb_system,
         render::{havok::draw_debugshapes_system, light::ShadowGenerationMode},
         resources::SelectedEntity,
         tags::NodeFilterSet,
         transform::Transform,
         utility::draw_utilities_system,
-        visibility::{
-            calculate_view_visibility_system, reset_view_visibility_system, ViewVisibility,
-            VisibilityHelper,
-        },
+        visibility::{calculate_view_visibility_system, ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu::SharedGpuContext,

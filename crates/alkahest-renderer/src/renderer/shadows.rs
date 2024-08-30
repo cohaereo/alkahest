@@ -4,13 +4,13 @@ use alkahest_data::{
     technique::StateSelection,
     tfx::{TfxRenderStage, TfxShaderStage},
 };
-use bevy_ecs::{entity::Entity, system::RunSystemOnce, world::Ref};
+use bevy_ecs::entity::Entity;
 
 use crate::{
     ecs::{
         render::light::{ShadowGenerationMode, ShadowMapRenderer},
         transform::Transform,
-        visibility::{reset_view_visibility_system, ViewVisibility, VisibilityHelper},
+        visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
     gpu_event,

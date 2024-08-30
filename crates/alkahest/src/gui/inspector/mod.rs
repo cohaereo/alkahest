@@ -106,7 +106,7 @@ impl GuiView for InspectorPanel {
 pub fn show_inspector_panel(
     ui: &mut egui::Ui,
     scene: &mut Scene,
-    mut cmd: Commands,
+    mut cmd: Commands<'_, '_>,
     ent: Entity,
     resources: &AppResources,
 ) {
@@ -307,11 +307,6 @@ pub(super) trait ComponentPanel {
         ICON_CUBE_OUTLINE
     }
 
-    // TODO(cohae): Not the most ergonomic thing ever
-    fn has_inspector_ui() -> bool {
-        false
-    }
-
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
@@ -331,13 +326,9 @@ impl ComponentPanel for Transform {
         ICON_AXIS_ARROW
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui(
         &mut self,
-        scene: &mut Scene,
+        _scene: &mut Scene,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
         resources: &AppResources,
@@ -469,10 +460,6 @@ impl ComponentPanel for DynamicModelComponent {
         ICON_CUBE_OUTLINE
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
@@ -550,10 +537,6 @@ impl ComponentPanel for ShaderBallComponent {
         ICON_POKEBALL
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
@@ -597,10 +580,6 @@ impl ComponentPanel for ShaderBallComponent {
 //         ICON_IDENTIFIER
 //     }
 //
-//     fn has_inspector_ui() -> bool {
-//         true
-//     }
-//
 //     fn show_inspector_ui(&mut self, _: &Scene, _: EntityRef<'_>, ui: &mut egui::Ui, _: &Resources) {
 //         ui.label(format!("World ID: 0x{:016X}", self.0));
 //     }
@@ -613,10 +592,6 @@ impl ComponentPanel for NodeMetadata {
 
     fn inspector_icon() -> char {
         ICON_TAG
-    }
-
-    fn has_inspector_ui() -> bool {
-        true
     }
 
     fn show_inspector_ui<'s>(
@@ -660,10 +635,6 @@ impl ComponentPanel for SRespawnPoint {
 
     fn inspector_icon() -> char {
         ICON_ACCOUNT_CONVERT
-    }
-
-    fn has_inspector_ui() -> bool {
-        true
     }
 
     fn show_inspector_ui<'s>(

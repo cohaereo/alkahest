@@ -44,3 +44,7 @@ fastrand = "2.1.0"
 [build-dependencies]
 glob = "0.3.1"
 windows.workspace = true
+
+[features]
+default = []
+tfx_strict_interpreter = []

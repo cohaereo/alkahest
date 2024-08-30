@@ -2,13 +2,7 @@
 //! This build script compiles all the shaders in the `shaders` directory into DXBC binaries.
 //! Shaders are discovered by recursively searching the `shaders` directory for `.hlsl` files
 
-use std::{
-    alloc::{alloc_zeroed, dealloc, Layout},
-    ffi::c_void,
-    fs::File,
-    io::Read,
-    path::Path,
-};
+use std::path::Path;
 
 use windows::core::{s, PCSTR};
 
@@ -280,7 +274,7 @@ mod compiler {
             .arg("-Fo").arg(format!("Z:{output_file_path}"))
             .arg("-D").arg(unsafe { stage.define().to_string().unwrap()})
             .arg("-Iassets/shaders/include")
-            .arg(&format!("Z:{temp_source_path}"))
+            .arg(format!("Z:{temp_source_path}"))
             .output()
             .unwrap_or_else(|err| {
                 panic!("Failed to execute FXC command: {}", err);

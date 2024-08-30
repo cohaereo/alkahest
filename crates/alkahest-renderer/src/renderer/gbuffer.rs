@@ -382,7 +382,7 @@ impl CpuStagingBuffer {
     ) -> anyhow::Result<R> {
         unsafe {
             #[allow(clippy::uninit_assumed_init)]
-            let mut ptr = std::mem::MaybeUninit::uninit().assume_init();
+            let mut ptr = D3D11_MAPPED_SUBRESOURCE::default();
             self.gctx
                 .context()
                 .Map(&self.texture, 0, mode, 0, Some(&mut ptr))

@@ -17,9 +17,8 @@ use crate::{
     resources::AppResources,
 };
 
-#[derive(Debug)]
 pub struct ActivitiesForDestination {
-    pub destination_name: Option<String>,
+    // pub destination_name: Option<String>,
     pub destination_code: String,
     pub activities: Vec<(String, TagHash)>,
 }
@@ -83,7 +82,7 @@ impl ActivityBrowser {
                         bucket_name
                     };
 
-                    let destination_name = stringmap.get(&destination.location_name.0).cloned();
+                    // let destination_name = stringmap.get(&destination.location_name.0).cloned();
 
                     for activity in &destination.activities {
                         let activity_code = activity.activity_code.to_string();
@@ -121,7 +120,7 @@ impl ActivityBrowser {
 
                     activity_buckets.entry(bucket_name).or_default().push(
                         ActivitiesForDestination {
-                            destination_name,
+                            // destination_name,
                             destination_code: destination.destination_name.to_string(),
                             activities,
                         },

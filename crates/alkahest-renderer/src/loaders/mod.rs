@@ -29,7 +29,7 @@ pub struct AssetManager {
 
     request_tx: Sender<LoadRequest>,
     asset_rx: Receiver<LoadedAsset>,
-    workers: Vec<std::thread::JoinHandle<()>>,
+    _workers: Vec<std::thread::JoinHandle<()>>,
 
     pending_requests: FxHashSet<AssetId>,
 }
@@ -50,7 +50,7 @@ impl AssetManager {
             index_buffers: AssetRegistry::new(true),
             request_tx,
             asset_rx,
-            workers,
+            _workers: workers,
             pending_requests: FxHashSet::default(),
         }
     }
@@ -68,7 +68,7 @@ impl AssetManager {
             index_buffers: AssetRegistry::new(false),
             request_tx,
             asset_rx,
-            workers: vec![],
+            _workers: vec![],
             pending_requests: FxHashSet::default(),
         }
     }

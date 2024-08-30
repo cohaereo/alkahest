@@ -28,6 +28,7 @@ mod util;
 
 pub use configuration::SelectionGizmoMode;
 
+#[allow(unused)]
 pub trait UiExt {
     fn chip(&mut self, label: impl AsRef<str>) -> Response;
 

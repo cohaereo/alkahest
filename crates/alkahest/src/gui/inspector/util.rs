@@ -36,10 +36,6 @@ impl ComponentPanel for Ruler {
         Ruler::icon().char()
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
@@ -172,10 +168,6 @@ impl ComponentPanel for Sphere {
         Sphere::icon().char()
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
@@ -216,10 +208,6 @@ impl ComponentPanel for Beacon {
 
     fn inspector_icon() -> char {
         Beacon::icon().char()
-    }
-
-    fn has_inspector_ui() -> bool {
-        true
     }
 
     fn show_inspector_ui(
@@ -325,10 +313,6 @@ impl ComponentPanel for Route {
 
     fn inspector_icon() -> char {
         Route::icon().char()
-    }
-
-    fn has_inspector_ui() -> bool {
-        true
     }
 
     fn show_inspector_ui(

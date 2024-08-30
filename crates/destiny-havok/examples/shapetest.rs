@@ -278,19 +278,3 @@ trait SeekSaveExt: Seek {
 }
 
 impl<T: Read + Seek> SeekSaveExt for T {}
-
-const CUBE_VERTICES: [Vec3; 8] = [
-    Vec3::new(-1.0, -1.0, -1.0),
-    Vec3::new(-1.0, -1.0, 1.0),
-    Vec3::new(-1.0, 1.0, -1.0),
-    Vec3::new(-1.0, 1.0, 1.0),
-    Vec3::new(1.0, -1.0, -1.0),
-    Vec3::new(1.0, -1.0, 1.0),
-    Vec3::new(1.0, 1.0, -1.0),
-    Vec3::new(1.0, 1.0, 1.0),
-];
-
-const CUBE_INDICES: [u32; 36] = [
-    0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 0, 2, 4, 4, 2, 6, 1, 5, 3, 3, 5, 7, 0, 4, 1, 1, 4, 5, 2, 3,
-    6, 6, 3, 7,
-];

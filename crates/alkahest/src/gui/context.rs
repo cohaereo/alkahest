@@ -134,7 +134,7 @@ impl GuiContext {
                     paint(
                         &GuiCtx {
                             icons: &self.resources,
-                            integration: renderer,
+                            _integration: renderer,
                         },
                         context,
                     )
@@ -148,9 +148,9 @@ impl GuiContext {
             .handle_platform_output(window, output.platform_output)
     }
 
-    pub fn input<R>(&self, reader: impl FnOnce(&InputState) -> R) -> R {
-        self.egui.input(reader)
-    }
+    // pub fn input<R>(&self, reader: impl FnOnce(&InputState) -> R) -> R {
+    //     self.egui.input(reader)
+    // }
 
     pub fn input_mut<R>(&mut self, reader: impl FnOnce(&mut InputState) -> R) -> R {
         self.egui.input_mut(reader)
@@ -227,9 +227,9 @@ impl GuiViewManager {
         self.views_overlay.insert(TypeId::of::<T>(), Box::new(view));
     }
 
-    pub fn remove<T: GuiView + 'static>(&mut self) {
-        self.views.remove(&TypeId::of::<T>());
-    }
+    // pub fn remove<T: GuiView + 'static>(&mut self) {
+    //     self.views.shift_remove(&TypeId::of::<T>());
+    // }
 
     pub fn draw(
         &mut self,
@@ -258,7 +258,7 @@ impl GuiViewManager {
             }
 
             for tid in to_remove {
-                if let Some(mut view) = self.views.remove(&tid) {
+                if let Some(mut view) = self.views.shift_remove(&tid) {
                     view.dispose(ctx, resources, gui);
                 }
             }
@@ -272,7 +272,7 @@ impl GuiViewManager {
 
 pub struct GuiCtx<'a> {
     pub icons: &'a GuiResources,
-    pub integration: &'a mut DirectX11Renderer,
+    pub _integration: &'a mut DirectX11Renderer,
 }
 
 pub struct GuiResources {

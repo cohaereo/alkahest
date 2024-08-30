@@ -7,7 +7,6 @@ use alkahest_renderer::{
         new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
-        visibility::calculate_view_visibility_system,
         Scene,
     },
     gpu::{texture::LOW_RES, GpuContext},
@@ -15,9 +14,7 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
-use bevy_ecs::system::RunSystemOnce;
 use bevy_tasks::{ComputeTaskPool, TaskPool};
-use destiny_pkg::TagHash;
 use egui::{Key, KeyboardShortcut, Modifiers};
 use gilrs::{EventType, Gilrs};
 use glam::Vec2;
@@ -316,21 +313,17 @@ impl AlkahestApp {
                             // Process gamepad input
                             {
                                 // Examine new events
-                                while let Some(gilrs::Event { id, event, time }) =
-                                    gilrs.next_event()
+                                while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event()
                                 {
                                     active_gamepad = Some(id);
 
-                                    match event {
-                                        EventType::ButtonPressed {
-                                            0: gilrs::Button::Start,
-                                            ..
-                                        } => {
-                                            let mut gui_views =
-                                                resources.get_mut::<GuiViewManager>();
-                                            gui_views.hide_views = !gui_views.hide_views;
-                                        }
-                                        _ => {}
+                                    if let EventType::ButtonPressed {
+                                        0: gilrs::Button::Start,
+                                        ..
+                                    } = event
+                                    {
+                                        let mut gui_views = resources.get_mut::<GuiViewManager>();
+                                        gui_views.hide_views = !gui_views.hide_views;
                                     }
                                 }
 

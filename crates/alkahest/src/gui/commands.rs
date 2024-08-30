@@ -19,14 +19,14 @@ pub fn load_pkg_entities(
     let entity_hashes = package_manager()
         .package_entry_index
         .iter()
-        .filter(|(i, e)| package_manager().package_paths[*i].name.contains(pkg_name))
+        .filter(|(i, _e)| package_manager().package_paths[*i].name.contains(pkg_name))
         .flat_map(|(pkg_id, entries)| {
             entries
                 .iter()
                 .enumerate()
                 .filter(|(_, e)| Some(e.reference) == SEntity::ID)
                 // .filter(|(_, e)| Some(e.reference) == SDynamicModel::ID)
-                .map(|(i, e)| TagHash::new(*pkg_id, i as u16))
+                .map(|(i, _e)| TagHash::new(*pkg_id, i as u16))
         })
         .collect_vec();
 
@@ -44,7 +44,7 @@ pub fn load_pkg_entities(
                 scene.spawn(er);
                 info!("Entity spawned");
             }
-            Err(e) => {} // error!("Failed to load entity {hash}: {e:?}"),
+            Err(_e) => {} // error!("Failed to load entity {hash}: {e:?}"),
         }
     }
 

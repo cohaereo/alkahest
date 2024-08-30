@@ -7,6 +7,7 @@ use alkahest_renderer::{
         tags::{EntityTag, Tags},
         transform::Transform,
         visibility::{Visibility, VisibilityHelper},
+        Scene,
     },
     resources::AppResources,
     util::{color::ColorExt, text::prettify_distance},
@@ -17,7 +18,7 @@ use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use strum::IntoEnumIterator;
 use winit::window::Window;
-use alkahest_renderer::ecs::Scene;
+
 use crate::{
     gui::{
         chip::EcsTagsExt,
@@ -76,7 +77,7 @@ impl GuiView for OutlinerPanel {
                     }
                 }
 
-                if !label.to_lowercase().contains(&s) {
+                if !label.to_lowercase().contains(s) {
                     return false;
                 }
 
@@ -91,7 +92,7 @@ impl GuiView for OutlinerPanel {
                     // Match search string
                     if !self.search.is_empty() {
                         let s = self.search.to_lowercase();
-                        if !search(*e, &s, scene){
+                        if !search(*e, &s, scene) {
                             return false;
                         }
                     }
@@ -218,7 +219,7 @@ impl OutlinerPanel {
         ui: &mut egui::Ui,
         resources: &AppResources,
         e: EntityRef<'_>,
-        cmd: &mut Commands,
+        cmd: &mut Commands<'_, '_>,
     ) {
         let distance = if let Some(transform) = e.get::<Transform>() {
             (transform.translation - resources.get::<Camera>().position()).length()

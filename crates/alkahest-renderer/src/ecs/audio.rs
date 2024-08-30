@@ -3,11 +3,11 @@ use bevy_ecs::prelude::Component;
 
 #[derive(Component)]
 pub struct AmbientAudio {
-    data: SAudioClipCollection,
+    _data: SAudioClipCollection,
 }
 
 impl AmbientAudio {
     pub fn new(data: SAudioClipCollection) -> Self {
-        Self { data }
+        Self { _data: data }
     }
 }

@@ -299,12 +299,12 @@ trait SeekSaveExt: Seek {
     {
         let pos = self.stream_position()?;
 
-        self.seek(seek)?;
-        let r = inner(self)?;
-
-        self.seek(SeekFrom::Start(pos))?;
-
-        Ok(r)
+        self.save_pos(|s| {
+            s.seek(seek)?;
+            let r = inner(s);
+            s.seek(SeekFrom::Start(pos))?;
+            r
+        })
     }
 }
 

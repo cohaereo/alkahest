@@ -287,7 +287,7 @@ impl<T: Asset + 'static> AssetRegistry<T> {
         }
         let id = handle.id;
         if let Some(storage) = self.handle_map.get_mut(&id) {
-            storage.asset.insert(Arc::new(asset));
+            let _ = storage.asset.insert(Arc::new(asset));
         } else {
             error!("Tried to overwrite non-existent asset {id:?}")
         }

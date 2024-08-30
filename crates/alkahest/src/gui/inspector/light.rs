@@ -22,10 +22,6 @@ impl ComponentPanel for SLightCollection {
         ICON_LIGHTBULB_GROUP
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui<'s>(
         &mut self,
         scene: &'s mut Scene,
@@ -67,10 +63,6 @@ impl ComponentPanel for LightRenderer {
         ICON_LIGHTBULB_ON
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
@@ -99,7 +91,7 @@ impl ComponentPanel for LightRenderer {
         });
         ui.label(&self.debug_label);
         ui.collapsing("Debug Info", |ui| {
-            ui.style_mut().wrap = Some(true);
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
             ui.label(&self.debug_info);
         });
 
@@ -143,10 +135,6 @@ impl ComponentPanel for CubemapVolume {
 
     fn inspector_icon() -> char {
         ICON_LIGHTBULB_ON
-    }
-
-    fn has_inspector_ui() -> bool {
-        true
     }
 
     fn show_inspector_ui<'s>(

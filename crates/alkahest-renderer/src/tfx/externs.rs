@@ -1,12 +1,12 @@
-use std::{fmt::Debug, mem::transmute};
+use std::{fmt::Debug, ptr::null_mut};
 
 use binrw::binread;
 use field_access::FieldAccess;
-use glam::{Mat3, Mat4, Quat, Vec3, Vec4};
+use glam::{Mat3, Mat4, Quat, Vec4};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use strum::EnumIter;
-use windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView;
+use windows::{core::Interface, Win32::Graphics::Direct3D11::ID3D11ShaderResourceView};
 
 use super::channels::{ChannelType, GlobalChannel};
 use crate::{camera::Viewport, util::short_type_name};
@@ -34,7 +34,9 @@ impl TextureView {
     }
 
     pub fn view_unchecked(&self) -> ID3D11ShaderResourceView {
-        self.view().unwrap_or_else(|| unsafe { transmute(0u64) })
+        // cohae: Shoddy as fuck, causes brainaches
+        self.view()
+            .unwrap_or_else(|| unsafe { ID3D11ShaderResourceView::from_raw(null_mut()) })
     }
 
     pub fn is_null(&self) -> bool {

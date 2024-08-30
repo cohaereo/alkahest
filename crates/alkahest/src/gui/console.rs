@@ -27,7 +27,7 @@ use alkahest_renderer::{
     tfx::bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
 };
 use anyhow::Context;
-use bevy_ecs::{bundle::Bundle, entity::Entity, query::With};
+use bevy_ecs::bundle::Bundle;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, Key, Modifiers, RichText, TextStyle};
@@ -39,7 +39,7 @@ use rustc_hash::FxHashSet;
 use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
 use tracing::{
     field::{Field, Visit},
-    Event, Level, Subscriber, Value,
+    Event, Level, Subscriber,
 };
 use tracing_subscriber::Layer;
 use winit::window::Window;
@@ -105,7 +105,6 @@ where
 
 pub struct ConsolePanel {
     pub command_buffer: String,
-    pub autoscroll: bool,
     pub open: bool,
 }
 
@@ -113,7 +112,6 @@ impl Default for ConsolePanel {
     fn default() -> Self {
         Self {
             command_buffer: "".to_string(),
-            autoscroll: true,
             open: false,
         }
     }

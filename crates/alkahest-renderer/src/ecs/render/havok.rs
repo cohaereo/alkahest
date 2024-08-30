@@ -3,7 +3,6 @@ use anyhow::Context;
 use bevy_ecs::{
     entity::Entity,
     prelude::Component,
-    query::Without,
     system::{In, Query, Res},
 };
 use destiny_havok::shape_collection;

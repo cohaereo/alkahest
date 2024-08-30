@@ -1,5 +1,6 @@
 mod maps;
 
+#[allow(unused)]
 #[macro_use]
 extern crate tracing;
 

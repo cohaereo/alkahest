@@ -7,9 +7,8 @@ use glam::{Mat4, Vec3};
 
 use super::{
     render::{
-        dynamic_geometry::DynamicModelComponent,
-        light::{LightRenderer, ShadowMapRenderer},
-        static_geometry::{StaticInstances, StaticModelSingle},
+        dynamic_geometry::DynamicModelComponent, light::ShadowMapRenderer,
+        static_geometry::StaticModelSingle,
     },
     tags::NodeFilter,
     transform::Transform,

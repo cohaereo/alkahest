@@ -1,5 +1,5 @@
 use alkahest_renderer::{ecs::tags::Tags, ColorExt};
-use egui::{epaint, vec2, Color32, Rect, Response, RichText};
+use egui::{epaint, vec2, Color32, Rect, Response, RichText, TextWrapMode};
 
 use crate::{
     gui::UiExt,
@@ -29,8 +29,8 @@ impl Chip {
     pub fn ui(&mut self, ui: &mut egui::Ui) -> Response {
         let size_ratio = self.size / 14.0;
 
-        let wrap_og = ui.style().wrap;
-        ui.style_mut().wrap = Some(false);
+        let wrap_og = ui.style().wrap_mode;
+        ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
 
         let text_color = self.background.text_color_for_background();
         let label = egui::Label::new(
@@ -60,7 +60,7 @@ impl Chip {
             });
         }
 
-        ui.style_mut().wrap = wrap_og;
+        ui.style_mut().wrap_mode = wrap_og;
 
         response
     }

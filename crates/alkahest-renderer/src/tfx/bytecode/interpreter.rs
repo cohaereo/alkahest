@@ -4,7 +4,7 @@ use std::{
 };
 
 use alkahest_data::tfx::TfxShaderStage;
-use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec4, Vec4Swizzles};
 use smallvec::SmallVec;
 use windows::Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResourceView};
 

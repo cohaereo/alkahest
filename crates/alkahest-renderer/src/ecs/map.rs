@@ -13,11 +13,11 @@ use crate::{
 // TODO(cohae): This should probably be a resource, since there can only be one per map
 #[derive(Resource)]
 pub struct MapAtmosphere {
-    data: SMapAtmosphere,
+    _data: SMapAtmosphere,
     lookup_0: Option<Texture>,
-    lookup_1: Option<Texture>,
+    _lookup_1: Option<Texture>,
     lookup_2: Option<Texture>,
-    lookup_3: Option<Texture>,
+    _lookup_3: Option<Texture>,
     unkd0: Option<Texture>,
 }
 
@@ -50,11 +50,11 @@ impl MapAtmosphere {
             .transpose()?;
 
         Ok(MapAtmosphere {
-            data,
+            _data: data,
             lookup_0,
-            lookup_1,
+            _lookup_1: lookup_1,
             lookup_2,
-            lookup_3,
+            _lookup_3: lookup_3,
             unkd0,
         })
     }
@@ -65,21 +65,21 @@ impl MapAtmosphere {
             .as_ref()
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
-        let lf_unk40: TextureView = self
-            .lookup_1
-            .as_ref()
-            .map(|l| l.view.clone().into())
-            .unwrap_or_default();
+        // let lf_unk40: TextureView = self
+        //     .lookup_1
+        //     .as_ref()
+        //     .map(|l| l.view.clone().into())
+        //     .unwrap_or_default();
         let lf_unk48: TextureView = self
             .lookup_2
             .as_ref()
             .map(|l| l.view.clone().into())
             .unwrap_or_default();
-        let lf_unk58: TextureView = self
-            .lookup_3
-            .as_ref()
-            .map(|l| l.view.clone().into())
-            .unwrap_or_default();
+        // let lf_unk58: TextureView = self
+        //     .lookup_3
+        //     .as_ref()
+        //     .map(|l| l.view.clone().into())
+        //     .unwrap_or_default();
         let unkd0: TextureView = self
             .unkd0
             .as_ref()

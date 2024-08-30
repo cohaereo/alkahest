@@ -4,10 +4,7 @@ use alkahest_data::{
     tfx::TfxShaderStage,
 };
 use anyhow::Context;
-use bevy_ecs::{
-    change_detection::DetectChanges, component::Component, query::Without, system::Query,
-    world::Ref,
-};
+use bevy_ecs::{change_detection::DetectChanges, component::Component, system::Query, world::Ref};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
@@ -58,11 +55,11 @@ pub struct LightRenderer {
     technique_shading: Handle<Technique>,
     technique_shading_shadowing: Option<Handle<Technique>>,
     // TfxRenderStage::Volumetrics
-    technique_volumetrics: Handle<Technique>,
-    technique_volumetrics_shadowing: Option<Handle<Technique>>,
+    _technique_volumetrics: Handle<Technique>,
+    _technique_volumetrics_shadowing: Option<Handle<Technique>>,
     // TfxRenderStage::LightProbeApply
-    technique_compute_lightprobe: Handle<Technique>,
-    technique_compute_lightprobe_shadowing: Option<Handle<Technique>>,
+    _technique_compute_lightprobe: Handle<Technique>,
+    _technique_compute_lightprobe_shadowing: Option<Handle<Technique>>,
 
     pub debug_label: String,
     pub debug_info: String,
@@ -159,10 +156,10 @@ impl LightRenderer {
 
             technique_shading: Handle::none(),
             technique_shading_shadowing: None,
-            technique_volumetrics: Handle::none(),
-            technique_volumetrics_shadowing: None,
-            technique_compute_lightprobe: Handle::none(),
-            technique_compute_lightprobe_shadowing: None,
+            _technique_volumetrics: Handle::none(),
+            _technique_volumetrics_shadowing: None,
+            _technique_compute_lightprobe: Handle::none(),
+            _technique_compute_lightprobe_shadowing: None,
             debug_label: "Unknown DeferredLight".to_string(),
             debug_info: "Unknown DeferredLight".to_string(),
         })
@@ -177,8 +174,9 @@ impl LightRenderer {
         Ok(Self {
             projection_matrix: light.light_to_world,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
-            technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
-            technique_compute_lightprobe: asset_manager
+            _technique_volumetrics: asset_manager
+                .get_or_load_technique(light.technique_volumetrics),
+            _technique_compute_lightprobe: asset_manager
                 .get_or_load_technique(light.technique_compute_lightprobe),
             debug_label,
             debug_info: format!("{light:X?}"),
@@ -198,13 +196,14 @@ impl LightRenderer {
             technique_shading_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_shading_shadowing),
             ),
-            technique_volumetrics: asset_manager.get_or_load_technique(light.technique_volumetrics),
-            technique_volumetrics_shadowing: Some(
+            _technique_volumetrics: asset_manager
+                .get_or_load_technique(light.technique_volumetrics),
+            _technique_volumetrics_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_volumetrics_shadowing),
             ),
-            technique_compute_lightprobe: asset_manager
+            _technique_compute_lightprobe: asset_manager
                 .get_or_load_technique(light.technique_compute_lightprobe),
-            technique_compute_lightprobe_shadowing: Some(
+            _technique_compute_lightprobe_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_compute_lightprobe_shadowing),
             ),
             debug_label,

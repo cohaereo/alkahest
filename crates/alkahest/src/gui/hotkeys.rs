@@ -3,7 +3,7 @@ use alkahest_renderer::{
     ecs::{hierarchy::Parent, resources::SelectedEntity, visibility::Visibility, Scene},
     renderer::RendererShared,
 };
-use bevy_ecs::{entity::Entity, query::With};
+use bevy_ecs::entity::Entity;
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -29,8 +29,8 @@ pub const SHORTCUT_DESELECT: egui::KeyboardShortcut = egui::KeyboardShortcut::ne
     egui::Key::A,
 );
 
-pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
-    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F);
+// pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
+//     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F);
 
 pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::G);

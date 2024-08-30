@@ -138,20 +138,3 @@ fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-trait SeekSaveExt: Seek {
-    fn save_pos<F>(&mut self, inner: F) -> anyhow::Result<()>
-    where
-        F: FnOnce(&mut Self) -> anyhow::Result<()>,
-    {
-        let pos = self.stream_position()?;
-
-        inner(self)?;
-
-        self.seek(SeekFrom::Start(pos))?;
-
-        Ok(())
-    }
-}
-
-impl<T: Read + Seek> SeekSaveExt for T {}

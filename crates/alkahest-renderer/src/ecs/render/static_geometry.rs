@@ -10,13 +10,11 @@ use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
     prelude::Component,
-    query::Without,
     system::{Commands, Query},
     world::Ref,
 };
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
-use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 

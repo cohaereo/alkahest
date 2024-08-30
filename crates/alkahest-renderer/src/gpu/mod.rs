@@ -41,7 +41,7 @@ use crate::{
 
 pub type SharedGpuContext = Arc<GpuContext>;
 pub struct GpuContext {
-    main_thread_id: ThreadId,
+    _main_thread_id: ThreadId,
 
     pub device: ID3D11Device,
     context: ID3D11DeviceContext,
@@ -250,7 +250,7 @@ impl GpuContext {
         };
 
         Ok(Self {
-            main_thread_id: std::thread::current().id(),
+            _main_thread_id: std::thread::current().id(),
             util_resources: UtilResources::new(&device),
 
             device,
@@ -300,11 +300,11 @@ impl GpuContext {
         #[cfg(debug_assertions)]
         assert_eq!(
             std::thread::current().id(),
-            self.main_thread_id,
+            self._main_thread_id,
             "Tried to access ID3D11DeviceContext from thread {:?}, but context was created on \
              thread {:?}",
             std::thread::current().id(),
-            self.main_thread_id
+            self._main_thread_id
         );
 
         &self.context
@@ -446,7 +446,7 @@ impl GpuContext {
                 let depth_bias = self.current_depth_bias.load(Ordering::Relaxed);
                 if index < 9 && depth_bias < 9 {
                     self.context()
-                        .RSSetState(&self.states.rasterizer_states[depth_bias][index]);
+                        .RSSetState(self.states.rasterizer_states[depth_bias][index].as_ref());
                 }
             }
             self.current_rasterizer_state
@@ -459,8 +459,9 @@ impl GpuContext {
             unsafe {
                 let rasterizer_state = self.current_rasterizer_state.load(Ordering::Relaxed);
                 if index < 9 && rasterizer_state < 9 {
-                    self.context()
-                        .RSSetState(&self.states.rasterizer_states[index][rasterizer_state]);
+                    self.context().RSSetState(
+                        self.states.rasterizer_states[index][rasterizer_state].as_ref(),
+                    );
                 }
             }
             self.current_depth_bias.store(index, Ordering::Relaxed);

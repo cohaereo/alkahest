@@ -36,20 +36,6 @@ pub fn fnv1(data: &[u8]) -> FnvHash {
     })
 }
 
-pub trait BoolExts {
-    fn yes_no(self) -> &'static str;
-}
-
-impl BoolExts for bool {
-    fn yes_no(self) -> &'static str {
-        if self {
-            "yes"
-        } else {
-            "no"
-        }
-    }
-}
-
 /// Fixes version/tag strings to be compatible with semver
 pub fn version_fixup(version: &str) -> String {
     let v = version.replace('v', "");

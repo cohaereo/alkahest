@@ -393,7 +393,7 @@ pub async fn load_map(
 
     let mut entity_ogtransforms: Vec<(Entity, OriginalTransform)> = vec![];
     for (entity, transform) in scene.query::<(Entity, &Transform)>().iter(&mut scene) {
-        entity_ogtransforms.push((entity, OriginalTransform(transform.clone())));
+        entity_ogtransforms.push((entity, OriginalTransform(*transform)));
     }
 
     for (entity, transform) in entity_ogtransforms {
@@ -479,7 +479,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                             NodeFilter::Static,
                         ));
 
-                        if let Some(bounds) = bounds.get(0) {
+                        if let Some(bounds) = bounds.first() {
                             scene
                                 .entity_mut(parent)
                                 .insert_one(bounds.bb.untransform(transform.local_to_world()));
@@ -1350,7 +1350,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let d: SSlipSurfaceVolume = TigerReadable::read_ds(table_data)?;
 
-                let (havok_debugshape, new_transform) =
+                let (havok_debugshape, _new_transform) =
                     if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
                         let mut cur = Cursor::new(&havok_data);
                         match destiny_havok::shape_collection::read_shape_collection(&mut cur) {

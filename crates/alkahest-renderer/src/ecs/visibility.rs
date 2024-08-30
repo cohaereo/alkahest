@@ -1,14 +1,10 @@
-use std::process::Child;
-
 use alkahest_data::occlusion::Aabb;
 use bevy_ecs::{
     bundle::Bundle,
-    change_detection::DetectChangesMut,
     component::Component,
     entity::Entity,
     query::{Has, With, Without},
     system::{In, Query},
-    world::Ref,
 };
 
 use super::{
@@ -130,7 +126,7 @@ fn propagate_entity_visibility_recursive(
         }
     }
 
-    let vis = vis.map(|v| v.clone()).unwrap_or_default();
+    let vis = vis.copied().unwrap_or_default();
     if let Some(children) = &children {
         for child in children.iter() {
             propagate_entity_visibility_recursive(*child, vis, q_visibility);
@@ -179,8 +175,6 @@ pub fn calculate_view_visibility_system(
 
                     if frustum.contains_sphere(sphere) {
                         view_vis.set();
-                    } else {
-                        return;
                     }
                 } else {
                     view_vis.set();

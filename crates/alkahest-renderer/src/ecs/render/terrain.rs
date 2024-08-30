@@ -4,7 +4,7 @@ use alkahest_data::{
     tfx::{TfxFeatureRenderer, TfxRenderStage, TfxShaderStage},
 };
 use alkahest_pm::package_manager;
-use bevy_ecs::{entity::Entity, prelude::Component, query::Without};
+use bevy_ecs::{entity::Entity, prelude::Component};
 use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;

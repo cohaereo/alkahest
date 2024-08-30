@@ -17,10 +17,6 @@ impl ComponentPanel for DecoratorRenderer {
         ICON_TREE
     }
 
-    fn has_inspector_ui() -> bool {
-        true
-    }
-
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
