@@ -21,15 +21,15 @@ use alkahest_renderer::{
         Scene,
     },
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_EYE_OFF_OUTLINE, ICON_HUMAN_MALE,
+        ICON_ACCOUNT_CONVERT, ICON_EYE_ARROW_RIGHT_OUTLINE, ICON_HUMAN_MALE,
         ICON_HUMAN_MALE_FEMALE_CHILD, ICON_POKEBALL,
     },
     renderer::RendererShared,
     shader::shader_ball::ShaderBallComponent,
-    util::{black_magic::EntityRefDarkMagic, text::prettify_distance, Hocus},
+    util::{black_magic::EntityRefDarkMagic, Hocus},
 };
 use bevy_ecs::{entity::Entity, prelude::EntityRef, system::Commands};
-use egui::{Align2, Button, Color32, FontId, Key, RichText, Ui, Widget};
+use egui::{Align2, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use winit::window::Window;
 

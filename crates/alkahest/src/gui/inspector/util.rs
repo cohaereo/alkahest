@@ -16,7 +16,7 @@ use alkahest_renderer::{
 use bevy_ecs::prelude::EntityRef;
 use egui::{
     color_picker::{color_edit_button_rgba, Alpha},
-    Button,
+    Button, Widget,
 };
 use glam::Vec3;
 
@@ -386,7 +386,7 @@ impl ComponentPanel for Route {
                                     ));
                                 }
                                 if let Some(label) = node.label.as_mut() {
-                                    egui::TextEdit::singleline(label);
+                                    egui::TextEdit::singleline(label).ui(ui);
                                 } else {
                                     ui.label(format!("Node {}", i + 1));
                                     if ui
