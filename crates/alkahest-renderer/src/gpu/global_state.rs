@@ -76,8 +76,8 @@ impl RenderStates {
         let mut rasterizer_states: [[_; 9]; 9] =
             core::array::from_fn(|_| core::array::from_fn(|_| None));
 
-        for rs_index in 0..9 {
-            for db_index in 0..9 {
+        for (db_index, top) in rasterizer_states.iter_mut().enumerate() {
+            for (rs_index, compiled_state) in top.iter_mut().enumerate() {
                 let rs_desc = &RASTERIZER_STATES[rs_index];
                 let db_desc = &DEPTH_BIASES[db_index];
 
@@ -102,7 +102,7 @@ impl RenderStates {
                         .unwrap()
                 }
 
-                rasterizer_states[db_index][rs_index] = state;
+                *compiled_state = state;
             }
         }
 

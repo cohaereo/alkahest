@@ -392,7 +392,7 @@ pub async fn load_map(
     }
 
     let mut entity_ogtransforms: Vec<(Entity, OriginalTransform)> = vec![];
-    for (entity, transform) in scene.query::<(Entity, &Transform)>().iter(&mut scene) {
+    for (entity, transform) in scene.query::<(Entity, &Transform)>().iter(&scene) {
         entity_ogtransforms.push((entity, OriginalTransform(*transform)));
     }
 
@@ -1491,6 +1491,7 @@ fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn load_entity_into_scene(
     entity_hash: TagHash,
     scene: &mut Scene,

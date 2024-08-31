@@ -3,7 +3,7 @@ use bevy_ecs::{
     bundle::Bundle,
     component::Component,
     entity::Entity,
-    query::{Has, With, Without},
+    query::{Has, QueryData, With, Without},
     system::{In, Query},
 };
 
@@ -141,19 +141,29 @@ pub fn reset_view_visibility_system(mut q_visibility: Query<&mut ViewVisibility>
     }
 }
 
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub struct CalculateViewVisibilityQuery {
+    vis: Option<&'static Visibility>,
+    view_vis: &'static mut ViewVisibility,
+    aabb: Option<&'static Aabb>,
+    transform: Option<&'static Transform>,
+    is_static_instance: Has<StaticInstance>,
+}
+
 pub fn calculate_view_visibility_system(
     In(frustum): In<Frustum>,
-    mut q_visibility: Query<(
-        Option<&Visibility>,
-        &mut ViewVisibility,
-        Option<&Aabb>,
-        Option<&Transform>,
-        Has<StaticInstance>,
-    )>,
+    mut q_visibility: Query<CalculateViewVisibilityQuery>,
 ) {
     puffin::profile_function!();
     q_visibility.par_iter_mut().for_each(
-        |(vis, mut view_vis, aabb, transform, is_static_instance)| {
+        |CalculateViewVisibilityQueryItem {
+             vis,
+             mut view_vis,
+             aabb,
+             transform,
+             is_static_instance,
+         }| {
             view_vis.reset();
 
             // TODO(cohae): Individual static instances should be culled on the GPU

@@ -97,6 +97,7 @@ impl CompiledShaders {
                         .write(true)
                         .read(true)
                         .create(true)
+                        .truncate(true)
                         .open("vertex.bin")
                         .unwrap()
                         .write_all(std::slice::from_raw_parts(
@@ -109,6 +110,7 @@ impl CompiledShaders {
                         .write(true)
                         .read(true)
                         .create(true)
+                        .truncate(true)
                         .open("pixel.bin")
                         .unwrap()
                         .write_all(std::slice::from_raw_parts(

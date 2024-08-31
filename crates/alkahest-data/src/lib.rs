@@ -1,3 +1,5 @@
+#![allow(clippy::missing_transmute_annotations)]
+
 pub mod activity;
 pub mod buffers;
 pub mod common;

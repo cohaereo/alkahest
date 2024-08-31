@@ -197,17 +197,14 @@ impl StaticModel {
             .enumerate()
             .filter(|(_, g)| g.render_stage == render_stage)
         {
-            if group.render_stage == TfxRenderStage::ShadowGenerate {
-                if group.unk6 == 2
-                    && renderer.active_shadow_generation_mode != ShadowGenerationMode::MovingOnly
-                {
-                    continue;
-                } else if group.unk6 == 1
-                    && renderer.active_shadow_generation_mode
-                        != ShadowGenerationMode::StationaryOnly
-                {
-                    continue;
-                }
+            if group.render_stage == TfxRenderStage::ShadowGenerate
+                && ((group.unk6 == 2
+                    && renderer.active_shadow_generation_mode != ShadowGenerationMode::MovingOnly)
+                    || (group.unk6 == 1
+                        && renderer.active_shadow_generation_mode
+                            != ShadowGenerationMode::StationaryOnly))
+            {
+                continue;
             }
 
             profiling::scope!("StaticModel::draw::group", format!("group_{}", i));

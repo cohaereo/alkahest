@@ -1,6 +1,6 @@
 #![warn(rust_2018_idioms)]
 #![deny(clippy::correctness, clippy::suspicious, clippy::complexity)]
-#![allow(clippy::collapsible_else_if)]
+#![allow(clippy::collapsible_else_if, clippy::missing_transmute_annotations)]
 
 #[macro_use]
 extern crate tracing;

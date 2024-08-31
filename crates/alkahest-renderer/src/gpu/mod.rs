@@ -6,7 +6,6 @@ pub mod texture;
 pub mod util;
 
 use std::{
-    mem::transmute,
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering},
         Arc,
@@ -24,7 +23,7 @@ use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::{
     core::Interface,
     Win32::{
-        Foundation::{DXGI_STATUS_OCCLUDED, HINSTANCE},
+        Foundation::{DXGI_STATUS_OCCLUDED, HINSTANCE, HWND},
         Graphics::{
             Direct3D::*,
             Direct3D11::*,
@@ -103,7 +102,7 @@ impl GpuContext {
                 BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
                 BufferCount: 2,
                 OutputWindow: match window.window_handle().unwrap().as_raw() {
-                    RawWindowHandle::Win32(h) => unsafe { transmute(h.hwnd) },
+                    RawWindowHandle::Win32(h) => HWND(h.hwnd.get()),
                     u => panic!("Can't open window for {u:?}"),
                 },
                 Windowed: true.into(),

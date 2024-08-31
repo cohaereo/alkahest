@@ -53,13 +53,9 @@ pub async fn discord_client_loop() {
         .await
         .ok();
 
-    loop {
-        if let Ok(activity) = activty_rx.recv() {
-            if let Err(e) = discord.update_activity(activity).await {
-                tracing::error!(error = ?e, "[discord-sdk] failed to update activity");
-            }
-        } else {
-            break;
+    while let Ok(activity) = activty_rx.recv() {
+        if let Err(e) = discord.update_activity(activity).await {
+            tracing::error!(error = ?e, "[discord-sdk] failed to update activity");
         }
     }
 }

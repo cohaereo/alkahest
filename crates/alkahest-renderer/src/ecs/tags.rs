@@ -134,10 +134,6 @@ impl Display for EntityTag {
 pub struct Tags(pub FxHashSet<EntityTag>);
 
 impl Tags {
-    pub fn from_iter(arr: impl IntoIterator<Item = EntityTag>) -> Self {
-        Self(arr.into_iter().collect())
-    }
-
     pub fn insert(&mut self, tag: EntityTag) {
         self.0.insert(tag);
     }
@@ -145,6 +141,12 @@ impl Tags {
     // pub fn remove(&mut self, tag: EntityTag) {
     //     self.0.remove(&tag);
     // }
+}
+
+impl FromIterator<EntityTag> for Tags {
+    fn from_iter<T: IntoIterator<Item = EntityTag>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
 }
 
 pub fn insert_tag(scene: &mut Scene, ent: Entity, tag: EntityTag) {

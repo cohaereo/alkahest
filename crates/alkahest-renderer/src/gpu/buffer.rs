@@ -62,7 +62,9 @@ impl<T> ConstantBuffer<T> {
         })
     }
 
-    /// This function is unsafe because, unlike `write`, it doesn't check the size of the data
+    /// # Safety
+    ///
+    /// The size of the array is not checked against the size of the buffer, this needs to be checked by the caller
     pub unsafe fn write_array(&self, data: &[T]) -> anyhow::Result<()> {
         self.map(D3D11_MAP_WRITE_DISCARD, |map| {
             map.pData

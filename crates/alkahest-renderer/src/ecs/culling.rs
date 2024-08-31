@@ -1,6 +1,6 @@
 use alkahest_data::occlusion::Aabb;
 use bevy_ecs::{
-    query::{Or, With},
+    query::{Or, QueryData, QueryFilter, With},
     system::{In, Query},
 };
 use glam::{Mat4, Vec3};
@@ -132,28 +132,41 @@ impl Frustum {
     }
 }
 
+#[derive(QueryData)]
+struct AabbDrawQuery {
+    bb: &'static Aabb,
+    transform: Option<&'static Transform>,
+    filter: Option<&'static NodeFilter>,
+    view_vis: Option<&'static ViewVisibility>,
+}
+
+#[derive(QueryFilter)]
+struct AabbDrawFilter {
+    _or: Or<(
+        With<ShadowMapRenderer>,
+        With<StaticModelSingle>,
+        With<DynamicModelComponent>,
+    )>,
+}
+
+// cohae: We keep these query types private to avoid cluttering the global namespace
+#[allow(private_interfaces)]
 pub fn draw_aabb_system(
     In(renderer): In<RendererShared>,
-    q_aabb: Query<
-        (
-            &Aabb,
-            Option<&Transform>,
-            Option<&NodeFilter>,
-            Option<&ViewVisibility>,
-        ),
-        Or<(
-            With<ShadowMapRenderer>,
-            With<StaticModelSingle>,
-            With<DynamicModelComponent>,
-        )>,
-    >,
+    q_aabb: Query<AabbDrawQuery, AabbDrawFilter>,
 ) {
     gpu_event!(renderer.gpu, "draw_aabb_system");
 
-    for (aabb, transform, filter, view_vis) in &q_aabb {
+    for AabbDrawQueryItem {
+        bb,
+        transform,
+        filter,
+        view_vis,
+    } in &q_aabb
+    {
         let mut aabb_transform = Transform {
-            translation: aabb.center(),
-            scale: aabb.extents(),
+            translation: bb.center(),
+            scale: bb.extents(),
             ..Default::default()
         }
         .local_to_world();
@@ -173,7 +186,7 @@ pub fn draw_aabb_system(
         let c = filter.map(|f| f.color()).unwrap_or(Color::WHITE);
         renderer.immediate.sphere(
             aabb_transform.to_scale_rotation_translation().2,
-            aabb.radius(),
+            bb.radius(),
             Color::from_rgba_premultiplied(c.r(), c.g(), c.b(), 0.1),
         )
     }

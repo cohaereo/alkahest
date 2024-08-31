@@ -39,6 +39,13 @@ struct ScopeAlkDebugLine {
     scroll_speed: f32,
 }
 
+pub struct ImmediateLabel {
+    pub text: String,
+    pub position: Vec3,
+    pub align: [LabelAlign; 2],
+    pub color: Color,
+}
+
 pub struct ImmediateRenderer {
     gpu: SharedGpuContext,
 
@@ -55,7 +62,7 @@ pub struct ImmediateRenderer {
     cb_debug_shape: ConstantBuffer<ScopeAlkDebugShape>,
     cb_debug_line: ConstantBuffer<ScopeAlkDebugLine>,
 
-    labels: Mutex<Vec<(String, Vec3, [LabelAlign; 2], Color)>>,
+    labels: Mutex<Vec<ImmediateLabel>>,
 }
 
 impl ImmediateRenderer {
@@ -175,6 +182,7 @@ impl ImmediateRenderer {
         self.line_dotted(start, end, start_color, end_color, width, 0.0, 0.0, 0.0);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn line_dotted<C: Into<Color>>(
         &self,
         start: Vec3,
@@ -368,14 +376,17 @@ impl ImmediateRenderer {
         align: [LabelAlign; 2],
         color: C,
     ) {
-        self.labels
-            .lock()
-            .push((label, position, align, color.into()));
+        self.labels.lock().push(ImmediateLabel {
+            text: label,
+            position,
+            align,
+            color: color.into(),
+        });
     }
 
     /// Take all the labels rendered this frame
     #[must_use]
-    pub fn drain_labels(&self) -> Vec<(String, Vec3, [LabelAlign; 2], Color)> {
+    pub fn drain_labels(&self) -> Vec<ImmediateLabel> {
         std::mem::take(&mut self.labels.lock())
     }
 }

@@ -2,7 +2,7 @@ mod cubemaps;
 pub mod gbuffer;
 mod immediate;
 use glam::{Mat4, Quat};
-pub use immediate::LabelAlign;
+pub use immediate::{ImmediateLabel, LabelAlign};
 mod lighting_pass;
 mod opaque_pass;
 mod pickbuffer;

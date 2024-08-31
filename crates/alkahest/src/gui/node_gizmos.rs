@@ -9,7 +9,7 @@ use alkahest_renderer::{
         visibility::{Visibility, VisibilityHelper as _},
     },
     icons::ICON_HELP,
-    renderer::{LabelAlign, RendererShared},
+    renderer::{ImmediateLabel, LabelAlign, RendererShared},
     resources::AppResources,
     ColorExt,
 };
@@ -55,12 +55,18 @@ impl GuiView for NodeGizmoOverlay {
 
         {
             let renderer = resources.get_mut::<RendererShared>();
-            for (text, point, align, color) in renderer.immediate.drain_labels() {
-                if !camera.is_point_visible(point) {
+            for ImmediateLabel {
+                text,
+                position,
+                align,
+                color,
+            } in renderer.immediate.drain_labels()
+            {
+                if !camera.is_point_visible(position) {
                     continue;
                 }
 
-                let projected_point = camera.world_to_projective.project_point3(point);
+                let projected_point = camera.world_to_projective.project_point3(position);
 
                 let screen_point = Pos2::new(
                     ((projected_point.x + 1.0) * 0.5) * screen_size.x,
@@ -108,7 +114,7 @@ impl GuiView for NodeGizmoOverlay {
                         Option<&NodeMetadata>,
                         Option<&Visibility>,
                     )>()
-                    .iter(&mut map.scene)
+                    .iter(&map.scene)
                 {
                     if !vis.is_visible(0) {
                         continue;

@@ -167,6 +167,7 @@ pub fn calculate_mesh_normals_flat(
     (new_vertices, new_indices)
 }
 
+#[allow(clippy::type_complexity)]
 pub fn draw_debugshapes_system(
     In(renderer): In<RendererShared>,
     selected: Res<SelectedEntity>,

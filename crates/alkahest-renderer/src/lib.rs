@@ -1,5 +1,8 @@
+#![allow(clippy::missing_transmute_annotations)]
+
 #[macro_use]
 extern crate tracing;
+
 pub mod camera;
 pub mod ecs;
 pub mod gpu;

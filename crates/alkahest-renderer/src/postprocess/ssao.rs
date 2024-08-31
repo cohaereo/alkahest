@@ -149,15 +149,15 @@ impl Default for ScopeAlkahestSsao {
         // TODO(cohae): Configurable kernel size
         let mut samples = [Vec4::ZERO; KERNEL_SIZE];
         let mut rng = fastrand::Rng::with_seed(0xbc65a5a72901bc71);
-        for i in 0..KERNEL_SIZE {
-            let mut sample = Vec3::new(rng.f32() * 2.0 - 1.0, rng.f32() * 2.0 - 1.0, 0.0);
-            sample = sample.normalize();
-            sample *= rng.f32();
+        for (i, sample) in samples.iter_mut().enumerate() {
+            let mut nsample = Vec3::new(rng.f32() * 2.0 - 1.0, rng.f32() * 2.0 - 1.0, 0.0);
+            nsample = nsample.normalize();
+            nsample *= rng.f32();
 
             let mut scale = i as f32 / KERNEL_SIZE as f32;
             scale = 0.1f32.lerp(1.0, scale * scale);
-            sample *= scale;
-            samples[i] = sample.extend(1.0);
+            nsample *= scale;
+            *sample = nsample.extend(1.0);
         }
 
         Self {
