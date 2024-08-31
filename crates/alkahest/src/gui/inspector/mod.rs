@@ -362,27 +362,43 @@ impl ComponentPanel for Transform {
                             self.translation = camera.position_target();
                         }
 
-                        let (d, pos) = resources
-                            .get::<RendererShared>()
-                            .data
-                            .lock()
-                            .gbuffers
-                            .depth_buffer_distance_pos_center(&camera);
+                        // let (d, pos) = resources
+                        //     .get::<RendererShared>()
+                        //     .data
+                        //     .lock()
+                        //     .gbuffers
+                        //     .depth_buffer_distance_pos_center(&camera);
+                        // if ui
+                        //     .add_enabled(
+                        //         d.is_finite(),
+                        //         Button::new(if d.is_finite() {
+                        //             ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
+                        //         } else {
+                        //             ICON_EYE_OFF_OUTLINE.to_string()
+                        //         }),
+                        //     )
+                        //     .on_hover_text("Set position to gaze")
+                        //     .clicked()
+                        // {
+                        //     self.translation = pos;
+                        // }
+                        // ui.label(prettify_distance(d));
+
                         if ui
-                            .add_enabled(
-                                d.is_finite(),
-                                Button::new(if d.is_finite() {
-                                    ICON_EYE_ARROW_RIGHT_OUTLINE.to_string()
-                                } else {
-                                    ICON_EYE_OFF_OUTLINE.to_string()
-                                }),
-                            )
+                            .button(ICON_EYE_ARROW_RIGHT_OUTLINE.to_string())
                             .on_hover_text("Set position to gaze")
                             .clicked()
                         {
-                            self.translation = pos;
+                            let (distance, pos) = resources
+                                .get::<RendererShared>()
+                                .data
+                                .lock()
+                                .gbuffers
+                                .depth_buffer_distance_pos_center(&camera);
+                            if distance.is_finite() {
+                                self.translation = pos;
+                            }
                         }
-                        ui.label(prettify_distance(d));
                     });
                     ui.end_row();
                 }
