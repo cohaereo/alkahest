@@ -1,7 +1,10 @@
+// TODO(cohae): Remove this once PanicHookInfo becomes stable (and update MSRV)
+#![allow(deprecated)]
+
 use std::{
     backtrace::{Backtrace, BacktraceStatus},
     io::Write,
-    panic::PanicHookInfo,
+    panic::PanicInfo,
     sync::{Arc, OnceLock},
 };
 
@@ -64,7 +67,7 @@ pub fn install_hook(header: Option<String>) {
     }
 }
 
-fn write_panic_to_file(info: &PanicHookInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
+fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
     let mut file_lock = PANIC_FILE.lock();
     if file_lock.is_none() {
         *file_lock = Some(fs_err::File::create("panic.log")?);
