@@ -106,8 +106,8 @@ mod compiler {
         Win32::{
             Foundation::E_FAIL,
             Graphics::Direct3D::{
-                Fxc::D3DCompile, ID3DBlob, ID3DInclude, ID3DInclude_Impl, D3D_INCLUDE_TYPE,
-                D3D_SHADER_MACRO,
+                Fxc::{D3DCompile, D3DCOMPILE_OPTIMIZATION_LEVEL3},
+                ID3DBlob, ID3DInclude, ID3DInclude_Impl, D3D_INCLUDE_TYPE, D3D_SHADER_MACRO,
             },
         },
     };
@@ -139,7 +139,7 @@ mod compiler {
                 Some(&*includer),
                 stage.entry(),
                 stage.target(),
-                0,
+                D3DCOMPILE_OPTIMIZATION_LEVEL3,
                 0,
                 &mut shader_blob,
                 Some(&mut errors),
@@ -273,6 +273,7 @@ mod compiler {
             .arg("-T").arg(unsafe { stage.target().to_string().unwrap()})
             .arg("-Fo").arg(format!("Z:{output_file_path}"))
             .arg("-D").arg(unsafe { stage.define().to_string().unwrap()})
+            .arg("-O3")
             .arg("-Iassets/shaders/include")
             .arg(format!("Z:{temp_source_path}"))
             .output()
