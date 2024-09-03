@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use windows::{
-    core::{Interface, Param, HRESULT, HSTRING},
+    core::{Interface, HSTRING},
     Win32::{
         Foundation::{S_FALSE, S_OK},
         Graphics::Direct3D11::{
@@ -147,6 +147,10 @@ impl GpuContext {
         .expect("Failed to create query")
     }
 
+    /// # Safety
+    ///
+    /// T can be any sized data type and is not checked against the type of the data returned by the query itself,
+    /// meaning it's up to the caller to guarantee that this type is valid for the data returned by the query (see D3D11_QUERY on MSDN)
     pub unsafe fn get_query_data<T: Sized + Default>(
         &self,
         query: &ID3D11Query,
