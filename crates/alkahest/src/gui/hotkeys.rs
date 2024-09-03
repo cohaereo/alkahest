@@ -11,7 +11,6 @@ use alkahest_renderer::{
     renderer::RendererShared,
 };
 use bevy_ecs::entity::Entity;
-use glam::Vec3;
 use rustc_hash::FxHashSet;
 
 use crate::{

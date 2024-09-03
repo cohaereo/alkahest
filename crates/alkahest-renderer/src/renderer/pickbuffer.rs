@@ -19,7 +19,7 @@ use windows::Win32::{
 
 use crate::{
     ecs::{
-        render::{draw_entity, static_geometry::draw_static_instances_individual_system},
+        render::draw_entity,
         Scene,
     },
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},

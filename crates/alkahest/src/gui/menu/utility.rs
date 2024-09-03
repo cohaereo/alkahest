@@ -6,7 +6,6 @@ use alkahest_renderer::{
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
         utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
-        visibility::VisibilityBundle,
         SceneInfo,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},

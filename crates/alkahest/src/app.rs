@@ -274,6 +274,10 @@ impl AlkahestApp {
                             (c.window.width, c.window.height) = (new_dims.width, new_dims.height)
                         });
                     }
+                    WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                        debug!("ScaleFactorChanged {scale_factor}");
+                        gui.egui.set_pixels_per_point(scale_factor as f32);
+                    }
                     WindowEvent::RedrawRequested => {
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
