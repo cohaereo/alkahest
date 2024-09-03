@@ -1,11 +1,12 @@
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
-        common::{Global, Icon, Label, Mutable},
+        common::{Global, Icon, Label, Mutable, RenderCommonBundle},
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
         utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
+        visibility::VisibilityBundle,
         SceneInfo,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
@@ -51,6 +52,7 @@ impl MenuBar {
                     Ruler::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
+                    RenderCommonBundle::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());
@@ -83,6 +85,7 @@ impl MenuBar {
                     Sphere::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
+                    RenderCommonBundle::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());
@@ -118,6 +121,7 @@ impl MenuBar {
                     Beacon::default_label(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
+                    RenderCommonBundle::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());
@@ -150,6 +154,7 @@ impl MenuBar {
                     Route::default_label(),
                     Mutable,
                     Global,
+                    RenderCommonBundle::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());
@@ -176,6 +181,7 @@ impl MenuBar {
                     ShaderBallComponent::new(&renderer).unwrap(),
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
+                    RenderCommonBundle::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());

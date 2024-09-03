@@ -9,7 +9,11 @@ use glam::{Mat4, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
 
 use crate::{
-    ecs::{transform::Transform, Scene},
+    ecs::{
+        transform::Transform,
+        visibility::{ViewVisibility, VisibilityHelper},
+        Scene,
+    },
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt},
     gpu_event, include_dxbc,
     loaders::vertex_buffer::VertexBuffer,
@@ -163,12 +167,19 @@ impl ShaderBallComponent {
 }
 
 pub fn draw_shaderball_system(renderer: &Renderer, scene: &mut Scene, stage: TfxRenderStage) {
-    for (e, transform, ball) in scene
-        .query::<(Entity, &Transform, &ShaderBallComponent)>()
+    for (e, transform, ball, view_vis) in scene
+        .query::<(
+            Entity,
+            &Transform,
+            &ShaderBallComponent,
+            Option<&ViewVisibility>,
+        )>()
         .iter(scene)
     {
-        renderer.pickbuffer.with_entity(e, || {
-            ball.draw(renderer, transform, stage);
-        });
+        if view_vis.is_visible(renderer.active_view) {
+            renderer.pickbuffer.with_entity(e, || {
+                ball.draw(renderer, transform, stage);
+            });
+        }
     }
 }
