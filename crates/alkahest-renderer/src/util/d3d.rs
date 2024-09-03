@@ -42,3 +42,14 @@ impl ErrorExt for anyhow::Error {
         }
     }
 }
+
+pub fn try_out_ptr<T, F, E, O>(mut f: F) -> Result<T, E>
+where
+    F: FnMut(&mut Option<T>) -> Result<O, E>,
+{
+    let mut t: Option<T> = None;
+    match f(&mut t) {
+        Ok(_) => Ok(t.unwrap()),
+        Err(e) => Err(e),
+    }
+}

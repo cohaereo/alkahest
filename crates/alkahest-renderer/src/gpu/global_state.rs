@@ -38,7 +38,7 @@ pub struct RenderStates {
     pub blend_states: [ID3D11BlendState; 90],
     pub input_layouts: [ID3D11InputLayout; 77],
     pub rasterizer_states: [[Option<ID3D11RasterizerState>; 9]; 9],
-    pub depth_stencil_states: [(ID3D11DepthStencilState, ID3D11DepthStencilState); 88],
+    pub depth_stencil_states: [(ID3D11DepthStencilState, ID3D11DepthStencilState); 89],
 }
 
 impl RenderStates {
@@ -10180,7 +10180,7 @@ struct BungieDepthDesc {
 
 //region Depth/Stencil States
 
-const DEPTH_STENCIL_COMBOS: [(usize, usize); 88] = [
+const DEPTH_STENCIL_COMBOS: [(usize, usize); 89] = [
     (0, 0), // 0
     (1, 1),
     (2, 1), // 2
@@ -10269,9 +10269,10 @@ const DEPTH_STENCIL_COMBOS: [(usize, usize); 88] = [
     (5, 0x2a),
     (10, 0x16),
     (1, 0x16),
+    (14, 1), // CUSTOM ALKAHEST DEPTH STATE
 ];
 
-const DEPTH_STATES: [BungieDepthDesc; 14] = [
+const DEPTH_STATES: [BungieDepthDesc; 15] = [
     // Depth 0
     BungieDepthDesc {
         enable: BOOL(0),
@@ -10397,6 +10398,15 @@ const DEPTH_STATES: [BungieDepthDesc; 14] = [
         _enable_alt: BOOL(1),
         _write_mask_alt: 0,
         func_alt: D3D11_COMPARISON_LESS_EQUAL,
+    },
+    // Depth 14 (CUSTOM FOR ALKAHEST)
+    BungieDepthDesc {
+        enable: BOOL(1),
+        write_mask: 0,
+        func: D3D11_COMPARISON_EQUAL,
+        _enable_alt: BOOL(1),
+        _write_mask_alt: 0,
+        func_alt: D3D11_COMPARISON_EQUAL,
     },
 ];
 

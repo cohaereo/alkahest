@@ -13,7 +13,7 @@ use crate::{
         visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
-    gpu_event,
+    gpu_event, gpu_profile_event,
     renderer::Renderer,
     util::{black_magic::EntityRefDarkMagic, Hocus},
 };
@@ -28,7 +28,7 @@ impl Renderer {
             .use_flipped_depth_comparison
             .store(true, Ordering::Relaxed);
 
-        gpu_event!(self.gpu, "update_shadow_maps");
+        gpu_profile_event!(self.gpu, "update_shadow_maps");
         self.gpu
             .current_states
             .store(StateSelection::new(Some(0), Some(2), Some(2), Some(6)));
@@ -54,7 +54,7 @@ impl Renderer {
 
             let er = scene.entity(e);
             let mut shadow = er.get_mut::<ShadowMapRenderer>().unwrap();
-            shadow.last_update = self.frame_index;
+            shadow.last_update = self.frame_index.load(Ordering::Relaxed);
             let transform = er.get::<Transform>().unwrap();
 
             self.gpu

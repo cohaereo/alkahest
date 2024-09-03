@@ -3,14 +3,33 @@ use glam::Vec4;
 
 use crate::{
     ecs::Scene,
-    gpu_event,
+    gpu_event, gpu_profile_event,
     renderer::Renderer,
-    tfx::{externs, externs::ExternDefault},
+    tfx::externs::{self, ExternDefault},
 };
 
 impl Renderer {
+    // pub fn draw_depth_prepass(&self, scene: &mut Scene) {
+    //     gpu_profile_event!(self.gpu, "depth_prepass");
+
+    //     self.gpu
+    //         .current_states
+    //         .store(StateSelection::new(Some(0), Some(2), Some(2), Some(0)));
+
+    //     unsafe {
+    //         let gbuffers = &self.data.lock().gbuffers;
+    //         self.gpu
+    //             .context()
+    //             .OMSetRenderTargets(None, &gbuffers.depth.view);
+
+    //         gbuffers.depth.clear(0.0, 0);
+    //     }
+
+    //     self.run_renderstage_systems(scene, TfxRenderStage::DepthPrepass);
+    // }
+
     pub fn draw_opaque_pass(&self, scene: &mut Scene) {
-        gpu_event!(self.gpu, "generate_gbuffer");
+        gpu_profile_event!(self.gpu, "generate_gbuffer");
 
         self.gpu
             .current_states
@@ -33,7 +52,9 @@ impl Renderer {
             gbuffers.rt0.clear(&[0.0, 0.0, 0.0, 0.0]);
             gbuffers.rt1.clear(&[0.0, 0.0, 0.0, 0.0]);
             gbuffers.rt2.clear(&[1.0, 0.5, 1.0, 1.0]);
+            // if !self.render_settings.depth_prepass {
             gbuffers.depth.clear(0.0, 0);
+            // }
         }
 
         // Draw opaque pass

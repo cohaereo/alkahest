@@ -2,14 +2,14 @@ use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
 
 use crate::{
     ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
-    gpu_event,
+    gpu_event, gpu_profile_event,
     renderer::{cubemaps::draw_cubemap_system, Renderer},
     tfx::externs::{self, ExternDefault, ShadowMask},
 };
 
 impl Renderer {
     pub fn draw_lighting_pass(&self, scene: &mut Scene) {
-        gpu_event!(self.gpu, "lighting_pass");
+        gpu_profile_event!(self.gpu, "lighting_pass");
 
         unsafe {
             let data = &mut self.data.lock();
@@ -50,7 +50,7 @@ impl Renderer {
                 self.matcap.draw(self);
             } else {
                 if self.render_settings.feature_global_lighting {
-                    gpu_event!(self.gpu, "global_lighting");
+                    gpu_profile_event!(self.gpu, "global_lighting");
 
                     self.gpu.current_states.store(StateSelection::new(
                         Some(0),
@@ -71,7 +71,7 @@ impl Renderer {
                 ));
 
                 {
-                    gpu_event!(self.gpu, "deferred_lights");
+                    gpu_profile_event!(self.gpu, "deferred_lights");
                     draw_light_system(self, scene)
                 }
 
@@ -95,7 +95,7 @@ impl Renderer {
 
         {
             if self.render_settings.ssao {
-                gpu_event!(self.gpu, "ssao");
+                gpu_profile_event!(self.gpu, "ssao");
                 self.ssao.draw(self);
             }
         }
@@ -103,7 +103,7 @@ impl Renderer {
 
     // TODO(cohae): woe, naming conventions be upon ye
     pub fn draw_shading_pass(&self, scene: &Scene) {
-        gpu_event!(self.gpu, "shading_pass");
+        gpu_profile_event!(self.gpu, "shading_pass");
 
         unsafe {
             let gbuffers = &self.data.lock().gbuffers;
@@ -131,7 +131,7 @@ impl Renderer {
     }
 
     pub fn draw_atmosphere(&self, scene: &Scene) {
-        gpu_event!(self.gpu, "atmosphere");
+        gpu_profile_event!(self.gpu, "atmosphere");
 
         {
             let mut data = self.data.lock();

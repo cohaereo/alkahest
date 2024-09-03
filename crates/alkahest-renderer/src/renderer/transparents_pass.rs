@@ -5,14 +5,17 @@ use alkahest_data::{
 
 use crate::{
     ecs::Scene,
-    gpu_event,
+    gpu_event, gpu_profile_event,
     renderer::Renderer,
-    tfx::{externs, externs::ExternDefault, scope::ScopeTransparentAdvanced},
+    tfx::{
+        externs::{self, ExternDefault},
+        scope::ScopeTransparentAdvanced,
+    },
 };
 
 impl Renderer {
     pub fn draw_transparents_pass(&self, scene: &mut Scene) {
-        gpu_event!(self.gpu, "transparents_pass");
+        gpu_profile_event!(self.gpu, "transparents_pass");
 
         {
             let mut data = self.data.lock();

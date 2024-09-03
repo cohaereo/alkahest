@@ -18,7 +18,8 @@ use alkahest_data::{
     dxgi::DxgiFormat, geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage,
 };
 use crossbeam::atomic::AtomicCell;
-use parking_lot::RwLock;
+use debug::PendingGpuTimestampRange;
+use parking_lot::{Mutex, RwLock};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::{
     core::Interface,
@@ -78,6 +79,8 @@ pub struct GpuContext {
 
     pub util_resources: UtilResources,
     pub custom_pixel_shader: Option<ID3D11PixelShader>,
+
+    pending_timestamp_queries: Mutex<Vec<PendingGpuTimestampRange>>,
 }
 
 impl GpuContext {
@@ -289,6 +292,8 @@ impl GpuContext {
                 Some(0),
             )),
             custom_pixel_shader: None,
+
+            pending_timestamp_queries: Mutex::new(Vec::new()),
         })
     }
 
@@ -312,6 +317,19 @@ impl GpuContext {
 
 impl GpuContext {
     pub fn begin_frame(&self) {
+        self.pending_timestamp_queries.lock().clear();
+        // for pending_timestamp in std::mem::take(&mut *self.pending_timestamp_queries.lock()) {
+        //     let timestamp = pending_timestamp.resolve_blocking(self);
+        //     if !timestamp.disjoint {
+        //         println!(
+        //             "Resolved timestamp {} - {}ms",
+        //             &timestamp.label,
+        //             timestamp.to_miliseconds_f32()
+        //         );
+        //     }
+        // }
+        // println!();
+
         unsafe {
             // TODO(cohae): Clearing the state causes maps like bannerfall to use a point fill mode (which doesn't exist in dx11????)
             // self.context.ClearState();

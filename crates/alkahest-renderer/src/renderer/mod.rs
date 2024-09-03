@@ -12,7 +12,14 @@ mod systems;
 mod transparents_pass;
 mod util;
 
-use std::{ops::Deref, sync::Arc, time::Instant};
+use std::{
+    ops::Deref,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Instant,
+};
 
 use alkahest_data::{
     occlusion::Aabb,
@@ -38,7 +45,7 @@ use crate::{
         Scene,
     },
     gpu::SharedGpuContext,
-    gpu_event,
+    gpu_event, gpu_profile_event,
     handle::Handle,
     loaders::AssetManager,
     postprocess::ssao::SsaoRenderer,
@@ -93,7 +100,7 @@ pub struct Renderer {
     pub time: Instant,
     last_frame: Instant,
     pub delta_time: f64,
-    pub frame_index: usize,
+    pub frame_index: AtomicUsize,
 
     pub active_view: usize,
     // Hacky way to obtain these filters for now
@@ -140,7 +147,7 @@ impl Renderer {
             time: Instant::now(),
             last_frame: Instant::now(),
             delta_time: 0.0,
-            frame_index: 0,
+            frame_index: AtomicUsize::default(),
             active_shadow_generation_mode: ShadowGenerationMode::StationaryOnly,
             lastfilters: NodeFilterSet::default(),
             active_view: 0,
@@ -166,10 +173,13 @@ impl Renderer {
         self.update_shadow_maps(scene);
 
         {
-            gpu_event!(self.gpu, "view_0");
+            gpu_profile_event!(self.gpu, "view_0");
             self.bind_view(view, 0);
 
             self.draw_atmosphere(scene);
+            // if self.render_settings.depth_prepass {
+            //     self.draw_depth_prepass(scene);
+            // }
             self.draw_opaque_pass(scene);
             self.draw_lighting_pass(scene);
             self.draw_shading_pass(scene);
@@ -204,7 +214,7 @@ impl Renderer {
                 );
             }
 
-            gpu_event!(self.gpu, "final_or_debug_view");
+            gpu_profile_event!(self.gpu, "final_or_debug_view");
             let pipeline = self
                 .render_globals
                 .pipelines
@@ -237,11 +247,11 @@ impl Renderer {
                 .copy_to_staging(&data.gbuffers.depth_staging);
         }
 
-        self.pocus().frame_index = self.frame_index.wrapping_add(1);
+        self.frame_index.fetch_add(1, Ordering::Relaxed);
     }
 
     fn draw_view_overlay(&self, scene: &mut Scene, resources: &AppResources) {
-        gpu_event!(self.gpu, "view_overlay");
+        gpu_profile_event!(self.gpu, "view_overlay");
 
         self.gpu
             .current_states
@@ -514,6 +524,8 @@ pub struct RendererSettings {
     #[serde(skip, default = "default_true")]
     pub stage_decals_additive: bool,
 
+    // #[serde(skip, default = "default_true")]
+    // pub depth_prepass: bool,
     #[serde(skip)]
     pub debug_view: RenderDebugView,
 }
@@ -541,6 +553,7 @@ impl Default for RendererSettings {
             stage_decals: true,
             stage_decals_additive: true,
 
+            // depth_prepass: true,
             debug_view: RenderDebugView::None,
         }
     }
