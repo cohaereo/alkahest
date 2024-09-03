@@ -263,6 +263,14 @@ impl Camera {
     // pub fn look_at(&mut self, target: Vec3) {
     //     self.controller.look_at(target);
     // }
+
+    pub fn fov(&self) -> f32 {
+        match &self.projection {
+            CameraProjection::Perspective { fov, .. }
+            | CameraProjection::PerspectiveBounded { fov, .. } => *fov,
+            CameraProjection::Orthographic { .. } => 90.0,
+        }
+    }
 }
 
 impl View for Camera {

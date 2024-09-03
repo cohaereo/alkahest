@@ -1,9 +1,17 @@
+use alkahest_data::occlusion::Aabb;
 use alkahest_renderer::{
-    camera::{tween::ease_out_exponential, Camera},
-    ecs::{hierarchy::Parent, resources::SelectedEntity, visibility::Visibility, Scene},
+    camera::{
+        tween::{ease_out_exponential, Tween},
+        Camera,
+    },
+    ecs::{
+        hierarchy::Parent, resources::SelectedEntity, transform::Transform, visibility::Visibility,
+        Scene,
+    },
     renderer::RendererShared,
 };
 use bevy_ecs::entity::Entity;
+use glam::Vec3;
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -29,8 +37,8 @@ pub const SHORTCUT_DESELECT: egui::KeyboardShortcut = egui::KeyboardShortcut::ne
     egui::Key::A,
 );
 
-// pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
-//     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F);
+pub const SHORTCUT_FOCUS: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F);
 
 pub const SHORTCUT_GAZE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::G);
@@ -75,6 +83,57 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
         goto_gaze(resources);
     }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FOCUS)) {
+        focus_selected(resources);
+    }
+}
+
+fn focus_selected(resources: &mut AppResources) {
+    let mut maps = resources.get_mut::<MapList>();
+    let Some(map) = maps.current_map_mut() else {
+        return;
+    };
+
+    let selected_entity = resources.get::<SelectedEntity>().selected();
+    let Some(selected_entity) = selected_entity else {
+        return;
+    };
+
+    let mut cam = resources.get_mut::<Camera>();
+    let bounds = map.scene.get::<Aabb>(selected_entity).cloned();
+
+    let (center, radius) = if let Some(transform) = map.scene.get::<Transform>(selected_entity) {
+        if let Some(bounds) = bounds {
+            (
+                transform.local_to_world().transform_point3(bounds.center()),
+                bounds.radius(),
+            )
+        } else {
+            (transform.translation, 1.0)
+        }
+    } else {
+        if let Some(bounds) = bounds {
+            (bounds.center(), bounds.radius())
+        } else {
+            return;
+        }
+    };
+
+    // Calculate the vertical field of view in radians
+    let half_fov_y = (cam.fov() * 0.5).to_radians();
+
+    // Calculate the distance required to fit the sphere in the frustum vertically
+    let distance = radius / half_fov_y.tan();
+
+    // Adjust the camera's position to ensure the sphere fits in the frustum
+    let target_position = center - cam.forward().normalize() * (distance * 1.75);
+    cam.tween = Some(Tween::new(
+        ease_out_exponential,
+        Some((cam.position(), target_position)),
+        None,
+        0.5,
+    ));
 }
 
 fn hide_unselected(resources: &mut AppResources) {
@@ -84,10 +143,9 @@ fn hide_unselected(resources: &mut AppResources) {
     };
 
     let selected_entity = resources.get::<SelectedEntity>().selected();
-    if selected_entity.is_none() {
+    let Some(selected_entity) = selected_entity else {
         return;
-    }
-    let selected_entity = selected_entity.unwrap();
+    };
 
     let entity_parents: FxHashSet<Entity> = get_ancestors(&map.scene, selected_entity)
         .into_iter()

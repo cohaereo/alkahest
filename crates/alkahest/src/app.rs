@@ -10,7 +10,7 @@ use alkahest_renderer::{
         Scene,
     },
     gpu::{texture::LOW_RES, GpuContext},
-    gpu_event,
+    gpu_event, gpu_profile_event,
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
@@ -277,7 +277,11 @@ impl AlkahestApp {
                     WindowEvent::RedrawRequested => {
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
+
+                        gctx.begin_frame();
+
                         {
+                            gpu_profile_event!(gctx, "main");
                             if gui.input_mut(|i| {
                                 i.consume_shortcut(&KeyboardShortcut::new(
                                     Modifiers::ALT,
@@ -298,8 +302,6 @@ impl AlkahestApp {
                                     c.window.fullscreen = window.fullscreen().is_some();
                                 });
                             }
-
-                            gctx.begin_frame();
 
                             {
                                 let mut action_list = resources.get_mut::<ActionList>();
@@ -388,9 +390,9 @@ impl AlkahestApp {
 
                         renderer
                             .gpu
-                            .begin_event("interface_and_hud", "")
+                            .begin_event_span("interface_and_hud", "")
                             .scoped(|| {
-                                gpu_event!(renderer.gpu, "egui");
+                                gpu_profile_event!(renderer.gpu, "egui");
                                 gui.draw_frame(window, |ctx, ectx| {
                                     hotkeys::process_hotkeys(ectx, resources);
 

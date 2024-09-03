@@ -124,6 +124,8 @@ impl GuiView for RenderSettingsPanel {
                                 .ui(ui);
                         });
                     });
+                    // ui.checkbox(&mut c.renderer.depth_prepass, "⚠ Depth Prepass");
+
                     render_feat_vis(ui, "Crosshair", &mut c.visual.draw_crosshair);
                     render_feat_vis(ui, "Node Visualization", &mut c.visual.node_nametags);
                     ui.collapsing("Node filters", |ui| {
@@ -178,11 +180,11 @@ impl GuiView for RenderSettingsPanel {
                         "Trees/Decorators",
                         &mut c.renderer.feature_decorators,
                     );
-                    render_feat_vis(ui, "Atmosphere", &mut c.renderer.feature_atmosphere);
-                    render_feat_vis(ui, "Cubemaps", &mut c.renderer.feature_cubemaps);
+                    render_feat_vis(ui, "⚠ Atmosphere", &mut c.renderer.feature_atmosphere);
+                    render_feat_vis(ui, "⚠ Cubemaps", &mut c.renderer.feature_cubemaps);
                     render_feat_vis(
                         ui,
-                        "Global Lighting",
+                        "⚠ Global Lighting",
                         &mut c.renderer.feature_global_lighting,
                     );
                 });
