@@ -168,7 +168,6 @@ impl DirectX11Renderer {
         swap_chain: &IDXGISwapChain,
         input: egui::RawInput,
         context: &Context,
-        pixels_per_point: f32,
         paint: PaintFn,
     ) -> Result<egui::FullOutput, RenderError>
     where
@@ -191,11 +190,11 @@ impl DirectX11Renderer {
             }
 
             let primitives = context
-                .tessellate(output.shapes.clone(), pixels_per_point)
+                .tessellate(output.shapes.clone(), output.pixels_per_point)
                 .into_iter()
                 .filter_map(|prim| {
                     if let Primitive::Mesh(mesh) = prim.primitive {
-                        GpuMesh::from_mesh(screen, mesh, prim.clip_rect, pixels_per_point)
+                        GpuMesh::from_mesh(screen, mesh, prim.clip_rect, output.pixels_per_point)
                     } else {
                         panic!("Paint callbacks are not yet supported")
                     }

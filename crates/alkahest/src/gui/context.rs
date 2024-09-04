@@ -129,7 +129,6 @@ impl GuiContext {
                 unsafe { transmute(&self.gctx.swap_chain) },
                 input,
                 &self.egui,
-                window.scale_factor() as f32,
                 |renderer, context| {
                     paint(
                         &GuiCtx {
