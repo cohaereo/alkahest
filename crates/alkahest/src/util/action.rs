@@ -4,10 +4,10 @@ use alkahest_renderer::{
     camera::{get_look_angle, tween::Tween, Camera},
     ecs::{
         common::{Global, Mutable, RenderCommonBundle},
-        hierarchy::{Children, Parent},
+        hierarchy::Children,
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
-        transform::{Transform, TransformFlags},
+        transform::Transform,
         utility::{Route, RouteHolder, RouteNode, Utility},
     },
     resources::AppResources,
@@ -210,33 +210,7 @@ impl Action for SpawnRouteAction {
                 let parent = map.scene.spawn_empty().id();
                 let mut children = vec![];
                 for node in route.path {
-                    let e = map
-                        .scene
-                        .spawn((
-                            Parent(parent),
-                            Transform {
-                                translation: node.pos,
-                                flags: TransformFlags::IGNORE_ROTATION
-                                    | TransformFlags::IGNORE_SCALE,
-                                ..Default::default()
-                            },
-                            RouteNode {
-                                map_hash: node.map_hash,
-                                is_teleport: node.is_teleport,
-                            },
-                            if let Some(label) = node.label {
-                                RouteNode::label(&label)
-                            } else {
-                                RouteNode::default_label()
-                            },
-                            RouteNode::icon(),
-                            NodeFilter::Utility,
-                            Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                            Mutable,
-                            Global,
-                            RenderCommonBundle::default(),
-                        ))
-                        .id();
+                    let e = map.scene.spawn(RouteNode::make_budle(parent, node)).id();
                     children.push(e);
                 }
                 map.scene.entity_mut(parent).insert((

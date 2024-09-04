@@ -2,11 +2,11 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Global, Icon, Label, Mutable, RenderCommonBundle},
-        hierarchy::{Children, Parent},
+        hierarchy::Children,
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
+        utility::{Beacon, Route, RouteNode, RouteNodeHolder, Ruler, Sphere, Utility},
         SceneInfo,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
@@ -150,28 +150,18 @@ impl MenuBar {
                         Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
                         Mutable,
                         Global,
-                        RenderCommonBundle::default()
+                        RenderCommonBundle::default(),
                     ))
                     .id();
                 let n = map
                     .scene
-                    .spawn((
-                        Parent(route_id),
-                        Transform {
-                            translation: camera.position(),
-                            ..Default::default()
-                        },
-                        RouteNode {
+                    .spawn(RouteNode::make_budle(
+                        route_id,
+                        RouteNodeHolder {
+                            pos: camera.position(),
                             map_hash: map.scene.get_map_hash(),
                             ..Default::default()
                         },
-                        RouteNode::icon(),
-                        RouteNode::default_label(),
-                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                        NodeFilter::Utility,
-                        Mutable,
-                        Global,
-                        RenderCommonBundle::default(),
                     ))
                     .id();
                 map.scene

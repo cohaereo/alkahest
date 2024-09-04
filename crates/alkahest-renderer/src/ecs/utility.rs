@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy_ecs::{
+    bundle::Bundle,
     entity::Entity,
     prelude::Component,
     system::{Commands, In, Query, Res, ResMut},
@@ -10,7 +11,10 @@ use ecolor::Rgba;
 use glam::Vec3;
 
 use super::{
-    common::{Icon, Label},
+    common::{Global, Icon, Label, Mutable, RenderCommonBundle},
+    hierarchy::Parent,
+    tags::{EntityTag, NodeFilter, Tags},
+    transform::TransformFlags,
     visibility::{Visibility, VisibilityHelper},
     MapInfo, SceneInfo,
 };
@@ -34,6 +38,16 @@ pub trait Utility {
         Label::from(str)
     }
     fn default_label() -> Label;
+}
+
+#[derive(Bundle)]
+pub struct UtilityCommonBundle {
+    pub label: Label,
+    pub icon: Icon,
+    pub filter: NodeFilter,
+    pub tags: Tags,
+    pub mutable: Mutable,
+    pub render_common: RenderCommonBundle,
 }
 
 #[derive(Component)]
@@ -186,6 +200,15 @@ pub struct RouteNode {
     pub is_teleport: bool,
 }
 
+#[derive(Bundle)]
+pub struct RouteNodeBundle {
+    pub parent: Parent,
+    pub transform: Transform,
+    pub node: RouteNode,
+    pub global: Global,
+    pub util_common: UtilityCommonBundle,
+}
+
 #[derive(Component)]
 pub struct Route {
     pub color: Color,
@@ -295,6 +318,36 @@ impl Utility for RouteNode {
 
     fn default_label() -> Label {
         Label::new_default("").with_offset(0.0, 0.0, 0.12)
+    }
+}
+
+impl RouteNode {
+    pub fn make_budle(parent: Entity, node: RouteNodeHolder) -> RouteNodeBundle {
+        RouteNodeBundle {
+            parent: Parent(parent),
+            transform: Transform {
+                translation: node.pos,
+                flags: TransformFlags::IGNORE_ROTATION | TransformFlags::IGNORE_SCALE,
+                ..Default::default()
+            },
+            node: RouteNode {
+                map_hash: node.map_hash,
+                is_teleport: node.is_teleport,
+            },
+            global: Global,
+            util_common: UtilityCommonBundle {
+                label: if let Some(label) = node.label {
+                    RouteNode::label(&label)
+                } else {
+                    RouteNode::default_label()
+                },
+                icon: RouteNode::icon(),
+                filter: NodeFilter::Utility,
+                tags: Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                mutable: Mutable,
+                render_common: RenderCommonBundle::default(),
+            },
+        }
     }
 }
 

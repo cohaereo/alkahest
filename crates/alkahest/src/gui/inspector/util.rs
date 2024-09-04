@@ -1,12 +1,10 @@
 use alkahest_renderer::{
     camera::{tween::Tween, Camera},
     ecs::{
-        common::{Global, Mutable, RenderCommonBundle},
         hierarchy::{Children, Parent},
         resources::SelectedEntity,
-        tags::{EntityTag, NodeFilter, Tags},
         transform::Transform,
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
+        utility::{Beacon, Route, RouteNode, RouteNodeHolder, Ruler, Sphere, Utility},
         Scene, SceneInfo,
     },
     icons::{
@@ -389,23 +387,13 @@ impl ComponentPanel for Route {
                 || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_ADD_ROUTE_NODE_NEXT))
             {
                 let node = cmd
-                    .spawn((
-                        Parent(e.id()),
-                        Transform {
-                            translation: camera.position(),
-                            ..Default::default()
-                        },
-                        RouteNode {
+                    .spawn(RouteNode::make_budle(
+                        e.id(),
+                        RouteNodeHolder {
+                            pos: camera.position(),
                             map_hash: scene.get_map_hash(),
                             ..Default::default()
                         },
-                        RouteNode::icon(),
-                        RouteNode::default_label(),
-                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                        NodeFilter::Utility,
-                        Mutable,
-                        Global,
-                        RenderCommonBundle::default(),
                     ))
                     .id();
                 if let Some(mut children) = e.get_mut::<Children>() {
@@ -492,23 +480,13 @@ impl ComponentPanel for RouteNode {
                         .position(|&ent| ent == e.id())
                         .unwrap_or(children.0.len());
                     let node = cmd
-                        .spawn((
-                            Parent(parent.0),
-                            Transform {
-                                translation: camera.position(),
-                                ..Default::default()
-                            },
-                            RouteNode {
+                        .spawn(RouteNode::make_budle(
+                            parent.0,
+                            RouteNodeHolder {
+                                pos: camera.position(),
                                 map_hash: scene.get_map_hash(),
                                 ..Default::default()
                             },
-                            RouteNode::icon(),
-                            RouteNode::default_label(),
-                            Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                            NodeFilter::Utility,
-                            Mutable,
-                            Global,
-                            RenderCommonBundle::default(),
                         ))
                         .id();
                     children.0.insert(index, node);
@@ -532,23 +510,13 @@ impl ComponentPanel for RouteNode {
                         .position(|&ent| ent == e.id())
                         .unwrap_or(children.0.len());
                     let node = cmd
-                        .spawn((
-                            Parent(parent.0),
-                            Transform {
-                                translation: camera.position(),
-                                ..Default::default()
-                            },
-                            RouteNode {
+                        .spawn(RouteNode::make_budle(
+                            parent.0,
+                            RouteNodeHolder {
+                                pos: camera.position(),
                                 map_hash: scene.get_map_hash(),
                                 ..Default::default()
                             },
-                            RouteNode::icon(),
-                            RouteNode::default_label(),
-                            Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                            NodeFilter::Utility,
-                            Mutable,
-                            Global,
-                            RenderCommonBundle::default(),
                         ))
                         .id();
                     children.0.insert(index + 1, node);
