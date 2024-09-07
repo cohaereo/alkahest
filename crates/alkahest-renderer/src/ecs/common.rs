@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use bevy_ecs::{bundle::Bundle, component::Component};
 use ecolor::Color32;
+use glam::Vec3;
 
 use super::visibility::VisibilityBundle;
 
@@ -57,6 +58,7 @@ impl Display for Icon {
 pub struct Label {
     pub label: String,
     pub default: bool,
+    pub offset: Vec3,
 }
 
 impl Display for Label {
@@ -71,7 +73,12 @@ impl Label {
         Self {
             label: s.to_string(),
             default: true,
+            offset: Vec3::new(0.0, 0.0, 0.0),
         }
+    }
+    pub fn with_offset(mut self, x: f32, y: f32, z: f32) -> Self {
+        self.offset = Vec3::new(x, y, z);
+        self
     }
 }
 
@@ -80,6 +87,7 @@ impl From<&str> for Label {
         Self {
             label: s.to_string(),
             default: false,
+            offset: Vec3::new(0.0, 0.0, 0.0),
         }
     }
 }
@@ -89,6 +97,7 @@ impl From<String> for Label {
         Self {
             label: s,
             default: false,
+            offset: Vec3::new(0.0, 0.0, 0.0),
         }
     }
 }
