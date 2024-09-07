@@ -1,5 +1,6 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, fmt::Write};
 
+use anyhow::Context;
 use bevy_ecs::{
     bundle::Bundle,
     entity::Entity,
@@ -209,6 +210,36 @@ pub struct RouteNodeBundle {
     pub util_common: UtilityCommonBundle,
 }
 
+impl RouteNodeBundle {
+    pub fn new(parent: Entity, node: RouteNodeHolder) -> Self {
+        Self {
+            parent: Parent(parent),
+            transform: Transform {
+                translation: node.pos,
+                flags: TransformFlags::IGNORE_ROTATION | TransformFlags::IGNORE_SCALE,
+                ..Default::default()
+            },
+            node: RouteNode {
+                map_hash: node.map_hash,
+                is_teleport: node.is_teleport,
+            },
+            global: Global,
+            util_common: UtilityCommonBundle {
+                label: if let Some(label) = node.label {
+                    RouteNode::label(&label)
+                } else {
+                    RouteNode::default_label()
+                },
+                icon: RouteNode::icon(),
+                filter: NodeFilter::Utility,
+                tags: Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                mutable: Mutable,
+                render_common: RenderCommonBundle::default(),
+            },
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct Route {
     pub color: Color,
@@ -235,25 +266,29 @@ impl Default for Route {
 }
 
 impl Route {
-    pub fn get_command(&self, scene: &Scene, entity: Entity) -> String {
+    pub fn get_command(&self, scene: &Scene, entity: Entity) -> anyhow::Result<String> {
         let mut command = String::from("route");
         if let Some(hash) = self.activity_hash.as_ref() {
-            command = format!("{} hash {}", command, hash.0);
+            write!(&mut command, " hash {}", hash.0)?;
         }
         if let Some(children) = scene.entity(entity).get::<Children>() {
             for child_ent in &children.0 {
-                let Some(pos) = scene.entity(*child_ent).get::<Transform>() else {
-                    return String::from("ERR");
-                };
-                let Some(node) = scene.entity(*child_ent).get::<RouteNode>() else {
-                    return String::from("ERR");
-                };
-                let Some(label) = scene.entity(*child_ent).get::<Label>() else {
-                    return String::from("ERR");
-                };
-                command = format!(
-                    "{} node {} {} {}{}{}{}",
-                    command,
+                let pos = scene
+                    .entity(*child_ent)
+                    .get::<Transform>()
+                    .context("Missing Transform")?;
+                let node = scene
+                    .entity(*child_ent)
+                    .get::<RouteNode>()
+                    .context("Missing Route Node")?;
+                let label = scene
+                    .entity(*child_ent)
+                    .get::<Label>()
+                    .context("Missing Label")?;
+
+                write!(
+                    &mut command,
+                    " node {} {} {}{}{}{}",
                     pos.translation[0],
                     pos.translation[1],
                     pos.translation[2],
@@ -268,10 +303,10 @@ impl Route {
                     } else {
                         String::new()
                     }
-                );
+                )?;
             }
         }
-        command
+        Ok(command)
     }
 
     pub fn fixup_visiblity(&self, scene: &Scene, cmd: &mut Commands, entity: Entity) {
@@ -318,36 +353,6 @@ impl Utility for RouteNode {
 
     fn default_label() -> Label {
         Label::new_default("").with_offset(0.0, 0.0, 0.12)
-    }
-}
-
-impl RouteNode {
-    pub fn make_budle(parent: Entity, node: RouteNodeHolder) -> RouteNodeBundle {
-        RouteNodeBundle {
-            parent: Parent(parent),
-            transform: Transform {
-                translation: node.pos,
-                flags: TransformFlags::IGNORE_ROTATION | TransformFlags::IGNORE_SCALE,
-                ..Default::default()
-            },
-            node: RouteNode {
-                map_hash: node.map_hash,
-                is_teleport: node.is_teleport,
-            },
-            global: Global,
-            util_common: UtilityCommonBundle {
-                label: if let Some(label) = node.label {
-                    RouteNode::label(&label)
-                } else {
-                    RouteNode::default_label()
-                },
-                icon: RouteNode::icon(),
-                filter: NodeFilter::Utility,
-                tags: Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                mutable: Mutable,
-                render_common: RenderCommonBundle::default(),
-            },
-        }
     }
 }
 

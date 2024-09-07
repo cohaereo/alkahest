@@ -253,7 +253,9 @@ fn select_child(resources: &mut AppResources) {
     if let Some(current) = selected.selected() {
         if let Some(map) = maps.current_map_mut() {
             if let Some(children) = map.scene.get::<Children>(current) {
-                selected.select(children.0[0]);
+                if !children.0.is_empty() {
+                    selected.select(children.0[0]);
+                }
             }
         }
     }

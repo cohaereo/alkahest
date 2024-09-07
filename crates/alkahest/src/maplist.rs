@@ -204,7 +204,9 @@ impl Map {
     ) {
         let mut new_children = Children(SmallVec::new());
         for child in children.0.iter() {
-            let old_entity_components = source.take_boxed(*child).unwrap();
+            let Some(old_entity_components) = source.take_boxed(*child) else {
+                continue;
+            };
             let new_entity = self.scene.spawn_boxed(old_entity_components);
             if new_selected.is_none() && selected.is_some_and(|e| e == *child) {
                 new_selected.replace(new_entity);

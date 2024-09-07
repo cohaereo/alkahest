@@ -215,9 +215,9 @@ pub fn show_inspector_panel(
                         |ui| {
                             for c in children.iter() {
                                 let title = if let Some(label) = scene.get::<Label>(*c) {
-                                    format!("{label} (id {})", scene.entity(*c).id())
+                                    format!("{label} (id {})", *c)
                                 } else {
-                                    format!("Entity {}", scene.entity(*c).id())
+                                    format!("Entity {}", *c)
                                 };
 
                                 if ui.selectable_label(false, title).clicked() {

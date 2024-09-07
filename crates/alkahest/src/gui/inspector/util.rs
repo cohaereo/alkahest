@@ -4,7 +4,9 @@ use alkahest_renderer::{
         hierarchy::{Children, Parent},
         resources::SelectedEntity,
         transform::Transform,
-        utility::{Beacon, Route, RouteNode, RouteNodeHolder, Ruler, Sphere, Utility},
+        utility::{
+            Beacon, Route, RouteNode, RouteNodeBundle, RouteNodeHolder, Ruler, Sphere, Utility,
+        },
         Scene, SceneInfo,
     },
     icons::{
@@ -387,7 +389,7 @@ impl ComponentPanel for Route {
                 || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_ADD_ROUTE_NODE_NEXT))
             {
                 let node = cmd
-                    .spawn(RouteNode::make_budle(
+                    .spawn(RouteNodeBundle::new(
                         e.id(),
                         RouteNodeHolder {
                             pos: camera.position(),
@@ -410,7 +412,10 @@ impl ComponentPanel for Route {
             .clicked()
         {
             let command = self.get_command(scene, e.id());
-            ui.output_mut(|o| o.copied_text = command);
+            match command {
+                Ok(cmd) => ui.output_mut(|o| o.copied_text = cmd),
+                Err(err) => error!("Failed to export route command for {}: {err}", e.id()),
+            }
         }
 
         if ui
@@ -480,7 +485,7 @@ impl ComponentPanel for RouteNode {
                         .position(|&ent| ent == e.id())
                         .unwrap_or(children.0.len());
                     let node = cmd
-                        .spawn(RouteNode::make_budle(
+                        .spawn(RouteNodeBundle::new(
                             parent.0,
                             RouteNodeHolder {
                                 pos: camera.position(),
@@ -510,7 +515,7 @@ impl ComponentPanel for RouteNode {
                         .position(|&ent| ent == e.id())
                         .unwrap_or(children.0.len());
                     let node = cmd
-                        .spawn(RouteNode::make_budle(
+                        .spawn(RouteNodeBundle::new(
                             parent.0,
                             RouteNodeHolder {
                                 pos: camera.position(),

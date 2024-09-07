@@ -6,7 +6,7 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
-        utility::{Beacon, Route, RouteNode, RouteNodeHolder, Ruler, Sphere, Utility},
+        utility::{Beacon, Route, RouteNodeBundle, RouteNodeHolder, Ruler, Sphere, Utility},
         SceneInfo,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
@@ -155,7 +155,7 @@ impl MenuBar {
                     .id();
                 let n = map
                     .scene
-                    .spawn(RouteNode::make_budle(
+                    .spawn(RouteNodeBundle::new(
                         route_id,
                         RouteNodeHolder {
                             pos: camera.position(),

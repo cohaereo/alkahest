@@ -8,7 +8,7 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
         transform::Transform,
-        utility::{Route, RouteHolder, RouteNode, Utility},
+        utility::{Route, RouteHolder, RouteNode, RouteNodeBundle, Utility},
     },
     resources::AppResources,
 };
@@ -210,7 +210,7 @@ impl Action for SpawnRouteAction {
                 let parent = map.scene.spawn_empty().id();
                 let mut children = vec![];
                 for node in route.path {
-                    let e = map.scene.spawn(RouteNode::make_budle(parent, node)).id();
+                    let e = map.scene.spawn(RouteNodeBundle::new(parent, node)).id();
                     children.push(e);
                 }
                 map.scene.entity_mut(parent).insert((
