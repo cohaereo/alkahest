@@ -271,14 +271,15 @@ impl Renderer {
             );
         }
 
+        scene.run_system_once_with(
+            resources.get::<RendererShared>().clone(),
+            draw_utilities_system,
+        );
+
         // TODO(cohae): Move debug shapes to a separate system
         scene.run_system_once_with(
             resources.get::<RendererShared>().clone(),
             draw_debugshapes_system,
-        );
-        scene.run_system_once_with(
-            resources.get::<RendererShared>().clone(),
-            draw_utilities_system,
         );
         // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
