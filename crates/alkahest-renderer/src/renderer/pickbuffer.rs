@@ -18,10 +18,7 @@ use windows::Win32::{
 };
 
 use crate::{
-    ecs::{
-        render::draw_entity,
-        Scene,
-    },
+    ecs::{render::draw_entity, Scene},
     gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
     gpu_event, include_dxbc,
     renderer::{

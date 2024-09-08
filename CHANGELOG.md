@@ -39,6 +39,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Global channel labels/input field types
 - Added an empty map instead of a scratch scene
 - Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
+- Added Arrow Hotkeys to navigate selected object heirarchies @Froggy618157725
+  in [#36](https://github.com/cohaereo/alkahest/pull/36)
+- Added hotkeys to add to current route. + adds at the end of the route, or after current node, - adds before the selected node
 
 ### Changed
 
@@ -46,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Abstract global/fullscreen pipelines
 - Replaced `hecs` with `bevy-ecs`
 - Use bevy-ecs change detection to update cbuffers
+- Improved Route UI. Can now use translation gizmo for small adjustments
 
 ### Fixed
 
