@@ -1,6 +1,11 @@
+use std::f32::consts::PI;
+
 use alkahest_renderer::{
     camera::Camera,
-    ecs::{resources::SelectedEntity, transform::Transform},
+    ecs::{
+        resources::SelectedEntity,
+        transform::{Transform, TransformFlags},
+    },
     icons::{ICON_AXIS_ARROW, ICON_CURSOR_DEFAULT, ICON_RESIZE, ICON_ROTATE_ORBIT},
     renderer::Renderer,
     resources::AppResources,
@@ -9,9 +14,10 @@ use egui::{
     epaint::Vertex, Context, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding, Ui,
     UiStackInfo,
 };
-use glam::{DQuat, DVec3};
+use glam::{DQuat, DVec3, Quat, Vec3};
 use transform_gizmo_egui::{
-    math::Transform as GTransform, Gizmo, GizmoConfig, GizmoInteraction, GizmoResult,
+    math::Transform as GTransform, EnumSet, Gizmo, GizmoConfig, GizmoInteraction, GizmoMode,
+    GizmoResult,
 };
 use winit::window::Window;
 
@@ -111,6 +117,13 @@ impl GuiView for GizmoSelector {
     }
 }
 
+#[derive(Default)]
+pub struct GizmoInfo {
+    pub gizmo: Gizmo,
+    pub mode_filter: Option<EnumSet<GizmoMode>>,
+    pub rotation_axis: Option<Vec3>,
+}
+
 pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources: &AppResources) {
     let Some(selected) = resources.get::<SelectedEntity>().selected() else {
         return;
@@ -134,26 +147,69 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
         };
         let camera = resources.get::<Camera>();
 
-        let mut gizmo = resources.get_mut::<Gizmo>();
-        let old_config = *gizmo.config();
-        gizmo.update_config(GizmoConfig {
-            view_matrix: camera.world_to_camera.as_dmat4().into(),
-            projection_matrix: camera.camera_to_projective.as_dmat4().into(),
-            modes: gizmo_mode.to_enumset(),
-            ..old_config
-        });
+        let mut gizmo_info = resources.get_mut::<Vec<GizmoInfo>>();
 
-        if let Some((_result, new_transform)) = gizmo_interact(
-            &mut gizmo,
+        for (i, info) in gizmo_info.iter_mut().enumerate() {
+            let old_config = *info.gizmo.config();
+
+            if transform
+                .flags
+                .contains(TransformFlags::SCALE_IS_BIDIRECTIONAL)
+                || i == 1
+            {
+                info.gizmo.update_config(GizmoConfig {
+                    view_matrix: camera.world_to_camera.as_dmat4().into(),
+                    projection_matrix: camera.camera_to_projective.as_dmat4().into(),
+                    modes: match info.mode_filter {
+                        Some(filter) => gizmo_mode.to_enumset().intersection(filter),
+                        None => gizmo_mode.to_enumset(),
+                    },
+                    ..old_config
+                });
+            } else {
+                info.gizmo.update_config(GizmoConfig {
+                    view_matrix: camera.world_to_camera.as_dmat4().into(),
+                    projection_matrix: camera.camera_to_projective.as_dmat4().into(),
+                    modes: EnumSet::empty(),
+                    ..old_config
+                });
+            }
+        }
+
+        let end = if transform
+            .flags
+            .contains(TransformFlags::SCALE_IS_BIDIRECTIONAL)
+        {
+            gizmo_info.len()
+        } else {
+            gizmo_info.len().min(1)
+        };
+
+        if let Some((_result, new_transform, i)) = gizmo_interact(
+            &mut gizmo_info[..end],
             ctx,
             &[GTransform {
                 scale: transform.scale.as_dvec3().into(),
                 rotation: transform.rotation.as_dquat().into(),
                 translation: transform.translation.as_dvec3().into(),
             }],
+            &mut [GTransform::default()],
         ) {
             renderer.pickbuffer.cancel_request();
-            transform.translation = DVec3::from(new_transform[0].translation).as_vec3();
+
+            transform.translation = DVec3::from(new_transform[0].translation).as_vec3()
+                + if transform
+                    .flags
+                    .contains(TransformFlags::SCALE_IS_BIDIRECTIONAL)
+                {
+                    if i == 0 {
+                        DVec3::from(new_transform[0].scale).as_vec3() - transform.scale
+                    } else {
+                        transform.scale - DVec3::from(new_transform[0].scale).as_vec3()
+                    }
+                } else {
+                    Vec3::ZERO
+                };
             transform.rotation = DQuat::from(new_transform[0].rotation).as_quat().normalize();
             transform.scale = DVec3::from(new_transform[0].scale).as_vec3();
         }
@@ -162,52 +218,77 @@ pub fn draw_transform_gizmos(renderer: &Renderer, ctx: &egui::Context, resources
 
 #[must_use]
 fn gizmo_interact(
-    gizmo: &mut Gizmo,
+    gizmo_info: &mut [GizmoInfo],
     ctx: &egui::Context,
     targets: &[GTransform],
-) -> Option<(GizmoResult, Vec<GTransform>)> {
+    targets_scratch: &mut [GTransform],
+) -> Option<(GizmoResult, Vec<GTransform>, usize)> {
     let cursor_pos = ctx
         .input(|input| input.pointer.hover_pos())
         .unwrap_or_default();
 
-    let mut viewport = gizmo.config().viewport;
-    if !viewport.is_finite() {
-        viewport = ctx.screen_rect();
+    let mut active_result = None;
+    for (i, info) in gizmo_info.iter_mut().enumerate() {
+        let mut viewport = info.gizmo.config().viewport;
+        if !viewport.is_finite() {
+            viewport = ctx.screen_rect();
+        }
+        info.gizmo.update_config(GizmoConfig {
+            viewport,
+            pixels_per_point: ctx.pixels_per_point(),
+            ..*info.gizmo.config()
+        });
+        if active_result.is_none() {
+            for (target, target_scratch) in targets.iter().zip(targets_scratch.iter_mut()) {
+                target_scratch.rotation = if let Some(axis) = info.rotation_axis {
+                    DQuat::from(target.rotation)
+                        .as_quat()
+                        .mul_quat(Quat::from_axis_angle(axis, PI))
+                        .as_dquat()
+                        .into()
+                } else {
+                    target.rotation
+                };
+                target_scratch.translation = target.translation;
+                target_scratch.scale = target.scale;
+            }
+            let gizmo_result = info.gizmo.update(
+                GizmoInteraction {
+                    cursor_pos: (cursor_pos.x, cursor_pos.y),
+                    drag_started: ctx
+                        .input(|input| input.pointer.button_pressed(PointerButton::Primary)),
+                    dragging: ctx.input(|input| input.pointer.button_down(PointerButton::Primary)),
+                },
+                targets_scratch,
+            );
+            active_result = gizmo_result.map(|(g, v)| (g, v, i));
+        }
     }
 
-    gizmo.update_config(GizmoConfig {
-        viewport,
-        pixels_per_point: ctx.pixels_per_point(),
-        ..*gizmo.config()
-    });
+    for (i, info) in gizmo_info.iter_mut().enumerate() {
+        if active_result
+            .as_ref()
+            .map_or(true, |(_, _, active)| *active == i)
+        {
+            let draw_data = info.gizmo.draw();
 
-    let gizmo_result = gizmo.update(
-        GizmoInteraction {
-            cursor_pos: (cursor_pos.x, cursor_pos.y),
-            drag_started: ctx.input(|input| input.pointer.button_pressed(PointerButton::Primary)),
-            dragging: ctx.input(|input| input.pointer.button_down(PointerButton::Primary)),
-        },
-        targets,
-    );
-
-    let draw_data = gizmo.draw();
-
-    ctx.layer_painter(egui::LayerId::background())
-        // .with_clip_rect(egui_viewport)
-        .add(Mesh {
-            indices: draw_data.indices,
-            vertices: draw_data
-                .vertices
-                .into_iter()
-                .zip(draw_data.colors)
-                .map(|(pos, [r, g, b, a])| Vertex {
-                    pos: pos.into(),
-                    uv: Pos2::default(),
-                    color: Rgba::from_rgba_premultiplied(r, g, b, a).into(),
-                })
-                .collect(),
-            ..Default::default()
-        });
-
-    gizmo_result
+            ctx.layer_painter(egui::LayerId::background())
+                // .with_clip_rect(egui_viewport)
+                .add(Mesh {
+                    indices: draw_data.indices,
+                    vertices: draw_data
+                        .vertices
+                        .into_iter()
+                        .zip(draw_data.colors)
+                        .map(|(pos, [r, g, b, a])| Vertex {
+                            pos: pos.into(),
+                            uv: Pos2::default(),
+                            color: Rgba::from_rgba_premultiplied(r, g, b, a).into(),
+                        })
+                        .collect(),
+                    ..Default::default()
+                });
+        }
+    }
+    active_result
 }

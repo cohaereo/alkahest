@@ -2,13 +2,20 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Global, Icon, Label, Mutable, RenderCommonBundle},
+        hierarchy::Children,
         resources::SelectedEntity,
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
+        utility::{
+            Beacon, Cuboid, CuboidBundle, Route, RouteNodeBundle, RouteNodeHolder, Ruler, Sphere,
+            Utility,
+        },
         SceneInfo,
     },
-    icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    icons::{
+        ICON_CUBE_OUTLINE, ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE,
+        ICON_SPHERE,
+    },
     renderer::RendererShared,
     resources::AppResources,
     shader::shader_ball::ShaderBallComponent,
@@ -74,7 +81,11 @@ impl MenuBar {
                 let e = map.scene.spawn((
                     NodeFilter::Utility,
                     Transform {
-                        translation: if distance > 24.0 { position_base } else { pos },
+                        translation: if !pos.is_finite() || distance > 24.0 {
+                            position_base
+                        } else {
+                            pos
+                        },
                         scale: Vec3::splat(9.0),
                         flags: TransformFlags::IGNORE_ROTATION | TransformFlags::SCALE_IS_RADIUS,
                         ..Default::default()
@@ -85,6 +96,36 @@ impl MenuBar {
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                     RenderCommonBundle::default(),
+                ));
+
+                resources.get_mut::<SelectedEntity>().select(e.id());
+
+                ui.close_menu();
+            }
+        }
+        if ui.button(format!("{} Cuboid", ICON_CUBE_OUTLINE)).clicked() {
+            let mut maps = resources.get_mut::<MapList>();
+            let renderer = resources.get::<RendererShared>();
+            let camera = resources.get::<Camera>();
+            let (distance, pos) = renderer
+                .data
+                .lock()
+                .gbuffers
+                .depth_buffer_distance_pos_center(&camera);
+            if let Some(map) = maps.current_map_mut() {
+                let camera = resources.get::<Camera>();
+                let position_base = camera.position() + camera.forward() * 24.0;
+                let e = map.scene.spawn(CuboidBundle::new(
+                    Transform {
+                        translation: if !pos.is_finite() || distance > 24.0 {
+                            position_base
+                        } else {
+                            pos
+                        },
+                        scale: Vec3::splat(12.0),
+                        ..Default::default()
+                    },
+                    Cuboid::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());
@@ -107,7 +148,7 @@ impl MenuBar {
                 let e = map.scene.spawn((
                     NodeFilter::Utility,
                     Transform {
-                        translation: if distance > 24.0 {
+                        translation: if !pos.is_finite() || distance > 24.0 {
                             camera.position()
                         } else {
                             pos
@@ -136,27 +177,38 @@ impl MenuBar {
             let camera = resources.get::<Camera>();
 
             if let Some(map) = maps.current_map_mut() {
-                let e = map.scene.spawn((
-                    NodeFilter::Utility,
-                    Route {
-                        path: vec![RouteNode {
+                let route_id = map
+                    .scene
+                    .spawn((
+                        Route {
+                            activity_hash: map.scene.get_activity_hash(),
+                            ..Default::default()
+                        },
+                        Route::icon(),
+                        Route::default_label(),
+                        NodeFilter::Utility,
+                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                        Mutable,
+                        Global,
+                        RenderCommonBundle::default(),
+                    ))
+                    .id();
+                let n = map
+                    .scene
+                    .spawn(RouteNodeBundle::new(
+                        route_id,
+                        RouteNodeHolder {
                             pos: camera.position(),
                             map_hash: map.scene.get_map_hash(),
-                            is_teleport: false,
-                            label: None,
-                        }],
-                        activity_hash: map.scene.get_activity_hash(),
-                        ..Default::default()
-                    },
-                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                    Route::icon(),
-                    Route::default_label(),
-                    Mutable,
-                    Global,
-                    RenderCommonBundle::default(),
-                ));
+                            ..Default::default()
+                        },
+                    ))
+                    .id();
+                map.scene
+                    .entity_mut(route_id)
+                    .insert(Children::from_slice(&[n]));
 
-                resources.get_mut::<SelectedEntity>().select(e.id());
+                resources.get_mut::<SelectedEntity>().select(route_id);
 
                 ui.close_menu();
             }
