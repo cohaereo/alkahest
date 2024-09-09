@@ -5,7 +5,7 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         route::{Route, RouteNode, RouteNodeBundle, RouteNodeData},
         transform::Transform,
-        utility::{Beacon, Ruler, Sphere, Utility},
+        utility::{Beacon, Cuboid, Ruler, Sphere, Utility},
         Scene, SceneInfo,
     },
     icons::{
@@ -197,6 +197,40 @@ impl ComponentPanel for Sphere {
                     .range(2..=32),
             )
         });
+
+        ui.horizontal(|ui| {
+            color_edit_button_rgba(ui, &mut self.color, Alpha::OnlyBlend).context_menu(|ui| {
+                ui.checkbox(&mut self.rainbow, "Rainbow mode");
+            });
+
+            ui.label("Color");
+        });
+    }
+}
+
+impl ComponentPanel for Cuboid {
+    fn inspector_name() -> &'static str {
+        "Cuboid"
+    }
+
+    fn inspector_icon() -> char {
+        Self::icon().char()
+    }
+
+    fn show_inspector_ui(
+        &mut self,
+        _: &mut Scene,
+        _: &mut Commands<'_, '_>,
+        e: EntityRef<'_>,
+        ui: &mut egui::Ui,
+        _resources: &AppResources,
+    ) {
+        if !e.contains::<Transform>() {
+            ui.label(format!(
+                "{} This entity has no transform component",
+                ICON_ALERT
+            ));
+        }
 
         ui.horizontal(|ui| {
             color_edit_button_rgba(ui, &mut self.color, Alpha::OnlyBlend).context_menu(|ui| {
