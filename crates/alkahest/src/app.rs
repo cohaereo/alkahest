@@ -17,9 +17,9 @@ use alkahest_renderer::{
 use bevy_tasks::{ComputeTaskPool, TaskPool};
 use egui::{Key, KeyboardShortcut, Modifiers};
 use gilrs::{EventType, Gilrs};
-use glam::Vec2;
+use glam::{Vec2, Vec3};
 use strum::IntoEnumIterator;
-use transform_gizmo_egui::{EnumSet, Gizmo, GizmoConfig, GizmoOrientation};
+use transform_gizmo_egui::{enum_set, EnumSet, Gizmo, GizmoConfig, GizmoMode, GizmoOrientation};
 use windows::core::HRESULT;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -33,7 +33,7 @@ use crate::{
     gui::{
         activity_select::{get_map_name, set_activity, ActivityBrowser, CurrentActivity},
         context::{GuiContext, GuiViewManager, HiddenWindows},
-        gizmo::draw_transform_gizmos,
+        gizmo::{draw_transform_gizmos, GizmoInfo},
         hotkeys,
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
@@ -117,12 +117,35 @@ impl AlkahestApp {
         let stringmap = Arc::new(StringContainer::load_all_global());
         resources.insert(stringmap);
 
-        let gizmo = Gizmo::new(GizmoConfig {
-            modes: EnumSet::all(),
-            orientation: GizmoOrientation::Local,
-            ..Default::default()
-        });
-        resources.insert(gizmo);
+        let gizmos = vec![
+            GizmoInfo {
+                gizmo: Gizmo::new(GizmoConfig {
+                    modes: EnumSet::all(),
+                    orientation: GizmoOrientation::Local,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            GizmoInfo {
+                gizmo: Gizmo::new(GizmoConfig {
+                    modes: EnumSet::all(),
+                    orientation: GizmoOrientation::Local,
+                    ..Default::default()
+                }),
+                mode_filter: Some(GizmoMode::ScaleX | GizmoMode::ScaleY),
+                rotation_axis: Some(Vec3::Z),
+            },
+            GizmoInfo {
+                gizmo: Gizmo::new(GizmoConfig {
+                    modes: EnumSet::all(),
+                    orientation: GizmoOrientation::Local,
+                    ..Default::default()
+                }),
+                mode_filter: Some(enum_set!(GizmoMode::ScaleZ)),
+                rotation_axis: Some(Vec3::X),
+            },
+        ];
+        resources.insert(gizmos);
 
         resources
             .get_mut::<GuiViewManager>()

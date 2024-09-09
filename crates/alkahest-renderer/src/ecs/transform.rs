@@ -119,6 +119,7 @@ bitflags! {
         const IGNORE_SCALE = 1 << 2;
 
         const SCALE_IS_RADIUS = 1 << 3;
+        const SCALE_IS_BIDIRECTIONAL = 1 << 4;
     }
 }
 
