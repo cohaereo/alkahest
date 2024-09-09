@@ -16,7 +16,7 @@ use alkahest_renderer::{
         resources::SelectedEntity,
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere},
+        utility::{Beacon, Cuboid, Route, RouteNode, Ruler, Sphere},
         visibility::{Visibility, VisibilityHelper},
         Scene,
     },
@@ -295,6 +295,7 @@ fn show_inspector_components(
         // EntityWorldId,
         Ruler,
         Sphere,
+        Cuboid,
         Beacon,
         Route,
         RouteNode,
@@ -454,6 +455,11 @@ impl ComponentPanel for Transform {
                             self.scale = Vec3::splat(
                                 (self.translation - camera.position()).length().max(0.1),
                             );
+                        }
+                    } else if self.flags.contains(TransformFlags::SCALE_IS_BIDIRECTIONAL) {
+                        let mut scale = self.scale * 2.0;
+                        if input_float3!(ui, format!("{ICON_RESIZE} Sides"), &mut scale).inner {
+                            self.scale = scale / 2.0;
                         }
                     } else {
                         input_float3!(ui, format!("{ICON_RESIZE} Scale"), &mut self.scale).inner;
