@@ -40,7 +40,7 @@ impl ComponentPanel for Ruler {
     }
 
     fn inspector_icon() -> char {
-        Ruler::icon().char()
+        Self::icon().char()
     }
 
     fn show_inspector_ui(
@@ -173,7 +173,7 @@ impl ComponentPanel for Sphere {
     }
 
     fn inspector_icon() -> char {
-        Sphere::icon().char()
+        Self::icon().char()
     }
 
     fn show_inspector_ui(
@@ -250,7 +250,7 @@ impl ComponentPanel for Beacon {
     }
 
     fn inspector_icon() -> char {
-        Beacon::icon().char()
+        Self::icon().char()
     }
 
     fn show_inspector_ui(
@@ -356,7 +356,7 @@ impl ComponentPanel for Route {
     }
 
     fn inspector_icon() -> char {
-        Route::icon().char()
+        Self::icon().char()
     }
 
     fn show_inspector_ui(
@@ -472,7 +472,7 @@ impl ComponentPanel for RouteNode {
     }
 
     fn inspector_icon() -> char {
-        RouteNode::icon().char()
+        Self::icon().char()
     }
 
     fn show_inspector_ui(

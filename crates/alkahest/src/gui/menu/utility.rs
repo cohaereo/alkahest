@@ -81,7 +81,11 @@ impl MenuBar {
                 let e = map.scene.spawn((
                     NodeFilter::Utility,
                     Transform {
-                        translation: if distance > 24.0 { position_base } else { pos },
+                        translation: if !pos.is_finite() || distance > 24.0 {
+                            position_base
+                        } else {
+                            pos
+                        },
                         scale: Vec3::splat(9.0),
                         flags: TransformFlags::IGNORE_ROTATION | TransformFlags::SCALE_IS_RADIUS,
                         ..Default::default()
@@ -144,7 +148,7 @@ impl MenuBar {
                 let e = map.scene.spawn((
                     NodeFilter::Utility,
                     Transform {
-                        translation: if distance > 24.0 {
+                        translation: if !pos.is_finite() || distance > 24.0 {
                             camera.position()
                         } else {
                             pos
