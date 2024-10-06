@@ -65,19 +65,17 @@ pub fn set_activity(activity: impl Into<ds::activity::ActivityArgs>) {
 }
 
 pub fn set_activity_from_map(map: &Map) {
-    let details = format!("Viewing a map ({})", map.hash);
-    let state = format!(
-        "'{}' ({})",
-        map.name,
-        package_manager().package_paths[&map.hash.pkg_id()].name
-    );
+    if let Some(map_pkg_path) = package_manager().package_paths.get(&map.hash.pkg_id()) {
+        let details = format!("Viewing a map ({})", map.hash);
+        let state = format!("'{}' ({})", map.name, map_pkg_path.name);
 
-    let rp = default_activity_builder()
-        .details(details)
-        .state(state)
-        .start_timestamp(SystemTime::now());
+        let rp = default_activity_builder()
+            .details(details)
+            .state(state)
+            .start_timestamp(SystemTime::now());
 
-    set_activity(rp);
+        set_activity(rp);
+    }
 }
 
 fn default_activity_builder() -> ds::activity::ActivityBuilder {

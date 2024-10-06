@@ -54,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix atmosphere rendering for TFS
 - Rewrote TFX bytecode op 0xe to merge_3_1
 - Fix cross-compilation on Linux by using FXC instead of D3DCompile
+- Fixed a random Discord presence related crash
 
 ## 0.5.0 - 2024-07-24
 
