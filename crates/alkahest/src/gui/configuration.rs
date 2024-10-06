@@ -187,6 +187,10 @@ impl GuiView for RenderSettingsPanel {
                         "⚠ Global Lighting",
                         &mut c.renderer.feature_global_lighting,
                     );
+                    render_feat_vis(ui, "FXAA", &mut c.renderer.feature_fxaa);
+                    if c.renderer.feature_fxaa {
+                        render_feat_vis(ui, "FXAA Noise", &mut c.renderer.fxaa_noise);
+                    }
                 });
 
                 ui.separator();

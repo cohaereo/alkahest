@@ -6,6 +6,7 @@ pub use immediate::{ImmediateLabel, LabelAlign};
 mod lighting_pass;
 mod opaque_pass;
 mod pickbuffer;
+mod postprocess;
 pub mod shader;
 mod shadows;
 mod systems;
@@ -184,6 +185,8 @@ impl Renderer {
             self.draw_lighting_pass(scene);
             self.draw_shading_pass(scene);
             self.draw_transparents_pass(scene);
+
+            self.draw_postprocessing_pass(scene);
 
             if self.pickbuffer.selection_request.load().is_some() {
                 self.draw_pickbuffer(scene, resources.get::<SelectedEntity>().selected());
@@ -516,6 +519,7 @@ pub struct RendererSettings {
     pub feature_atmosphere: bool,
     pub feature_cubemaps: bool,
     pub feature_global_lighting: bool,
+    pub feature_fxaa: bool,
 
     #[serde(skip, default = "default_true")]
     pub stage_transparent: bool,
@@ -523,6 +527,9 @@ pub struct RendererSettings {
     pub stage_decals: bool,
     #[serde(skip, default = "default_true")]
     pub stage_decals_additive: bool,
+
+    #[serde(skip, default = "default_true")]
+    pub fxaa_noise: bool,
 
     // #[serde(skip, default = "default_true")]
     // pub depth_prepass: bool,
@@ -548,10 +555,13 @@ impl Default for RendererSettings {
             feature_atmosphere: false,
             feature_cubemaps: false,
             feature_global_lighting: false,
+            feature_fxaa: true,
 
             stage_transparent: true,
             stage_decals: true,
             stage_decals_additive: true,
+
+            fxaa_noise: true,
 
             // depth_prepass: true,
             debug_view: RenderDebugView::None,

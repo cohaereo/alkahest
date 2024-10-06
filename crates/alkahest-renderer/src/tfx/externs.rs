@@ -85,6 +85,7 @@ pub struct ExternStorage {
     pub decorator_wind: Option<DecoratorWind>,
     pub postprocess: Option<Postprocess>,
     pub shadow_mask: Option<ShadowMask>,
+    pub fxaa: Option<Fxaa>,
 
     pub global_channels: [GlobalChannel; 256],
     pub global_channels_used: RwLock<[usize; 256]>,
@@ -113,6 +114,7 @@ impl Default for ExternStorage {
             decorator_wind: Some(DecoratorWind::default()),
             postprocess: None,
             shadow_mask: None,
+            fxaa: Some(Fxaa::default()),
 
             global_channels: get_global_channel_defaults(),
             global_channels_used: RwLock::new([0; 256]),
@@ -255,6 +257,7 @@ impl ExternStorage {
             DecoratorWind => self.decorator_wind,
             Postprocess => self.postprocess,
             ShadowMask => self.shadow_mask,
+            Fxaa => self.fxaa,
         }
     }
 
@@ -292,7 +295,8 @@ impl ExternStorage {
             SpeedtreePlacements,
             DecoratorWind,
             Postprocess,
-            ShadowMask
+            ShadowMask,
+            Fxaa
         }
     }
 
@@ -811,6 +815,17 @@ extern_struct! {
         0x20 => unk20: Vec4,
         0x30 => unk30: f32,
         0x34 => unk34: f32,
+    }
+}
+
+extern_struct! {
+    struct Fxaa("fxaa") {
+        0x00 => source_texture: TextureView,
+        0x50 => fxaa_param0: f32 > default(0.75),
+        0x54 => fxaa_param1: f32 > default(1. / 6.0),
+        0x58 => fxaa_param2: f32 > default(1. / 12.0),
+        0x80 => noise_time: f32,
+        0x90 => noise_intensity_scale: Vec4 > default(Vec4::new(0.25, -0.225, 0.40, 0.96)),
     }
 }
 
