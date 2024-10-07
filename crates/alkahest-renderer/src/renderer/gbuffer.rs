@@ -202,6 +202,9 @@ impl GBuffer {
         self.atmos_ss_far_lookup.resize(new_size)?;
         self.ssao_intermediate.resize(new_size)?;
 
+        self.postprocess_ping.resize(new_size)?;
+        self.postprocess_pong.resize(new_size)?;
+
         self.current_size = new_size;
         Ok(())
     }
