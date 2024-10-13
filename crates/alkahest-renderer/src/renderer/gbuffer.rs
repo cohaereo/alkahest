@@ -9,7 +9,12 @@ use windows::Win32::Graphics::{
     Dxgi::Common::*,
 };
 
-use crate::{camera::Camera, gpu::SharedGpuContext, gpu_event, util::d3d::D3dResource};
+use crate::{
+    camera::Camera,
+    gpu::SharedGpuContext,
+    gpu_event,
+    util::{d3d::D3dResource, Hocus},
+};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,
@@ -31,7 +36,26 @@ pub struct GBuffer {
     pub atmos_ss_far_lookup: RenderTarget,
     pub atmos_ss_near_lookup: RenderTarget,
 
+    pub postprocess_ping: RenderTarget,
+    pub postprocess_pong: RenderTarget,
+    postprocess_pingpong: PingPong,
+
     current_size: (u32, u32),
+}
+
+#[derive(PartialEq)]
+enum PingPong {
+    Ping,
+    Pong,
+}
+
+impl PingPong {
+    pub fn flip(&mut self) {
+        *self = match self {
+            PingPong::Ping => PingPong::Pong,
+            PingPong::Pong => PingPong::Ping,
+        }
+    }
 }
 
 impl GBuffer {
@@ -61,21 +85,21 @@ impl GBuffer {
 
             light_diffuse: RenderTarget::create(
                 size,
-                DxgiFormat::R16G16B16A16_FLOAT,
+                DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
                 "Light_Diffuse",
             )
             .context("Light_Diffuse")?,
             light_specular: RenderTarget::create(
                 size,
-                DxgiFormat::R16G16B16A16_FLOAT,
+                DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
                 "Light_Specular",
             )
             .context("Light_Specular")?,
             light_ibl_specular: RenderTarget::create(
                 size,
-                DxgiFormat::R16G16B16A16_FLOAT,
+                DxgiFormat::R11G11B10_FLOAT,
                 gctx.clone(),
                 "Specular_IBL",
             )
@@ -126,6 +150,22 @@ impl GBuffer {
             )
             .context("atmos_ss_near_lookup")?,
 
+            postprocess_ping: RenderTarget::create(
+                size,
+                DxgiFormat::R8G8B8A8_UNORM_SRGB,
+                gctx.clone(),
+                "postprocess_ping",
+            )
+            .context("postprocess_ping")?,
+            postprocess_pong: RenderTarget::create(
+                size,
+                DxgiFormat::R8G8B8A8_UNORM_SRGB,
+                gctx.clone(),
+                "postprocess_ping",
+            )
+            .context("postprocess_ping")?,
+            postprocess_pingpong: PingPong::Ping,
+
             current_size: size,
         })
     }
@@ -162,6 +202,9 @@ impl GBuffer {
         self.atmos_ss_far_lookup.resize(new_size)?;
         self.ssao_intermediate.resize(new_size)?;
 
+        self.postprocess_ping.resize(new_size)?;
+        self.postprocess_pong.resize(new_size)?;
+
         self.current_size = new_size;
         Ok(())
     }
@@ -193,6 +236,27 @@ impl GBuffer {
             .project_point3(Vec3::new(0.0, 0.0, raw_depth));
         let distance = (pos - camera.position()).length();
         (distance, pos)
+    }
+
+    /// Returns (source, target). If `swap_after_use` is enabled, the order of the buffers will be reversed on the next call
+    pub fn get_postprocess_rt(&self, swap_after_use: bool) -> (&RenderTarget, &RenderTarget) {
+        let r = match self.postprocess_pingpong {
+            PingPong::Ping => (&self.postprocess_ping, &self.postprocess_pong),
+            PingPong::Pong => (&self.postprocess_pong, &self.postprocess_ping),
+        };
+        if swap_after_use {
+            self.postprocess_pingpong.pocus().flip();
+        }
+
+        r
+    }
+
+    /// Get the last rendertarget that was written to in the postprocess pass
+    pub fn get_postprocess_output(&self) -> &RenderTarget {
+        match self.postprocess_pingpong {
+            PingPong::Ping => &self.postprocess_ping,
+            PingPong::Pong => &self.postprocess_pong,
+        }
     }
 }
 

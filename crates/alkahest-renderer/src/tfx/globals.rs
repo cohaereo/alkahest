@@ -162,6 +162,7 @@ tfx_global_pipelines! {
     ssao_bilateral_filter,
     ssao_compute_ao_3D_ps,
     fxaa,
+    fxaa_noise,
 
     // Atmosphere/Sky
     hemisphere_sky_color_generate,

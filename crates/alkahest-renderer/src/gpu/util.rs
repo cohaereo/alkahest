@@ -13,6 +13,7 @@ pub struct UtilResources {
     pub blit_vs: ID3D11VertexShader,
     pub blit_ps: ID3D11PixelShader,
     pub blit_srgb_ps: ID3D11PixelShader,
+    pub blit_alphaluminance_ps: ID3D11PixelShader,
 
     pub point_sampler: ID3D11SamplerState,
 }
@@ -30,6 +31,9 @@ impl UtilResources {
             .unwrap();
         let blit_srgb_ps = device
             .load_pixel_shader(include_dxbc!(ps "util/blit_srgb.hlsl"))
+            .unwrap();
+        let blit_alphaluminance_ps = device
+            .load_pixel_shader(include_dxbc!(ps "util/copy_with_luminance_as_alpha.hlsl"))
             .unwrap();
 
         let point_sampler = device
@@ -52,6 +56,7 @@ impl UtilResources {
             blit_vs,
             blit_ps,
             blit_srgb_ps,
+            blit_alphaluminance_ps,
             point_sampler,
         }
     }
@@ -65,20 +70,43 @@ impl GpuContext {
         srgb: bool,
     ) {
         gpu_event!(self, "blit_texture");
+        self.blit_internal(
+            texture_view,
+            rt,
+            if srgb {
+                &self.util_resources.blit_srgb_ps
+            } else {
+                &self.util_resources.blit_ps
+            },
+        );
+    }
+
+    pub fn blit_texture_alphaluminance(
+        &self,
+        texture_view: &ID3D11ShaderResourceView,
+        rt: &ID3D11RenderTargetView,
+    ) {
+        gpu_event!(self, "blit_texture_alphaluminance");
+        self.blit_internal(
+            texture_view,
+            rt,
+            &self.util_resources.blit_alphaluminance_ps,
+        );
+    }
+
+    fn blit_internal(
+        &self,
+        texture_view: &ID3D11ShaderResourceView,
+        rt: &ID3D11RenderTargetView,
+        shader: &ID3D11PixelShader,
+    ) {
         unsafe {
             self.set_blend_state(0);
             // self.set_rasterizer_state(0);
             self.context.RSSetState(None);
 
             self.context.VSSetShader(&self.util_resources.blit_vs, None);
-            self.context.PSSetShader(
-                if srgb {
-                    &self.util_resources.blit_srgb_ps
-                } else {
-                    &self.util_resources.blit_ps
-                },
-                None,
-            );
+            self.context.PSSetShader(shader, None);
 
             self.set_input_topology(EPrimitiveType::Triangles);
             self.context
