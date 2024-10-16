@@ -8,7 +8,7 @@ use alkahest_renderer::{
     renderer::RendererShared,
     util::color::Color,
 };
-use bevy_ecs::prelude::EntityRef;
+use bevy_ecs::{prelude::EntityRef, system::Commands};
 use egui::{Color32, RichText, Ui};
 
 use crate::{gui::inspector::ComponentPanel, resources::AppResources};
@@ -25,6 +25,7 @@ impl ComponentPanel for SLightCollection {
     fn show_inspector_ui<'s>(
         &mut self,
         scene: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         e: EntityRef<'s>,
         _ui: &mut Ui,
         resources: &AppResources,
@@ -66,6 +67,7 @@ impl ComponentPanel for LightRenderer {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         e: EntityRef<'s>,
         ui: &mut Ui,
         resources: &AppResources,
@@ -140,6 +142,7 @@ impl ComponentPanel for CubemapVolume {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         e: EntityRef<'s>,
         _: &mut Ui,
         resources: &AppResources,
