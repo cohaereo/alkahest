@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added an empty map instead of a scratch scene
 - Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
 - FXAA pipeline support
+- Re-added loader code for decal and decal collection node
 
 ### Changed
 

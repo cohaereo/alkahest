@@ -6,10 +6,10 @@ use alkahest_data::{
     decorator::SDecorator,
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
-        SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
-        SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
-        SUnk808068d4, SUnk80806aa7, SUnk80806ef4, SUnk8080714b, SUnk80808604, SUnk80808cb7,
-        SUnk80809178, SUnk8080917b,
+        SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume,
+        SDecalCollectionResource, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
+        SShadowingLight, SSlipSurfaceVolume, SUnk808068d4, SUnk80806aa7, SUnk80806ef4,
+        SUnk8080714b, SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     occlusion::Aabb,
     text::{StringContainer, StringContainerShared},
@@ -48,9 +48,10 @@ use crate::{
         Scene, SceneInfo,
     },
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_IMAGE_FILTER_HDR,
-        ICON_LABEL, ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER, ICON_SPHERE,
-        ICON_SPOTLIGHT_BEAM, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_ACCOUNT_CONVERT, ICON_CUBE, ICON_CUBE_OUTLINE, ICON_FLARE, ICON_FOLDER,
+        ICON_IMAGE_FILTER_HDR, ICON_LABEL, ICON_LIGHTBULB_GROUP, ICON_SHAPE, ICON_SPEAKER,
+        ICON_SPHERE, ICON_SPOTLIGHT_BEAM, ICON_STICKER, ICON_TREE, ICON_WAVES, ICON_WEATHER_FOG,
+        ICON_WEATHER_PARTLY_CLOUDY,
     },
     renderer::{Renderer, RendererShared},
     util::{
@@ -550,6 +551,52 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     ),
                     parent_entity,
                 );
+            }
+            // Decal collection
+            0x80806955 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                if !tag.is_some() {
+                    continue;
+                }
+
+                let header: SDecalCollectionResource =
+                    package_manager().read_tag_struct(tag).unwrap();
+
+                let decal_collection_entity =
+                    spawn_data_entity(scene, (metadata.clone(),), parent_entity);
+                let mut children = vec![];
+                for inst in &header.instance_ranges {
+                    for i in inst.start..(inst.start + inst.count) {
+                        let transform = header.transforms[i as usize];
+                        // let bounds = &header.occlusion_bounds.bounds[i as usize];
+                        children.push(spawn_data_entity(
+                            scene,
+                            (
+                                Transform {
+                                    translation: Vec3::new(transform.x, transform.y, transform.z),
+                                    ..Default::default()
+                                },
+                                Icon::Colored(ICON_STICKER, Color32::from_rgb(24, 201, 186)),
+                                Label::from(format!("Decal (material={})", inst.material)),
+                                resource_origin,
+                                NodeFilter::Decal,
+                                metadata.clone(),
+                            ),
+                            Some(decal_collection_entity),
+                        ));
+                    }
+                }
+
+                scene.entity_mut(decal_collection_entity).insert((
+                    Icon::Unicode(ICON_FOLDER),
+                    Label::from(format!("Decal Collection {tag}")),
+                    Children::from_slice(&children),
+                    resource_origin,
+                    // RenderCommonBundle::default(),
+                ));
             }
             // (ambient) sound source
             0x8080666f => {

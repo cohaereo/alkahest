@@ -8,8 +8,8 @@ use super::Scene;
 use crate::{
     icons::{
         ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_CUBE, ICON_DROPBOX, ICON_HELP,
-        ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG,
-        ICON_TOOLBOX, ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_STICKER,
+        ICON_TAG, ICON_TOOLBOX, ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
     },
     util::{color::Color, scene::EntityWorldMutExt},
 };
@@ -26,6 +26,7 @@ pub enum NodeFilter {
     SkyObject,
     Cubemap,
     Static,
+    Decal,
 
     InstakillBarrier,
     TurnbackBarrier,
@@ -49,6 +50,7 @@ impl NodeFilter {
             NodeFilter::SkyObject => ICON_WEATHER_PARTLY_CLOUDY,
             NodeFilter::Cubemap => ICON_SPHERE,
             NodeFilter::Static => ICON_CUBE,
+            NodeFilter::Decal => ICON_STICKER,
             NodeFilter::InstakillBarrier => ICON_SKULL,
             NodeFilter::TurnbackBarrier => ICON_REPLY,
             NodeFilter::PlayerContainmentVolume => ICON_DROPBOX,
@@ -69,6 +71,7 @@ impl NodeFilter {
             NodeFilter::SkyObject => Color::from_srgba_unmultiplied(0xAD, 0xD8, 0xE6, 255),
             NodeFilter::Cubemap => Color::from_srgba_unmultiplied(50, 255, 50, 255),
             NodeFilter::Static => Color::WHITE,
+            NodeFilter::Decal => Color::from_srgba_unmultiplied(24, 201, 186, 255),
             NodeFilter::InstakillBarrier => Color::from_srgba_unmultiplied(220, 60, 60, 255),
             NodeFilter::TurnbackBarrier => Color::from_srgba_unmultiplied(220, 120, 60, 255),
             NodeFilter::PlayerContainmentVolume => {
