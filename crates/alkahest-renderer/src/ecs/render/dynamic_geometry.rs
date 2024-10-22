@@ -14,6 +14,7 @@ use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
+use crate::tfx::view::View;
 use crate::{
     ecs::{
         render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
@@ -450,15 +451,39 @@ pub fn draw_sky_objects_system(
         &format!("render_stage={render_stage:?}")
     );
 
-    for (dynamic, vis) in scene
-        .query::<(&DynamicModelComponent, Option<&ViewVisibility>)>()
+    let view_position = {
+        renderer
+            .data
+            .lock()
+            .externs
+            .view
+            .as_ref()
+            .map(|v| v.position.truncate())
+            .unwrap_or_default()
+    };
+
+    let mut entities_visible: Vec<(Entity, f32)> = scene
+        .query::<(
+            Entity,
+            &Transform,
+            &DynamicModelComponent,
+            Option<&ViewVisibility>,
+        )>()
         .iter(scene)
+        .filter(|(_e, transform, dynamic, view_vis)| {
+            view_vis.is_visible(renderer.active_view)
+                && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
+        })
+        .map(|(e, transform, _, _)| (e, transform.translation.distance_squared(view_position)))
+        .collect_vec();
+
+    entities_visible.sort_by(|(_, a), (_, b)| b.total_cmp(a));
+
+    for dynamic in scene
+        .query::<&DynamicModelComponent>()
+        .iter_many(scene, entities_visible.into_iter().map(|(e, _)| e))
     {
-        if vis.is_visible(renderer.active_view)
-            && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
-        {
-            dynamic.draw(renderer, render_stage).unwrap();
-        }
+        dynamic.draw(renderer, render_stage).unwrap();
     }
 }
 

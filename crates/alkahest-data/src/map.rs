@@ -202,10 +202,11 @@ pub struct SCubemapVolume {
 
 /// Decal collection resource
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0xffffffff)]
-pub struct SUnk80806e68 {
+#[tiger_tag(id = 0x8080695B)]
+pub struct SDecalCollectionResource {
     pub file_size: u64,
-    pub instances: Vec<SUnk80806e6c>,
+    pub instance_ranges: Vec<SDecalInstanceRange>,
+    pub transforms: Vec<glam::Vec4>,
     pub instance_points: TagHash,
     pub unk_vertex_colors: TagHash,
 
@@ -214,9 +215,10 @@ pub struct SUnk80806e68 {
     _pad3c: u32,
     pub bounds: Aabb,
 }
+
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0x80806963)]
-pub struct SUnk80806e6c {
+pub struct SDecalInstanceRange {
     pub material: TagHash,
     pub start: u16,
     pub count: u16,

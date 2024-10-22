@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added an empty map instead of a scratch scene
 - Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
 - FXAA pipeline support
+- Re-added loader code for decal and decal collection node
 - - Added Arrow Hotkeys to navigate selected object heirarchies @Froggy618157725
   in [#36](https://github.com/cohaereo/alkahest/pull/36)
 - Added hotkeys to add to current route. + adds at the end of the route, or after current node, - adds before the selected node
@@ -59,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Rewrote TFX bytecode op 0xe to merge_3_1
 - Fix cross-compilation on Linux by using FXC instead of D3DCompile
 - Fixed a random Discord presence related crash
+- Added transparency sorting for sky objects (fixes broken skyboxes such as the Anomaly in Vesper's Host)
 
 ## 0.5.0 - 2024-07-24
 

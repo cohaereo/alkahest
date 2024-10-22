@@ -561,7 +561,7 @@ impl Default for RendererSettings {
             stage_decals: true,
             stage_decals_additive: true,
 
-            fxaa_noise: true,
+            fxaa_noise: false,
 
             // depth_prepass: true,
             debug_view: RenderDebugView::None,
