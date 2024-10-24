@@ -59,18 +59,14 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x2d_u8)] Unk2d,
     #[br(magic = 0x2e_u8)] TransformVec4,
 
-    // #[br(magic = 0x2f_u8)] Spline4Const,
-    // #[br(magic = 0x30_u8)] Spline8Const,
-    // #[br(magic = 0x31_u8)] Spline8ChainConst,
-
     // Constant-related
     #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 },
     #[br(magic = 0x35_u8)] LerpConstant { constant_start: u8 },
     #[br(magic = 0x36_u8)] LerpConstantSaturated { constant_start: u8 },
-    #[br(magic = 0x37_u8)] Unk37 { constant_start: u8 }, // spline4_const?
-    #[br(magic = 0x38_u8)] Unk38 { unk1: u8 },
-    #[br(magic = 0x39_u8)] Unk39 { unk1: u8 },
-    #[br(magic = 0x3a_u8)] Unk3a { unk1: u8 },
+    #[br(magic = 0x37_u8)] Spline4Const { constant_start: u8 },
+    #[br(magic = 0x38_u8)] Spline8Const { constant_start: u8 },
+    #[br(magic = 0x39_u8)] Spline8ChainConst { constant_start: u8 },
+    #[br(magic = 0x3a_u8)] Gradient4Const { constant_start: u8 },
     #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
 
     // Externs
@@ -243,19 +239,19 @@ impl TfxBytecodeOp {
                     constant_start + 1
                 )
             }
-            TfxBytecodeOp::Unk37 {
+            TfxBytecodeOp::Spline4Const {
                 constant_start: unk1,
             } => {
-                format!("unk37 unk1={unk1}")
+                format!("spline4_const unk1={unk1}")
             }
-            TfxBytecodeOp::Unk38 { unk1 } => {
-                format!("unk38 unk1={unk1}")
+            TfxBytecodeOp::Spline8Const { constant_start } => {
+                format!("spline8_const constant_start={constant_start}")
             }
-            TfxBytecodeOp::Unk39 { unk1 } => {
-                format!("unk39 unk1={unk1}")
+            TfxBytecodeOp::Spline8ChainConst { constant_start } => {
+                format!("spline8_chain_const constant_start={constant_start}")
             }
-            TfxBytecodeOp::Unk3a { unk1 } => {
-                format!("unk3a unk1={unk1}")
+            TfxBytecodeOp::Gradient4Const { constant_start } => {
+                format!("gradient4_const constant_start={constant_start}")
             }
             TfxBytecodeOp::UnkLoadConstant { constant_index } => {
                 if let Some(constants) = constants {
