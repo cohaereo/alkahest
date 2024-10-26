@@ -353,6 +353,18 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk58 => "unk58".to_string(),
         }
     }
+
+    /// Is this op PermuteExtendX or Permute(xxxx)?
+    pub fn is_permute_x(&self) -> bool {
+        matches!(
+            self,
+            TfxBytecodeOp::PermuteExtendX
+                | TfxBytecodeOp::Permute {
+                    //swizzle xx yy zz ww
+                    fields: 0b00_00_00_00
+                }
+        )
+    }
 }
 
 fn decode_permute_param(param: u8) -> String {

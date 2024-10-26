@@ -285,7 +285,7 @@ impl TfxBytecodeInterpreter {
                     );
                 }
                 TfxBytecodeOp::PushObjectChannelVector { hash } => {
-                    if let Some(value) = object_channels.and_then(|c| c.values.get(hash)) {
+                    if let Some((value, _)) = object_channels.and_then(|c| c.values.get(hash)) {
                         stack_push!(*value);
                     } else {
                         // TODO(cohae): Some kind of error/feedback here would be nice

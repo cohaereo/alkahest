@@ -38,3 +38,23 @@ pub enum ChannelType {
     /// Linear color-space. Usage of the alpha channel is different per channel
     Color,
 }
+
+impl ChannelType {
+    /// Picks the type with the most elements. Used for inferring the channel type from expression bytecode
+    pub fn pick_best_type(self, other: Self) -> Self {
+        if self.element_count() > other.element_count() {
+            self
+        } else {
+            other
+        }
+    }
+
+    pub fn element_count(&self) -> usize {
+        match self {
+            ChannelType::Vec4 => 4,
+            ChannelType::Float => 1,
+            ChannelType::FloatRanged(_) => 1,
+            ChannelType::Color => 3,
+        }
+    }
+}

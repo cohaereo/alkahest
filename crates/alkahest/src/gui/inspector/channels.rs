@@ -1,4 +1,5 @@
 use alkahest_renderer::{ecs::channels::ObjectChannels, icons::ICON_TABLE};
+use egui::Widget;
 
 use crate::gui::UiExt;
 
@@ -25,10 +26,30 @@ impl ComponentPanel for ObjectChannels {
         ui: &mut egui::Ui,
         _: &alkahest_renderer::resources::AppResources,
     ) {
-        for (channel_id, value) in &mut self.values {
+        for (channel_id, (value, channel_type)) in &mut self.values {
             ui.horizontal(|ui| {
                 ui.strong(format!("{channel_id:08X}"));
-                ui.vec4_input(value);
+
+                match channel_type {
+                    alkahest_renderer::tfx::channels::ChannelType::Vec4 => {
+                        ui.vec4_input(value);
+                    }
+                    alkahest_renderer::tfx::channels::ChannelType::Float => {
+                        egui::DragValue::new(&mut value.x).speed(0.01).ui(ui);
+                    }
+                    alkahest_renderer::tfx::channels::ChannelType::FloatRanged(ref range) => {
+                        egui::Slider::new(&mut value.x, range.clone()).ui(ui);
+                    }
+                    alkahest_renderer::tfx::channels::ChannelType::Color => {
+                        let mut c = value.truncate().to_array();
+
+                        if ui.color_edit_button_rgb(&mut c).changed() {
+                            value.x = c[0];
+                            value.y = c[1];
+                            value.z = c[2];
+                        }
+                    }
+                }
             });
         }
     }

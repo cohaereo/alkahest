@@ -5,15 +5,15 @@ use bevy_ecs::{
     system::{In, Query},
 };
 use glam::Vec4;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
-use crate::renderer::RendererShared;
+use crate::{renderer::RendererShared, tfx::channels::ChannelType};
 
 use super::render::dynamic_geometry::DynamicModelComponent;
 
 #[derive(Component)]
 pub struct ObjectChannels {
-    pub values: FxHashMap<u32, Vec4>,
+    pub values: FxHashMap<u32, (Vec4, ChannelType)>,
 }
 
 // Discover channels used by dynamic objects by going over every object with a DynamicModelComponent that doesn't already have a ObjectChannels component
@@ -25,10 +25,13 @@ pub fn object_channels_discovery_system(
 ) {
     let assets = &renderer.data.lock().asset_manager;
     'entity: for (entity, model) in q_dynamic_model.iter() {
-        let mut object_ids = FxHashSet::default();
+        let mut object_ids = FxHashMap::default();
         for t in model.techniques() {
             if let Some(technique) = assets.techniques.get(&t) {
-                object_ids.extend(technique.object_channel_ids());
+                for (hash, channel_type) in technique.object_channel_ids() {
+                    let e = object_ids.entry(hash).or_insert(ChannelType::Float);
+                    *e = channel_type.pick_best_type(e.clone());
+                }
             } else {
                 if !t.is_none() {
                     // Technique not loaded yet, skip this object for now
@@ -45,7 +48,10 @@ pub fn object_channels_discovery_system(
         // }
 
         commands.entity(entity).insert(ObjectChannels {
-            values: object_ids.iter().map(|&id| (id, Vec4::ONE)).collect(),
+            values: object_ids
+                .iter()
+                .map(|(&id, ty)| (id, (Vec4::ONE, ty.clone())))
+                .collect(),
         });
     }
 }

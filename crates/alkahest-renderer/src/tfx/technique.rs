@@ -8,7 +8,7 @@ use alkahest_pm::package_manager;
 use anyhow::{ensure, Context};
 use destiny_pkg::TagHash;
 use glam::Vec4;
-use rustc_hash::FxHashSet;
+use rustc_hash::FxHashMap;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
     ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
@@ -23,7 +23,7 @@ use crate::{
     util::d3d::D3dResource,
 };
 
-use super::bytecode::opcodes::TfxBytecodeOp;
+use super::{bytecode::opcodes::TfxBytecodeOp, channels::ChannelType};
 
 pub struct Technique {
     pub tech: STechnique,
@@ -56,13 +56,23 @@ impl Technique {
         ]
     }
 
-    pub fn object_channel_ids(&self) -> FxHashSet<u32> {
-        let mut ids = FxHashSet::default();
+    pub fn object_channel_ids(&self) -> FxHashMap<u32, ChannelType> {
+        let mut ids = FxHashMap::default();
         for (_, s) in self.all_stages() {
             if let Some(bytecode) = s.as_ref().and_then(|s| s.bytecode.as_ref()) {
-                for op in &bytecode.opcodes {
+                for i in 0..bytecode.opcodes.len() {
+                    let op = &bytecode.opcodes[i];
+                    let next = bytecode.opcodes.get(i + 1);
+                    // If this channel is immediately swizzled with `.xxxx`, we can assume it's a single float
+                    let channel_type = if next.map(|op| op.is_permute_x()).unwrap_or_default() {
+                        ChannelType::Float
+                    } else {
+                        ChannelType::Vec4
+                    };
+
                     if let &TfxBytecodeOp::PushObjectChannelVector { hash } = op {
-                        ids.insert(hash);
+                        let e = ids.entry(hash).or_insert(ChannelType::Float);
+                        *e = channel_type.pick_best_type(e.clone());
                     }
                 }
             }
