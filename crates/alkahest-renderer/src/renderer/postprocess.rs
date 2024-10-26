@@ -19,7 +19,7 @@ impl Renderer {
             );
         }
 
-        if self.render_settings.feature_fxaa {
+        if self.settings.feature_fxaa {
             unsafe {
                 let data = &mut self.data.lock();
                 let (source, target) = data.gbuffers.get_postprocess_rt(true);
@@ -36,7 +36,7 @@ impl Renderer {
             }
 
             gpu_event!(self.gpu, "fxaa");
-            let pipeline = if self.render_settings.fxaa_noise {
+            let pipeline = if self.settings.fxaa_noise {
                 &self.render_globals.pipelines.fxaa_noise
             } else {
                 &self.render_globals.pipelines.fxaa

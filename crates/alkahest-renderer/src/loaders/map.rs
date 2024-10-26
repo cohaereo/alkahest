@@ -818,6 +818,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         0.5,
                         light.far_plane,
                     ),
+                    renderer.settings.shadow_quality.resolution(),
                 )?;
 
                 let bb = Aabb::from_projection_matrix(light.light_to_world);

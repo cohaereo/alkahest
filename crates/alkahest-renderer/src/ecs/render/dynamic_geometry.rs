@@ -190,17 +190,17 @@ impl DynamicModel {
     where
         F: Fn(&Self, &Renderer, &SDynamicMesh, &SDynamicMeshPart),
     {
-        if !renderer.render_settings.stage_transparent
+        if !renderer.settings.stage_transparent
             && render_stage == TfxRenderStage::Transparents
         {
             return Ok(());
         }
 
-        if !renderer.render_settings.stage_decals && render_stage == TfxRenderStage::Decals {
+        if !renderer.settings.stage_decals && render_stage == TfxRenderStage::Decals {
             return Ok(());
         }
 
-        if !renderer.render_settings.stage_decals_additive
+        if !renderer.settings.stage_decals_additive
             && render_stage == TfxRenderStage::DecalsAdditive
         {
             return Ok(());

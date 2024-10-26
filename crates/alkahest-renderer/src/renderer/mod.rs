@@ -10,6 +10,7 @@ mod pickbuffer;
 mod postprocess;
 pub mod shader;
 mod shadows;
+pub use shadows::{ShadowPcfSamples, ShadowQuality};
 mod systems;
 mod transparents_pass;
 mod util;
@@ -91,7 +92,7 @@ pub struct Renderer {
     pub render_globals: RenderGlobals,
     pub data: Mutex<RendererData>,
 
-    pub render_settings: RendererSettings,
+    pub settings: RendererSettings,
 
     pub ssao: SsaoRenderer,
     matcap: MatcapRenderer,
@@ -145,7 +146,7 @@ impl Renderer {
                 .context("failed to create Pickbuffer")?,
             gpu,
             render_globals,
-            render_settings: RendererSettings::default(),
+            settings: RendererSettings::default(),
             time: AtomicCell::new(Time::now()),
             last_frame: Instant::now(),
             delta_time: 0.0,
@@ -194,7 +195,7 @@ impl Renderer {
             }
         }
 
-        if self.render_settings.debug_view.is_gamma_converter() {
+        if self.settings.debug_view.is_gamma_converter() {
             self.draw_view_overlay(scene, resources);
         }
 
@@ -222,7 +223,7 @@ impl Renderer {
             let pipeline = self
                 .render_globals
                 .pipelines
-                .get_debug_view_pipeline(self.render_settings.debug_view);
+                .get_debug_view_pipeline(self.settings.debug_view);
 
             self.gpu
                 .current_states
@@ -230,7 +231,7 @@ impl Renderer {
             self.execute_global_pipeline(pipeline, "final_or_debug_view");
         }
 
-        if !self.render_settings.debug_view.is_gamma_converter() {
+        if !self.settings.debug_view.is_gamma_converter() {
             self.draw_view_overlay(scene, resources);
         }
 
@@ -239,7 +240,7 @@ impl Renderer {
             self.gpu.swapchain_target.read().as_ref().unwrap(),
             // final_combine and final_combine_no_film_curve already apply gamma correction
             !matches!(
-                self.render_settings.debug_view,
+                self.settings.debug_view,
                 RenderDebugView::None | RenderDebugView::NoFilmCurve
             ),
         );
@@ -427,7 +428,7 @@ impl Renderer {
     }
 
     pub fn set_render_settings(&self, settings: RendererSettings) {
-        self.pocus().render_settings = settings;
+        self.pocus().settings = settings;
     }
 
     pub fn resize_buffers(&self, width: u32, height: u32) {
@@ -455,9 +456,9 @@ impl Renderer {
 
         // Can we render based on stages?
         let mut stages_ok = stage.map_or(true, |v| match v {
-            TfxRenderStage::Transparents => self.render_settings.stage_transparent,
-            TfxRenderStage::Decals => self.render_settings.stage_decals,
-            TfxRenderStage::DecalsAdditive => self.render_settings.stage_decals_additive,
+            TfxRenderStage::Transparents => self.settings.stage_transparent,
+            TfxRenderStage::Decals => self.settings.stage_decals,
+            TfxRenderStage::DecalsAdditive => self.settings.stage_decals_additive,
             _ => true,
         });
 
@@ -477,13 +478,13 @@ impl Renderer {
         }
 
         let features_ok = feature.map_or(true, |v| match v {
-            TfxFeatureRenderer::StaticObjects => self.render_settings.feature_statics.contains(flags_to_check),
-            TfxFeatureRenderer::TerrainPatch => self.render_settings.feature_terrain.contains(flags_to_check),
-            TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.render_settings.feature_dynamics.contains(flags_to_check),
-            TfxFeatureRenderer::SkyTransparent => self.render_settings.feature_sky.contains(flags_to_check),
-            TfxFeatureRenderer::Water => self.render_settings.feature_water.contains(flags_to_check),
-            TfxFeatureRenderer::SpeedtreeTrees => self.render_settings.feature_decorators.contains(flags_to_check),
-            TfxFeatureRenderer::Cubemaps => self.render_settings.feature_cubemaps,
+            TfxFeatureRenderer::StaticObjects => self.settings.feature_statics.contains(flags_to_check),
+            TfxFeatureRenderer::TerrainPatch => self.settings.feature_terrain.contains(flags_to_check),
+            TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.settings.feature_dynamics.contains(flags_to_check),
+            TfxFeatureRenderer::SkyTransparent => self.settings.feature_sky.contains(flags_to_check),
+            TfxFeatureRenderer::Water => self.settings.feature_water.contains(flags_to_check),
+            TfxFeatureRenderer::SpeedtreeTrees => self.settings.feature_decorators.contains(flags_to_check),
+            TfxFeatureRenderer::Cubemaps => self.settings.feature_cubemaps,
             _ => true,
         });
 
@@ -502,7 +503,7 @@ pub struct RendererSettings {
     pub ssao: bool,
     #[serde(skip)]
     pub matcap: bool,
-    pub shadows: bool,
+    pub shadow_quality: ShadowQuality,
     pub shadow_updates_per_frame: usize,
 
     #[serde(skip, default = "RenderFeatureVisibility::all")]
@@ -544,7 +545,7 @@ impl Default for RendererSettings {
             vsync: true,
             ssao: true,
             matcap: false,
-            shadows: true,
+            shadow_quality: ShadowQuality::Medium,
             shadow_updates_per_frame: 2,
 
             feature_statics: RenderFeatureVisibility::all(),
