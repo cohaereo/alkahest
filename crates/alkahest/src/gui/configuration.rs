@@ -103,6 +103,7 @@ impl GuiView for RenderSettingsPanel {
                 ui.collapsing(RichText::new("Graphics").heading(), |ui| {
                     ui.checkbox(&mut c.renderer.vsync, "VSync");
                     ui.checkbox(&mut c.renderer.matcap, "Matcap");
+                    ui.checkbox(&mut c.renderer.draw_selection_outline, "Selection Outline");
 
                     if egui::ComboBox::from_label("Shadows")
                         .selected_text(c.renderer.shadow_quality.to_string().split_pascalcase())

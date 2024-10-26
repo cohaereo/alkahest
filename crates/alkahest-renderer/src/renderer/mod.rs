@@ -283,9 +283,10 @@ impl Renderer {
         // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-            if scene
-                .get_entity(selected)
-                .map_or(true, |v| v.get::<ViewVisibility>().is_visible(0))
+            if self.settings.draw_selection_outline
+                && scene
+                    .get_entity(selected)
+                    .map_or(true, |v| v.get::<ViewVisibility>().is_visible(0))
             {
                 self.draw_outline(
                     scene,
@@ -506,6 +507,8 @@ pub struct RendererSettings {
     pub ssao: bool,
     #[serde(skip)]
     pub matcap: bool,
+    #[serde(skip, default = "default_true")]
+    pub draw_selection_outline: bool,
     pub shadow_quality: ShadowQuality,
     pub shadow_updates_per_frame: usize,
 
@@ -548,6 +551,7 @@ impl Default for RendererSettings {
             vsync: true,
             ssao: true,
             matcap: false,
+            draw_selection_outline: true,
             shadow_quality: ShadowQuality::Medium,
             shadow_updates_per_frame: 2,
 
