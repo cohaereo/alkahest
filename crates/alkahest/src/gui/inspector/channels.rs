@@ -1,4 +1,6 @@
-use alkahest_renderer::{ecs::channels::ObjectChannels, icons::ICON_TABLE};
+use alkahest_renderer::{
+    ecs::channels::ObjectChannels, icons::ICON_TABLE, tfx::channels::ChannelType,
+};
 use egui::Widget;
 
 use crate::gui::UiExt;
@@ -35,10 +37,27 @@ impl ComponentPanel for ObjectChannels {
                         ui.vec4_input(value);
                     }
                     alkahest_renderer::tfx::channels::ChannelType::Float => {
-                        egui::DragValue::new(&mut value.x).speed(0.01).ui(ui);
+                        egui::DragValue::new(&mut value.x)
+                            .speed(0.01)
+                            .ui(ui)
+                            .context_menu(|ui| {
+                                if ui.selectable_label(false, "Convert to slider").clicked() {
+                                    *channel_type = ChannelType::FloatRanged(0.0..=1.0);
+                                }
+                            });
                     }
                     alkahest_renderer::tfx::channels::ChannelType::FloatRanged(ref range) => {
-                        egui::Slider::new(&mut value.x, range.clone()).ui(ui);
+                        ui.spacing_mut().slider_width = 250.0;
+                        egui::Slider::new(&mut value.x, range.clone())
+                            .ui(ui)
+                            .context_menu(|ui| {
+                                if ui
+                                    .selectable_label(false, "Convert to drag value")
+                                    .clicked()
+                                {
+                                    *channel_type = ChannelType::Float;
+                                }
+                            });
                     }
                     alkahest_renderer::tfx::channels::ChannelType::Color => {
                         let mut c = value.truncate().to_array();
