@@ -1,3 +1,4 @@
+mod channels;
 mod decorator;
 mod light;
 mod util;
@@ -6,6 +7,7 @@ use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
+        channels::ObjectChannels,
         common::{Global, Label, Mutable},
         hierarchy::{Children, Parent},
         map::{CubemapVolume, NodeMetadata},
@@ -263,9 +265,11 @@ fn show_inspector_components(
 		($($component:ty),+) => {
 			$(
 				if let Some(mut component) = e.get_mut::<$component>() {
-					inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-						component.show_inspector_ui(scene, e, ui, resources);
-					});
+                    if component.should_show_in_inspector() {
+                        inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
+                            component.show_inspector_ui(scene, e, ui, resources);
+                        });
+                    }
 				}
 			)*
 		};
@@ -284,6 +288,7 @@ fn show_inspector_components(
         ShaderBallComponent,
         DecoratorRenderer,
         SRespawnPoint,
+        ObjectChannels,
         NodeMetadata
     );
 }
@@ -305,6 +310,10 @@ pub(super) trait ComponentPanel {
     fn inspector_name() -> &'static str;
     fn inspector_icon() -> char {
         ICON_CUBE_OUTLINE
+    }
+
+    fn should_show_in_inspector(&self) -> bool {
+        true
     }
 
     fn show_inspector_ui<'s>(

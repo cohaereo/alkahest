@@ -4,6 +4,7 @@ use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
+        channels::object_channels_discovery_system,
         new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
@@ -14,6 +15,7 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
+use bevy_ecs::system::RunSystemOnce;
 use bevy_tasks::{ComputeTaskPool, TaskPool};
 use egui::{Key, KeyboardShortcut, Modifiers};
 use gilrs::{EventType, Gilrs};
@@ -377,6 +379,11 @@ impl AlkahestApp {
                             maps.update_maps(resources);
 
                             if let Some(map) = maps.current_map_mut() {
+                                map.scene.run_system_once_with(
+                                    resources.get::<RendererShared>().clone(),
+                                    object_channels_discovery_system,
+                                );
+
                                 map.update();
                             }
 

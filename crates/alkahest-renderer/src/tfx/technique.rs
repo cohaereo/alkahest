@@ -8,18 +8,22 @@ use alkahest_pm::package_manager;
 use anyhow::{ensure, Context};
 use destiny_pkg::TagHash;
 use glam::Vec4;
+use rustc_hash::FxHashSet;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
     ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
 };
 
 use crate::{
+    ecs::channels::ObjectChannels,
     gpu::{buffer::ConstantBufferCached, texture::Texture, GpuContext},
     handle::Handle,
     renderer::Renderer,
     tfx::bytecode::interpreter::TfxBytecodeInterpreter,
     util::d3d::D3dResource,
 };
+
+use super::bytecode::opcodes::TfxBytecodeOp;
 
 pub struct Technique {
     pub tech: STechnique,
@@ -42,6 +46,7 @@ impl Technique {
             (&self.tech.shader_compute, self.stage_compute.as_ref()),
         ]
     }
+
     pub fn all_stages_mut(&mut self) -> [(&STechniqueShader, Option<&mut TechniqueStage>); 4] {
         [
             (&self.tech.shader_pixel, self.stage_pixel.as_mut()),
@@ -50,10 +55,33 @@ impl Technique {
             (&self.tech.shader_compute, self.stage_compute.as_mut()),
         ]
     }
+
+    pub fn object_channel_ids(&self) -> FxHashSet<u32> {
+        let mut ids = FxHashSet::default();
+        for (_, s) in self.all_stages() {
+            if let Some(bytecode) = s.as_ref().and_then(|s| s.bytecode.as_ref()) {
+                for op in &bytecode.opcodes {
+                    if let &TfxBytecodeOp::PushObjectChannelVector { hash } = op {
+                        ids.insert(hash);
+                    }
+                }
+            }
+        }
+
+        ids
+    }
 }
 
 impl Technique {
     pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
+        self.bind_with_channels(renderer, None)
+    }
+
+    pub fn bind_with_channels(
+        &self,
+        renderer: &Renderer,
+        object_channels: Option<&ObjectChannels>,
+    ) -> anyhow::Result<()> {
         let states = renderer.gpu.current_states.load().select(&self.tech.states);
         if let Some(u) = states.blend_state() {
             renderer.gpu.set_blend_state(u);
@@ -75,12 +103,12 @@ impl Technique {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
                     if renderer.gpu.custom_pixel_shader.is_none() {
                         self.stage_pixel
                             .as_ref()
                             .context("Pixel stage not set")?
-                            .bind(renderer)?;
+                            .bind(renderer, object_channels)?;
                     }
 
                     ctx.GSSetShader(None, None);
@@ -92,7 +120,7 @@ impl Technique {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
 
                     if renderer.gpu.custom_pixel_shader.is_none() {
                         ctx.PSSetShader(None, None);
@@ -106,11 +134,11 @@ impl Technique {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
                     self.stage_geometry
                         .as_ref()
                         .context("Geometry stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
 
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
@@ -133,24 +161,24 @@ impl Technique {
                     self.stage_compute
                         .as_ref()
                         .context("Compute stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
                 }
                 // Seems to be primarily used by postprocessing shaders
                 0 => {
                     self.stage_vertex
                         .as_ref()
                         .context("Vertex stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
                     if renderer.gpu.custom_pixel_shader.is_none() {
                         self.stage_pixel
                             .as_ref()
                             .context("Pixel stage not set")?
-                            .bind(renderer)?;
+                            .bind(renderer, object_channels)?;
                     }
                     self.stage_compute
                         .as_ref()
                         .context("Pixel stage not set")?
-                        .bind(renderer)?;
+                        .bind(renderer, object_channels)?;
 
                     ctx.GSSetShader(None, None);
                     ctx.HSSetShader(None, None);
@@ -189,7 +217,11 @@ pub struct TechniqueStage {
 }
 
 impl TechniqueStage {
-    pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
+    pub fn bind(
+        &self,
+        renderer: &Renderer,
+        object_channels: Option<&ObjectChannels>,
+    ) -> anyhow::Result<()> {
         self.shader_module.bind(&renderer.gpu);
         for (slot, tex) in &self.textures {
             if let Some(tex) = renderer.data.lock().asset_manager.textures.get_shared(tex) {
@@ -209,6 +241,7 @@ impl TechniqueStage {
                 self.cbuffer.as_ref(),
                 &self.shader.constants.bytecode_constants,
                 &self.samplers,
+                object_channels,
             )?;
         }
 

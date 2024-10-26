@@ -10,7 +10,7 @@ impl<'a> Vec4Input<'a> {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui) -> Response {
-        const DRAG_SPEED: f64 = 0.01;
+        const DRAG_SPEED: f64 = 0.0025;
         ui.horizontal(|ui| {
             ui.add(
                 egui::DragValue::new(&mut self.value.x)

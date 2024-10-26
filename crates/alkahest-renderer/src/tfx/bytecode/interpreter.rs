@@ -10,6 +10,7 @@ use windows::Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResou
 
 use super::opcodes::TfxBytecodeOp;
 use crate::{
+    ecs::channels::ObjectChannels,
     gpu::{buffer::ConstantBufferCached, GpuContext},
     tfx::externs::{ExternStorage, TextureView},
 };
@@ -36,6 +37,7 @@ impl TfxBytecodeInterpreter {
         buffer: Option<&ConstantBufferCached<Vec4>>,
         constants: &[Vec4],
         samplers: &[Option<ID3D11SamplerState>],
+        object_channels: Option<&ObjectChannels>,
     ) -> anyhow::Result<()> {
         profiling::scope!("TfxBytecodeInterpreter::evaluate");
         let mut stack: SmallVec<[Vec4; 64]> = Default::default();
@@ -282,8 +284,13 @@ impl TfxBytecodeInterpreter {
                         c[5]
                     );
                 }
-                TfxBytecodeOp::PushObjectChannelVector { .. } => {
-                    stack_push!(Vec4::ONE)
+                TfxBytecodeOp::PushObjectChannelVector { hash } => {
+                    if let Some(value) = object_channels.and_then(|c| c.values.get(hash)) {
+                        stack_push!(*value);
+                    } else {
+                        // TODO(cohae): Some kind of error/feedback here would be nice
+                        stack_push!(Vec4::ZERO);
+                    }
                 }
                 &TfxBytecodeOp::Unk4c { unk1, .. }
                 // | &TfxBytecodeOp::PushObjectChannelVector { hash }
