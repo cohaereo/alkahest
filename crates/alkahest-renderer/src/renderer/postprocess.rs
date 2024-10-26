@@ -26,7 +26,7 @@ impl Renderer {
                 let rt = target.render_target.clone();
                 data.externs.fxaa = Some(externs::Fxaa {
                     source_texture: source.view.clone().into(),
-                    noise_time: self.time.elapsed().as_secs_f32(),
+                    noise_time: self.time.load().elapsed(),
                     ..Default::default()
                 });
 

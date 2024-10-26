@@ -14,7 +14,6 @@ use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use tiger_parse::PackageManagerExt;
 
-use crate::tfx::view::View;
 use crate::{
     ecs::{
         render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
@@ -470,7 +469,7 @@ pub fn draw_sky_objects_system(
             Option<&ViewVisibility>,
         )>()
         .iter(scene)
-        .filter(|(_e, transform, dynamic, view_vis)| {
+        .filter(|(_e, _transform, dynamic, view_vis)| {
             view_vis.is_visible(renderer.active_view)
                 && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
         })

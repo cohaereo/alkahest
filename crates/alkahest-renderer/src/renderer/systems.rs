@@ -1,6 +1,5 @@
 use alkahest_data::tfx::TfxRenderStage;
 
-use crate::tfx::view::View;
 use crate::{
     ecs::{
         render::{

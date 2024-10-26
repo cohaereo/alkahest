@@ -1,6 +1,7 @@
 mod cubemaps;
 pub mod gbuffer;
 mod immediate;
+use crossbeam::atomic::AtomicCell;
 use glam::{Mat4, Quat};
 pub use immediate::{ImmediateLabel, LabelAlign};
 mod lighting_pass;
@@ -19,7 +20,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use alkahest_data::{
@@ -98,7 +99,7 @@ pub struct Renderer {
     cubemap_renderer: CubemapRenderer,
     pub pickbuffer: Pickbuffer,
 
-    pub time: Instant,
+    pub time: AtomicCell<Time>,
     last_frame: Instant,
     pub delta_time: f64,
     pub frame_index: AtomicUsize,
@@ -145,7 +146,7 @@ impl Renderer {
             gpu,
             render_globals,
             render_settings: RendererSettings::default(),
-            time: Instant::now(),
+            time: AtomicCell::new(Time::now()),
             last_frame: Instant::now(),
             delta_time: 0.0,
             frame_index: AtomicUsize::default(),
@@ -351,8 +352,8 @@ impl Renderer {
         {
             let externs = &mut self.data.lock().externs;
             externs.frame = Frame {
-                game_time: self.time.elapsed().as_secs_f32(),
-                render_time: self.time.elapsed().as_secs_f32(),
+                game_time: self.time.load().elapsed(),
+                render_time: self.time.load().elapsed(),
                 delta_game_time: self.delta_time as f32,
                 specular_lobe_3d_lookup: self
                     .render_globals
@@ -641,5 +642,39 @@ impl RenderDebugView {
     /// Does this view convert gamma/color space?
     pub fn is_gamma_converter(&self) -> bool {
         matches!(self, Self::None | Self::NoFilmCurve)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Time {
+    Instant(Instant),
+    Fixed(f32),
+}
+
+impl Time {
+    pub fn now() -> Self {
+        Self::Instant(Instant::now())
+    }
+
+    pub fn fixed(fixed: f32) -> Self {
+        Self::Fixed(fixed)
+    }
+
+    pub fn elapsed(&self) -> f32 {
+        match self {
+            Self::Instant(time) => time.elapsed().as_secs_f32(),
+            Self::Fixed(time) => *time,
+        }
+    }
+
+    pub fn to_fixed(&self) -> Self {
+        Self::Fixed(self.elapsed())
+    }
+
+    pub fn to_instant(&self) -> Self {
+        match self {
+            Self::Instant(time) => Self::Instant(*time),
+            Self::Fixed(time) => Self::Instant(Instant::now() - Duration::from_secs_f32(*time)),
+        }
     }
 }

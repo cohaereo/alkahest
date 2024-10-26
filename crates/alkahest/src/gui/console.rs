@@ -1,7 +1,6 @@
 use std::{
     fmt::Debug,
     io::{Cursor, Seek, SeekFrom},
-    mem::transmute_copy,
     sync::Arc,
 };
 
@@ -23,7 +22,7 @@ use alkahest_renderer::{
         visibility::Visibility,
     },
     icons::ICON_CUBE,
-    renderer::{Renderer, RendererShared},
+    renderer::{Renderer, RendererShared, Time},
     resources::AppResources,
     tfx::bytecode::{decompiler::TfxBytecodeDecompiler, opcodes::TfxBytecodeOp},
 };
@@ -32,7 +31,7 @@ use bevy_ecs::bundle::Bundle;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, Key, Modifiers, RichText, TextStyle};
-use glam::{Mat3, Mat4, Vec2, Vec3, Vec4Swizzles};
+use glam::{Mat4, Vec2, Vec3, Vec4Swizzles};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -861,6 +860,23 @@ fn execute_command(command: &str, args: &[&str], resources: &AppResources) {
             camera.set_position(position);
             camera.set_forward(-camera_to_world.transpose().row(2).xyz());
             camera.set_projection(CameraProjection::perspective(fov, 0.01));
+        }
+        "lock_time" => {
+            let renderer = resources.get_mut::<RendererShared>();
+            let mut t = renderer.time.load().elapsed();
+            if let Some(time_arg) = args.first() {
+                let Ok(time) = str::parse::<f32>(time_arg) else {
+                    error!("Invalid time argument");
+                    return;
+                };
+                t = time;
+            }
+
+            renderer.time.store(Time::fixed(t));
+        }
+        "unlock_time" => {
+            let renderer = resources.get_mut::<RendererShared>();
+            renderer.time.store(renderer.time.load().to_instant());
         }
         _ => error!("Unknown command '{command}'"),
     }

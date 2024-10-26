@@ -272,12 +272,13 @@ impl TfxBytecodeInterpreter {
                     anyhow::ensure!((*constant_start as usize + 5) < constants.len());
                     let v = stack_top!();
                     let c = &constants[*constant_start as usize..];
-                    *v = tfx_converted::bytecode_op_gradient4_const(*v, 
-                        c[0], 
-                        c[1], 
-                        c[2], 
-                        c[3], 
-                        c[4], 
+                    *v = tfx_converted::bytecode_op_gradient4_const(
+                        *v,
+                        c[0],
+                        c[1],
+                        c[2],
+                        c[3],
+                        c[4],
                         c[5]
                     );
                 }
@@ -786,7 +787,11 @@ mod tfx_converted {
         } else {
             Vec4::ZERO
         };
-        let c_division = if c_offsets_from_x != Vec4::ZERO { c_offsets_from_x / c_segment_interval } else { c_safe_division };
+        let c_division = if c_offsets_from_x != Vec4::ZERO {
+            c_offsets_from_x / c_segment_interval
+        } else {
+            c_safe_division
+        };
         let c_percentages = c_division.clamp(Vec4::ZERO, Vec4::ONE); // Saturate
 
         // Compute the influence that each of the colors will contribute to the final color.
