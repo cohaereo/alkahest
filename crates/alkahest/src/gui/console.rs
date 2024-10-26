@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
     io::{Cursor, Seek, SeekFrom},
+    mem::transmute_copy,
     sync::Arc,
 };
 
@@ -12,7 +13,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use alkahest_renderer::{
-    camera::Camera,
+    camera::{Camera, CameraProjection},
     ecs::{
         common::{Icon, Label, Mutable, RenderCommonBundle},
         render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
@@ -31,7 +32,7 @@ use bevy_ecs::bundle::Bundle;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, Key, Modifiers, RichText, TextStyle};
-use glam::{Vec2, Vec3};
+use glam::{Mat3, Mat4, Vec2, Vec3, Vec4Swizzles};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -42,7 +43,7 @@ use tracing::{
     Event, Level, Subscriber,
 };
 use tracing_subscriber::Layer;
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, window::Window};
 
 use crate::{
     gui::{
@@ -807,6 +808,59 @@ fn execute_command(command: &str, args: &[&str], resources: &AppResources) {
             if let Err(e) = load_pkg_entities(args[0], renderer.clone(), scene) {
                 error!("Failed to load entities from package {}: {e}", args[0]);
             }
+        }
+        "window_resize" => {
+            if args.len() != 2 {
+                error!("Missing width and height arguments");
+                return;
+            }
+
+            let Ok(width): Result<u32, _> = str::parse(args[0]) else {
+                error!("Invalid width argument");
+                return;
+            };
+            let Ok(height): Result<u32, _> = str::parse(args[1]) else {
+                error!("Invalid height argument");
+                return;
+            };
+
+            let _ = resources
+                .get::<Arc<Window>>()
+                .request_inner_size(PhysicalSize::new(width, height));
+        }
+        "set_camera_from_cb12" => {
+            if args.len() != 1 {
+                error!("Missing hex data argument");
+                return;
+            }
+
+            let Ok(data) = hex::decode(args[0]) else {
+                error!("Invalid hex data");
+                return;
+            };
+
+            if data.len() < 240 {
+                error!("Not enough data to reconstruct camera (need at least 240 bytes)");
+                return;
+            }
+
+            // Safety: range checks are done by slice indexing, which will never panic due to the above check. We're using unaligned reads to prevent UB if the data is not aligned.
+            // let world_to_projective =
+            //     unsafe { data[00..64].as_ptr().cast::<Mat4>().read_unaligned() };
+            let camera_to_world = unsafe { data[64..128].as_ptr().cast::<Mat4>().read_unaligned() };
+            let camera_to_projective =
+                unsafe { data[176..240].as_ptr().cast::<Mat4>().read_unaligned() };
+
+            let (_, rotation, position) = camera_to_world.to_scale_rotation_translation();
+            let fov = (1.0 / camera_to_projective.y_axis.y).atan().to_degrees() * 2.0;
+            info!(
+                "Parsed camera from view scope data: pos={position:?} rot={rotation:?} fov={fov}"
+            );
+
+            let mut camera = resources.get_mut::<Camera>();
+            camera.set_position(position);
+            camera.set_forward(-camera_to_world.transpose().row(2).xyz());
+            camera.set_projection(CameraProjection::perspective(fov, 0.01));
         }
         _ => error!("Unknown command '{command}'"),
     }

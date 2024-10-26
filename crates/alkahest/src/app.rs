@@ -46,7 +46,7 @@ use crate::{
 };
 
 pub struct AlkahestApp {
-    pub window: winit::window::Window,
+    pub window: Arc<winit::window::Window>,
     pub event_loop: EventLoop<()>,
 
     pub gctx: Arc<GpuContext>,
@@ -87,6 +87,7 @@ impl AlkahestApp {
             .with_window_icon(Some(icon.clone()))
             .build(&event_loop)
             .unwrap();
+        let window = Arc::new(window);
 
         puffin::set_scopes_on(cfg!(feature = "profiler"));
 
@@ -98,6 +99,7 @@ impl AlkahestApp {
         resources.insert(CurrentActivity(args.activity));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
+        resources.insert(window.clone());
 
         let mut maps = MapList::default();
         maps.maps.push(Map::create_empty("Empty Map"));

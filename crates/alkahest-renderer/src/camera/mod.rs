@@ -1,5 +1,5 @@
 pub mod projection;
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use glam::{Mat3, Mat4, Quat, Vec2, Vec3, Vec4};
 pub use projection::CameraProjection;
 
 pub mod fps;
@@ -246,6 +246,21 @@ impl Camera {
 
     pub fn set_orientation(&mut self, orientation: Vec2) {
         self.controller.set_orientation(orientation);
+    }
+
+    pub fn set_orientation_quat(&mut self, rotation: Quat) {
+        self.controller
+            .set_orientation(self.get_look_angle(self.position() + rotation * Vec3::X));
+    }
+
+    // pub fn set_orientation_mat3(&mut self, rotation: Mat3) {
+    //     self.controller
+    //         .set_orientation(self.get_look_angle(self.position() + rotation.mul_vec3(Vec3::X)));
+    // }
+
+    pub fn set_forward(&mut self, forward: Vec3) {
+        self.controller
+            .set_orientation(self.get_look_angle(self.position() + forward));
     }
 
     pub fn view_angle(&self) -> Vec2 {

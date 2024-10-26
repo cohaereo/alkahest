@@ -42,6 +42,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - FXAA pipeline support
 - Re-added loader code for decal and decal collection node
 - Implemented TFX bytecode op 0x3a gradient4_const
+- Added console command `window_resize` to resize the window to a specific size
+- Added console command `set_camera_from_cb12` to load view matrices from a raw view scope buffer
 
 ### Changed
 
