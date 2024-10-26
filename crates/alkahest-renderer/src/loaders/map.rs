@@ -705,6 +705,14 @@ fn load_datatable_into_scene<R: Read + Seek>(
 
                 let d: SUnk808068d4 = TigerReadable::read_ds(table_data)?;
 
+                if d.entity_model.is_none() {
+                    warn!(
+                        "Water entity model is None (table {}, offset 0x{:X})",
+                        table_hash, data.data_resource.offset
+                    );
+                    continue;
+                }
+
                 let model = DynamicModelComponent::load(
                     renderer,
                     &transform,

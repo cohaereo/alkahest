@@ -58,6 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix cross-compilation on Linux by using FXC instead of D3DCompile
 - Fixed a random Discord presence related crash
 - Added transparency sorting for sky objects (fixes broken skyboxes such as the Anomaly in Vesper's Host)
+- Fixed a water related map loading error on Disjunction by @cohaereo
 
 ## 0.5.0 - 2024-07-24
 
