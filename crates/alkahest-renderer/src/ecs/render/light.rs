@@ -386,6 +386,8 @@ pub struct ShadowMapRenderer {
     depth_stationary: ShadowDepthMap,
     depth: ShadowDepthMap,
     viewport: Viewport,
+    projection: CameraProjection,
+    transform: Transform,
 
     world_to_camera: Mat4,
     camera_to_projective: Mat4,
@@ -427,6 +429,8 @@ impl ShadowMapRenderer {
             resolution,
             depth_stationary,
             depth,
+            projection,
+            transform,
             viewport,
             world_to_camera,
             camera_to_projective,
@@ -438,12 +442,7 @@ impl ShadowMapRenderer {
     }
 
     pub fn resize(&mut self, gpu: &GpuContext, resolution: u32) {
-        self.depth
-            .resize((resolution, resolution), &gpu.device)
-            .ok();
-        self.depth_stationary
-            .resize((resolution, resolution), &gpu.device)
-            .ok();
+        *self = Self::new(gpu, self.transform, self.projection.clone(), resolution).unwrap();
     }
 
     /// Binds the shadowmap
@@ -454,6 +453,7 @@ impl ShadowMapRenderer {
         mode: ShadowGenerationMode,
     ) {
         self.world_to_camera = transform.view_matrix();
+        self.transform = transform.clone();
 
         unsafe {
             let view = match mode {

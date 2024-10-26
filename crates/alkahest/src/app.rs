@@ -32,6 +32,7 @@ use crate::{
     config,
     gui::{
         activity_select::{get_map_name, set_activity, ActivityBrowser, CurrentActivity},
+        console,
         context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
         hotkeys,
@@ -471,6 +472,7 @@ impl AlkahestApp {
                             std::thread::sleep(std::time::Duration::from_millis(100));
                         }
 
+                        console::process_queued_commands(resources);
                         if let Some(picked_id) = renderer.pickbuffer.finish_request() {
                             let mut selected = resources.get_mut::<SelectedEntity>();
                             if !selected.changed_this_frame {

@@ -16,6 +16,8 @@ use crate::{
     resources::AppResources,
 };
 
+use super::console;
+
 pub struct RenderSettingsPanel;
 
 impl GuiView for RenderSettingsPanel {
@@ -102,17 +104,26 @@ impl GuiView for RenderSettingsPanel {
                     ui.checkbox(&mut c.renderer.vsync, "VSync");
                     ui.checkbox(&mut c.renderer.matcap, "Matcap");
 
-                    egui::ComboBox::from_label("Shadows")
+                    if egui::ComboBox::from_label("Shadows")
                         .selected_text(c.renderer.shadow_quality.to_string().split_pascalcase())
                         .show_ui(ui, |ui| {
+                            let mut changed = false;
                             for quality in ShadowQuality::iter() {
-                                ui.selectable_value(
-                                    &mut c.renderer.shadow_quality,
-                                    quality,
-                                    quality.to_string().split_pascalcase(),
-                                );
+                                changed |= ui
+                                    .selectable_value(
+                                        &mut c.renderer.shadow_quality,
+                                        quality,
+                                        quality.to_string().split_pascalcase(),
+                                    )
+                                    .clicked();
                             }
-                        });
+                            changed
+                        })
+                        .inner
+                        .unwrap_or_default()
+                    {
+                        console::queue_command("recreate_shadowmaps", &[]);
+                    }
                     ui.checkbox(&mut c.renderer.ssao, "SSAO");
                     ui.collapsing("SSAO Settings", |ui| {
                         let renderer = resources.get::<RendererShared>();

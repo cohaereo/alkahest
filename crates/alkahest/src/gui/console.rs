@@ -15,7 +15,10 @@ use alkahest_renderer::{
     camera::{Camera, CameraProjection},
     ecs::{
         common::{Icon, Label, Mutable, RenderCommonBundle},
-        render::{dynamic_geometry::DynamicModelComponent, static_geometry::StaticModelSingle},
+        render::{
+            dynamic_geometry::DynamicModelComponent, light::ShadowMapRenderer,
+            static_geometry::StaticModelSingle,
+        },
         tags::{EntityTag, Tags},
         transform::{OriginalTransform, Transform},
         utility::{Route, RouteNode},
@@ -214,6 +217,34 @@ impl GuiView for ConsolePanel {
         }
 
         None
+    }
+}
+
+struct QueuedCommand {
+    command: String,
+    args: Vec<String>,
+}
+
+lazy_static! {
+    static ref COMMAND_QUEUE: (
+        crossbeam::channel::Sender<QueuedCommand>,
+        crossbeam::channel::Receiver<QueuedCommand>
+    ) = crossbeam::channel::bounded(64);
+}
+
+pub fn queue_command(command: &str, args: &[&str]) {
+    let command = QueuedCommand {
+        command: command.to_string(),
+        args: args.iter().map(|s| s.to_string()).collect_vec(),
+    };
+
+    COMMAND_QUEUE.0.send(command).ok();
+}
+
+pub fn process_queued_commands(resources: &AppResources) {
+    while let Ok(cmd) = COMMAND_QUEUE.1.try_recv() {
+        let args = cmd.args.iter().map(|s| s.as_str()).collect_vec();
+        execute_command(&cmd.command, &args, resources);
     }
 }
 
@@ -877,6 +908,18 @@ fn execute_command(command: &str, args: &[&str], resources: &AppResources) {
         "unlock_time" => {
             let renderer = resources.get_mut::<RendererShared>();
             renderer.time.store(renderer.time.load().to_instant());
+        }
+        "recreate_shadowmaps" => {
+            let renderer = resources.get_mut::<RendererShared>();
+            let mut maps = resources.get_mut::<MapList>();
+
+            let Some(scene) = maps.current_map_mut().map(|m| &mut m.scene) else {
+                return;
+            };
+
+            for mut shadowmap in scene.query::<&mut ShadowMapRenderer>().iter_mut(scene) {
+                shadowmap.resize(&renderer.gpu, renderer.settings.shadow_quality.resolution());
+            }
         }
         _ => error!("Unknown command '{command}'"),
     }

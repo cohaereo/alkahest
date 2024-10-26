@@ -492,9 +492,12 @@ impl Renderer {
     }
 }
 
-// Workaround until we (eventually) get default literals: https://github.com/serde-rs/serde/issues/368
+// Workarounds until we (eventually) get default literals: https://github.com/serde-rs/serde/issues/368
 fn default_true() -> bool {
     true
+}
+fn default_false() -> bool {
+    false
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -530,7 +533,7 @@ pub struct RendererSettings {
     #[serde(skip, default = "default_true")]
     pub stage_decals_additive: bool,
 
-    #[serde(skip, default = "default_true")]
+    #[serde(skip, default = "default_false")]
     pub fxaa_noise: bool,
 
     // #[serde(skip, default = "default_true")]

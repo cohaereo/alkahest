@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub enum CameraProjection {
     Perspective {
         /// Field of view in degrees
