@@ -259,7 +259,7 @@ impl GuiView for TfxExternEditor {
                                             .speed(0.01)
                                             .ui(ui);
                                     }
-                                    alkahest_renderer::tfx::channels::ChannelType::FloatSlider(
+                                    alkahest_renderer::tfx::channels::ChannelType::FloatRanged(
                                         ref range,
                                     ) => {
                                         egui::Slider::new(&mut channel.value.x, range.clone())
