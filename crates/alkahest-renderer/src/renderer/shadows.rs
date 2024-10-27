@@ -89,9 +89,11 @@ impl Renderer {
 #[derive(Copy, Clone, Serialize, Deserialize, PartialEq, strum::EnumIter, strum::Display)]
 pub enum ShadowQuality {
     Off,
+    Lowest,
     Low,
     Medium,
     High,
+    Highest,
 }
 
 impl ShadowQuality {
@@ -99,16 +101,20 @@ impl ShadowQuality {
         match self {
             ShadowQuality::Off => ShadowPcfSamples::Samples13,
             ShadowQuality::Low => ShadowPcfSamples::Samples13,
+            ShadowQuality::Lowest => ShadowPcfSamples::Samples13,
             ShadowQuality::Medium => ShadowPcfSamples::Samples17,
             ShadowQuality::High => ShadowPcfSamples::Samples21,
+            ShadowQuality::Highest => ShadowPcfSamples::Samples21,
         }
     }
 
     pub fn resolution(&self) -> u32 {
         match self {
-            ShadowQuality::Off | ShadowQuality::Low => 256,
-            ShadowQuality::Medium => 512,
-            ShadowQuality::High => 1024,
+            ShadowQuality::Off | ShadowQuality::Lowest => 256,
+            ShadowQuality::Low => 512,
+            ShadowQuality::Medium => 1024,
+            ShadowQuality::High => 2048,
+            ShadowQuality::Highest => 4096,
         }
     }
 }
