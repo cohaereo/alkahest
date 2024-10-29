@@ -177,6 +177,7 @@ tfx_global_pipelines! {
     sky_hemisphere_spherical_blur,
     sky_direction_lookup_generate,
     sky_generate_sky_mask,
+    atmo_depth_angle_density_lookup_generate,
 
     // Cubemap variants
     cubemap_apply_cube_alpha_off_probes_off_relighting_off, cubemap_apply_cube_alpha_off_probes_off_relighting_on,

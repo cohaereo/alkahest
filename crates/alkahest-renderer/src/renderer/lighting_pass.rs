@@ -1,4 +1,5 @@
-use alkahest_data::{geometry::EPrimitiveType, technique::StateSelection};
+use alkahest_data::technique::StateSelection;
+use glam::Vec4;
 
 use crate::{
     ecs::{map::MapAtmosphere, render::light::draw_light_system, Scene},
@@ -155,78 +156,75 @@ impl Renderer {
                 .unwrap_or(ExternDefault::extern_default());
 
             data.externs.atmosphere = Some({
-                let mut atmos = externs::Atmosphere {
+                let atmosphere_lookup_tex_desc = data.gbuffers.atmos_ss_far_lookup.get_desc();
+                let atmosphere_lookup_resolution = Vec4::new(
+                    atmosphere_lookup_tex_desc.Width as f32,
+                    atmosphere_lookup_tex_desc.Height as f32,
+                    1. / atmosphere_lookup_tex_desc.Width as f32,
+                    1. / atmosphere_lookup_tex_desc.Height as f32,
+                );
+                externs::Atmosphere {
                     atmos_ss_far_lookup: data.gbuffers.atmos_ss_far_lookup.view.clone().into(),
                     atmos_ss_near_lookup: data.gbuffers.atmos_ss_near_lookup.view.clone().into(),
+                    atmosphere_lookup_resolution,
                     unk100: self.gpu.dark_grey_texture.view.clone().into(),
+                    light_shaft_optical_depth: self.gpu.white_texture.view.clone().into(),
 
                     ..atmos_existing
-                };
-
-                if let Some(map_atmos) = scene.get_resource::<MapAtmosphere>() {
-                    map_atmos.update_extern(&mut atmos);
                 }
-
-                atmos
             });
         }
 
         if scene.get_resource::<MapAtmosphere>().is_some() {
-            unsafe {
-                self.gpu.context().OMSetRenderTargets(
-                    Some(&[
-                        Some(
-                            self.data
-                                .lock()
-                                .gbuffers
-                                .atmos_ss_far_lookup
-                                .render_target
-                                .clone(),
-                        ),
-                        None,
-                    ]),
-                    None,
+            self.gpu
+                .current_states
+                .store(StateSelection::new(Some(0), Some(0), Some(0), Some(0)));
+
+            if let Some(atmos) = self.data.lock().externs.atmosphere.as_mut() {
+                scene
+                    .get_resource::<MapAtmosphere>()
+                    .unwrap()
+                    .update_extern(atmos, false);
+            }
+
+            {
+                gpu_profile_event!(self.gpu, "sky_lookup_generate_near");
+                self.data.lock().gbuffers.atmos_ss_near_lookup.bind();
+
+                self.execute_global_pipeline(
+                    &self.render_globals.pipelines.sky_lookup_generate_near,
+                    "sky_lookup_generate_near",
                 );
+            }
 
-                self.render_globals
-                    .pipelines
-                    .sky_lookup_generate_far
-                    .bind(self)
-                    .unwrap();
+            if let Some(atmos) = self.data.lock().externs.atmosphere.as_mut() {
+                scene
+                    .get_resource::<MapAtmosphere>()
+                    .unwrap()
+                    .update_extern(atmos, true);
+            }
 
-                self.gpu.current_states.store(StateSelection::new(
-                    Some(0),
-                    Some(0),
-                    Some(0),
-                    Some(0),
-                ));
-                self.gpu.flush_states();
-                self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
+            {
+                gpu_profile_event!(self.gpu, "sky_lookup_generate_far");
+                self.data.lock().gbuffers.atmos_ss_far_lookup.bind();
 
-                self.gpu.context().Draw(6, 0);
-
-                self.gpu.context().OMSetRenderTargets(
-                    Some(&[
-                        Some(
-                            self.data
-                                .lock()
-                                .gbuffers
-                                .atmos_ss_near_lookup
-                                .render_target
-                                .clone(),
-                        ),
-                        None,
-                    ]),
-                    None,
+                self.execute_global_pipeline(
+                    &self.render_globals.pipelines.sky_lookup_generate_far,
+                    "sky_lookup_generate_far",
                 );
+            }
 
-                self.render_globals
-                    .pipelines
-                    .sky_lookup_generate_near
-                    .bind(self)
-                    .unwrap();
+            {
+                gpu_profile_event!(self.gpu, "atmo_depth_angle_density_lookup_generate");
+                self.data.lock().gbuffers.depth_angle_density_lookup.bind();
 
-                self.gpu.context().Draw(6, 0);
+                self.execute_global_pipeline(
+                    &self
+                        .render_globals
+                        .pipelines
+                        .atmo_depth_angle_density_lookup_generate,
+                    "atmo_depth_angle_density_lookup_generate",
+                );
             }
         }
     }

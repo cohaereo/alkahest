@@ -55,6 +55,7 @@ pub struct GpuContext {
     pub color0_fallback: VertexBuffer,
     pub color_ao_fallback: VertexBuffer,
 
+    pub atmos_depth_angle_lookup_tmp: Texture,
     pub sky_hemisphere_placeholder: Texture,
     pub shadowmap_vs_t2: Texture,
     pub white_texture: Texture,
@@ -243,6 +244,14 @@ impl GpuContext {
             Some("sky_hemisphere_placeholder.png"),
         )?;
 
+        let atmos_depth_angle_lookup_tmp = Texture::load_png(
+            &device,
+            &Png::from_bytes(include_bytes!(
+                "../../assets/textures/depth_angle_lookup_temp.png"
+            ))?,
+            Some("depth_angle_lookup_temp.png"),
+        )?;
+
         let mut swapchain_target = None;
         unsafe {
             if let Some(swap_chain) = &swap_chain {
@@ -268,6 +277,7 @@ impl GpuContext {
             color0_fallback,
             color_ao_fallback,
             sky_hemisphere_placeholder,
+            atmos_depth_angle_lookup_tmp,
             white_texture,
             light_grey_texture,
             grey_texture,

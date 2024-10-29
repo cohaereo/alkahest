@@ -596,11 +596,11 @@ extern_struct! {
 
 extern_struct! {
     struct Transparent("transparent") {
-        0x00 => unk00: TextureView > unimplemented(false), // t11 | atmos_ss_far_lookup(_low_res)
-        0x08 => unk08: TextureView > unimplemented(false), // t12 | atmos_ss_far_lookup_downsampled
-        0x10 => unk10: TextureView > unimplemented(false), // t13 | atmos_ss_near_lookup(_low_res)
-        0x18 => unk18: TextureView > unimplemented(false), // t14 | atmos_ss_near_lookup_downsampled
-        0x20 => unk20: TextureView > unimplemented(false), // t15 | surf_atmosphere_depth_angle_density_lookup
+        0x00 => atmos_ss_far_lookup: TextureView > unimplemented(false), // t11 | atmos_ss_far_lookup(_low_res)
+        0x08 => atmos_ss_far_lookup_downsampled: TextureView > unimplemented(false), // t12 | atmos_ss_far_lookup_downsampled
+        0x10 => atmos_ss_near_lookup: TextureView > unimplemented(false), // t13 | atmos_ss_near_lookup(_low_res)
+        0x18 => atmos_ss_near_lookup_downsampled: TextureView > unimplemented(false), // t14 | atmos_ss_near_lookup_downsampled
+        0x20 => atmosphere_depth_angle_density_lookup: TextureView > unimplemented(false), // t15 | surf_atmosphere_depth_angle_density_lookup
         0x28 => unk28: TextureView > unimplemented(false), // t16 | field456_0x200 (Texture3D)
         0x30 => unk30: TextureView > unimplemented(false), // t17 | field457_0x204 (Texture3D)
         0x38 => unk38: TextureView > unimplemented(false), // t18 | field458_0x208 (Texture3D)
@@ -633,10 +633,11 @@ extern_struct! {
         0x78 => unk78: f32 > unimplemented(true),
         0x80 => unk80: TextureView > unimplemented(true),
         0x88 => unk88: TextureView > unimplemented(true),
-        0x90 => unk90: Vec4 > unimplemented(true),
+        0x90 => atmosphere_lookup_resolution: Vec4,
         0xa0 => light_shaft_optical_depth: TextureView > unimplemented(true),
-        0xc0 => unkc0: TextureView > unimplemented(true),
-        0xd0 => unkd0: Vec4 > unimplemented(true),
+        0xc0 => unkc0: TextureView > unimplemented(true), // Optical depth but hemispherical?
+        // (width, height, 1 / width, 1 / height)
+        0xd0 => depth_angle_density_lookup_resolution: Vec4 > default(Vec4::new(512.0, 512.0, 1. / 512.0, 1. / 512.0)),
 
         // Result of sky_lookup_generate_far
         0xe0 => atmos_ss_far_lookup: TextureView, // lightfall = 0xc0
@@ -650,7 +651,7 @@ extern_struct! {
         0x140 => fog_color: Vec4 > unimplemented(true), // lightfall = 0x120
         0x150 => unk150: f32 > unimplemented(true),
         0x154 => unk154: f32 > unimplemented(true),
-        0x160 => fog_intensity: f32 > unimplemented(true),
+        0x160 => fog_intensity: f32 > unimplemented(true) > default(0.0),
         0x164 => unk164: f32 > unimplemented(true),
         0x168 => unk168: f32 > unimplemented(true),
         0x16c => unk16c: f32 > unimplemented(true),
@@ -1004,8 +1005,17 @@ impl ExternDefault for f32 {
 fn get_global_channel_defaults() -> [GlobalChannel; 256] {
     let mut channels: [GlobalChannel; 256] = core::array::from_fn(|_| GlobalChannel::default());
 
-    channels[10].value = Vec4::ZERO;
     channels[97].value = Vec4::ZERO;
+    
+    // Atmosphere
+    // Values taken from midday tower rdc
+    channels[10].value = Vec4::ONE;
+    channels[25].value = Vec4::splat(40.0);
+    channels[26].value = Vec4::splat(0.90); // Atmos intensity but a channel?
+    channels[35].value = Vec4::splat(0.55);
+    channels[40].value = Vec4::ZERO;
+    channels[43].value = Vec4::ZERO;
+    channels[100].value = Vec4::new(0.41105, 0.71309, 0.56793, 0.56793);
 
     channels[75] = GlobalChannel::new("unk75 (verity dark/light)", ChannelType::FloatRanged(0f32..=1f32), Vec4::ZERO);
     channels[76] = GlobalChannel::new("unk76 (verity dark/light, cancels out unk75)", ChannelType::FloatRanged(0f32..=1f32), Vec4::ZERO);

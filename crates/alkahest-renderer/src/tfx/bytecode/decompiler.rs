@@ -351,9 +351,20 @@ impl TfxBytecodeDecompiler {
                         "gradient4_const({v}, {c0}, {c1}, {c2}, {c3}, {c4}, {c5})"
                     ));
                 }
+                &TfxBytecodeOp::Spline8Const { constant_start } => {
+                    // anyhow::ensure!((constant_start as usize + 4) < constants.len());
+                    let v = stack_pop!();
+                    stack_push!(format!(
+                        "spline8_const({v}, /* TODO: parse spline8 constants */)"
+                    ));
+                }
                 // TfxBytecodeOp::Unk39 { unk1 } => todo!(),
                 // TfxBytecodeOp::Unk3a { unk1 } => todo!(),
-                // TfxBytecodeOp::UnkLoadConstant { constant_index } => todo!(),
+                &TfxBytecodeOp::UnkLoadConstant { constant_index } => {
+                    anyhow::ensure!((constant_index as usize) < constants.len());
+                    let v = constants[constant_index as usize];
+                    stack_push!(format!("float4(?)({}, {}, {}, {})", v.x, v.y, v.z, v.w));
+                }
                 &TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
                     let offset_bytes = offset as usize * 4;
                     let path = ExternStorage::get_field_path(extern_, offset_bytes)
