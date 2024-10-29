@@ -12,11 +12,12 @@ use bevy_ecs::{
 use destiny_pkg::TagHash;
 use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
+use rustc_hash::FxHashSet;
 use tiger_parse::PackageManagerExt;
 
-use crate::tfx::view::View;
 use crate::{
     ecs::{
+        channels::ObjectChannels,
         render::{decorators::DecoratorRenderer, static_geometry::ModelBuffers},
         transform::Transform,
         visibility::{ViewVisibility, VisibilityHelper},
@@ -167,11 +168,13 @@ impl DynamicModel {
         renderer: &Renderer,
         render_stage: TfxRenderStage,
         identifier: u16,
+        object_channels: Option<&ObjectChannels>,
     ) -> anyhow::Result<()> {
         self.draw_wrapped(
             renderer,
             render_stage,
             identifier,
+            object_channels,
             |_, renderer, _mesh, part| unsafe {
                 renderer
                     .gpu
@@ -186,22 +189,21 @@ impl DynamicModel {
         renderer: &Renderer,
         render_stage: TfxRenderStage,
         identifier: u16,
+        object_channels: Option<&ObjectChannels>,
         f: F,
     ) -> anyhow::Result<()>
     where
         F: Fn(&Self, &Renderer, &SDynamicMesh, &SDynamicMeshPart),
     {
-        if !renderer.render_settings.stage_transparent
-            && render_stage == TfxRenderStage::Transparents
-        {
+        if !renderer.settings.stage_transparent && render_stage == TfxRenderStage::Transparents {
             return Ok(());
         }
 
-        if !renderer.render_settings.stage_decals && render_stage == TfxRenderStage::Decals {
+        if !renderer.settings.stage_decals && render_stage == TfxRenderStage::Decals {
             return Ok(());
         }
 
-        if !renderer.render_settings.stage_decals_additive
+        if !renderer.settings.stage_decals_additive
             && render_stage == TfxRenderStage::DecalsAdditive
         {
             return Ok(());
@@ -247,7 +249,9 @@ impl DynamicModel {
             if let Some(technique) =
                 renderer.get_technique_shared(&self.part_techniques[self.selected_mesh][part_index])
             {
-                technique.bind(renderer).expect("Failed to bind technique");
+                technique
+                    .bind_with_channels(renderer, object_channels)
+                    .expect("Failed to bind technique");
                 all_scopes |= technique.used_scopes;
                 // } else {
                 //     continue;
@@ -257,7 +261,7 @@ impl DynamicModel {
                 .and_then(|t| renderer.data.lock().asset_manager.techniques.get_shared(&t))
             {
                 technique
-                    .bind(renderer)
+                    .bind_with_channels(renderer, object_channels)
                     .expect("Failed to bind variant technique");
                 all_scopes |= technique.used_scopes;
             }
@@ -367,7 +371,12 @@ impl DynamicModelComponent {
         self.ext = ext;
     }
 
-    pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) -> anyhow::Result<()> {
+    pub fn draw(
+        &self,
+        renderer: &Renderer,
+        render_stage: TfxRenderStage,
+        object_channels: Option<&ObjectChannels>,
+    ) -> anyhow::Result<()> {
         // cohae: We're doing this in reverse. Normally we'd write the extern first, then copy that to scope data
         renderer.data.lock().externs.rigid_model = Some(self.ext.clone());
 
@@ -382,7 +391,15 @@ impl DynamicModelComponent {
         // }
 
         // TODO(cohae): Error reporting
-        self.model.draw(renderer, render_stage, self.identifier)
+        self.model
+            .draw(renderer, render_stage, self.identifier, object_channels)
+    }
+
+    pub fn techniques(&self) -> Vec<Handle<Technique>> {
+        let mut techniques = self.model.techniques.clone();
+        techniques.extend(self.model.part_techniques.iter().flatten().cloned());
+
+        FxHashSet::from_iter(techniques).into_iter().collect()
     }
 }
 
@@ -418,9 +435,12 @@ pub fn draw_dynamic_model_system(
 
     for (e, _feature_type) in entities {
         let dynamic = scene.get::<DynamicModelComponent>(e).unwrap();
+        let object_channels = scene.get::<ObjectChannels>(e);
 
         renderer.pickbuffer.with_entity(e, || {
-            dynamic.draw(renderer, render_stage).unwrap();
+            dynamic
+                .draw(renderer, render_stage, object_channels)
+                .unwrap();
         });
     }
 
@@ -470,7 +490,7 @@ pub fn draw_sky_objects_system(
             Option<&ViewVisibility>,
         )>()
         .iter(scene)
-        .filter(|(_e, transform, dynamic, view_vis)| {
+        .filter(|(_e, _transform, dynamic, view_vis)| {
             view_vis.is_visible(renderer.active_view)
                 && dynamic.model.feature_type == TfxFeatureRenderer::SkyTransparent
         })
@@ -483,7 +503,7 @@ pub fn draw_sky_objects_system(
         .query::<&DynamicModelComponent>()
         .iter_many(scene, entities_visible.into_iter().map(|(e, _)| e))
     {
-        dynamic.draw(renderer, render_stage).unwrap();
+        dynamic.draw(renderer, render_stage, None).unwrap();
     }
 }
 

@@ -1,6 +1,7 @@
 mod cubemaps;
 pub mod gbuffer;
 mod immediate;
+use crossbeam::atomic::AtomicCell;
 use glam::{Mat4, Quat};
 pub use immediate::{ImmediateLabel, LabelAlign};
 mod lighting_pass;
@@ -9,6 +10,7 @@ mod pickbuffer;
 mod postprocess;
 pub mod shader;
 mod shadows;
+pub use shadows::{ShadowPcfSamples, ShadowQuality};
 mod systems;
 mod transparents_pass;
 mod util;
@@ -19,7 +21,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use alkahest_data::{
@@ -90,7 +92,7 @@ pub struct Renderer {
     pub render_globals: RenderGlobals,
     pub data: Mutex<RendererData>,
 
-    pub render_settings: RendererSettings,
+    pub settings: RendererSettings,
 
     pub ssao: SsaoRenderer,
     matcap: MatcapRenderer,
@@ -98,7 +100,7 @@ pub struct Renderer {
     cubemap_renderer: CubemapRenderer,
     pub pickbuffer: Pickbuffer,
 
-    pub time: Instant,
+    pub time: AtomicCell<Time>,
     last_frame: Instant,
     pub delta_time: f64,
     pub frame_index: AtomicUsize,
@@ -144,8 +146,8 @@ impl Renderer {
                 .context("failed to create Pickbuffer")?,
             gpu,
             render_globals,
-            render_settings: RendererSettings::default(),
-            time: Instant::now(),
+            settings: RendererSettings::default(),
+            time: AtomicCell::new(Time::now()),
             last_frame: Instant::now(),
             delta_time: 0.0,
             frame_index: AtomicUsize::default(),
@@ -193,7 +195,7 @@ impl Renderer {
             }
         }
 
-        if self.render_settings.debug_view.is_gamma_converter() {
+        if self.settings.debug_view.is_gamma_converter() {
             self.draw_view_overlay(scene, resources);
         }
 
@@ -221,7 +223,7 @@ impl Renderer {
             let pipeline = self
                 .render_globals
                 .pipelines
-                .get_debug_view_pipeline(self.render_settings.debug_view);
+                .get_debug_view_pipeline(self.settings.debug_view);
 
             self.gpu
                 .current_states
@@ -229,7 +231,7 @@ impl Renderer {
             self.execute_global_pipeline(pipeline, "final_or_debug_view");
         }
 
-        if !self.render_settings.debug_view.is_gamma_converter() {
+        if !self.settings.debug_view.is_gamma_converter() {
             self.draw_view_overlay(scene, resources);
         }
 
@@ -238,7 +240,7 @@ impl Renderer {
             self.gpu.swapchain_target.read().as_ref().unwrap(),
             // final_combine and final_combine_no_film_curve already apply gamma correction
             !matches!(
-                self.render_settings.debug_view,
+                self.settings.debug_view,
                 RenderDebugView::None | RenderDebugView::NoFilmCurve
             ),
         );
@@ -281,9 +283,10 @@ impl Renderer {
         // scene.run_system_once_with(resources.get::<RendererShared>().clone(), draw_aabb_system);
 
         if let Some(selected) = resources.get::<SelectedEntity>().selected() {
-            if scene
-                .get_entity(selected)
-                .map_or(true, |v| v.get::<ViewVisibility>().is_visible(0))
+            if self.settings.draw_selection_outline
+                && scene
+                    .get_entity(selected)
+                    .map_or(true, |v| v.get::<ViewVisibility>().is_visible(0))
             {
                 self.draw_outline(
                     scene,
@@ -351,8 +354,8 @@ impl Renderer {
         {
             let externs = &mut self.data.lock().externs;
             externs.frame = Frame {
-                game_time: self.time.elapsed().as_secs_f32(),
-                render_time: self.time.elapsed().as_secs_f32(),
+                game_time: self.time.load().elapsed(),
+                render_time: self.time.load().elapsed(),
                 delta_game_time: self.delta_time as f32,
                 specular_lobe_3d_lookup: self
                     .render_globals
@@ -426,7 +429,7 @@ impl Renderer {
     }
 
     pub fn set_render_settings(&self, settings: RendererSettings) {
-        self.pocus().render_settings = settings;
+        self.pocus().settings = settings;
     }
 
     pub fn resize_buffers(&self, width: u32, height: u32) {
@@ -454,9 +457,9 @@ impl Renderer {
 
         // Can we render based on stages?
         let mut stages_ok = stage.map_or(true, |v| match v {
-            TfxRenderStage::Transparents => self.render_settings.stage_transparent,
-            TfxRenderStage::Decals => self.render_settings.stage_decals,
-            TfxRenderStage::DecalsAdditive => self.render_settings.stage_decals_additive,
+            TfxRenderStage::Transparents => self.settings.stage_transparent,
+            TfxRenderStage::Decals => self.settings.stage_decals,
+            TfxRenderStage::DecalsAdditive => self.settings.stage_decals_additive,
             _ => true,
         });
 
@@ -476,13 +479,13 @@ impl Renderer {
         }
 
         let features_ok = feature.map_or(true, |v| match v {
-            TfxFeatureRenderer::StaticObjects => self.render_settings.feature_statics.contains(flags_to_check),
-            TfxFeatureRenderer::TerrainPatch => self.render_settings.feature_terrain.contains(flags_to_check),
-            TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.render_settings.feature_dynamics.contains(flags_to_check),
-            TfxFeatureRenderer::SkyTransparent => self.render_settings.feature_sky.contains(flags_to_check),
-            TfxFeatureRenderer::Water => self.render_settings.feature_water.contains(flags_to_check),
-            TfxFeatureRenderer::SpeedtreeTrees => self.render_settings.feature_decorators.contains(flags_to_check),
-            TfxFeatureRenderer::Cubemaps => self.render_settings.feature_cubemaps,
+            TfxFeatureRenderer::StaticObjects => self.settings.feature_statics.contains(flags_to_check),
+            TfxFeatureRenderer::TerrainPatch => self.settings.feature_terrain.contains(flags_to_check),
+            TfxFeatureRenderer::RigidObject | TfxFeatureRenderer::DynamicObjects => self.settings.feature_dynamics.contains(flags_to_check),
+            TfxFeatureRenderer::SkyTransparent => self.settings.feature_sky.contains(flags_to_check),
+            TfxFeatureRenderer::Water => self.settings.feature_water.contains(flags_to_check),
+            TfxFeatureRenderer::SpeedtreeTrees => self.settings.feature_decorators.contains(flags_to_check),
+            TfxFeatureRenderer::Cubemaps => self.settings.feature_cubemaps,
             _ => true,
         });
 
@@ -490,9 +493,12 @@ impl Renderer {
     }
 }
 
-// Workaround until we (eventually) get default literals: https://github.com/serde-rs/serde/issues/368
+// Workarounds until we (eventually) get default literals: https://github.com/serde-rs/serde/issues/368
 fn default_true() -> bool {
     true
+}
+fn default_false() -> bool {
+    false
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -501,7 +507,9 @@ pub struct RendererSettings {
     pub ssao: bool,
     #[serde(skip)]
     pub matcap: bool,
-    pub shadows: bool,
+    #[serde(skip, default = "default_true")]
+    pub draw_selection_outline: bool,
+    pub shadow_quality: ShadowQuality,
     pub shadow_updates_per_frame: usize,
 
     #[serde(skip, default = "RenderFeatureVisibility::all")]
@@ -528,7 +536,7 @@ pub struct RendererSettings {
     #[serde(skip, default = "default_true")]
     pub stage_decals_additive: bool,
 
-    #[serde(skip, default = "default_true")]
+    #[serde(skip, default = "default_false")]
     pub fxaa_noise: bool,
 
     // #[serde(skip, default = "default_true")]
@@ -543,7 +551,8 @@ impl Default for RendererSettings {
             vsync: true,
             ssao: true,
             matcap: false,
-            shadows: true,
+            draw_selection_outline: true,
+            shadow_quality: ShadowQuality::Medium,
             shadow_updates_per_frame: 2,
 
             feature_statics: RenderFeatureVisibility::all(),
@@ -641,5 +650,39 @@ impl RenderDebugView {
     /// Does this view convert gamma/color space?
     pub fn is_gamma_converter(&self) -> bool {
         matches!(self, Self::None | Self::NoFilmCurve)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Time {
+    Instant(Instant),
+    Fixed(f32),
+}
+
+impl Time {
+    pub fn now() -> Self {
+        Self::Instant(Instant::now())
+    }
+
+    pub fn fixed(fixed: f32) -> Self {
+        Self::Fixed(fixed)
+    }
+
+    pub fn elapsed(&self) -> f32 {
+        match self {
+            Self::Instant(time) => time.elapsed().as_secs_f32(),
+            Self::Fixed(time) => *time,
+        }
+    }
+
+    pub fn to_fixed(&self) -> Self {
+        Self::Fixed(self.elapsed())
+    }
+
+    pub fn to_instant(&self) -> Self {
+        match self {
+            Self::Instant(time) => Self::Instant(*time),
+            Self::Fixed(time) => Self::Instant(Instant::now() - Duration::from_secs_f32(*time)),
+        }
     }
 }

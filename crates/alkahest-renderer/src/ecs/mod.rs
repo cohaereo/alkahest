@@ -3,6 +3,7 @@ use destiny_pkg::TagHash;
 use resources::SelectedEntity;
 
 pub mod audio;
+pub mod channels;
 pub mod common;
 pub mod culling;
 pub mod hierarchy;

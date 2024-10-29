@@ -30,18 +30,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+### ✨ Highlights
+
+- FXAA pipeline support
+- Added an empty map for spawning objects
+- Add a search bar to the outliner by @AndrisBorbas in [#41](https://github.com/cohaereo/alkahest/pull/41)
+- Object channel editor
+
 ### Added
 
 - Cull static/dynamic geometry outside of the view frustum
 - Write tracing events to alkahest.log
-- Add a search bar to the outliner by @AndrisBorbas in [#41](https://github.com/cohaereo/alkahest/pull/41)
 - Basic controller support
 - Global channel labels/input field types
-- Added an empty map instead of a scratch scene
 - Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
-- FXAA pipeline support
 - Re-added loader code for decal and decal collection node
-- - Added Arrow Hotkeys to navigate selected object heirarchies @Froggy618157725
+- Implemented TFX bytecode op 0x3a gradient4_const
+- Added console command `window_resize` to resize the window to a specific size
+- Added console command `set_camera_from_cb12` to load view matrices from a raw view scope buffer
+- Added commands `lock_time` and `unlock_time` to allow fixing the game time to a specific value (eg. for more deterministic image comparisons)
+- Shadow quality option (replaces shadow checkbox)
+- Added Arrow Hotkeys to navigate selected object heirarchies @Froggy618157725
   in [#36](https://github.com/cohaereo/alkahest/pull/36)
 - Added hotkeys to add to current route. + adds at the end of the route, or after current node, - adds before the selected node
 
@@ -61,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix cross-compilation on Linux by using FXC instead of D3DCompile
 - Fixed a random Discord presence related crash
 - Added transparency sorting for sky objects (fixes broken skyboxes such as the Anomaly in Vesper's Host)
+- Fixed a water related map loading error on Disjunction by @cohaereo
 
 ## 0.5.0 - 2024-07-24
 

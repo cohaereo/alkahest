@@ -5,6 +5,7 @@ use alkahest_data::{
     tfx::{TfxRenderStage, TfxShaderStage},
 };
 use bevy_ecs::entity::Entity;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::{
@@ -20,7 +21,7 @@ use crate::{
 
 impl Renderer {
     pub fn update_shadow_maps(&self, scene: &mut Scene) {
-        if !self.render_settings.shadows || self.render_settings.matcap {
+        if self.settings.shadow_quality == ShadowQuality::Off || self.settings.matcap {
             return;
         }
 
@@ -47,7 +48,7 @@ impl Renderer {
         }
 
         shadow_renderers.sort_by_key(|(_, last_update)| *last_update);
-        shadow_renderers.truncate(self.render_settings.shadow_updates_per_frame);
+        shadow_renderers.truncate(self.settings.shadow_updates_per_frame);
 
         for (e, _) in shadow_renderers {
             gpu_event!(self.gpu, "update_shadow_map", e.index().to_string());
@@ -83,4 +84,43 @@ impl Renderer {
             .use_flipped_depth_comparison
             .store(false, Ordering::Relaxed);
     }
+}
+
+#[derive(Copy, Clone, Serialize, Deserialize, PartialEq, strum::EnumIter, strum::Display)]
+pub enum ShadowQuality {
+    Off,
+    Lowest,
+    Low,
+    Medium,
+    High,
+    Highest,
+}
+
+impl ShadowQuality {
+    pub fn pcf_samples(&self) -> ShadowPcfSamples {
+        match self {
+            ShadowQuality::Off => ShadowPcfSamples::Samples13,
+            ShadowQuality::Low => ShadowPcfSamples::Samples13,
+            ShadowQuality::Lowest => ShadowPcfSamples::Samples13,
+            ShadowQuality::Medium => ShadowPcfSamples::Samples17,
+            ShadowQuality::High => ShadowPcfSamples::Samples21,
+            ShadowQuality::Highest => ShadowPcfSamples::Samples21,
+        }
+    }
+
+    pub fn resolution(&self) -> u32 {
+        match self {
+            ShadowQuality::Off | ShadowQuality::Lowest => 256,
+            ShadowQuality::Low => 512,
+            ShadowQuality::Medium => 1024,
+            ShadowQuality::High => 2048,
+            ShadowQuality::Highest => 4096,
+        }
+    }
+}
+
+pub enum ShadowPcfSamples {
+    Samples13 = 0,
+    Samples17 = 1,
+    Samples21 = 2,
 }

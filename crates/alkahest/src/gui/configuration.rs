@@ -2,7 +2,7 @@ use alkahest_renderer::{
     camera::{Camera, CameraProjection},
     ecs::tags::{NodeFilter, NodeFilterSet},
     icons::{ICON_CLIPBOARD, ICON_CURSOR_DEFAULT, ICON_EYE},
-    renderer::{RenderDebugView, RenderFeatureVisibility, RendererShared},
+    renderer::{RenderDebugView, RenderFeatureVisibility, RendererShared, ShadowQuality},
     util::text::StringExt,
 };
 use egui::{Context, RichText, Rounding, Widget};
@@ -15,6 +15,8 @@ use crate::{
     gui::context::{GuiCtx, GuiView, ViewResult},
     resources::AppResources,
 };
+
+use super::console;
 
 pub struct RenderSettingsPanel;
 
@@ -101,7 +103,28 @@ impl GuiView for RenderSettingsPanel {
                 ui.collapsing(RichText::new("Graphics").heading(), |ui| {
                     ui.checkbox(&mut c.renderer.vsync, "VSync");
                     ui.checkbox(&mut c.renderer.matcap, "Matcap");
-                    ui.checkbox(&mut c.renderer.shadows, "Shadows");
+                    ui.checkbox(&mut c.renderer.draw_selection_outline, "Selection Outline");
+
+                    if egui::ComboBox::from_label("Shadows")
+                        .selected_text(c.renderer.shadow_quality.to_string().split_pascalcase())
+                        .show_ui(ui, |ui| {
+                            let mut changed = false;
+                            for quality in ShadowQuality::iter() {
+                                changed |= ui
+                                    .selectable_value(
+                                        &mut c.renderer.shadow_quality,
+                                        quality,
+                                        quality.to_string().split_pascalcase(),
+                                    )
+                                    .clicked();
+                            }
+                            changed
+                        })
+                        .inner
+                        .unwrap_or_default()
+                    {
+                        console::queue_command("recreate_shadowmaps", &[]);
+                    }
                     ui.checkbox(&mut c.renderer.ssao, "SSAO");
                     ui.collapsing("SSAO Settings", |ui| {
                         let renderer = resources.get::<RendererShared>();

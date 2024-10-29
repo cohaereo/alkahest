@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub enum CameraProjection {
     Perspective {
         /// Field of view in degrees
@@ -16,10 +17,12 @@ pub enum CameraProjection {
 }
 
 impl CameraProjection {
+    /// Field of view in degrees
     pub fn perspective(fov: f32, near: f32) -> Self {
         Self::Perspective { fov, near }
     }
 
+    /// Field of view in degrees
     pub fn perspective_bounded(fov: f32, near: f32, far: f32) -> Self {
         Self::PerspectiveBounded { fov, near, far }
     }

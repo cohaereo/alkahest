@@ -154,6 +154,7 @@ impl DecoratorRenderer {
                 renderer,
                 stage,
                 dyn_id,
+                None,
                 move |_model, renderer, mesh, part| unsafe {
                     let layout = mesh.get_input_layout_for_stage(stage);
                     if !RenderStates::is_input_layout_instanced(layout as usize) {

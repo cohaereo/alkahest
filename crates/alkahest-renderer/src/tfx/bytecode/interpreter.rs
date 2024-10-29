@@ -10,6 +10,7 @@ use windows::Win32::Graphics::Direct3D11::{ID3D11SamplerState, ID3D11ShaderResou
 
 use super::opcodes::TfxBytecodeOp;
 use crate::{
+    ecs::channels::ObjectChannels,
     gpu::{buffer::ConstantBufferCached, GpuContext},
     tfx::externs::{ExternStorage, TextureView},
 };
@@ -36,6 +37,7 @@ impl TfxBytecodeInterpreter {
         buffer: Option<&ConstantBufferCached<Vec4>>,
         constants: &[Vec4],
         samplers: &[Option<ID3D11SamplerState>],
+        object_channels: Option<&ObjectChannels>,
     ) -> anyhow::Result<()> {
         profiling::scope!("TfxBytecodeInterpreter::evaluate");
         let mut stack: SmallVec<[Vec4; 64]> = Default::default();
@@ -268,9 +270,27 @@ impl TfxBytecodeInterpreter {
 
                     stack_push!(mat.mul_vec4(value));
                 }
-
-                TfxBytecodeOp::PushObjectChannelVector { .. } => {
-                    stack_push!(Vec4::ONE)
+                TfxBytecodeOp::Gradient4Const { constant_start } => {
+                    anyhow::ensure!((*constant_start as usize + 5) < constants.len());
+                    let v = stack_top!();
+                    let c = &constants[*constant_start as usize..];
+                    *v = tfx_converted::bytecode_op_gradient4_const(
+                        *v,
+                        c[0],
+                        c[1],
+                        c[2],
+                        c[3],
+                        c[4],
+                        c[5]
+                    );
+                }
+                TfxBytecodeOp::PushObjectChannelVector { hash } => {
+                    if let Some((value, _)) = object_channels.and_then(|c| c.values.get(hash)) {
+                        stack_push!(*value);
+                    } else {
+                        // TODO(cohae): Some kind of error/feedback here would be nice
+                        stack_push!(Vec4::ZERO);
+                    }
                 }
                 &TfxBytecodeOp::Unk4c { unk1, .. }
                 // | &TfxBytecodeOp::PushObjectChannelVector { hash }
@@ -298,7 +318,7 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     *v = a + *v * (b - a);
                 }
-                TfxBytecodeOp::Unk37 { constant_start } => {
+                TfxBytecodeOp::Spline4Const { constant_start } => {
                     anyhow::ensure!((*constant_start as usize + 4) < constants.len());
                     let v = stack_top!();
                     *v = unsafe {
@@ -624,4 +644,206 @@ mod tfx_converted {
     pub fn _trig_helper_vector_sin_cos_rotations_estimate(a: Vec4) -> Vec4 {
         _trig_helper_vector_sin_rotations_estimate(a + Vec4::new(0.0, 0.25, 0.0, 0.25))
     }
+
+    // pub fn bytecode_op_spline4_const(
+    //     x: Vec4,
+    //     c3: Vec4,
+    //     c2: Vec4,
+    //     c1: Vec4,
+    //     c0: Vec4,
+    //     thresholds: Vec4,
+    // ) -> Vec4 {
+    //     let high = c3 * x + c2;
+    //     let low = c1 * x + c0;
+    //     let x2 = x * x;
+    //     let evaluated_spline = high * x2 + low;
+
+    //     let threshold_mask = step(thresholds, x);
+    //     let channel_mask = _fake_bitwise_ops_fake_xor(threshold_mask, threshold_mask.yzww).xyzw;
+    //     let spline_result_in_4 = evaluated_spline * channel_mask;
+    //     let spline_result = spline_result_in_4.x
+    //         + spline_result_in_4.y
+    //         + spline_result_in_4.z
+    //         + spline_result_in_4.w;
+
+    //     Vec4::splat(spline_result)
+    // }
+
+    // // evals a cubic polynomial across four channels with estrin form
+    // float4 bytecode_op_spline4_const(
+    //     float4 X,
+    //     float4 C3,
+    //     float4 C2,
+    //     float4 C1,
+    //     float4 C0,
+    //     float4 thresholds)
+    // {
+    //     float4 high= C3 * X + C2;
+    //     float4 low= C1 * X + C0;
+    //     float4 X2= X * X;
+    //     float4 evaluated_spline= high * X2 + low;
+
+    //     float4 threshold_mask= step(thresholds, X);
+    //     float4 channel_mask= float4(_fake_bitwise_ops_fake_xor(threshold_mask, threshold_mask.yzww).xyz, threshold_mask.w);
+    //     float4 spline_result_in_4= evaluated_spline * channel_mask;
+    //     float spline_result= spline_result_in_4.x + spline_result_in_4.y + spline_result_in_4.z + spline_result_in_4.w;
+
+    //     return spline_result.xxxx;
+    // }
+
+    // // evals a cubic polynomial across eight channels with estrin form
+    // float4 bytecode_op_spline8_const(
+    //     float4 X,
+    //     float4 C3,
+    //     float4 C2,
+    //     float4 C1,
+    //     float4 C0,
+    //     float4 D3,
+    //     float4 D2,
+    //     float4 D1,
+    //     float4 D0,
+    //     float4 C_thresholds,
+    //     float4 D_thresholds)
+    // {
+    //     float4 C_high= C3 * X + C2;
+    //     float4 C_low= C1 * X + C0;
+    //     float4 D_high= D3 * X + D2;
+    //     float4 D_low= D1 * X + D0;
+    //     float4 X2= X * X;
+    //     float4 C_evaluated_spline= C_high * X2 + C_low;
+    //     float4 D_evaluated_spline= D_high * X2 + D_low;
+
+    //     float4 C_threshold_mask= step(C_thresholds, X);
+    //     float4 D_threshold_mask= step(D_thresholds, X);
+    //     float4 C_channel_mask= float4(_fake_bitwise_ops_fake_xor(C_threshold_mask, C_threshold_mask.yzww).xyz, C_threshold_mask.w);
+    //     float4 D_channel_mask= float4(_fake_bitwise_ops_fake_xor(D_threshold_mask, D_threshold_mask.yzww).xyz, D_threshold_mask.w);
+    //     float4 C_spline_result_in_4= C_evaluated_spline * C_channel_mask;
+    //     float4 D_spline_result_in_4= D_evaluated_spline * D_channel_mask;
+    //     float C_spline_result= C_spline_result_in_4.x + C_spline_result_in_4.y + C_spline_result_in_4.z + C_spline_result_in_4.w;
+    //     float D_spline_result= D_spline_result_in_4.x + D_spline_result_in_4.y + D_spline_result_in_4.z + D_spline_result_in_4.w;
+    //     float spline_result= D_threshold_mask.x ? D_spline_result : C_spline_result;
+
+    //     return spline_result.xxxx;
+    // }
+
+    // float4 bytecode_op_spline8_chain_const(
+    //     float4 X,
+    //     float4 Recursion,
+    //     float4 C3,
+    //     float4 C2,
+    //     float4 C1,
+    //     float4 C0,
+    //     float4 D3,
+    //     float4 D2,
+    //     float4 D1,
+    //     float4 D0,
+    //     float4 C_thresholds,
+    //     float4 D_thresholds)
+    // {
+    //     float4 C_high= C3 * X + C2;
+    //     float4 C_low= C1 * X + C0;
+    //     float4 D_high= D3 * X + D2;
+    //     float4 D_low= D1 * X + D0;
+    //     float4 X2= X * X;
+    //     float4 C_evaluated_spline= C_high * X2 + C_low;
+    //     float4 D_evaluated_spline= D_high * X2 + D_low;
+
+    //     float4 C_threshold_mask= step(C_thresholds, X);
+    //     float4 D_threshold_mask= step(D_thresholds, X);
+    //     float4 C_channel_mask= float4(_fake_bitwise_ops_fake_xor(C_threshold_mask, C_threshold_mask.yzww).xyz, C_threshold_mask.w);
+    //     float4 D_channel_mask= float4(_fake_bitwise_ops_fake_xor(D_threshold_mask, D_threshold_mask.yzww).xyz, D_threshold_mask.w);
+
+    //     float4 C_spline_result_in_4= C_evaluated_spline * C_channel_mask;
+    //     float4 D_spline_result_in_4= D_evaluated_spline * D_channel_mask;
+    //     float C_spline_result= C_spline_result_in_4.x + C_spline_result_in_4.y + C_spline_result_in_4.z + C_spline_result_in_4.w;
+    //     float D_spline_result= D_spline_result_in_4.x + D_spline_result_in_4.y + D_spline_result_in_4.z + D_spline_result_in_4.w;
+
+    //     float spline_result_intermediate= C_threshold_mask.x ? C_spline_result : Recursion.x;
+    //     float spline_result= D_threshold_mask.x ? D_spline_result : spline_result_intermediate;
+
+    //     return spline_result.xxxx;
+    // }
+
+    // // evals a cubic polynomial across four channels with estrin form
+    // float4 bytecode_op_cubic(
+    //     float4 X,
+    //     float4 coefficients)
+    // {
+    //     float4 high= coefficients.x * X + coefficients.yyyy;
+    //     float4 low= coefficients.z * X + coefficients.wwww;
+    //     float4 X2= X * X;
+    //     float4 cubic_result= high * X2 + low;
+
+    //     return cubic_result;
+    // }
+
+    pub fn bytecode_op_gradient4_const(
+        x: Vec4,
+        base_color: Vec4,
+        cred: Vec4,
+        cgreen: Vec4,
+        cblue: Vec4,
+        calpha: Vec4,
+        thresholds: Vec4,
+    ) -> Vec4 {
+        // Compute the weighting of each gradient delta based upon the X position of evaluation.
+        let c_offsets_from_x = x - thresholds;
+        let c_segment_interval = thresholds.yzw().extend(1.0) - thresholds;
+        let c_safe_division = if c_offsets_from_x.cmpgt(Vec4::ZERO).all() {
+            Vec4::ONE
+        } else {
+            Vec4::ZERO
+        };
+        let c_division = if c_offsets_from_x != Vec4::ZERO {
+            c_offsets_from_x / c_segment_interval
+        } else {
+            c_safe_division
+        };
+        let c_percentages = c_division.clamp(Vec4::ZERO, Vec4::ONE); // Saturate
+
+        // Compute the influence that each of the colors will contribute to the final color.
+        let x_influence = cred * c_percentages;
+        let y_influence = cgreen * c_percentages;
+        let z_influence = cblue * c_percentages;
+        let w_influence = calpha * c_percentages;
+
+        // Add the colors into the base color
+        base_color
+            + Vec4::new(
+                Vec4::ONE.dot(x_influence),
+                Vec4::ONE.dot(y_influence),
+                Vec4::ONE.dot(z_influence),
+                Vec4::ONE.dot(w_influence),
+            )
+    }
+
+    // float4 bytecode_op_gradient4_const(
+    //     float4 X,
+    //     float4 BaseColor,
+    //     float4 Cred,
+    //     float4 Cgreen,
+    //     float4 Cblue,
+    //     float4 Calpha,
+    //     float4 Cthresholds)
+    // {
+    //     // Compute the weighting of each gradient delta based upon the X position of evaluation.
+    //     float4 Coffsets_from_x= X - Cthresholds;
+    //     float4 Csegment_interval= float4(Cthresholds.yzw, 1.0f) - Cthresholds;
+    //     float4 Csafe_division= (Coffsets_from_x >= 0.0f) ? float4(1.0f, 1.0f, 1.0f, 1.0f) : float4(0.0f ,0.0f, 0.0f, 0.0f);
+    //     float4 Cdivision= (Csegment_interval != 0.0f) ? (Coffsets_from_x / Csegment_interval) :  Csafe_division;
+    //     float4 Cpercentages= saturate(Cdivision);
+
+    //     // Compute the influence that each of the colors will contribute to the final color.
+    //     float4 Xinfluence= Cred * Cpercentages;
+    //     float4 Yinfluence= Cgreen * Cpercentages;
+    //     float4 Zinfluence= Cblue * Cpercentages;
+    //     float4 Winfluence= Calpha * Cpercentages;
+
+    //     // Add the colors into the base color.
+    //     float4 gradient_result= BaseColor + float4(	dot(1.0f, Xinfluence),
+    //                                                 dot(1.0f, Yinfluence),
+    //                                                 dot(1.0f, Zinfluence),
+    //                                                 dot(1.0f, Winfluence));
+    //     return gradient_result;
+    // }
 }

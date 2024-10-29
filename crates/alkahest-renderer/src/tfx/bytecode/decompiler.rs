@@ -310,7 +310,7 @@ impl TfxBytecodeDecompiler {
 
                     stack_push!(format!("saturate(lerp({start}, {end}, {v}))",));
                 }
-                &TfxBytecodeOp::Unk37 { constant_start } => {
+                &TfxBytecodeOp::Spline4Const { constant_start } => {
                     anyhow::ensure!((constant_start as usize + 4) < constants.len());
                     let c0 = constants[constant_start as usize];
                     let c1 = constants[constant_start as usize + 1];
@@ -323,16 +323,33 @@ impl TfxBytecodeDecompiler {
                     let c3 = format!("float4({}, {}, {}, {})", c3.x, c3.y, c3.z, c3.w);
 
                     stack_push!(format!(
-                        "unk37({c0}, {c1}, {c2}, {c3})",
+                        "spline4_const({c0}, {c1}, {c2}, {c3})",
                         c0 = c0,
                         c1 = c1,
                         c2 = c2,
                         c3 = c3
                     ));
                 }
-                TfxBytecodeOp::Unk38 { unk1 } => {
+                &TfxBytecodeOp::Gradient4Const { constant_start } => {
+                    anyhow::ensure!((constant_start as usize + 4) < constants.len());
+                    let c0 = constants[constant_start as usize];
+                    let c1 = constants[constant_start as usize + 1];
+                    let c2 = constants[constant_start as usize + 2];
+                    let c3 = constants[constant_start as usize + 3];
+                    let c4 = constants[constant_start as usize + 4];
+                    let c5 = constants[constant_start as usize + 5];
+
+                    let c0 = format!("float4({}, {}, {}, {})", c0.x, c0.y, c0.z, c0.w);
+                    let c1 = format!("float4({}, {}, {}, {})", c1.x, c1.y, c1.z, c1.w);
+                    let c2 = format!("float4({}, {}, {}, {})", c2.x, c2.y, c2.z, c2.w);
+                    let c3 = format!("float4({}, {}, {}, {})", c3.x, c3.y, c3.z, c3.w);
+                    let c4 = format!("float4({}, {}, {}, {})", c4.x, c4.y, c4.z, c4.w);
+                    let c5 = format!("float4({}, {}, {}, {})", c5.x, c5.y, c5.z, c5.w);
+
                     let v = stack_pop!();
-                    stack_push!(format!("unk38({unk1}, {v})"));
+                    stack_push!(format!(
+                        "gradient4_const({v}, {c0}, {c1}, {c2}, {c3}, {c4}, {c5})"
+                    ));
                 }
                 // TfxBytecodeOp::Unk39 { unk1 } => todo!(),
                 // TfxBytecodeOp::Unk3a { unk1 } => todo!(),

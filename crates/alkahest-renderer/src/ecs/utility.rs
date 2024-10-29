@@ -584,8 +584,7 @@ fn draw_beacon(
         beacon.color[0],
         beacon.color[1],
         beacon.color[2],
-        (150.0 + (renderer.time.elapsed().as_secs_f32() * 2.0 * PI * beacon.freq).sin() * 50.0)
-            / 255.0,
+        (150.0 + (renderer.time.load().elapsed() * 2.0 * PI * beacon.freq).sin() * 50.0) / 255.0,
     );
 
     let color = selected.select_fade_color(color, Some(entity));

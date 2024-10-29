@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Formatter},
-    hash::BuildHasherDefault,
+    hash::{BuildHasherDefault, Hash},
     sync::{Arc, Weak},
 };
 
@@ -102,6 +102,20 @@ pub struct Handle<T: Asset> {
     id: AssetId,
     _phantom: std::marker::PhantomData<T>,
 }
+
+impl<T: Asset> Hash for Handle<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl<T: Asset> PartialEq for Handle<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl<T: Asset> Eq for Handle<T> {}
 
 // pub struct WeakHandle<T: Asset> {
 //     refcount: Weak<()>,

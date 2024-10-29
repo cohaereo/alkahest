@@ -34,7 +34,7 @@ use crate::{
     handle::Handle,
     icons::{ICON_LIGHTBULB_FLUORESCENT_TUBE, ICON_LIGHTBULB_ON, ICON_SPOTLIGHT_BEAM},
     loaders::AssetManager,
-    renderer::{gbuffer::ShadowDepthMap, Renderer},
+    renderer::{gbuffer::ShadowDepthMap, Renderer, ShadowQuality},
     tfx::{
         externs::{self, TextureView},
         technique::Technique,
@@ -258,12 +258,6 @@ impl LightRenderer {
     }
 }
 
-pub enum ShadowPcfSamples {
-    Samples13 = 0,
-    Samples17 = 1,
-    Samples21 = 2,
-}
-
 pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
     profiling::scope!("draw_light_system");
     for (transform, light_renderer, light, vis) in scene
@@ -367,10 +361,10 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
                     .unwrap_or_default();
                 externs.deferred_shadow = Some(externs::DeferredShadow {
                     unk00: TextureView::RawSRV(shadowmap.depth.texture_view.clone()),
-                    resolution_width: ShadowMapRenderer::RESOLUTION as f32,
-                    resolution_height: ShadowMapRenderer::RESOLUTION as f32,
+                    resolution_width: shadowmap.resolution() as f32,
+                    resolution_height: shadowmap.resolution() as f32,
                     unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
-                    unk180: ShadowPcfSamples::Samples21 as u8 as f32,
+                    unk180: renderer.settings.shadow_quality.pcf_samples() as u8 as f32,
                     ..existing_shadowmap
                 })
             }
@@ -378,7 +372,7 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
 
         light_renderer.draw(
             renderer,
-            shadowmap.is_some() && renderer.render_settings.shadows,
+            shadowmap.is_some() && renderer.settings.shadow_quality != ShadowQuality::Off,
         );
     }
 }
@@ -388,9 +382,12 @@ pub struct ShadowMapRenderer {
     pub last_update: usize,
     pub stationary_needs_update: bool,
 
+    resolution: u32,
     depth_stationary: ShadowDepthMap,
     depth: ShadowDepthMap,
     viewport: Viewport,
+    projection: CameraProjection,
+    transform: Transform,
 
     world_to_camera: Mat4,
     camera_to_projective: Mat4,
@@ -409,19 +406,18 @@ pub enum ShadowGenerationMode {
 }
 
 impl ShadowMapRenderer {
-    const RESOLUTION: u32 = 1024;
     pub fn new(
         gpu: &GpuContext,
         transform: Transform,
         projection: CameraProjection,
+        resolution: u32,
     ) -> anyhow::Result<Self> {
-        let depth = ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
-        let depth_stationary =
-            ShadowDepthMap::create((Self::RESOLUTION, Self::RESOLUTION), 1, &gpu.device)?;
+        let depth = ShadowDepthMap::create((resolution, resolution), 1, &gpu.device)?;
+        let depth_stationary = ShadowDepthMap::create((resolution, resolution), 1, &gpu.device)?;
 
         let viewport = Viewport {
             origin: UVec2::ZERO,
-            size: UVec2::splat(Self::RESOLUTION),
+            size: UVec2::splat(resolution),
         };
 
         let world_to_camera = transform.view_matrix();
@@ -430,12 +426,23 @@ impl ShadowMapRenderer {
         Ok(Self {
             last_update: 0,
             stationary_needs_update: true,
+            resolution,
             depth_stationary,
             depth,
+            projection,
+            transform,
             viewport,
             world_to_camera,
             camera_to_projective,
         })
+    }
+
+    pub fn resolution(&self) -> u32 {
+        self.resolution
+    }
+
+    pub fn resize(&mut self, gpu: &GpuContext, resolution: u32) {
+        *self = Self::new(gpu, self.transform, self.projection.clone(), resolution).unwrap();
     }
 
     /// Binds the shadowmap
@@ -446,6 +453,7 @@ impl ShadowMapRenderer {
         mode: ShadowGenerationMode,
     ) {
         self.world_to_camera = transform.view_matrix();
+        self.transform = transform.clone();
 
         unsafe {
             let view = match mode {

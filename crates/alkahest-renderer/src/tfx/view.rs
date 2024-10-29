@@ -1,5 +1,4 @@
 use alkahest_data::tfx::TfxRenderStage;
-use glam::Vec3;
 use std::ops::{BitOr, BitOrAssign};
 
 use super::externs;

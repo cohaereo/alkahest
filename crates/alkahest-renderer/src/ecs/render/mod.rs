@@ -20,6 +20,8 @@ use crate::{
     shader::shader_ball::ShaderBallComponent,
 };
 
+use super::channels::ObjectChannels;
+
 pub mod decorators;
 pub mod dynamic_geometry;
 pub mod havok;
@@ -51,7 +53,7 @@ pub fn draw_entity(
         decorator_renderer.draw(renderer, render_stage).unwrap();
     } else if let Some(dynamic_model_component) = er.get::<DynamicModelComponent>() {
         dynamic_model_component
-            .draw(renderer, render_stage)
+            .draw(renderer, render_stage, er.get::<ObjectChannels>())
             .unwrap();
     } else if let Ok((shaderball, transform)) = scene
         .query::<(&ShaderBallComponent, &Transform)>()

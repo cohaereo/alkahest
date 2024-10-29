@@ -12,6 +12,8 @@ impl Renderer {
 
         {
             let data = &mut self.data.lock();
+            // Ping, Pong
+            // Blits shading_result to pong
             let (_source, target) = data.gbuffers.get_postprocess_rt(true);
             self.gpu.blit_texture_alphaluminance(
                 &data.gbuffers.shading_result.view,
@@ -19,14 +21,16 @@ impl Renderer {
             );
         }
 
-        if self.render_settings.feature_fxaa {
+        if self.settings.feature_fxaa {
             unsafe {
                 let data = &mut self.data.lock();
+                // (pong, ping)
+                // renders to ping
                 let (source, target) = data.gbuffers.get_postprocess_rt(true);
                 let rt = target.render_target.clone();
                 data.externs.fxaa = Some(externs::Fxaa {
                     source_texture: source.view.clone().into(),
-                    noise_time: self.time.elapsed().as_secs_f32(),
+                    noise_time: self.time.load().elapsed(),
                     ..Default::default()
                 });
 
@@ -36,7 +40,7 @@ impl Renderer {
             }
 
             gpu_event!(self.gpu, "fxaa");
-            let pipeline = if self.render_settings.fxaa_noise {
+            let pipeline = if self.settings.fxaa_noise {
                 &self.render_globals.pipelines.fxaa_noise
             } else {
                 &self.render_globals.pipelines.fxaa

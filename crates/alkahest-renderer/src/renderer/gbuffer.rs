@@ -2,6 +2,7 @@ use std::mem::size_of;
 
 use alkahest_data::dxgi::DxgiFormat;
 use anyhow::Context;
+use crossbeam::atomic::AtomicCell;
 use glam::Vec3;
 use windows::Win32::Graphics::{
     Direct3D::{D3D11_SRV_DIMENSION_TEXTURE2D, D3D11_SRV_DIMENSION_TEXTURE2DARRAY},
@@ -38,20 +39,20 @@ pub struct GBuffer {
 
     pub postprocess_ping: RenderTarget,
     pub postprocess_pong: RenderTarget,
-    postprocess_pingpong: PingPong,
+    postprocess_pingpong: AtomicCell<PingPong>,
 
     current_size: (u32, u32),
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 enum PingPong {
     Ping,
     Pong,
 }
 
 impl PingPong {
-    pub fn flip(&mut self) {
-        *self = match self {
+    pub fn next(&self) -> Self {
+        match self {
             PingPong::Ping => PingPong::Pong,
             PingPong::Pong => PingPong::Ping,
         }
@@ -164,7 +165,7 @@ impl GBuffer {
                 "postprocess_ping",
             )
             .context("postprocess_ping")?,
-            postprocess_pingpong: PingPong::Ping,
+            postprocess_pingpong: AtomicCell::new(PingPong::Ping),
 
             current_size: size,
         })
@@ -240,12 +241,16 @@ impl GBuffer {
 
     /// Returns (source, target). If `swap_after_use` is enabled, the order of the buffers will be reversed on the next call
     pub fn get_postprocess_rt(&self, swap_after_use: bool) -> (&RenderTarget, &RenderTarget) {
-        let r = match self.postprocess_pingpong {
+        let current_pingpong = self.postprocess_pingpong.load();
+        let r = match current_pingpong {
             PingPong::Ping => (&self.postprocess_ping, &self.postprocess_pong),
             PingPong::Pong => (&self.postprocess_pong, &self.postprocess_ping),
         };
+
+        assert_ne!(&r.0.texture, &r.1.texture);
+
         if swap_after_use {
-            self.postprocess_pingpong.pocus().flip();
+            self.postprocess_pingpong.store(current_pingpong.next());
         }
 
         r
@@ -253,7 +258,7 @@ impl GBuffer {
 
     /// Get the last rendertarget that was written to in the postprocess pass
     pub fn get_postprocess_output(&self) -> &RenderTarget {
-        match self.postprocess_pingpong {
+        match self.postprocess_pingpong.load() {
             PingPong::Ping => &self.postprocess_ping,
             PingPong::Pong => &self.postprocess_pong,
         }

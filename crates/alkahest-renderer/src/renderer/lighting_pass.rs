@@ -45,11 +45,11 @@ impl Renderer {
         }
 
         {
-            if self.render_settings.matcap {
+            if self.settings.matcap {
                 gpu_event!(self.gpu, "matcap");
                 self.matcap.draw(self);
             } else {
-                if self.render_settings.feature_global_lighting {
+                if self.settings.feature_global_lighting {
                     gpu_profile_event!(self.gpu, "global_lighting");
 
                     self.gpu.current_states.store(StateSelection::new(
@@ -75,7 +75,7 @@ impl Renderer {
                     draw_light_system(self, scene)
                 }
 
-                if self.render_settings.feature_cubemaps {
+                if self.settings.feature_cubemaps {
                     unsafe {
                         let data = &mut self.data.lock();
                         self.gpu.context().OMSetRenderTargets(
@@ -94,7 +94,7 @@ impl Renderer {
         }
 
         {
-            if self.render_settings.ssao {
+            if self.settings.ssao {
                 gpu_profile_event!(self.gpu, "ssao");
                 self.ssao.draw(self);
             }
@@ -116,7 +116,7 @@ impl Renderer {
         {
             gpu_event!(self.gpu, "deferred_shading");
             let pipeline = if scene.get_resource::<MapAtmosphere>().is_some()
-                && self.render_settings.feature_atmosphere
+                && self.settings.feature_atmosphere
             {
                 &self.render_globals.pipelines.deferred_shading
             } else {

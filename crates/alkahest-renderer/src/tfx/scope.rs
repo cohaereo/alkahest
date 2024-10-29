@@ -170,6 +170,7 @@ impl TfxScopeStage {
                 self.cbuffer.as_ref(),
                 &self.stage.constants.bytecode_constants,
                 &self.samplers,
+                None,
             )?;
         }
 

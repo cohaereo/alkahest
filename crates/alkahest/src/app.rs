@@ -4,6 +4,7 @@ use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
     camera::{Camera, Viewport},
     ecs::{
+        channels::object_channels_discovery_system,
         new_scene,
         resources::SelectedEntity,
         tags::{NodeFilter, NodeFilterSet},
@@ -14,6 +15,7 @@ use alkahest_renderer::{
     input::InputState,
     renderer::{Renderer, RendererShared},
 };
+use bevy_ecs::system::RunSystemOnce;
 use bevy_tasks::{ComputeTaskPool, TaskPool};
 use egui::{Key, KeyboardShortcut, Modifiers};
 use gilrs::{EventType, Gilrs};
@@ -32,6 +34,7 @@ use crate::{
     config,
     gui::{
         activity_select::{get_map_name, set_activity, ActivityBrowser, CurrentActivity},
+        console,
         context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
         hotkeys,
@@ -46,7 +49,7 @@ use crate::{
 };
 
 pub struct AlkahestApp {
-    pub window: winit::window::Window,
+    pub window: Arc<winit::window::Window>,
     pub event_loop: EventLoop<()>,
 
     pub gctx: Arc<GpuContext>,
@@ -87,6 +90,7 @@ impl AlkahestApp {
             .with_window_icon(Some(icon.clone()))
             .build(&event_loop)
             .unwrap();
+        let window = Arc::new(window);
 
         puffin::set_scopes_on(cfg!(feature = "profiler"));
 
@@ -98,6 +102,7 @@ impl AlkahestApp {
         resources.insert(CurrentActivity(args.activity));
         resources.insert(SelectedEntity::default());
         resources.insert(args);
+        resources.insert(window.clone());
 
         let mut maps = MapList::default();
         maps.maps.push(Map::create_empty("Empty Map"));
@@ -375,6 +380,11 @@ impl AlkahestApp {
                             maps.update_maps(resources);
 
                             if let Some(map) = maps.current_map_mut() {
+                                map.scene.run_system_once_with(
+                                    resources.get::<RendererShared>().clone(),
+                                    object_channels_discovery_system,
+                                );
+
                                 map.update();
                             }
 
@@ -470,6 +480,7 @@ impl AlkahestApp {
                             std::thread::sleep(std::time::Duration::from_millis(100));
                         }
 
+                        console::process_queued_commands(resources);
                         if let Some(picked_id) = renderer.pickbuffer.finish_request() {
                             let mut selected = resources.get_mut::<SelectedEntity>();
                             if !selected.changed_this_frame {
