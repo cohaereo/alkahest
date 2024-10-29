@@ -284,6 +284,25 @@ impl TfxBytecodeInterpreter {
                         c[5]
                     );
                 }
+                TfxBytecodeOp::Spline8Const { constant_start } => {
+                    
+                    anyhow::ensure!((*constant_start as usize + 9) < constants.len());
+                    let v = stack_top!();
+                    let c = &constants[*constant_start as usize..];
+                    *v = tfx_converted::bytecode_op_spline8_const(
+                        *v,
+                        c[0],
+                        c[1],
+                        c[2],
+                        c[3],
+                        c[4],
+                        c[5],
+                        c[6],
+                        c[7],
+                        c[8],
+                        c[9],
+                    );
+                }
                 TfxBytecodeOp::PushObjectChannelVector { hash } => {
                     if let Some((value, _)) = object_channels.and_then(|c| c.values.get(hash)) {
                         stack_push!(*value);
@@ -725,6 +744,70 @@ mod tfx_converted {
 
     //     return spline_result.xxxx;
     // }
+
+    fn _fake_bitwise_ops_fake_xor(a: Vec4, b: Vec4) -> Vec4 {
+        (a + b).rem_euclid(Vec4::splat(2.))
+    }
+
+    #[inline]
+    fn step(y: Vec4, x: Vec4) -> Vec4 {
+        Vec4::select(x.cmpge(y), Vec4::ONE, Vec4::ZERO)
+    }
+
+    pub fn bytecode_op_spline8_const(
+        x: Vec4,
+        c3: Vec4,
+        c2: Vec4,
+        c1: Vec4,
+        c0: Vec4,
+        d3: Vec4,
+        d2: Vec4,
+        d1: Vec4,
+        d0: Vec4,
+        c_thresholds: Vec4,
+        d_thresholds: Vec4,
+    ) -> Vec4 {
+        let c_high = c3 * x + c2;
+        let c_low = c1 * x + c0;
+        let d_high = d3 * x + d2;
+        let d_low = d1 * x + d0;
+
+        let x2 = x * x;
+
+        let c_evaluated_spline = c_high * x2 + c_low;
+        let d_evaluated_spline = d_high * x2 + d_low;
+
+        let c_threshold_mask = step(c_thresholds, x);
+        let d_threshold_mask = step(d_thresholds, x);
+
+        let c_channel_mask = _fake_bitwise_ops_fake_xor(c_threshold_mask, c_threshold_mask.yzww())
+            .xyz()
+            .extend(c_threshold_mask.w);
+
+        let d_channel_mask = _fake_bitwise_ops_fake_xor(d_threshold_mask, d_threshold_mask.yzww())
+            .xyz()
+            .extend(d_threshold_mask.w);
+
+        let c_spline_result_in_4 = c_evaluated_spline * c_channel_mask;
+        let d_spline_result_in_4 = d_evaluated_spline * d_channel_mask;
+
+        let c_spline_result = c_spline_result_in_4.x
+            + c_spline_result_in_4.y
+            + c_spline_result_in_4.z
+            + c_spline_result_in_4.w;
+        let d_spline_result = d_spline_result_in_4.x
+            + d_spline_result_in_4.y
+            + d_spline_result_in_4.z
+            + d_spline_result_in_4.w;
+
+        let spline_result = if d_threshold_mask.x > 0.0 {
+            d_spline_result
+        } else {
+            c_spline_result
+        };
+
+        Vec4::splat(spline_result)
+    }
 
     // float4 bytecode_op_spline8_chain_const(
     //     float4 X,
