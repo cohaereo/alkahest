@@ -445,7 +445,7 @@ extern_struct! {
         0x00 => game_time: f32,
         0x04 => render_time: f32,
         0x0c => unk0c: f32 > unimplemented(true),
-        0x10 => unk10: f32 > unimplemented(true),
+        0x10 => unk10: f32 > unimplemented(false) > default(0.50),
         0x14 => delta_game_time: f32 > unimplemented(true),
         0x18 => exposure_time: f32 > unimplemented(true),
         0x1c => exposure_scale: f32 > unimplemented(false),
@@ -1015,12 +1015,13 @@ fn get_global_channel_defaults() -> [GlobalChannel; 256] {
     channels[35].value = Vec4::splat(0.55);
     channels[40].value = Vec4::ZERO;
     channels[43].value = Vec4::ZERO;
+    channels[68] = GlobalChannel::new("unk68", ChannelType::Float, Vec4::splat(0.5));
     channels[100].value = Vec4::new(0.41105, 0.71309, 0.56793, 0.56793);
 
     channels[75] = GlobalChannel::new("unk75 (verity dark/light)", ChannelType::FloatRanged(0f32..=1f32), Vec4::ZERO);
     channels[76] = GlobalChannel::new("unk76 (verity dark/light, cancels out unk75)", ChannelType::FloatRanged(0f32..=1f32), Vec4::ZERO);
 
-    // Sun related
+    // Sun related  
     channels[82].value = Vec4::ZERO;
     channels[83].value = Vec4::ZERO;
     channels[98].value = Vec4::ZERO;
@@ -1034,7 +1035,7 @@ fn get_global_channel_defaults() -> [GlobalChannel; 256] {
     channels[33] = GlobalChannel::new("global diffuse penumbra tint", ChannelType::Color, Vec4::ONE);
     channels[34] = GlobalChannel::new("global diffuse penumbra intensity", ChannelType::Float, Vec4::ONE);
 
-    channels[37] = GlobalChannel::new("fog start", ChannelType::Float, Vec4::X * 50.0);
+    channels[37] = GlobalChannel::new("fog start", ChannelType::Float, Vec4::INFINITY);
     channels[41] = GlobalChannel::new("fog falloff", ChannelType::Float, Vec4::X * 50.0);
 
     // Misc lights

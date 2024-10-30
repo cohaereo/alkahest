@@ -243,12 +243,11 @@ impl GuiView for TfxExternEditor {
                             }
 
                             ui.horizontal(|ui| {
-                                ui.strong(
-                                    channel
-                                        .name
-                                        .clone()
-                                        .unwrap_or_else(|| format!("unknown #{i}: ")),
-                                );
+                                let channel_name = channel
+                                    .name
+                                    .clone()
+                                    .unwrap_or_else(|| "unknown".to_string());
+                                ui.strong(format!("{channel_name} ({i}):"));
 
                                 match channel.editor_type {
                                     alkahest_renderer::tfx::channels::ChannelType::Vec4 => {
