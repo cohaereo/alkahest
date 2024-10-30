@@ -360,10 +360,10 @@ impl TfxBytecodeDecompiler {
                 }
                 // TfxBytecodeOp::Unk39 { unk1 } => todo!(),
                 // TfxBytecodeOp::Unk3a { unk1 } => todo!(),
-                &TfxBytecodeOp::UnkLoadConstant { constant_index } => {
-                    anyhow::ensure!((constant_index as usize) < constants.len());
-                    let v = constants[constant_index as usize];
-                    stack_push!(format!("float4(?)({}, {}, {}, {})", v.x, v.y, v.z, v.w));
+                &TfxBytecodeOp::Unk3b { constant_start } => {
+                    anyhow::ensure!((constant_start as usize + 10) < constants.len());
+                    let v = stack_pop!();
+                    stack_push!(format!("unk3b({v}, /* TODO: parse unk3b constants */)"));
                 }
                 &TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {
                     let offset_bytes = offset as usize * 4;

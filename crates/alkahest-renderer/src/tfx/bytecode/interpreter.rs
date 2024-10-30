@@ -285,7 +285,6 @@ impl TfxBytecodeInterpreter {
                     );
                 }
                 TfxBytecodeOp::Spline8Const { constant_start } => {
-                    
                     anyhow::ensure!((*constant_start as usize + 9) < constants.len());
                     let v = stack_top!();
                     let c = &constants[*constant_start as usize..];
@@ -301,6 +300,25 @@ impl TfxBytecodeInterpreter {
                         c[7],
                         c[8],
                         c[9],
+                    );
+                }
+                TfxBytecodeOp::Unk3b { constant_start } => {
+                    anyhow::ensure!((*constant_start as usize + 10) < constants.len());
+                    let v = stack_top!();
+                    let c = &constants[*constant_start as usize..];
+                    *v = tfx_converted::bytecode_op_unk3b_const(
+                        *v,
+                        c[0],
+                        c[1],
+                        c[2],
+                        c[3],
+                        c[4],
+                        c[5],
+                        c[6],
+                        c[7],
+                        c[8],
+                        c[9],
+                        c[10],
                     );
                 }
                 TfxBytecodeOp::PushObjectChannelVector { hash } => {
@@ -320,10 +338,6 @@ impl TfxBytecodeInterpreter {
                 | &TfxBytecodeOp::Unk54 { unk1, .. } => {
                     externs.global_channels_used.write()[unk1 as usize] += 1;
                     stack_push!(externs.global_channels[unk1 as usize].value);
-                }
-                TfxBytecodeOp::UnkLoadConstant { constant_index } => {
-                    anyhow::ensure!((*constant_index as usize) < constants.len());
-                    *stack_top!() = constants[*constant_index as usize];
                 }
                 TfxBytecodeOp::PushConstVec4 { constant_index } => {
                     anyhow::ensure!((*constant_index as usize) < constants.len());
@@ -537,6 +551,8 @@ impl TfxBytecodeInterpreter {
 
 // Methods adapted from HLSL TFX sources
 mod tfx_converted {
+    use std::arch::x86_64::{_mm_castsi128_ps, _mm_set1_ps};
+
     use glam::{Vec4, Vec4Swizzles};
 
     fn lerp(start: f32, end: f32, t: f32) -> f32 {
@@ -929,4 +945,173 @@ mod tfx_converted {
     //                                                 dot(1.0f, Winfluence));
     //     return gradient_result;
     // }
+
+    pub fn bytecode_op_unk3b_const(
+        input: Vec4,
+        param_0: Vec4,
+        param_1: Vec4,
+        param_2: Vec4,
+        param_3: Vec4,
+        param_4: Vec4,
+        param_5: Vec4,
+        param_6: Vec4,
+        param_7: Vec4,
+        param_8: Vec4,
+        param_9: Vec4,
+        param_10: Vec4,
+    ) -> Vec4 {
+        unsafe {
+            use std::arch::x86_64::{
+                __m128, _mm_add_ps, _mm_and_ps, _mm_andnot_ps, _mm_cmple_ps, _mm_cmplt_ps,
+                _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_mul_ps, _mm_or_ps, _mm_set1_epi32,
+                _mm_shuffle_ps, _mm_sub_ps,
+            };
+
+            let mask = f32::from_bits(u32::MAX);
+            let unk_7FF7B2E5E4E0 = __m128::from(Vec4::splat(mask));
+            let unk_7FF7B2E5E4F0 = __m128::from(Vec4::new(mask, mask, mask, 0.0));
+            let unk_7FF7B2E5E5C0 = __m128::from(Vec4::new(0.0, 0.0, 0.0, mask));
+            let xmmword_7FF7B2E5E550 = __m128::from(Vec4::new(mask, 0.0, 0.0, 0.0));
+            let xmmword_7FF7B2E5E590 = __m128::from(Vec4::new(0.0, mask, 0.0, 0.0));
+            let xmmword_7FF7B2E5E5B0 = __m128::from(Vec4::new(0.0, 0.0, mask, 0.0));
+            let zero = _mm_set1_ps(0.0);
+
+            let v4 = __m128::from(Vec4::ONE);
+            let v5 = __m128::from(param_0);
+            let v6 = __m128::from(param_9);
+            let v7 = _mm_andnot_ps(unk_7FF7B2E5E4E0, v4);
+            let v8 = __m128::from(param_10);
+            let v9 = _mm_sub_ps(input.into(), v6);
+            let v10 = _mm_sub_ps(input.into(), v8);
+            let v11 = _mm_sub_ps(
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_and_ps(_mm_shuffle_ps(v8, v8, 57), unk_7FF7B2E5E4E0),
+                        unk_7FF7B2E5E4F0,
+                    ),
+                    _mm_andnot_ps(unk_7FF7B2E5E4F0, v4),
+                ),
+                v8,
+            );
+            let v12 = _mm_sub_ps(
+                _mm_add_ps(
+                    _mm_or_ps(
+                        _mm_and_ps(
+                            _mm_and_ps(_mm_shuffle_ps(v8, v8, 0), unk_7FF7B2E5E5C0),
+                            unk_7FF7B2E5E4E0,
+                        ),
+                        v7,
+                    ),
+                    _mm_and_ps(_mm_shuffle_ps(v6, v6, 57), unk_7FF7B2E5E4F0),
+                ),
+                v6,
+            );
+            let v13 = _mm_cmplt_ps(
+                Vec4::splat(0.0001).into(),
+                _mm_max_ps(_mm_sub_ps(zero, v12), v12),
+            );
+            let v14 = _mm_cmplt_ps(
+                Vec4::splat(0.0001).into(),
+                _mm_max_ps(_mm_sub_ps(zero, v11), v11),
+            );
+            let v15 = _mm_min_ps(
+                _mm_max_ps(
+                    _mm_or_ps(
+                        _mm_andnot_ps(v13, _mm_and_ps(_mm_cmple_ps(zero, v9), v4)),
+                        _mm_and_ps(_mm_div_ps(v9, v12), v13),
+                    ),
+                    zero,
+                ),
+                v4,
+            );
+            let v16 = _mm_min_ps(
+                _mm_max_ps(
+                    _mm_or_ps(
+                        _mm_andnot_ps(v14, _mm_and_ps(_mm_cmple_ps(zero, v10), v4)),
+                        _mm_and_ps(_mm_div_ps(v10, v11), v14),
+                    ),
+                    zero,
+                ),
+                v4,
+            );
+            let v17 = _mm_mul_ps(
+                _mm_add_ps(
+                    _mm_mul_ps(param_1.into(), v15),
+                    _mm_mul_ps(param_5.into(), v16),
+                ),
+                v4,
+            );
+            let v18 = _mm_add_ps(_mm_shuffle_ps(v17, v17, 78), v17);
+            let v19 = _mm_add_ps(
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_and_ps(
+                            _mm_add_ps(_mm_shuffle_ps(v18, v18, 147), v18),
+                            xmmword_7FF7B2E5E550,
+                        ),
+                        unk_7FF7B2E5E4E0,
+                    ),
+                    v7,
+                ),
+                v5,
+            );
+            let v20 = _mm_mul_ps(
+                _mm_add_ps(
+                    _mm_mul_ps(param_2.into(), v15),
+                    _mm_mul_ps(param_6.into(), v16),
+                ),
+                v4,
+            );
+            let v21 = _mm_add_ps(_mm_shuffle_ps(v20, v20, 78), v20);
+            let v22 = _mm_add_ps(
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_and_ps(
+                            _mm_add_ps(_mm_shuffle_ps(v21, v21, 147), v21),
+                            xmmword_7FF7B2E5E590,
+                        ),
+                        unk_7FF7B2E5E4E0,
+                    ),
+                    v7,
+                ),
+                v19,
+            );
+            let v23 = _mm_mul_ps(param_3.into(), v15);
+            let v24 = __m128::from(param_7);
+            let v25 = _mm_mul_ps(_mm_add_ps(v23, _mm_mul_ps(v24, v16)), v4);
+            let v26 = _mm_add_ps(_mm_shuffle_ps(v25, v25, 78), v25);
+            let v27 = _mm_add_ps(
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_and_ps(
+                            _mm_add_ps(_mm_shuffle_ps(v26, v26, 147), v26),
+                            xmmword_7FF7B2E5E5B0,
+                        ),
+                        unk_7FF7B2E5E4E0,
+                    ),
+                    v7,
+                ),
+                v22,
+            );
+            let v28 = _mm_mul_ps(param_4.into(), v15);
+            let v29 = __m128::from(param_8);
+            let v30 = _mm_mul_ps(_mm_add_ps(v28, _mm_mul_ps(v29, v16)), v4);
+            let v31 = _mm_add_ps(_mm_shuffle_ps(v30, v30, 78), v30);
+            let result = _mm_add_ps(
+                _mm_or_ps(
+                    _mm_and_ps(
+                        _mm_and_ps(
+                            _mm_add_ps(_mm_shuffle_ps(v31, v31, 147), v31),
+                            unk_7FF7B2E5E5C0,
+                        ),
+                        unk_7FF7B2E5E4E0,
+                    ),
+                    v7,
+                ),
+                v27,
+            );
+
+            Vec4::from(result)
+        }
+    }
 }
