@@ -59,6 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Replaced `hecs` with `bevy-ecs`
 - Use bevy-ecs change detection to update cbuffers
 - Enabled fast math for `glam`
+- Various atmosphere-related improvements
 
 ### Fixed
 
