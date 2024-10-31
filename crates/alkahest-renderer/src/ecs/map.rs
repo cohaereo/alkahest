@@ -59,7 +59,7 @@ impl MapAtmosphere {
         })
     }
 
-    pub fn update_extern(&self, x: &mut externs::Atmosphere) {
+    pub fn update_extern(&self, x: &mut externs::Atmosphere, far: bool) {
         let lf_unk30: TextureView = self
             .lookup_0
             .as_ref()
@@ -90,9 +90,13 @@ impl MapAtmosphere {
         //     x.unk58 = x.unk40.clone();
         // }
 
-        x.unk40 = lf_unk30.clone();
+        if far {
+            x.unk40 = lf_unk30.clone();
+        } else {
+            x.unk40 = lf_unk48.clone();
+        }
         x.unk58 = lf_unk48.clone();
-        x.light_shaft_optical_depth = unkd0.clone();
+        x.unk80 = unkd0.clone();
     }
 }
 

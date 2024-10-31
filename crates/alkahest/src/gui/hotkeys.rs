@@ -74,6 +74,11 @@ pub const SHORTCUT_SELECT_PREV_CHILD: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::ArrowLeft);
 
 pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
+    // We're in a text input field, don't process hotkeys
+    if ctx.wants_keyboard_input() {
+        return;
+    }
+
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_UNHIDE_ALL)) {
         unhide_all(resources);
     }

@@ -67,7 +67,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x38_u8)] Spline8Const { constant_start: u8 },
     #[br(magic = 0x39_u8)] Spline8ChainConst { constant_start: u8 },
     #[br(magic = 0x3a_u8)] Gradient4Const { constant_start: u8 },
-    #[br(magic = 0x3b_u8)] UnkLoadConstant { constant_index: u8 },
+    #[br(magic = 0x3b_u8)] Unk3b { constant_start: u8 },
 
     // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
@@ -253,17 +253,17 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Gradient4Const { constant_start } => {
                 format!("gradient4_const constant_start={constant_start}")
             }
-            TfxBytecodeOp::UnkLoadConstant { constant_index } => {
+            TfxBytecodeOp::Unk3b { constant_start } => {
                 if let Some(constants) = constants {
                     format!(
-                        "unk_load_constant constants[{constant_index}] // {}",
+                        "unk_load_constant constants[{constant_start}] // {}",
                         constants
-                            .get(*constant_index as usize)
+                            .get(*constant_start as usize)
                             .map(Vec4::to_string)
                             .unwrap_or("CONSTANT OUT OF RANGE".into())
                     )
                 } else {
-                    format!("unk_load_constant constants[{constant_index}]")
+                    format!("unk_load_constant constants[{constant_start}]")
                 }
             }
             TfxBytecodeOp::PushExternInputFloat { extern_, offset } => {

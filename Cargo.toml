@@ -37,7 +37,7 @@ egui = { version = "0.28.1", features = ["persistence"] }
 egui_extras = "0.28.1"
 
 field_access = "0.1.6"
-glam = { version = "0.28", features = ["bytemuck", "mint"] }
+glam = { version = "0.28", features = ["bytemuck", "mint", "fast-math"] }
 itertools = "0.13.0"
 lazy_static = "1.4.0"
 num = "0.4.1"

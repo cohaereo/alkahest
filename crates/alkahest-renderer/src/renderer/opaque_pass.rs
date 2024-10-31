@@ -45,9 +45,9 @@ impl Renderer {
                 ]),
                 &gbuffers.depth.view,
             );
-            // self.gpu
-            //     .context()
-            //     .OMSetDepthStencilState(&gbuffers.depth.state, 0);
+            self.gpu
+                .context()
+                .RSSetViewports(Some(std::slice::from_ref(&gbuffers.rt0.viewport())));
 
             gbuffers.rt0.clear(&[0.0, 0.0, 0.0, 0.0]);
             gbuffers.rt1.clear(&[0.0, 0.0, 0.0, 0.0]);

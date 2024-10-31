@@ -10,12 +10,7 @@ use windows::Win32::Graphics::{
     Dxgi::Common::*,
 };
 
-use crate::{
-    camera::Camera,
-    gpu::SharedGpuContext,
-    gpu_event,
-    util::{d3d::D3dResource, Hocus},
-};
+use crate::{camera::Camera, gpu::SharedGpuContext, gpu_event, util::d3d::D3dResource};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,
@@ -36,6 +31,8 @@ pub struct GBuffer {
     pub ssao_intermediate: RenderTarget,
     pub atmos_ss_far_lookup: RenderTarget,
     pub atmos_ss_near_lookup: RenderTarget,
+
+    pub depth_angle_density_lookup: RenderTarget,
 
     pub postprocess_ping: RenderTarget,
     pub postprocess_pong: RenderTarget,
@@ -137,19 +134,27 @@ impl GBuffer {
             .context("SSAO_Intermediate")?,
 
             atmos_ss_far_lookup: RenderTarget::create(
-                size,
-                DxgiFormat::R8G8B8A8_UNORM_SRGB,
+                (size.0 / 4, size.1 / 4),
+                DxgiFormat::R16G16B16A16_FLOAT,
                 gctx.clone(),
                 "atmos_ss_far_lookup",
             )
             .context("atmos_ss_far_lookup")?,
             atmos_ss_near_lookup: RenderTarget::create(
-                size,
-                DxgiFormat::R8G8B8A8_UNORM_SRGB,
+                (size.0 / 4, size.1 / 4),
+                DxgiFormat::R16G16B16A16_FLOAT,
                 gctx.clone(),
                 "atmos_ss_near_lookup",
             )
             .context("atmos_ss_near_lookup")?,
+
+            depth_angle_density_lookup: RenderTarget::create(
+                (512, 512),
+                DxgiFormat::R16G16B16A16_FLOAT,
+                gctx.clone(),
+                "depth_angle_density_lookup",
+            )
+            .context("depth_angle_density_lookup")?,
 
             postprocess_ping: RenderTarget::create(
                 size,
@@ -199,8 +204,10 @@ impl GBuffer {
         self.depth.resize(new_size).context("Depth")?;
         self.depth_staging.resize(new_size).context("Depth")?;
 
-        self.atmos_ss_near_lookup.resize(new_size)?;
-        self.atmos_ss_far_lookup.resize(new_size)?;
+        self.atmos_ss_near_lookup
+            .resize((new_size.0 / 4, new_size.1 / 4))?;
+        self.atmos_ss_far_lookup
+            .resize((new_size.0 / 4, new_size.1 / 4))?;
         self.ssao_intermediate.resize(new_size)?;
 
         self.postprocess_ping.resize(new_size)?;
@@ -385,6 +392,38 @@ impl RenderTarget {
             self.gctx
                 .context()
                 .ClearRenderTargetView(&self.render_target, color)
+        }
+    }
+
+    pub fn get_desc(&self) -> D3D11_TEXTURE2D_DESC {
+        unsafe {
+            let mut desc = Default::default();
+            self.texture.GetDesc(&mut desc);
+            desc
+        }
+    }
+
+    pub fn viewport(&self) -> D3D11_VIEWPORT {
+        let desc = self.get_desc();
+        D3D11_VIEWPORT {
+            TopLeftX: 0.0,
+            TopLeftY: 0.0,
+            Width: desc.Width as f32,
+            Height: desc.Height as f32,
+            MinDepth: 0.0,
+            MaxDepth: 1.0,
+        }
+    }
+
+    /// Binds this render target to RT0, disabling depth/stencil and adjusting the viewport
+    pub fn bind(&self) {
+        unsafe {
+            self.gctx
+                .context()
+                .OMSetRenderTargets(Some(&[Some(self.render_target.clone())]), None);
+            self.gctx
+                .context()
+                .RSSetViewports(Some(std::slice::from_ref(&self.viewport())));
         }
     }
 }

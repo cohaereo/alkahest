@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added SpecularOnly, ValidLayeredMetalness, ValidSmoothnessHeatmap, ValidSourceColor debug views
 - Re-added loader code for decal and decal collection node
 - Implemented TFX bytecode op 0x3a gradient4_const
+- Implemented TFX bytecode op 0x3b
 - Added console command `window_resize` to resize the window to a specific size
 - Added console command `set_camera_from_cb12` to load view matrices from a raw view scope buffer
 - Added commands `lock_time` and `unlock_time` to allow fixing the game time to a specific value (eg. for more deterministic image comparisons)
@@ -61,6 +62,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Replaced `hecs` with `bevy-ecs`
 - Use bevy-ecs change detection to update cbuffers
 - Improved Route UI. Can now use translation gizmo for small adjustments
+- Enabled fast math for `glam`
+- Various atmosphere-related improvements
 
 ### Fixed
 
@@ -70,7 +73,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fix cross-compilation on Linux by using FXC instead of D3DCompile
 - Fixed a random Discord presence related crash
 - Added transparency sorting for sky objects (fixes broken skyboxes such as the Anomaly in Vesper's Host)
-- Fixed a water related map loading error on Disjunction by @cohaereo
+- Fixed a water related map loading error on Disjunction
+- Hotkeys are no longer triggered when typing in text fields
 
 ## 0.5.0 - 2024-07-24
 

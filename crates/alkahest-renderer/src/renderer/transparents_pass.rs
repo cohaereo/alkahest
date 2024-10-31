@@ -27,21 +27,39 @@ impl Renderer {
                 .unwrap_or(ExternDefault::extern_default());
 
             data.externs.transparent = Some(externs::Transparent {
-                unk00: data.gbuffers.atmos_ss_far_lookup.view.clone().into(),
-                // TODO(cohae): unk08 and unk18 are actually the downsampling of their respective lookup
-                unk08: data.gbuffers.atmos_ss_far_lookup.view.clone().into(),
-                unk10: data.gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                unk18: data.gbuffers.atmos_ss_near_lookup.view.clone().into(),
-                unk20: self.gpu.grey_texture.view.clone().into(),
-                // unk20: data.gbuffers.staging_clone.view.clone().into(),
+                atmos_ss_far_lookup: data.gbuffers.atmos_ss_far_lookup.view.clone().into(),
+                // TODO(cohae): downsampled variants actually need to be downsampled :)
+                atmos_ss_far_lookup_downsampled: data
+                    .gbuffers
+                    .atmos_ss_far_lookup
+                    .view
+                    .clone()
+                    .into(),
+                atmos_ss_near_lookup: data.gbuffers.atmos_ss_near_lookup.view.clone().into(),
+                atmos_ss_near_lookup_downsampled: data
+                    .gbuffers
+                    .atmos_ss_near_lookup
+                    .view
+                    .clone()
+                    .into(),
+                atmosphere_depth_angle_density_lookup: self
+                    .gpu
+                    .atmos_depth_angle_lookup_tmp
+                    .view
+                    .clone()
+                    .into(),
+                // atmosphere_depth_angle_density_lookup: data
+                //     .gbuffers
+                //     .depth_angle_density_lookup
+                //     .view
+                //     .clone()
+                //     .into(),
                 unk28: self.gpu.light_grey_texture.view.clone().into(),
                 unk30: self.gpu.light_grey_texture.view.clone().into(),
                 unk38: self.gpu.light_grey_texture.view.clone().into(),
                 unk40: self.gpu.light_grey_texture.view.clone().into(),
-                // unk48: gctx.black_texture.view.clone().into(),
-                unk48: data.gbuffers.shading_result_read.view.clone().into(),
-                // unk48: self.gpu.black_texture.view.clone().into(),
-                unk50: self.gpu.black_texture.view.clone().into(),
+                unk48: externs::TextureView::Null, // volumetrics
+                unk50: externs::TextureView::Null, // volumetrics
                 unk58: self.gpu.light_grey_texture.view.clone().into(),
                 unk60: data.gbuffers.shading_result_read.view.clone().into(),
                 ..existing_transparent
