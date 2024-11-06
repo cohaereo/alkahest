@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added commands `lock_time` and `unlock_time` to allow fixing the game time to a specific value (eg. for more deterministic image comparisons)
 - Shadow quality option (replaces shadow checkbox)
 - Content confidentiality dialog on first startup
+- Log unimplemented TFX bytecode ops in the TFX debugger
 
 ### Changed
 

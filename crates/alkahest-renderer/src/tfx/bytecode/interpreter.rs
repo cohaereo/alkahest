@@ -12,7 +12,7 @@ use super::opcodes::TfxBytecodeOp;
 use crate::{
     ecs::channels::ObjectChannels,
     gpu::{buffer::ConstantBufferCached, GpuContext},
-    tfx::externs::{ExternStorage, TextureView},
+    tfx::externs::{ExternStorage, TextureView, TfxExpressionError, TfxExpressionErrorType},
 };
 
 pub struct TfxBytecodeInterpreter {
@@ -458,8 +458,17 @@ impl TfxBytecodeInterpreter {
                     temp[slotu] = v;
                 }
                 #[cfg(not(feature = "tfx_strict_interpreter"))]
-                _ => {
+                u => {
                     let _ = ip;
+                    externs.errors.write()                   
+                     .entry(format!(
+                        "TFX expression opcode '{}' is not implemented", u.name()
+                    ))
+                    .or_insert_with(|| TfxExpressionError {
+                        error_type: TfxExpressionErrorType::UnimplementedOpcode(u.name()),
+                        repeat_count: 0,
+                    })
+                    .repeat_count += 1;
                 }
                 #[cfg(feature = "tfx_strict_interpreter")]
                 u => {
@@ -551,7 +560,7 @@ impl TfxBytecodeInterpreter {
 
 // Methods adapted from HLSL TFX sources
 mod tfx_converted {
-    use std::arch::x86_64::{_mm_castsi128_ps, _mm_set1_ps};
+    use std::arch::x86_64::_mm_set1_ps;
 
     use glam::{Vec4, Vec4Swizzles};
 
@@ -963,33 +972,33 @@ mod tfx_converted {
         unsafe {
             use std::arch::x86_64::{
                 __m128, _mm_add_ps, _mm_and_ps, _mm_andnot_ps, _mm_cmple_ps, _mm_cmplt_ps,
-                _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_mul_ps, _mm_or_ps, _mm_set1_epi32,
+                _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_mul_ps, _mm_or_ps,
                 _mm_shuffle_ps, _mm_sub_ps,
             };
 
             let mask = f32::from_bits(u32::MAX);
-            let unk_7FF7B2E5E4E0 = __m128::from(Vec4::splat(mask));
-            let unk_7FF7B2E5E4F0 = __m128::from(Vec4::new(mask, mask, mask, 0.0));
-            let unk_7FF7B2E5E5C0 = __m128::from(Vec4::new(0.0, 0.0, 0.0, mask));
-            let xmmword_7FF7B2E5E550 = __m128::from(Vec4::new(mask, 0.0, 0.0, 0.0));
-            let xmmword_7FF7B2E5E590 = __m128::from(Vec4::new(0.0, mask, 0.0, 0.0));
-            let xmmword_7FF7B2E5E5B0 = __m128::from(Vec4::new(0.0, 0.0, mask, 0.0));
+            let unk_7ff7b2e5e4e0 = __m128::from(Vec4::splat(mask));
+            let unk_7ff7b2e5e4f0 = __m128::from(Vec4::new(mask, mask, mask, 0.0));
+            let unk_7ff7b2e5e5c0 = __m128::from(Vec4::new(0.0, 0.0, 0.0, mask));
+            let xmmword_7ff7b2e5e550 = __m128::from(Vec4::new(mask, 0.0, 0.0, 0.0));
+            let xmmword_7ff7b2e5e590 = __m128::from(Vec4::new(0.0, mask, 0.0, 0.0));
+            let xmmword_7ff7b2e5e5b0 = __m128::from(Vec4::new(0.0, 0.0, mask, 0.0));
             let zero = _mm_set1_ps(0.0);
 
             let v4 = __m128::from(Vec4::ONE);
             let v5 = __m128::from(param_0);
             let v6 = __m128::from(param_9);
-            let v7 = _mm_andnot_ps(unk_7FF7B2E5E4E0, v4);
+            let v7 = _mm_andnot_ps(unk_7ff7b2e5e4e0, v4);
             let v8 = __m128::from(param_10);
             let v9 = _mm_sub_ps(input.into(), v6);
             let v10 = _mm_sub_ps(input.into(), v8);
             let v11 = _mm_sub_ps(
                 _mm_or_ps(
                     _mm_and_ps(
-                        _mm_and_ps(_mm_shuffle_ps(v8, v8, 57), unk_7FF7B2E5E4E0),
-                        unk_7FF7B2E5E4F0,
+                        _mm_and_ps(_mm_shuffle_ps(v8, v8, 57), unk_7ff7b2e5e4e0),
+                        unk_7ff7b2e5e4f0,
                     ),
-                    _mm_andnot_ps(unk_7FF7B2E5E4F0, v4),
+                    _mm_andnot_ps(unk_7ff7b2e5e4f0, v4),
                 ),
                 v8,
             );
@@ -997,12 +1006,12 @@ mod tfx_converted {
                 _mm_add_ps(
                     _mm_or_ps(
                         _mm_and_ps(
-                            _mm_and_ps(_mm_shuffle_ps(v8, v8, 0), unk_7FF7B2E5E5C0),
-                            unk_7FF7B2E5E4E0,
+                            _mm_and_ps(_mm_shuffle_ps(v8, v8, 0), unk_7ff7b2e5e5c0),
+                            unk_7ff7b2e5e4e0,
                         ),
                         v7,
                     ),
-                    _mm_and_ps(_mm_shuffle_ps(v6, v6, 57), unk_7FF7B2E5E4F0),
+                    _mm_and_ps(_mm_shuffle_ps(v6, v6, 57), unk_7ff7b2e5e4f0),
                 ),
                 v6,
             );
@@ -1047,9 +1056,9 @@ mod tfx_converted {
                     _mm_and_ps(
                         _mm_and_ps(
                             _mm_add_ps(_mm_shuffle_ps(v18, v18, 147), v18),
-                            xmmword_7FF7B2E5E550,
+                            xmmword_7ff7b2e5e550,
                         ),
-                        unk_7FF7B2E5E4E0,
+                        unk_7ff7b2e5e4e0,
                     ),
                     v7,
                 ),
@@ -1068,9 +1077,9 @@ mod tfx_converted {
                     _mm_and_ps(
                         _mm_and_ps(
                             _mm_add_ps(_mm_shuffle_ps(v21, v21, 147), v21),
-                            xmmword_7FF7B2E5E590,
+                            xmmword_7ff7b2e5e590,
                         ),
-                        unk_7FF7B2E5E4E0,
+                        unk_7ff7b2e5e4e0,
                     ),
                     v7,
                 ),
@@ -1085,9 +1094,9 @@ mod tfx_converted {
                     _mm_and_ps(
                         _mm_and_ps(
                             _mm_add_ps(_mm_shuffle_ps(v26, v26, 147), v26),
-                            xmmword_7FF7B2E5E5B0,
+                            xmmword_7ff7b2e5e5b0,
                         ),
-                        unk_7FF7B2E5E4E0,
+                        unk_7ff7b2e5e4e0,
                     ),
                     v7,
                 ),
@@ -1102,9 +1111,9 @@ mod tfx_converted {
                     _mm_and_ps(
                         _mm_and_ps(
                             _mm_add_ps(_mm_shuffle_ps(v31, v31, 147), v31),
-                            unk_7FF7B2E5E5C0,
+                            unk_7ff7b2e5e5c0,
                         ),
-                        unk_7FF7B2E5E4E0,
+                        unk_7ff7b2e5e4e0,
                     ),
                     v7,
                 ),
