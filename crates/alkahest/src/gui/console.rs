@@ -33,7 +33,7 @@ use anyhow::Context;
 use bevy_ecs::bundle::Bundle;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
-use egui::{Color32, Key, Modifiers, RichText, TextStyle};
+use egui::{Color32, RichText, TextStyle};
 use glam::{Mat4, Vec2, Vec3, Vec4Swizzles};
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -198,10 +198,6 @@ impl GuiView for ConsolePanel {
 
                         self.command_buffer.clear();
                         ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
-                    }
-
-                    if ctx.memory(|m| m.has_focus("console_input_line".into())) {
-                        ui.input_mut(|i| i.count_and_consume_key(Modifiers::NONE, Key::H));
                     }
                 });
             });

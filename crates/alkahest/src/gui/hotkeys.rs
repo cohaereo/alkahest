@@ -5,7 +5,10 @@ use alkahest_renderer::{
         Camera,
     },
     ecs::{
-        hierarchy::Parent, resources::SelectedEntity, transform::Transform, visibility::Visibility,
+        hierarchy::Parent,
+        resources::SelectedEntity,
+        transform::Transform,
+        visibility::{Visibility, VisibilityHelper},
         Scene,
     },
     renderer::RendererShared,
@@ -63,6 +66,10 @@ pub fn process_hotkeys(ctx: &egui::Context, resources: &mut AppResources) {
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE_UNSELECTED)) {
         hide_unselected(resources);
+    }
+
+    if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE)) {
+        hide_selected(resources);
     }
 
     if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_DESELECT)) {
@@ -158,6 +165,34 @@ fn hide_unselected(resources: &mut AppResources) {
         if e.id() != selected_entity && !entity_parents.contains(&e.id()) {
             map.commands().entity(e.id()).insert((Visibility::Hidden,));
         }
+    }
+}
+
+fn hide_selected(resources: &mut AppResources) {
+    let mut maps = resources.get_mut::<MapList>();
+    let Some(map) = maps.current_map_mut() else {
+        return;
+    };
+
+    let selected_entity = resources.get::<SelectedEntity>().selected();
+    let Some(selected_entity) = selected_entity else {
+        return;
+    };
+
+    let visible = map
+        .scene
+        .entity(selected_entity)
+        .get::<Visibility>()
+        .is_visible(0);
+
+    if visible {
+        map.commands()
+            .entity(selected_entity)
+            .insert((Visibility::Hidden,));
+    } else {
+        map.commands()
+            .entity(selected_entity)
+            .insert((Visibility::Visible,));
     }
 }
 

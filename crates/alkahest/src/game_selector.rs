@@ -1,4 +1,4 @@
-use std::{mem::transmute, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use alkahest_renderer::gpu::GpuContext;
 use game_detector::InstalledGame;
