@@ -6,7 +6,7 @@ use winit::window::Window;
 
 use crate::{
     gui::{
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
         util::PainterExt,
     },
     resources::AppResources,
@@ -33,7 +33,7 @@ impl GuiView for FpsDisplayOverlay {
         _window: &Window,
         _resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let average_delta = self.deltas.iter().sum::<f32>() / self.deltas.len() as f32;
         let average_fps = 1.0 / average_delta;
 

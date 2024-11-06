@@ -22,7 +22,7 @@ use winit::window::Window;
 use crate::{
     gui::{
         chip::EcsTagsExt,
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
         icons::{ICON_DELETE, ICON_EYE_OFF},
     },
     maplist::{Map, MapList},
@@ -56,7 +56,7 @@ impl GuiView for OutlinerPanel {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let mut maps = resources.get_mut::<MapList>();
         if let Some(map) = maps.current_map_mut() {
             let scene = &mut map.scene;

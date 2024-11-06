@@ -5,7 +5,7 @@ use winit::window::Window;
 use crate::{
     gui::{
         bottom_bar::LoadingIcon,
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
     },
     maplist::{MapList, MapLoadState},
 };
@@ -19,7 +19,7 @@ impl GuiView for ResourceLoadIndicatorOverlay {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let renderer = resources.get::<RendererShared>();
         let am = &renderer.data.lock().asset_manager;
         let open = !am.is_idle();

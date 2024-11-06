@@ -6,7 +6,7 @@ use winit::window::Window;
 
 use crate::{
     gui::{
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
         icons,
         icons::{ICON_ALERT_CIRCLE_OUTLINE, ICON_CHECK_CIRCLE, ICON_CIRCLE, ICON_CIRCLE_OUTLINE},
     },
@@ -23,7 +23,7 @@ impl GuiView for BottomBar {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
             let mut maplist = resources.get_mut::<MapList>();
             if !maplist.maps.is_empty() {

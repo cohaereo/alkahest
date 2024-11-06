@@ -11,7 +11,7 @@ use winit::window::Window;
 
 use crate::{
     gui::{
-        context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
+        context::{GuiCtx, GuiView, HiddenWindows, ViewAction},
         UiExt,
     },
     resources::AppResources,
@@ -36,7 +36,7 @@ impl GuiView for TfxErrorViewer {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let renderer = resources.get::<RendererShared>();
         let externs = &mut renderer.data.lock().externs;
 
@@ -130,7 +130,7 @@ impl GuiView for TfxExternEditor {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         // cohae: When adding externs to this list, make sure the static values don't get reset each frame
         // Additionally, object-specific externs (such as RigidModel or SimpleGeometry) are not editable
         const SHOWN_EXTERNS: &[TfxExtern] = &[

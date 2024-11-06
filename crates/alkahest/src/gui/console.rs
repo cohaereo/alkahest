@@ -50,7 +50,7 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::{
     gui::{
         commands::load_pkg_entities,
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
     },
     maplist::MapList,
     util::action::{ActionList, ActivitySwapAction, SpawnRouteAction},
@@ -127,7 +127,7 @@ impl GuiView for ConsolePanel {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let request_focus = if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
             self.open = true;
             true

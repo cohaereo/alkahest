@@ -21,3 +21,21 @@ pub fn mat4_scale_translation(scale: Vec3, translation: Vec3) -> Mat4 {
         Vec4::from((translation, 1.0)),
     )
 }
+
+pub trait FloatExt: Sized {
+    fn remap(self, in_start: f32, in_end: f32, out_start: f32, out_end: f32) -> f32;
+    fn remap_clamped(self, in_start: f32, in_end: f32, out_start: f32, out_end: f32) -> f32 {
+        let v = self.remap(in_start, in_end, out_start, out_end);
+        if out_start < out_end {
+            v.clamp(out_start, out_end)
+        } else {
+            v.clamp(out_end, out_start)
+        }
+    }
+}
+
+impl FloatExt for f32 {
+    fn remap(self, in_start: f32, in_end: f32, out_start: f32, out_end: f32) -> f32 {
+        out_start + (self - in_start) * (out_end - out_start) / (in_end - in_start)
+    }
+}

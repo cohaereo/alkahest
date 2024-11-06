@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{atomic::Ordering, Arc};
 
 use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
@@ -44,7 +44,7 @@ use crate::{
     maplist::{Map, MapList},
     resources::AppResources,
     updater::UpdateCheck,
-    util::action::ActionList,
+    util::{action::ActionList, iron},
     ApplicationArgs,
 };
 
@@ -72,6 +72,10 @@ impl AlkahestApp {
         icon: &winit::window::Icon,
         args: ApplicationArgs,
     ) -> Self {
+        iron::set_policy(iron::Policy::Disabled);
+        alkahest_renderer::gpu::DESKTOP_DISPLAY_MODE
+            .store(iron::get_content_policy(), Ordering::SeqCst);
+
         let window = winit::window::WindowBuilder::new()
             .with_title("Alkahest")
             .with_min_inner_size(PhysicalSize::new(640, 360))
@@ -259,13 +263,14 @@ impl AlkahestApp {
                     }
                     WindowEvent::Resized(new_dims) => {
                         if let Some(swap_chain) = gctx.swap_chain.as_ref() {
-                            let _ = gui
-                                .renderer
-                                .resize_buffers(swap_chain, || {
-                                    gctx.resize_swapchain(new_dims.width, new_dims.height);
-                                    HRESULT(0)
-                                })
-                                .expect("Failed to resize buffers");
+                            let _ = gui.renderer.as_mut().map(|renderer| {
+                                let _ = renderer
+                                    .resize_buffers(swap_chain, || {
+                                        gctx.resize_swapchain(new_dims.width, new_dims.height);
+                                        HRESULT(0)
+                                    })
+                                    .unwrap();
+                            });
                         }
 
                         renderer.resize_buffers(new_dims.width, new_dims.height);

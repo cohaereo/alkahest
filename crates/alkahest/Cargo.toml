@@ -84,6 +84,7 @@ tracing.workspace = true
 #tracy-client = "0.17.0"
 puffin.workspace = true
 discord-sdk = "0.3.6"
+windows-registry = "0.3.0"
 
 [features]
 default = ["discord_rpc"]

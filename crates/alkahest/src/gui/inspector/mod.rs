@@ -38,7 +38,7 @@ use winit::window::Window;
 use crate::{
     gui::{
         chip::EcsTagsExt,
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
         hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
         icons::{
             ICON_AXIS_ARROW, ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
@@ -59,7 +59,7 @@ impl GuiView for InspectorPanel {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let mut maps = resources.get_mut::<MapList>();
 
         if let Some(map) = maps.current_map_mut() {
