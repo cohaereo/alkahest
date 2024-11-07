@@ -14,7 +14,7 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use winit::window::Window;
 
 use crate::{
-    gui::context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
+    gui::context::{GuiCtx, GuiView, HiddenWindows, ViewAction},
     resources::AppResources,
     util::{consts, consts::CHANGELOG_MD},
 };
@@ -57,7 +57,7 @@ impl GuiView for MenuBar {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Utility", |ui| {

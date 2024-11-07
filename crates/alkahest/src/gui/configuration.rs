@@ -10,13 +10,12 @@ use strum::IntoEnumIterator;
 use transform_gizmo_egui::{EnumSet, GizmoMode};
 use winit::window::Window;
 
+use super::console;
 use crate::{
     config,
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::context::{GuiCtx, GuiView, ViewAction},
     resources::AppResources,
 };
-
-use super::console;
 
 pub struct RenderSettingsPanel;
 
@@ -27,7 +26,7 @@ impl GuiView for RenderSettingsPanel {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         egui::Window::new("Settings").show(ctx, |ui| {
             let mut camera = resources.get_mut::<Camera>();
             ui.heading("Camera");

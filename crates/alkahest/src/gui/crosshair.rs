@@ -4,7 +4,7 @@ use winit::window::Window;
 
 use crate::{
     config,
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::context::{GuiCtx, GuiView, ViewAction},
     maplist::{MapList, MapLoadState},
 };
 
@@ -17,7 +17,7 @@ impl GuiView for CrosshairOverlay {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let maps = resources.get::<MapList>();
         if maps
             .current_map()

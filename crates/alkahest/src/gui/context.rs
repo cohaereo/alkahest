@@ -1,4 +1,4 @@
-use std::{any::TypeId, mem::transmute, sync::Arc};
+use std::{any::TypeId, sync::Arc};
 
 use alkahest_renderer::{
     gpu::GpuContext,
@@ -12,6 +12,7 @@ use indexmap::IndexMap;
 use smallvec::SmallVec;
 use winit::{event::WindowEvent, window::Window};
 
+use super::sodi::Sodi;
 use crate::{
     config::APP_DIRS,
     gui::{
@@ -36,7 +37,7 @@ use crate::{
 pub struct GuiContext {
     pub egui: egui::Context,
     pub integration: egui_winit::State,
-    pub renderer: egui_directx11::DirectX11Renderer,
+    pub renderer: Option<egui_directx11::DirectX11Renderer>,
     gctx: Arc<GpuContext>,
     resources: GuiResources,
 }
@@ -98,10 +99,10 @@ impl GuiContext {
         egui.set_fonts(fonts);
         egui.set_style(style::style());
 
-        let renderer = egui_directx11::DirectX11Renderer::init_from_swapchain(unsafe {
-            transmute(&gctx.swap_chain)
-        })
-        .expect("Failed to initialize egui renderer");
+        let renderer = gctx.swap_chain.as_ref().map(|swap_chain| {
+            egui_directx11::DirectX11Renderer::init_from_swapchain(swap_chain)
+                .expect("Failed to initialize egui renderer")
+        });
 
         GuiContext {
             resources: GuiResources::load(&egui),
@@ -123,28 +124,26 @@ impl GuiContext {
         profiling::scope!("GuiContext::draw_frame");
         let input = self.integration.take_egui_input(window);
 
-        let output = self
-            .renderer
-            .paint(
-                unsafe { transmute(&self.gctx.swap_chain) },
-                input,
-                &self.egui,
-                |renderer, context| {
-                    paint(
-                        &GuiCtx {
-                            icons: &self.resources,
-                            _integration: renderer,
-                        },
-                        context,
-                    )
-                },
-            )
-            .context("Failed to paint egui frame")
-            .map_err(|e| e.with_d3d_error(&self.gctx))
-            .unwrap();
+        if let Some(ref swap_chain) = self.gctx.swap_chain {
+            if let Some(ref mut renderer) = self.renderer {
+                let output = renderer
+                    .paint(swap_chain, input, &self.egui, |renderer, context| {
+                        paint(
+                            &GuiCtx {
+                                icons: &self.resources,
+                                _integration: renderer,
+                            },
+                            context,
+                        )
+                    })
+                    .context("Failed to paint egui frame")
+                    .map_err(|e| e.with_d3d_error(&self.gctx))
+                    .unwrap();
 
-        self.integration
-            .handle_platform_output(window, output.platform_output)
+                self.integration
+                    .handle_platform_output(window, output.platform_output)
+            }
+        }
     }
 
     // pub fn input<R>(&self, reader: impl FnOnce(&InputState) -> R) -> R {
@@ -172,7 +171,7 @@ impl Drop for GuiContext {
 }
 
 #[derive(PartialEq)]
-pub enum ViewResult {
+pub enum ViewAction {
     Close,
 }
 
@@ -183,7 +182,7 @@ pub trait GuiView {
         window: &Window,
         resources: &AppResources,
         gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult>;
+    ) -> Option<ViewAction>;
 
     fn dispose(&mut self, _ctx: &egui::Context, _resources: &AppResources, _gui: &GuiCtx<'_>) {}
 }
@@ -213,6 +212,7 @@ impl GuiViewManager {
         views.insert(CrosshairOverlay);
         views.insert(ResourceLoadIndicatorOverlay);
         views.insert(GizmoSelector);
+        views.insert(Sodi::default());
 
         views.insert_overlay(FpsDisplayOverlay::default());
 
@@ -250,7 +250,7 @@ impl GuiViewManager {
             let mut to_remove = SmallVec::<[TypeId; 4]>::new();
             for (tid, view) in self.views.iter_mut() {
                 if let Some(result) = view.draw(ctx, window, resources, gui) {
-                    if result == ViewResult::Close {
+                    if result == ViewAction::Close {
                         to_remove.push(*tid);
                     }
                 }

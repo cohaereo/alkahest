@@ -1,4 +1,4 @@
-use std::{mem::transmute, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use alkahest_renderer::gpu::GpuContext;
 use game_detector::InstalledGame;
@@ -46,16 +46,18 @@ pub fn select_game_installation(
             let _ = gui.handle_event(&window, event);
 
             match event {
-                WindowEvent::Resized(new_dims) => unsafe {
-                    let _ = gui
-                        .renderer
-                        .resize_buffers(transmute(&dcs.swap_chain), || {
-                            dcs.resize_swapchain(new_dims.width, new_dims.height);
+                WindowEvent::Resized(new_dims) => {
+                    let swap_chain = dcs.swap_chain.as_ref().unwrap();
+                    let _ = gui.renderer.as_mut().map(|renderer| {
+                        let _ = renderer
+                            .resize_buffers(swap_chain, || {
+                                dcs.resize_swapchain(new_dims.width, new_dims.height);
 
-                            S_OK
-                        })
-                        .unwrap();
-                },
+                                S_OK
+                            })
+                            .unwrap();
+                    });
+                }
                 WindowEvent::RedrawRequested => {
                     gui.draw_frame(&window, |_, ctx| {
                         if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {

@@ -18,7 +18,7 @@ use winit::window::Window;
 use crate::{
     gui::{
         configuration::SelectionGizmoMode,
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
     },
     maplist::MapList,
 };
@@ -32,7 +32,7 @@ impl GuiView for GizmoSelector {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let mut ui = Ui::new(
             ctx.clone(),
             LayerId::background(),

@@ -33,7 +33,7 @@ use anyhow::Context;
 use bevy_ecs::bundle::Bundle;
 use binrw::BinReaderExt;
 use destiny_pkg::{TagHash, TagHash64};
-use egui::{Color32, Key, Modifiers, RichText, TextStyle};
+use egui::{Color32, RichText, TextStyle};
 use glam::{Mat4, Vec2, Vec3, Vec4Swizzles};
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -50,7 +50,7 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::{
     gui::{
         commands::load_pkg_entities,
-        context::{GuiCtx, GuiView, ViewResult},
+        context::{GuiCtx, GuiView, ViewAction},
     },
     maplist::MapList,
     util::action::{ActionList, ActivitySwapAction, SpawnRouteAction},
@@ -127,7 +127,7 @@ impl GuiView for ConsolePanel {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let request_focus = if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
             self.open = true;
             true
@@ -198,10 +198,6 @@ impl GuiView for ConsolePanel {
 
                         self.command_buffer.clear();
                         ctx.memory_mut(|m| m.request_focus(egui::Id::new("console_input_line")));
-                    }
-
-                    if ctx.memory(|m| m.has_focus("console_input_line".into())) {
-                        ui.input_mut(|i| i.count_and_consume_key(Modifiers::NONE, Key::H));
                     }
                 });
             });

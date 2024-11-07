@@ -21,7 +21,7 @@ use winit::window::Window;
 
 use crate::{
     config,
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::context::{GuiCtx, GuiView, ViewAction},
     maplist::MapList,
 };
 
@@ -34,7 +34,7 @@ impl GuiView for NodeGizmoOverlay {
         _window: &Window,
         resources: &AppResources,
         gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let camera = resources.get::<Camera>();
         let screen_size = ctx.screen_rect().size();
         let painter = ctx.layer_painter(egui::LayerId::background());

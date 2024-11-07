@@ -38,8 +38,8 @@ use winit::window::Window;
 use crate::{
     gui::{
         chip::EcsTagsExt,
-        context::{GuiCtx, GuiView, ViewResult},
-        hotkeys::{SHORTCUT_DELETE, SHORTCUT_HIDE},
+        context::{GuiCtx, GuiView, ViewAction},
+        hotkeys::SHORTCUT_DELETE,
         icons::{
             ICON_AXIS_ARROW, ICON_CAMERA_CONTROL, ICON_CUBE_OUTLINE, ICON_DELETE, ICON_EYE,
             ICON_EYE_OFF, ICON_RADIUS_OUTLINE, ICON_RESIZE, ICON_ROTATE_ORBIT, ICON_TAG,
@@ -59,7 +59,7 @@ impl GuiView for InspectorPanel {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let mut maps = resources.get_mut::<MapList>();
 
         if let Some(map) = maps.current_map_mut() {
@@ -154,7 +154,6 @@ pub fn show_inspector_panel(
                     .strong(),
             )
             .clicked()
-            || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_HIDE))
         {
             if visible {
                 cmd.entity(ent).insert((Visibility::Hidden,));

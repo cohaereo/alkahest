@@ -962,6 +962,7 @@ pub struct TfxExpressionError {
 }
 
 pub enum TfxExpressionErrorType {
+    UnimplementedOpcode(&'static str),
     Unimplemented { field_offset: usize },
     InvalidType(&'static str),
     ExternNotSet(&'static str),

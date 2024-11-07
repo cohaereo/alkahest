@@ -1,6 +1,6 @@
 use alkahest_renderer::{
     renderer::RendererShared,
-    tfx::externs::{TextureView, TfxExpressionErrorType, TfxExtern},
+    tfx::externs::{ExternStorage, TextureView, TfxExpressionErrorType, TfxExtern},
     ColorExt,
 };
 use egui::{Color32, Context, RichText, Widget};
@@ -11,7 +11,7 @@ use winit::window::Window;
 
 use crate::{
     gui::{
-        context::{GuiCtx, GuiView, HiddenWindows, ViewResult},
+        context::{GuiCtx, GuiView, HiddenWindows, ViewAction},
         UiExt,
     },
     resources::AppResources,
@@ -36,7 +36,7 @@ impl GuiView for TfxErrorViewer {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         let renderer = resources.get::<RendererShared>();
         let externs = &mut renderer.data.lock().externs;
 
@@ -47,58 +47,15 @@ impl GuiView for TfxErrorViewer {
             .show(ctx, |ui| {
                 ui.checkbox(&mut self.clear_each_frame, "Clear each frame");
                 egui::ScrollArea::new([false, true]).show(ui, |ui| {
-                    TableBuilder::new(ui)
-                        .column(Column::initial(128.0).resizable(true))
-                        .column(Column::remainder())
-                        .striped(true)
-                        .header(10.0, |mut header| {
-                            header.col(|ui| {
-                                ui.strong("Level");
-                            });
-                            header.col(|ui| {
-                                ui.strong("Message");
-                            });
-                        })
-                        .body(|mut body| {
-                            let errors = externs.errors.read();
-                            let mut errors = errors.iter().collect_vec();
-                            errors.sort_by_key(|(msg, _)| *msg);
-
-                            for (message, error) in errors {
-                                body.row(20.0, |mut row| {
-                                    row.col(|ui| {
-                                        let (label, background_color) = match error.error_type {
-                                            TfxExpressionErrorType::Unimplemented { .. } => {
-                                                // if partial {
-                                                //     ("STUBBED", Color32::YELLOW)
-                                                // } else {
-                                                ("UNIMPLEMENTED", Color32::RED)
-                                                // }
-                                            }
-                                            TfxExpressionErrorType::InvalidType(_) => {
-                                                ("INVALID_TYPE", Color32::DARK_RED)
-                                            }
-
-                                            TfxExpressionErrorType::ExternNotSet(_) => {
-                                                ("EXTERN_NOT_SET", Color32::DARK_RED)
-                                            }
-                                        };
-
-                                        ui.label(
-                                            RichText::new(label)
-                                                .strong()
-                                                .background_color(background_color)
-                                                .color(
-                                                    background_color.text_color_for_background(),
-                                                ),
-                                        );
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(format!("{} ({}x)", message, error.repeat_count));
-                                    });
-                                });
-                            }
-                        });
+                    ui.heading("Expression Interpreter");
+                    self.table_filtered(ui, externs, |v| {
+                        matches!(v, TfxExpressionErrorType::UnimplementedOpcode { .. })
+                    });
+                    ui.separator();
+                    ui.heading("Extern Storage");
+                    self.table_filtered(ui, externs, |v| {
+                        !matches!(v, TfxExpressionErrorType::UnimplementedOpcode { .. })
+                    });
                 });
             });
 
@@ -108,6 +65,67 @@ impl GuiView for TfxErrorViewer {
 
         // (!open).then_some(ViewResult::Close)
         None
+    }
+}
+
+impl TfxErrorViewer {
+    pub fn table_filtered<F>(&mut self, ui: &mut egui::Ui, externs: &ExternStorage, filter: F)
+    where
+        F: Fn(&TfxExpressionErrorType) -> bool,
+    {
+        TableBuilder::new(ui)
+            .column(Column::initial(196.0).resizable(true))
+            .column(Column::remainder())
+            .striped(true)
+            .header(10.0, |mut header| {
+                header.col(|ui| {
+                    ui.strong("Level");
+                });
+                header.col(|ui| {
+                    ui.strong("Message");
+                });
+            })
+            .body(|mut body| {
+                let errors = externs.errors.read();
+                let mut errors = errors.iter().collect_vec();
+                errors.sort_by_key(|(msg, _)| *msg);
+
+                for (message, error) in errors.iter().filter(|(_, err)| filter(&err.error_type)) {
+                    body.row(20.0, |mut row| {
+                        row.col(|ui| {
+                            let (label, background_color) = match error.error_type {
+                                TfxExpressionErrorType::Unimplemented { .. } => {
+                                    // if partial {
+                                    //     ("STUBBED", Color32::YELLOW)
+                                    // } else {
+                                    ("UNIMPLEMENTED_FIELD", Color32::RED)
+                                    // }
+                                }
+                                TfxExpressionErrorType::InvalidType(_) => {
+                                    ("INVALID_TYPE", Color32::DARK_RED)
+                                }
+
+                                TfxExpressionErrorType::ExternNotSet(_) => {
+                                    ("EXTERN_NOT_SET", Color32::DARK_RED)
+                                }
+                                TfxExpressionErrorType::UnimplementedOpcode { .. } => {
+                                    ("UNIMPLEMENTED_OPCODE", Color32::DARK_RED)
+                                }
+                            };
+
+                            ui.label(
+                                RichText::new(label)
+                                    .strong()
+                                    .background_color(background_color)
+                                    .color(background_color.text_color_for_background()),
+                            );
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("{} ({}x)", message, error.repeat_count));
+                        });
+                    });
+                }
+            });
     }
 }
 
@@ -130,7 +148,7 @@ impl GuiView for TfxExternEditor {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         // cohae: When adding externs to this list, make sure the static values don't get reset each frame
         // Additionally, object-specific externs (such as RigidModel or SimpleGeometry) are not editable
         const SHOWN_EXTERNS: &[TfxExtern] = &[

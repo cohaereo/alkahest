@@ -8,6 +8,7 @@ pub mod hotkeys;
 pub use alkahest_renderer::icons;
 mod input;
 pub mod inspector;
+mod sodi;
 mod tfx;
 
 // Custom widgets

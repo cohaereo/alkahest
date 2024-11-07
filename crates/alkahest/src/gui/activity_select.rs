@@ -12,7 +12,7 @@ use tiger_parse::{PackageManagerExt, TigerReadable};
 use winit::window::Window;
 
 use crate::{
-    gui::context::{GuiCtx, GuiView, ViewResult},
+    gui::context::{GuiCtx, GuiView, ViewAction},
     maplist::MapList,
     resources::AppResources,
 };
@@ -287,7 +287,7 @@ impl GuiView for ActivityBrowser {
         _window: &Window,
         resources: &AppResources,
         _gui: &GuiCtx<'_>,
-    ) -> Option<ViewResult> {
+    ) -> Option<ViewAction> {
         egui::Window::new("Activities").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.selectable_value(

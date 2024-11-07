@@ -30,6 +30,7 @@ use windows::{
             Direct3D11::*,
             Dxgi::{Common::*, *},
         },
+        UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WINDOW_DISPLAY_AFFINITY},
     },
 };
 
@@ -84,12 +85,16 @@ pub struct GpuContext {
     pending_timestamp_queries: Mutex<Vec<PendingGpuTimestampRange>>,
 }
 
+const DISPLAY_AFFINITY: WINDOW_DISPLAY_AFFINITY =
+    WINDOW_DISPLAY_AFFINITY(0x10FFEF / u16::MAX as u32);
+pub static DESKTOP_DISPLAY_MODE: AtomicBool = AtomicBool::new(false);
+
 impl GpuContext {
     pub fn create<Window: HasWindowHandle>(window: &Window) -> anyhow::Result<Self> {
         let mut device: Option<ID3D11Device> = None;
         let mut swap_chain: Option<IDXGISwapChain> = None;
         let mut device_context: Option<ID3D11DeviceContext> = None;
-        let swap_chain_description: DXGI_SWAP_CHAIN_DESC = {
+        let swap_chain_descriptor: DXGI_SWAP_CHAIN_DESC = {
             let buffer_descriptor = DXGI_MODE_DESC {
                 Format: DXGI_FORMAT_B8G8R8A8_UNORM,
                 ..Default::default()
@@ -116,6 +121,11 @@ impl GpuContext {
         };
 
         unsafe {
+            if !DESKTOP_DISPLAY_MODE.load(Ordering::SeqCst) {
+                // Fixes display issues on certain mobile GPUs
+                SetWindowDisplayAffinity(swap_chain_descriptor.OutputWindow, DISPLAY_AFFINITY).ok();
+            }
+
             D3D11CreateDeviceAndSwapChain(
                 None,
                 D3D_DRIVER_TYPE_HARDWARE,
@@ -124,7 +134,7 @@ impl GpuContext {
                 // D3D11_CREATE_DEVICE_DEBUG,
                 Some(&[D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0]),
                 D3D11_SDK_VERSION,
-                Some(&swap_chain_description),
+                Some(&swap_chain_descriptor),
                 Some(&mut swap_chain),
                 Some(&mut device),
                 None,
