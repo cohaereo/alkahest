@@ -4,9 +4,10 @@ use alkahest_renderer::{
         common::{Global, Icon, Label, Mutable, RenderCommonBundle},
         hierarchy::Children,
         resources::SelectedEntity,
+        route::{Route, RouteNodeBundle, RouteNodeData},
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
-        utility::{Beacon, Route, RouteNodeBundle, RouteNodeHolder, Ruler, Sphere, Utility},
+        utility::{Beacon, Ruler, Sphere, Utility},
         SceneInfo,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
@@ -157,7 +158,7 @@ impl MenuBar {
                     .scene
                     .spawn(RouteNodeBundle::new(
                         route_id,
-                        RouteNodeHolder {
+                        RouteNodeData {
                             pos: camera.position(),
                             map_hash: map.scene.get_map_hash(),
                             ..Default::default()

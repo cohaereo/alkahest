@@ -8,7 +8,7 @@ use alkahest_renderer::{
             static_geometry::update_static_instances_system,
         },
         resources::SelectedEntity,
-        utility::Route,
+        route::Route,
         visibility::propagate_entity_visibility_system,
         Scene, SceneInfo,
     },

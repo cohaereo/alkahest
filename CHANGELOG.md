@@ -53,7 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Shadow quality option (replaces shadow checkbox)
 - Added Arrow Hotkeys to navigate selected object heirarchies @Froggy618157725
   in [#36](https://github.com/cohaereo/alkahest/pull/36)
-- Added hotkeys to add to current route. + adds at the end of the route, or after current node, - adds before the selected node
+- Added hotkeys to add to current route. <kbd>+</kbd> adds at the end of the route, or after current node, <kbd>-</kbd> adds before the selected node
 - Content confidentiality dialog on first startup
 - Log unimplemented TFX bytecode ops in the TFX debugger
 ### Changed

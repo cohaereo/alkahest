@@ -6,9 +6,10 @@ use alkahest_renderer::{
         common::{Global, Mutable, RenderCommonBundle},
         hierarchy::Children,
         resources::SelectedEntity,
+        route::{Route, RouteData, RouteNode, RouteNodeBundle},
         tags::{EntityTag, NodeFilter, Tags},
         transform::Transform,
-        utility::{Route, RouteHolder, RouteNode, RouteNodeBundle, Utility},
+        utility::Utility,
     },
     resources::AppResources,
 };
@@ -193,11 +194,11 @@ impl Action for ActivitySwapAction {
 }
 
 pub struct SpawnRouteAction {
-    route: Option<RouteHolder>,
+    route: Option<RouteData>,
 }
 
 impl SpawnRouteAction {
-    pub fn new(route: RouteHolder) -> Self {
+    pub fn new(route: RouteData) -> Self {
         Self { route: Some(route) }
     }
 }
@@ -262,91 +263,91 @@ impl Action for FollowAction {
         let camera = resources.get::<Camera>();
         let mut maps = resources.get_mut::<MapList>();
 
-        if let Some(map) = maps.current_map_mut() {
-            let scene = &mut map.scene;
-            let camera_offset = Vec3::Z;
-            let mut buffer = resources.get_mut::<ActionBuffer>();
-            const DEGREES_PER_SEC: f32 = 360.0;
-            const METERS_PER_SEC: f32 = 18.0;
+        let Some(map) = maps.current_map_mut() else {
+            return;
+        };
+        let scene = &mut map.scene;
+        let camera_offset = Vec3::Z;
+        let mut buffer = resources.get_mut::<ActionBuffer>();
+        const DEGREES_PER_SEC: f32 = 360.0;
+        const METERS_PER_SEC: f32 = 18.0;
 
-            let route_ref = scene.entity(self.route_ent);
+        let route_ref = scene.entity(self.route_ent);
 
-            let Some(route) = route_ref.get::<Route>() else {
+        let Some(route) = route_ref.get::<Route>() else {
+            return;
+        };
+
+        let Some(children) = route_ref.get::<Children>() else {
+            return;
+        };
+
+        if children.0.is_empty() {
+            return;
+        }
+
+        let start_index = match self.traverse_from {
+            Some(e) => children.0.iter().position(|&ent| ent == e).unwrap_or(0),
+            None => 0,
+        };
+
+        let start_node_ent = scene.entity(children.0[start_index]);
+        let Some(start_pos) = start_node_ent.get::<Transform>().map(|t| t.translation) else {
+            return;
+        };
+        let Some(start_hash) = start_node_ent.get::<RouteNode>().map(|n| n.map_hash) else {
+            return;
+        };
+
+        let mut old_pos = start_pos + camera_offset;
+        let mut old_orient = camera.get_look_angle(old_pos);
+        buffer.buffer_action(TweenAction::new(
+            |x| x,
+            Some((camera.position(), old_pos)),
+            Some((camera.view_angle(), old_orient)),
+            1.0,
+        ));
+
+        if let Some(hash) = start_hash {
+            buffer.buffer_action(MapSwapAction::new(hash));
+        }
+        for node_e in children.0.iter().skip(start_index + 1) {
+            let Some(pos) = scene.get::<Transform>(*node_e) else {
+                return;
+            };
+            let Some(node) = scene.get::<RouteNode>(*node_e) else {
                 return;
             };
 
-            if let Some(children) = route_ref.get::<Children>() {
-                if children.0.is_empty() {
-                    return;
-                }
-
-                let start_index = match self.traverse_from {
-                    Some(e) => children.0.iter().position(|&ent| ent == e).unwrap_or(0),
-                    None => 0,
-                };
-
-                let start_node_ent = scene.entity(children.0[start_index]);
-                let start_pos = match start_node_ent.get::<Transform>() {
-                    Some(t) => t.translation,
-                    None => return,
-                };
-                let start_hash = match start_node_ent.get::<RouteNode>() {
-                    Some(n) => n.map_hash,
-                    None => return,
-                };
-
-                let mut old_pos = start_pos + camera_offset;
-                let mut old_orient = camera.get_look_angle(old_pos);
-                buffer.buffer_action(TweenAction::new(
-                    |x| x,
-                    Some((camera.position(), old_pos)),
-                    Some((camera.view_angle(), old_orient)),
-                    1.0,
-                ));
-
-                if let Some(hash) = start_hash {
-                    buffer.buffer_action(MapSwapAction::new(hash));
-                }
-                for node_e in children.0.iter().skip(start_index + 1) {
-                    let Some(pos) = scene.get::<Transform>(*node_e) else {
-                        return;
-                    };
-                    let Some(node) = scene.get::<RouteNode>(*node_e) else {
-                        return;
-                    };
-
-                    info!("Attempting to get next for {}", node_e);
-                    let new_pos = pos.translation + camera_offset;
-                    let new_orient = get_look_angle(old_orient, old_pos, new_pos);
-                    //TODO Not sure why this isn't working right
-                    // let angle_dif = get_look_angle_difference(old_orient, old_pos, new_pos);
-                    // Using a silly approximation to look ok.
-                    let angle_delta = (old_orient - new_orient).abs();
-                    let angle_dif = (angle_delta.x % 360.0).max(angle_delta.y % 360.0);
-                    buffer.buffer_action(TweenAction::new(
-                        |x| x,
-                        None,
-                        Some((old_orient, new_orient)),
-                        angle_dif / (DEGREES_PER_SEC * route.speed_multiplier),
-                    ));
-                    old_orient = new_orient;
-                    buffer.buffer_action(TweenAction::new(
-                        |x| x,
-                        Some((old_pos, new_pos)),
-                        None,
-                        if node.is_teleport {
-                            route.scale * 0.1
-                        } else {
-                            route.scale * old_pos.distance(new_pos)
-                                / (METERS_PER_SEC * route.speed_multiplier)
-                        },
-                    ));
-                    if let Some(hash) = node.map_hash {
-                        buffer.buffer_action(MapSwapAction::new(hash));
-                    }
-                    old_pos = new_pos;
-                }
+            let new_pos = pos.translation + camera_offset;
+            let new_orient = get_look_angle(old_orient, old_pos, new_pos);
+            //TODO Not sure why this isn't working right
+            // let angle_dif = get_look_angle_difference(old_orient, old_pos, new_pos);
+            // Using a silly approximation to look ok.
+            let angle_delta = (old_orient - new_orient).abs();
+            let angle_dif = (angle_delta.x % 360.0).max(angle_delta.y % 360.0);
+            buffer.buffer_action(TweenAction::new(
+                |x| x,
+                None,
+                Some((old_orient, new_orient)),
+                angle_dif / (DEGREES_PER_SEC * route.speed_multiplier),
+            ));
+            old_orient = new_orient;
+            buffer.buffer_action(TweenAction::new(
+                |x| x,
+                Some((old_pos, new_pos)),
+                None,
+                if node.is_teleport {
+                    route.scale * 0.1
+                } else {
+                    route.scale * old_pos.distance(new_pos)
+                        / (METERS_PER_SEC * route.speed_multiplier)
+                },
+            ));
+            if let Some(hash) = node.map_hash {
+                buffer.buffer_action(MapSwapAction::new(hash));
             }
+            old_pos = new_pos;
         }
     }
 

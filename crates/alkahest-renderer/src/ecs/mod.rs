@@ -10,6 +10,7 @@ pub mod hierarchy;
 pub mod map;
 pub mod render;
 pub mod resources;
+pub mod route;
 pub mod tags;
 pub mod transform;
 pub mod utility;

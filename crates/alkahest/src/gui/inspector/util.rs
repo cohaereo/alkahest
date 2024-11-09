@@ -3,10 +3,9 @@ use alkahest_renderer::{
     ecs::{
         hierarchy::{Children, Parent},
         resources::SelectedEntity,
+        route::{Route, RouteNode, RouteNodeBundle, RouteNodeData},
         transform::Transform,
-        utility::{
-            Beacon, Route, RouteNode, RouteNodeBundle, RouteNodeHolder, Ruler, Sphere, Utility,
-        },
+        utility::{Beacon, Ruler, Sphere, Utility},
         Scene, SceneInfo,
     },
     icons::{
@@ -391,7 +390,7 @@ impl ComponentPanel for Route {
                 let node = cmd
                     .spawn(RouteNodeBundle::new(
                         e.id(),
-                        RouteNodeHolder {
+                        RouteNodeData {
                             pos: camera.position(),
                             map_hash: scene.get_map_hash(),
                             ..Default::default()
@@ -487,7 +486,7 @@ impl ComponentPanel for RouteNode {
                     let node = cmd
                         .spawn(RouteNodeBundle::new(
                             parent.0,
-                            RouteNodeHolder {
+                            RouteNodeData {
                                 pos: camera.position(),
                                 map_hash: scene.get_map_hash(),
                                 ..Default::default()
@@ -517,7 +516,7 @@ impl ComponentPanel for RouteNode {
                     let node = cmd
                         .spawn(RouteNodeBundle::new(
                             parent.0,
-                            RouteNodeHolder {
+                            RouteNodeData {
                                 pos: camera.position(),
                                 map_hash: scene.get_map_hash(),
                                 ..Default::default()
