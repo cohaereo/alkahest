@@ -44,7 +44,10 @@ use crate::{
     maplist::{Map, MapList},
     resources::AppResources,
     updater::UpdateCheck,
-    util::{action::ActionList, iron},
+    util::{
+        action::{ActionBuffer, ActionList},
+        iron,
+    },
     ApplicationArgs,
 };
 
@@ -114,6 +117,7 @@ impl AlkahestApp {
         resources.insert(SelectionGizmoMode::default());
         resources.insert(HiddenWindows::default());
         resources.insert(ActionList::default());
+        resources.insert(ActionBuffer::default());
         let renderer = Renderer::create(
             gctx.clone(),
             (window.inner_size().width, window.inner_size().height),

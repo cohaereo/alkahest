@@ -3,7 +3,7 @@ use alkahest_renderer::{
     icons::ICON_TREE,
     renderer::RendererShared,
 };
-use bevy_ecs::prelude::EntityRef;
+use bevy_ecs::{prelude::EntityRef, system::Commands};
 use egui::{Color32, Ui};
 
 use crate::{gui::inspector::ComponentPanel, resources::AppResources};
@@ -20,6 +20,7 @@ impl ComponentPanel for DecoratorRenderer {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         ui: &mut Ui,
         resources: &AppResources,

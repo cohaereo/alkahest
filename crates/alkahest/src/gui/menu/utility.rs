@@ -2,10 +2,12 @@ use alkahest_renderer::{
     camera::Camera,
     ecs::{
         common::{Global, Icon, Label, Mutable, RenderCommonBundle},
+        hierarchy::Children,
         resources::SelectedEntity,
+        route::{Route, RouteNodeBundle, RouteNodeData},
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
-        utility::{Beacon, Route, RouteNode, Ruler, Sphere, Utility},
+        utility::{Beacon, Ruler, Sphere, Utility},
         SceneInfo,
     },
     icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
@@ -136,27 +138,38 @@ impl MenuBar {
             let camera = resources.get::<Camera>();
 
             if let Some(map) = maps.current_map_mut() {
-                let e = map.scene.spawn((
-                    NodeFilter::Utility,
-                    Route {
-                        path: vec![RouteNode {
+                let route_id = map
+                    .scene
+                    .spawn((
+                        Route {
+                            activity_hash: map.scene.get_activity_hash(),
+                            ..Default::default()
+                        },
+                        Route::icon(),
+                        Route::default_label(),
+                        NodeFilter::Utility,
+                        Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
+                        Mutable,
+                        Global,
+                        RenderCommonBundle::default(),
+                    ))
+                    .id();
+                let n = map
+                    .scene
+                    .spawn(RouteNodeBundle::new(
+                        route_id,
+                        RouteNodeData {
                             pos: camera.position(),
                             map_hash: map.scene.get_map_hash(),
-                            is_teleport: false,
-                            label: None,
-                        }],
-                        activity_hash: map.scene.get_activity_hash(),
-                        ..Default::default()
-                    },
-                    Tags::from_iter([EntityTag::Utility, EntityTag::Global]),
-                    Route::icon(),
-                    Route::default_label(),
-                    Mutable,
-                    Global,
-                    RenderCommonBundle::default(),
-                ));
+                            ..Default::default()
+                        },
+                    ))
+                    .id();
+                map.scene
+                    .entity_mut(route_id)
+                    .insert(Children::from_slice(&[n]));
 
-                resources.get_mut::<SelectedEntity>().select(e.id());
+                resources.get_mut::<SelectedEntity>().select(route_id);
 
                 ui.close_menu();
             }

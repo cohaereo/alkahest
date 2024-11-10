@@ -6,6 +6,7 @@ use egui::Widget;
 use crate::gui::UiExt;
 
 use super::ComponentPanel;
+use bevy_ecs::system::Commands;
 
 impl ComponentPanel for ObjectChannels {
     fn inspector_name() -> &'static str {
@@ -24,6 +25,7 @@ impl ComponentPanel for ObjectChannels {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut alkahest_renderer::ecs::Scene,
+        _: &mut Commands<'_, '_>,
         _: bevy_ecs::world::EntityRef<'s>,
         ui: &mut egui::Ui,
         _: &alkahest_renderer::resources::AppResources,

@@ -16,9 +16,10 @@ use alkahest_renderer::{
             light::LightRenderer,
         },
         resources::SelectedEntity,
+        route::{Route, RouteNode},
         tags::{insert_tag, remove_tag, EntityTag, Tags},
         transform::{OriginalTransform, Transform, TransformFlags},
-        utility::{Beacon, Route, Ruler, Sphere},
+        utility::{Beacon, Ruler, Sphere},
         visibility::{Visibility, VisibilityHelper},
         Scene,
     },
@@ -125,10 +126,29 @@ pub fn show_inspector_panel(
                 .clicked()
                 || ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_DELETE)))
         {
+            // Remove all children
+            if let Some(children) = e.get::<Children>() {
+                for child_ent in &children.0 {
+                    cmd.entity(*child_ent).despawn();
+                }
+            }
+            // Remove from parent
+            if let Some(parent) = e.get::<Parent>() {
+                if let Some(mut children) = scene.entity(parent.0).get_mut::<Children>() {
+                    children.0.retain(|child| *child != e.id());
+                }
+                resources.get_mut::<SelectedEntity>().select(parent.0);
+            }
             cmd.entity(ent).despawn();
         }
 
-        if ui
+        if e.contains::<RouteNode>() {
+            ui.label(
+                RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
+                    .size(24.0)
+                    .strong(),
+            );
+        } else if ui
             .button(
                 RichText::new(if visible { ICON_EYE } else { ICON_EYE_OFF })
                     .size(24.0)
@@ -197,9 +217,9 @@ pub fn show_inspector_panel(
                         |ui| {
                             for c in children.iter() {
                                 let title = if let Some(label) = scene.get::<Label>(*c) {
-                                    format!("{label} (id {})", e.id())
+                                    format!("{label} (id {})", *c)
                                 } else {
-                                    format!("Entity {}", e.id())
+                                    format!("Entity {}", *c)
                                 };
 
                                 if ui.selectable_label(false, title).clicked() {
@@ -226,7 +246,7 @@ pub fn show_inspector_panel(
 
     let mut global = e.contains::<Global>();
     let mut global_changed = false;
-    if e.contains::<Mutable>() && !e.contains::<Route>() {
+    if e.contains::<Mutable>() && !e.contains::<Route>() && !e.contains::<RouteNode>() {
         if ui.checkbox(&mut global, "Show in all Maps").changed() {
             global_changed = true;
             if global {
@@ -237,7 +257,7 @@ pub fn show_inspector_panel(
         };
         ui.separator();
     }
-    show_inspector_components(ui, scene.pocus(), e, resources);
+    show_inspector_components(ui, scene.pocus(), &mut cmd, e, resources);
 
     if global_changed {
         if global {
@@ -251,12 +271,13 @@ pub fn show_inspector_panel(
 fn show_inspector_components(
     ui: &mut egui::Ui,
     scene: &mut Scene,
+    cmd: &mut Commands<'_, '_>,
     e: EntityRef<'_>,
     resources: &AppResources,
 ) {
     if let Some(mut t) = e.get_mut::<Transform>() {
         inspector_component_frame(ui, "Transform", ICON_AXIS_ARROW, |ui| {
-            t.show_inspector_ui(scene, e, ui, resources);
+            t.show_inspector_ui(scene, cmd, e, ui, resources);
         });
     }
 
@@ -266,7 +287,7 @@ fn show_inspector_components(
 				if let Some(mut component) = e.get_mut::<$component>() {
                     if component.should_show_in_inspector() {
                         inspector_component_frame(ui, <$component>::inspector_name(), <$component>::inspector_icon(), |ui| {
-                            component.show_inspector_ui(scene, e, ui, resources);
+                            component.show_inspector_ui(scene, cmd, e, ui, resources);
                         });
                     }
 				}
@@ -280,6 +301,7 @@ fn show_inspector_components(
         Sphere,
         Beacon,
         Route,
+        RouteNode,
         DynamicModelComponent,
         LightRenderer,
         SLightCollection,
@@ -318,6 +340,7 @@ pub(super) trait ComponentPanel {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         _: &mut egui::Ui,
         _: &AppResources,
@@ -337,6 +360,7 @@ impl ComponentPanel for Transform {
     fn show_inspector_ui(
         &mut self,
         _scene: &mut Scene,
+        _: &mut Commands<'_, '_>,
         e: EntityRef<'_>,
         ui: &mut egui::Ui,
         resources: &AppResources,
@@ -487,6 +511,7 @@ impl ComponentPanel for DynamicModelComponent {
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
         _: &AppResources,
@@ -564,6 +589,7 @@ impl ComponentPanel for ShaderBallComponent {
     fn show_inspector_ui(
         &mut self,
         _: &mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'_>,
         ui: &mut egui::Ui,
         _: &AppResources,
@@ -621,6 +647,7 @@ impl ComponentPanel for NodeMetadata {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         ui: &mut Ui,
         _: &AppResources,
@@ -664,6 +691,7 @@ impl ComponentPanel for SRespawnPoint {
     fn show_inspector_ui<'s>(
         &mut self,
         _: &'s mut Scene,
+        _: &mut Commands<'_, '_>,
         _: EntityRef<'s>,
         ui: &mut Ui,
         _: &AppResources,

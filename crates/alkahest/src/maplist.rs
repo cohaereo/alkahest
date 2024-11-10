@@ -2,21 +2,26 @@ use alkahest_data::text::StringContainerShared;
 use alkahest_renderer::{
     ecs::{
         common::Global,
+        hierarchy::{Children, Parent},
         render::{
             dynamic_geometry::update_dynamic_model_system, light::update_shadowrenderer_system,
             static_geometry::update_static_instances_system,
         },
         resources::SelectedEntity,
+        route::Route,
         visibility::propagate_entity_visibility_system,
         Scene, SceneInfo,
     },
     loaders::map::load_map,
     renderer::RendererShared,
-    util::{scene::SceneExt, Hocus},
+    util::{
+        scene::{EntityWorldMutExt, SceneExt},
+        Hocus,
+    },
 };
 use bevy_ecs::{
     entity::Entity,
-    query::With,
+    query::{With, Without},
     schedule::{ExecutorKind, Schedule, ScheduleLabel},
     system::Commands,
     world::CommandQueue,
@@ -24,6 +29,7 @@ use bevy_ecs::{
 use destiny_pkg::TagHash;
 use itertools::Itertools;
 use poll_promise::Promise;
+use smallvec::SmallVec;
 
 use crate::{
     discord, gui::activity_select::CurrentActivity, resources::AppResources, ApplicationArgs,
@@ -152,7 +158,7 @@ impl Map {
     /// Remove global entities from the scene and store them in this one
     pub fn take_globals(&mut self, source: &mut Scene) {
         let ent_list = source
-            .query_filtered::<Entity, With<Global>>()
+            .query_filtered::<Entity, (With<Global>, Without<Parent>)>()
             .iter(source)
             .collect_vec();
         let mut new_selected_entity: Option<Entity> = None;
@@ -160,13 +166,24 @@ impl Map {
         {
             // TODO(cohae): selected_entity always appears to be None, and thus the selected entity isn't carried over
             let selected_entity = source.resource::<SelectedEntity>().selected();
-            for &entity in &ent_list {
+            for entity in ent_list {
                 let old_entity_components = source.take_boxed(entity).unwrap();
                 let new_entity = self.scene.spawn_boxed(old_entity_components);
 
-                if selected_entity == Some(entity) {
+                if new_selected_entity.is_none() && selected_entity == Some(entity) {
                     new_selected_entity = Some(new_entity);
                 }
+
+                let Some(children) = self.scene.entity_mut(new_entity).take::<Children>() else {
+                    continue;
+                };
+                self.fixup_children(
+                    source,
+                    new_entity,
+                    &children,
+                    &mut new_selected_entity,
+                    &selected_entity,
+                );
             }
         }
 
@@ -174,6 +191,42 @@ impl Map {
             self.scene
                 .resource_mut::<SelectedEntity>()
                 .select(new_entity);
+        }
+    }
+
+    fn fixup_children(
+        &mut self,
+        source: &mut Scene,
+        new_parent: Entity,
+        children: &Children,
+        new_selected: &mut Option<Entity>,
+        selected: &Option<Entity>,
+    ) {
+        let mut new_children = Children(SmallVec::new());
+        for child in children.0.iter() {
+            let Some(old_entity_components) = source.take_boxed(*child) else {
+                continue;
+            };
+            let new_entity = self.scene.spawn_boxed(old_entity_components);
+            if new_selected.is_none() && selected.is_some_and(|e| e == *child) {
+                new_selected.replace(new_entity);
+            }
+            new_children.0.push(new_entity);
+            if let Some(mut parent) = self.scene.entity_mut(new_entity).get_mut::<Parent>() {
+                parent.0 = new_parent;
+            }
+
+            let Some(grandchildren) = self.scene.entity_mut(new_entity).take::<Children>() else {
+                continue;
+            };
+            self.fixup_children(source, new_entity, &grandchildren, new_selected, selected);
+        }
+        self.scene.entity_mut(new_parent).insert_one(new_children);
+    }
+
+    fn fixup_route_visibility(&mut self) {
+        for (e, r) in self.scene.query::<(Entity, &Route)>().iter(&self.scene) {
+            r.fixup_visiblity(&self.scene, &mut self.commands(), e);
         }
     }
 
@@ -336,6 +389,7 @@ impl MapList {
             let mut source = std::mem::take(&mut self.maps[previous_map].scene);
             let dest = &mut self.maps[self.current_map];
             dest.take_globals(&mut source);
+            dest.fixup_route_visibility();
             self.maps[previous_map].scene = source;
         }
 
