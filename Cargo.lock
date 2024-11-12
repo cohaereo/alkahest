@@ -1965,9 +1965,9 @@ dependencies = [
 
 [[package]]
 name = "game-detector"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fbe534daf8e8976fa51d09f4666110d679f13cb19a7676b382e2989cfae6f14"
+checksum = "e402aa3e469f106a785c3af7f7d265eff82fefaa852a9bfe50a2b327918c46d7"
 dependencies = [
  "anyhow",
  "fs-err",

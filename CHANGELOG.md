@@ -76,6 +76,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added transparency sorting for sky objects (fixes broken skyboxes such as the Anomaly in Vesper's Host)
 - Fixed a water related map loading error on Disjunction
 - Hotkeys are no longer triggered when typing in text fields
+- Fixed Alkahest sometimes not being able to detect the Steam installation of Destiny 2
 
 ## 0.5.0 - 2024-07-24
 
