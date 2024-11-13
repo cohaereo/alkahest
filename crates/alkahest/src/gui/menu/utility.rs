@@ -7,10 +7,13 @@ use alkahest_renderer::{
         route::{Route, RouteNodeBundle, RouteNodeData},
         tags::{EntityTag, NodeFilter, Tags},
         transform::{Transform, TransformFlags},
-        utility::{Beacon, Ruler, Sphere, Utility},
+        utility::{Beacon, Cuboid, CuboidBundle, Ruler, Sphere, Utility},
         SceneInfo,
     },
-    icons::{ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    icons::{
+        ICON_CUBE_OUTLINE, ICON_MAP_MARKER_PATH, ICON_POKEBALL, ICON_RULER_SQUARE, ICON_SIGN_POLE,
+        ICON_SPHERE,
+    },
     renderer::RendererShared,
     resources::AppResources,
     shader::shader_ball::ShaderBallComponent,
@@ -76,7 +79,11 @@ impl MenuBar {
                 let e = map.scene.spawn((
                     NodeFilter::Utility,
                     Transform {
-                        translation: if distance > 24.0 { position_base } else { pos },
+                        translation: if !pos.is_finite() || distance > 24.0 {
+                            position_base
+                        } else {
+                            pos
+                        },
                         scale: Vec3::splat(9.0),
                         flags: TransformFlags::IGNORE_ROTATION | TransformFlags::SCALE_IS_RADIUS,
                         ..Default::default()
@@ -87,6 +94,36 @@ impl MenuBar {
                     Tags::from_iter([EntityTag::Utility]),
                     Mutable,
                     RenderCommonBundle::default(),
+                ));
+
+                resources.get_mut::<SelectedEntity>().select(e.id());
+
+                ui.close_menu();
+            }
+        }
+        if ui.button(format!("{} Cuboid", ICON_CUBE_OUTLINE)).clicked() {
+            let mut maps = resources.get_mut::<MapList>();
+            let renderer = resources.get::<RendererShared>();
+            let camera = resources.get::<Camera>();
+            let (distance, pos) = renderer
+                .data
+                .lock()
+                .gbuffers
+                .depth_buffer_distance_pos_center(&camera);
+            if let Some(map) = maps.current_map_mut() {
+                let camera = resources.get::<Camera>();
+                let position_base = camera.position() + camera.forward() * 24.0;
+                let e = map.scene.spawn(CuboidBundle::new(
+                    Transform {
+                        translation: if !pos.is_finite() || distance > 24.0 {
+                            position_base
+                        } else {
+                            pos
+                        },
+                        scale: Vec3::splat(12.0),
+                        ..Default::default()
+                    },
+                    Cuboid::default(),
                 ));
 
                 resources.get_mut::<SelectedEntity>().select(e.id());
@@ -109,7 +146,7 @@ impl MenuBar {
                 let e = map.scene.spawn((
                     NodeFilter::Utility,
                     Transform {
-                        translation: if distance > 24.0 {
+                        translation: if !pos.is_finite() || distance > 24.0 {
                             camera.position()
                         } else {
                             pos

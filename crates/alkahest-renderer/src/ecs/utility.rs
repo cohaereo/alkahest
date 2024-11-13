@@ -13,7 +13,7 @@ use glam::Vec3;
 use super::{
     common::{Icon, Label, Mutable, RenderCommonBundle},
     route::{Route, RouteNode},
-    tags::{NodeFilter, Tags},
+    tags::{EntityTag, NodeFilter, Tags},
     visibility::VisibilityHelper,
     MapInfo,
 };
@@ -22,7 +22,7 @@ use crate::{
         hierarchy::Children, resources::SelectedEntity, transform::Transform,
         visibility::ViewVisibility,
     },
-    icons::{ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
+    icons::{ICON_CUBE_OUTLINE, ICON_RULER_SQUARE, ICON_SIGN_POLE, ICON_SPHERE},
     renderer::{LabelAlign, Renderer, RendererShared},
     util::{
         color::{Color, ColorExt, Hsv},
@@ -120,6 +120,55 @@ impl Utility for Sphere {
 }
 
 #[derive(Component)]
+pub struct Cuboid {
+    pub color: Color,
+    pub rainbow: bool,
+}
+
+impl Default for Cuboid {
+    fn default() -> Self {
+        Self {
+            color: Color::from_rgba_premultiplied(1.0, 1.0, 1.0, 0.3),
+            rainbow: false,
+        }
+    }
+}
+
+impl Utility for Cuboid {
+    fn default_label() -> Label {
+        Label::new_default("Cuboid").with_offset(0.0, 0.0, -1.0)
+    }
+
+    fn icon() -> Icon {
+        Icon::Unicode(ICON_CUBE_OUTLINE)
+    }
+}
+
+#[derive(Bundle)]
+pub struct CuboidBundle {
+    pub transform: Transform,
+    pub cuboid: Cuboid,
+    pub util_common: UtilityCommonBundle,
+}
+
+impl CuboidBundle {
+    pub fn new(transform: Transform, cuboid: Cuboid) -> Self {
+        Self {
+            transform,
+            cuboid,
+            util_common: UtilityCommonBundle {
+                label: Cuboid::default_label(),
+                icon: Cuboid::icon(),
+                filter: NodeFilter::Utility,
+                tags: Tags::from_iter([EntityTag::Utility]),
+                mutable: Mutable,
+                render_common: RenderCommonBundle::default(),
+            },
+        }
+    }
+}
+
+#[derive(Component)]
 pub struct Beacon {
     pub color: Color,
     pub freq: f32,
@@ -155,6 +204,7 @@ pub fn draw_utilities_system(
     selected: ResMut<SelectedEntity>,
     q_ruler: Query<(Entity, &Ruler, Option<&ViewVisibility>)>,
     q_sphere: Query<(Entity, &Transform, &Sphere, Option<&ViewVisibility>)>,
+    q_cuboid: Query<(Entity, &Transform, &Cuboid, Option<&ViewVisibility>)>,
     q_beacon: Query<(Entity, &Transform, &Beacon, Option<&ViewVisibility>)>,
     q_route: Query<(Entity, &Route, &Children, Option<&ViewVisibility>)>,
     q_route_node: Query<(Entity, &Transform, &RouteNode)>,
@@ -168,6 +218,12 @@ pub fn draw_utilities_system(
     for (e, transform, sphere, vis) in q_sphere.iter() {
         if vis.is_visible(renderer.active_view) {
             draw_sphere(&renderer, transform, sphere, e, &selected);
+        }
+    }
+
+    for (e, transform, cuboid, vis) in q_cuboid.iter() {
+        if vis.is_visible(renderer.active_view) {
+            draw_cuboid(&renderer, transform, cuboid, e, &selected);
         }
     }
 
@@ -360,6 +416,35 @@ fn draw_sphere(
     renderer
         .immediate
         .sphere(transform.translation, transform.radius(), color);
+}
+
+fn draw_cuboid(
+    renderer: &Renderer,
+    transform: &Transform,
+    cuboid: &Cuboid,
+    entity: Entity,
+    selected: &SelectedEntity,
+) {
+    let color = if cuboid.rainbow {
+        Color::from(*Hsv::rainbow())
+    } else {
+        cuboid.color
+    };
+
+    let color = selected.select_fade_color(color, Some(entity));
+
+    let color_opaque = color.to_opaque();
+    let cross_color = color_opaque.invert().keep_bright();
+    renderer.immediate.cross(
+        transform.translation,
+        0.25 * transform.scale.length(),
+        cross_color,
+    );
+
+    renderer
+        .immediate
+        .cube_outline(transform.local_to_world(), color);
+    renderer.immediate.cube(transform.local_to_world(), color);
 }
 
 fn draw_beacon(

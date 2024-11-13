@@ -56,6 +56,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added hotkeys to add to current route. <kbd>+</kbd> adds at the end of the route, or after current node, <kbd>-</kbd> adds before the selected node
 - Content confidentiality dialog on first startup
 - Log unimplemented TFX bytecode ops in the TFX debugger
+- Added Cuboid utility shape. Scaling Gizmo will be made nicer in the future... @Froggy618157725
+  in [#43](https://github.com/cohaereo/alkahest/pull/43)
 ### Changed
 
 - Enable SSAO by default
@@ -76,6 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added transparency sorting for sky objects (fixes broken skyboxes such as the Anomaly in Vesper's Host)
 - Fixed a water related map loading error on Disjunction
 - Hotkeys are no longer triggered when typing in text fields
+- Fix certain Utility Objects spawning at Infinity
 
 ## 0.5.0 - 2024-07-24
 
