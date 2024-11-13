@@ -2,7 +2,10 @@ use alkahest_data::tfx::TfxShaderStage;
 use glam::Vec4;
 use smallvec::SmallVec;
 
-use crate::tfx::{bytecode::opcodes::TfxBytecodeOp, externs::ExternStorage};
+use crate::tfx::{
+    bytecode::opcodes::{decode_permute_param, TfxBytecodeOp},
+    externs::ExternStorage,
+};
 
 #[derive(Default, Debug)]
 pub struct DecompilationResult {
@@ -149,9 +152,9 @@ impl TfxBytecodeDecompiler {
                     let [t1, t2] = stack_pop!(2);
                     stack_push!(format!("float4({t1}.xyz, {t2}.x)"));
                 }
-                TfxBytecodeOp::Unk0f => {
-                    let [t1, t2] = stack_pop!(2);
-                    stack_push!(format!("unk0f({t1}, {t2})"));
+                TfxBytecodeOp::Cubic => {
+                    let [t1, t0] = stack_pop!(2);
+                    stack_push!(format!("cubic({t0}, {t1})"));
                 }
                 TfxBytecodeOp::Lerp => {
                     let [t1, t2, t3] = stack_pop!(3);
@@ -222,20 +225,8 @@ impl TfxBytecodeDecompiler {
                     v.push_str(".xxxx");
                 }
                 TfxBytecodeOp::Permute { fields } => {
-                    let s0 = (fields >> 6) & 0b11;
-                    let s1 = (fields >> 4) & 0b11;
-                    let s2 = (fields >> 2) & 0b11;
-                    let s3 = fields & 0b11;
-
                     let v = stack_top!();
-                    let elements = ['x', 'y', 'z', 'w'];
-                    v.push_str(&format!(
-                        ".{}{}{}{}",
-                        elements[s0 as usize],
-                        elements[s1 as usize],
-                        elements[s2 as usize],
-                        elements[s3 as usize]
-                    ));
+                    v.push_str(&decode_permute_param(*fields));
                 }
                 TfxBytecodeOp::Saturate => {
                     let v = stack_pop!();
@@ -316,18 +307,23 @@ impl TfxBytecodeDecompiler {
                     let c1 = constants[constant_start as usize + 1];
                     let c2 = constants[constant_start as usize + 2];
                     let c3 = constants[constant_start as usize + 3];
+                    let c4 = constants[constant_start as usize + 4];
 
                     let c0 = format!("float4({}, {}, {}, {})", c0.x, c0.y, c0.z, c0.w);
                     let c1 = format!("float4({}, {}, {}, {})", c1.x, c1.y, c1.z, c1.w);
                     let c2 = format!("float4({}, {}, {}, {})", c2.x, c2.y, c2.z, c2.w);
                     let c3 = format!("float4({}, {}, {}, {})", c3.x, c3.y, c3.z, c3.w);
+                    let c4 = format!("float4({}, {}, {}, {})", c4.x, c4.y, c4.z, c4.w);
 
+                    let v = stack_pop!();
                     stack_push!(format!(
-                        "spline4_const({c0}, {c1}, {c2}, {c3})",
+                        "spline4_const({x}, {c0}, {c1}, {c2}, {c3}, {c4})",
+                        x = v,
                         c0 = c0,
                         c1 = c1,
                         c2 = c2,
-                        c3 = c3
+                        c3 = c3,
+                        c4 = c4
                     ));
                 }
                 &TfxBytecodeOp::Gradient4Const { constant_start } => {
@@ -454,11 +450,24 @@ impl TfxBytecodeDecompiler {
                 TfxBytecodeOp::PushGlobalChannelVector { unk1 } => {
                     stack_push!(format!("global_channel({unk1})"));
                 }
+
+                TfxBytecodeOp::PushTexDimensions { index, fields } => stack_push!(format!(
+                    "push_tex_dimensions({index}){}",
+                    decode_permute_param(*fields)
+                )),
+                TfxBytecodeOp::PushTexTilingParams { index, fields } => stack_push!(format!(
+                    "push_tex_tiling_params({index}){}",
+                    decode_permute_param(*fields)
+                )),
+                TfxBytecodeOp::PushTexTileLayerCount { index, fields } => stack_push!(format!(
+                    "push_tex_tile_layer_count({index}){}",
+                    decode_permute_param(*fields)
+                )),
                 // TfxBytecodeOp::Unk50 { unk1 } => todo!(),
                 // TfxBytecodeOp::Unk51 => todo!(),
-                TfxBytecodeOp::Unk52 { unk1, unk2 } => {
-                    stack_push!(format!("unk52({unk1}, {unk2})"));
-                }
+                // TfxBytecodeOp::Unk52 { unk1, unk2 } => {
+                //     stack_push!(format!("unk52({unk1}, {unk2})"));
+                // }
                 // TfxBytecodeOp::Unk53 { unk1, unk2 } => todo!(),
                 // TfxBytecodeOp::Unk54 { unk1, unk2 } => todo!(),
                 // TfxBytecodeOp::Unk55 => todo!(),

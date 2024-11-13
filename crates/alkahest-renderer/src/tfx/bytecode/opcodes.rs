@@ -26,7 +26,7 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x0c_u8)] Merge1_3,
     #[br(magic = 0x0d_u8)] Merge2_2,
     #[br(magic = 0x0e_u8)] Merge3_1,
-    #[br(magic = 0x0f_u8)] Unk0f,
+    #[br(magic = 0x0f_u8)] Cubic,
     #[br(magic = 0x10_u8)] Lerp,
     #[br(magic = 0x11_u8)] LerpSaturated,
     #[br(magic = 0x12_u8)] MultiplyAdd,
@@ -126,9 +126,9 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x4f_u8)] PushGlobalChannelVector { unk1: u8 },
     #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
     #[br(magic = 0x51_u8)] Unk51,
-    #[br(magic = 0x52_u8)] Unk52 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x53_u8)] Unk53 { unk1: u8, unk2: u8 },
-    #[br(magic = 0x54_u8)] Unk54 { unk1: u8, unk2: u8 },
+    #[br(magic = 0x52_u8)] PushTexDimensions { index: u8, fields: u8 },
+    #[br(magic = 0x53_u8)] PushTexTilingParams { index: u8, fields: u8 },
+    #[br(magic = 0x54_u8)] PushTexTileLayerCount { index: u8, fields: u8 },
     #[br(magic = 0x55_u8)] Unk55,
     #[br(magic = 0x56_u8)] Unk56,
     #[br(magic = 0x57_u8)] Unk57,
@@ -164,7 +164,7 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Merge1_3 => "merge_1_3",
             TfxBytecodeOp::Merge2_2 => "merge_2_2",
             TfxBytecodeOp::Merge3_1 => "merge_3_1",
-            TfxBytecodeOp::Unk0f => "unk0f",
+            TfxBytecodeOp::Cubic => "cubic",
             TfxBytecodeOp::Lerp => "lerp",
             TfxBytecodeOp::LerpSaturated => "lerp_saturated",
             TfxBytecodeOp::MultiplyAdd => "multiply_add",
@@ -226,9 +226,9 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::PushGlobalChannelVector { .. } => "push_global_channel_vector",
             TfxBytecodeOp::Unk50 { .. } => "unk50",
             TfxBytecodeOp::Unk51 => "unk51",
-            TfxBytecodeOp::Unk52 { .. } => "unk52",
-            TfxBytecodeOp::Unk53 { .. } => "unk53",
-            TfxBytecodeOp::Unk54 { .. } => "unk54",
+            TfxBytecodeOp::PushTexDimensions { .. } => "push_tex_dimensions",
+            TfxBytecodeOp::PushTexTilingParams { .. } => "push_tex_tiling_params",
+            TfxBytecodeOp::PushTexTileLayerCount { .. } => "push_tex_tile_layer_count",
             TfxBytecodeOp::Unk55 => "unk55",
             TfxBytecodeOp::Unk56 => "unk56",
             TfxBytecodeOp::Unk57 => "unk57",
@@ -387,9 +387,18 @@ impl TfxBytecodeOp {
                 format!("push_global_channel_vector({index})")
             }
             TfxBytecodeOp::Unk50 { unk1 } => format!("unk50 unk1={unk1}"),
-            TfxBytecodeOp::Unk52 { unk1, unk2 } => format!("unk52 unk1={unk1} unk2={unk2}"),
-            TfxBytecodeOp::Unk53 { unk1, unk2 } => format!("unk53 unk1={unk1} unk2={unk2}"),
-            TfxBytecodeOp::Unk54 { unk1, unk2 } => format!("unk54 unk1={unk1} unk2={unk2}"),
+            TfxBytecodeOp::PushTexDimensions { index, fields } => format!(
+                "push_tex_dimensions index={index} fields={}",
+                decode_permute_param(*fields)
+            ),
+            TfxBytecodeOp::PushTexTilingParams { index, fields } => format!(
+                "push_tex_tiling_params index={index} fields={}",
+                decode_permute_param(*fields)
+            ),
+            TfxBytecodeOp::PushTexTileLayerCount { index, fields } => format!(
+                "push_tex_tile_layer_count index={index} fields={}",
+                decode_permute_param(*fields)
+            ),
             _ => name.to_string(),
         }
     }
@@ -407,7 +416,7 @@ impl TfxBytecodeOp {
     }
 }
 
-fn decode_permute_param(param: u8) -> String {
+pub fn decode_permute_param(param: u8) -> String {
     let s0 = (param >> 6) & 0b11;
     let s1 = (param >> 4) & 0b11;
     let s2 = (param >> 2) & 0b11;

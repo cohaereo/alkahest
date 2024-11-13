@@ -65,7 +65,7 @@ pub struct STechniqueShader {
     pub shader: TagHash,
     pub unk4: u32,
     pub textures: Vec<SMaterialTextureAssignment>, // 0x8
-    pub unk18: u64,
+    pub unk18: u64, // TODO(cohae): Is this field part of SDynamicConstants?
     pub constants: SDynamicConstants,
 
     pub unk78: [u32; 6],
@@ -106,11 +106,11 @@ pub type Unk80806cb6 = Unk80806cb5;
 #[tiger_tag]
 #[derive(Debug, Clone)]
 pub struct SDynamicConstants {
-    pub bytecode: Vec<u8>,
-    pub bytecode_constants: Vec<Vec4>,
-    pub samplers: Vec<WideHash>,
-    pub unk38: Vec<Vec4>,
-    pub unk48: [u32; 4],
+    pub bytecode: Vec<u8>,             // 0x0
+    pub bytecode_constants: Vec<Vec4>, // 0x10
+    pub samplers: Vec<WideHash>,       // 0x20
+    pub unk38: Vec<Vec4>,              // 0x30
+    pub unk48: [u32; 4],               // 0x40
 
     pub constant_buffer_slot: i32,
     pub constant_buffer: TagHash,

@@ -160,12 +160,18 @@ impl TfxBytecodeInterpreter {
                     let [t1, t0] = stack_pop!(2);
                     stack_push!(Vec4::new(t1.x, t1.y, t1.z, t0.x));
                 }
-                TfxBytecodeOp::Unk0f => {
-                    let [t1, t0] = stack_pop!(2);
+                TfxBytecodeOp::Cubic => {
+                    let [x, coefficients] = stack_pop!(2);
 
-                    stack_push!(
-                        (t0.xxxx() * t1 + t0.yyyy()) * (t1 * t1) + (t0.zzzz() * t1 + t0.wwww())
-                    );
+                    let high = coefficients.x * x + coefficients.yyyy();
+                    let low = coefficients.z * x + coefficients.wwww();
+                    let x2 = x * x;
+
+                    stack_push!(high * x2 + low);
+
+                    // stack_push!(
+                    //     (t0.xxxx() * t1 + t0.yyyy()) * (t1 * t1) + (t0.zzzz() * t1 + t0.wwww())
+                    // );
                 }
                 TfxBytecodeOp::Lerp => {
                     let [b, a, v] = stack_pop!(3);
@@ -275,13 +281,7 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     let c = &constants[*constant_start as usize..];
                     *v = tfx_converted::bytecode_op_gradient4_const(
-                        *v,
-                        c[0],
-                        c[1],
-                        c[2],
-                        c[3],
-                        c[4],
-                        c[5]
+                        *v, c[0], c[1], c[2], c[3], c[4], c[5],
                     );
                 }
                 TfxBytecodeOp::Spline8Const { constant_start } => {
@@ -289,17 +289,7 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     let c = &constants[*constant_start as usize..];
                     *v = tfx_converted::bytecode_op_spline8_const(
-                        *v,
-                        c[0],
-                        c[1],
-                        c[2],
-                        c[3],
-                        c[4],
-                        c[5],
-                        c[6],
-                        c[7],
-                        c[8],
-                        c[9],
+                        *v, c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9],
                     );
                 }
                 TfxBytecodeOp::Unk3b { constant_start } => {
@@ -307,18 +297,7 @@ impl TfxBytecodeInterpreter {
                     let v = stack_top!();
                     let c = &constants[*constant_start as usize..];
                     *v = tfx_converted::bytecode_op_unk3b_const(
-                        *v,
-                        c[0],
-                        c[1],
-                        c[2],
-                        c[3],
-                        c[4],
-                        c[5],
-                        c[6],
-                        c[7],
-                        c[8],
-                        c[9],
-                        c[10],
+                        *v, c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9], c[10],
                     );
                 }
                 TfxBytecodeOp::PushObjectChannelVector { hash } => {
@@ -329,13 +308,7 @@ impl TfxBytecodeInterpreter {
                         stack_push!(Vec4::ZERO);
                     }
                 }
-                &TfxBytecodeOp::Unk4c { unk1, .. }
-                // | &TfxBytecodeOp::PushObjectChannelVector { hash }
-                | &TfxBytecodeOp::PushGlobalChannelVector { unk1, .. }
-                | &TfxBytecodeOp::Unk50 { unk1, .. }
-                | &TfxBytecodeOp::Unk52 { unk1, .. }
-                | &TfxBytecodeOp::Unk53 { unk1, .. }
-                | &TfxBytecodeOp::Unk54 { unk1, .. } => {
+                &TfxBytecodeOp::PushGlobalChannelVector { unk1, .. } => {
                     externs.global_channels_used.write()[unk1 as usize] += 1;
                     stack_push!(externs.global_channels[unk1 as usize].value);
                 }
@@ -443,7 +416,8 @@ impl TfxBytecodeInterpreter {
                         let [x_axis, y_axis, z_axis, w_axis] = stack_pop!(4);
 
                         let start = *element as usize;
-                        buffer_map[start..start + 4].copy_from_slice(&[x_axis, y_axis, z_axis, w_axis]);
+                        buffer_map[start..start + 4]
+                            .copy_from_slice(&[x_axis, y_axis, z_axis, w_axis]);
                     }
                 }
                 TfxBytecodeOp::PushTemp { slot } => {
@@ -457,22 +431,81 @@ impl TfxBytecodeInterpreter {
                     let [v] = stack_pop!(1);
                     temp[slotu] = v;
                 }
-                #[cfg(not(feature = "tfx_strict_interpreter"))]
                 u => {
                     let _ = ip;
-                    externs.errors.write()                   
-                     .entry(format!(
-                        "TFX expression opcode '{}' is not implemented", u.name()
-                    ))
-                    .or_insert_with(|| TfxExpressionError {
-                        error_type: TfxExpressionErrorType::UnimplementedOpcode(u.name()),
-                        repeat_count: 0,
-                    })
-                    .repeat_count += 1;
-                }
-                #[cfg(feature = "tfx_strict_interpreter")]
-                u => {
-                    anyhow::bail!("Unimplemented TFX bytecode op '{u:?}' at IP {ip}")
+                    externs
+                        .errors
+                        .write()
+                        .entry(format!(
+                            "TFX expression opcode '{}' is not implemented",
+                            u.name()
+                        ))
+                        .or_insert_with(|| TfxExpressionError {
+                            error_type: TfxExpressionErrorType::UnimplementedOpcode(u.name()),
+                            repeat_count: 0,
+                        })
+                        .repeat_count += 1;
+
+                    match u {
+                        // &TfxBytecodeOp::LerpSaturated => todo!(),
+                        // &TfxBytecodeOp::LerpConstantSaturated { constant_start } => todo!(),
+                        // &TfxBytecodeOp::SetShaderUav { value, stage, slot } => todo!(),
+                        // &TfxBytecodeOp::Spline8ChainConst { constant_start } => todo!(),
+                        &TfxBytecodeOp::Unk14 => {
+                            stack_pop!(2);
+                        } // pops 2
+                        &TfxBytecodeOp::Unk1b => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk1c => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk24 => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk25 => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk26 => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk2c => {
+                            stack_pop!(1);
+                        } // pops 1
+                        &TfxBytecodeOp::Unk2d => {
+                            stack_pop!(4);
+                        } // pops 4
+                        &TfxBytecodeOp::Unk42 => {
+                            stack_push!(Vec4::ONE);
+                        } // pushes 1
+                        &TfxBytecodeOp::Unk49 { .. } => {
+                            stack_pop!(1);
+                        } // pops 1
+                        &TfxBytecodeOp::Unk4c { .. } => {
+                            stack_push!(Vec4::ONE);
+                        } // pushes 1
+                        &TfxBytecodeOp::Unk50 { .. } => {
+                            stack_push!(Vec4::ZERO);
+                        } // pushes 1, parameter is unused?
+                        &TfxBytecodeOp::Unk51 => {
+                            stack_pop!(1);
+                        } // pops 1
+                        &TfxBytecodeOp::PushTexDimensions { fields, .. }
+                        | &TfxBytecodeOp::PushTexTilingParams { fields, .. }
+                        | &TfxBytecodeOp::PushTexTileLayerCount { fields, .. } => {
+                            let s0 = (fields >> 6) & 0b11;
+                            let s1 = (fields >> 4) & 0b11;
+                            let s2 = (fields >> 2) & 0b11;
+                            let s3 = fields & 0b11;
+
+                            let v = Vec4::new(0.250000, 0.250000, 0.250000, 0.062500);
+                            // let v = Vec4::new(0.200000, 0.164103, 0.200000, 0.033333);
+
+                            let v2 = v.to_array();
+
+                            stack_push!(Vec4::new(
+                                v2[s0 as usize],
+                                v2[s1 as usize],
+                                v2[s2 as usize],
+                                v2[s3 as usize],
+                            ));
+                        }
+                        &TfxBytecodeOp::Unk55 => {} // ???
+                        &TfxBytecodeOp::Unk56 => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk57 => {} // doesn't modify stack pointer
+                        &TfxBytecodeOp::Unk58 => {} // switch case with early return
+                        _ => {}
+                    }
                 }
             }
         }
@@ -972,8 +1005,8 @@ mod tfx_converted {
         unsafe {
             use std::arch::x86_64::{
                 __m128, _mm_add_ps, _mm_and_ps, _mm_andnot_ps, _mm_cmple_ps, _mm_cmplt_ps,
-                _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_mul_ps, _mm_or_ps,
-                _mm_shuffle_ps, _mm_sub_ps,
+                _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_mul_ps, _mm_or_ps, _mm_shuffle_ps,
+                _mm_sub_ps,
             };
 
             let mask = f32::from_bits(u32::MAX);

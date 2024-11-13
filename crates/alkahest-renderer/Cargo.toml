@@ -47,4 +47,3 @@ windows.workspace = true
 
 [features]
 default = []
-tfx_strict_interpreter = []

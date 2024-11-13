@@ -11,14 +11,14 @@ pub struct STextureHeader {
     pub _unk8: u32,
 
     #[tag(offset = 0x20)]
-    pub cafe: u16,
+    pub cafe: u16, // 0x20
 
-    pub width: u16,
-    pub height: u16,
-    pub depth: u16,
-    pub array_size: u16,
+    pub width: u16,      // 0x22
+    pub height: u16,     // 0x24
+    pub depth: u16,      // 0x26
+    pub array_size: u16, // 0x28
+    pub tile_count: u16,
 
-    pub unk2a: u16,
     pub unk2c: u8,
     pub mip_count: u8,
     pub unk2e: [u8; 10],
