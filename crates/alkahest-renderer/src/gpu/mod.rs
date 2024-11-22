@@ -17,6 +17,7 @@ use std::{
 use alkahest_data::{
     dxgi::DxgiFormat, geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage,
 };
+use anyhow::Context;
 use crossbeam::atomic::AtomicCell;
 use debug::PendingGpuTimestampRange;
 use parking_lot::{Mutex, RwLock};
@@ -91,65 +92,16 @@ pub static DESKTOP_DISPLAY_MODE: AtomicBool = AtomicBool::new(false);
 
 impl GpuContext {
     pub fn create<Window: HasWindowHandle>(window: &Window) -> anyhow::Result<Self> {
-        let mut device: Option<ID3D11Device> = None;
-        let mut swap_chain: Option<IDXGISwapChain> = None;
-        let mut device_context: Option<ID3D11DeviceContext> = None;
-        let swap_chain_descriptor: DXGI_SWAP_CHAIN_DESC = {
-            let buffer_descriptor = DXGI_MODE_DESC {
-                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                ..Default::default()
-            };
-
-            let sample_descriptor = DXGI_SAMPLE_DESC {
-                Count: 1,
-                Quality: 0,
-            };
-
-            DXGI_SWAP_CHAIN_DESC {
-                BufferDesc: buffer_descriptor,
-                SampleDesc: sample_descriptor,
-                BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                BufferCount: 2,
-                OutputWindow: match window.window_handle().unwrap().as_raw() {
-                    RawWindowHandle::Win32(h) => HWND(h.hwnd.get()),
-                    u => panic!("Can't open window for {u:?}"),
-                },
-                Windowed: true.into(),
-                SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
-                Flags: 0,
-            }
-        };
-
-        unsafe {
-            if !DESKTOP_DISPLAY_MODE.load(Ordering::SeqCst) {
-                // Fixes display issues on certain mobile GPUs
-                SetWindowDisplayAffinity(swap_chain_descriptor.OutputWindow, DISPLAY_AFFINITY).ok();
-            }
-
-            D3D11CreateDeviceAndSwapChain(
-                None,
-                D3D_DRIVER_TYPE_HARDWARE,
-                HINSTANCE::default(),
-                Default::default(),
-                // D3D11_CREATE_DEVICE_DEBUG,
-                Some(&[D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0]),
-                D3D11_SDK_VERSION,
-                Some(&swap_chain_descriptor),
-                Some(&mut swap_chain),
-                Some(&mut device),
-                None,
-                Some(&mut device_context),
-            )?;
-        }
-
-        let device = device.unwrap();
-        let device_context = device_context.unwrap();
-        let swap_chain = swap_chain.unwrap();
-
-        Self::create_inner(device, device_context, Some(swap_chain))
+        Self::create_inner(Some(window))
     }
 
     pub fn create_headless() -> anyhow::Result<Self> {
+        Self::create_inner(None::<&winit::window::Window>)
+    }
+
+    fn create_device_swapchain<Window: HasWindowHandle>(
+        window: Option<&Window>,
+    ) -> anyhow::Result<(ID3D11Device, ID3D11DeviceContext, Option<IDXGISwapChain>)> {
         let mut device: Option<ID3D11Device> = None;
         let mut device_context: Option<ID3D11DeviceContext> = None;
 
@@ -171,14 +123,53 @@ impl GpuContext {
         let device = device.unwrap();
         let device_context = device_context.unwrap();
 
-        Self::create_inner(device, device_context, None)
+        let dxgi = unsafe { CreateDXGIFactory::<IDXGIFactory>()? };
+        let mut swap_chain: Option<IDXGISwapChain> = None;
+        if let Some(window) = window {
+            let swap_chain_descriptor: DXGI_SWAP_CHAIN_DESC = {
+                let buffer_descriptor = DXGI_MODE_DESC {
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    ..Default::default()
+                };
+
+                let sample_descriptor = DXGI_SAMPLE_DESC {
+                    Count: 1,
+                    Quality: 0,
+                };
+
+                DXGI_SWAP_CHAIN_DESC {
+                    BufferDesc: buffer_descriptor,
+                    SampleDesc: sample_descriptor,
+                    BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+                    BufferCount: 2,
+                    OutputWindow: match window.window_handle().unwrap().as_raw() {
+                        RawWindowHandle::Win32(h) => HWND(h.hwnd.get()),
+                        u => panic!("Can't open window for {u:?}"),
+                    },
+                    Windowed: true.into(),
+                    SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
+                    Flags: 0,
+                }
+            };
+
+            unsafe {
+                if !DESKTOP_DISPLAY_MODE.load(Ordering::SeqCst) {
+                    // Fixes display issues on certain mobile GPUs
+                    SetWindowDisplayAffinity(swap_chain_descriptor.OutputWindow, DISPLAY_AFFINITY)
+                        .ok();
+                }
+
+                dxgi.CreateSwapChain(&device, &swap_chain_descriptor, &mut swap_chain)
+                    .ok()
+                    .context("Failed to create swapchain")?;
+            }
+        }
+
+        Ok((device, device_context, swap_chain))
     }
 
-    fn create_inner(
-        device: ID3D11Device,
-        device_context: ID3D11DeviceContext,
-        swap_chain: Option<IDXGISwapChain>,
-    ) -> anyhow::Result<Self> {
+    fn create_inner<Window: HasWindowHandle>(window: Option<&Window>) -> anyhow::Result<Self> {
+        let (device, device_context, swap_chain) = Self::create_device_swapchain(window)?;
         let states = RenderStates::new(&device)?;
 
         let fallback_texture = Texture::load_png(
