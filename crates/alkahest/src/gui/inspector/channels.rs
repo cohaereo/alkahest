@@ -1,12 +1,13 @@
+use std::collections::HashMap;
+
 use alkahest_renderer::{
     ecs::channels::ObjectChannels, icons::ICON_TABLE, tfx::channels::ChannelType,
 };
-use egui::Widget;
-
-use crate::gui::UiExt;
+use bevy_ecs::system::Commands;
+use egui::{Color32, RichText, Widget};
 
 use super::ComponentPanel;
-use bevy_ecs::system::Commands;
+use crate::gui::UiExt;
 
 impl ComponentPanel for ObjectChannels {
     fn inspector_name() -> &'static str {
@@ -28,11 +29,19 @@ impl ComponentPanel for ObjectChannels {
         _: &mut Commands<'_, '_>,
         _: bevy_ecs::world::EntityRef<'s>,
         ui: &mut egui::Ui,
-        _: &alkahest_renderer::resources::AppResources,
+        resources: &alkahest_renderer::resources::AppResources,
     ) {
+        let wordlist = resources.get::<FnvWordlist>();
         for (channel_id, (value, channel_type)) in &mut self.values {
             ui.horizontal(|ui| {
-                ui.strong(format!("{channel_id:08X}"));
+                if let Some(name) = wordlist.get(*channel_id) {
+                    ui.strong(
+                        RichText::new(format!("{name} ({channel_id:08X})"))
+                            .color(Color32::LIGHT_BLUE),
+                    );
+                } else {
+                    ui.strong(format!("{channel_id:08X}"));
+                }
 
                 match channel_type {
                     alkahest_renderer::tfx::channels::ChannelType::Vec4 => {
@@ -74,4 +83,34 @@ impl ComponentPanel for ObjectChannels {
             });
         }
     }
+}
+
+pub struct FnvWordlist(HashMap<u32, String>);
+
+impl FnvWordlist {
+    /// Initializes a hashmap with the fnv hashes of all the strings in the embedded wordlist
+    pub fn new() -> Self {
+        let mut map: HashMap<u32, String> = HashMap::new();
+
+        const WORDLIST: &'static str = include_str!("../../../wordlist_channels.txt");
+        for s in WORDLIST.lines() {
+            let s = s.to_string();
+            let h = fnv1(s.as_bytes());
+            map.insert(h, s);
+        }
+
+        Self(map)
+    }
+
+    pub fn get(&self, hash: u32) -> Option<&str> {
+        self.0.get(&hash).map(|v| v.as_str())
+    }
+}
+
+const FNV1_BASE: u32 = 0x811c9dc5;
+const FNV1_PRIME: u32 = 0x01000193;
+fn fnv1(data: &[u8]) -> u32 {
+    data.iter().fold(FNV1_BASE, |acc, b| {
+        acc.wrapping_mul(FNV1_PRIME) ^ (*b as u32)
+    })
 }

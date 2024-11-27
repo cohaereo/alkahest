@@ -10,3 +10,5 @@ panic.log
 keys.txt
 
 /textures
+/pipelines
+/bytecode-stuff

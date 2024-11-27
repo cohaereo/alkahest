@@ -38,6 +38,7 @@ use crate::{
         context::{GuiContext, GuiViewManager, HiddenWindows},
         gizmo::draw_transform_gizmos,
         hotkeys,
+        inspector::FnvWordlist,
         updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
@@ -110,6 +111,7 @@ impl AlkahestApp {
         resources.insert(SelectedEntity::default());
         resources.insert(args);
         resources.insert(window.clone());
+        resources.insert(FnvWordlist::new());
 
         let mut maps = MapList::default();
         maps.maps.push(Map::create_empty("Empty Map"));

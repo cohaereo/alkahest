@@ -2,7 +2,6 @@ mod channels;
 mod decorator;
 mod light;
 mod util;
-
 use alkahest_data::map::{SLightCollection, SRespawnPoint};
 use alkahest_renderer::{
     camera::Camera,
@@ -32,6 +31,7 @@ use alkahest_renderer::{
     util::{black_magic::EntityRefDarkMagic, Hocus},
 };
 use bevy_ecs::{entity::Entity, prelude::EntityRef, system::Commands};
+pub use channels::FnvWordlist;
 use egui::{Align2, Color32, FontId, Key, RichText, Ui, Widget};
 use glam::{Quat, Vec3};
 use winit::window::Window;
