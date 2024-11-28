@@ -8,8 +8,8 @@ use alkahest_data::{
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume,
         SDecalCollectionResource, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
-        SShadowingLight, SSlipSurfaceVolume, SUnk808068d4, SUnk80806aa7, SUnk80806ef4,
-        SUnk8080714b, SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        SShadowingLight, SSlipSurfaceVolume, SStaticAmbientOcclusion, SUnk808068d4, SUnk80806aa7,
+        SUnk80806ef4, SUnk8080714b, SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     occlusion::Aabb,
     text::{StringContainer, StringContainerShared},
@@ -18,7 +18,7 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::Context;
-use bevy_ecs::{bundle::Bundle, entity::Entity};
+use bevy_ecs::{bundle::Bundle, entity::Entity, query::With};
 use binrw::BinReaderExt;
 use destiny_pkg::TagHash;
 use ecolor::Color32;
@@ -33,7 +33,7 @@ use crate::{
         audio::AmbientAudio,
         common::{Icon, Label, RenderCommonBundle, ResourceOrigin},
         hierarchy::{Children, Parent},
-        map::{CubemapVolume, MapAtmosphere, NodeMetadata},
+        map::{CubemapVolume, MapAtmosphere, MapStaticAO, NodeMetadata},
         render::{
             decorators::DecoratorRenderer,
             dynamic_geometry::DynamicModelComponent,
@@ -401,6 +401,21 @@ pub async fn load_map(
         scene.entity_mut(entity).insert_one(transform);
     }
 
+    let mut to_update = vec![];
+    for entity in scene
+        .query_filtered::<Entity, With<TerrainPatches>>()
+        .iter(&scene)
+    {
+        to_update.push(entity);
+    }
+    // Vertex AO: refresh terrain constants
+    if let Some(map_ao) = scene.get_resource::<MapStaticAO>() {
+        for e in to_update {
+            let patches = scene.entity(e).get::<TerrainPatches>().unwrap();
+            patches.update_constants(map_ao);
+        }
+    }
+
     Ok(scene)
 }
 
@@ -534,9 +549,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .unwrap();
 
                 let terrain_resource: SUnk8080714b = TigerReadable::read_ds(table_data).unwrap();
-                let terrain_renderer =
-                    TerrainPatches::load_from_tag(renderer, terrain_resource.terrain)
-                        .context("Failed to load terrain patches")?;
+                let terrain_renderer = TerrainPatches::load_from_tag(
+                    renderer,
+                    terrain_resource.terrain,
+                    terrain_resource.identifier,
+                )
+                .context("Failed to load terrain patches")?;
 
                 spawn_data_entity(
                     scene,
@@ -742,6 +760,29 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         table_hash, data.data_resource.offset
                     );
                 }
+            }
+            0x80806a40 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                if tag.is_none() {
+                    continue;
+                }
+
+                let static_ao =
+                    match package_manager().read_tag_struct::<SStaticAmbientOcclusion>(tag) {
+                        Ok(static_ao) => static_ao,
+                        Err(e) => {
+                            error!(error=?e, tag=%tag, "Failed to load static AO");
+                            continue;
+                        }
+                    };
+
+                scene.insert_resource(
+                    MapStaticAO::from_tag(&renderer.gpu, &static_ao)
+                        .context("Failed to load static AO")?,
+                );
             }
             0x80806a63 => {
                 table_data

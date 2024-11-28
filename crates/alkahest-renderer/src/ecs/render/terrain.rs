@@ -6,12 +6,13 @@ use alkahest_data::{
 use alkahest_pm::package_manager;
 use bevy_ecs::{entity::Entity, prelude::Component};
 use destiny_pkg::TagHash;
-use glam::{Mat4, Vec4};
+use glam::Vec4;
 use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
     ecs::{
+        map::MapStaticAO,
         visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
@@ -28,17 +29,34 @@ pub struct TerrainPatches {
     pub terrain: STerrain,
     techniques: Vec<Handle<Technique>>,
     dyemaps: Vec<Handle<Texture>>,
-    group_cbuffers: Vec<ConstantBuffer<Mat4>>,
+    group_cbuffers: Vec<ConstantBuffer<TerrainPatchGroupConstants>>,
 
     pub vertex0_buffer: Handle<VertexBuffer>,
     pub vertex1_buffer: Handle<VertexBuffer>,
     pub index_buffer: Handle<IndexBuffer>,
 
     pub hash: TagHash,
+    pub identifier: u64,
+}
+
+#[repr(C)]
+#[derive(Default)]
+pub struct TerrainPatchGroupConstants {
+    offset: Vec4,
+    texcoord_transform: Vec4,
+    unk20: f32,
+    unk24: f32,
+    unk28: f32,
+    ao_offset: u32,
+    unk30: Vec4,
 }
 
 impl TerrainPatches {
-    pub fn load_from_tag(renderer: &Renderer, hash: TagHash) -> anyhow::Result<Self> {
+    pub fn load_from_tag(
+        renderer: &Renderer,
+        hash: TagHash,
+        identifier: u64,
+    ) -> anyhow::Result<Self> {
         let terrain: STerrain = package_manager().read_tag_struct(hash)?;
 
         let mut render_data = renderer.data.lock();
@@ -69,7 +87,12 @@ impl TerrainPatches {
             let texcoord_transform =
                 Vec4::new(group.unk20.x, group.unk20.y, group.unk20.z, group.unk20.w);
 
-            let scope_terrain = Mat4::from_cols(offset, texcoord_transform, Vec4::ZERO, Vec4::ZERO);
+            // let scope_terrain = Mat4::from_cols(offset, texcoord_transform, Vec4::ZERO, Vec4::ZERO);
+            let scope_terrain = TerrainPatchGroupConstants {
+                offset,
+                texcoord_transform,
+                ..Default::default()
+            };
 
             let cb = ConstantBuffer::create(renderer.gpu.clone(), Some(&scope_terrain))?;
             group_cbuffers.push(cb);
@@ -90,7 +113,36 @@ impl TerrainPatches {
             dyemaps,
             group_cbuffers,
             hash,
+            identifier,
         })
+    }
+
+    pub fn update_constants(&self, map_ao: &MapStaticAO) {
+        for (i, group) in self.terrain.mesh_groups.iter().enumerate() {
+            let offset = Vec4::new(
+                self.terrain.unk30.x,
+                self.terrain.unk30.y,
+                self.terrain.unk30.z,
+                self.terrain.unk30.w,
+            );
+
+            let texcoord_transform =
+                Vec4::new(group.unk20.x, group.unk20.y, group.unk20.z, group.unk20.w);
+
+            // let scope_terrain = Mat4::from_cols(offset, texcoord_transform, Vec4::ZERO, Vec4::ZERO);
+            let scope_terrain = TerrainPatchGroupConstants {
+                offset,
+                texcoord_transform,
+                ao_offset: map_ao
+                    .offset_map
+                    .get(&self.identifier)
+                    .copied()
+                    .unwrap_or_default(),
+                ..Default::default()
+            };
+
+            self.group_cbuffers[i].write(&scope_terrain).ok();
+        }
     }
 
     pub fn draw(&self, renderer: &Renderer, render_stage: TfxRenderStage) {
@@ -192,6 +244,15 @@ pub fn draw_terrain_patches_system(
 ) {
     if !renderer.should_render(Some(render_stage), Some(TfxFeatureRenderer::TerrainPatch)) {
         return;
+    }
+
+    if let Some(map_ao) = scene.get_resource::<MapStaticAO>() {
+        unsafe {
+            renderer
+                .gpu
+                .context()
+                .VSSetShaderResources(1, Some(&[map_ao.ao_buffer.srv.clone()]));
+        }
     }
 
     for (e, terrain, vis) in scene

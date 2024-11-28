@@ -158,9 +158,10 @@ pub struct SUnk80807152 {
 #[tiger_tag(id = 0xffffffff, size = 0x20)]
 pub struct SUnk8080714b {
     #[tag(offset = 0x10)]
-    pub unk10: u16,
-    pub unk12: u16,
-    pub unk14: ResourceHash,
+    pub identifier: u64, // used for vertex AO
+    // pub unk10: u16,
+    // pub unk12: u16,
+    // pub unk14: ResourceHash,
     pub terrain: TagHash,
     pub terrain_bounds: TagHash,
 }
@@ -661,4 +662,29 @@ pub struct SMapAtmosphere {
 #[tiger_tag(id = 0x80806A78)]
 pub struct SLensFlare {
     // TODO(cohae): Placeholder struct
+}
+
+#[tiger_tag(id = 0x80806D19)]
+pub struct SStaticAmbientOcclusion {
+    pub file_size: u64,
+    pub ao0: SAmbientOcclusionBuffer,
+    pub ao1: SAmbientOcclusionBuffer,
+    pub ao2: SAmbientOcclusionBuffer,
+    // pub unk50: Vec<S80806D4F>,
+    // pub unk60: Vec<u16>,
+}
+
+#[tiger_tag]
+pub struct SAmbientOcclusionBuffer {
+    pub buffer: TagHash, // Vertex buffer
+    _padding: [u8; 4],
+    pub mappings: Vec<SAmbientOcclusionOffsetMapping>,
+}
+
+#[tiger_tag(id = 0x80806D21)]
+pub struct SAmbientOcclusionOffsetMapping {
+    pub identifier: u64,
+    pub offset: u32,
+    pub unkc: u32,
+    pub unk10: [u32; 4],
 }

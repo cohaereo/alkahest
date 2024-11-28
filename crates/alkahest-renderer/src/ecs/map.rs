@@ -1,4 +1,6 @@
-use alkahest_data::map::SMapAtmosphere;
+use std::collections::HashMap;
+
+use alkahest_data::map::{SMapAtmosphere, SStaticAmbientOcclusion};
 use bevy_ecs::{prelude::Component, system::Resource};
 use destiny_pkg::TagHash;
 use glam::Vec3;
@@ -6,11 +8,13 @@ use glam::Vec3;
 use crate::{
     gpu::{texture::Texture, GpuContext},
     handle::Handle,
-    loaders::texture::load_texture,
+    loaders::{
+        texture::load_texture,
+        vertex_buffer::{load_vertex_buffer, VertexBuffer},
+    },
     tfx::externs::{self, TextureView},
 };
 
-// TODO(cohae): This should probably be a resource, since there can only be one per map
 #[derive(Resource)]
 pub struct MapAtmosphere {
     _data: SMapAtmosphere,
@@ -124,4 +128,27 @@ pub struct NodeMetadata {
     pub resource_type: u32,
 
     pub name: Option<String>,
+}
+
+#[derive(Resource)]
+pub struct MapStaticAO {
+    pub ao_buffer: VertexBuffer,
+    pub offset_map: HashMap<u64, u32>,
+}
+
+impl MapStaticAO {
+    pub fn from_tag(gpu: &GpuContext, tag: &SStaticAmbientOcclusion) -> anyhow::Result<Self> {
+        let ao_buffer = load_vertex_buffer(gpu, tag.ao0.buffer)?;
+        let offset_map = tag
+            .ao0
+            .mappings
+            .iter()
+            .map(|m| (m.identifier, m.offset))
+            .collect();
+
+        Ok(MapStaticAO {
+            ao_buffer,
+            offset_map,
+        })
+    }
 }

@@ -11,7 +11,7 @@ use windows::Win32::Graphics::{
         D3D11_BUFFER_SRV_1, D3D11_SHADER_RESOURCE_VIEW_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC_0,
         D3D11_SUBRESOURCE_DATA, D3D11_USAGE_DEFAULT,
     },
-    Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
+    Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8_UNORM},
 };
 
 use crate::{gpu::GpuContext, util::d3d::D3dResource};
@@ -27,7 +27,7 @@ pub struct VertexBuffer {
 
 impl VertexBuffer {
     pub fn load_data(device: &ID3D11Device, data: &[u8], stride: u32) -> anyhow::Result<Self> {
-        let bind_flags = if stride == 4 {
+        let bind_flags = if matches!(stride, 1 | 4) {
             D3D11_BIND_VERTEX_BUFFER | D3D11_BIND_SHADER_RESOURCE
         } else {
             D3D11_BIND_VERTEX_BUFFER
@@ -53,12 +53,16 @@ impl VertexBuffer {
         let buffer = buffer.unwrap();
 
         let mut srv = None;
-        if stride == 4 {
+        if matches!(stride, 1 | 4) {
             unsafe {
                 device.CreateShaderResourceView(
                     &buffer,
                     Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-                        Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                        Format: if stride == 1 {
+                            DXGI_FORMAT_R8_UNORM
+                        } else {
+                            DXGI_FORMAT_R8G8B8A8_UNORM
+                        },
                         ViewDimension: D3D11_SRV_DIMENSION_BUFFER,
                         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
                             Buffer: D3D11_BUFFER_SRV {

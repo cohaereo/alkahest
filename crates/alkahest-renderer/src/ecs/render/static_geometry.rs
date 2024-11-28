@@ -76,7 +76,7 @@ impl ModelBuffers {
                 0,
                 Some(&[
                     color.srv.clone(),
-                    renderer.gpu.color_ao_fallback.srv.clone(),
+                    // renderer.gpu.color_ao_fallback.srv.clone(),
                 ]),
             );
         }
@@ -166,9 +166,7 @@ impl StaticModel {
             return;
         }
 
-        if !renderer.settings.stage_transparent
-            && render_stage == TfxRenderStage::Transparents
-        {
+        if !renderer.settings.stage_transparent && render_stage == TfxRenderStage::Transparents {
             return;
         }
 
