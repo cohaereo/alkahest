@@ -779,10 +779,12 @@ fn load_datatable_into_scene<R: Read + Seek>(
                         }
                     };
 
-                scene.insert_resource(
-                    MapStaticAO::from_tag(&renderer.gpu, &static_ao)
-                        .context("Failed to load static AO")?,
-                );
+                match MapStaticAO::from_tag(&renderer.gpu, &static_ao) {
+                    Ok(o) => scene.insert_resource(o),
+                    Err(e) => {
+                        error!(error=?e, tag=%tag, "Failed to load static AO");
+                    }
+                }
             }
             0x80806a63 => {
                 table_data

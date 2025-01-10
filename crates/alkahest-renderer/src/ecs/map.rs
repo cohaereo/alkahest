@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use alkahest_data::map::{SMapAtmosphere, SStaticAmbientOcclusion};
+use anyhow::Context;
 use bevy_ecs::{prelude::Component, system::Resource};
 use destiny_pkg::TagHash;
 use glam::Vec3;
@@ -138,7 +139,8 @@ pub struct MapStaticAO {
 
 impl MapStaticAO {
     pub fn from_tag(gpu: &GpuContext, tag: &SStaticAmbientOcclusion) -> anyhow::Result<Self> {
-        let ao_buffer = load_vertex_buffer(gpu, tag.ao0.buffer)?;
+        let ao_buffer =
+            load_vertex_buffer(gpu, tag.ao0.buffer).context("Failed to load AO vertex buffer")?;
         let offset_map = tag
             .ao0
             .mappings
