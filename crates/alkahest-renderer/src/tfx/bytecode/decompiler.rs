@@ -347,7 +347,7 @@ impl TfxBytecodeDecompiler {
                         "gradient4_const({v}, {c0}, {c1}, {c2}, {c3}, {c4}, {c5})"
                     ));
                 }
-                &TfxBytecodeOp::Spline8Const { constant_start } => {
+                &TfxBytecodeOp::Spline8Const { .. } => {
                     // anyhow::ensure!((constant_start as usize + 4) < constants.len());
                     let v = stack_pop!();
                     stack_push!(format!(

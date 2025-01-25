@@ -56,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added hotkeys to add to current route. <kbd>+</kbd> adds at the end of the route, or after current node, <kbd>-</kbd> adds before the selected node
 - Content confidentiality dialog on first startup
 - Log unimplemented TFX bytecode ops in the TFX debugger
+
 ### Changed
 
 - Enable SSAO by default
@@ -77,6 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fixed a water related map loading error on Disjunction
 - Hotkeys are no longer triggered when typing in text fields
 - Fixed Alkahest sometimes not being able to detect the Steam installation of Destiny 2
+- Fixed loading of 80809121 volumes (renamed from slipsurface volume to Unknown80809121)
 
 ## 0.5.0 - 2024-07-24
 

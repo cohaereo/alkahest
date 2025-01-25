@@ -503,7 +503,7 @@ pub struct SUnk80806d4f {
 #[tiger_tag(id = 0x80809178)]
 pub struct SUnk80809178 {
     // Points to havok pre-tag
-    pub unk0: Pointer<SSlipSurfaceVolume>,
+    pub unk0: Pointer<SHavokShapeRef>,
 
     pub unk8: u32,
     pub unkc: u32,
@@ -519,7 +519,7 @@ pub struct SUnk80809178 {
 #[tiger_tag(id = 0x8080917B)]
 pub struct SUnk8080917b {
     // Points to havok pre-tag
-    pub unk0: Pointer<SSlipSurfaceVolume>,
+    pub unk0: Pointer<SHavokShapeRef>,
     pub unk8: u32,
     pub unkc: u32,
     pub kind: u8,
@@ -528,7 +528,7 @@ pub struct SUnk8080917b {
 
 #[derive(Clone, Debug)]
 #[tiger_tag(id = 0xffffffff)]
-pub struct SSlipSurfaceVolume {
+pub struct SHavokShapeRef {
     pub unk0: [u32; 4],
     pub havok_file: TagHash,
     pub unk14: u32,

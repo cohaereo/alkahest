@@ -32,7 +32,7 @@ pub enum NodeFilter {
     TurnbackBarrier,
     PlayerContainmentVolume,
     NamedArea,
-    SlipSurfaceVolume,
+    Unknown80809121,
 
     Utility,
 
@@ -55,7 +55,7 @@ impl NodeFilter {
             NodeFilter::TurnbackBarrier => ICON_REPLY,
             NodeFilter::PlayerContainmentVolume => ICON_DROPBOX,
             NodeFilter::NamedArea => ICON_TAG,
-            NodeFilter::SlipSurfaceVolume => ICON_HELP,
+            NodeFilter::Unknown80809121 => ICON_HELP,
             NodeFilter::Utility => ICON_TOOLBOX,
             NodeFilter::Unknown => ICON_HELP,
         }
@@ -78,7 +78,7 @@ impl NodeFilter {
                 Color::from_srgba_unmultiplied(192, 100, 192, 255)
             }
             NodeFilter::NamedArea => Color::from_srgba_unmultiplied(0, 127, 0, 255),
-            NodeFilter::SlipSurfaceVolume => Color::from_srgba_unmultiplied(96, 96, 255, 255),
+            NodeFilter::Unknown80809121 => Color::from_srgba_unmultiplied(96, 96, 255, 255),
             NodeFilter::Utility => Color::from_srgba_unmultiplied(119, 142, 160, 255),
             NodeFilter::Unknown => Color::from_srgba_unmultiplied(255, 255, 255, 255),
         }

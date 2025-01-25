@@ -98,7 +98,7 @@ impl Default for VisualSettings {
                     if !matches!(
                         nf,
                         NodeFilter::PlayerContainmentVolume
-                            | NodeFilter::SlipSurfaceVolume
+                            | NodeFilter::Unknown80809121
                             | NodeFilter::InstakillBarrier
                             | NodeFilter::Cubemap
                             | NodeFilter::NamedArea

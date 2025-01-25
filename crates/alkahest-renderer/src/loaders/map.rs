@@ -7,8 +7,8 @@ use alkahest_data::{
     entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume,
-        SDecalCollectionResource, SLensFlare, SLightCollection, SMapAtmosphere, SMapDataTable,
-        SShadowingLight, SSlipSurfaceVolume, SStaticAmbientOcclusion, SUnk808068d4, SUnk80806aa7,
+        SDecalCollectionResource, SHavokShapeRef, SLensFlare, SLightCollection, SMapAtmosphere,
+        SMapDataTable, SShadowingLight, SStaticAmbientOcclusion, SUnk808068d4, SUnk80806aa7,
         SUnk80806ef4, SUnk8080714b, SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
     },
     occlusion::Aabb,
@@ -1447,9 +1447,9 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     .seek(SeekFrom::Start(data.data_resource.offset))
                     .unwrap();
 
-                let d: SSlipSurfaceVolume = TigerReadable::read_ds(table_data)?;
+                let d: SHavokShapeRef = TigerReadable::read_ds(table_data)?;
 
-                let (havok_debugshape, _new_transform) =
+                let (havok_debugshape, new_transform) =
                     if let Ok(havok_data) = package_manager().read_tag(d.havok_file) {
                         let mut cur = Cursor::new(&havok_data);
                         match destiny_havok::shape_collection::read_shape_collection(&mut cur) {
@@ -1482,14 +1482,17 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     };
 
                 if let Some(havok_debugshape) = havok_debugshape {
-                    let filter = NodeFilter::SlipSurfaceVolume;
+                    let filter = NodeFilter::Unknown80809121;
                     spawn_data_entity(
                         scene,
                         (
-                            transform,
+                            new_transform.unwrap_or(transform),
                             filter,
                             Icon::Colored(filter.icon(), filter.color().into()),
-                            Label::from("Slip Surface Volume"),
+                            Label::from(format!(
+                                "Unknown80809121\n(havok={}:{}, unk14={:08X})",
+                                d.havok_file, d.shape_index, d.unk14
+                            )),
                             havok_debugshape,
                             metadata.clone(),
                         ),
