@@ -225,8 +225,8 @@ impl ImmediateRenderer {
         }
 
         unsafe {
-            self.gpu.context().Draw(2, 0);
-            self.gpu.context().GSSetShader(None, None);
+            self.gpu.lock_context().Draw(2, 0);
+            self.gpu.lock_context().GSSetShader(None, None);
         }
     }
 
@@ -258,7 +258,7 @@ impl ImmediateRenderer {
 
         unsafe {
             self.gpu
-                .context()
+                .lock_context()
                 .DrawIndexed(self.ib_sphere.length as u32, 0, 0);
         }
     }
@@ -306,7 +306,7 @@ impl ImmediateRenderer {
 
         unsafe {
             self.gpu
-                .context()
+                .lock_context()
                 .DrawIndexed(self.ib_cube.length as u32, 0, 0);
         }
     }
@@ -345,7 +345,7 @@ impl ImmediateRenderer {
 
         unsafe {
             self.gpu
-                .context()
+                .lock_context()
                 .DrawIndexed(self.ib_cube_outline.length as u32, 0, 0);
         }
     }

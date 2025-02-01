@@ -45,11 +45,11 @@ impl ShaderProgram {
 
     pub fn bind(&self, gctx: &GpuContext) {
         unsafe {
-            gctx.context().VSSetShader(&self.vs, None);
+            gctx.lock_context().VSSetShader(&self.vs, None);
             if let Some(gs) = &self.gs {
-                gctx.context().GSSetShader(gs, None);
+                gctx.lock_context().GSSetShader(gs, None);
             }
-            gctx.context().PSSetShader(&self.ps, None);
+            gctx.lock_context().PSSetShader(&self.ps, None);
         }
     }
 }

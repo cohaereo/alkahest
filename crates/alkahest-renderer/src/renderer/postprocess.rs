@@ -6,8 +6,8 @@ impl Renderer {
     pub fn draw_postprocessing_pass(&self, _scene: &mut Scene) {
         gpu_event!(self.gpu, "postprocess");
         unsafe {
-            self.gpu.context().OMSetRenderTargets(Some(&[]), None);
-            self.gpu.context().PSSetShaderResources(0, Some(&[]));
+            self.gpu.lock_context().OMSetRenderTargets(Some(&[]), None);
+            self.gpu.lock_context().PSSetShaderResources(0, Some(&[]));
         }
 
         {
@@ -35,7 +35,7 @@ impl Renderer {
                 });
 
                 self.gpu
-                    .context()
+                    .lock_context()
                     .OMSetRenderTargets(Some(&[Some(rt), None]), None);
             }
 
@@ -54,8 +54,8 @@ impl Renderer {
 
         {
             unsafe {
-                self.gpu.context().OMSetRenderTargets(Some(&[]), None);
-                self.gpu.context().PSSetShaderResources(0, Some(&[]));
+                self.gpu.lock_context().OMSetRenderTargets(Some(&[]), None);
+                self.gpu.lock_context().PSSetShaderResources(0, Some(&[]));
             }
             let data = &mut self.data.lock();
             let output_rt = data.gbuffers.get_postprocess_output();

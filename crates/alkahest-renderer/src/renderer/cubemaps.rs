@@ -133,7 +133,7 @@ impl CubemapRenderer {
                     .as_ref()
                     .and_then(|t| data.asset_manager.textures.get(t).map(|v| v.view.clone()));
 
-                renderer.gpu.context().PSSetShaderResources(
+                renderer.gpu.lock_context().PSSetShaderResources(
                     0,
                     Some(&[
                         specular_ibl,
@@ -144,14 +144,20 @@ impl CubemapRenderer {
                 );
             }
 
-            renderer.gpu.context().VSSetShader(&self.shader_vs, None);
-            renderer.gpu.context().PSSetShader(&self.shader_ps, None);
+            renderer
+                .gpu
+                .lock_context()
+                .VSSetShader(&self.shader_vs, None);
+            renderer
+                .gpu
+                .lock_context()
+                .PSSetShader(&self.shader_ps, None);
             renderer.gpu.set_input_layout(0);
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
 
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .DrawIndexed(self.index_buffer.length as u32, 0, 0);
         }
     }

@@ -149,7 +149,7 @@ impl ShaderBallComponent {
         unsafe {
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .VSSetShader(&self.renderer.vshader, None);
 
             if render_stage == TfxRenderStage::GenerateGbuffer {
@@ -160,7 +160,7 @@ impl ShaderBallComponent {
 
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .Draw(self.renderer.vertex_buffer.length, 0);
         }
     }

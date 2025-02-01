@@ -105,7 +105,7 @@ impl Technique {
             renderer.gpu.set_depth_bias(u);
         }
 
-        let ctx = renderer.gpu.context();
+        let ctx = renderer.gpu.lock_context();
         unsafe {
             match self.unk8 {
                 1 => {
@@ -281,12 +281,12 @@ impl ShaderModule {
     pub fn bind(&self, gctx: &GpuContext) {
         unsafe {
             match self {
-                ShaderModule::Vertex(shader) => gctx.context().VSSetShader(shader, None),
+                ShaderModule::Vertex(shader) => gctx.lock_context().VSSetShader(shader, None),
                 ShaderModule::Pixel(shader) => gctx.bind_pixel_shader(shader),
-                ShaderModule::Geometry(shader) => gctx.context().GSSetShader(shader, None),
-                ShaderModule::Hull(shader) => gctx.context().HSSetShader(shader, None),
-                ShaderModule::Domain(shader) => gctx.context().DSSetShader(shader, None),
-                ShaderModule::Compute(shader) => gctx.context().CSSetShader(shader, None),
+                ShaderModule::Geometry(shader) => gctx.lock_context().GSSetShader(shader, None),
+                ShaderModule::Hull(shader) => gctx.lock_context().HSSetShader(shader, None),
+                ShaderModule::Domain(shader) => gctx.lock_context().DSSetShader(shader, None),
+                ShaderModule::Compute(shader) => gctx.lock_context().CSSetShader(shader, None),
             }
         }
     }

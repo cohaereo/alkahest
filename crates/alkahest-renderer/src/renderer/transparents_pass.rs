@@ -102,13 +102,13 @@ impl Renderer {
             }
 
             unsafe {
-                self.gpu.context().OMSetRenderTargets(
+                self.gpu.lock_context().OMSetRenderTargets(
                     Some(&[Some(data.gbuffers.shading_result.render_target.clone())]),
                     &data.gbuffers.depth.view,
                 );
 
                 self.gpu
-                    .context()
+                    .lock_context()
                     .OMSetDepthStencilState(&data.gbuffers.depth.state_readonly, 0);
             }
         }

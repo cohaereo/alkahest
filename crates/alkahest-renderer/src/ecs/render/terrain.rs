@@ -191,7 +191,7 @@ impl TerrainPatches {
 
         if let (Some(vertex0), Some(vertex1), Some(index)) = (vertex0, vertex1, index) {
             unsafe {
-                let ctx = renderer.gpu.context();
+                let ctx = renderer.gpu.lock_context();
                 ctx.IASetIndexBuffer(&index.buffer, DXGI_FORMAT(index.format as _), 0);
                 ctx.IASetVertexBuffers(
                     0,
@@ -234,7 +234,7 @@ impl TerrainPatches {
             unsafe {
                 renderer
                     .gpu
-                    .context()
+                    .lock_context()
                     .DrawIndexed(part.index_count as _, part.index_start as _, 0);
             }
         }
@@ -254,7 +254,7 @@ pub fn draw_terrain_patches_system(
         unsafe {
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .VSSetShaderResources(1, Some(&[map_ao.ao_buffer.srv.clone()]));
         }
     }

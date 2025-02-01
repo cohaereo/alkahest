@@ -68,11 +68,14 @@ pub fn install_hook(header: Option<String>) {
         PANIC_HEADER.set(header).expect("Panic header already set");
     }
 
-    if let Err(e) = std::fs::create_dir("crashes") {
-        eprintln!("Failed to create crash dump directory: {e}");
-    }
-    // TODO(cohae): Prevent handler from triggering twice/on panic
     // TODO(cohae): Auto-clean old crash dumps
+    if !std::fs::exists("crashes").unwrap_or(false) {
+        if let Err(e) = std::fs::create_dir("crashes") {
+            eprintln!("Failed to create crash dump directory: {e}");
+        }
+    }
+
+    // TODO(cohae): Prevent handler from triggering twice/on panic
     let breakpad = BreakpadHandler::attach(
         "crashes",
         breakpad_handler::InstallOptions::BothHandlers,

@@ -136,7 +136,7 @@ impl DecoratorRenderer {
                 unsafe {
                     renderer
                         .gpu
-                        .context()
+                        .lock_context()
                         .VSSetConstantBuffers(10, Some(&[None]));
                 }
             }
@@ -165,7 +165,7 @@ impl DecoratorRenderer {
 
                     self.instance_buffer.bind_single(&renderer.gpu, 1);
 
-                    renderer.gpu.context().DrawIndexedInstanced(
+                    renderer.gpu.lock_context().DrawIndexedInstanced(
                         part.index_count,
                         // self.data.unk48.instance_data.data.len() as _,
                         instance_count,

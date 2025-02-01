@@ -110,13 +110,13 @@ impl<T> ConstantBuffer<T> {
             #[allow(clippy::uninit_assumed_init)]
             let mut ptr = D3D11_MAPPED_SUBRESOURCE::default();
             self.gctx
-                .context()
+                .lock_context()
                 .Map(&self.buffer, 0, mode, 0, Some(&mut ptr))
                 .context("Failed to map ConstantBuffer")?;
 
             f(ptr);
 
-            self.gctx.context().Unmap(&self.buffer, 0);
+            self.gctx.lock_context().Unmap(&self.buffer, 0);
 
             Ok(())
         }
@@ -127,7 +127,7 @@ impl<T> ConstantBuffer<T> {
     }
 
     pub fn bind(&self, slot: u32, stage: TfxShaderStage) {
-        let ctx = self.gctx.context();
+        let ctx = self.gctx.lock_context();
         unsafe {
             match stage {
                 TfxShaderStage::Vertex => {

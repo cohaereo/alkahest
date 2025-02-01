@@ -54,7 +54,7 @@ impl IndexBuffer {
 
     pub fn bind(&self, gpu: &GpuContext) {
         unsafe {
-            gpu.context()
+            gpu.lock_context()
                 .IASetIndexBuffer(&self.buffer, DXGI_FORMAT(self.format as i32), 0);
         }
     }

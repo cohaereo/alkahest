@@ -178,7 +178,7 @@ impl DynamicModel {
             |_, renderer, _mesh, part| unsafe {
                 renderer
                     .gpu
-                    .context()
+                    .lock_context()
                     .DrawIndexed(part.index_count, part.index_start, 0);
             },
         )
@@ -272,7 +272,7 @@ impl DynamicModel {
                 unsafe {
                     renderer
                         .gpu
-                        .context()
+                        .lock_context()
                         .VSSetShader(&renderer.gpu.util_resources.entity_vs_override, None);
                 }
             }

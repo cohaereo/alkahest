@@ -37,7 +37,7 @@ impl Renderer {
 
         unsafe {
             let gbuffers = &self.data.lock().gbuffers;
-            self.gpu.context().OMSetRenderTargets(
+            self.gpu.lock_context().OMSetRenderTargets(
                 Some(&[
                     Some(gbuffers.rt0.render_target.clone()),
                     Some(gbuffers.rt1.render_target.clone()),
@@ -46,7 +46,7 @@ impl Renderer {
                 &gbuffers.depth.view,
             );
             self.gpu
-                .context()
+                .lock_context()
                 .RSSetViewports(Some(std::slice::from_ref(&gbuffers.rt0.viewport())));
 
             gbuffers.rt0.clear(&[0.0, 0.0, 0.0, 0.0]);

@@ -51,7 +51,7 @@ impl ModelBuffers {
             let color = am.vertex_buffers.get(&self.color_buffer);
             let index = am.index_buffers.get(&self.index_buffer)?;
 
-            let ctx = renderer.gpu.context();
+            let ctx = renderer.gpu.lock_context();
             ctx.IASetIndexBuffer(&index.buffer, DXGI_FORMAT(index.format as _), 0);
             if let Some(vertex1) = vertex1 {
                 ctx.IASetVertexBuffers(
@@ -228,7 +228,7 @@ impl StaticModel {
             renderer.gpu.set_input_topology(part.primitive_type);
 
             unsafe {
-                renderer.gpu.context().DrawIndexedInstanced(
+                renderer.gpu.lock_context().DrawIndexedInstanced(
                     part.index_count,
                     instances_count,
                     part.index_start,
@@ -269,7 +269,7 @@ impl StaticModel {
             renderer.gpu.set_input_topology(mesh.mesh.primitive_type);
 
             unsafe {
-                renderer.gpu.context().DrawIndexedInstanced(
+                renderer.gpu.lock_context().DrawIndexedInstanced(
                     mesh.mesh.index_count,
                     instances_count,
                     mesh.mesh.index_start,

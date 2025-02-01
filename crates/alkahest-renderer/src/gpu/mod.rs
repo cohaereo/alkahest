@@ -20,7 +20,7 @@ use alkahest_data::{
 use anyhow::Context;
 use crossbeam::atomic::AtomicCell;
 use debug::PendingGpuTimestampRange;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{Mutex, ReentrantMutex, ReentrantMutexGuard, RwLock};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::{
     core::Interface,
@@ -43,10 +43,8 @@ use crate::{
 
 pub type SharedGpuContext = Arc<GpuContext>;
 pub struct GpuContext {
-    _main_thread_id: ThreadId,
-
     pub device: ID3D11Device,
-    context: ID3D11DeviceContext,
+    context: ReentrantMutex<ID3D11DeviceContext>,
     annotation: ID3DUserDefinedAnnotation,
 
     pub swap_chain: Option<IDXGISwapChain>,
@@ -262,12 +260,11 @@ impl GpuContext {
         };
 
         Ok(Self {
-            _main_thread_id: std::thread::current().id(),
             util_resources: UtilResources::new(&device),
 
             device,
             annotation: device_context.cast()?,
-            context: device_context,
+            context: ReentrantMutex::new(device_context),
 
             swap_chain,
             swapchain_target: RwLock::new(swapchain_target),
@@ -308,21 +305,10 @@ impl GpuContext {
         })
     }
 
-    /// The device context may only be accessed from the thread that the DCS was created on
-    /// Panics in debug mode if the current thread is not the main thread
+    /// The device context may only be accessed from one thread at a time, so calling this method will lock the context for the current thread.
     #[inline(always)]
-    pub fn context(&self) -> &ID3D11DeviceContext {
-        #[cfg(debug_assertions)]
-        assert_eq!(
-            std::thread::current().id(),
-            self._main_thread_id,
-            "Tried to access ID3D11DeviceContext from thread {:?}, but context was created on \
-             thread {:?}",
-            std::thread::current().id(),
-            self._main_thread_id
-        );
-
-        &self.context
+    pub fn lock_context(&self) -> ReentrantMutexGuard<ID3D11DeviceContext> {
+        self.context.lock()
     }
 }
 
@@ -345,7 +331,7 @@ impl GpuContext {
             // TODO(cohae): Clearing the state causes maps like bannerfall to use a point fill mode (which doesn't exist in dx11????)
             // self.context.ClearState();
 
-            self.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
+            self.lock_context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
                 Width: self.swapchain_resolution.load().0 as f32,
@@ -426,7 +412,7 @@ impl GpuContext {
                     .CreateRenderTargetView(&bb, None, Some(&mut new_rtv))
                     .unwrap();
 
-                self.context()
+                self.lock_context()
                     .OMSetRenderTargets(Some(&[new_rtv.clone()]), None);
 
                 *self.swapchain_target.write() = new_rtv;
@@ -441,7 +427,7 @@ impl GpuContext {
     pub fn set_blend_state(&self, index: usize) {
         if self.current_blend_state.load(Ordering::Relaxed) != index {
             unsafe {
-                self.context().OMSetBlendState(
+                self.lock_context().OMSetBlendState(
                     &self.states.blend_states[index],
                     Some(&[1.0, 1.0, 1.0, 1.0]),
                     0xFFFFFFFF,
@@ -455,7 +441,7 @@ impl GpuContext {
         if self.current_depth_state.load(Ordering::Relaxed) != index {
             let states = &self.states.depth_stencil_states[index];
             unsafe {
-                self.context().OMSetDepthStencilState(
+                self.lock_context().OMSetDepthStencilState(
                     if self.use_flipped_depth_comparison.load(Ordering::Relaxed) {
                         &states.1
                     } else {
@@ -473,7 +459,7 @@ impl GpuContext {
             unsafe {
                 let depth_bias = self.current_depth_bias.load(Ordering::Relaxed);
                 if index < 9 && depth_bias < 9 {
-                    self.context()
+                    self.lock_context()
                         .RSSetState(self.states.rasterizer_states[depth_bias][index].as_ref());
                 }
             }
@@ -487,7 +473,7 @@ impl GpuContext {
             unsafe {
                 let rasterizer_state = self.current_rasterizer_state.load(Ordering::Relaxed);
                 if index < 9 && rasterizer_state < 9 {
-                    self.context().RSSetState(
+                    self.lock_context().RSSetState(
                         self.states.rasterizer_states[index][rasterizer_state].as_ref(),
                     );
                 }
@@ -499,7 +485,7 @@ impl GpuContext {
     pub fn set_input_layout(&self, index: usize) {
         if self.current_input_layout.load(Ordering::Relaxed) != index {
             unsafe {
-                self.context()
+                self.lock_context()
                     .IASetInputLayout(&self.states.input_layouts[index]);
             }
             self.current_input_layout.store(index, Ordering::Relaxed);
@@ -509,7 +495,7 @@ impl GpuContext {
     pub fn set_input_topology(&self, topology: EPrimitiveType) {
         if self.current_input_topology.load(Ordering::Relaxed) != topology as i32 {
             unsafe {
-                self.context().IASetPrimitiveTopology(match topology {
+                self.lock_context().IASetPrimitiveTopology(match topology {
                     EPrimitiveType::PointList => D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
                     EPrimitiveType::LineList => D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
                     EPrimitiveType::LineStrip => D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
@@ -526,7 +512,7 @@ impl GpuContext {
 impl GpuContext {
     pub fn bind_cbuffer(&self, slot: u32, buffer: Option<ID3D11Buffer>, stage: TfxShaderStage) {
         unsafe {
-            let ctx = self.context();
+            let ctx = self.lock_context();
             match stage {
                 TfxShaderStage::Vertex => ctx.VSSetConstantBuffers(slot, Some(&[buffer])),
                 TfxShaderStage::Pixel => ctx.PSSetConstantBuffers(slot, Some(&[buffer])),
@@ -542,12 +528,12 @@ impl GpuContext {
         let shader = shader.into();
         if shader.is_some() {
             unsafe {
-                self.context()
+                self.lock_context()
                     .PSSetShader(self.custom_pixel_shader.as_ref().or(shader), None);
             }
         } else {
             unsafe {
-                self.context().PSSetShader(None, None);
+                self.lock_context().PSSetShader(None, None);
             }
         }
     }

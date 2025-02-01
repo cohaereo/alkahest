@@ -76,14 +76,14 @@ impl SsaoRenderer {
 
         if let Some(deferred) = &externs.deferred {
             unsafe {
-                renderer.gpu.context().PSSetShaderResources(
+                renderer.gpu.lock_context().PSSetShaderResources(
                     0,
                     Some(&[deferred.deferred_depth.view(), deferred.deferred_rt1.view()]),
                 );
 
                 renderer
                     .gpu
-                    .context()
+                    .lock_context()
                     .PSSetConstantBuffers(0, Some(&[Some(self.scope.buffer().clone())]));
             }
 
@@ -98,17 +98,23 @@ impl SsaoRenderer {
 
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .OMSetRenderTargets(Some(&[Some(intermediate_rt)]), None);
 
             renderer.gpu.set_blend_state(0);
-            renderer.gpu.context().RSSetState(None);
+            renderer.gpu.lock_context().RSSetState(None);
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
-            renderer.gpu.context().OMSetDepthStencilState(None, 0);
-            renderer.gpu.context().VSSetShader(&self.shader_vs, None);
-            renderer.gpu.context().PSSetShader(&self.shader_ps, None);
+            renderer.gpu.lock_context().OMSetDepthStencilState(None, 0);
+            renderer
+                .gpu
+                .lock_context()
+                .VSSetShader(&self.shader_vs, None);
+            renderer
+                .gpu
+                .lock_context()
+                .PSSetShader(&self.shader_ps, None);
 
-            renderer.gpu.context().Draw(3, 0);
+            renderer.gpu.lock_context().Draw(3, 0);
 
             renderer.gpu.current_states.store(StateSelection::new(
                 Some(3),
@@ -120,13 +126,13 @@ impl SsaoRenderer {
             renderer.gpu.restore_state(&dxstate);
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .PSSetShader(&self.shader_blur_ps, None);
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .PSSetShaderResources(0, Some(&[Some(intermediate_view)]));
-            renderer.gpu.context().Draw(3, 0);
+            renderer.gpu.lock_context().Draw(3, 0);
         }
     }
 }

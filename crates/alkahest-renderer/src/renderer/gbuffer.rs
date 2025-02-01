@@ -364,7 +364,7 @@ impl RenderTarget {
         gpu_event!(self.gctx, "copy", format!("{}->{}", self.name, dest.name));
         unsafe {
             self.gctx
-                .context()
+                .lock_context()
                 .CopyResource(&dest.texture, &self.texture)
         }
     }
@@ -377,7 +377,7 @@ impl RenderTarget {
         );
         unsafe {
             self.gctx
-                .context()
+                .lock_context()
                 .CopyResource(&dest.texture, &self.texture)
         }
     }
@@ -390,7 +390,7 @@ impl RenderTarget {
     pub fn clear(&self, color: &[f32; 4]) {
         unsafe {
             self.gctx
-                .context()
+                .lock_context()
                 .ClearRenderTargetView(&self.render_target, color)
         }
     }
@@ -419,10 +419,10 @@ impl RenderTarget {
     pub fn bind(&self) {
         unsafe {
             self.gctx
-                .context()
+                .lock_context()
                 .OMSetRenderTargets(Some(&[Some(self.render_target.clone())]), None);
             self.gctx
-                .context()
+                .lock_context()
                 .RSSetViewports(Some(std::slice::from_ref(&self.viewport())));
         }
     }
@@ -492,13 +492,13 @@ impl CpuStagingBuffer {
             #[allow(clippy::uninit_assumed_init)]
             let mut ptr = D3D11_MAPPED_SUBRESOURCE::default();
             self.gctx
-                .context()
+                .lock_context()
                 .Map(&self.texture, 0, mode, 0, Some(&mut ptr))
                 .context("Failed to map ConstantBuffer")?;
 
             let r = f(ptr);
 
-            self.gctx.context().Unmap(&self.texture, 0);
+            self.gctx.lock_context().Unmap(&self.texture, 0);
 
             Ok(r)
         }
@@ -718,7 +718,7 @@ impl DepthState {
     pub fn copy_depth(&self) {
         unsafe {
             self.gctx
-                .context()
+                .lock_context()
                 .CopyResource(&self.texture_copy, &self.texture);
         }
     }
@@ -726,7 +726,7 @@ impl DepthState {
     pub fn copy_to_staging(&self, dest: &CpuStagingBuffer) {
         unsafe {
             self.gctx
-                .context()
+                .lock_context()
                 .CopyResource(&dest.texture, &self.texture)
         }
     }
@@ -738,7 +738,7 @@ impl DepthState {
 
     pub fn clear(&self, depth: f32, stencil: u8) {
         unsafe {
-            self.gctx.context().ClearDepthStencilView(
+            self.gctx.lock_context().ClearDepthStencilView(
                 &self.view,
                 (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
                 depth,

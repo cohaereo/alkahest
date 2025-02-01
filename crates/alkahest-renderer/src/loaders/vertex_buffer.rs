@@ -89,7 +89,7 @@ impl VertexBuffer {
 
     pub fn bind_single(&self, gpu: &GpuContext, slot: u32) {
         unsafe {
-            gpu.context().IASetVertexBuffers(
+            gpu.lock_context().IASetVertexBuffers(
                 slot,
                 1,
                 Some(&Some(self.buffer.clone())),

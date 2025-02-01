@@ -484,7 +484,7 @@ impl Texture {
     }
 
     pub fn bind(&self, gctx: &GpuContext, slot: u32, stage: TfxShaderStage) {
-        let ctx = gctx.context();
+        let ctx = gctx.lock_context();
         unsafe {
             match stage {
                 TfxShaderStage::Vertex => {

@@ -100,30 +100,28 @@ impl GpuContext {
         rt: &ID3D11RenderTargetView,
         shader: &ID3D11PixelShader,
     ) {
+        let ctx = self.lock_context();
         unsafe {
             self.set_blend_state(0);
             // self.set_rasterizer_state(0);
-            self.context.RSSetState(None);
+            ctx.RSSetState(None);
 
-            self.context.VSSetShader(&self.util_resources.blit_vs, None);
-            self.context.PSSetShader(shader, None);
+            ctx.VSSetShader(&self.util_resources.blit_vs, None);
+            ctx.PSSetShader(shader, None);
 
             self.set_input_topology(EPrimitiveType::Triangles);
-            self.context
-                .OMSetRenderTargets(Some(&[Some(rt.clone())]), None);
-            self.context.OMSetDepthStencilState(None, 0);
-            self.context
-                .PSSetSamplers(0, Some(&[Some(self.util_resources.point_sampler.clone())]));
-            self.context
-                .PSSetShaderResources(0, Some(&[Some(texture_view.clone())]));
+            ctx.OMSetRenderTargets(Some(&[Some(rt.clone())]), None);
+            ctx.OMSetDepthStencilState(None, 0);
+            ctx.PSSetSamplers(0, Some(&[Some(self.util_resources.point_sampler.clone())]));
+            ctx.PSSetShaderResources(0, Some(&[Some(texture_view.clone())]));
 
-            self.context.Draw(3, 0);
+            ctx.Draw(3, 0);
         }
     }
 
     pub fn copy_texture(&self, source: &ID3D11Texture2D, dest: &ID3D11Texture2D) {
         unsafe {
-            self.context().CopyResource(dest, source);
+            self.lock_context().CopyResource(dest, source);
         }
     }
 }

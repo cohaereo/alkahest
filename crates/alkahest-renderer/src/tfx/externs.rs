@@ -1023,7 +1023,7 @@ fn get_global_channel_defaults() -> [GlobalChannel; 256] {
     channels[76] = GlobalChannel::new("unk76 (verity dark/light, cancels out unk75)", ChannelType::FloatRanged(0f32..=1f32), Vec4::ZERO);
 
     // Sun related  
-    channels[82].value = Vec4::ZERO;
+    channels[82].value = Vec4::new(1., 0., 0., 0.); // X controls ambient occlusion in someway, needs to be 1 for the debug shader to show AO correctly
     channels[83].value = Vec4::ZERO;
     channels[98].value = Vec4::ZERO;
     channels[100].value = Vec4::ZERO;

@@ -12,7 +12,7 @@ impl GpuContext {
         let mut render_targets = [const { None }; 8];
         let mut depth_stencil_view = None;
         unsafe {
-            self.context()
+            self.lock_context()
                 .OMGetRenderTargets(Some(&mut render_targets), Some(&mut depth_stencil_view));
         }
 
@@ -25,10 +25,10 @@ impl GpuContext {
     pub fn restore_state(&self, state: &D3DState) {
         unsafe {
             if let Some(dsv) = &state.depth_stencil_view {
-                self.context
+                self.lock_context()
                     .OMSetRenderTargets(Some(&state.render_targets), dsv);
             } else {
-                self.context()
+                self.lock_context()
                     .OMSetRenderTargets(Some(&state.render_targets), None);
             }
         }

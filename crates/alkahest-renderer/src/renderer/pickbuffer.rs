@@ -60,10 +60,10 @@ impl Renderer {
 
             // Draw the selected entity into the outline depth buffer
             self.gpu
-                .context()
+                .lock_context()
                 .OMSetRenderTargets(None, Some(&self.pickbuffer.outline_depth.view));
             self.gpu
-                .context()
+                .lock_context()
                 .OMSetDepthStencilState(Some(&self.pickbuffer.outline_depth.state), 0);
             draw_entity(
                 scene,
@@ -76,22 +76,22 @@ impl Renderer {
             // Draw the outline itself
 
             self.gpu
-                .context()
+                .lock_context()
                 .OMSetRenderTargets(Some(&dxstate.render_targets), None);
-            self.gpu.context().OMSetDepthStencilState(None, 0);
+            self.gpu.lock_context().OMSetDepthStencilState(None, 0);
 
             self.gpu.flush_states();
             self.gpu.set_blend_state(12);
             self.gpu.set_depth_stencil_state(1);
-            self.gpu.context().RSSetState(None);
+            self.gpu.lock_context().RSSetState(None);
             self.gpu.set_input_topology(EPrimitiveType::Triangles);
             self.gpu
-                .context()
+                .lock_context()
                 .VSSetShader(&self.pickbuffer.outline_vs, None);
             self.gpu
-                .context()
+                .lock_context()
                 .PSSetShader(&self.pickbuffer.outline_ps, None);
-            self.gpu.context().PSSetShaderResources(
+            self.gpu.lock_context().PSSetShaderResources(
                 0,
                 Some(&[
                     Some(self.pickbuffer.outline_depth.texture_view.clone()),
@@ -101,7 +101,7 @@ impl Renderer {
             self.pickbuffer.outline_cb.write(&time_since_select).ok();
             self.pickbuffer.outline_cb.bind(0, TfxShaderStage::Pixel);
 
-            self.gpu.context().Draw(3, 0);
+            self.gpu.lock_context().Draw(3, 0);
 
             self.gpu.restore_state(&dxstate);
         }
@@ -229,7 +229,7 @@ impl Pickbuffer {
     pub fn start(&self, gpu: &GpuContext) {
         self.clear(gpu);
         unsafe {
-            gpu.context().OMSetRenderTargets(
+            gpu.lock_context().OMSetRenderTargets(
                 Some(&[Some(self.pick_buffer.render_target.clone())]),
                 Some(&self.outline_depth.view),
             );
@@ -239,7 +239,7 @@ impl Pickbuffer {
 
             // Limit the draw area to as small as possible
             if let Some((x, y)) = self.selection_request.load() {
-                gpu.context().RSSetScissorRects(Some(&[RECT {
+                gpu.lock_context().RSSetScissorRects(Some(&[RECT {
                     left: x as i32 - 1,
                     top: y as i32 - 1,
                     right: x as i32 + 1,
@@ -256,7 +256,7 @@ impl Pickbuffer {
         self.pocus().is_drawing_selection = false;
         self.selection_ready.store(true, Ordering::Relaxed);
         unsafe {
-            gpu.context().RSSetScissorRects(None);
+            gpu.lock_context().RSSetScissorRects(None);
         }
     }
 
@@ -281,17 +281,17 @@ impl Pickbuffer {
         self.outline_depth.clear(0.0, 0);
 
         unsafe {
-            gpu.context()
+            gpu.lock_context()
                 .OMSetRenderTargets(Some(&[Some(self.pick_buffer.render_target.clone())]), None);
 
             gpu.set_blend_state(0);
-            gpu.context().RSSetState(None);
+            gpu.lock_context().RSSetState(None);
             gpu.set_input_topology(EPrimitiveType::Triangles);
-            gpu.context().OMSetDepthStencilState(None, 0);
-            gpu.context().VSSetShader(&self.clear_vs, None);
-            gpu.context().PSSetShader(&self.clear_ps, None);
+            gpu.lock_context().OMSetDepthStencilState(None, 0);
+            gpu.lock_context().VSSetShader(&self.clear_vs, None);
+            gpu.lock_context().PSSetShader(&self.clear_ps, None);
 
-            gpu.context().Draw(3, 0);
+            gpu.lock_context().Draw(3, 0);
         }
     }
 

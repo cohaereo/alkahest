@@ -78,11 +78,11 @@ impl MatcapRenderer {
             self.cam_cb.bind(0, TfxShaderStage::Pixel);
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .PSSetShaderResources(0, Some(&[Some(data.gbuffers.rt1.view.clone())]));
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .PSSetSamplers(0, Some(&[Some(self.sampler_linear.clone())]));
 
             self.matcap_diffuse
@@ -91,13 +91,13 @@ impl MatcapRenderer {
                 .bind(&renderer.gpu, 2, TfxShaderStage::Pixel);
 
             renderer.gpu.flush_states();
-            renderer.gpu.context().RSSetState(None);
+            renderer.gpu.lock_context().RSSetState(None);
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
-            renderer.gpu.context().OMSetDepthStencilState(None, 0);
-            renderer.gpu.context().VSSetShader(&self.shader_vs, None);
-            renderer.gpu.context().PSSetShader(&self.shader_ps, None);
+            renderer.gpu.lock_context().OMSetDepthStencilState(None, 0);
+            renderer.gpu.lock_context().VSSetShader(&self.shader_vs, None);
+            renderer.gpu.lock_context().PSSetShader(&self.shader_ps, None);
 
-            renderer.gpu.context().Draw(3, 0);
+            renderer.gpu.lock_context().Draw(3, 0);
         }
     }
 }

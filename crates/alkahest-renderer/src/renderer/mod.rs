@@ -210,7 +210,7 @@ impl Renderer {
                     ..Default::default()
                 });
 
-                self.gpu.context().OMSetRenderTargets(
+                self.gpu.lock_context().OMSetRenderTargets(
                     Some(&[Some(
                         // self.gpu.swapchain_target.read().as_ref().unwrap().clone(),
                         data.gbuffers.shading_result.render_target.clone(),
@@ -265,7 +265,7 @@ impl Renderer {
 
         let dxstate = self.gpu.backup_state();
         unsafe {
-            self.gpu.context().OMSetRenderTargets(
+            self.gpu.lock_context().OMSetRenderTargets(
                 Some(&dxstate.render_targets),
                 &self.data.lock().gbuffers.depth.view,
             );
@@ -336,7 +336,7 @@ impl Renderer {
 
         let vp = view.viewport();
         unsafe {
-            self.gpu.context().RSSetViewports(Some(&[D3D11_VIEWPORT {
+            self.gpu.lock_context().RSSetViewports(Some(&[D3D11_VIEWPORT {
                 TopLeftX: vp.origin.x as f32,
                 TopLeftY: vp.origin.y as f32,
                 Width: vp.size.x as f32,

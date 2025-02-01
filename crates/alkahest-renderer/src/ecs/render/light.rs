@@ -217,14 +217,14 @@ impl LightRenderer {
         unsafe {
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .OMSetDepthStencilState(Some(&self.depth_state), 0);
 
             // Layout 1
             //  - float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12
             renderer.gpu.set_input_layout(1);
             renderer.gpu.set_blend_state(8);
-            renderer.gpu.context().IASetVertexBuffers(
+            renderer.gpu.lock_context().IASetVertexBuffers(
                 0,
                 1,
                 Some([Some(self.vb_cube.clone())].as_ptr()),
@@ -245,14 +245,14 @@ impl LightRenderer {
 
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .IASetIndexBuffer(Some(&self.ib_cube), DXGI_FORMAT_R16_UINT, 0);
 
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
 
             renderer
                 .gpu
-                .context()
+                .lock_context()
                 .DrawIndexed(self.cube_index_count, 0, 0);
         }
     }
@@ -458,7 +458,7 @@ impl ShadowMapRenderer {
         unsafe {
             let view = match mode {
                 ShadowGenerationMode::StationaryOnly => {
-                    renderer.gpu.context().ClearDepthStencilView(
+                    renderer.gpu.lock_context().ClearDepthStencilView(
                         &self.depth_stationary.views[0],
                         (D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL).0 as _,
                         1.0,
@@ -476,7 +476,7 @@ impl ShadowMapRenderer {
                 }
             };
 
-            renderer.gpu.context().OMSetRenderTargets(None, view);
+            renderer.gpu.lock_context().OMSetRenderTargets(None, view);
         }
     }
 }

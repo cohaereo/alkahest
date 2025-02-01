@@ -407,7 +407,7 @@ impl AlkahestApp {
                         }
 
                         unsafe {
-                            renderer.gpu.context().OMSetRenderTargets(
+                            renderer.gpu.lock_context().OMSetRenderTargets(
                                 Some(&[renderer.gpu.swapchain_target.read().clone()]),
                                 None,
                             );

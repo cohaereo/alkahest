@@ -14,7 +14,7 @@ impl Renderer {
 
         unsafe {
             let data = &mut self.data.lock();
-            self.gpu.context().OMSetRenderTargets(
+            self.gpu.lock_context().OMSetRenderTargets(
                 Some(&[
                     Some(data.gbuffers.light_diffuse.render_target.clone()),
                     Some(data.gbuffers.light_specular.render_target.clone()),
@@ -79,7 +79,7 @@ impl Renderer {
                 if self.settings.feature_cubemaps {
                     unsafe {
                         let data = &mut self.data.lock();
-                        self.gpu.context().OMSetRenderTargets(
+                        self.gpu.lock_context().OMSetRenderTargets(
                             Some(&[
                                 Some(data.gbuffers.light_diffuse.render_target.clone()),
                                 Some(data.gbuffers.light_ibl_specular.render_target.clone()),
@@ -108,7 +108,7 @@ impl Renderer {
 
         unsafe {
             let gbuffers = &self.data.lock().gbuffers;
-            self.gpu.context().OMSetRenderTargets(
+            self.gpu.lock_context().OMSetRenderTargets(
                 Some(&[Some(gbuffers.shading_result.render_target.clone()), None]),
                 None,
             );

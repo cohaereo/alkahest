@@ -157,8 +157,9 @@ impl GpuContext {
     ) -> windows::core::Result<Option<T>> {
         let mut data = T::default();
 
-        let result = (windows::core::Interface::vtable(self.context()).GetData)(
-            windows::core::Interface::as_raw(self.context()),
+        let ctx = self.lock_context();
+        let result = (windows::core::Interface::vtable(&*ctx).GetData)(
+            windows::core::Interface::as_raw(&*ctx),
             query.as_raw(),
             &mut data as *mut T as *mut _,
             std::mem::size_of::<T>() as u32,
@@ -192,8 +193,8 @@ impl GpuContext {
         let end = self.create_query(D3D11_QUERY_TIMESTAMP);
 
         unsafe {
-            self.context().Begin(&disjoint);
-            self.context().End(&start);
+            self.lock_context().Begin(&disjoint);
+            self.lock_context().End(&start);
         }
 
         self.pending_timestamp_queries
@@ -208,7 +209,7 @@ impl GpuContext {
         GpuProfilingGuard {
             disjoint,
             end,
-            context: self.context.clone(),
+            context: self.context.lock().clone(),
         }
     }
 

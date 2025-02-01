@@ -14,7 +14,7 @@ impl Renderer {
         self.gpu.set_input_topology(EPrimitiveType::TriangleStrip);
 
         unsafe {
-            self.gpu.context().Draw(4, 0);
+            self.gpu.lock_context().Draw(4, 0);
         }
     }
 }
