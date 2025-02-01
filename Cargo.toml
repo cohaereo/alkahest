@@ -73,6 +73,9 @@ winit = { version = "0.29" }
 [profile.dev.package.destiny-pkg]
 opt-level = 3
 
+[profile.dev.package.backtrace]
+opt-level = 3
+
 [profile.dev]
 # opt-level = 3
 # cohae: Overflow checks are nice for some, but not for us

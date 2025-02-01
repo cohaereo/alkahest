@@ -196,6 +196,7 @@ dependencies = [
 name = "alkahest-panic-handler"
 version = "0.1.0"
 dependencies = [
+ "breakpad-handler",
  "color-eyre",
  "fs-err",
  "lazy_static",
@@ -740,6 +741,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c132eebf10f5cad5289222520a4a058514204aed6d791f1cf4fe8088b82d15f"
 dependencies = [
  "objc2 0.5.2",
+]
+
+[[package]]
+name = "breakpad-handler"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02f55f2391cefb076097c05539776004f257ca9a0d6b12fe55b1886845aa8e8e"
+dependencies = [
+ "breakpad-sys",
+]
+
+[[package]]
+name = "breakpad-sys"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f6fe478a0669c95a5c3f0a399b93dc9bf0edc648b5be981e89578fb52b6b2ff"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

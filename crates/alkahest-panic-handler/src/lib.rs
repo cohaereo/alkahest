@@ -18,6 +18,8 @@ lazy_static! {
     static ref PANIC_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
     static ref PANIC_HEADER: OnceLock<String> = OnceLock::new();
     static ref BREAKPAD_HANDLER: OnceLock<BreakpadHandler> = OnceLock::new();
+    static ref PANIC_HOOK: color_eyre::config::PanicHook =
+        color_eyre::config::HookBuilder::new().into_hooks().0;
 }
 
 pub fn install_hook(header: Option<String>) {
@@ -26,14 +28,13 @@ pub fn install_hook(header: Option<String>) {
         let this_thread = std::thread::current();
 
         // First call color-eyre's fancy CLI backtrace
-        let (panic_hook, _) = color_eyre::config::HookBuilder::new().into_hooks();
         eprintln!(
             "Thread '{}' panicked:\n{}",
             this_thread
                 .name()
                 .map(|name| name.to_string())
                 .unwrap_or(format!("{:?}", this_thread.id())),
-            panic_hook.panic_report(info)
+            PANIC_HOOK.panic_report(info)
         );
 
         // Write a panic file
@@ -43,22 +44,20 @@ pub fn install_hook(header: Option<String>) {
         }
 
         // Dont show dialog on debug builds
-        if cfg!(debug_assertions) {
-            return;
-        }
-
-        // Finally, show a dialog
-        let panic_message_stripped = strip_ansi_codes(&format!("{info}"));
-        if let Err(e) = native_dialog::MessageDialog::new()
-            .set_type(native_dialog::MessageType::Error)
-            .set_title("Alkahest crashed!")
-            .set_text(&format!(
-                "{}\n\nA full crash log has been written to panic.log",
-                panic_message_stripped
-            ))
-            .show_alert()
-        {
-            eprintln!("Failed to show error dialog: {e}")
+        if !cfg!(debug_assertions) {
+            // Finally, show a dialog
+            let panic_message_stripped = strip_ansi_codes(&format!("{info}"));
+            if let Err(e) = native_dialog::MessageDialog::new()
+                .set_type(native_dialog::MessageType::Error)
+                .set_title("Alkahest crashed!")
+                .set_text(&format!(
+                    "{}\n\nA full crash log has been written to panic.log",
+                    panic_message_stripped
+                ))
+                .show_alert()
+            {
+                eprintln!("Failed to show error dialog: {e}")
+            }
         }
 
         // Make sure the application exits
