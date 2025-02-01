@@ -56,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added hotkeys to add to current route. <kbd>+</kbd> adds at the end of the route, or after current node, <kbd>-</kbd> adds before the selected node
 - Content confidentiality dialog on first startup
 - Log unimplemented TFX bytecode ops in the TFX debugger
+- Added breakpad integration for crash reporting
 
 ### Changed
 
@@ -79,6 +80,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Hotkeys are no longer triggered when typing in text fields
 - Fixed Alkahest sometimes not being able to detect the Steam installation of Destiny 2
 - Fixed loading of 80809121 volumes (renamed from slipsurface volume to Unknown80809121)
+- Display scaling is now properly applied upon launch
+- The GUI manager no longer sets the scale factor twice, making scaling more consistent
+- Fixed some concurrency-related crashes in the renderer by adding a reentrant lock to the immediate context
+- Fixed a stack overflow in debug mode by moving global scopes/pipelines to the heap
 
 ## 0.5.0 - 2024-07-24
 
