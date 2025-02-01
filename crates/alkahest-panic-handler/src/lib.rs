@@ -7,6 +7,7 @@ use std::{
     panic::PanicInfo,
     path::PathBuf,
     sync::{Arc, OnceLock},
+    time::SystemTime,
 };
 
 use breakpad_handler::BreakpadHandler;
@@ -74,10 +75,40 @@ pub fn install_hook(header: Option<String>) {
 }
 
 fn install_breakpad() {
-    // TODO(cohae): Auto-clean old crash dumps
     if !std::fs::exists("crashes").unwrap_or(false) {
         if let Err(e) = std::fs::create_dir("crashes") {
             eprintln!("Failed to create crash dump directory: {e}");
+        }
+    } else {
+        // Clean up dumps, keep only the last 5
+        if let Ok(dir) = std::fs::read_dir("crashes") {
+            // Get all .dmp files
+            let mut dumps: Vec<_> = dir
+                .filter_map(|entry| {
+                    entry.ok().and_then(|entry| {
+                        entry
+                            .file_name()
+                            .into_string()
+                            .ok()
+                            .and_then(|name| name.strip_suffix(".dmp").map(|_| entry))
+                    })
+                })
+                .collect();
+            // Sort by date ascending
+            dumps.sort_by_key(|entry| {
+                entry
+                    .metadata()
+                    .ok()
+                    .and_then(|m| m.modified().ok())
+                    .unwrap_or(SystemTime::UNIX_EPOCH)
+            });
+            // Reverse to descending order
+            dumps.reverse();
+            dumps.iter().skip(5).for_each(|entry| {
+                if let Err(e) = std::fs::remove_file(entry.path()) {
+                    eprintln!("Failed to remove old crash dump: {e}");
+                }
+            });
         }
     }
 
