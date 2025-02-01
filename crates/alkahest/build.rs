@@ -29,6 +29,10 @@ fn main() {
         println!("cargo:rustc-env=GIT_HASH=unknown-revision");
     }
 
+    if let Ok(v) = rustc_version::version_meta() {
+        println!("cargo:rustc-env=RUSTC_VERSION={}", v.semver);
+    }
+
     if cfg!(target_os = "windows") {
         let mut res = winres::WindowsResource::new();
         res.set_icon("assets/icon2.ico");

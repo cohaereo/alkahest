@@ -134,10 +134,8 @@ impl MenuBar {
                                 ui.separator();
                                 ui.label(format!("Revision {}", consts::GIT_HASH));
                                 ui.label(format!("Built on {}", consts::BUILD_DATE));
-                                if let Ok(v) = rustc_version::version_meta() {
-                                    ui.add_space(8.0);
-                                    ui.label(format!("rustc {}+{:?}", v.semver, v.channel));
-                                }
+                                ui.add_space(8.0);
+                                ui.label(format!("rustc {}", consts::RUSTC_VERSION));
                             })
                         });
                     })

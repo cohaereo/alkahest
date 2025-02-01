@@ -87,6 +87,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fixed some concurrency-related crashes in the renderer by adding a reentrant lock to the immediate context
 - Fixed a stack overflow in debug mode by moving global scopes/pipelines to the heap
 - When a texture handle is explicitly set to `none`, Alkahest will now properly unset the texture instead of binding the fallback texture
+- Bake rustc version as a constant instead of checking it at runtime
 
 ## 0.5.0 - 2024-07-24
 

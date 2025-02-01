@@ -10,7 +10,6 @@ use std::{
         atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering},
         Arc,
     },
-    thread::ThreadId,
     time::Duration,
 };
 

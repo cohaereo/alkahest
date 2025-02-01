@@ -70,7 +70,6 @@ paste = "1.0.14"
 profiling.workspace = true
 puffin_egui = "0.29.0"
 reqwest = { version = "0.12.3", features = ["json"] }
-rustc_version = "0.4.0"
 rustc-hash.workspace = true
 semver = "1.0.21"
 smallvec.workspace = true
@@ -103,4 +102,5 @@ targets = ["x86_64-pc-windows-gnu"]
 targets = ["x86_64-pc-windows-gnu"]
 
 [build-dependencies]
+rustc_version = "0.4.0"
 winres = "0.1.12"
