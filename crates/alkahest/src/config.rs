@@ -1,28 +1,18 @@
 use alkahest_renderer::{ecs::tags::NodeFilter, renderer::RendererSettings};
-use directories::ProjectDirs;
 use egui::ahash::HashSet;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
-use crate::{updater::UpdateChannel, util::RwLock};
+use crate::{paths, updater::UpdateChannel, util::RwLock};
 
 lazy_static! {
     pub static ref CONFIGURATION: RwLock<Config> = RwLock::new(Config::default());
-    pub static ref APP_DIRS: ProjectDirs = {
-        let pd = ProjectDirs::from("net", "cohaereo", "Alkahest")
-            .expect("Failed to get application directories");
-        std::fs::create_dir_all(pd.config_dir()).expect("Failed to create config directory");
-        std::fs::create_dir_all(pd.config_local_dir())
-            .expect("Failed to create local config directory");
-
-        pd
-    };
 }
 
 pub fn persist() {
     if let Err(e) = std::fs::write(
-        APP_DIRS.config_dir().join("config.yml"),
+        paths::config_dir().join("config.yml"),
         serde_yaml::to_string(&*CONFIGURATION.read()).expect("Fatal: failed to write config"),
     ) {
         error!("Failed to write config: {e}");
@@ -32,7 +22,7 @@ pub fn persist() {
 }
 
 pub fn load() {
-    if let Ok(c) = std::fs::read_to_string(APP_DIRS.config_dir().join("config.yml")) {
+    if let Ok(c) = std::fs::read_to_string(paths::config_dir().join("config.yml")) {
         match serde_yaml::from_str(&c) {
             Ok(config) => {
                 with_mut(|c| *c = config);

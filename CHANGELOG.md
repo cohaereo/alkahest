@@ -57,6 +57,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Content confidentiality dialog on first startup
 - Log unimplemented TFX bytecode ops in the TFX debugger
 - Added breakpad integration for crash reporting
+- Creating a `portable.txt` file in the same directory as the executable will make Alkahest use that directory for its configuration and temporary files
 
 ### Changed
 

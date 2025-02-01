@@ -31,6 +31,7 @@ mod resources {
     pub use alkahest_renderer::resources::*;
 }
 mod discord;
+mod paths;
 mod updater;
 mod util;
 
