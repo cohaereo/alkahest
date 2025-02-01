@@ -88,6 +88,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Fixed a stack overflow in debug mode by moving global scopes/pipelines to the heap
 - When a texture handle is explicitly set to `none`, Alkahest will now properly unset the texture instead of binding the fallback texture
 - Bake rustc version as a constant instead of checking it at runtime
+- Fixed solid geometry not rendering in simpler maps (Shard, Sunken, etc.)
 
 ## 0.5.0 - 2024-07-24
 

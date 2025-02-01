@@ -14,6 +14,7 @@ use crate::{
         visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
+    gpu::DepthMode,
     gpu_event, gpu_profile_event,
     renderer::Renderer,
     util::{black_magic::EntityRefDarkMagic, Hocus},
@@ -25,9 +26,7 @@ impl Renderer {
             return;
         }
 
-        self.gpu
-            .use_flipped_depth_comparison
-            .store(true, Ordering::Relaxed);
+        self.gpu.set_depth_mode(DepthMode::Flipped);
 
         gpu_profile_event!(self.gpu, "update_shadow_maps");
         self.gpu
@@ -80,9 +79,7 @@ impl Renderer {
             self.run_renderstage_systems(scene, TfxRenderStage::ShadowGenerate);
         }
 
-        self.gpu
-            .use_flipped_depth_comparison
-            .store(false, Ordering::Relaxed);
+        self.gpu.set_depth_mode(DepthMode::Normal);
     }
 }
 

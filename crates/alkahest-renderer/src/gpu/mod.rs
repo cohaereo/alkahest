@@ -73,7 +73,7 @@ pub struct GpuContext {
     current_depth_bias: AtomicUsize,
     current_input_topology: AtomicI32,
     current_depth_state: AtomicUsize,
-    pub use_flipped_depth_comparison: AtomicBool,
+    use_flipped_depth_comparison: AtomicBool,
 
     pub current_states: AtomicCell<StateSelection>,
 
@@ -373,6 +373,14 @@ impl GpuContext {
         }
     }
 
+    pub fn set_depth_mode(&self, mode: DepthMode) {
+        let flipped = mode == DepthMode::Flipped;
+        self.use_flipped_depth_comparison
+            .store(flipped, Ordering::Relaxed);
+        // cohae: Since the depth/stencil state only checks the index and not whether we changed the flipped state, we need to flush the depth state manually
+        self.flush_states();
+    }
+
     pub fn present(&self, vsync: bool) {
         if let Some(swap_chain) = &self.swap_chain {
             unsafe {
@@ -559,3 +567,10 @@ impl GpuContext {
 
 unsafe impl Send for GpuContext {}
 unsafe impl Sync for GpuContext {}
+
+#[derive(PartialEq)]
+pub enum DepthMode {
+    Normal,
+    /// Used for rendering shadowmaps
+    Flipped,
+}
