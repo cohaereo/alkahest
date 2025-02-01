@@ -5,9 +5,11 @@ use std::{
     backtrace::{Backtrace, BacktraceStatus},
     io::Write,
     panic::PanicInfo,
+    path::PathBuf,
     sync::{Arc, OnceLock},
 };
 
+use breakpad_handler::BreakpadHandler;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
@@ -15,6 +17,7 @@ lazy_static! {
     static ref PANIC_FILE: Arc<Mutex<Option<fs_err::File>>> = Arc::new(Mutex::new(None));
     static ref PANIC_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
     static ref PANIC_HEADER: OnceLock<String> = OnceLock::new();
+    static ref BREAKPAD_HANDLER: OnceLock<BreakpadHandler> = OnceLock::new();
 }
 
 pub fn install_hook(header: Option<String>) {
@@ -65,6 +68,34 @@ pub fn install_hook(header: Option<String>) {
     if let Some(header) = header {
         PANIC_HEADER.set(header).expect("Panic header already set");
     }
+
+    if let Err(e) = std::fs::create_dir("crashes") {
+        eprintln!("Failed to create crash dump directory: {e}");
+    }
+    // TODO(cohae): Prevent handler from triggering twice/on panic
+    // TODO(cohae): Auto-clean old crash dumps
+    let breakpad = BreakpadHandler::attach(
+        "crashes",
+        breakpad_handler::InstallOptions::BothHandlers,
+        Box::new(|path: PathBuf| {
+            eprintln!("Crash dump written to: {}", path.display());
+            if let Err(e) = native_dialog::MessageDialog::new()
+                .set_type(native_dialog::MessageType::Error)
+                .set_title("Alkahest crashed!")
+                .set_text(&format!(
+                    "Alkahest encountered an unrecoverable error and must close.\n\nA crash dump \
+                     has been written to:\n{}\nPlease report this issue to the developers.",
+                    path.display()
+                ))
+                .show_alert()
+            {
+                eprintln!("Failed to show error dialog: {e}")
+            }
+        }),
+    )
+    .expect("Failed to install breakpad handler");
+
+    BREAKPAD_HANDLER.set(breakpad).ok();
 }
 
 fn write_panic_to_file(info: &PanicInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
