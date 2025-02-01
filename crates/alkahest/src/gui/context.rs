@@ -59,7 +59,7 @@ impl GuiContext {
             egui.clone(),
             egui::ViewportId::default(),
             window,
-            Some(window.scale_factor() as f32),
+            None,
             Some(8192),
         );
 
