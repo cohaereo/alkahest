@@ -23,8 +23,8 @@ binrw = "0.13.3"
 bitflags = { version = "2.5.0", features = ["serde"] }
 bytemuck = "1.7.0"
 crossbeam = "0.8.4"
-destiny-pkg = "0.11"
-tiger-parse = { version = "0.1.12", git = "https://github.com/v4nguard/tiger-parse", features = [
+destiny-pkg = "0.14"
+tiger-parse = { version = "0.1.15", git = "https://github.com/v4nguard/tiger-parse", features = [
     "check_types",
     "check_types_strict",
     "destiny_pkg",
@@ -37,7 +37,7 @@ egui = { version = "0.28.1", features = ["persistence"] }
 egui_extras = "0.28.1"
 
 field_access = "0.1.6"
-glam = { version = "0.28", features = ["bytemuck", "mint", "fast-math"] }
+glam = { version = "0.29", features = ["bytemuck", "mint", "fast-math"] }
 itertools = "0.13.0"
 lazy_static = "1.4.0"
 num = "0.4.1"

@@ -17,7 +17,8 @@ pub fn load_pkg_entities(
     scene: &mut Scene,
 ) -> anyhow::Result<()> {
     let entity_hashes = package_manager()
-        .package_entry_index
+        .lookup
+        .tag32_entries_by_pkg
         .iter()
         .filter(|(i, _e)| package_manager().package_paths[*i].name.contains(pkg_name))
         .flat_map(|(pkg_id, entries)| {

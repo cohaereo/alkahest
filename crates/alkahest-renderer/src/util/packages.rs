@@ -19,7 +19,8 @@ impl TagHashExt for TagHash {
 
     fn is_valid_pkg(&self) -> bool {
         package_manager()
-            .package_entry_index
+            .lookup
+            .tag32_entries_by_pkg
             .contains_key(&self.pkg_id())
     }
 }

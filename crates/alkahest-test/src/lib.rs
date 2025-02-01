@@ -54,7 +54,7 @@ fn initialize_package_manager(/* args: &TestArgs*/) -> anyhow::Result<()> {
         );
     }
 
-    let pm = PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape).unwrap();
+    let pm = PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape, None).unwrap();
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 

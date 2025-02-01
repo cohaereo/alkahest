@@ -67,6 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Improved Route UI. Can now use translation gizmo for small adjustments
 - Enabled fast math for `glam`
 - Various atmosphere-related improvements
+- Updated `destiny-pkg` to 0.14, drastically improving startup time
 
 ### Fixed
 

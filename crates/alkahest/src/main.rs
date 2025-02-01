@@ -206,8 +206,9 @@ fn initialize_package_manager(
         );
     }
 
-    let pm = info_span!("Initializing package manager")
-        .in_scope(|| PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape).unwrap());
+    let pm = info_span!("Initializing package manager").in_scope(|| {
+        PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape, None).unwrap()
+    });
 
     config::with_mut(|c| c.packages_directory = Some(pm.package_dir.to_string_lossy().to_string()));
     config::persist();

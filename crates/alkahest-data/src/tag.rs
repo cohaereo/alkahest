@@ -78,7 +78,11 @@ impl WideHash {
                     None
                 }
             }
-            WideHash::Hash64(v) => package_manager().hash64_table.get(&v.0).map(|v| v.hash32),
+            WideHash::Hash64(v) => package_manager()
+                .lookup
+                .tag64_entries
+                .get(&v.0)
+                .map(|v| v.hash32),
         }
     }
 
