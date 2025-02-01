@@ -71,7 +71,7 @@ macro_rules! tfx_global_scopes {
     ($($name:ident),*) => {
         pub struct GlobalScopes {
             $(
-                pub $name: TfxScope,
+                pub $name: Box<TfxScope>,
             )*
         }
 
@@ -82,13 +82,13 @@ macro_rules! tfx_global_scopes {
 
                 Self {
                     $(
-                        $name: TfxScope::load(
+                        $name: Box::new(TfxScope::load(
                             package_manager()
                                 .read_tag_struct(scopes[stringify!($name)])
                                 .unwrap_or_else(|_| panic!("Failed to read scope {}", stringify!($name))),
                             gctx.clone(),
                         )
-                        .expect("Failed to load scope"),
+                        .expect("Failed to load scope")),
                     )*
                 }
             }

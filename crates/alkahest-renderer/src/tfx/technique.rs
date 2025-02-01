@@ -14,6 +14,7 @@ use windows::Win32::Graphics::Direct3D11::{
     ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,
 };
 
+use super::{bytecode::opcodes::TfxBytecodeOp, channels::ChannelType};
 use crate::{
     ecs::channels::ObjectChannels,
     gpu::{buffer::ConstantBufferCached, texture::Texture, GpuContext},
@@ -23,22 +24,20 @@ use crate::{
     util::d3d::D3dResource,
 };
 
-use super::{bytecode::opcodes::TfxBytecodeOp, channels::ChannelType};
-
 pub struct Technique {
     pub tech: STechnique,
     pub hash: TagHash,
 
-    pub stage_vertex: Option<TechniqueStage>,
-    // pub stage_hull: Option<TechniqueStage>,
-    // pub stage_domain: Option<TechniqueStage>,
-    pub stage_geometry: Option<TechniqueStage>,
-    pub stage_pixel: Option<TechniqueStage>,
-    pub stage_compute: Option<TechniqueStage>,
+    pub stage_vertex: Option<Box<TechniqueStage>>,
+    // pub stage_hull: Option<Box<TechniqueStage>>,
+    // pub stage_domain: Option<Box<TechniqueStage>>,
+    pub stage_geometry: Option<Box<TechniqueStage>>,
+    pub stage_pixel: Option<Box<TechniqueStage>>,
+    pub stage_compute: Option<Box<TechniqueStage>>,
 }
 
 impl Technique {
-    pub fn all_stages(&self) -> [(&STechniqueShader, Option<&TechniqueStage>); 4] {
+    pub fn all_stages(&self) -> [(&STechniqueShader, Option<&Box<TechniqueStage>>); 4] {
         [
             (&self.tech.shader_pixel, self.stage_pixel.as_ref()),
             (&self.tech.shader_geometry, self.stage_geometry.as_ref()),
@@ -47,7 +46,7 @@ impl Technique {
         ]
     }
 
-    pub fn all_stages_mut(&mut self) -> [(&STechniqueShader, Option<&mut TechniqueStage>); 4] {
+    pub fn all_stages_mut(&mut self) -> [(&STechniqueShader, Option<&mut Box<TechniqueStage>>); 4] {
         [
             (&self.tech.shader_pixel, self.stage_pixel.as_mut()),
             (&self.tech.shader_geometry, self.stage_geometry.as_mut()),

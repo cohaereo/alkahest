@@ -54,7 +54,7 @@ fn load_technique_stage(
     shader: &STechniqueShader,
     technique_hash: TagHash,
     stage: TfxShaderStage,
-) -> anyhow::Result<Option<TechniqueStage>> {
+) -> anyhow::Result<Option<Box<TechniqueStage>>> {
     if shader.shader.is_none() {
         return Ok(None);
     }
@@ -98,7 +98,7 @@ fn load_technique_stage(
         }
     };
 
-    let mut stage = TechniqueStage {
+    let mut stage = Box::new(TechniqueStage {
         stage,
         shader: shader.clone(),
 
@@ -115,7 +115,7 @@ fn load_technique_stage(
 
         cbuffer,
         bytecode,
-    };
+    });
 
     for sampler in shader.constants.samplers.iter() {
         stage

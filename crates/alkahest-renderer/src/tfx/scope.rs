@@ -25,10 +25,10 @@ use crate::{
 pub struct TfxScope {
     scope: SScope,
 
-    pub stage_pixel: Option<TfxScopeStage>,
-    pub stage_vertex: Option<TfxScopeStage>,
-    pub stage_geometry: Option<TfxScopeStage>,
-    pub stage_compute: Option<TfxScopeStage>,
+    pub stage_pixel: Option<Box<TfxScopeStage>>,
+    pub stage_vertex: Option<Box<TfxScopeStage>>,
+    pub stage_geometry: Option<Box<TfxScopeStage>>,
+    pub stage_compute: Option<Box<TfxScopeStage>>,
 }
 
 impl TfxScope {
@@ -111,7 +111,7 @@ impl TfxScopeStage {
         stage: SScopeStage,
         shader_stage: TfxShaderStage,
         gctx: SharedGpuContext,
-    ) -> anyhow::Result<Option<TfxScopeStage>> {
+    ) -> anyhow::Result<Option<Box<TfxScopeStage>>> {
         let cbuffer = if stage.constants.constant_buffer.is_some() {
             let buffer_header_ref = package_manager()
                 .get_entry(stage.constants.constant_buffer)
@@ -153,13 +153,13 @@ impl TfxScopeStage {
             samplers.push(crate::loaders::technique::load_sampler(&gctx, sampler.hash32()).ok());
         }
 
-        Ok(Some(TfxScopeStage {
+        Ok(Some(Box::new(TfxScopeStage {
             stage,
             shader_stage,
             samplers,
             cbuffer,
             bytecode,
-        }))
+        })))
     }
 
     pub fn bind(&self, renderer: &Renderer) -> anyhow::Result<()> {
