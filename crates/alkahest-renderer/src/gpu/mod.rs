@@ -507,6 +507,25 @@ impl GpuContext {
                 .store(topology as i32, Ordering::Relaxed);
         }
     }
+
+    pub fn bind_srv(
+        &self,
+        view: Option<ID3D11ShaderResourceView>,
+        slot: u32,
+        stage: TfxShaderStage,
+    ) {
+        let ctx = self.lock_context();
+        unsafe {
+            match stage {
+                TfxShaderStage::Vertex => ctx.VSSetShaderResources(slot, Some(&[view])),
+                TfxShaderStage::Hull => ctx.HSSetShaderResources(slot, Some(&[view])),
+                TfxShaderStage::Domain => ctx.DSSetShaderResources(slot, Some(&[view])),
+                TfxShaderStage::Geometry => ctx.GSSetShaderResources(slot, Some(&[view])),
+                TfxShaderStage::Pixel => ctx.PSSetShaderResources(slot, Some(&[view])),
+                TfxShaderStage::Compute => ctx.CSSetShaderResources(slot, Some(&[view])),
+            }
+        }
+    }
 }
 
 impl GpuContext {

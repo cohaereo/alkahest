@@ -484,29 +484,7 @@ impl Texture {
     }
 
     pub fn bind(&self, gctx: &GpuContext, slot: u32, stage: TfxShaderStage) {
-        let ctx = gctx.lock_context();
-        unsafe {
-            match stage {
-                TfxShaderStage::Vertex => {
-                    ctx.VSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
-                }
-                TfxShaderStage::Hull => {
-                    ctx.HSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
-                }
-                TfxShaderStage::Domain => {
-                    ctx.DSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
-                }
-                TfxShaderStage::Geometry => {
-                    ctx.GSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
-                }
-                TfxShaderStage::Pixel => {
-                    ctx.PSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
-                }
-                TfxShaderStage::Compute => {
-                    ctx.CSSetShaderResources(slot, Some(&[Some(self.view.clone())]))
-                }
-            }
-        }
+        gctx.bind_srv(Some(self.view.clone()), slot, stage);
     }
 }
 

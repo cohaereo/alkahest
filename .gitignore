@@ -13,3 +13,5 @@ keys.txt
 /pipelines
 /bytecode-stuff
 /crashes
+/misc
+/.cargo

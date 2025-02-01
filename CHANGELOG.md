@@ -86,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - The GUI manager no longer sets the scale factor twice, making scaling more consistent
 - Fixed some concurrency-related crashes in the renderer by adding a reentrant lock to the immediate context
 - Fixed a stack overflow in debug mode by moving global scopes/pipelines to the heap
+- When a texture handle is explicitly set to `none`, Alkahest will now properly unset the texture instead of binding the fallback texture
 
 ## 0.5.0 - 2024-07-24
 

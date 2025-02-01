@@ -235,6 +235,8 @@ impl TechniqueStage {
         for (slot, tex) in &self.textures {
             if let Some(tex) = renderer.data.lock().asset_manager.textures.get_shared(tex) {
                 tex.bind(&renderer.gpu, *slot, self.stage);
+            } else if tex.is_none() {
+                renderer.gpu.bind_srv(None, *slot, self.stage);
             } else {
                 renderer
                     .gpu
