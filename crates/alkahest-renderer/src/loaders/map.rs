@@ -55,6 +55,7 @@ use crate::{
     },
     renderer::{Renderer, RendererShared},
     util::{
+        black_magic::EntityRefDarkMagic,
         scene::{EntityWorldMutExt, SceneExt},
         text::StringExt,
     },
@@ -411,8 +412,11 @@ pub async fn load_map(
     // Vertex AO: refresh terrain constants
     if let Some(map_ao) = scene.get_resource::<MapStaticAO>() {
         for e in to_update {
-            let patches = scene.entity(e).get::<TerrainPatches>().unwrap();
-            patches.update_constants(map_ao);
+            let patches = scene.entity(e);
+            patches
+                .get_mut::<TerrainPatches>()
+                .unwrap()
+                .update_constants(&renderer.gpu, map_ao);
         }
     }
 

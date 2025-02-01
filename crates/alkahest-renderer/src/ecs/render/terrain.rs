@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{
     geometry::EPrimitiveType,
     map::STerrain,
@@ -16,7 +18,7 @@ use crate::{
         visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
-    gpu::{buffer::ConstantBuffer, texture::Texture},
+    gpu::{buffer::ConstantBuffer, texture::Texture, GpuContext},
     gpu_event,
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
@@ -117,7 +119,7 @@ impl TerrainPatches {
         })
     }
 
-    pub fn update_constants(&self, map_ao: &MapStaticAO) {
+    pub fn update_constants(&mut self, gpu: &Arc<GpuContext>, map_ao: &MapStaticAO) {
         for (i, group) in self.terrain.mesh_groups.iter().enumerate() {
             let offset = Vec4::new(
                 self.terrain.unk30.x,
@@ -141,7 +143,9 @@ impl TerrainPatches {
                 ..Default::default()
             };
 
-            self.group_cbuffers[i].write(&scope_terrain).ok();
+            if let Ok(cb) = ConstantBuffer::create(gpu.clone(), Some(&scope_terrain)) {
+                self.group_cbuffers[i] = cb;
+            }
         }
     }
 
