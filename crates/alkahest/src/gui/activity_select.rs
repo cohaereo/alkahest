@@ -146,10 +146,13 @@ impl ActivityBrowser {
         }
 
         let mut maps: Vec<_> = maps.into_iter().collect();
-        maps.sort_by(|a, b| a.0.cmp(&b.0));
+        maps.sort_by_key(|(name, _)| name.clone());
 
         let mut activity_buckets: Vec<_> = activity_buckets.into_iter().collect();
-        activity_buckets.sort_by(|a, b| a.0.cmp(&b.0));
+        activity_buckets.sort_by_key(|(name, _)| {
+            let name_trimmed = name.trim_start_matches("The ");
+            name_trimmed.to_owned()
+        });
 
         Self {
             // destinations,

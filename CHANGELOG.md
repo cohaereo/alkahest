@@ -69,6 +69,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Enabled fast math for `glam`
 - Various atmosphere-related improvements
 - Updated `destiny-pkg` to 0.14, drastically improving startup time
+- Leading articles are now ignored when sorting destinations
 
 ### Fixed
 
