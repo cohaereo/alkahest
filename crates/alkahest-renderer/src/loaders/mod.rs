@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use crossbeam::channel::{Receiver, Sender};
 use destiny_pkg::TagHash;
 use rustc_hash::FxHashSet;
 use strum::AsRefStr;
 
 use crate::{
-    gpu::{texture::Texture, SharedGpuContext},
+    gpu::{texture::Texture, GpuContext},
     handle::{AssetId, AssetIdValue, AssetRegistry, Handle, RawHandle},
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     tfx::technique::Technique,
@@ -18,7 +20,7 @@ pub mod texture;
 pub mod vertex_buffer;
 
 pub struct AssetManager {
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
     disabled: bool,
 
     pub textures: AssetRegistry<Texture>,
@@ -35,7 +37,7 @@ pub struct AssetManager {
 }
 
 impl AssetManager {
-    pub fn new(gctx: SharedGpuContext) -> Self {
+    pub fn new(gctx: Arc<GpuContext>) -> Self {
         let (request_tx, request_rx) = crossbeam::channel::unbounded();
         let (asset_tx, asset_rx) = crossbeam::channel::unbounded();
 
@@ -55,7 +57,7 @@ impl AssetManager {
         }
     }
 
-    pub fn new_disabled(gctx: SharedGpuContext) -> Self {
+    pub fn new_disabled(gctx: Arc<GpuContext>) -> Self {
         let (request_tx, _request_rx) = crossbeam::channel::unbounded();
         let (_asset_tx, asset_rx) = crossbeam::channel::unbounded();
 
@@ -313,7 +315,7 @@ impl LoadRequest {
 }
 
 fn load_worker_thread(
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
     rx_request: Receiver<LoadRequest>,
     tx: Sender<LoadedAsset>,
 ) -> anyhow::Result<()> {
@@ -388,7 +390,7 @@ fn load_worker_thread(
 }
 
 pub fn spawn_load_workers(
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
     num_workers: usize,
     rx_request: Receiver<LoadRequest>,
     tx: Sender<LoadedAsset>,

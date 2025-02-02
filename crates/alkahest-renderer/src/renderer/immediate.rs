@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, sync::Arc};
 
 use alkahest_data::{geometry::EPrimitiveType, occlusion::Aabb, tfx::TfxShaderStage};
 use genmesh::{
@@ -9,7 +9,7 @@ use glam::{Mat4, Vec3, Vec4};
 use parking_lot::Mutex;
 
 use crate::{
-    gpu::{buffer::ConstantBuffer, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, GpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::shader::ShaderProgram,
@@ -47,7 +47,7 @@ pub struct ImmediateLabel {
 }
 
 pub struct ImmediateRenderer {
-    gpu: SharedGpuContext,
+    gpu: Arc<GpuContext>,
 
     vb_cube: VertexBuffer,
     ib_cube: IndexBuffer,
@@ -66,7 +66,7 @@ pub struct ImmediateRenderer {
 }
 
 impl ImmediateRenderer {
-    pub fn new(gpu: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn new(gpu: Arc<GpuContext>) -> anyhow::Result<Self> {
         let mesh_sphere = genmesh::generators::SphereUv::new(32, 32);
         let vertices: Vec<[f32; 4]> = mesh_sphere
             .shared_vertex_iter()

@@ -47,7 +47,7 @@ use crate::{
         visibility::{calculate_view_visibility_system, ViewVisibility, VisibilityHelper},
         Scene,
     },
-    gpu::SharedGpuContext,
+    gpu::GpuContext,
     gpu_event, gpu_profile_event,
     handle::Handle,
     loaders::AssetManager,
@@ -87,7 +87,7 @@ impl Deref for RendererShared {
 }
 
 pub struct Renderer {
-    pub gpu: SharedGpuContext,
+    pub gpu: Arc<GpuContext>,
 
     pub render_globals: RenderGlobals,
     pub data: Mutex<RendererData>,
@@ -119,7 +119,7 @@ pub struct RendererData {
 
 impl Renderer {
     pub fn create(
-        gpu: SharedGpuContext,
+        gpu: Arc<GpuContext>,
         window_size: (u32, u32),
         disable_asset_loading: bool,
     ) -> anyhow::Result<RendererShared> {
@@ -336,14 +336,16 @@ impl Renderer {
 
         let vp = view.viewport();
         unsafe {
-            self.gpu.lock_context().RSSetViewports(Some(&[D3D11_VIEWPORT {
-                TopLeftX: vp.origin.x as f32,
-                TopLeftY: vp.origin.y as f32,
-                Width: vp.size.x as f32,
-                Height: vp.size.y as f32,
-                MinDepth: 0.0,
-                MaxDepth: 1.0,
-            }]));
+            self.gpu
+                .lock_context()
+                .RSSetViewports(Some(&[D3D11_VIEWPORT {
+                    TopLeftX: vp.origin.x as f32,
+                    TopLeftY: vp.origin.y as f32,
+                    Width: vp.size.x as f32,
+                    Height: vp.size.y as f32,
+                    MinDepth: 0.0,
+                    MaxDepth: 1.0,
+                }]));
         }
     }
 

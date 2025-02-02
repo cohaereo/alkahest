@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{buffers::IndexBufferHeader, dxgi::DxgiFormat};
 use alkahest_pm::package_manager;
 use anyhow::Context;
@@ -11,10 +13,7 @@ use windows::Win32::Graphics::{
     Dxgi::Common::DXGI_FORMAT,
 };
 
-use crate::{
-    gpu::{GpuContext, SharedGpuContext},
-    util::d3d::D3dResource,
-};
+use crate::{gpu::GpuContext, util::d3d::D3dResource};
 
 pub struct IndexBuffer {
     pub buffer: ID3D11Buffer,
@@ -61,7 +60,7 @@ impl IndexBuffer {
 }
 
 pub(crate) fn load_index_buffer(
-    gctx: &SharedGpuContext,
+    gctx: &Arc<GpuContext>,
     hash: TagHash,
 ) -> anyhow::Result<IndexBuffer> {
     let entry = package_manager()

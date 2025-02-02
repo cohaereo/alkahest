@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{mem::size_of, sync::Arc};
 
 use alkahest_data::dxgi::DxgiFormat;
 use anyhow::Context;
@@ -10,7 +10,7 @@ use windows::Win32::Graphics::{
     Dxgi::Common::*,
 };
 
-use crate::{camera::Camera, gpu::SharedGpuContext, gpu_event, util::d3d::D3dResource};
+use crate::{camera::Camera, gpu::GpuContext, gpu_event, util::d3d::D3dResource};
 
 pub struct GBuffer {
     pub rt0: RenderTarget,
@@ -57,7 +57,7 @@ impl PingPong {
 }
 
 impl GBuffer {
-    pub fn create(mut size: (u32, u32), gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn create(mut size: (u32, u32), gctx: Arc<GpuContext>) -> anyhow::Result<Self> {
         if size.0 == 0 || size.1 == 0 {
             size = (1, 1);
         }
@@ -279,14 +279,14 @@ pub struct RenderTarget {
     pub format: DxgiFormat,
     pub name: String,
 
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
 }
 
 impl RenderTarget {
     pub fn create(
         size: (u32, u32),
         format: DxgiFormat,
-        gctx: SharedGpuContext,
+        gctx: Arc<GpuContext>,
         name: &str,
     ) -> anyhow::Result<Self> {
         let size = if size.0 == 0 || size.1 == 0 {
@@ -432,14 +432,14 @@ pub struct CpuStagingBuffer {
     pub texture: ID3D11Texture2D,
     pub format: DxgiFormat,
     pub name: String,
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
 }
 
 impl CpuStagingBuffer {
     pub fn create(
         size: (u32, u32),
         format: DxgiFormat,
-        gctx: SharedGpuContext,
+        gctx: Arc<GpuContext>,
         name: &str,
     ) -> anyhow::Result<Self> {
         unsafe {
@@ -515,12 +515,12 @@ pub struct DepthState {
 
     pub texture_copy: ID3D11Texture2D,
     pub texture_copy_view: ID3D11ShaderResourceView,
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
     name: String,
 }
 
 impl DepthState {
-    pub fn create(gctx: SharedGpuContext, size: (u32, u32), name: &str) -> anyhow::Result<Self> {
+    pub fn create(gctx: Arc<GpuContext>, size: (u32, u32), name: &str) -> anyhow::Result<Self> {
         let size = if size.0 == 0 || size.1 == 0 {
             warn!("Zero size depth state requested, using 1x1");
             (4, 4)

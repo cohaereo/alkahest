@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use anyhow::Context;
 use bevy_ecs::{
@@ -16,7 +18,7 @@ use crate::{
         transform::Transform,
         visibility::{ViewVisibility, VisibilityHelper},
     },
-    gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, GpuContext},
     gpu_event, include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::{shader::ShaderProgram, RendererShared},
@@ -42,7 +44,7 @@ pub struct HavokShapeRenderer {
 }
 
 impl HavokShapeRenderer {
-    pub fn new(gpu: SharedGpuContext, shape: &shape_collection::Shape) -> anyhow::Result<Self> {
+    pub fn new(gpu: Arc<GpuContext>, shape: &shape_collection::Shape) -> anyhow::Result<Self> {
         let (vertices, indices) = calculate_mesh_normals_flat(&shape.vertices, &shape.indices);
         let indices_outline = remove_diagonals_linegulate(&vertices, &indices);
 

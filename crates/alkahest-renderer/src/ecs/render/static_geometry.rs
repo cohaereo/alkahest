@@ -26,7 +26,7 @@ use crate::{
         visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
-    gpu::{buffer::ConstantBuffer, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, GpuContext},
     gpu_event,
     handle::Handle,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, AssetManager},
@@ -290,13 +290,13 @@ pub struct StaticModelSingle {
 }
 
 impl StaticModelSingle {
-    pub fn new(gctx: SharedGpuContext, model: StaticModel) -> anyhow::Result<Self> {
+    pub fn new(gctx: Arc<GpuContext>, model: StaticModel) -> anyhow::Result<Self> {
         let cbuffer = ConstantBuffer::create_array_init(gctx, &[0u8; 32 + 64])?;
         Ok(Self { model, cbuffer })
     }
 
     pub fn load(
-        gctx: SharedGpuContext,
+        gctx: Arc<GpuContext>,
         am: &mut AssetManager,
         tag: TagHash,
     ) -> anyhow::Result<Self> {

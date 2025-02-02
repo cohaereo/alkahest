@@ -43,10 +43,10 @@ pub fn config_dir() -> std::path::PathBuf {
     }
 }
 
-pub fn local_config_dir() -> std::path::PathBuf {
-    if *IS_PORTABLE {
-        PORTABLE_DIR.join("local")
-    } else {
-        APP_DIRS.config_local_dir().to_owned()
-    }
-}
+// pub fn local_config_dir() -> std::path::PathBuf {
+//     if *IS_PORTABLE {
+//         PORTABLE_DIR.join("local")
+//     } else {
+//         APP_DIRS.config_local_dir().to_owned()
+//     }
+// }

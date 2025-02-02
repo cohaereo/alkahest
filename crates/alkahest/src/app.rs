@@ -10,7 +10,7 @@ use alkahest_renderer::{
         tags::{NodeFilter, NodeFilterSet},
         Scene,
     },
-    gpu::{texture::LOW_RES, GpuContext},
+    gpu::{adapter::GpuAdapter, texture::LOW_RES, GpuContext},
     gpu_event, gpu_profile_event,
     input::InputState,
     renderer::{Renderer, RendererShared},
@@ -81,7 +81,7 @@ impl AlkahestApp {
         args: ApplicationArgs,
     ) -> Self {
         iron::set_policy(iron::Policy::Disabled);
-        alkahest_renderer::gpu::DESKTOP_DISPLAY_MODE
+        alkahest_renderer::gpu::adapter::DESKTOP_DISPLAY_MODE
             .store(iron::get_content_policy(), Ordering::SeqCst);
 
         let window = winit::window::WindowBuilder::new()
@@ -114,7 +114,8 @@ impl AlkahestApp {
 
         puffin::set_scopes_on(cfg!(feature = "profiler"));
 
-        let gctx = Arc::new(GpuContext::create(&window).unwrap());
+        let adapter = GpuAdapter::create(&window).expect("Failed to create GpuAdapter");
+        let gctx = GpuContext::create(&adapter).expect("Failed to create GpuContext");
         let gui = GuiContext::create(&window, gctx.clone());
         let mut resources = AppResources::default();
         resources.insert(GuiViewManager::with_default_views());

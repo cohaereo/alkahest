@@ -1,6 +1,9 @@
 use std::{
     mem::size_of,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use alkahest_data::{
@@ -19,7 +22,7 @@ use windows::Win32::{
 
 use crate::{
     ecs::{render::draw_entity, Scene},
-    gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext},
     gpu_event, include_dxbc,
     renderer::{
         gbuffer::{CpuStagingBuffer, DepthState, RenderTarget},
@@ -135,7 +138,7 @@ pub struct Pickbuffer {
 }
 
 impl Pickbuffer {
-    pub fn new(gctx: SharedGpuContext, window_size: (u32, u32)) -> anyhow::Result<Self> {
+    pub fn new(gctx: Arc<GpuContext>, window_size: (u32, u32)) -> anyhow::Result<Self> {
         let outline_vs = gctx
             .device
             .load_vertex_shader(include_dxbc!(vs "gui/outline.hlsl"))?;

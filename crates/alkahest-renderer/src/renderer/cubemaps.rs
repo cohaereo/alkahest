@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
@@ -8,7 +10,7 @@ use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader
 
 use crate::{
     ecs::{map::CubemapVolume, transform::Transform, Scene},
-    gpu::{buffer::ConstantBuffer, util::DxDeviceExt, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, util::DxDeviceExt, GpuContext},
     include_dxbc,
     loaders::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     renderer::Renderer,
@@ -55,7 +57,7 @@ pub struct CubemapRenderer {
 }
 
 impl CubemapRenderer {
-    pub fn new(gpu: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn new(gpu: Arc<GpuContext>) -> anyhow::Result<Self> {
         let shader_vs = gpu
             .device
             .load_vertex_shader(include_dxbc!(vs "cubemap.hlsl"))

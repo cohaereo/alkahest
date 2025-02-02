@@ -1,6 +1,6 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
-use alkahest_renderer::gpu::GpuContext;
+use alkahest_renderer::gpu::{adapter::GpuAdapter, GpuContext};
 use game_detector::InstalledGame;
 use windows::Win32::{
     Foundation::{DXGI_STATUS_OCCLUDED, S_OK},
@@ -32,7 +32,8 @@ pub fn select_game_installation(
         .with_window_icon(Some(icon.clone()))
         .build(event_loop)?;
 
-    let dcs = Arc::new(GpuContext::create(&window)?);
+    let adapter = GpuAdapter::create(&window)?;
+    let dcs = GpuContext::create(&adapter)?;
     let mut gui = GuiContext::create(&window, dcs.clone());
 
     let mut present_parameters = 0;

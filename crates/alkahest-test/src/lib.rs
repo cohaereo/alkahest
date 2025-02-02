@@ -8,7 +8,7 @@ use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 use alkahest_pm::PACKAGE_MANAGER;
 use alkahest_renderer::{
-    gpu::GpuContext,
+    gpu::{adapter::GpuAdapter, GpuContext},
     renderer::{Renderer, RendererShared},
 };
 use anyhow::Context;
@@ -88,8 +88,9 @@ impl TestHarness {
 
         initialize_package_manager(/*&TestArgs::parse()*/)
             .expect("Failed to initialize package manager");
-        let gpu =
-            Arc::new(GpuContext::create_headless().expect("Failed to create headless GPU context"));
+
+        let adapter = GpuAdapter::create_headless().expect("Failed to create headless adapter");
+        let gpu = GpuContext::create(&adapter).expect("Failed to create headless GPU context");
         let renderer =
             Renderer::create(gpu, (4, 4), true).expect("Failed to create headless renderer");
 

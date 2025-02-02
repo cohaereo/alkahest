@@ -10,7 +10,7 @@ use alkahest_data::tfx::TfxShaderStage;
 use anyhow::Context;
 use windows::Win32::Graphics::Direct3D11::*;
 
-use crate::gpu::{GpuContext, SharedGpuContext};
+use crate::gpu::GpuContext;
 
 #[derive(Clone)]
 pub struct ConstantBuffer<T: Sized> {
@@ -72,7 +72,7 @@ impl<T> ConstantBuffer<T> {
         })
     }
 
-    pub fn create_array_init(gctx: SharedGpuContext, initial_data: &[T]) -> anyhow::Result<Self> {
+    pub fn create_array_init(gctx: Arc<GpuContext>, initial_data: &[T]) -> anyhow::Result<Self> {
         let mut buffer = None;
         unsafe {
             gctx.device.CreateBuffer(

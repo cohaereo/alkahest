@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{
     dxgi::DxgiFormat, geometry::EPrimitiveType, technique::StateSelection, tfx::TfxShaderStage,
 };
@@ -5,7 +7,7 @@ use glam::{FloatExt, Mat4, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::{ID3D11PixelShader, ID3D11VertexShader};
 
 use crate::{
-    gpu::{buffer::ConstantBufferCached, texture::Texture, util::DxDeviceExt, SharedGpuContext},
+    gpu::{buffer::ConstantBufferCached, texture::Texture, util::DxDeviceExt, GpuContext},
     include_dxbc,
     renderer::Renderer,
 };
@@ -20,7 +22,7 @@ pub struct SsaoRenderer {
 }
 
 impl SsaoRenderer {
-    pub fn new(gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn new(gctx: Arc<GpuContext>) -> anyhow::Result<Self> {
         let mut noise = vec![];
         let mut rng = fastrand::Rng::with_seed(0xcb65a5a72901bc71);
         for _ in 0..16 {

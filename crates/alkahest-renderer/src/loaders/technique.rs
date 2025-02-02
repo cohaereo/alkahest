@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{
     technique::{STechnique, STechniqueShader},
     tfx::TfxShaderStage,
@@ -9,14 +11,14 @@ use tiger_parse::PackageManagerExt;
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{
-    gpu::{buffer::ConstantBufferCached, GpuContext, SharedGpuContext},
+    gpu::{buffer::ConstantBufferCached, GpuContext},
     tfx::{
         bytecode::{interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp},
         technique::{ShaderModule, Technique, TechniqueStage},
     },
 };
 
-pub fn load_technique(gctx: SharedGpuContext, hash: TagHash) -> anyhow::Result<Technique> {
+pub fn load_technique(gctx: Arc<GpuContext>, hash: TagHash) -> anyhow::Result<Technique> {
     let stech: STechnique = package_manager().read_tag_struct(hash)?;
 
     Ok(Technique {
@@ -50,7 +52,7 @@ pub fn load_technique(gctx: SharedGpuContext, hash: TagHash) -> anyhow::Result<T
 }
 
 fn load_technique_stage(
-    gctx: SharedGpuContext,
+    gctx: Arc<GpuContext>,
     shader: &STechniqueShader,
     technique_hash: TagHash,
     stage: TfxShaderStage,

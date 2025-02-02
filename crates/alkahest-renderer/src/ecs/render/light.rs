@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{
     geometry::EPrimitiveType,
     map::{SLight, SShadowingLight},
@@ -29,7 +31,7 @@ use crate::{
         visibility::{ViewVisibility, VisibilityHelper},
         Scene,
     },
-    gpu::{GpuContext, SharedGpuContext},
+    gpu::GpuContext,
     gpu_event,
     handle::Handle,
     icons::{ICON_LIGHTBULB_FLUORESCENT_TUBE, ICON_LIGHTBULB_ON, ICON_SPOTLIGHT_BEAM},
@@ -66,7 +68,7 @@ pub struct LightRenderer {
 }
 
 impl LightRenderer {
-    pub fn new_empty(gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn new_empty(gctx: Arc<GpuContext>) -> anyhow::Result<Self> {
         let mesh = genmesh::generators::Cube::new();
         let vertices: Vec<[f32; 3]> = mesh
             .shared_vertex_iter()
@@ -166,7 +168,7 @@ impl LightRenderer {
     }
 
     pub fn load(
-        gctx: SharedGpuContext,
+        gctx: Arc<GpuContext>,
         asset_manager: &mut AssetManager,
         light: &SLight,
         debug_label: String,
@@ -185,7 +187,7 @@ impl LightRenderer {
     }
 
     pub fn load_shadowing(
-        gctx: SharedGpuContext,
+        gctx: Arc<GpuContext>,
         asset_manager: &mut AssetManager,
         light: &SShadowingLight,
         debug_label: String,
@@ -243,10 +245,11 @@ impl LightRenderer {
                 return;
             }
 
-            renderer
-                .gpu
-                .lock_context()
-                .IASetIndexBuffer(Some(&self.ib_cube), DXGI_FORMAT_R16_UINT, 0);
+            renderer.gpu.lock_context().IASetIndexBuffer(
+                Some(&self.ib_cube),
+                DXGI_FORMAT_R16_UINT,
+                0,
+            );
 
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
 

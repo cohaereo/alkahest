@@ -2,7 +2,7 @@
 //     fn size(&self) -> usize;
 // }
 
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
 use alkahest_data::{
     render_globals::{SScope, SScopeStage},
@@ -13,7 +13,7 @@ use glam::{Mat4, Vec2, Vec3, Vec4};
 use windows::Win32::Graphics::Direct3D11::ID3D11SamplerState;
 
 use crate::{
-    gpu::{buffer::ConstantBufferCached, SharedGpuContext},
+    gpu::{buffer::ConstantBufferCached, GpuContext},
     renderer::Renderer,
     tfx::{
         bytecode::{interpreter::TfxBytecodeInterpreter, opcodes::TfxBytecodeOp},
@@ -32,7 +32,7 @@ pub struct TfxScope {
 }
 
 impl TfxScope {
-    pub fn load(scope: SScope, gctx: SharedGpuContext) -> anyhow::Result<TfxScope> {
+    pub fn load(scope: SScope, gctx: Arc<GpuContext>) -> anyhow::Result<TfxScope> {
         let sscope = scope.clone();
         let stage_vertex = if sscope.stage_vertex.constants.constant_buffer_slot != -1 {
             TfxScopeStage::load(sscope.stage_vertex, TfxShaderStage::Vertex, gctx.clone())?
@@ -110,7 +110,7 @@ impl TfxScopeStage {
     pub fn load(
         stage: SScopeStage,
         shader_stage: TfxShaderStage,
-        gctx: SharedGpuContext,
+        gctx: Arc<GpuContext>,
     ) -> anyhow::Result<Option<Box<TfxScopeStage>>> {
         let cbuffer = if stage.constants.constant_buffer.is_some() {
             let buffer_header_ref = package_manager()

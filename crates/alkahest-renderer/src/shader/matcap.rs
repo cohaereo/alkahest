@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::{geometry::EPrimitiveType, tfx::TfxShaderStage};
 use glam::Mat4;
 use windows::Win32::Graphics::Direct3D11::{
@@ -6,7 +8,7 @@ use windows::Win32::Graphics::Direct3D11::{
 };
 
 use crate::{
-    gpu::{buffer::ConstantBuffer, texture::Texture, util::DxDeviceExt, SharedGpuContext},
+    gpu::{buffer::ConstantBuffer, texture::Texture, util::DxDeviceExt, GpuContext},
     include_dxbc,
     renderer::Renderer,
     util::image::Png,
@@ -24,7 +26,7 @@ pub struct MatcapRenderer {
 }
 
 impl MatcapRenderer {
-    pub fn new(gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn new(gctx: Arc<GpuContext>) -> anyhow::Result<Self> {
         let cam_cb = ConstantBuffer::create(gctx.clone(), None)?;
 
         let shader_vs = gctx
@@ -94,8 +96,14 @@ impl MatcapRenderer {
             renderer.gpu.lock_context().RSSetState(None);
             renderer.gpu.set_input_topology(EPrimitiveType::Triangles);
             renderer.gpu.lock_context().OMSetDepthStencilState(None, 0);
-            renderer.gpu.lock_context().VSSetShader(&self.shader_vs, None);
-            renderer.gpu.lock_context().PSSetShader(&self.shader_ps, None);
+            renderer
+                .gpu
+                .lock_context()
+                .VSSetShader(&self.shader_vs, None);
+            renderer
+                .gpu
+                .lock_context()
+                .PSSetShader(&self.shader_ps, None);
 
             renderer.gpu.lock_context().Draw(3, 0);
         }

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::render_globals::{SRenderGlobals, SUnk808066ae, SUnk808067a8, SUnk8080822d};
 use alkahest_pm::package_manager;
 use anyhow::Context;
@@ -6,7 +8,7 @@ use rustc_hash::FxHashMap;
 use tiger_parse::PackageManagerExt;
 
 use crate::{
-    gpu::{texture::Texture, GpuContext, SharedGpuContext},
+    gpu::{texture::Texture, GpuContext},
     loaders::technique::load_technique,
     renderer::RenderDebugView,
     tfx::{scope::TfxScope, technique::Technique},
@@ -23,7 +25,7 @@ pub struct RenderGlobals {
 }
 
 impl RenderGlobals {
-    pub fn load(gctx: SharedGpuContext) -> anyhow::Result<Self> {
+    pub fn load(gctx: Arc<GpuContext>) -> anyhow::Result<Self> {
         let data: SRenderGlobals = package_manager().read_named_tag_struct("render_globals")?;
         let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
 
@@ -77,7 +79,7 @@ macro_rules! tfx_global_scopes {
 
 
         impl GlobalScopes {
-            pub fn load(gctx: SharedGpuContext, globals: &SUnk808067a8) -> Self {
+            pub fn load(gctx: Arc<GpuContext>, globals: &SUnk808067a8) -> Self {
                 let scopes: FxHashMap<String, TagHash> = globals.scopes.iter().map(|p| (p.name.to_string(), p.scope)).collect();
 
                 Self {
@@ -121,7 +123,7 @@ macro_rules! tfx_global_pipelines {
 
 
         impl GlobalPipelines {
-            pub fn load(gctx: SharedGpuContext, globals: &SUnk808067a8) -> Self {
+            pub fn load(gctx: Arc<GpuContext>, globals: &SUnk808067a8) -> Self {
                 let techniques: FxHashMap<String, TagHash> = globals.unk20.iter().map(|p| (p.name.to_string(), p.technique)).collect();
 
                 Self {
