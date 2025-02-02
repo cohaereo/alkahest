@@ -161,7 +161,7 @@ impl Camera {
         {
             self.tween = None;
         }
-        self.speed_mul = (self.speed_mul + scroll * 0.05).clamp(0.0, 25.0);
+        self.speed_mul = (self.speed_mul + scroll * 0.05).clamp(0.05, 25.0);
         self.controller.update_mouse(delta, scroll);
         self.update_matrices();
     }

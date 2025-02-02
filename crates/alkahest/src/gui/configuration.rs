@@ -64,7 +64,7 @@ impl GuiView for RenderSettingsPanel {
 
             ui.horizontal(|ui| {
                 egui::DragValue::new(&mut camera.speed_mul)
-                    .range(0f32..=25.0)
+                    .range(0.05f32..=25.0)
                     .speed(0.05)
                     .ui(ui);
                 ui.label("Speed");
