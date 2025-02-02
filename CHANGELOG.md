@@ -70,6 +70,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Various atmosphere-related improvements
 - Updated `destiny-pkg` to 0.14, drastically improving startup time
 - Leading articles are now ignored when sorting destinations
+- Camera speed multiplier will no longer be able to reach 0
+- Config file is now automatically saved every 5 minutes
 
 ### Fixed
 

@@ -10,11 +10,15 @@ lazy_static! {
     pub static ref CONFIGURATION: RwLock<Config> = RwLock::new(Config::default());
 }
 
-pub fn persist() {
-    if let Err(e) = std::fs::write(
+pub fn try_persist() -> anyhow::Result<()> {
+    Ok(std::fs::write(
         paths::config_dir().join("config.yml"),
-        serde_yaml::to_string(&*CONFIGURATION.read()).expect("Fatal: failed to write config"),
-    ) {
+        serde_yaml::to_string(&*CONFIGURATION.read())?,
+    )?)
+}
+
+pub fn persist() {
+    if let Err(e) = try_persist() {
         error!("Failed to write config: {e}");
     } else {
         info!("Config written successfully!");

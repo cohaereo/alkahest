@@ -68,9 +68,13 @@ pub struct AlkahestApp {
 
     update_channel_gui: ChannelSelector,
     updater_gui: Option<UpdateDownload>,
+
+    next_config_save: std::time::Instant,
 }
 
 impl AlkahestApp {
+    const CONFIG_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
+
     pub fn new(
         event_loop: EventLoop<()>,
         icon: &winit::window::Icon,
@@ -200,6 +204,7 @@ impl AlkahestApp {
             scratch_map: new_scene(),
             update_channel_gui,
             updater_gui,
+            next_config_save: std::time::Instant::now() + Self::CONFIG_SAVE_INTERVAL,
         }
     }
 
@@ -216,6 +221,7 @@ impl AlkahestApp {
             update_channel_gui,
             updater_gui,
             gilrs,
+            next_config_save,
             ..
         } = self;
 
@@ -291,6 +297,12 @@ impl AlkahestApp {
                         });
                     }
                     WindowEvent::RedrawRequested => {
+                        if *next_config_save < std::time::Instant::now() {
+                            config::try_persist().ok();
+                            *next_config_save =
+                                std::time::Instant::now() + Self::CONFIG_SAVE_INTERVAL;
+                        }
+
                         resources.get_mut::<SelectedEntity>().changed_this_frame = false;
                         renderer.data.lock().asset_manager.poll();
 
