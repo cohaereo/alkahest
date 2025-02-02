@@ -12,6 +12,7 @@ binrw.workspace = true
 bitflags.workspace = true
 destiny-pkg.workspace = true
 glam.workspace = true
+lazy_static.workspace = true
 tiger-parse.workspace = true
 rustc-hash.workspace = true
 rayon.workspace = true

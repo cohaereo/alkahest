@@ -187,6 +187,7 @@ dependencies = [
  "bitflags 2.6.0",
  "destiny-pkg",
  "glam 0.29.2",
+ "lazy_static",
  "rayon",
  "rustc-hash 2.0.0",
  "tiger-parse",
