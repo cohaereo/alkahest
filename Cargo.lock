@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "alkahest-data",
  "alkahest-panic-handler",
@@ -178,7 +178,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest-data"
-version = "0.1.0"
+version = "0.5.1"
 dependencies = [
  "alkahest-pm",
  "anyhow",
@@ -195,7 +195,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest-panic-handler"
-version = "0.1.0"
+version = "0.5.1"
 dependencies = [
  "breakpad-handler",
  "color-eyre",
@@ -208,7 +208,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest-pm"
-version = "0.1.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "destiny-pkg",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "alkahest-renderer"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "alkahest-data",
  "alkahest-pm",

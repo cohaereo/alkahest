@@ -30,6 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Unreleased / Rolling Release
 
+## 0.5.1 - 2025-02-02
+
 ### ✨ Highlights
 
 - FXAA pipeline support
