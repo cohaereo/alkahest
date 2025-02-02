@@ -86,7 +86,7 @@ impl AlkahestApp {
 
         let window = winit::window::WindowBuilder::new()
             .with_title("Alkahest")
-            .with_min_inner_size(PhysicalSize::new(640, 360))
+            .with_min_inner_size(PhysicalSize::new(1280, 720))
             .with_inner_size(config::with(|c| {
                 PhysicalSize::new(c.window.width, c.window.height)
             }))
@@ -103,6 +103,14 @@ impl AlkahestApp {
             .build(&event_loop)
             .unwrap();
         let window = Arc::new(window);
+
+        // Make sure the window size in the config is not below the minimum size
+        config::with_mut(|c| {
+            let corrected_size = window.inner_size();
+            c.window.width = corrected_size.width;
+            c.window.height = corrected_size.height;
+        });
+        config::try_persist().ok();
 
         puffin::set_scopes_on(cfg!(feature = "profiler"));
 
@@ -274,27 +282,31 @@ impl AlkahestApp {
                         }
                     }
                     WindowEvent::Resized(new_dims) => {
-                        if let Some(swap_chain) = gctx.swap_chain.as_ref() {
-                            let _ = gui.renderer.as_mut().map(|renderer| {
-                                let _ = renderer
-                                    .resize_buffers(swap_chain, || {
-                                        gctx.resize_swapchain(new_dims.width, new_dims.height);
-                                        HRESULT(0)
-                                    })
-                                    .unwrap();
+                        let minimized = window.is_minimized().unwrap_or(false);
+                        if !minimized && new_dims.width > 0 && new_dims.height > 0 {
+                            if let Some(swap_chain) = gctx.swap_chain.as_ref() {
+                                let _ = gui.renderer.as_mut().map(|renderer| {
+                                    let _ = renderer
+                                        .resize_buffers(swap_chain, || {
+                                            gctx.resize_swapchain(new_dims.width, new_dims.height);
+                                            HRESULT(0)
+                                        })
+                                        .unwrap();
+                                });
+                            }
+
+                            renderer.resize_buffers(new_dims.width, new_dims.height);
+
+                            resources.get_mut::<Camera>().set_viewport(Viewport {
+                                size: glam::UVec2::new(new_dims.width, new_dims.height),
+                                origin: glam::UVec2::ZERO,
+                            });
+
+                            config::with_mut(|c| {
+                                (c.window.width, c.window.height) =
+                                    (new_dims.width, new_dims.height)
                             });
                         }
-
-                        renderer.resize_buffers(new_dims.width, new_dims.height);
-
-                        resources.get_mut::<Camera>().set_viewport(Viewport {
-                            size: glam::UVec2::new(new_dims.width, new_dims.height),
-                            origin: glam::UVec2::ZERO,
-                        });
-
-                        config::with_mut(|c| {
-                            (c.window.width, c.window.height) = (new_dims.width, new_dims.height)
-                        });
                     }
                     WindowEvent::RedrawRequested => {
                         if *next_config_save < std::time::Instant::now() {

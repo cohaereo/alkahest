@@ -92,6 +92,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - When a texture handle is explicitly set to `none`, Alkahest will now properly unset the texture instead of binding the fallback texture
 - Bake rustc version as a constant instead of checking it at runtime
 - Fixed solid geometry not rendering in simpler maps (Shard, Sunken, etc.)
+- Fixed invalid window sizes being handled (eg. win32 resizes the window to 0x0 when minimizing it)
 
 ## 0.5.0 - 2024-07-24
 
