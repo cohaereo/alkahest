@@ -15,10 +15,10 @@ use crate::{
 // TODO(cohae): Implement shallow reading in tiger-parse itself
 pub struct SBubbleParentShallow {
     pub file_size: u64,
-    // 808091e0
-    pub child_map: TagHash,
-    pub unkc: u32,
 
+    // 808091e0
+    pub child_map: WideHash, // widehash as of 8.2.0
+    // pub unkc: u32, // Removed in 8.2.0 (padding)
     pub unk10: u64,
     pub map_name: ResourceHash,
 }
@@ -27,10 +27,10 @@ pub struct SBubbleParentShallow {
 #[tiger_tag(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
-    pub child_map: TagHash,
-    // pub child_map: Tag<SBubbleDefinition>,
-    pub unkc: u32,
 
+    // 808091e0
+    pub child_map: WideHash, // widehash as of 8.2.0
+    // pub unkc: u32, // Removed in 8.2.0 (padding)
     pub unk10: u64,
     pub map_name: ResourceHash,
 

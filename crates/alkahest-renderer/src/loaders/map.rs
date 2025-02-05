@@ -75,7 +75,7 @@ pub async fn load_map(
     let mut scene = Scene::new_with_info(activity_hash, map_hash);
     let bubble_definition = if bubble_parent.child_map.is_some() {
         package_manager()
-            .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map)
+            .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map.hash32())
             .context("Failed to read bubble definition")?
     } else {
         warn!("Map {map_hash} is missing a bubble definition!");
