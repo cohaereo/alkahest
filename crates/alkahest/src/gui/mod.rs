@@ -23,7 +23,6 @@ mod load_indicator;
 mod menu;
 mod node_gizmos;
 mod outliner;
-mod profiler;
 pub(crate) mod updater;
 mod util;
 

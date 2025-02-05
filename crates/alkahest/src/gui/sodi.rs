@@ -76,7 +76,7 @@ impl GuiView for Sodi {
         ))
         .rect_filled(
             egui::Rect::EVERYTHING,
-            Rounding::default(),
+            CornerRadius::default(),
             Color32::from_black_alpha(elapsed.remap_clamped(0.25, 1.0, 0.0, 196.0) as u8),
         );
 

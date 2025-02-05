@@ -54,7 +54,7 @@ impl BigButton {
             let expansion = Vec2::splat(visuals.expansion);
             (
                 expansion,
-                visuals.rounding,
+                visuals.corner_radius,
                 visuals.weak_bg_fill,
                 visuals.bg_stroke,
             )
@@ -65,6 +65,7 @@ impl BigButton {
             frame_rounding,
             frame_fill,
             frame_stroke,
+            egui::StrokeKind::Middle,
         );
 
         let icon_rect = Rect::from_min_size(ui_rect.min, Vec2::splat(72.0));

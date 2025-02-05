@@ -13,9 +13,8 @@ use alkahest_renderer::{
     resources::AppResources,
     ColorExt,
 };
-
 use bevy_ecs::entity::Entity;
-use egui::{Color32, Context, Pos2, Rect, Sense, Ui, UiStackInfo};
+use egui::{Color32, Context, Pos2, Rect, Sense, Ui};
 use glam::{Vec2, Vec3};
 use winit::window::Window;
 
@@ -41,11 +40,10 @@ impl GuiView for NodeGizmoOverlay {
 
         let panel_ui = Ui::new(
             ctx.clone(),
-            egui::LayerId::background(),
             "node_nametags".into(),
-            ctx.available_rect(),
-            ctx.screen_rect(),
-            UiStackInfo::default(),
+            egui::UiBuilder::new()
+                .layer_id(egui::LayerId::background())
+                .max_rect(ctx.available_rect()),
         );
 
         let mut selected_entity = resources.get_mut::<SelectedEntity>();
@@ -243,12 +241,13 @@ impl GuiView for NodeGizmoOverlay {
                         if selected_entity.selected() == Some(*e) {
                             painter.rect(
                                 debug_string_rect.expand(8.0),
-                                egui::Rounding::same(4.0),
+                                egui::CornerRadius::same(4),
                                 Color32::TRANSPARENT,
                                 egui::Stroke::new(
                                     3.0,
                                     Color32::from_rgba_unmultiplied(255, 150, 50, 255),
                                 ),
+                                egui::StrokeKind::Middle,
                             );
                         }
 
@@ -265,13 +264,14 @@ impl GuiView for NodeGizmoOverlay {
                         let white_bg = background_color.r() == 255;
                         painter.rect(
                             debug_string_rect.expand(4.0),
-                            egui::Rounding::ZERO,
+                            egui::CornerRadius::ZERO,
                             if white_bg {
                                 Color32::from_white_alpha(128)
                             } else {
                                 Color32::from_black_alpha(96)
                             },
                             egui::Stroke::default(),
+                            egui::StrokeKind::Middle,
                         );
                         // }
 
@@ -311,9 +311,10 @@ impl GuiView for NodeGizmoOverlay {
                                 screen_point.to_array().into(),
                                 [11.0, 11.0].into(),
                             ),
-                            egui::Rounding::ZERO,
+                            egui::CornerRadius::ZERO,
                             Color32::from_black_alpha(152),
                             egui::Stroke::default(),
+                            egui::StrokeKind::Middle,
                         );
 
                         if let Some(origin) = node.origin {
@@ -343,7 +344,7 @@ impl GuiView for NodeGizmoOverlay {
 
                     painter.rect(
                         top_rect.expand(8.0),
-                        egui::Rounding::same(4.0),
+                        egui::CornerRadius::same(4),
                         Color32::TRANSPARENT,
                         egui::Stroke::new(
                             3.0,
@@ -354,6 +355,7 @@ impl GuiView for NodeGizmoOverlay {
                                 if is_hovered { 150 } else { 255 },
                             ),
                         ),
+                        egui::StrokeKind::Middle,
                     );
                 }
             }

@@ -72,14 +72,6 @@ impl GuiView for MenuBar {
                     windows.tfx_extern_editor ^= ui
                         .selectable_label(windows.tfx_extern_editor, "TFX Extern Editor")
                         .clicked();
-
-                    if cfg!(feature = "profiler") {
-                        windows.cpu_profiler ^= ui
-                            .selectable_label(windows.cpu_profiler, "Profiler")
-                            .clicked();
-                    } else {
-                        windows.cpu_profiler = false;
-                    }
                 });
 
                 ui.menu_button("Help", |ui| {
@@ -102,11 +94,7 @@ impl MenuBar {
             .open(&mut self.changelog_open)
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    CommonMarkViewer::new("changelog_md").show(
-                        ui,
-                        &mut self.markdown_cache,
-                        CHANGELOG_MD,
-                    );
+                    CommonMarkViewer::new().show(ui, &mut self.markdown_cache, CHANGELOG_MD);
                 })
             });
     }
@@ -114,7 +102,7 @@ impl MenuBar {
         egui::Window::new("About")
             .open(&mut self.about_open)
             .show(ctx, |ui| {
-                egui::Frame::none()
+                egui::Frame::new()
                     .inner_margin(Vec2::splat(16.0))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {

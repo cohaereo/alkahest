@@ -205,7 +205,7 @@ impl StaticModel {
                 continue;
             }
 
-            profiling::scope!("StaticModel::draw::group", format!("group_{}", i));
+            profiling::scope!("StaticModel::draw::group", &format!("group_{}", i));
             let part = &self.model.opaque_meshes.parts[group.part_index as usize];
             if !part.lod_category.is_highest_detail() {
                 continue;

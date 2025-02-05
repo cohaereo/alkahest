@@ -25,12 +25,14 @@ pub fn select_game_installation(
     event_loop: &mut EventLoop<()>,
     icon: &winit::window::Icon,
 ) -> anyhow::Result<String> {
-    let window = winit::window::WindowBuilder::new()
-        .with_title("Alkahest")
-        .with_inner_size(PhysicalSize::new(320, 320))
-        .with_min_inner_size(PhysicalSize::new(320, 480))
-        .with_window_icon(Some(icon.clone()))
-        .build(event_loop)?;
+    #[allow(deprecated)]
+    let window = event_loop.create_window(
+        winit::window::WindowAttributes::new()
+            .with_title("Alkahest")
+            .with_inner_size(PhysicalSize::new(320, 320))
+            .with_min_inner_size(PhysicalSize::new(320, 480))
+            .with_window_icon(Some(icon.clone())),
+    )?;
 
     let adapter = GpuAdapter::create(&window)?;
     let dcs = GpuContext::create(&adapter)?;
@@ -41,7 +43,7 @@ pub fn select_game_installation(
 
     let mut installations = find_all_installations();
 
-    #[allow(clippy::single_match)]
+    #[allow(clippy::single_match, deprecated)]
     event_loop.run_on_demand(|event, window_target| match &event {
         Event::WindowEvent { event, .. } => {
             let _ = gui.handle_event(&window, event);

@@ -6,7 +6,7 @@ use alkahest_renderer::{
     resources::AppResources,
 };
 use egui::{
-    epaint::Vertex, Context, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Rounding, Ui,
+    epaint::Vertex, Context, CornerRadius, LayerId, Mesh, PointerButton, Pos2, Rgba, RichText, Ui,
     UiStackInfo,
 };
 use glam::{DQuat, DVec3};
@@ -35,40 +35,41 @@ impl GuiView for GizmoSelector {
     ) -> Option<ViewAction> {
         let mut ui = Ui::new(
             ctx.clone(),
-            LayerId::background(),
             "gizmo_selector_overlay".into(),
-            ctx.available_rect().shrink(16.0),
-            ctx.screen_rect(),
-            UiStackInfo::default(),
+            egui::UiBuilder::new()
+                .layer_id(LayerId::background())
+                .max_rect(ctx.available_rect().shrink(16.0))
+                .ui_stack_info(UiStackInfo::default()),
+            // ctx.screen_rect(),
         );
 
         ui.horizontal(|ui| {
             let mut gizmo_mode = resources.get_mut::<SelectionGizmoMode>();
-            let rounding_l = Rounding {
-                ne: 0.0,
-                se: 0.0,
-                nw: 4.0,
-                sw: 4.0,
+            let rounding_l = CornerRadius {
+                ne: 0,
+                se: 0,
+                nw: 4,
+                sw: 4,
             };
-            let rounding_m = Rounding {
-                nw: 0.0,
-                sw: 0.0,
-                ne: 0.0,
-                se: 0.0,
+            let rounding_m = CornerRadius {
+                nw: 0,
+                sw: 0,
+                ne: 0,
+                se: 0,
             };
-            let rounding_r = Rounding {
-                nw: 0.0,
-                sw: 0.0,
-                ne: 4.0,
-                se: 4.0,
+            let rounding_r = CornerRadius {
+                nw: 0,
+                sw: 0,
+                ne: 4,
+                se: 4,
             };
 
             ui.style_mut().spacing.item_spacing = [0.0; 2].into();
             ui.style_mut().spacing.button_padding = [4.0, 4.0].into();
 
-            ui.style_mut().visuals.widgets.active.rounding = rounding_l;
-            ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
-            ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+            ui.style_mut().visuals.widgets.active.corner_radius = rounding_l;
+            ui.style_mut().visuals.widgets.hovered.corner_radius = rounding_l;
+            ui.style_mut().visuals.widgets.inactive.corner_radius = rounding_l;
 
             ui.selectable_value(
                 &mut *gizmo_mode,
@@ -77,9 +78,9 @@ impl GuiView for GizmoSelector {
             )
             .on_hover_text("Hotkey: 1");
 
-            ui.style_mut().visuals.widgets.active.rounding = rounding_m;
-            ui.style_mut().visuals.widgets.hovered.rounding = rounding_m;
-            ui.style_mut().visuals.widgets.inactive.rounding = rounding_m;
+            ui.style_mut().visuals.widgets.active.corner_radius = rounding_m;
+            ui.style_mut().visuals.widgets.hovered.corner_radius = rounding_m;
+            ui.style_mut().visuals.widgets.inactive.corner_radius = rounding_m;
 
             ui.selectable_value(
                 &mut *gizmo_mode,
@@ -95,9 +96,9 @@ impl GuiView for GizmoSelector {
             )
             .on_hover_text("Hotkey: 3");
 
-            ui.style_mut().visuals.widgets.active.rounding = rounding_r;
-            ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
-            ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+            ui.style_mut().visuals.widgets.active.corner_radius = rounding_r;
+            ui.style_mut().visuals.widgets.hovered.corner_radius = rounding_r;
+            ui.style_mut().visuals.widgets.inactive.corner_radius = rounding_r;
 
             ui.selectable_value(
                 &mut *gizmo_mode,
@@ -186,6 +187,7 @@ fn gizmo_interact(
             cursor_pos: (cursor_pos.x, cursor_pos.y),
             drag_started: ctx.input(|input| input.pointer.button_pressed(PointerButton::Primary)),
             dragging: ctx.input(|input| input.pointer.button_down(PointerButton::Primary)),
+            ..Default::default()
         },
         targets,
     );

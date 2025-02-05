@@ -168,10 +168,10 @@ impl DirectX11Renderer {
         swap_chain: &IDXGISwapChain,
         input: egui::RawInput,
         context: &Context,
-        paint: PaintFn,
+        mut paint: PaintFn,
     ) -> Result<egui::FullOutput, RenderError>
     where
-        PaintFn: FnOnce(&mut Self, &Context),
+        PaintFn: FnMut(&mut Self, &Context),
     {
         unsafe {
             let (dev, ctx) = &get_device_and_context(swap_chain)?;

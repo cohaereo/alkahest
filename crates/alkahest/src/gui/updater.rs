@@ -2,7 +2,7 @@ use alkahest_renderer::icons::{
     ICON_CANCEL, ICON_DOWNLOAD, ICON_LIGHTNING_BOLT, ICON_SHIELD_HALF_FULL,
 };
 use anyhow::Context;
-use egui::{Align2, Color32, Id, RichText, Rounding, Vec2};
+use egui::{Align2, Color32, CornerRadius, Id, RichText, Vec2};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use poll_promise::Promise;
 
@@ -28,7 +28,7 @@ impl ChannelSelector {
             ))
             .rect_filled(
                 egui::Rect::EVERYTHING,
-                Rounding::default(),
+                CornerRadius::default(),
                 Color32::from_black_alpha(128),
             );
 
@@ -130,7 +130,7 @@ impl UpdateDownload {
         ))
         .rect_filled(
             egui::Rect::EVERYTHING,
-            Rounding::default(),
+            CornerRadius::default(),
             Color32::from_black_alpha(128),
         );
 
@@ -155,7 +155,7 @@ impl UpdateDownload {
                                 .max_width(ui.available_width())
                                 .max_height(300.0)
                                 .show(ui, |ui| {
-                                    CommonMarkViewer::new("changelog_md").show(
+                                    CommonMarkViewer::new().show(
                                         ui,
                                         &mut self.markdown_cache,
                                         &self.version.changelog,

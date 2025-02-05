@@ -215,7 +215,10 @@ impl DynamicModel {
             self.hash.prepend_package_name()
         );
 
-        profiling::scope!("DynamicModel::draw", format!("mesh={}", self.selected_mesh));
+        profiling::scope!(
+            "DynamicModel::draw",
+            &format!("mesh={}", self.selected_mesh)
+        );
         // ensure!(self.selected_mesh < self.mesh_count(), "Invalid mesh index");
         // ensure!(
         //     self.selected_variant < self.variant_count() || self.variant_count() == 0,

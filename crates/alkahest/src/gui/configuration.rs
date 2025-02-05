@@ -5,7 +5,7 @@ use alkahest_renderer::{
     renderer::{RenderDebugView, RenderFeatureVisibility, RendererShared, ShadowQuality},
     util::text::StringExt,
 };
-use egui::{Context, RichText, Rounding, Widget};
+use egui::{Context, CornerRadius, RichText, Widget};
 use strum::IntoEnumIterator;
 use transform_gizmo_egui::{EnumSet, GizmoMode};
 use winit::window::Window;
@@ -57,7 +57,7 @@ impl GuiView for RenderSettingsPanel {
                     format!("goto {} {} {}", position.x, position.y, position.z)
                 };
 
-                ui.output_mut(|o| o.copied_text = command);
+                ui.ctx().copy_text(command);
             }
 
             ui.add_space(4.0);
@@ -256,25 +256,25 @@ fn render_feat_vis_select(ui: &mut egui::Ui, name: &str, mode: &mut RenderFeatur
     ui.horizontal(|ui| {
         ui.label(name);
 
-        let rounding_l = Rounding {
-            ne: 0.0,
-            se: 0.0,
-            nw: 2.0,
-            sw: 2.0,
+        let rounding_l = CornerRadius {
+            ne: 0,
+            se: 0,
+            nw: 2,
+            sw: 2,
         };
-        let rounding_r = Rounding {
-            nw: 0.0,
-            sw: 0.0,
-            ne: 2.0,
-            se: 2.0,
+        let rounding_r = CornerRadius {
+            nw: 0,
+            sw: 0,
+            ne: 2,
+            se: 2,
         };
 
         ui.style_mut().spacing.item_spacing = [0.0; 2].into();
         ui.style_mut().spacing.button_padding = [4.0, 0.0].into();
 
-        ui.style_mut().visuals.widgets.active.rounding = rounding_l;
-        ui.style_mut().visuals.widgets.hovered.rounding = rounding_l;
-        ui.style_mut().visuals.widgets.inactive.rounding = rounding_l;
+        ui.style_mut().visuals.widgets.active.corner_radius = rounding_l;
+        ui.style_mut().visuals.widgets.hovered.corner_radius = rounding_l;
+        ui.style_mut().visuals.widgets.inactive.corner_radius = rounding_l;
 
         if ui
             .selectable_label(
@@ -286,9 +286,9 @@ fn render_feat_vis_select(ui: &mut egui::Ui, name: &str, mode: &mut RenderFeatur
             *mode ^= RenderFeatureVisibility::VISIBLE;
         }
 
-        ui.style_mut().visuals.widgets.active.rounding = rounding_r;
-        ui.style_mut().visuals.widgets.hovered.rounding = rounding_r;
-        ui.style_mut().visuals.widgets.inactive.rounding = rounding_r;
+        ui.style_mut().visuals.widgets.active.corner_radius = rounding_r;
+        ui.style_mut().visuals.widgets.hovered.corner_radius = rounding_r;
+        ui.style_mut().visuals.widgets.inactive.corner_radius = rounding_r;
 
         ui.add_enabled_ui(mode.contains(RenderFeatureVisibility::VISIBLE), |ui| {
             if ui
@@ -308,18 +308,18 @@ fn render_feat_vis(ui: &mut egui::Ui, name: &str, visible: &mut bool) {
     ui.horizontal(|ui| {
         ui.label(name);
 
-        let rounding = Rounding {
-            nw: 2.0,
-            sw: 2.0,
-            ne: 2.0,
-            se: 2.0,
+        let rounding = CornerRadius {
+            nw: 2,
+            sw: 2,
+            ne: 2,
+            se: 2,
         };
 
         ui.style_mut().spacing.button_padding = [4.0, 0.0].into();
 
-        ui.style_mut().visuals.widgets.active.rounding = rounding;
-        ui.style_mut().visuals.widgets.hovered.rounding = rounding;
-        ui.style_mut().visuals.widgets.inactive.rounding = rounding;
+        ui.style_mut().visuals.widgets.active.corner_radius = rounding;
+        ui.style_mut().visuals.widgets.hovered.corner_radius = rounding;
+        ui.style_mut().visuals.widgets.inactive.corner_radius = rounding;
 
         if ui
             .selectable_label(*visible, ICON_EYE.to_string())

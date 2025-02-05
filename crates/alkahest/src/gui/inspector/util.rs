@@ -412,7 +412,7 @@ impl ComponentPanel for Route {
         {
             let command = self.get_command(scene, e.id());
             match command {
-                Ok(cmd) => ui.output_mut(|o| o.copied_text = cmd),
+                Ok(cmd) => ui.ctx().copy_text(cmd),
                 Err(err) => error!("Failed to export route command for {}: {err}", e.id()),
             }
         }

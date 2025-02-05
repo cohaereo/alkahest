@@ -26,7 +26,6 @@ use crate::{
         menu::MenuBar,
         node_gizmos::NodeGizmoOverlay,
         outliner::OutlinerPanel,
-        profiler::PuffinProfiler,
         tfx::{TfxErrorViewer, TfxExternEditor},
     },
     paths,
@@ -60,24 +59,29 @@ impl GuiContext {
             egui::ViewportId::default(),
             window,
             None,
+            Some(egui_winit::winit::window::Theme::Dark),
             Some(8192),
         );
 
         let mut fonts = egui::FontDefinitions::default();
         fonts.font_data.insert(
             "Inter-Medium".into(),
-            egui::FontData::from_static(include_bytes!("../../assets/fonts/Inter-Medium.ttf")),
+            Arc::new(egui::FontData::from_static(include_bytes!(
+                "../../assets/fonts/Inter-Medium.ttf"
+            ))),
         );
 
         fonts.font_data.insert(
             "materialdesignicons".into(),
-            egui::FontData::from_static(include_bytes!(
+            Arc::new(egui::FontData::from_static(include_bytes!(
                 "../../assets/fonts/materialdesignicons-webfont.ttf"
-            )),
+            ))),
         );
         fonts.font_data.insert(
             "Destiny_Keys".into(),
-            egui::FontData::from_static(include_bytes!("../../assets/fonts/Destiny_Keys.otf")),
+            Arc::new(egui::FontData::from_static(include_bytes!(
+                "../../assets/fonts/Destiny_Keys.otf"
+            ))),
         );
 
         fonts
@@ -117,9 +121,9 @@ impl GuiContext {
         self.integration.on_window_event(window, event)
     }
 
-    pub fn draw_frame<PF>(&mut self, window: &Window, paint: PF)
+    pub fn draw_frame<PF>(&mut self, window: &Window, mut paint: PF)
     where
-        PF: FnOnce(&GuiCtx<'_>, &egui::Context),
+        PF: FnMut(&GuiCtx<'_>, &egui::Context),
     {
         profiling::scope!("GuiContext::draw_frame");
         let input = self.integration.take_egui_input(window);
@@ -208,7 +212,6 @@ impl GuiViewManager {
         views.insert(BottomBar);
         views.insert(OutlinerPanel::default());
         views.insert(InspectorPanel);
-        views.insert(PuffinProfiler);
         views.insert(CrosshairOverlay);
         views.insert(ResourceLoadIndicatorOverlay);
         views.insert(GizmoSelector);
@@ -290,6 +293,7 @@ impl GuiResources {
                 magnification: egui::TextureFilter::Linear,
                 minification: egui::TextureFilter::Linear,
                 wrap_mode: egui::TextureWrapMode::ClampToEdge,
+                ..Default::default()
             },
         );
 
@@ -302,7 +306,6 @@ impl GuiResources {
 pub struct HiddenWindows {
     pub tfx_extern_editor: bool,
     pub tfx_extern_debugger: bool,
-    pub cpu_profiler: bool,
 }
 
 mod style {
@@ -311,7 +314,7 @@ mod style {
     use egui::{
         epaint::Shadow,
         style::{Interaction, Selection, Spacing, WidgetVisuals, Widgets},
-        Color32, Margin, Rounding, Stroke, Style, Vec2, Visuals,
+        Color32, CornerRadius, Margin, Stroke, Style, Vec2, Visuals,
     };
 
     pub fn style() -> Style {
@@ -330,17 +333,17 @@ mod style {
             spacing: Spacing {
                 item_spacing: Vec2 { x: 8.0, y: 3.0 },
                 window_margin: Margin {
-                    left: 6.0,
-                    right: 6.0,
-                    top: 6.0,
-                    bottom: 6.0,
+                    left: 6,
+                    right: 6,
+                    top: 6,
+                    bottom: 6,
                 },
                 button_padding: Vec2 { x: 9.0, y: 5.0 },
                 menu_margin: Margin {
-                    left: 6.0,
-                    right: 6.0,
-                    top: 6.0,
-                    bottom: 6.0,
+                    left: 6,
+                    right: 6,
+                    top: 6,
+                    bottom: 6,
                 },
                 indent: 18.0,
                 interact_size: Vec2 { x: 40.0, y: 20.0 },
@@ -376,11 +379,11 @@ mod style {
                             width: 0.20,
                             color: Color32::from_rgb(255, 255, 255),
                         },
-                        rounding: Rounding {
-                            nw: 6.0,
-                            ne: 6.0,
-                            sw: 6.0,
-                            se: 6.0,
+                        corner_radius: CornerRadius {
+                            nw: 6,
+                            ne: 6,
+                            sw: 6,
+                            se: 6,
                         },
                         fg_stroke: Stroke {
                             width: 1.5,
@@ -395,11 +398,11 @@ mod style {
                             width: 0.25,
                             color: Color32::from_rgba_premultiplied(255, 255, 255, 255),
                         },
-                        rounding: Rounding {
-                            nw: 6.0,
-                            ne: 6.0,
-                            sw: 6.0,
-                            se: 6.0,
+                        corner_radius: CornerRadius {
+                            nw: 6,
+                            ne: 6,
+                            sw: 6,
+                            se: 6,
                         },
                         fg_stroke: Stroke {
                             width: 1.5,
@@ -414,11 +417,11 @@ mod style {
                             width: 0.5,
                             color: Color32::from_rgba_premultiplied(150, 150, 150, 255),
                         },
-                        rounding: Rounding {
-                            nw: 6.0,
-                            ne: 6.0,
-                            sw: 6.0,
-                            se: 6.0,
+                        corner_radius: CornerRadius {
+                            nw: 6,
+                            ne: 6,
+                            sw: 6,
+                            se: 6,
                         },
                         fg_stroke: Stroke {
                             width: 1.5,
@@ -433,11 +436,11 @@ mod style {
                             width: 0.25,
                             color: Color32::from_rgba_premultiplied(255, 255, 255, 255),
                         },
-                        rounding: Rounding {
-                            nw: 6.0,
-                            ne: 6.0,
-                            sw: 6.0,
-                            se: 6.0,
+                        corner_radius: CornerRadius {
+                            nw: 6,
+                            ne: 6,
+                            sw: 6,
+                            se: 6,
                         },
                         fg_stroke: Stroke {
                             width: 1.5,
@@ -452,11 +455,11 @@ mod style {
                             width: 0.25,
                             color: Color32::from_rgba_premultiplied(60, 60, 60, 255),
                         },
-                        rounding: Rounding {
-                            nw: 6.0,
-                            ne: 6.0,
-                            sw: 6.0,
-                            se: 6.0,
+                        corner_radius: CornerRadius {
+                            nw: 6,
+                            ne: 6,
+                            sw: 6,
+                            se: 6,
                         },
                         fg_stroke: Stroke {
                             width: 1.5,
@@ -478,14 +481,14 @@ mod style {
                 code_bg_color: Color32::from_rgba_premultiplied(64, 64, 64, 255),
                 warn_fg_color: Color32::from_rgba_premultiplied(255, 143, 0, 255),
                 error_fg_color: Color32::from_rgba_premultiplied(255, 0, 0, 255),
-                window_rounding: Rounding {
-                    nw: 6.0,
-                    ne: 6.0,
-                    sw: 6.0,
-                    se: 6.0,
+                window_corner_radius: CornerRadius {
+                    nw: 6,
+                    ne: 6,
+                    sw: 6,
+                    se: 6,
                 },
                 window_shadow: Shadow {
-                    // extrusion: 16.0,
+                    // extrusion: 16,
                     // color: Color32::from_rgba_premultiplied(0, 0, 0, 96),
                     ..Default::default()
                 },
@@ -494,15 +497,15 @@ mod style {
                     width: 1.0,
                     color: Color32::from_rgba_premultiplied(21, 21, 21, 255),
                 },
-                menu_rounding: Rounding {
-                    nw: 6.0,
-                    ne: 6.0,
-                    sw: 6.0,
-                    se: 6.0,
+                menu_corner_radius: CornerRadius {
+                    nw: 6,
+                    ne: 6,
+                    sw: 6,
+                    se: 6,
                 },
                 panel_fill: Color32::from_rgba_premultiplied(27, 27, 27, 255),
                 popup_shadow: Shadow {
-                    // extrusion: 16.0,
+                    // extrusion: 16,
                     // color: Color32::from_rgba_premultiplied(0, 0, 0, 96),
                     ..Default::default()
                 },

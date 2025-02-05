@@ -84,24 +84,29 @@ impl AlkahestApp {
         alkahest_renderer::gpu::adapter::DESKTOP_DISPLAY_MODE
             .store(iron::get_content_policy(), Ordering::SeqCst);
 
-        let window = winit::window::WindowBuilder::new()
-            .with_title("Alkahest")
-            .with_min_inner_size(PhysicalSize::new(1280, 720))
-            .with_inner_size(config::with(|c| {
-                PhysicalSize::new(c.window.width, c.window.height)
-            }))
-            .with_position(config::with(|c| {
-                PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
-            }))
-            .with_maximized(config!().window.maximised)
-            .with_fullscreen(if config!().window.fullscreen {
-                Some(winit::window::Fullscreen::Borderless(None))
-            } else {
-                None
-            })
-            .with_window_icon(Some(icon.clone()))
-            .build(&event_loop)
-            .unwrap();
+        // TODO(cohae): The new winit API is annoying to work with for desktop apps, so we're sticking to deprecated stuff until we migrate to SDL
+        #[allow(deprecated)]
+        let window = event_loop
+            .create_window(
+                winit::window::WindowAttributes::new()
+                    .with_title("Alkahest")
+                    .with_min_inner_size(PhysicalSize::new(1280, 720))
+                    .with_inner_size(config::with(|c| {
+                        PhysicalSize::new(c.window.width, c.window.height)
+                    }))
+                    .with_position(config::with(|c| {
+                        PhysicalPosition::new(c.window.pos_x, c.window.pos_y)
+                    }))
+                    .with_maximized(config!().window.maximised)
+                    .with_fullscreen(if config!().window.fullscreen {
+                        Some(winit::window::Fullscreen::Borderless(None))
+                    } else {
+                        None
+                    })
+                    .with_window_icon(Some(icon.clone())),
+            )
+            .expect("Failed to create window");
+
         let window = Arc::new(window);
 
         // Make sure the window size in the config is not below the minimum size
@@ -236,6 +241,7 @@ impl AlkahestApp {
 
         let mut active_gamepad = None;
 
+        #[allow(deprecated)]
         event_loop.run_on_demand(move |event, target| {
             if let winit::event::Event::WindowEvent { event, .. } = event {
                 let egui_event_response = gui.handle_event(window, &event);
