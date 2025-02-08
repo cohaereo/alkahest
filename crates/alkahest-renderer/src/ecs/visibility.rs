@@ -97,12 +97,11 @@ impl VisibilityHelper for Option<&ViewVisibility> {
     }
 }
 
+#[profiling::function]
 pub fn propagate_entity_visibility_system(
     q_root: Query<(&Children, Option<&Visibility>), Without<Parent>>,
     q_visibility: Query<(Option<&Children>, Option<&Visibility>), With<Parent>>,
 ) {
-    puffin::profile_function!();
-
     for (children, vis) in q_root.iter() {
         let vis = vis.cloned().unwrap_or_default();
         for child in children.iter() {
@@ -151,11 +150,11 @@ pub struct CalculateViewVisibilityQuery {
     is_static_instance: Has<StaticInstance>,
 }
 
+#[profiling::function]
 pub fn calculate_view_visibility_system(
     In(frustum): In<Frustum>,
     mut q_visibility: Query<CalculateViewVisibilityQuery>,
 ) {
-    puffin::profile_function!();
     q_visibility.par_iter_mut().for_each(
         |CalculateViewVisibilityQueryItem {
              vis,

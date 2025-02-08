@@ -239,23 +239,6 @@ macro_rules! gpu_event {
     };
     ($gpu:expr, $name:expr, $data:expr) => {
         let __gpu_eventguard = $gpu.begin_event_span($name, $data);
-        let __puffin_eventguard = if puffin::are_scopes_on() {
-            static SCOPE_ID: std::sync::OnceLock<puffin::ScopeId> = std::sync::OnceLock::new();
-            let scope_id = SCOPE_ID.get_or_init(|| {
-                puffin::ThreadProfiler::call(|tp| {
-                    let name = $name.to_string();
-                    let id = tp.register_named_scope(
-                        name,
-                        puffin::clean_function_name(puffin::current_function_name!()),
-                        puffin::short_file_name(file!()),
-                        line!(),
-                    );
-                    id
-                })
-            });
-            Some(puffin::ProfilerScope::new(*scope_id, $data))
-        } else {
-            None
-        };
+        profiling::scope!($name, &$data);
     };
 }

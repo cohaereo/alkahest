@@ -117,7 +117,9 @@ impl AlkahestApp {
         });
         config::try_persist().ok();
 
-        puffin::set_scopes_on(cfg!(feature = "profiler"));
+        if cfg!(feature = "profiler") {
+            profiling::tracy_client::Client::start();
+        }
 
         let adapter = GpuAdapter::create(&window).expect("Failed to create GpuAdapter");
         let gctx = GpuContext::create(&adapter).expect("Failed to create GpuContext");
