@@ -34,17 +34,61 @@ pub struct SBubbleParent {
     pub unk10: u64,
     pub map_name: ResourceHash,
 
-    #[tag(offset = 0x40)]
+    #[tag(offset = 0x48)] // Pushed to 0x48 in 8.2.0
     pub unk40: Vec<SUnk808096c9>,
 }
 
 #[derive(Debug)]
 #[tiger_tag(id = 0x808096C9)]
 pub struct SUnk808096c9 {
-    pub unk0: u32,
-    pub unk4: u32,
-    pub unk8: u32,
-    pub unkc: u32, // 8080964e
+    pub tag: WideTag<SUnk808096CC>,
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0x80809A33)]
+pub struct SUnk80809A33 {
+    pub file_size: u64,
+    pub unk8: [u64; 4],
+    pub unk28: Vec<SUnk80809A39>,
+    pub unk38: Vec<i16>,
+    pub unk48: [u64; 4],
+    pub unk68: Vec<SUnk80809A37>,
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0x80809A39)]
+pub struct SUnk80809A39 {
+    pub unk0: Vec4,
+    pub unk10: u64,
+    pub unk18: u16,
+    pub unk1a: u8,
+    pub unk1b: u8,
+    pub unk1c: [u32; 7],
+    pub unk38: f32,
+    pub unk3c: f32,
+    pub unk40: f32,
+    pub unk44: u32,
+    pub unk48: [u32; 5],
+    pub unk5c: u16,
+    pub unk5e: u16,
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0x80809A37)]
+pub struct SUnk80809A37 {
+    pub unk0: [u32; 4],
+}
+
+#[derive(Debug)]
+#[tiger_tag(id = 0x808096CC)]
+pub struct SUnk808096CC {
+    pub unk0: Vec4,
+    pub unk10: Vec4,
+    pub unk20: Vec4,
+    pub unk30: Vec4,
+    pub unk40: Vec4,
+    pub unk50: Vec4,
+    pub unk60: TagHash,
 }
 
 // D2Class_01878080
