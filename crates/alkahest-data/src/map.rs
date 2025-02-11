@@ -1,3 +1,4 @@
+use assert_offset::AssertOffsets;
 use destiny_pkg::TagHash;
 use glam::{Mat4, Quat, Vec4};
 use tiger_parse::{tiger_tag, Pointer, ResourcePointer};
@@ -23,12 +24,13 @@ pub struct SBubbleParentShallow {
     pub map_name: ResourceHash,
 }
 
-#[derive(Debug)]
+#[derive(Debug, AssertOffsets)]
 #[tiger_tag(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
 
     // 808091e0
+    #[offset(0x8)]
     pub child_map: WideHash, // widehash as of 8.2.0
     // pub unkc: u32, // Removed in 8.2.0 (padding)
     pub unk10: u64,

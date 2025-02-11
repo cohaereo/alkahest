@@ -72,14 +72,24 @@ pub async fn load_map(
         .read_tag_struct::<SBubbleParent>(map_hash)
         .context("Failed to read SBubbleParent")?;
 
+    unsafe extern "C" {
+        #[allow(improper_ctypes)]
+        fn load_keys_for_namespace(bubble: *const SBubbleParent, namespace: u32);
+    }
+
+    if let Some(path) = package_manager().package_paths.get(&map_hash.pkg_id()) {
+        unsafe {
+            load_keys_for_namespace(&bubble_parent, fnv1(path.name.as_bytes()));
+        }
+    }
+
     let mut scene = Scene::new_with_info(activity_hash, map_hash);
     let bubble_definition = if bubble_parent.child_map.is_some() {
         package_manager()
             .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map.hash32())
             .context("Failed to read bubble definition")?
     } else {
-        warn!("Map {map_hash} is missing a bubble definition!");
-        return Ok(scene);
+        anyhow::bail!("Map {map_hash} is missing a bubble definition!");
     };
     // let Ok(bubble_definition) = package_manager().read_tag::<SBubbleDefinition>(bubble_parent.child_map) else {
     //     warn!("Failed to load bubble definition for map {}", map_hash);
@@ -177,15 +187,6 @@ pub async fn load_map(
                         activity.ambient_activity
                     );
                 }
-            }
-        }
-    }
-
-    let mut entity_worldid_name_map: FxHashMap<u64, String> = Default::default();
-    for (e, _, _) in &activity_entrefs {
-        for resource in &e.unk18.entity_resources {
-            if let Some(strings) = get_entity_labels(resource.entity_resource) {
-                entity_worldid_name_map.extend(strings);
             }
         }
     }
@@ -376,23 +377,6 @@ pub async fn load_map(
         }
     }
 
-    let mut new_entity_names: Vec<(Entity, String)> = vec![];
-    for (entity, mut meta) in scene
-        .query::<(Entity, &mut NodeMetadata)>()
-        .iter_mut(&mut scene)
-    {
-        if meta.world_id != u64::MAX {
-            if let Some(name) = entity_worldid_name_map.get(&meta.world_id) {
-                new_entity_names.push((entity, name.clone()));
-                meta.name = Some(name.clone());
-            }
-        }
-    }
-
-    for (entity, name) in new_entity_names {
-        scene.entity_mut(entity).insert_one(Label::from(name));
-    }
-
     let mut entity_ogtransforms: Vec<(Entity, OriginalTransform)> = vec![];
     for (entity, transform) in scene.query::<(Entity, &Transform)>().iter(&scene) {
         entity_ogtransforms.push((entity, OriginalTransform(*transform)));
@@ -409,6 +393,7 @@ pub async fn load_map(
     {
         to_update.push(entity);
     }
+
     // Vertex AO: refresh terrain constants
     if let Some(map_ao) = scene.get_resource::<MapStaticAO>() {
         for e in to_update {

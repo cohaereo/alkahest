@@ -17,6 +17,7 @@ tiger-parse.workspace = true
 rustc-hash.workspace = true
 rayon.workspace = true
 bevy_ecs = { workspace = true, optional = true }
+assert-offset = "0.1.1"
 
 [features]
 bevy = ["bevy_ecs"]
