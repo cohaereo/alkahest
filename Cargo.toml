@@ -46,7 +46,8 @@ num-derive = "0.4.0"
 num-traits = "0.2.16"
 parking_lot = "0.12.1"
 png = "0.17.13"
-profiling = { version = "1.0.15", features = ["profile-with-tracy"] }
+# profiling = { version = "1.0.15", features = ["profile-with-tracy"] }
+profiling = { version = "1.0.15", features = [] }
 raw-window-handle = "0.6.0"
 rayon = "1.7.0"
 rustc-hash = "2.0.0"

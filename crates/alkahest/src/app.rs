@@ -117,9 +117,9 @@ impl AlkahestApp {
         });
         config::try_persist().ok();
 
-        if cfg!(feature = "profiler") {
-            profiling::tracy_client::Client::start();
-        }
+        // if cfg!(feature = "profiler") {
+        //     profiling::tracy_client::Client::start();
+        // }
 
         let adapter = GpuAdapter::create(&window).expect("Failed to create GpuAdapter");
         let gctx = GpuContext::create(&adapter).expect("Failed to create GpuContext");
@@ -513,6 +513,7 @@ impl AlkahestApp {
                         gctx.present(config::with(|c| c.renderer.vsync));
 
                         window.request_redraw();
+                        #[cfg(feature = "profiler")]
                         profiling::finish_frame!();
 
                         // Slow the app to 10fps when it's window is out of focus

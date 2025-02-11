@@ -13,7 +13,6 @@ use anyhow::Context;
 use app::AlkahestApp;
 use clap::Parser;
 use destiny_pkg::{GameVersion, PackageManager, TagHash};
-use mimalloc::MiMalloc;
 use tracing::level_filters::LevelFilter;
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -35,8 +34,14 @@ mod paths;
 mod updater;
 mod util;
 
+#[cfg(not(feature = "profiler"))]
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+// #[cfg(feature = "profiler")]
+// #[global_allocator]
+// static GLOBAL: profiling::tracy_client::ProfiledAllocator<std::alloc::System> =
+//     profiling::tracy_client::ProfiledAllocator::new(std::alloc::System, 100);
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None, disable_version_flag(true))]

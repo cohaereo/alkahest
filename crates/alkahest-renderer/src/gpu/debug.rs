@@ -239,6 +239,6 @@ macro_rules! gpu_event {
     };
     ($gpu:expr, $name:expr, $data:expr) => {
         let __gpu_eventguard = $gpu.begin_event_span($name, $data);
-        profiling::scope!($name, &$data);
+        // profiling::scope!($name, &$data);
     };
 }
