@@ -343,7 +343,8 @@ pub async fn load_map(
                                 None,
                                 0,
                                 None,
-                            )?;
+                            )
+                            .ok();
                         }
                     }
                 }
