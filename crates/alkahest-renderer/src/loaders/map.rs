@@ -798,7 +798,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 ))
                 .enumerate()
                 {
-                    let shape = LightShape::from_volume_matrix(light.light_to_world);
+                    let shape = LightShape::from_volume_matrix(light.light_space_transform);
                     let transform = Transform {
                         translation: transform.translation.xyz(),
                         rotation: transform.rotation,
@@ -854,7 +854,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     renderer.settings.shadow_quality.resolution(),
                 )?;
 
-                let bb = Aabb::from_projection_matrix(light.light_to_world);
+                let bb = Aabb::from_projection_matrix(light.light_space_transform);
 
                 spawn_data_entity(
                     scene,

@@ -2,7 +2,8 @@ use std::time::Instant;
 
 use alkahest_renderer::{
     icons::{ICON_CAMERA_OFF_OUTLINE, ICON_EYE_LOCK_OUTLINE},
-    resources::AppResources, util::FloatExt,
+    resources::AppResources,
+    util::FloatExt,
 };
 use egui::*;
 use windows_registry::CURRENT_USER;
@@ -33,7 +34,7 @@ impl Sodi {
             Err(e) => {
                 error!("Failed to check SODI acceptance: {e:?}");
                 false
-            },
+            }
         }
     }
 }
@@ -99,7 +100,7 @@ impl GuiView for Sodi {
                                         .color(Color32::WHITE)
                                         .size(128.0),
                                 );
-                                
+
                                 ui.weak(format!("{ICON_CAMERA_OFF_OUTLINE} Capturing disabled"));
                             });
 

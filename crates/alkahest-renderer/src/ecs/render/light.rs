@@ -11,7 +11,7 @@ use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
     Triangulate,
 };
-use glam::{Mat4, UVec2, Vec4, Vec4Swizzles};
+use glam::{Mat4, UVec2, Vec3, Vec4, Vec4Swizzles};
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, ID3D11DepthStencilState, D3D11_BIND_INDEX_BUFFER, D3D11_BIND_VERTEX_BUFFER,
@@ -174,7 +174,7 @@ impl LightRenderer {
         debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            projection_matrix: light.light_to_world,
+            projection_matrix: light.light_space_transform,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             _technique_volumetrics: asset_manager
                 .get_or_load_technique(light.technique_volumetrics),
@@ -193,7 +193,7 @@ impl LightRenderer {
         debug_label: String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            projection_matrix: light.light_to_world,
+            projection_matrix: light.light_space_transform,
             technique_shading: asset_manager.get_or_load_technique(light.technique_shading),
             technique_shading_shadowing: Some(
                 asset_manager.get_or_load_technique(light.technique_shading_shadowing),
@@ -278,26 +278,27 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
                 return;
             };
 
-            let transform_relative = Transform {
-                translation: transform.translation - view.position.xyz(),
-                // translation: Vec3::ZERO,
-                ..*transform
-            };
+            let local_to_world_scaled = transform.local_to_world() * light.light_space_transform;
+            let view_translation_inverse_mat4 = Mat4::from_translation(-view.position.xyz());
+            let local_to_world_relative =
+                view_translation_inverse_mat4 * transform.local_to_world();
 
-            let transform_mat = transform_relative.local_to_world();
-            let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
+            let (min, max) = compute_light_bounds(light.light_space_transform);
+            let light_local_to_world =
+                compute_light_local_to_world(transform.local_to_world(), min, max);
 
-            externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: view.world_to_projective * transform_mat_scaled,
-            });
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
-                // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
-                unk80: transform_mat,
+                unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
+                unk80: local_to_world_relative,
+
                 unk100: light.unk50,
 
                 ..existing_deflight
+            });
+
+            externs.simple_geometry = Some(externs::SimpleGeometry {
+                transform: view.world_to_projective * local_to_world_scaled,
             });
         }
 
@@ -330,18 +331,20 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
                 ..*transform
             };
 
-            let transform_mat = transform_relative.local_to_world();
-            let transform_mat_scaled = transform.local_to_world() * light.light_to_world;
+            let local_to_world_scaled = transform.local_to_world() * light.light_space_transform;
+            let view_translation_inverse_mat4 = Mat4::from_translation(-view.position.xyz());
+            let local_to_world_relative =
+                view_translation_inverse_mat4 * transform.local_to_world();
 
-            externs.simple_geometry = Some(externs::SimpleGeometry {
-                transform: view.world_to_projective * transform_mat_scaled,
-            });
+            let (min, max) = compute_light_bounds(light.light_space_transform);
+            let light_local_to_world =
+                compute_light_local_to_world(transform.local_to_world(), min, max);
 
             let existing_deflight = externs.deferred_light.as_ref().cloned().unwrap_or_default();
             externs.deferred_light = Some(externs::DeferredLight {
-                // TODO(cohae): Used for transforming projective textures (see lamps in Altar of Reflection)
-                unk40: Transform::from_translation(view.position.xyz()).local_to_world(),
-                unk80: transform_mat,
+                unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
+                unk80: local_to_world_relative,
+
                 unk100: light.unk50,
                 // unk110: 1.0,
                 // unk114: 2000.0,
@@ -349,6 +352,10 @@ pub fn draw_light_system(renderer: &Renderer, scene: &mut Scene) {
                 // unk11c: 1.0,
                 // unk120: 1.0,
                 ..existing_deflight
+            });
+
+            externs.simple_geometry = Some(externs::SimpleGeometry {
+                transform: view.world_to_projective * local_to_world_scaled,
             });
 
             if let Some(shadowmap) = shadowmap {
@@ -556,4 +563,72 @@ pub fn update_shadowrenderer_system(
             shadow.stationary_needs_update = true;
         }
     }
+}
+
+fn compute_light_bounds(light_space_transform: Mat4) -> (Vec3, Vec3) {
+    let mut points = [
+        Vec3::new(-1.0, -1.0, -1.0),
+        Vec3::new(-1.0, -1.0, 1.0),
+        Vec3::new(-1.0, 1.0, -1.0),
+        Vec3::new(-1.0, 1.0, 1.0),
+        Vec3::new(1.0, -1.0, -1.0),
+        Vec3::new(1.0, -1.0, 1.0),
+        Vec3::new(1.0, 1.0, -1.0),
+        Vec3::new(1.0, 1.0, 1.0),
+    ];
+
+    for point in &mut points {
+        let p = light_space_transform.mul_vec4(point.extend(1.0));
+        let point_w_abs = (-p.wwww()).abs();
+        *point = Vec4::select(
+            point_w_abs.cmpge(Vec4::splat(0.0001)),
+            p / p.wwww(),
+            Vec4::W,
+        )
+        .truncate();
+    }
+
+    points
+        .iter()
+        .fold((Vec3::MAX, Vec3::MIN), |(min, max), &point| {
+            (min.min(point), max.max(point))
+        })
+}
+
+fn compute_light_local_to_world(node_local_to_world: Mat4, min: Vec3, max: Vec3) -> Mat4 {
+    let bounds_center = min.midpoint(max);
+    let bounds_half_extents = (max - min) / 2.0;
+
+    // First matrix operation ("mat"):
+    // Each column is computed by scaling one of node_local_to_world’s axes by the corresponding component of bounds_half_extents,
+    // except for the w-axis which is a linear combination of the x, y, and z axes plus the original w-axis.
+    let mat = Mat4 {
+        x_axis: node_local_to_world.x_axis * bounds_half_extents.x,
+        y_axis: node_local_to_world.y_axis * bounds_half_extents.y,
+        z_axis: node_local_to_world.z_axis * bounds_half_extents.z,
+        w_axis: node_local_to_world.x_axis * bounds_center.x
+            + node_local_to_world.y_axis * bounds_center.y
+            + node_local_to_world.z_axis * bounds_center.z
+            + node_local_to_world.w_axis,
+    };
+
+    // Second matrix operation ("mat_scaled"):
+    // Scale the x, y, and z axes by 2, and subtract all three from the w-axis.
+    let mat_scaled = Mat4 {
+        x_axis: mat.x_axis * 2.0,
+        y_axis: mat.y_axis * 2.0,
+        z_axis: mat.z_axis * 2.0,
+        w_axis: mat.w_axis - mat.x_axis - mat.y_axis - mat.z_axis,
+    };
+
+    // Third matrix operation (computing light_local_to_world):
+    // Rearrange the columns of mat_scaled: swap the x and z axes, leaving y and w unchanged.
+    let light_local_to_world = Mat4 {
+        x_axis: mat_scaled.z_axis,
+        y_axis: mat_scaled.y_axis,
+        z_axis: mat_scaled.x_axis,
+        w_axis: mat_scaled.w_axis,
+    };
+
+    light_local_to_world
 }
