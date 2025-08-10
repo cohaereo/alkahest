@@ -1640,14 +1640,14 @@ fn load_entity_into_scene(
         match entres.unk10.resource_type {
             0x80806d8a => {
                 let mut cur = Cursor::new(package_manager().read_tag(entres.taghash())?);
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x224))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x244))?;
                 let model_hash: TagHash = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x3c0))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x3e0))?;
                 let entity_material_map: Vec<Unk808072c5> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x400))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x420))?;
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
