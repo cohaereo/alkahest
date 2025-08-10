@@ -59,80 +59,88 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x2d_u8)] Unk2d,
     #[br(magic = 0x2e_u8)] TransformVec4,
 
+    #[br(magic = 0x34_u8)] CompareLess,
+    #[br(magic = 0x35_u8)] CompareLessEqual,
+    #[br(magic = 0x36_u8)] CompareGreater,
+    #[br(magic = 0x37_u8)] CompareGreaterEqual,
+    #[br(magic = 0x38_u8)] CompareEqual,
+    #[br(magic = 0x39_u8)] CompareNotEqual,
+    #[br(magic = 0x3a_u8)] CompareNotZeroTernary,
+
     // Constant-related
-    #[br(magic = 0x34_u8)] PushConstVec4 { constant_index: u8 },
-    #[br(magic = 0x35_u8)] LerpConstant { constant_start: u8 },
-    #[br(magic = 0x36_u8)] LerpConstantSaturated { constant_start: u8 },
-    #[br(magic = 0x37_u8)] Spline4Const { constant_start: u8 },
-    #[br(magic = 0x38_u8)] Spline8Const { constant_start: u8 },
-    #[br(magic = 0x39_u8)] Spline8ChainConst { constant_start: u8 },
-    #[br(magic = 0x3a_u8)] Gradient4Const { constant_start: u8 },
-    #[br(magic = 0x3b_u8)] Unk3b { constant_start: u8 },
+    #[br(magic = 0x3B_u8)] PushConstVec4 { constant_index: u8 },
+    #[br(magic = 0x3C_u8)] LerpConstant { constant_start: u8 },
+    #[br(magic = 0x3D_u8)] LerpConstantSaturated { constant_start: u8 },
+    #[br(magic = 0x3E_u8)] Spline4Const { constant_start: u8 },
+    #[br(magic = 0x3F_u8)] Spline8Const { constant_start: u8 },
+    #[br(magic = 0x40_u8)] Spline8ChainConst { constant_start: u8 },
+    #[br(magic = 0x41_u8)] Gradient4Const { constant_start: u8 },
+    #[br(magic = 0x42_u8)] Unk3b { constant_start: u8 },
 
     // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
     /// Offset is in single floats (4 bytes)
-    #[br(magic = 0x3c_u8)] PushExternInputFloat { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x43_u8)] PushExternInputFloat { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern vec4 to the stack
     /// Offset is in vec4s (16 bytes)
-    #[br(magic = 0x3d_u8)] PushExternInputVec4 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x44_u8)] PushExternInputVec4 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern mat4 to the stack
     /// Offset is in vec4s (16 bytes)
-    #[br(magic = 0x3e_u8)] PushExternInputMat4 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x45_u8)] PushExternInputMat4 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern texture to the stack as a u64
     /// Offset is in u64s (8 bytes)
-    #[br(magic = 0x3f_u8)] PushExternInputTextureView { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x46_u8)] PushExternInputTextureView { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern u32 to the stack as a u64
     /// Offset is in u32s (4 bytes)
-    #[br(magic = 0x40_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x47_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern UAV to the stack as a u64
     /// Offset is in u64s (8 bytes)
-    #[br(magic = 0x41_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x48_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
 
     // TODO(cohae): Loads a value from render context + 0x44a0
-    #[br(magic = 0x42_u8)] Unk42,
-    #[br(magic = 0x43_u8)] PushFromOutput { element: u8 },
-    #[br(magic = 0x44_u8)] PopOutput { element: u8 },
-    #[br(magic = 0x45_u8)] PopOutputMat4 { element: u8 },
-    #[br(magic = 0x46_u8)] PushTemp { slot: u8 },
-    #[br(magic = 0x47_u8)] PopTemp { slot: u8 },
-    #[br(magic = 0x48_u8)] SetShaderTexture {
+    #[br(magic = 0x49_u8)] Unk42,
+    #[br(magic = 0x4A_u8)] PushFromOutput { element: u8 },
+    #[br(magic = 0x4B_u8)] PopOutput { element: u8 },
+    #[br(magic = 0x4C_u8)] PopOutputMat4 { element: u8 },
+    #[br(magic = 0x4D_u8)] PushTemp { slot: u8 },
+    #[br(magic = 0x4E_u8)] PopTemp { slot: u8 },
+    #[br(magic = 0x4F_u8)] SetShaderTexture {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x49_u8)] Unk49 { unk1: u8 },
-    #[br(magic = 0x4a_u8)] SetShaderSampler {
+    #[br(magic = 0x50_u8)] Unk49 { unk1: u8 },
+    #[br(magic = 0x51_u8)] SetShaderSampler {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x4b_u8)] SetShaderUav {
+    #[br(magic = 0x52_u8)] SetShaderUav {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x4c_u8)] Unk4c { unk1: u8 },
+    #[br(magic = 0x53_u8)] Unk4c { unk1: u8 },
     /// Pushes a sampler on the stack from the technique sampler table
-    #[br(magic = 0x4d_u8)] PushSampler { index: u8 },
+    #[br(magic = 0x54_u8)] PushSampler { index: u8 },
 
-    #[br(magic = 0x4e_u8)] PushObjectChannelVector { #[br(big)] hash: u32 },
-    #[br(magic = 0x4f_u8)] PushGlobalChannelVector { unk1: u8 },
-    #[br(magic = 0x50_u8)] Unk50 { unk1: u8 },
-    #[br(magic = 0x51_u8)] Unk51,
-    #[br(magic = 0x52_u8)] PushTexDimensions { index: u8, fields: u8 },
-    #[br(magic = 0x53_u8)] PushTexTilingParams { index: u8, fields: u8 },
-    #[br(magic = 0x54_u8)] PushTexTileLayerCount { index: u8, fields: u8 },
-    #[br(magic = 0x55_u8)] Unk55,
-    #[br(magic = 0x56_u8)] Unk56,
-    #[br(magic = 0x57_u8)] Unk57,
-    #[br(magic = 0x58_u8)] Unk58,
+    #[br(magic = 0x55_u8)] PushObjectChannelVector { #[br(big)] hash: u32 },
+    #[br(magic = 0x56_u8)] PushGlobalChannelVector { unk1: u8 },
+    #[br(magic = 0x57_u8)] Unk50 { unk1: u8 },
+    #[br(magic = 0x58_u8)] Unk51,
+    #[br(magic = 0x59_u8)] PushTexDimensions { index: u8, fields: u8 },
+    #[br(magic = 0x5a_u8)] PushTexTilingParams { index: u8, fields: u8 },
+    #[br(magic = 0x5b_u8)] PushTexTileLayerCount { index: u8, fields: u8 },
+    #[br(magic = 0x5c_u8)] Unk55,
+    #[br(magic = 0x5d_u8)] Unk56,
+    #[br(magic = 0x5e_u8)] Unk57,
+    #[br(magic = 0x5f_u8)] Unk58,
 }
 
 impl TfxBytecodeOp {
@@ -196,6 +204,15 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Unk2c => "unk2c",
             TfxBytecodeOp::Unk2d => "unk2d",
             TfxBytecodeOp::TransformVec4 => "transform_vec4",
+
+            TfxBytecodeOp::CompareLess => "compare_less",
+            TfxBytecodeOp::CompareLessEqual => "compare_less_equal",
+            TfxBytecodeOp::CompareGreater => "compare_greater",
+            TfxBytecodeOp::CompareGreaterEqual => "compare_greater_equal",
+            TfxBytecodeOp::CompareEqual => "compare_equal",
+            TfxBytecodeOp::CompareNotEqual => "compare_not_equal",
+            TfxBytecodeOp::CompareNotZeroTernary => "compare_not_zero_ternary",
+
             TfxBytecodeOp::PushConstVec4 { .. } => "push_const_vec4",
             TfxBytecodeOp::LerpConstant { .. } => "lerp_constant",
             TfxBytecodeOp::LerpConstantSaturated { .. } => "lerp_constant_saturated",
