@@ -1,0 +1,11 @@
+[package]
+name = "egui-d3d11"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "1", features = ["derive"] }
+egui.workspace = true
+d3d11.workspace = true
+alkahest-render = { path = "../render" }
+thiserror = "2"

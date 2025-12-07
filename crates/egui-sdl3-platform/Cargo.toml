@@ -1,0 +1,10 @@
+[package]
+name = "egui-sdl3-platform"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+egui.workspace = true
+sdl3.workspace = true
+tracing.workspace = true

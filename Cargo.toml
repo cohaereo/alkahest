@@ -1,0 +1,108 @@
+[package]
+name = "alkahest"
+version = "0.0.0"
+edition = "2024"
+default-run = "alkahest"
+
+[[bin]]
+name = "alkahest"
+path = "src/main.rs"
+
+[workspace]
+members = [
+    "crates/data",
+    "crates/core",
+    "crates/render",
+    "crates/egui-d3d11",
+    "crates/egui-sdl3-platform",
+]
+
+[workspace.dependencies]
+anyhow = "1"
+crossbeam = "0.8"
+d3d11 = { git = "https://github.com/cohaereo/d3d11-rs.git", features = ["sdl3"] }
+egui = { version = "0.31.1", default-features = false, features = ["bytemuck"] }
+egui_dock = "0.16"
+gdt-cpus = "25.5.0"
+glam = { version = "0.29", features = ["bytemuck", "fast-math"] }
+itertools = "0.14"
+parking_lot = "0.12"
+profiling = "1"
+rayon = "1.11.0"
+serde = "1"
+sdl3 = { version = "0.16", features = [
+    "raw-window-handle",
+] }
+tiger-parse = { version = "0.7.1", git = "https://github.com/v4nguard/tiger-parse.git", features = [
+    "check_types",
+    "check_types_strict",
+    "tiger_pkg",
+    "check_types_debug",
+] }
+tiger-pkg = { version = "0.18.10", features = ["global_manager_instance"] }
+tracing = { version = "0.2.0", git = "https://github.com/cohaereo/tracing-lesspretty.git" }
+
+[dependencies]
+alkahest-core = { path = "./crates/core" }
+alkahest-data = { path = "./crates/data" }
+alkahest-render = { path = "./crates/render" }
+egui-d3d11 = { path = "./crates/egui-d3d11" }
+egui-sdl3-platform = { path = "./crates/egui-sdl3-platform" }
+
+# (De)serialization
+gltf = { package = "gltf-json", version = "1.4.1" }
+serde_json = "1.0.140"
+tiger-parse.workspace = true
+tiger-pkg.workspace = true
+
+# General
+anyhow.workspace = true
+bitflags = "2"
+bytemuck = "1.22.0"
+dhat = { version = "0.3.3", optional = true }
+env_logger = "0.11.8"
+itertools.workspace = true
+profiling.workspace = true
+tracing-subscriber = { version = "0.3", git = "https://github.com/cohaereo/tracing-lesspretty.git", features = [
+    "env-filter",
+    "fmt",
+    "tracing-log",
+] }
+tracing.workspace = true
+tracy-client = { version = "0.18.2", optional = true }
+
+# Graphics
+d3d11.workspace = true
+glam.workspace = true
+sdl3.workspace = true
+
+# UI
+egui.workspace = true
+egui_extras = { version = "0.31.1", features = ["image"] }
+egui_dock.workspace = true
+image = { version = "0.25", features = ["png"] }
+nu-ansi-term = "0.50.1"
+native-dialog = "0.7.0"
+clap = { version = "4.5.37", features = ["derive"] }
+spin_sleep = "1.3.1"
+google_material_symbols = "0.2.9"
+hecs = "0.10.5"
+rayon.workspace = true
+chroma-dbg = "0.2.1"
+
+[build-dependencies]
+embed-resource = "3.0.1"
+
+[profile.dev.package.tiger-pkg]
+opt-level = 3
+
+[profile.dev.package.alkahest-data]
+opt-level = 3
+
+[profile.profiling]
+inherits = "release"
+debug = true
+
+[features]
+tracy = ["profiling/profile-with-tracy", "dep:tracy-client"]
+dhat-heap = ["dep:dhat"]

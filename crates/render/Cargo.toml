@@ -1,0 +1,47 @@
+[package]
+name = "alkahest-render"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alkahest-core = { path = "../core" }
+alkahest-data = { path = "../data" }
+
+anyhow.workspace = true
+arc-atomic = "0.1"
+arcshift = "0.1.10"
+assert-offset = "0.1"
+bon = "3.3"
+bumpalo = { version = "3.17.0", features = ["allocator_api"] }
+bytemuck = { version = "1", features = ["derive"] }
+chroma-dbg = "0.1.1"
+crossbeam.workspace = true
+d3d11.workspace = true
+ddsfile = "0.5.2"
+gdt-cpus.workspace = true
+glam.workspace = true
+hashbrown = "0.15.1"
+# hlsldecompiler = { git = "https://github.com/cohaereo/hlsldecompiler-rs.git" }
+itertools.workspace = true
+lazy_static = "1"
+parking_lot.workspace = true
+png = "0.17.14"
+profiling.workspace = true
+rand = "0.9.0"
+raw-window-handle = "0.6.2"
+rayon.workspace = true
+regex = "1"
+renderdoc = "0.12.1"
+sdl3.workspace = true
+# serde.workspace = true
+# serde_json = "1.0.133"
+smallvec = "1.14.0"
+tiger-parse.workspace = true
+tiger-pkg.workspace = true
+tracing.workspace = true
+# tracy-client.workspace = true
+uuid = "1"
+int-enum = "1.2.0"
+
+[features]
+tracy = []

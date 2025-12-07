@@ -1,0 +1,14 @@
+[package]
+name = "alkahest-core"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+lazy_static = "1"
+game-detector = { version = "0.1.7" }
+parking_lot.workspace = true
+serde.workspace = true
+toml = "0.8"
+tracing.workspace = true
+tiger-pkg.workspace = true
