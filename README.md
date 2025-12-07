@@ -1,10 +1,4 @@
-# Alkahest
-
-> [!NOTE]
->
-> ## 🗄️ Source Availability Notice
->
-> This repository serves as an archive for the pre-0.6 versions of Alkahest. The source code for versions 0.6 and later is not publicly available.
+# Alkahest Upended
 
 ## Resources
 
