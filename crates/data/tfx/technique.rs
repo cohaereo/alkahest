@@ -159,7 +159,6 @@ bitflags::bitflags! {
         const GEAR_DYE_2                   = 1 << 27;
         const GEAR_DYE_DECAL               = 1 << 28;
         const GENERIC_ARRAY                = 1 << 29;
-        const WEATHER                      = 1 << 30;
     }
 }
 

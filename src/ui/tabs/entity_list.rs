@@ -504,7 +504,7 @@ impl EntityListTab {
                                     ui.close_menu();
                                 }
 
-                                if ui.button("Copy hash (MIDA)").clicked() {
+                                if ui.button("Copy hash (Charm)").clicked() {
                                     ui.ctx()
                                         .copy_text(format!("{:08X}", entity.hash.0.swap_bytes()));
                                     ui.close_menu();
