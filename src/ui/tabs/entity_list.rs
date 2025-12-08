@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use alkahest_data::{pattern::SPattern, tfx::common::AxisAlignedBBox};
 use alkahest_render::{Renderer, camera::Camera};
-use egui::{Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, vec2};
+use egui::{Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget, vec2};
 use glam::Vec3;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
@@ -55,6 +55,7 @@ pub struct EntityListTab {
     current_package: u16,
     current_tag: TagHash,
     scene: Scene,
+    zoom: f32,
 
     /// Scene used for rendering thumbnails
     thumbnail_scene: Scene,
@@ -81,8 +82,9 @@ impl EntityListTab {
                 })
                 .collect(),
             current_package: 0,
-            show_entities_without_models: false,
             current_tag: TagHash::NONE,
+            show_entities_without_models: false,
+            zoom: 1.0,
             scene: Scene::new(Renderer::instance().clone(), Camera::default()).unwrap(),
             thumbnail_scene: Scene::new(
                 Renderer::instance().clone(),
@@ -324,6 +326,13 @@ impl EntityListTab {
                     "Show entities without models",
                 );
                 ui.separator();
+                egui::Slider::new(&mut self.zoom, 0.1f32..=1.5f32)
+                    .text("Zoom")
+                    .show_value(true)
+                    .step_by(0.1)
+                    .clamping(egui::SliderClamping::Always)
+                    .ui(ui);
+                ui.separator();
                 if let Some(entries) = self.packages.get(&self.current_package) {
                     let total = entries.len();
                     let with_models = entries.iter().filter(|e| e.has_model()).count();
@@ -362,7 +371,7 @@ impl EntityListTab {
                             }
                             const TAG_BOX_HEIGHT: f32 = 30.0;
                             let (card_rect, card_response) = ui.allocate_exact_size(
-                                vec2(256.0, 256.0 + TAG_BOX_HEIGHT),
+                                vec2(256.0, 256.0) * self.zoom + vec2(0.0, TAG_BOX_HEIGHT),
                                 Sense::click(),
                             );
 
@@ -395,7 +404,11 @@ impl EntityListTab {
                                 card_painter.text(
                                     card_rect.right_bottom() + vec2(-8.0, -5.0),
                                     egui::Align2::RIGHT_BOTTOM,
-                                    format!("{option_count} options"),
+                                    if self.zoom >= 0.70 {
+                                        format!("{option_count} options")
+                                    } else {
+                                        option_count.to_string()
+                                    },
                                     FontId::proportional(16.0),
                                     ui.visuals().text_color().gamma_multiply(0.8),
                                 );
