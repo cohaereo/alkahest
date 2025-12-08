@@ -31,27 +31,27 @@ impl Gui {
     ) -> anyhow::Result<Self> {
         let mut fonts = egui::FontDefinitions::default();
         fonts.font_data.insert(
-            "ppfraktionmono".into(),
+            "NHaasRegular".into(),
             Arc::new(egui::FontData::from_static(include_bytes!(
-                "../../assets/fonts/ppfraktionmono-regular.otf"
+                "../../assets/fonts/NHaasGroteskTXPro-55Rg.otf"
             ))),
         );
         fonts.font_data.insert(
-            "ppfraktionmono-bold".into(),
+            "NHaasMedium".into(),
             Arc::new(egui::FontData::from_static(include_bytes!(
-                "../../assets/fonts/ppfraktionmono-bold.otf"
+                "../../assets/fonts/NHaasGroteskTXPro-65Md.otf"
             ))),
         );
         fonts.font_data.insert(
-            "marathonshapiro_wide".into(),
+            "NHaasBold".into(),
             Arc::new(egui::FontData::from_static(include_bytes!(
-                "../../assets/fonts/marathonshapiro_wide65.otf"
+                "../../assets/fonts/NHaasGroteskDSPro-75Bd.otf"
             ))),
         );
         fonts.font_data.insert(
-            "khinterference-regular".into(),
+            "DestinySymbols".into(),
             Arc::new(egui::FontData::from_static(include_bytes!(
-                "../../assets/fonts/khinterference-regular.otf"
+                "../../assets/fonts/Destiny_Symbols_PC.otf"
             ))),
         );
         fonts.font_data.insert(
@@ -59,12 +59,6 @@ impl Gui {
             Arc::new(egui::FontData::from_static(
                 GoogleMaterialSymbols::FONT_BYTES,
             )),
-        );
-        fonts.font_data.insert(
-            "GoliathBeta-Encrypted".into(),
-            Arc::new(egui::FontData::from_static(include_bytes!(
-                "../../assets/fonts/GoliathBeta-Encrypted.otf"
-            ))),
         );
 
         let mut add_with_icons = |family: egui::FontFamily, elements: &[&str]| {
@@ -78,6 +72,12 @@ impl Gui {
 
             fonts
                 .families
+                .entry(family.clone())
+                .or_default()
+                .insert(elements.len(), "DestinySymbols".to_owned());
+
+            fonts
+                .families
                 .entry(family)
                 .or_default()
                 .insert(elements.len(), "MaterialSymbolsRounded-Medium".to_owned());
@@ -85,25 +85,14 @@ impl Gui {
 
         add_with_icons(
             egui::FontFamily::Proportional,
-            &["ppfraktionmono", "ppfraktionmono-bold"],
+            &["NHaasRegular", "NHaasMedium", "NHaasBold"],
         );
         add_with_icons(
             egui::FontFamily::Monospace,
-            &["ppfraktionmono", "ppfraktionmono-bold"],
+            &["NHaasRegular", "NHaasMedium", "NHaasBold"],
         );
-        add_with_icons(
-            egui::FontFamily::Name("khinterference".into()),
-            &["khinterference-regular"],
-        );
-        add_with_icons(
-            egui::FontFamily::Name("shapiro".into()),
-            &["marathonshapiro_wide"],
-        );
-        fonts
-            .families
-            .entry(egui::FontFamily::Name("encrypted".into()))
-            .or_default()
-            .insert(0, "GoliathBeta-Encrypted".into());
+        add_with_icons(egui::FontFamily::Name("Medium".into()), &["NHaasMedium"]);
+        add_with_icons(egui::FontFamily::Name("Bold".into()), &["NHaasBold"]);
 
         let egui_sdl3 =
             egui_sdl3_platform::Platform::new(&sdl, &window, gpu.swapchain_resolution())?;
@@ -116,7 +105,7 @@ impl Gui {
         let text_styles: BTreeMap<_, _> = [
             (
                 egui::TextStyle::Heading,
-                FontId::new(42.0, egui::FontFamily::Name("shapiro".into())),
+                FontId::new(42.0, egui::FontFamily::Name("Bold".into())),
             ),
             (
                 egui::TextStyle::Body,
@@ -128,7 +117,7 @@ impl Gui {
             ),
             (
                 egui::TextStyle::Button,
-                FontId::new(24.0, egui::FontFamily::Name("khinterference".into())),
+                FontId::new(24.0, egui::FontFamily::Name("Medium".into())),
             ),
             (
                 egui::TextStyle::Small,
@@ -175,12 +164,7 @@ impl Gui {
 
                 let inactive = TabInteractionStyle {
                     outline_color: Color32::TRANSPARENT,
-                    corner_radius: egui::CornerRadius {
-                        nw: 4,
-                        ne: 4,
-                        sw: 0,
-                        se: 0,
-                    },
+                    corner_radius: egui::CornerRadius::ZERO,
                     bg_fill: Color32::BLACK,
                     text_color: Color32::WHITE,
                 };

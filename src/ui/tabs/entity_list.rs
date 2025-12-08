@@ -11,7 +11,7 @@ use super::TabResult;
 use crate::{
     ui::{
         scene::{Scene, controller::CameraController},
-        util::spinner_image,
+        util::{UiExt, spinner_image},
     },
     world::{
         pattern::{spawn_pattern, spawn_pattern_from_header},
@@ -384,7 +384,7 @@ impl EntityListTab {
                                 Color32::BLACK,
                             );
                             card_painter.text(
-                                card_rect.left_bottom() + vec2(8.0, -3.0),
+                                card_rect.left_bottom() + vec2(8.0, -5.0),
                                 egui::Align2::LEFT_BOTTOM,
                                 entity.hash.to_string(),
                                 FontId::proportional(16.0),
@@ -393,7 +393,7 @@ impl EntityListTab {
                             let option_count = entity.option_count();
                             if option_count >= 1 {
                                 card_painter.text(
-                                    card_rect.right_bottom() + vec2(-8.0, -3.0),
+                                    card_rect.right_bottom() + vec2(-8.0, -5.0),
                                     egui::Align2::RIGHT_BOTTOM,
                                     format!("{option_count} options"),
                                     FontId::proportional(16.0),
@@ -430,13 +430,10 @@ impl EntityListTab {
                                     Color32::WHITE,
                                 );
                             } else {
-                                egui::Image::new(spinner_image().clone()).paint_at(
-                                    ui,
-                                    Rect::from_center_size(
-                                        card_image_rect.center(),
-                                        vec2(64.0, 64.0),
-                                    ),
-                                );
+                                ui.d_paint_spinner_at(Rect::from_center_size(
+                                    card_image_rect.center(),
+                                    vec2(64.0, 64.0),
+                                ));
                             }
 
                             if card_response.hovered() || entity.hash == self.current_tag {

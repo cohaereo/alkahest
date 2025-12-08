@@ -6,7 +6,7 @@ use crate::{
     task::Task,
     ui::{
         scene::{Scene, controller::CameraController},
-        util::spinner_image,
+        util::{UiExt, spinner_image},
     },
 };
 
@@ -49,8 +49,7 @@ impl MapTab {
             let (_, rect) = ui.allocate_space(ui.available_size());
             ui.painter()
                 .rect_filled(rect, 0, Color32::from_rgb(45, 48, 56));
-            egui::Image::new(spinner_image().clone())
-                .paint_at(ui, Rect::from_center_size(rect.center(), vec2(64.0, 64.0)));
+            ui.d_paint_spinner_at(Rect::from_center_size(rect.center(), vec2(64.0, 64.0)));
             ui.painter().text(
                 rect.center() + vec2(0.0, 42.0),
                 egui::Align2::CENTER_TOP,

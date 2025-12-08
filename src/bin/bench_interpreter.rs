@@ -60,7 +60,7 @@ fn main() {
 
         // println!("  ours = {:?}", result);
     }
-    println!("Marathon (Deimos):");
+    println!("Destiny (Alkahest):");
     let elapsed = start.elapsed();
     println!("  Elapsed time: {:?}", elapsed);
     let time_per_iter = elapsed.as_micros() as f32 / NUM_ITER as f32;

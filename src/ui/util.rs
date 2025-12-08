@@ -7,6 +7,7 @@ pub trait UiExt {
     fn d_button(&mut self, text: impl Into<RichText>) -> Response;
 
     fn d_spinner(&mut self, size: Vec2) -> Response;
+    fn d_paint_spinner_at(&mut self, rect: Rect);
 
     fn section_separator(&mut self, text: impl Into<RichText>);
 }
@@ -15,23 +16,46 @@ impl UiExt for Ui {
     fn d_button(&mut self, text: impl Into<RichText>) -> Response {
         let r = self
             .add(
-                Button::new(text.into().color(Color32::BLACK))
+                Button::new(text.into().color(Color32::WHITE))
                     .min_size(vec2(120.0, 60.0))
-                    .corner_radius(8)
-                    .fill(Color32::WHITE),
+                    .corner_radius(0)
+                    .fill(Color32::from_gray(96).gamma_multiply(0.2))
+                    .stroke(Stroke::new(1.0, Color32::WHITE)),
             )
             .on_hover_cursor(CursorIcon::PointingHand);
 
         if r.hovered() {
-            self.painter()
-                .rect_filled(r.rect, 8, Color32::from_black_alpha(48));
+            self.painter().rect(
+                r.rect.expand(4.0),
+                0,
+                Color32::TRANSPARENT,
+                Stroke::new(2.0, Color32::from_white_alpha(196)),
+                StrokeKind::Outside,
+            );
         }
 
         r
     }
 
     fn d_spinner(&mut self, size: Vec2) -> Response {
-        self.add(Image::new(spinner_image().clone()).fit_to_exact_size(size))
+        let (rect, response) = self.allocate_exact_size(size, Sense::hover());
+        // self.add(Image::new(spinner_image().clone()).fit_to_exact_size(size))
+
+        self.d_paint_spinner_at(rect);
+
+        response
+    }
+
+    fn d_paint_spinner_at(&mut self, rect: Rect) {
+        let (img1, img2, t) = spinner_image();
+        let alpha1 = 1.0 - t;
+        let alpha2 = t;
+        Image::new(img1.clone())
+            .tint(Color32::from_white_alpha((alpha1 * 255.0) as u8))
+            .paint_at(self, rect);
+        Image::new(img2.clone())
+            .tint(Color32::from_white_alpha((alpha2 * 255.0) as u8))
+            .paint_at(self, rect);
     }
 
     fn section_separator(&mut self, text: impl Into<RichText>) {
@@ -40,7 +64,11 @@ impl UiExt for Ui {
     }
 }
 
-pub fn spinner_image() -> &'static ImageSource<'static> {
+pub fn spinner_image() -> (
+    &'static ImageSource<'static>,
+    &'static ImageSource<'static>,
+    f32,
+) {
     thread_local! {
         static START_TIME: RefCell<Instant> = RefCell::new(Instant::now());
     }
@@ -54,8 +82,16 @@ pub fn spinner_image() -> &'static ImageSource<'static> {
     const IMG2: ImageSource = include_image!("../../assets/ui/load2.png");
     const IMG3: ImageSource = include_image!("../../assets/ui/load3.png");
     const IMG4: ImageSource = include_image!("../../assets/ui/load4.png");
+    const IMG5: ImageSource = include_image!("../../assets/ui/load5.png");
 
-    &[IMG0, IMG0, IMG1, IMG2, IMG3, IMG4, IMG4, IMG3, IMG2, IMG1][(time * 5.0) as usize % 10]
+    const IMAGES: &[ImageSource] = &[IMG0, IMG1, IMG2, IMG3, IMG4, IMG5];
+
+    const SPEED: f32 = 4.0;
+    let img1 = &IMAGES[(time * SPEED) as usize % IMAGES.len()];
+    let img2 = &IMAGES[(time * SPEED + 1.0) as usize % IMAGES.len()];
+    let t = (time * SPEED) % 1.0;
+
+    (img1, img2, t)
 }
 
 /// Extension trait for adding widgets for external data types.
