@@ -131,9 +131,6 @@ float4 mainPS(VSOutput input) : SV_TARGET {
   worldPos = mul(camera_to_world, worldPos);
   worldPos /= worldPos.w;
 
-  float distance = length(worldPos.xyz - camera_position);
-  float fog = remap(distance, 275.0, 350.0);
-
   // TODO after break: specular shading since we got worldpos now
   float3 albedo = rt0.rgb;
   float3 normal = rt1.xyz * 2.0 - 1.0;
@@ -182,5 +179,5 @@ float4 mainPS(VSOutput input) : SV_TARGET {
 
   float3 color = ambient + Lo;
 
-  return float4(lerp(color, SkyColor, fog), 1.0f);
+  return float4(color, 1.0f);
 }

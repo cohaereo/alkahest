@@ -15,40 +15,38 @@ use crate::{
 };
 
 #[derive(Debug, AssertOffsets)]
-#[tiger_type(id = 0x8080AB27, size = 0x50)]
+#[tiger_type(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
 
-    #[offset(0x8)]
-    pub definition: Tag<SBubbleDefinition>,
-    pub unkc: Padding<4>,
-
+    pub definition: WideTag<SBubbleDefinition>, // WideHash as of 8.2.0
+    // pub unkc: Padding<4>, // Removed in 8.2.0
     pub unk10: u64,
     pub map_name: FnvHash,
 }
 
 #[derive(Debug, AssertOffsets)]
-#[tiger_type(id = 0x8080A7BB, size = 0x50)]
+#[tiger_type(id = 0x80808701, size = 0x50)]
 pub struct SBubbleDefinition {
     pub file_size: u64,
     pub containers: Vec<WideTag<SMapContainer>>,
 }
 
 #[derive(Debug)]
-#[tiger_type(id = 0x8080A7C1, size = 0x38)]
+#[tiger_type(id = 0x80808707, size = 0x38)]
 pub struct SMapContainer {
     pub file_size: u64,
     #[tiger(offset = 0x28)]
     pub data_tables: Vec<TagHash>,
 }
 
-#[tiger_type(id = 0x8080B1A7)]
+#[tiger_type(id = 0x80809883)]
 pub struct SMapNodeTable {
     pub file_size: u64,
     pub nodes: Vec<SMapNodeEntry>,
 }
 
-#[tiger_type(id = 0x8080B3F5)]
+#[tiger_type(id = 0x80809885)]
 pub struct SMapNodeEntry {
     pub rotation: Quat,
     pub translation: Vec4,
@@ -70,8 +68,8 @@ tiger_variant_enum! {
     [offset = 0x10]
     [Unknown(true)]
     enum ComponentData {
-        // SStaticTerrainPatchesComponent,
-        // SStaticInstancesCollectionComponent,
+        SStaticTerrainPatchesComponent,
+        SStaticInstancesCollectionComponent
         // SSkyObjectCollectionComponent,
         // SDecalCollectionComponent,
         // SDecoratorsComponent,
@@ -92,9 +90,17 @@ pub struct SMaterialPermutationsComponent {
 //     pub ao: Tag<SStaticAmbientOcclusion>,
 // }
 
-#[tiger_type(id = 0x808085B0)]
+#[tiger_type(id = 0x80806CC9)]
 pub struct SStaticInstancesCollectionComponent {
     pub instances: TagHash,
+}
+
+#[derive(Clone, Debug)]
+#[tiger_type(id = 0x80806C7D)]
+pub struct SStaticTerrainPatchesComponent {
+    pub identifier: u64,
+    pub terrain: TagHash,
+    pub terrain_bounds: TagHash,
 }
 
 #[tiger_type(id = 0x80808378)]
@@ -120,14 +126,6 @@ pub struct SShadowingLightComponent {
 #[tiger_type(id = 0x8080821E)]
 pub struct SDecalCollectionComponent {
     pub decals: OptionalTag<SDecalCollection>,
-}
-
-#[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808563)]
-pub struct SStaticTerrainPatchesComponent {
-    pub identifier: u64,
-    pub terrain: TagHash,
-    pub terrain_bounds: TagHash,
 }
 
 #[tiger_type(id = 0x808085AA)]

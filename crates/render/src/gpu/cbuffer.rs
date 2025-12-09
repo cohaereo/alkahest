@@ -186,11 +186,11 @@ impl<T> ConstantBuffer<T> {
         }
     }
 
-    fn bind_srv(&self, cmd: &mut CommandList, stage: ShaderStage, slot: u32) {
+    pub fn bind_srv(&self, cmd: &mut CommandList, stage: ShaderStage, slot: u32) {
         cmd.set_shader_resource(stage, slot, &self.srv);
     }
 
-    fn bind_cbuffer(&self, cmd: &mut CommandList, stage: ShaderStage, slot: u32) {
+    pub fn bind_cbuffer(&self, cmd: &mut CommandList, stage: ShaderStage, slot: u32) {
         cmd.set_constant_buffer(stage, slot, &self.buffer);
     }
 }

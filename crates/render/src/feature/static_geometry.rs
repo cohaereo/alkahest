@@ -12,6 +12,7 @@ use alkahest_data::tfx::{
     RenderStage, ShaderStage,
 };
 use bytemuck::{Pod, Zeroable};
+use chroma_dbg::ChromaDebug;
 use d3d11::DeviceContext;
 use glam::{Mat4, Vec3, Vec4};
 use hashbrown::HashMap;
@@ -112,24 +113,21 @@ impl StaticModel {
 }
 
 pub struct StaticModelRenderer {
-    unk_cb1: ConstantBuffer<Vec4>,
     instance_buffer: ConstantBuffer<u8>,
-    instance_id_buffer: VertexBuffer,
     model: StaticModel,
-    visible_instance_ids: Vec<u32>,
     transforms: Vec<(SStaticInstanceTransform, AxisAlignedBBox)>,
     bounds: AxisAlignedBBox,
     identifier: u64,
 
     constants_dirty: bool,
+    instance_count: u32,
 }
 
 #[repr(C)]
 #[derive(Pod, Zeroable, Clone, Copy)]
 pub struct InstanceTransformBlock {
     pub transform: [Vec4; 3],
-    pub params0: Vec4,
-    pub params1: Vec4,
+    pub params: Vec4,
 }
 
 impl StaticModelRenderer {
@@ -141,26 +139,16 @@ impl StaticModelRenderer {
     ) -> anyhow::Result<Self> {
         let cbuffer = ConstantBuffer::create_raw(
             gpu,
-            size_of::<InstanceTransformBlock>() // header + padding
+            2 * size_of::<Vec4>() // quantization headers
             + transforms.len() * size_of::<InstanceTransformBlock>(), // per-transform data
         )?;
 
-        // Instance IDs dictate from where in the instance buffer to read the transform data. This is calculated as the ID * 0x50 (in bytes).
-        // In the past, the engine would skip the 32 bytes where the quantization information was stored, but the offset must now be an exact multiple of 0x40 bytes.
-        // cb0[0].x dictates where the quantization information is stored. For now I've opted to just skip the first instance and use that slot for the quantization information.
-        let visible_instance_ids = (0..transforms.len() as u32).map(|i| i + 1).collect_vec();
-
-        let instance_id_buffer =
-            VertexBuffer::load_data_ex(gpu, bytemuck::cast_slice(&visible_instance_ids), 4, true)?;
-
         trace!(instances = transforms.len(), model_hash=%model_hash, "Loading model");
         Ok(Self {
-            unk_cb1: ConstantBuffer::create(gpu, Some(&Vec4::ZERO))?, // Offsets instance buffer data
             instance_buffer: cbuffer,
-            instance_id_buffer,
             model: StaticModel::load(model_hash)?,
             bounds: transforms.iter().map(|(_, b)| b.clone()).sum(),
-            visible_instance_ids,
+            instance_count: transforms.len() as u32,
             transforms,
             identifier,
             constants_dirty: true,
@@ -169,9 +157,8 @@ impl StaticModelRenderer {
 
     #[profiling::function]
     pub fn render_all(&self, cmd: &mut CommandList, stage: RenderStage) {
-        self.unk_cb1.bind(cmd, ShaderStage::Vertex, 1);
-        self.instance_buffer.bind(cmd, ShaderStage::Vertex, 2);
-        self.instance_id_buffer.bind_single(cmd, 2);
+        self.instance_buffer
+            .bind_cbuffer(cmd, ShaderStage::Vertex, 1);
 
         let is_opaque = matches!(
             stage,
@@ -203,7 +190,7 @@ impl StaticModelRenderer {
 
                 cmd.draw_indexed_instanced(
                     part.index_count,
-                    self.visible_instance_ids.len() as u32,
+                    self.instance_count,
                     part.index_start,
                     0,
                     0,
@@ -232,7 +219,7 @@ impl StaticModelRenderer {
 
                 cmd.draw_indexed_instanced(
                     mesh.index_count,
-                    self.visible_instance_ids.len() as u32,
+                    self.instance_count,
                     mesh.index_start,
                     0,
                     0,
@@ -243,9 +230,8 @@ impl StaticModelRenderer {
 
     #[profiling::function]
     pub fn render_group(&self, cmd: &mut CommandList, stage: RenderStage, group: usize) {
-        self.unk_cb1.bind(cmd, ShaderStage::Vertex, 1);
-        self.instance_buffer.bind(cmd, ShaderStage::Vertex, 2);
-        self.instance_id_buffer.bind_single(cmd, 2);
+        self.instance_buffer
+            .bind_cbuffer(cmd, ShaderStage::Vertex, 1);
 
         let i = group;
         let group = &self.model.model.opaque_meshes.mesh_groups[i];
@@ -273,7 +259,7 @@ impl StaticModelRenderer {
 
         cmd.draw_indexed_instanced(
             part.index_count,
-            self.visible_instance_ids.len() as u32,
+            self.instance_count,
             part.index_start,
             0,
             0,
@@ -301,10 +287,6 @@ impl StaticModelRenderer {
                 f32::from_bits(model.max_color_index),
             ]))
             .unwrap();
-
-        while buffer.len() < size_of::<InstanceTransformBlock>() {
-            buffer.write_all(&[0u8]).unwrap();
-        }
 
         // let model_transform = Mat4::from_cols_array_2d(&[
         //     [model.mesh_scale, 0.0, 0.0, model.mesh_offset.x],
@@ -335,7 +317,7 @@ impl StaticModelRenderer {
                         instance_transform.y_axis,
                         instance_transform.z_axis,
                     ],
-                    params0: Vec4::new(
+                    params: Vec4::new(
                         1.0,
                         1.0,
                         1.0,
@@ -348,7 +330,6 @@ impl StaticModelRenderer {
                         //         .unwrap_or(0x02000000),
                         // ),
                     ),
-                    params1: Vec4::ZERO,
                 }]))
                 .unwrap();
         }
@@ -363,23 +344,7 @@ impl StaticModelRenderer {
             return false;
         }
 
-        self.visible_instance_ids.clear();
-        for (i, (_, b)) in self.transforms.iter().enumerate() {
-            if camera.is_visible(b) {
-                self.visible_instance_ids.push(1 + i as u32);
-            }
-        }
-
-        !self.visible_instance_ids.is_empty()
-    }
-
-    fn prepare_write_instance_ids(&self, cmd: &DeviceContext) {
-        // Safety: there's never more instances than we allocated space for (hopefully)
-        unsafe {
-            self.instance_id_buffer
-                .write(cmd, bytemuck::cast_slice(&self.visible_instance_ids))
-                .unwrap();
-        }
+        true
     }
 }
 
@@ -396,19 +361,6 @@ impl StaticInstancesRenderer {
     pub fn load(gpu: &Arc<Gpu>, instances_hash: TagHash) -> anyhow::Result<Self> {
         let instances: SStaticMeshInstances = package_manager().read_tag_struct(instances_hash)?;
         let mut models = Vec::with_capacity(instances.instance_groups.len());
-
-        let mut total_instances = 0;
-        for (i, group) in instances.instance_groups.iter().enumerate() {
-            // println!("Unique {} - {} instances", i, group.instance_count);
-            total_instances += group.instance_count;
-        }
-
-        let static_hashes: HashSet<TagHash> = instances.statics.iter().cloned().collect();
-        println!(
-            "{} uniques, {} instances total",
-            static_hashes.len(),
-            total_instances
-        );
 
         for group in &instances.instance_groups {
             let model = instances.statics[group.static_index as usize];
@@ -482,15 +434,13 @@ impl StaticInstancesRenderer {
 impl FeatureRenderer for StaticInstancesRenderer {
     fn visibility_test(&mut self, camera: &Camera) -> bool {
         self.models.par_iter_mut().for_each(|(model, visible)| {
-            *visible = model.visibility_test(camera);
+            *visible = true; // model.visibility_test(camera);
         });
         true
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {
-        let ctx = renderer.gpu.context();
         for (model, _visible) in self.models.iter_mut().filter(|(_, visible)| *visible) {
-            model.prepare_write_instance_ids(&ctx);
             if model.constants_dirty {
                 model.update_constants(
                     &renderer.gpu.context(), /*, renderer.ao.read().as_ref() */
@@ -523,7 +473,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
             let node_start = last_end;
             let mut node_end = (node_start + nodes_per_job).min(node_count);
 
-            if node_start >= node_count {
+            if node_start >= node_count || node_end == node_start {
                 break;
             }
 

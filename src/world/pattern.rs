@@ -162,34 +162,34 @@ pub fn spawn_pattern_from_header(
             //         );
             //     }
             // }
-            // 0x80808562 => {
-            //     let data = get_component_data!(SStaticTerrainPatchesComponent);
+            0x80806C7C => {
+                let data = get_component_data!(SStaticTerrainPatchesComponent);
 
-            //     let renderer =
-            //         TerrainPatchesRenderer::load(&renderer.gpu, data.terrain, data.identifier)?;
+                let renderer =
+                    TerrainPatchesRenderer::load(&renderer.gpu, data.terrain, data.identifier)?;
 
-            //     world.insert_one(
-            //         entity,
-            //         StaticRenderObject::new(Renderer::instance().add_object(RenderObject::new(
-            //             alkahest_data::tfx::TfxFeatureRenderer::TerrainPatch,
-            //             renderer,
-            //         ))),
-            //     )?;
-            // }
-            // 0x808085AF => {
-            //     let data = get_component_data!(SStaticInstancesCollectionComponent);
-            //     let instances: SUnk808082D5 = package_manager().read_tag_struct(data.instances)?;
-            //     world.insert_one(
-            //         entity,
-            //         StaticRenderObject::new(renderer.add_object(RenderObject::new(
-            //             TfxFeatureRenderer::ChunkedInstanceObjects,
-            //             Box::new(StaticInstancesRenderer::load(
-            //                 &renderer.gpu,
-            //                 instances.instances,
-            //             )?),
-            //         ))),
-            //     )?;
-            // }
+                world.insert_one(
+                    entity,
+                    StaticRenderObject::new(Renderer::instance().add_object(RenderObject::new(
+                        alkahest_data::tfx::TfxFeatureRenderer::TerrainPatch,
+                        renderer,
+                    ))),
+                )?;
+            }
+            0x80806CC8 => {
+                let data = get_component_data!(SStaticInstancesCollectionComponent);
+                let instances: SUnk808082D5 = package_manager().read_tag_struct(data.instances)?;
+                world.insert_one(
+                    entity,
+                    StaticRenderObject::new(renderer.add_object(RenderObject::new(
+                        TfxFeatureRenderer::ChunkedInstanceObjects,
+                        Box::new(StaticInstancesRenderer::load(
+                            &renderer.gpu,
+                            instances.instances,
+                        )?),
+                    ))),
+                )?;
+            }
             // 0x80808220 => {
             //     let data = get_component_data!(SDecalCollectionComponent);
             //     if let Some(collection) = &*data.decals {

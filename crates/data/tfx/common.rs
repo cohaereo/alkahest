@@ -18,14 +18,14 @@ impl SRotationTranslation {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_type(id = 0x8080A7F5, size = 0x18)]
+#[tiger_type(id = 0x808093B1, size = 0x18)]
 pub struct SOcclusionBounds {
     pub file_size: u64,
     pub bounds: Vec<SObjectOcclusionBounds>,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_type(id = 0x8080A7F7, size = 0x30)]
+#[tiger_type(id = 0x808093B3, size = 0x30)]
 pub struct SObjectOcclusionBounds {
     pub bb: AxisAlignedBBox,
     pub unk20: [u32; 4],
