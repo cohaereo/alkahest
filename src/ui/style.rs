@@ -6,6 +6,8 @@ pub fn gui_style() -> Style {
             override_text_color: Some(Color32::WHITE),
             window_fill: Color32::from_rgb(19, 19, 22),
             panel_fill: Color32::from_rgb(19, 19, 22),
+            // window_fill: Color32::WHITE,
+            // panel_fill: Color32::WHITE,
             ..Visuals::dark()
         },
         spacing: Spacing {

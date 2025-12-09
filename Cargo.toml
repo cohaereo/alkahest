@@ -89,6 +89,8 @@ google_material_symbols = "0.2.9"
 hecs = "0.10.5"
 rayon.workspace = true
 chroma-dbg = "0.2.1"
+subsecond = "0.7.2"
+dioxus-devtools = "0.7.2"
 
 [build-dependencies]
 embed-resource = "3.0.1"

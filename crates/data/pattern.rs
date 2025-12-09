@@ -1,8 +1,12 @@
 use tiger_parse::{
-    tiger_type, OptionalVariantPointer, ResourcePointer, ResourcePointerWithClass, VariantPointer,
+    tiger_type, FnvHash, OptionalVariantPointer, ResourcePointer, ResourcePointerWithClass,
+    VariantPointer,
 };
 
-use crate::{map::ComponentData, tag::Tag};
+use crate::{
+    map::ComponentData,
+    tag::{Tag, WideHash},
+};
 
 #[tiger_type(id = 0x80809AD8)]
 pub struct SPattern {
@@ -28,4 +32,19 @@ pub struct SComponent {
 
     #[tiger(offset = 0x30)]
     pub resource_table1: Vec<()>,
+}
+
+#[tiger_type(id = 0x8080841b, size = 0x40)]
+#[derive(Debug)]
+pub struct S8080841B {
+    #[tiger(offset = 0x30)]
+    pub unk30: Vec<S8080841D>,
+}
+
+#[tiger_type(id = 0x8080841d, size = 0x18)]
+#[derive(Debug)]
+pub struct S8080841D {
+    pub unk0: FnvHash,
+    pub unk4: u32,
+    pub entity: WideHash,
 }

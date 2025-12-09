@@ -2,7 +2,7 @@ use std::io::{Cursor, Seek, SeekFrom};
 
 use alkahest_data::{
     map::ComponentData,
-    pattern::SPattern,
+    pattern::{S8080841B, SPattern},
     tfx::{
         TfxFeatureRenderer,
         common::AxisAlignedBBox,
@@ -125,6 +125,26 @@ pub fn spawn_pattern_from_header(
                 let obj = Renderer::instance()
                     .add_object(RenderObject::new(TfxFeatureRenderer::RigidObject, model));
                 world.insert_one(entity, DynamicRenderObject::new(obj))?;
+            }
+            0x80808412 => {
+                let mut cur = Cursor::new(package_manager().read_tag(component.taghash())?);
+                cur.seek(SeekFrom::Start(component.unk18.offset + 0x88))?;
+                let array: Vec<S8080841B> = TigerReadable::read_ds(&mut cur)?;
+
+                for v1 in array {
+                    for v2 in v1.unk30 {
+                        if let Err(e) = spawn_pattern(world, v2.entity.hash32(), None) {
+                            error!(
+                                "Failed to spawn nested pattern {:?}/{} in pattern component {}: \
+                                 {:?}",
+                                v2.entity,
+                                v2.entity.hash32(),
+                                component.taghash(),
+                                e
+                            );
+                        }
+                    }
+                }
             }
             // 0x80804030 => {
             //     let Some(ComponentData::SMaterialPermutationsComponent(data)) = map_data else {

@@ -102,7 +102,9 @@ impl App {
 
         let gpu = &self.renderer.gpu;
         let mut cmd = CommandList::from_device_context(gpu, gpu.context().clone());
-        self.gui.draw(&mut cmd);
+        subsecond::call(|| {
+            self.gui.draw(&mut cmd);
+        });
 
         let vsync = false;
         self.renderer.present_frame(vsync);

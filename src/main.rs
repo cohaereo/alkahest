@@ -26,6 +26,7 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 //     tracy_client::ProfiledAllocator::new(std::alloc::System, 100);
 
 fn main() -> anyhow::Result<()> {
+    dioxus_devtools::connect_subsecond();
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
