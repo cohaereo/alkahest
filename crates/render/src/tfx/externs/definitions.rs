@@ -709,12 +709,12 @@ extern_struct! {
         0x80 => unk80: Vec4 > default(Vec4::ZERO),
         0x90 => unk90: f32 > default(0.0),
         0x94 => unk94: f32 > default(0.0),
-        0xA0 => unka0: Vec4 > default(Vec4::ZERO),
+        0x98 => unk98: f32 > default(0.0),
+        0x9C => unk9c: f32 > default(0.0),
+        0xA0 => unka0: f32 > default(0.0),
         0xB0 => unkb0: Vec4 > default(Vec4::ZERO),
         0xC0 => unkc0: Vec4 > default(Vec4::ZERO),
-        0xD0 => unkd0: f32,
-        0xD4 => unkd4: f32,
-        0xD8 => unkd8: f32,
+        0xD0 => unkd0: Vec4 > default(Vec4::ZERO),
     }
 }
 
@@ -1230,34 +1230,11 @@ extern_struct! {
 
 extern_struct! {
     struct DebugShadingOutput("debug_shading_output") {
-        0x00 => unk00: Vec4,
-        0x10 => unk10: TextureView,
-        0x18 => unk18: TextureView,
-        0x20 => unk20: TextureView,
-        0x28 => unk28: TextureView,
+        0x00 => unk00: f32,
+        0x20 => unk20: Vec4,
         0x30 => unk30: Vec4,
-        0x40 => unk40: Vec4,
-        0x50 => unk50: Vec4,
-        0x60 => unk60: Vec4,
-        0x70 => unk70: Mat4,
-        0xB0 => unkb0: TextureView,
-        0xB8 => unkb8: TextureView,
-        0xC0 => unkc0: TextureView,
-        0xC8 => unkc8: TextureView,
-        0xD0 => unkd0: Vec4,
-        0xE0 => unke0: Vec4,
-        0xF0 => unkf0: Vec4,
-        0x100 => unk100: Vec4,
-        0x110 => unk110: Mat4,
-        0x150 => unk150: TextureView,
-        0x158 => unk158: TextureView,
-        0x160 => unk160: TextureView,
-        0x168 => unk168: TextureView,
-        0x170 => unk170: Vec4,
-        0x180 => unk180: Vec4,
-        0x190 => unk190: Vec4,
-        0x1A0 => unk1a0: Vec4,
-        0x1B0 => unk1b0: Mat4,
+        0x80 => unk80: Vec4,
+        0x90 => unk90: Vec4,
     }
 }
 

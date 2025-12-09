@@ -291,10 +291,9 @@ impl Renderer {
                 * ext.get_global_channel_by_name("down_ambient_intensity").x,
             unk90: ext.get_global_channel_by_name("up_ambient_sharpness").x,
             unk94: ext.get_global_channel_by_name("down_ambient_sharpness").x,
-            unka0: vec4(0.01, 0.01, -0.5, -0.5),
-            unkb0: vec4(0.02, -2.0, 0.0, 0.0),
-            // unkd0: vec4(f32::NAN, f32::NAN, 0.5, 0.5),
-            unkc0: vec4(0.00333, -2.33333, 0.00, 0.00),
+            unkb0: vec4(0.01, 0.01, -0.5, -0.5),
+            unkc0: vec4(0.02, -2.0, 0.0, 0.0),
+            unkd0: vec4(0.00333, -2.33333, 0.00, 0.00),
             ..Default::default()
         };
 
