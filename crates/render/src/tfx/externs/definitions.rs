@@ -559,22 +559,12 @@ extern_struct! {
         0xD0 => unkd0: Vec4,
         0xE0 => unke0: Vec4,
         0xF0 => unkf0: Vec4,
-        0x100 => unk100: Vec4,
-        0x110 => unk110: Vec4,
-        0x120 => unk120: Mat4,
-        0x160 => unk160: f32,
-        0x164 => unk164: f32,
+        0x100 => unk100: Mat4,
+        0x140 => unk140: f32,
+        0x150 => unk150: Vec4,
+        0x160 => unk160: Vec4,
         0x170 => unk170: Vec4,
-        0x180 => unk180: Vec4,
-        0x190 => unk190: Vec4,
-        0x1A0 => unk1a0: f32,
-        0x1A4 => unk1a4: f32,
-        0x1A8 => unk1a8: f32,
-        0x1AC => unk1ac: f32,
-        0x1B0 => unk1b0: f32,
-        0x1B4 => unk1b4: f32,
-        0x1B8 => unk1b8: f32,
-        0x1C8 => unk1c8: f32,
+        0x18C => unk18c: f32,
     }
 }
 
@@ -677,15 +667,11 @@ extern_struct! {
         0x50 => unk50: TextureView,
         0x58 => unk58: TextureView,
         0x60 => unk60: TextureView,
-        0x68 => unk68: TextureView,
-        0x78 => unk78: TextureView,
+        0x70 => unk70: Vec4,
         0x80 => unk80: Vec4,
         0x90 => unk90: Vec4,
         0xA0 => unka0: Vec4,
         0xB0 => unkb0: Vec4,
-        0xC0 => unkc0: Vec4,
-        0xD0 => unkd0: Vec4,
-        0xE0 => unke0: Vec4,
     }
 }
 
@@ -1322,8 +1308,12 @@ extern_struct! {
 
 extern_struct! {
     struct SoftDeform("soft_deform") {
+        0x00 => unk00: TextureView,
         0x08 => unk08: TextureView,
         0x10 => unk10: Mat4,
+        0x50 => unk50: Vec4,
+        0x60 => unk60: Vec4,
+        0x70 => unk70: Vec4,
     }
 }
 

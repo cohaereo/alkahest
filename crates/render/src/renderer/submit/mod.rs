@@ -341,13 +341,11 @@ impl Renderer {
             // unk50: self.gpu.placeholder_white.view.clone().into(),
             // unk78: self.gpu.placeholder_white.view.clone().into(),
             // unk38: self.common.temporary_atmos.view.clone().into(),
-            unk80: vec4(0.22882, 0.00, 1.00, 45.00),
-            unk90: vec4(0.00, 0.00, 1.17485, 2.86546),
-            unka0: vec4(0.00, 0.00, 2.10913, 5.14044),
-            unkb0: vec4(0.00, 0.00, 3.46762, 8.41667),
-            unkc0: vec4(0.00, 0.00, 0.00, 0.00),
-            unkd0: vec4(0.00, 0.00, 0.00, 0.00),
-            unke0: vec4(0.00, 0.00, 0.00, 0.00),
+            unk70: vec4(0.22882, 0.00, 1.00, 45.00),
+            unk80: vec4(0.00, 0.00, 1.17485, 2.86546),
+            unk90: vec4(0.00, 0.00, 2.10913, 5.14044),
+            unka0: vec4(0.00, 0.00, 3.46762, 8.41667),
+            unkb0: vec4(0.00, 0.00, 0.00, 0.00),
             ..Default::default()
         };
 
