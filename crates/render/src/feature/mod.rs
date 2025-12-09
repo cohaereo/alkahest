@@ -32,6 +32,11 @@ pub trait FeatureRenderer {
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription;
+
+    /// Returns true if the feature renderer has finished loading any dependencies (techniques, buffers, etc)
+    fn is_loaded(&self) -> bool {
+        true
+    }
 }
 
 pub trait FeatureRendererData: Any {

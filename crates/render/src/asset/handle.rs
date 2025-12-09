@@ -11,6 +11,7 @@ use std::{
 use tiger_pkg::TagHash;
 
 use super::Asset;
+use crate::tfx::technique::Technique;
 
 struct AssetHolder {
     data: UnsafeCell<Arc<dyn Any + Send + Sync>>,
@@ -111,8 +112,9 @@ pub struct Handle<T: Asset + 'static> {
 }
 
 impl<T: Asset + Sync + Send + 'static> Handle<T> {
+    /// Returns true if the handle is null or the asset is loaded
     pub fn is_loaded(&self) -> bool {
-        self.asset.is_loaded()
+        self.is_null() || self.asset.is_loaded()
     }
 
     pub fn is_null(&self) -> bool {
@@ -163,4 +165,16 @@ impl<T: Asset + 'static> Clone for Handle<T> {
             _marker: std::marker::PhantomData,
         }
     }
+}
+
+pub fn is_technique_loaded(handle: &Handle<Technique>) -> bool {
+    if handle.is_null() {
+        return true;
+    }
+
+    let Some(technique) = handle.get() else {
+        return false;
+    };
+
+    technique.is_loaded()
 }

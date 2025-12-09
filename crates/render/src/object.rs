@@ -66,6 +66,10 @@ impl RenderObject {
     pub fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
         self.renderer.submit(cmd, stage);
     }
+
+    pub fn is_loaded(&self) -> bool {
+        self.renderer.is_loaded()
+    }
 }
 
 unsafe impl Send for RenderObject {}

@@ -16,7 +16,7 @@ use tiger_pkg::{package_manager, TagHash};
 
 use super::{shared::ModelBuffers, FeatureRenderer};
 use crate::{
-    asset::Handle,
+    asset::{handle::is_technique_loaded, Handle},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::{
         expression_vm::interpreter::TempObjectChannels, packet::CompactTransform,
@@ -306,6 +306,22 @@ impl FeatureRenderer for DynamicModel {
 
     fn subscribed_stages(&self) -> RenderStageSubscription {
         self.subscribed_stages
+    }
+
+    fn is_loaded(&self) -> bool {
+        if self
+            .part_techniques
+            .iter()
+            .any(|v| v.iter().any(|t| !is_technique_loaded(t)))
+        {
+            return false;
+        }
+
+        if self.techniques.iter().any(|t| !is_technique_loaded(t)) {
+            return false;
+        }
+
+        true
     }
 }
 

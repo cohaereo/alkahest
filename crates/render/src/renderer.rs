@@ -186,6 +186,15 @@ impl Renderer {
         objects.remove(handle.into());
     }
 
+    pub fn is_object_loaded(&self, handle: RenderObjectHandle) -> bool {
+        let objects = self.objects.read();
+        if let Some(object) = objects.get(handle.into()) {
+            object.is_loaded()
+        } else {
+            false
+        }
+    }
+
     pub fn shutdown(&self) {
         self.asset_manager.shutdown();
     }

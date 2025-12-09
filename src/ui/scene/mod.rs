@@ -153,19 +153,27 @@ impl Scene {
             egui::Color32::GREEN,
         );
 
-        if self.renderer.asset_manager.count_loading() > 0 {
-            ui.painter_at(r.rect).text(
-                r.rect.left_bottom() + Vec2::new(6.0, -3.0),
-                egui::Align2::LEFT_BOTTOM,
-                format!(
-                    "{} Loading assets... ({} in progress)",
-                    GoogleMaterialSymbols::HardDrive,
-                    self.renderer.asset_manager.count_loading()
-                ),
-                egui::FontId::proportional(16.0),
-                egui::Color32::WHITE,
-            );
-        }
+        ui.scope_builder(egui::UiBuilder::new().max_rect(r.rect), |ui| {
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                if self.world.is_empty() {
+                    ui.label(
+                        RichText::new(format!("{} Scene is empty", GoogleMaterialSymbols::Warning))
+                            .size(16.0),
+                    );
+                }
+
+                if self.renderer.asset_manager.count_loading() > 0 {
+                    ui.label(
+                        RichText::new(format!(
+                            "{} Loading assets... ({} in progress)",
+                            GoogleMaterialSymbols::HardDrive,
+                            self.renderer.asset_manager.count_loading()
+                        ))
+                        .size(16.0),
+                    );
+                }
+            });
+        });
 
         ui.style_mut().spacing.tooltip_width = 4096.0;
         ui.interact(

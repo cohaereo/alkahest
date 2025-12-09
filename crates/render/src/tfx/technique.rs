@@ -8,7 +8,8 @@ use tiger_pkg::{package_manager, TagHash};
 
 use super::dynamic_constants::DynamicConstants;
 use crate::{
-    gpu::command_list::CommandList, tfx::expression_vm::interpreter::TempObjectChannels, Gpu,
+    asset::Handle, gpu::command_list::CommandList,
+    tfx::expression_vm::interpreter::TempObjectChannels, Gpu,
 };
 
 pub struct Technique {
@@ -34,6 +35,7 @@ impl Technique {
             (&self.tech.shader_compute, self.stage_compute.as_ref()),
         ]
     }
+
     pub fn all_stages_mut(&mut self) -> [(&STechniqueShader, Option<&mut TechniqueStage>); 6] {
         [
             (&self.tech.shader_pixel, self.stage_pixel.as_mut()),
@@ -43,6 +45,18 @@ impl Technique {
             (&self.tech.shader_vertex, self.stage_vertex.as_mut()),
             (&self.tech.shader_compute, self.stage_compute.as_mut()),
         ]
+    }
+
+    pub fn is_loaded(&self) -> bool {
+        for (_shader, stage) in self.all_stages() {
+            if let Some(stage) = stage {
+                if !stage.is_loaded() {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 }
 
@@ -250,6 +264,13 @@ impl TechniqueStage {
         self.dynamic_constants.bind(cmd, self.stage, channels)?;
 
         Ok(())
+    }
+
+    pub fn is_loaded(&self) -> bool {
+        self.dynamic_constants
+            .textures
+            .iter()
+            .all(|(_, tex)| tex.as_ref().map(Handle::is_loaded).unwrap_or(true))
     }
 }
 

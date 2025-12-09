@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use alkahest_data::{pattern::SPattern, tfx::common::AxisAlignedBBox};
-use alkahest_render::{Renderer, camera::Camera};
+use alkahest_render::{Renderer, asset::AssetManager, camera::Camera, renderer};
 use egui::{Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget, vec2};
 use glam::Vec3;
 use tiger_parse::{PackageManagerExt, TigerReadable};
@@ -16,7 +16,7 @@ use crate::{
     world::{
         pattern::{spawn_pattern, spawn_pattern_from_header},
         permutations::{self, OPTION_KEY_INVALID, PermutationConfig},
-        render_objects::DynamicRenderObject,
+        render_objects::{DynamicRenderObject, s_are_all_objects_loaded},
     },
 };
 
@@ -104,39 +104,38 @@ impl EntityListTab {
     }
 
     fn render_thumbnails(&mut self, egui_ctx: &egui::Context) {
-        // Wait for the asset manager to finish loading before rendering thumbnails
-        if Renderer::instance().asset_manager.count_loading() > 0 {
-            return;
-        }
-
         let Some(entries) = self.packages.get_mut(&self.current_package) else {
             return;
         };
 
         for entry in entries.iter_mut().filter(|e| e.thumbnail.is_none()) {
             if let Some(world) = entry.thumbnail_world.take() {
-                let bb = world
-                    .query::<&AxisAlignedBBox>()
-                    .iter()
-                    .next()
-                    .map(|(_, bb)| bb.clone())
-                    .unwrap_or(AxisAlignedBBox::from_center_extents(Vec3::ZERO, Vec3::ONE));
-                self.thumbnail_scene.set_world(world);
-                self.thumbnail_scene.focus_fit_ortho(&bb);
-                self.thumbnail_scene.render(1.0 / 60.0, (512, 512));
-                match self.thumbnail_scene.copy_output_as_texture() {
-                    Ok(o) => {
-                        entry.thumbnail = Some(o);
+                if s_are_all_objects_loaded(&world, Renderer::instance()) {
+                    let bb = world
+                        .query::<&AxisAlignedBBox>()
+                        .iter()
+                        .next()
+                        .map(|(_, bb)| bb.clone())
+                        .unwrap_or(AxisAlignedBBox::from_center_extents(Vec3::ZERO, Vec3::ONE));
+                    self.thumbnail_scene.set_world(world);
+                    self.thumbnail_scene.focus_fit_ortho(&bb);
+                    self.thumbnail_scene.render(1.0 / 60.0, (512, 512));
+                    match self.thumbnail_scene.copy_output_as_texture() {
+                        Ok(o) => {
+                            entry.thumbnail = Some(o);
+                        }
+                        Err(e) => {
+                            error!("Failed to render thumbnail for {}: {}", entry.hash, e);
+                        }
                     }
-                    Err(e) => {
-                        error!("Failed to render thumbnail for {}: {}", entry.hash, e);
-                    }
+                    entry.thumbnail_world = Some(self.thumbnail_scene.take_world());
+                    break;
+                } else {
+                    entry.thumbnail_world = Some(world);
                 }
-                egui_ctx.request_repaint();
-                entry.thumbnail_world = Some(self.thumbnail_scene.take_world());
-                break;
             }
         }
+        egui_ctx.request_repaint();
     }
 
     fn render_live_preview(&mut self, hash: TagHash, _hover_vector: Vec2) {
