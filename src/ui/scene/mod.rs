@@ -55,7 +55,7 @@ impl Scene {
             renderer,
             camera,
             sun_light_angle: 60f32,
-            render_mode: RenderMode::Lookdev,
+            render_mode: RenderMode::Shaded,
             controller: CameraController::new_orbit(Vec3::ZERO, 2.5),
             surface,
             surface_srv,
