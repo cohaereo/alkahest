@@ -875,7 +875,7 @@ dependencies = [
 [[package]]
 name = "d3d11"
 version = "0.3.0"
-source = "git+https://github.com/cohaereo/d3d11-rs.git#9db745eddc16eb6a7765ff222a07379822963601"
+source = "git+https://github.com/cohaereo/d3d11-rs.git#dcc9dee3b539fce2994397e4d6f18869058f5b5d"
 dependencies = [
  "bincode",
  "bitflags 2.10.0",
@@ -892,7 +892,7 @@ dependencies = [
 [[package]]
 name = "d3d11-ffi"
 version = "0.3.0"
-source = "git+https://github.com/cohaereo/d3d11-rs.git#9db745eddc16eb6a7765ff222a07379822963601"
+source = "git+https://github.com/cohaereo/d3d11-rs.git#dcc9dee3b539fce2994397e4d6f18869058f5b5d"
 dependencies = [
  "windows-core 0.58.0",
  "windows-targets 0.52.6",
@@ -3468,9 +3468,9 @@ dependencies = [
 
 [[package]]
 name = "tracy-client"
-version = "0.18.2"
+version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef54005d3d760186fd662dad4b7bb27ecd5531cdef54d1573ebd3f20a9205ed7"
+checksum = "91d722a05fe49b31fef971c4732a7d4aa6a18283d9ba46abddab35f484872947"
 dependencies = [
  "loom",
  "once_cell",
@@ -3479,12 +3479,12 @@ dependencies = [
 
 [[package]]
 name = "tracy-client-sys"
-version = "0.26.1"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "319c70195101a93f56db4c74733e272d720768e13471f400c78406a326b172b0"
+checksum = "2fb391ac70462b3097a755618fbf9c8f95ecc1eb379a414f7b46f202ed10db1f"
 dependencies = [
  "cc",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]

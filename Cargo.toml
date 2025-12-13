@@ -69,7 +69,16 @@ tracing-subscriber = { version = "0.3", git = "https://github.com/cohaereo/traci
     "tracing-log",
 ] }
 tracing.workspace = true
-tracy-client = { version = "0.18.2", optional = true }
+tracy-client = { version = "*", optional = true, default-features = false, features = [
+    "broadcast",
+    "callstack-inlines",
+    "code-transfer",
+    "context-switch-tracing",
+    "crash-handler",
+    "enable",
+#    "sampling",
+    "system-tracing",
+] }
 
 # Graphics
 d3d11.workspace = true
