@@ -60,6 +60,12 @@ impl Gui {
                 GoogleMaterialSymbols::FONT_BYTES,
             )),
         );
+        fonts.font_data.insert(
+            "RobotoMono-Regular".into(),
+            Arc::new(egui::FontData::from_static(include_bytes!(
+                "../../assets/fonts/RobotoMono-Regular.ttf"
+            ))),
+        );
 
         let mut add_with_icons = |family: egui::FontFamily, elements: &[&str]| {
             for (i, &element) in elements.iter().enumerate() {
@@ -89,7 +95,7 @@ impl Gui {
         );
         add_with_icons(
             egui::FontFamily::Monospace,
-            &["NHaasRegular", "NHaasMedium", "NHaasBold"],
+            &["RobotoMono-Regular"],
         );
         add_with_icons(egui::FontFamily::Name("Medium".into()), &["NHaasMedium"]);
         add_with_icons(egui::FontFamily::Name("Bold".into()), &["NHaasBold"]);
@@ -113,7 +119,7 @@ impl Gui {
             ),
             (
                 egui::TextStyle::Monospace,
-                FontId::new(14.0, egui::FontFamily::Proportional),
+                FontId::new(14.0, egui::FontFamily::Monospace),
             ),
             (
                 egui::TextStyle::Button,
