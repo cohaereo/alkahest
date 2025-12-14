@@ -257,13 +257,16 @@ impl DynamicModel {
 
 impl FeatureRenderer for DynamicModel {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
-        let bounds = AxisAlignedBBox::from_center_extents(
-            self.model.model_offset.xyz(),
-            self.model.model_scale.xyz() * 2.0,
-        )
-        .transformed(self.transform);
+        // TODO(cohae): frustum culling is broken for some moving models (such as the vertex animated fan segments in Irkalla Complex)
+        // let bounds = AxisAlignedBBox::from_center_extents(
+        //     self.model.model_offset.xyz(),
+        //     self.model.model_scale.xyz() * 2.0,
+        // )
+        // .transformed(self.transform);
+        //
+        // camera.is_visible(&bounds)
 
-        camera.is_visible(&bounds)
+        true
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn Any) {
