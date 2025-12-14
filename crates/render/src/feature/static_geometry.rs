@@ -1,5 +1,5 @@
 use std::{collections::HashSet, f32, io::Write, ops::Deref, sync::Arc};
-
+use anyhow::Context;
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
     features::{
@@ -115,9 +115,10 @@ impl StaticModel {
 pub struct StaticModelRenderer {
     instance_buffer: ConstantBuffer<u8>,
     model: StaticModel,
-    transforms: Vec<(SStaticInstanceTransform, AxisAlignedBBox)>,
+    instances: Vec<(SStaticInstanceTransform, AxisAlignedBBox)>,
     bounds: AxisAlignedBBox,
     identifier: u64,
+    culling_enabled: bool,
 
     constants_dirty: bool,
     instance_count: u32,
@@ -133,7 +134,8 @@ pub struct InstanceTransformBlock {
 impl StaticModelRenderer {
     pub fn new(
         gpu: &Arc<Gpu>,
-        transforms: Vec<(SStaticInstanceTransform, AxisAlignedBBox)>,
+        transforms: Vec<SStaticInstanceTransform>,
+        occlusion_bounds: Option<Vec<AxisAlignedBBox>>,
         model_hash: TagHash,
         identifier: u64,
     ) -> anyhow::Result<Self> {
@@ -143,13 +145,27 @@ impl StaticModelRenderer {
             + transforms.len() * size_of::<InstanceTransformBlock>(), // per-transform data
         )?;
 
-        trace!(instances = transforms.len(), model_hash=%model_hash, "Loading model");
+        let mut culling_enabled = true;
+        let mut instances = Vec::with_capacity(transforms.len());
+        for (i, transform) in transforms.into_iter().enumerate() {
+            let bounds = if let Some(ref occlusion_bounds) = occlusion_bounds {
+                occlusion_bounds[i].clone()
+            } else {
+                warn!("No occlusion bounds provided for static model instances (model_hash={model_hash}), culling disabled");
+                culling_enabled = false;
+                AxisAlignedBBox::NONE
+            };
+            instances.push((transform, bounds));
+        }
+
+        trace!(instances = instances.len(), model_hash=%model_hash, "Loading model");
         Ok(Self {
             instance_buffer: cbuffer,
             model: StaticModel::load(model_hash)?,
-            bounds: transforms.iter().map(|(_, b)| b.clone()).sum(),
-            instance_count: transforms.len() as u32,
-            transforms,
+            bounds: instances.iter().map(|(_, b)| b.clone()).sum(),
+            culling_enabled,
+            instance_count: instances.len() as u32,
+            instances,
             identifier,
             constants_dirty: true,
         })
@@ -294,7 +310,7 @@ impl StaticModelRenderer {
         //     [0.0, 0.0, model.mesh_scale, model.mesh_offset.z],
         //     [0.0, 0.0, 0.0, 1.0],
         // ]);
-        for (transform, _) in &self.transforms {
+        for (transform, _) in &self.instances {
             let instance_transform = Mat4::from_scale_rotation_translation(
                 Vec3::splat(transform.scale),
                 transform.rotation,
@@ -340,6 +356,10 @@ impl StaticModelRenderer {
     }
 
     fn visibility_test(&mut self, camera: &Camera) -> bool {
+        if !self.culling_enabled {
+            return false;
+        }
+
         if !camera.culling_frustum.aabb_intersecting(&self.bounds) {
             return false;
         }
@@ -369,16 +389,8 @@ impl StaticInstancesRenderer {
 
             let renderer = StaticModelRenderer::new(
                 gpu,
-                instances.transforms[range.clone()]
-                    .iter()
-                    .cloned()
-                    .zip(
-                        instances.occlusion_bounds.bounds[range]
-                            .iter()
-                            .map(|b| &b.bb)
-                            .cloned(),
-                    )
-                    .collect(),
+                instances.transforms.get(range.clone()).context("Invalid instance transform range")?.to_vec(),
+                instances.occlusion_bounds.bounds.get(range).map(|bounds| bounds.into_iter().map(|b| b.bb.clone()).collect()),
                 model,
                 instances.vertex_ao_identifier,
             )?;
