@@ -2,20 +2,20 @@ pub mod controller;
 
 use std::{
     sync::{
-        Arc,
         atomic::{AtomicUsize, Ordering},
+        Arc,
     },
     time::Instant,
 };
 
-use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
+use alkahest_data::tfx::{common::AxisAlignedBBox, FeatureRendererSubscription};
 use alkahest_render::{
-    Gpu, Renderer, camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline,
-    tfx::view::View,
+    camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline, tfx::view::View, Gpu,
+    Renderer,
 };
 use bitflags::Flags;
-use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
-use egui::{FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, load::SizedTexture, vec2};
+use d3d11::{dxgi, ShaderResourceView, Texture2D, Texture2dDesc};
+use egui::{load::SizedTexture, vec2, FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2};
 use glam::Vec3;
 use google_material_symbols::GoogleMaterialSymbols;
 
@@ -196,10 +196,7 @@ impl Scene {
 
         self.controller.update(&mut self.camera, ui, &r, delta_time);
 
-        if (r.dragged_by(egui::PointerButton::Secondary)
-            || r.dragged_by(egui::PointerButton::Primary))
-            && ui.input(|i| i.modifiers.alt)
-        {
+        if r.dragged_by(egui::PointerButton::Middle) {
             let delta_adjusted = r.drag_delta() / 4.0;
             self.sun_light_angle += delta_adjusted.x;
             self.sun_light_angle = self.sun_light_angle.rem_euclid(360.0);
