@@ -2,30 +2,30 @@ use std::io::{Cursor, Seek, SeekFrom};
 
 use alkahest_data::{
     map::ComponentData,
-    pattern::{S8080841B, SPattern},
+    pattern::{SPattern, S8080841B},
     tfx::{
-        TfxFeatureRenderer,
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
+        TfxFeatureRenderer,
     },
 };
 use alkahest_render::{
-    Renderer,
     feature::{
-        rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
-        terrain_patches::TerrainPatchesRenderer,
+        decals::DecalCollectionRenderer, rigid_model::DynamicModel,
+        static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
+    Renderer,
 };
 use anyhow::Context;
 use glam::Vec4Swizzles;
 use tiger_parse::{PackageManagerExt, TigerReadable};
-use tiger_pkg::{TagHash, package_manager};
+use tiger_pkg::{package_manager, TagHash};
 
 use crate::world::{
-    UnimplementedTigerComponent, UnimplementedTigerComponents,
-    permutations::PermutationConfig,
-    render_objects::{DynamicRenderObject, StaticRenderObject},
+    permutations::PermutationConfig, render_objects::{DynamicRenderObject, StaticRenderObject},
+    UnimplementedTigerComponent,
+    UnimplementedTigerComponents,
 };
 
 pub fn spawn_pattern(
@@ -184,21 +184,21 @@ pub fn spawn_pattern_from_header(
                     ))),
                 )?;
             }
-            // 0x80808220 => {
-            //     let data = get_component_data!(SDecalCollectionComponent);
-            //     if let Some(collection) = &*data.decals {
-            //         let renderer = DecalCollectionRenderer::load(collection.clone())?;
-            //         world.insert_one(
-            //             entity,
-            //             StaticRenderObject::new(Renderer::instance().add_object(
-            //                 RenderObject::new(
-            //                     alkahest_data::tfx::TfxFeatureRenderer::DynamicDecals,
-            //                     renderer,
-            //                 ),
-            //             )),
-            //         )?;
-            //     }
-            // }
+            0x80806957 => {
+                let data = get_component_data!(SDecalCollectionComponent);
+                if let Some(collection) = &*data.decals {
+                    let renderer = DecalCollectionRenderer::load(collection.clone())?;
+                    world.insert_one(
+                        entity,
+                        StaticRenderObject::new(Renderer::instance().add_object(
+                            RenderObject::new(
+                                alkahest_data::tfx::TfxFeatureRenderer::DynamicDecals,
+                                renderer,
+                            ),
+                        )),
+                    )?;
+                }
+            }
             // 0x808085A9 => {
             //     let data = get_component_data!(SDecoratorsComponent);
             //     if let Some(decorators) = data.decorators.0.as_ref() {

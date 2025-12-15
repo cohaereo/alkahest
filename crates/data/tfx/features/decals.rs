@@ -7,7 +7,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808224)]
+#[tiger_type(id = 0x8080695B)]
 pub struct SDecalCollection {
     pub file_size: u64,
     pub decals: Vec<SDecalSet>,
@@ -22,7 +22,7 @@ pub struct SDecalCollection {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080822C)]
+#[tiger_type(id = 0x80806963)]
 pub struct SDecalSet {
     pub technique: TagHash,
     pub start: u16,

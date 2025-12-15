@@ -1,4 +1,3 @@
-use assert_offset::AssertOffsets;
 use glam::{Quat, Vec4};
 use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, OptionalVariantPointer};
 use tiger_pkg::TagHash;
@@ -13,7 +12,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, AssertOffsets)]
+#[derive(Debug)]
 #[tiger_type(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
@@ -24,7 +23,7 @@ pub struct SBubbleParent {
     pub map_name: FnvHash,
 }
 
-#[derive(Debug, AssertOffsets)]
+#[derive(Debug)]
 #[tiger_type(id = 0x80808701, size = 0x50)]
 pub struct SBubbleDefinition {
     pub file_size: u64,
@@ -68,9 +67,9 @@ tiger_variant_enum! {
     [Unknown(true)]
     enum ComponentData {
         SStaticTerrainPatchesComponent,
-        SStaticInstancesCollectionComponent
+        SStaticInstancesCollectionComponent,
+        SDecalCollectionComponent
         // SSkyObjectCollectionComponent,
-        // SDecalCollectionComponent,
         // SDecoratorsComponent,
         // SMaterialPermutationsComponent,
         // SShadowingLightComponent,
@@ -122,7 +121,7 @@ pub struct SShadowingLightComponent {
     pub light: OptionalTag<SShadowingLight>,
 }
 
-#[tiger_type(id = 0x8080821E)]
+#[tiger_type(id = 0x80806955)]
 pub struct SDecalCollectionComponent {
     pub decals: OptionalTag<SDecalCollection>,
 }
