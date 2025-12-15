@@ -56,9 +56,7 @@ impl View {
             lighting,
             shading_result,
             output,
-            subscribed_features: FeatureRendererSubscription::all_but(
-                alkahest_data::tfx::TfxFeatureRenderer::SpeedtreeTrees,
-            ),
+            subscribed_features: FeatureRendererSubscription::all(),
         })
     }
 
