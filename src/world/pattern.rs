@@ -24,6 +24,7 @@ use tiger_pkg::{package_manager, TagHash};
 
 use crate::world::{
     permutations::PermutationConfig, render_objects::{DynamicRenderObject, StaticRenderObject},
+    transform::Transform,
     UnimplementedTigerComponent,
     UnimplementedTigerComponents,
 };
@@ -211,34 +212,34 @@ pub fn spawn_pattern_from_header(
                         entity,
                         StaticRenderObject::new(Renderer::instance().add_object(
                             RenderObject::new(
-                                alkahest_data::tfx::TfxFeatureRenderer::SpeedtreeTrees,
+                                TfxFeatureRenderer::SpeedtreeTrees,
                                 Box::new(renderer),
                             ),
                         )),
                     )?;
                 }
             }
-            // 0x80808377 => {
-            //     let data = get_component_data!(SSkyObjectCollectionComponent);
-            //     let Some(objects) = &*data.objects else {
-            //         continue;
-            //     };
-            //     for obj in &objects.unk8 {
-            //         let (scale, rotation, translation) =
-            //             obj.transform.to_scale_rotation_translation();
+            0x80806AA2 => {
+                let data = get_component_data!(SSkyObjectCollectionComponent);
+                let Some(objects) = &*data.objects else {
+                    continue;
+                };
+                for obj in &objects.unk8 {
+                    let (scale, rotation, translation) =
+                        obj.transform.to_scale_rotation_translation();
 
-            //         let render_obj = RenderObject::new(
-            //             TfxFeatureRenderer::SkyTransparent,
-            //             DynamicModel::load(obj.model_ref.entity_model, vec![], vec![])?,
-            //         );
+                    let render_obj = RenderObject::new(
+                        TfxFeatureRenderer::SkyTransparent,
+                        DynamicModel::load(obj.model_ref.entity_model, vec![], vec![])?,
+                    );
 
-            //         // TODO(cohae): Again, spawning new entities for each object is kinda dumb
-            //         world.spawn((
-            //             Transform::new(translation, rotation, scale),
-            //             DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
-            //         ));
-            //     }
-            // }
+                    // TODO(cohae): Again, spawning new entities for each object is kinda dumb
+                    world.spawn((
+                        Transform::new(translation, rotation, scale),
+                        DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
+                    ));
+                }
+            }
             // 0x80808543 => {
             //     let data = get_component_data!(SShadowingLightComponent);
             //     let Some(light) = data.light.0.as_ref() else {

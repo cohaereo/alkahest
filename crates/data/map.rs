@@ -69,7 +69,7 @@ tiger_variant_enum! {
         SStaticTerrainPatchesComponent,
         SStaticInstancesCollectionComponent,
         SDecalCollectionComponent,
-        // SSkyObjectCollectionComponent,
+        SSkyObjectCollectionComponent,
         SDecoratorsComponent
         // SMaterialPermutationsComponent,
         // SShadowingLightComponent,
@@ -101,7 +101,7 @@ pub struct SStaticTerrainPatchesComponent {
     pub terrain_bounds: TagHash,
 }
 
-#[tiger_type(id = 0x80808378)]
+#[tiger_type(id = 0x80806AA3)]
 pub struct SSkyObjectCollectionComponent {
     pub objects: OptionalTag<SSkyObjectCollection>,
 }

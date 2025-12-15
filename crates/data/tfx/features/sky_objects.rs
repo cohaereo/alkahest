@@ -5,7 +5,7 @@ use tiger_pkg::TagHash;
 use crate::{tag::Tag, tfx::common::AxisAlignedBBox};
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080837C)]
+#[tiger_type(id = 0x80806AA7)]
 pub struct SSkyObjectCollection {
     pub file_size: u64,
     pub unk8: Vec<SUnk80806f97>,
@@ -14,7 +14,7 @@ pub struct SSkyObjectCollection {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080837E)]
+#[tiger_type(id = 0x80806AA9)]
 pub struct SUnk80806f97 {
     /// Transformation matrix
     pub transform: Mat4,
@@ -41,7 +41,7 @@ pub struct SUnk80806f97 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808383)]
+#[tiger_type(id = 0x80806AAE)]
 pub struct SSkyObjectModelRef {
     pub file_size: u64,
     pub entity_model: TagHash,
