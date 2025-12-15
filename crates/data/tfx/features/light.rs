@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080854B)]
+#[tiger_type(id = 0x80806C65)]
 pub struct SLightCollection {
     pub file_size: u64,
     pub unk8: u64,
@@ -21,7 +21,7 @@ pub struct SLightCollection {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808556, size = 256)]
+#[tiger_type(id = 0x80806C70, size = 240)]
 pub struct SLight {
     pub unk0: Vec4,
     pub unk10: Vec4,
@@ -39,15 +39,18 @@ pub struct SLight {
     pub unkb8: f32,
     pub unkbc: f32,
 
+    // TODO(cohae): This field is new in TFS. Taghash-like value such as 9E440E84, purpose unknown
+    pub unkc0: u32,
+
     pub technique_lighting_apply: TagHash,
     pub technique_volumetrics: TagHash,
-    pub technique_lightprobe_apply_lightprobe: TagHash,
-    pub unkc8: TagHash, // Unk80806da1
+    pub technique_lightprobe_apply: TagHash,
     pub unkd0: TagHash, // Unk80806da1
-    pub unkd4: [u32; 7],
+    pub unkd4: TagHash, // Unk80806da1
+    pub unkd8: [u32; 6],
 }
 
-#[tiger_type(id = 0x80808557, size = 0x120)]
+#[tiger_type(id = 0x80806C71, size = 0x110)]
 pub struct SShadowingLight {
     pub unk0: Vec4,
     pub unk10: Vec4,
@@ -72,17 +75,15 @@ pub struct SShadowingLight {
     pub unkc8: u32,
     pub unkcc: f32,
 
-    // 0xD0
     pub technique_lighting_apply: TagHash,
     pub technique_lighting_apply_shadowing: TagHash,
     pub technique_volumetrics: TagHash,
     pub technique_volumetrics_shadowing: TagHash,
-    // 0xE0
-    pub technique_lightprobe_apply_lightprobe: TagHash,
-    pub technique_lightprobe_apply_lightprobe_shadowing: TagHash,
+    pub technique_lightprobe_apply: TagHash,
+    pub technique_lightprobe_apply_shadowing: TagHash,
 
-    pub unke8: TagHash, // 80808691
-    pub unkec: TagHash, // 80808691
+    pub unke8: TagHash, // Unk80806da1
+    pub unkec: TagHash, // Unk80806da1
 
     pub unkf0: [f32; 5],
     pub unk104: [u8; 12],

@@ -70,10 +70,10 @@ tiger_variant_enum! {
         SStaticInstancesCollectionComponent,
         SDecalCollectionComponent,
         SSkyObjectCollectionComponent,
-        SDecoratorsComponent
+        SDecoratorsComponent,
+        SShadowingLightComponent,
+        SLightCollectionComponent
         // SMaterialPermutationsComponent,
-        // SShadowingLightComponent,
-        // SLightCollectionComponent,
         // SCubemapComponent
     }
 }
@@ -106,17 +106,17 @@ pub struct SSkyObjectCollectionComponent {
     pub objects: OptionalTag<SSkyObjectCollection>,
 }
 
-// #[tiger_type(id = 0x80806DE0)]
-// pub struct SWaterPlaneComponent {
-//     pub model: TagHash,
-// }
+#[tiger_type(id = 0x808068D4)]
+pub struct SWaterPlaneComponent {
+    pub model: TagHash,
+}
 
-#[tiger_type(id = 0x80808335)]
+#[tiger_type(id = 0x80806A63)]
 pub struct SLightCollectionComponent {
     pub lights: OptionalTag<SLightCollection>,
 }
 
-#[tiger_type(id = 0x80808544)]
+#[tiger_type(id = 0x80806C5E)]
 pub struct SShadowingLightComponent {
     pub light: OptionalTag<SShadowingLight>,
 }

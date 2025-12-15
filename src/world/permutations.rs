@@ -16,7 +16,7 @@ pub struct PermutationConfig {
 impl PermutationConfig {
     pub fn from_model(model: &SDynamicModelComponent) -> Option<Self> {
         if model.unk408.is_empty() || model.unk418.is_empty() {
-            warn!(
+            debug!(
                 "TODO: Handle dynamic model permutations without unk408, dont know what to do \
                  with these yet"
             );

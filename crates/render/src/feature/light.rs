@@ -165,11 +165,7 @@ impl FeatureRenderer for LightRenderer {
             cmd.externs.deferred_light = Some(Box::new(DeferredLight {
                 // unk40: local_to_world_relative.inverse().transpose(),
                 unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
-                unkc0: local_to_world_relative,
-
-                unk150: 1.0,
-                unk154: 0.0,
-                unk158: 0.0,
+                unk80: local_to_world_relative,
 
                 ..Default::default()
             }));

@@ -11,14 +11,16 @@ use alkahest_data::{
 };
 use alkahest_render::{
     feature::{
-        decals::DecalCollectionRenderer, decorators::DecoratorRenderer, rigid_model::DynamicModel,
-        static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
+        decals::DecalCollectionRenderer, decorators::DecoratorRenderer, light::LightRenderer,
+        rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
+        terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
     Renderer,
 };
 use anyhow::Context;
-use glam::Vec4Swizzles;
+use glam::{Vec3, Vec4Swizzles};
+use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{package_manager, TagHash};
 
@@ -240,46 +242,46 @@ pub fn spawn_pattern_from_header(
                     ));
                 }
             }
-            // 0x80808543 => {
-            //     let data = get_component_data!(SShadowingLightComponent);
-            //     let Some(light) = data.light.0.as_ref() else {
-            //         continue;
-            //     };
+            0x80806C5D => {
+                let data = get_component_data!(SShadowingLightComponent);
+                let Some(light) = data.light.0.as_ref() else {
+                    continue;
+                };
 
-            //     let render_obj = RenderObject::new(
-            //         TfxFeatureRenderer::DeferredLights,
-            //         LightRenderer::new_shadowing(renderer, light)?,
-            //     );
+                let render_obj = RenderObject::new(
+                    TfxFeatureRenderer::DeferredLights,
+                    LightRenderer::new_shadowing(renderer, light)?,
+                );
 
-            //     world.insert_one(
-            //         entity,
-            //         DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
-            //     )?;
-            // }
-            // 0x80808334 => {
-            //     let data = get_component_data!(SLightCollectionComponent);
-            //     let Some(lights) = data.lights.0.as_ref() else {
-            //         continue;
-            //     };
+                world.insert_one(
+                    entity,
+                    DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
+                )?;
+            }
+            0x80806A62 => {
+                let data = get_component_data!(SLightCollectionComponent);
+                let Some(lights) = data.lights.0.as_ref() else {
+                    continue;
+                };
 
-            //     for (light, transform, bounds) in multizip((
-            //         &lights.lights,
-            //         &lights.transforms,
-            //         &lights.occlusion_bounds.bounds,
-            //     )) {
-            //         let render_obj = Renderer::instance().add_object(RenderObject::new(
-            //             TfxFeatureRenderer::ChunkedLights,
-            //             LightRenderer::new(Renderer::instance(), light, bounds.bb.clone())
-            //                 .context("Failed to load light")?,
-            //         ));
+                for (light, transform, bounds) in multizip((
+                    &lights.lights,
+                    &lights.transforms,
+                    &lights.occlusion_bounds.bounds,
+                )) {
+                    let render_obj = Renderer::instance().add_object(RenderObject::new(
+                        TfxFeatureRenderer::ChunkedLights,
+                        LightRenderer::new(Renderer::instance(), light, bounds.bb.clone())
+                            .context("Failed to load light")?,
+                    ));
 
-            //         // TODO(cohae): ChunkedLights need to be chunked like static geometry
-            //         world.spawn((
-            //             Transform::new(transform.translation.xyz(), transform.rotation, Vec3::ONE),
-            //             DynamicRenderObject::new(render_obj),
-            //         ));
-            //     }
-            // }
+                    // TODO(cohae): ChunkedLights need to be chunked like static geometry
+                    world.spawn((
+                        Transform::new(transform.translation.xyz(), transform.rotation, Vec3::ONE),
+                        DynamicRenderObject::new(render_obj),
+                    ));
+                }
+            }
             // 0x80807F3B => {
             //     let data = get_component_data!(SCubemapComponent);
 

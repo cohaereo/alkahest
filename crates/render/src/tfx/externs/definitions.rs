@@ -160,17 +160,17 @@ extern_struct! {
 extern_struct! {
     struct DeferredLight("deferred_light") {
         0x40 => unk40: Mat4,
-        0x80 => unk80: Mat4, // New in Marathon
-        0xC0 => unkc0: Mat4,
-        0x100 => unk100: Vec4 > default(Vec4::W),
-        0x110 => unk110: Vec4 > default(Vec4::W),
-        0x120 => unk120: Vec4 > default(Vec4::W),
-        0x130 => unk130: Vec4 > default(Vec4::W),
-        0x140 => unk140: Vec4,
-        0x150 => unk150: f32,
-        0x154 => unk154: f32 > default(7500.0),
-        0x158 => unk158: f32,
-        0x160 => unk160: f32,
+        0x80 => unk80: Mat4,
+        0xc0 => unkc0: Vec4 > default(Vec4::W),
+        0xd0 => unkd0: Vec4 > default(Vec4::W),
+        0xe0 => unke0: Vec4 > default(Vec4::W),
+        0xf0 => unkf0: Vec4 > default(Vec4::W),
+        0x100 => unk100: Vec4,
+        0x110 => unk110: f32,
+        0x114 => unk114: f32 > default(7500.0),
+        0x118 => unk118: f32,
+        0x11c => unk11c: f32,
+        0x120 => unk120: f32,
     }
 }
 

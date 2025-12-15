@@ -3,7 +3,7 @@ use std::iter::Sum;
 use glam::{vec3, Quat, Vec3, Vec4, Vec4Swizzles};
 use tiger_parse::tiger_type;
 
-#[tiger_type(id = 0x8080BF47)]
+#[tiger_type(id = 0x80809F4F)]
 #[derive(Clone, Debug, Copy)]
 pub struct SRotationTranslation {
     pub rotation: Quat,
