@@ -58,9 +58,9 @@ pub enum Opcode {
     Unknown0x2D,
     TransformVec4,
 
-    CompareLess = 0x3b,
+    CompareLessThan = 0x3b,
     CompareLessEqual,
-    CompareGreater,
+    CompareGreaterThan,
     CompareGreaterEqual,
     CompareEqual,
     CompareNotEqual,
@@ -69,11 +69,13 @@ pub enum Opcode {
     PushConstVec4 = 0x42,
     LerpConstant,
     LerpConstantSaturated,
-    Spline4Const,
+
+    Spline4Const = 0x45,
     Spline8Const,
     Spline8ChainConst,
     Gradient4Const,
     Unknown0x49,
+
     PushExternInputFloat,
     PushExternInputVec4,
     PushExternInputMat4,
@@ -166,9 +168,9 @@ impl Opcode {
             | Opcode::Unknown0x24
             | Opcode::Unknown0x2C
             | Opcode::Unknown0x2D
-            | Opcode::CompareLess
+            | Opcode::CompareLessThan
             | Opcode::CompareLessEqual
-            | Opcode::CompareGreater
+            | Opcode::CompareGreaterThan
             | Opcode::CompareGreaterEqual
             | Opcode::CompareEqual
             | Opcode::CompareNotEqual

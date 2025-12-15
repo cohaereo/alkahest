@@ -431,6 +431,23 @@ impl<'a> InterpreterState<'a> {
                         cl[9],
                     );
                 }
+                Opcode::Spline8ChainConst => {
+                    let constant_start = ptr[1];
+                    ensure!(
+                        (constant_start + 9) < constants.len() as u8,
+                        "Invalid constant index"
+                    );
+
+                    let x = cached_top;
+                    let recursion = self.get(-1)?;
+                    self.stack_pointer -= 1;
+
+                    let cl = &constants[constant_start as usize..constant_start as usize + 10];
+                    cached_top = super::helpers::bytecode_op_spline8_chain_const(
+                        x, recursion, cl[0], cl[1], cl[2], cl[3], cl[4], cl[5], cl[6], cl[7],
+                        cl[8], cl[9],
+                    );
+                }
                 Opcode::Gradient4Const => {
                     let constant_start = ptr[1];
                     ensure!(

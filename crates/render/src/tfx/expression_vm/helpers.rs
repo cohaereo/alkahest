@@ -261,6 +261,69 @@ pub fn bytecode_op_spline8_const(
     Vec4::splat(spline_result)
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn bytecode_op_spline8_chain_const(
+    x: Vec4,
+    recursion: Vec4,
+    c3: Vec4,
+    c2: Vec4,
+    c1: Vec4,
+    c0: Vec4,
+    d3: Vec4,
+    d2: Vec4,
+    d1: Vec4,
+    d0: Vec4,
+    c_thresholds: Vec4,
+    d_thresholds: Vec4,
+) -> Vec4 {
+    let c_high = c3 * x + c2;
+    let c_low = c1 * x + c0;
+    let d_high = d3 * x + d2;
+    let d_low = d1 * x + d0;
+
+    let x2 = x * x;
+
+    let c_evaluated_spline = c_high * x2 + c_low;
+    let d_evaluated_spline = d_high * x2 + d_low;
+
+    let c_threshold_mask = step(c_thresholds, x);
+    let d_threshold_mask = step(d_thresholds, x);
+
+    let c_channel_mask = _fake_bitwise_ops_fake_xor(c_threshold_mask, c_threshold_mask.yzww())
+        .xyz()
+        .extend(c_threshold_mask.w);
+
+    let d_channel_mask = _fake_bitwise_ops_fake_xor(d_threshold_mask, d_threshold_mask.yzww())
+        .xyz()
+        .extend(d_threshold_mask.w);
+
+    let c_spline_result_in_4 = c_evaluated_spline * c_channel_mask;
+    let d_spline_result_in_4 = d_evaluated_spline * d_channel_mask;
+
+    let c_spline_result = c_spline_result_in_4.x
+        + c_spline_result_in_4.y
+        + c_spline_result_in_4.z
+        + c_spline_result_in_4.w;
+    let d_spline_result = d_spline_result_in_4.x
+        + d_spline_result_in_4.y
+        + d_spline_result_in_4.z
+        + d_spline_result_in_4.w;
+
+    let spline_result_intermediate = if c_threshold_mask.x > 0.0 {
+        c_spline_result
+    } else {
+        recursion.x
+    };
+
+    let spline_result = if d_threshold_mask.x > 0.0 {
+        d_spline_result
+    } else {
+        spline_result_intermediate
+    };
+
+    Vec4::splat(spline_result)
+}
+
 // TODO(cohae): Fuzztest against original SIMD code
 pub fn bytecode_op_25(v: Vec4) -> Vec4 {
     const XMMWORD_7FF73A1FCBD0: UVec4 = UVec4::splat(0x0000007F);
