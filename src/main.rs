@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate tracing;
 use std::rc::Rc;
 
 use app::App;
@@ -12,9 +14,6 @@ mod panic_hook;
 mod task;
 mod ui;
 mod world;
-
-#[macro_use]
-extern crate tracing;
 
 #[cfg(all(feature = "dhat-heap", not(feature = "tracy")))]
 #[global_allocator]
@@ -48,6 +47,8 @@ fn main() -> anyhow::Result<()> {
     alkahest_core::initialize_package_manager(args.gamedir.as_deref())?;
 
     let sdl_context = Rc::new(sdl3::init().expect("Failed to initialize SDL"));
+    #[cfg(target_os = "linux")]
+    sdl3::hint::set("SDL_VIDEO_DRIVER", "x11");
     let video_subsystem = sdl_context
         .video()
         .expect("Failed to initialize video subsystem");
