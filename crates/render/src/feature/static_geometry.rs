@@ -1,29 +1,27 @@
-use std::{collections::HashSet, f32, io::Write, ops::Deref, sync::Arc};
-use anyhow::Context;
+use std::{f32, io::Write, ops::Deref, sync::Arc};
+
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
     features::{
         dynamic::RenderStageSubscription,
         statics::{
-            SStaticInstanceTransform, SStaticMesh, SStaticMeshInstanceGroup, SStaticMeshInstances,
-            SStaticSpecialMesh,
+            SStaticInstanceTransform, SStaticMesh, SStaticMeshInstances, SStaticSpecialMesh,
         },
     },
     RenderStage, ShaderStage,
 };
+use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
-use chroma_dbg::ChromaDebug;
-use d3d11::DeviceContext;
 use glam::{Mat4, Vec3, Vec4};
 use hashbrown::HashMap;
 use itertools::Itertools;
-use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{package_manager, TagHash};
 
 use super::{shared::ModelBuffers, FeatureRenderer};
 use crate::{
-    asset::{vertex_buffer::VertexBuffer, Handle},
+    asset::Handle,
     camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList, state::GpuState},
     tfx::technique::Technique,
@@ -151,7 +149,10 @@ impl StaticModelRenderer {
             let bounds = if let Some(ref occlusion_bounds) = occlusion_bounds {
                 occlusion_bounds[i].clone()
             } else {
-                warn!("No occlusion bounds provided for static model instances (model_hash={model_hash}), culling disabled");
+                warn!(
+                    "No occlusion bounds provided for static model instances \
+                     (model_hash={model_hash}), culling disabled"
+                );
                 culling_enabled = false;
                 AxisAlignedBBox::NONE
             };
@@ -389,8 +390,16 @@ impl StaticInstancesRenderer {
 
             let renderer = StaticModelRenderer::new(
                 gpu,
-                instances.transforms.get(range.clone()).context("Invalid instance transform range")?.to_vec(),
-                instances.occlusion_bounds.bounds.get(range).map(|bounds| bounds.into_iter().map(|b| b.bb.clone()).collect()),
+                instances
+                    .transforms
+                    .get(range.clone())
+                    .context("Invalid instance transform range")?
+                    .to_vec(),
+                instances
+                    .occlusion_bounds
+                    .bounds
+                    .get(range)
+                    .map(|bounds| bounds.iter().map(|b| b.bb.clone()).collect()),
                 model,
                 instances.vertex_ao_identifier,
             )?;
@@ -444,8 +453,8 @@ impl StaticInstancesRenderer {
 }
 
 impl FeatureRenderer for StaticInstancesRenderer {
-    fn visibility_test(&mut self, camera: &Camera) -> bool {
-        self.models.par_iter_mut().for_each(|(model, visible)| {
+    fn visibility_test(&mut self, _camera: &Camera) -> bool {
+        self.models.par_iter_mut().for_each(|(_model, visible)| {
             *visible = true; // model.visibility_test(camera);
         });
         true
@@ -510,6 +519,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
             Renderer::instance()
                 .cmd_pool
                 .queue_job(Box::new(move |job_cmd: &mut CommandList| {
+                    profiling::scope!("command_thread_job", &format!("{range:?}"));
                     // Safety: p_models is valid for the lifetime of this closure
                     // TODO(cohae): need a better way to pass self.models to the job
                     let p_models = p_models as *const Vec<(StaticModelRenderer, bool)>;

@@ -1,7 +1,6 @@
 use std::any::Any;
 
 use alkahest_data::tfx::{
-    common::AxisAlignedBBox,
     features::dynamic::{
         RenderStageSubscription, SDynamicMesh, SDynamicMeshMaterialVariants, SDynamicMeshPart,
         SDynamicModel,
@@ -9,7 +8,7 @@ use alkahest_data::tfx::{
     RenderStage, ShaderStage, TfxScopeBits,
 };
 use anyhow::Context;
-use glam::{Mat4, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec4};
 use itertools::{multizip, Itertools};
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{package_manager, TagHash};
@@ -256,7 +255,7 @@ impl DynamicModel {
 }
 
 impl FeatureRenderer for DynamicModel {
-    fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
+    fn visibility_test(&mut self, _camera: &crate::camera::Camera) -> bool {
         // TODO(cohae): frustum culling is broken for some moving models (such as the vertex animated fan segments in Irkalla Complex)
         // let bounds = AxisAlignedBBox::from_center_extents(
         //     self.model.model_offset.xyz(),

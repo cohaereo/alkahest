@@ -25,7 +25,7 @@ impl SDynamicModel {
     }
 }
 
-#[derive(Debug, Clone       )]
+#[derive(Debug, Clone)]
 #[tiger_type(id = 0x80806EC5, size = 0x88)]
 pub struct SDynamicMesh {
     pub vertex0_buffer: TagHash,

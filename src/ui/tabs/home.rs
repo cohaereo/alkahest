@@ -1,8 +1,8 @@
-use egui::{RichText, Ui};
+use egui::Ui;
 use google_material_symbols::GoogleMaterialSymbols;
 
 use super::{Tab, TabResult, entity_list::EntityListTab, map_list::MapListTab};
-use crate::ui::{colors, util::UiExt};
+use crate::ui::util::UiExt;
 
 pub struct HomeTab;
 

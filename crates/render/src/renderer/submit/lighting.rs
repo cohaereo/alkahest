@@ -1,11 +1,7 @@
-use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
+use alkahest_data::tfx::{PipelineState, RenderStage};
 
 use super::Renderer;
-use crate::{
-    cmd_event_span,
-    gpu::command_list::CommandList,
-    tfx::{externs, view::View},
-};
+use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
 
 impl Renderer {
     pub(super) fn submit_lighting(&self, cmd: &mut CommandList, view: &View) {

@@ -4,7 +4,7 @@ use d3d11::{dxgi, BindFlags, BufferDesc, DeviceChild, DeviceContext, ShaderResou
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{package_manager, TagHash};
 
-use crate::{gpu::command_list::CommandList, Gpu};
+use crate::gpu::command_list::CommandList;
 
 #[derive(Clone)]
 pub struct VertexBuffer {

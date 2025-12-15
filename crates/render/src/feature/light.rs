@@ -1,4 +1,3 @@
-use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
     features::{
@@ -16,9 +15,9 @@ use super::FeatureRenderer;
 use crate::{
     camera::Camera,
     tfx::{
-        externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
+        externs::{self, DeferredLight, SimpleGeometry},
         packet::CompactTransform,
-        technique::{ShaderModule, Technique},
+        technique::Technique,
     },
     util::geometry,
     Renderer,

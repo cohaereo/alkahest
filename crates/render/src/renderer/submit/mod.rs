@@ -10,7 +10,7 @@ use std::fmt::Debug;
 
 use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, ShaderStage};
-use glam::{vec4, Mat4, Vec3, Vec4};
+use glam::{vec4, Mat4, Vec4};
 
 use super::Renderer;
 use crate::{

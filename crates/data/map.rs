@@ -1,12 +1,11 @@
 use assert_offset::AssertOffsets;
 use glam::{Quat, Vec4};
-use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, OptionalVariantPointer, Padding};
+use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, OptionalVariantPointer};
 use tiger_pkg::TagHash;
 
 use crate::{
-    tag::{OptionalTag, Tag, WideHash, WideTag},
+    tag::{OptionalTag, WideHash, WideTag},
     tfx::features::{
-        cubemap::SCubemapComponent,
         decals::SDecalCollection,
         decorators::SDecorator,
         light::{SLightCollection, SShadowingLight},

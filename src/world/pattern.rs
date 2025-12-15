@@ -6,32 +6,26 @@ use alkahest_data::{
     tfx::{
         TfxFeatureRenderer,
         common::AxisAlignedBBox,
-        features::{
-            dynamic::{SDynamicMeshMaterialVariants, SDynamicModelComponent},
-            statics::SUnk808082D5,
-        },
+        features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
     },
 };
 use alkahest_render::{
     Renderer,
     feature::{
-        cubemap::CubemapRenderer, decals::DecalCollectionRenderer, decorators::DecoratorRenderer,
-        light::LightRenderer, rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
+        rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
         terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
 };
 use anyhow::Context;
-use glam::{Vec3, Vec4Swizzles};
-use itertools::multizip;
-use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
+use glam::Vec4Swizzles;
+use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
 use crate::world::{
     UnimplementedTigerComponent, UnimplementedTigerComponents,
     permutations::PermutationConfig,
     render_objects::{DynamicRenderObject, StaticRenderObject},
-    transform::Transform,
 };
 
 pub fn spawn_pattern(

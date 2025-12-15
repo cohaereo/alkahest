@@ -93,10 +93,7 @@ impl Gui {
             egui::FontFamily::Proportional,
             &["NHaasRegular", "NHaasMedium", "NHaasBold"],
         );
-        add_with_icons(
-            egui::FontFamily::Monospace,
-            &["RobotoMono-Regular"],
-        );
+        add_with_icons(egui::FontFamily::Monospace, &["RobotoMono-Regular"]);
         add_with_icons(egui::FontFamily::Name("Medium".into()), &["NHaasMedium"]);
         add_with_icons(egui::FontFamily::Name("Bold".into()), &["NHaasBold"]);
 

@@ -1,5 +1,4 @@
 use alkahest_render::{Renderer, object::RenderObjectHandle, tfx::packet::FramePacket};
-use glam::Vec3Swizzles;
 
 use crate::world::{permutations::PermutationConfig, transform::Transform};
 

@@ -6,7 +6,7 @@ use crate::{
     task::Task,
     ui::{
         scene::{Scene, controller::CameraController},
-        util::{UiExt, spinner_image},
+        util::UiExt,
     },
 };
 

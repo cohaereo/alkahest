@@ -1,7 +1,6 @@
 use core::f32;
 use std::{
     arch::x86_64::{__m128, _mm_fmadd_ps},
-    mem::transmute,
     ops::{Add, Mul, Sub},
 };
 

@@ -1,7 +1,6 @@
 use std::{
     any::Any,
     cell::UnsafeCell,
-    ops::Deref,
     sync::{
         atomic::{AtomicBool, AtomicUsize},
         Arc,

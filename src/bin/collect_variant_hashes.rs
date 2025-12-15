@@ -1,20 +1,14 @@
 use std::{
     collections::{HashMap, HashSet},
-    hash::{DefaultHasher, Hash, Hasher},
     io::{Cursor, Seek, SeekFrom},
-    str::FromStr,
 };
 
 use alkahest_data::{
-    hash::fnv1,
-    pattern::SComponent,
-    tfx::features::dynamic::{SDynamicMeshMaterialVariants, SDynamicModelComponent},
+    hash::fnv1, pattern::SComponent, tfx::features::dynamic::SDynamicModelComponent,
 };
-use anyhow::Context;
-use chroma_dbg::ChromaDebug;
 use itertools::Itertools;
-use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
-use tiger_pkg::{TagHash, package_manager};
+use tiger_parse::{PackageManagerExt, TigerReadable};
+use tiger_pkg::package_manager;
 
 fn main() -> anyhow::Result<()> {
     alkahest_core::initialize_package_manager(None)?;
@@ -124,11 +118,9 @@ const GUESSES: &[(u32, &str)] = &[(0xB01748DA, "color"), (0x871AC0EA, "<unused>"
 fn find_hash(hash: u32) -> String {
     if let Some(s) = HASH_STRS.iter().find(|s| fnv1(s) == hash) {
         s.to_string()
+    } else if let Some((_, s)) = GUESSES.iter().find(|(h, _)| *h == hash) {
+        s.to_string()
     } else {
-        if let Some((_, s)) = GUESSES.iter().find(|(h, _)| *h == hash) {
-            s.to_string()
-        } else {
-            format!("{:08X}", hash)
-        }
+        format!("{:08X}", hash)
     }
 }

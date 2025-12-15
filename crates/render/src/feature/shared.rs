@@ -1,7 +1,7 @@
 use tiger_pkg::TagHash;
 
 use crate::{
-    asset::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, Handle},
+    asset::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     gpu::command_list::CommandList,
     Renderer,
 };

@@ -1,4 +1,4 @@
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
@@ -151,7 +151,7 @@ impl FeatureRenderer for CubemapRenderer {
         //     fvar27 = param_13.w;
         // }
 
-        let mut fvar26 = 0.0001;
+        let fvar26 = 0.0001;
         // if 0.0001 - param_18 < 0.0 {
         //     fvar26 = param_18;
         // }

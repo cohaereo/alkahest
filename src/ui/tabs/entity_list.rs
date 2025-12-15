@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use alkahest_data::{pattern::SPattern, tfx::common::AxisAlignedBBox};
-use alkahest_render::{Renderer, asset::AssetManager, camera::Camera, renderer};
+use alkahest_render::{Renderer, camera::Camera};
 use egui::{Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget, vec2};
 use glam::Vec3;
 use tiger_parse::{PackageManagerExt, TigerReadable};
@@ -11,12 +11,12 @@ use super::TabResult;
 use crate::{
     ui::{
         scene::{Scene, controller::CameraController},
-        util::{UiExt, spinner_image},
+        util::UiExt,
     },
     world::{
         pattern::{spawn_pattern, spawn_pattern_from_header},
         permutations::{self, OPTION_KEY_INVALID, PermutationConfig},
-        render_objects::{DynamicRenderObject, s_are_all_objects_loaded},
+        render_objects::s_are_all_objects_loaded,
     },
 };
 

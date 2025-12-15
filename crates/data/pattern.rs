@@ -1,6 +1,5 @@
 use tiger_parse::{
     tiger_type, FnvHash, OptionalVariantPointer, ResourcePointer, ResourcePointerWithClass,
-    VariantPointer,
 };
 
 use crate::{
