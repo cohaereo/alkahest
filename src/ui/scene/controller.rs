@@ -1,5 +1,5 @@
-use alkahest_render::{Renderer, camera::Camera};
-use egui::{Response, Ui, Vec2, vec2};
+use alkahest_render::{camera::Camera, Renderer};
+use egui::{vec2, Response, Ui, Vec2};
 use glam::{Quat, Vec3};
 
 pub enum CameraController {
@@ -97,10 +97,10 @@ impl CameraController {
                         movement /= 5.0;
                     }
                     if i.modifiers.shift {
-                        movement *= 2.0;
+                        movement *= 5.0;
                     }
                     if i.key_down(egui::Key::Space) {
-                        movement *= 2.5;
+                        movement *= 5.0;
                     }
                 });
 
