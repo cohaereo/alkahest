@@ -35,11 +35,10 @@ struct FrameQueries {
 
 struct ProfilerState {
     gpu: Arc<Gpu>,
+    enabled: bool,
 
     current_frame: FrameQueries,
-
     pending_frames: VecDeque<FrameQueries>,
-
     last_results: Vec<ProfileScope>,
 
     frame_index: u64,
@@ -54,6 +53,7 @@ impl D3D11Profiler {
     pub fn new(gpu: &Arc<Gpu>) -> Self {
         let state = ProfilerState {
             gpu: gpu.clone(),
+            enabled: true,
             current_frame: FrameQueries {
                 queries: Vec::new(),
                 frame_index: 0,
@@ -69,7 +69,11 @@ impl D3D11Profiler {
     }
 
     pub fn scope(&self, context: &DeviceContext, name: impl Into<String>) -> ProfileScopeGuard {
-        ProfileScopeGuard::new(self.clone(), context, name.into())
+        if !self.state.lock().enabled {
+            ProfileScopeGuard::none(self.clone())
+        } else {
+            ProfileScopeGuard::new(self.clone(), context, name.into())
+        }
     }
 
     fn start_scope(&self, name: String, context: &DeviceContext) -> anyhow::Result<ScopeHandle> {
@@ -110,7 +114,14 @@ impl D3D11Profiler {
     }
 
     fn end_scope(&self, handle: ScopeHandle) -> anyhow::Result<()> {
-        let ProfilerState { current_frame, .. } = &mut *self.state.lock();
+        let ProfilerState {
+            enabled,
+            current_frame,
+            ..
+        } = &mut *self.state.lock();
+        if !*enabled {
+            return Ok(());
+        }
 
         if handle.index >= current_frame.queries.len() {
             anyhow::bail!("Invalid scope handle");
@@ -130,12 +141,16 @@ impl D3D11Profiler {
     pub fn end_frame(&self) {
         let ProfilerState {
             gpu,
+            enabled,
             current_frame,
             pending_frames,
             last_results,
             frame_index,
             ..
         } = &mut *self.state.lock();
+        if !*enabled {
+            return;
+        }
 
         let mut frame = FrameQueries {
             queries: Vec::new(),
@@ -223,6 +238,10 @@ impl D3D11Profiler {
     }
 
     pub fn get_results_string(&self) -> String {
+        if !self.state.lock().enabled {
+            return "GPU profiling is disabled".to_string();
+        }
+
         let results = self.get_results();
 
         if results.is_empty() {
@@ -279,6 +298,13 @@ pub struct ProfileScopeGuard {
 }
 
 impl ProfileScopeGuard {
+    fn none(profiler: D3D11Profiler) -> Self {
+        Self {
+            profiler,
+            handle: None,
+        }
+    }
+
     fn new(profiler: D3D11Profiler, context: &DeviceContext, name: String) -> Self {
         let handle = profiler.start_scope(name, context).ok();
         Self { profiler, handle }
