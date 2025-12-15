@@ -45,11 +45,11 @@ impl DecoratorRenderer {
                 ..Default::default()
             });
 
-            let speedtree_cbuffer = if let Some(unk34) = &*smodel.unk14 {
+            let speedtree_cbuffer = if let Some(unk34) = &*smodel.unk34 {
                 let mut data = vec![Vec4::ONE; 72];
                 data[0..=4].copy_from_slice(&unk34.unk8.get(1).unwrap_or(&unk34.unk8[0]).unk0);
                 // data[5..=29]
-                for (i, c) in smodel.unk38.chunks_exact(4).enumerate() {
+                for (i, c) in smodel.unk58.chunks_exact(4).enumerate() {
                     let v = Vec4::new(c[0], c[1], c[2], c[3]);
                     data[5 + i] = v;
                 }

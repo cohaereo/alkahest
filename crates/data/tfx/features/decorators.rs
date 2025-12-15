@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080857D)]
+#[tiger_type(id = 0x80806C98)]
 pub struct SDecorator {
     pub file_size: u64,
     pub unk8: Vec<Tag<SUnk8080717E>>,
@@ -23,7 +23,7 @@ pub struct SDecorator {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080858B)]
+#[tiger_type(id = 0x80806CA4)]
 pub struct SUnk80807170 {
     pub file_size: u64,
     pub unk8: u32,
@@ -35,14 +35,14 @@ pub struct SUnk80807170 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x8080858E)]
+#[tiger_type(id = 0x80806CA7)]
 pub struct SDecoratorInstanceData {
     pub file_size: u64,
     pub data: Vec<SDecoratorInstanceElement>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808590)]
+#[tiger_type(id = 0x80806CA9)]
 pub struct SDecoratorInstanceElement {
     /// Normalized position
     pub position: [u16; 3],
@@ -53,7 +53,7 @@ pub struct SDecoratorInstanceElement {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808586)]
+#[tiger_type(id = 0x80806C9F)]
 pub struct SUnk8080716B {
     pub instances_scale: Vec4,
     pub instances_offset: Vec4,
@@ -64,29 +64,29 @@ pub struct SUnk8080716B {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80808599)]
+#[tiger_type(id = 0x80806CB2)]
 pub struct SUnk8080717E {
     pub file_size: u64,
     pub entity_model: TagHash,
     pub unk8: u32,
     pub bounds: AxisAlignedBBox,
-    pub unk10: TagHash,
-    pub unk14: OptionalTag<SUnk80807184>,
-    pub unk18: Vec<f32>,
-    pub unk28: Vec<bool>,
+    pub unk30: TagHash,
+    pub unk34: OptionalTag<SUnk80807184>,
     pub unk38: Vec<f32>,
+    pub unk48: Vec<bool>,
+    pub unk58: Vec<f32>,
     // ...
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80807184)]
+#[tiger_type(id = 0x80806CB8)]
 pub struct SUnk80807184 {
     pub file_size: u64,
     pub unk8: Vec<SUnk80807186>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80807186)]
+#[tiger_type(id = 0x80806CBA)]
 pub struct SUnk80807186 {
     pub unk0: [Vec4; 5],
 }

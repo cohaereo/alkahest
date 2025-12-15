@@ -11,7 +11,7 @@ use alkahest_data::{
 };
 use alkahest_render::{
     feature::{
-        decals::DecalCollectionRenderer, rigid_model::DynamicModel,
+        decals::DecalCollectionRenderer, decorators::DecoratorRenderer, rigid_model::DynamicModel,
         static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
@@ -199,25 +199,25 @@ pub fn spawn_pattern_from_header(
                     )?;
                 }
             }
-            // 0x808085A9 => {
-            //     let data = get_component_data!(SDecoratorsComponent);
-            //     if let Some(decorators) = data.decorators.0.as_ref() {
-            //         let renderer = DecoratorRenderer::load(
-            //             Renderer::instance(),
-            //             data.decorators.taghash(),
-            //             decorators.clone(),
-            //         )?;
-            //         world.insert_one(
-            //             entity,
-            //             StaticRenderObject::new(Renderer::instance().add_object(
-            //                 RenderObject::new(
-            //                     alkahest_data::tfx::TfxFeatureRenderer::SpeedtreeTrees,
-            //                     Box::new(renderer),
-            //                 ),
-            //             )),
-            //         )?;
-            //     }
-            // }
+            0x80806CC2 => {
+                let data = get_component_data!(SDecoratorsComponent);
+                if let Some(decorators) = data.decorators.0.as_ref() {
+                    let renderer = DecoratorRenderer::load(
+                        Renderer::instance(),
+                        data.decorators.taghash(),
+                        decorators.clone(),
+                    )?;
+                    world.insert_one(
+                        entity,
+                        StaticRenderObject::new(Renderer::instance().add_object(
+                            RenderObject::new(
+                                alkahest_data::tfx::TfxFeatureRenderer::SpeedtreeTrees,
+                                Box::new(renderer),
+                            ),
+                        )),
+                    )?;
+                }
+            }
             // 0x80808377 => {
             //     let data = get_component_data!(SSkyObjectCollectionComponent);
             //     let Some(objects) = &*data.objects else {

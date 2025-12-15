@@ -68,9 +68,9 @@ tiger_variant_enum! {
     enum ComponentData {
         SStaticTerrainPatchesComponent,
         SStaticInstancesCollectionComponent,
-        SDecalCollectionComponent
+        SDecalCollectionComponent,
         // SSkyObjectCollectionComponent,
-        // SDecoratorsComponent,
+        SDecoratorsComponent
         // SMaterialPermutationsComponent,
         // SShadowingLightComponent,
         // SLightCollectionComponent,
@@ -126,7 +126,7 @@ pub struct SDecalCollectionComponent {
     pub decals: OptionalTag<SDecalCollection>,
 }
 
-#[tiger_type(id = 0x808085AA)]
+#[tiger_type(id = 0x80806CC3)]
 pub struct SDecoratorsComponent {
     pub decorators: OptionalTag<SDecorator>,
 }
