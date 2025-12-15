@@ -66,8 +66,8 @@ impl StaticModel {
             .buffers
             .iter()
             .map(
-                |&(index_buffer, vertex0_buffer, vertex1_buffer, _unk_buffer)| {
-                    ModelBuffers::load(vertex0_buffer, vertex1_buffer, index_buffer)
+                |&(index_buffer, vertex0_buffer, vertex1_buffer, color_buffer)| {
+                    ModelBuffers::load(vertex0_buffer, vertex1_buffer, color_buffer, index_buffer)
                         .expect("Failed to load static model opaque mesh buffers")
                 },
             )
@@ -91,6 +91,7 @@ impl StaticModel {
                     buffers: ModelBuffers::load(
                         mesh.vertex0_buffer,
                         mesh.vertex1_buffer,
+                        mesh.color_buffer,
                         mesh.index_buffer,
                     )
                     .expect("Failed to load special mesh buffers"),

@@ -66,8 +66,13 @@ impl DynamicModel {
             .meshes
             .iter()
             .map(|m| {
-                ModelBuffers::load(m.vertex0_buffer, m.vertex1_buffer, m.index_buffer)
-                    .expect("Failed to load model buffers for dynamic model")
+                ModelBuffers::load(
+                    m.vertex0_buffer,
+                    m.vertex1_buffer,
+                    m.color_buffer,
+                    m.index_buffer,
+                )
+                .expect("Failed to load model buffers for dynamic model")
             })
             .collect_vec();
 
