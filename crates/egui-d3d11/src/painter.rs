@@ -100,7 +100,7 @@ impl D3D11Renderer {
 
         let samplers = {
             let desc = d3d11::SamplerDesc::builder()
-                .filter(d3d11::Filter::MaximumMinMagMipLinear)
+                .filter(d3d11::Filter::MinMagMipLinear)
                 .address_u(d3d11::TextureAddress::Border)
                 .address_v(d3d11::TextureAddress::Border)
                 .address_w(d3d11::TextureAddress::Border)

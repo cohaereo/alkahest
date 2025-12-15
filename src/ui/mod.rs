@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, mem::discriminant, rc::Rc, sync::Arc};
 
 use alkahest_render::{Gpu, gpu::command_list::CommandList};
+use anyhow::Context;
 use egui::{Color32, FontId};
 use egui_dock::{DockArea, DockState, TabInteractionStyle};
 use google_material_symbols::GoogleMaterialSymbols;
@@ -98,7 +99,8 @@ impl Gui {
         add_with_icons(egui::FontFamily::Name("Bold".into()), &["NHaasBold"]);
 
         let egui_sdl3 =
-            egui_sdl3_platform::Platform::new(&sdl, &window, gpu.swapchain_resolution())?;
+            egui_sdl3_platform::Platform::new(&sdl, &window, gpu.swapchain_resolution())
+                .context("Failed to initialize SDL3 Egui platform module")?;
         egui_sdl3.context().set_fonts(fonts);
         egui_sdl3.context().style_mut(|s| {
             *s = style::gui_style();
@@ -144,7 +146,8 @@ impl Gui {
         Ok(Self {
             window,
             sdl,
-            egui_d3d11: egui_d3d11::D3D11Renderer::new(gpu)?,
+            egui_d3d11: egui_d3d11::D3D11Renderer::new(gpu)
+                .context("Failed to initialize D3D11 Egui renderer")?,
             egui_sdl3,
             tree,
             added_nodes: Vec::new(),

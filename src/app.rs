@@ -9,6 +9,7 @@ use alkahest_render::{
     gpu::{command_list::CommandList, spinner::FullscreenSpinner},
     util::fps_histogram::FrametimeHistogram,
 };
+use anyhow::Context;
 use sdl3::video::Window;
 
 use crate::{cli::AppArgs, ui::Gui};
@@ -29,8 +30,8 @@ pub struct App {
 
 impl App {
     pub fn new(sdl: Rc<sdl3::Sdl>, window: Rc<Window>, _args: AppArgs) -> anyhow::Result<Self> {
-        let gpu = Arc::new(Gpu::create(&window)?);
-        let renderer = Arc::new(Renderer::new(gpu.clone())?);
+        let gpu = Arc::new(Gpu::create(&window).context("Failed to create GPU")?);
+        let renderer = Arc::new(Renderer::new(gpu.clone()).context("Failed to create renderer")?);
         Renderer::set_instance(renderer.clone());
 
         Ok(Self {

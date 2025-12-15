@@ -119,7 +119,8 @@ impl Gpu {
             )?,
             adapter: adapter3,
             swapchain: Mutex::new(Swapchain::new(swap_chain, &device, window_size)),
-            global_states: global_state::RenderStates::new(&device)?,
+            global_states: global_state::RenderStates::new(&device)
+                .context("Failed to create global render states")?,
             device,
             context: ReentrantMutex::new(context),
         })
