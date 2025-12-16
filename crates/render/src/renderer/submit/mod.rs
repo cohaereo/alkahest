@@ -334,13 +334,19 @@ impl Renderer {
         // };
 
         *ext.transparent = externs::Transparent {
-            // unk00: self.gpu.placeholder_white.view.clone().into(),
-            // unk10: self.gpu.placeholder_white.view.clone().into(),
-            // unk20: self.gpu.placeholder_white.view.clone().into(),
-            // unk48: self.gpu.placeholder_white.view.clone().into(),
-            // unk50: self.gpu.placeholder_white.view.clone().into(),
-            // unk78: self.gpu.placeholder_white.view.clone().into(),
-            // unk38: self.common.temporary_atmos.view.clone().into(),
+            // unk00: todo!(), // t11, Atmosphere (near?)
+            // unk08: todo!(), // t12, Atmosphere (3x2)
+            // unk10: todo!(), // t13, Atmosphere (far?)
+            // unk18: todo!(), // t14, 3d lightprobe
+            unk20: self.common.temporary_depth_angle_lookup.view.clone().into(), // t15
+            // unk28: todo!(), // t16, 3d lightprobe
+            // unk30: todo!(), // t17, 3d lightprobe
+            // unk38: todo!(), // t18, 3d lightprobe
+            // unk40: todo!(), // t19, 3d lightprobe
+            // unk48: todo!(), // t20
+            // unk50: todo!(), // t21
+            // unk58: todo!(), // t22
+            // unk60: todo!(), // t23
             unk70: vec4(0.22882, 0.00, 1.00, 45.00),
             unk80: vec4(0.00, 0.00, 1.17485, 2.86546),
             unk90: vec4(0.00, 0.00, 2.10913, 5.14044),
