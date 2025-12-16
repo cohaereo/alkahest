@@ -38,5 +38,9 @@ void mainPS(VSOutput input,
 {
 
     float4 rt2 = gbuffer_third.Sample(samplerState, input.uv);
-    out_third = float4(rt2.xyz, max(rt2.w, 1.0));
+    if(rt2.w == 0.0) {
+        out_third = float4(rt2.xyz, 1.0);
+    } else {
+        discard;
+    }
 }

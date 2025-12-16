@@ -5,6 +5,7 @@ use tiger_pkg::TagHash;
 use crate::{
     tag::{OptionalTag, WideHash, WideTag},
     tfx::features::{
+        cubemap::SCubemapComponent,
         decals::SDecalCollection,
         decorators::SDecorator,
         light::{SLightCollection, SShadowingLight},
@@ -72,9 +73,9 @@ tiger_variant_enum! {
         SSkyObjectCollectionComponent,
         SDecoratorsComponent,
         SShadowingLightComponent,
-        SLightCollectionComponent
+        SLightCollectionComponent,
+        SCubemapComponent
         // SMaterialPermutationsComponent,
-        // SCubemapComponent
     }
 }
 

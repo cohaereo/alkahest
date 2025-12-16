@@ -99,7 +99,7 @@ impl Renderer {
         ConVars::register("render.feature.road_decals", true);
         ConVars::register("render.feature.water", true);
         ConVars::register("render.feature.volumetrics", true);
-        ConVars::register("render.feature.cubemaps", false);
+        ConVars::register("render.feature.cubemaps", true);
 
         // Placeholder surface container
         // TODO(cohae): Can we remove this at some point?

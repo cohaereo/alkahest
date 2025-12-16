@@ -2,33 +2,33 @@ use std::io::{Cursor, Seek, SeekFrom};
 
 use alkahest_data::{
     map::ComponentData,
-    pattern::{SPattern, S8080841B},
+    pattern::{S8080841B, SPattern},
     tfx::{
+        TfxFeatureRenderer,
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
-        TfxFeatureRenderer,
     },
 };
 use alkahest_render::{
+    Renderer,
     feature::{
-        decals::DecalCollectionRenderer, decorators::DecoratorRenderer, light::LightRenderer,
-        rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
+        cubemap::CubemapRenderer, decals::DecalCollectionRenderer, decorators::DecoratorRenderer,
+        light::LightRenderer, rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
         terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
-    Renderer,
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use crate::world::{
-    permutations::PermutationConfig, render_objects::{DynamicRenderObject, StaticRenderObject},
+    UnimplementedTigerComponent, UnimplementedTigerComponents,
+    permutations::PermutationConfig,
+    render_objects::{DynamicRenderObject, StaticRenderObject},
     transform::Transform,
-    UnimplementedTigerComponent,
-    UnimplementedTigerComponents,
 };
 
 pub fn spawn_pattern(
@@ -282,19 +282,19 @@ pub fn spawn_pattern_from_header(
                     ));
                 }
             }
-            // 0x80807F3B => {
-            //     let data = get_component_data!(SCubemapComponent);
+            0x80806694 => {
+                let data = get_component_data!(SCubemapComponent);
 
-            //     let render_obj = RenderObject::new(
-            //         TfxFeatureRenderer::Cubemaps,
-            //         Box::new(CubemapRenderer::load(&renderer.gpu, data)?),
-            //     );
+                let render_obj = RenderObject::new(
+                    TfxFeatureRenderer::Cubemaps,
+                    Box::new(CubemapRenderer::load(&renderer.gpu, data)?),
+                );
 
-            //     world.insert_one(
-            //         entity,
-            //         DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
-            //     )?;
-            // }
+                world.insert_one(
+                    entity,
+                    DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
+                )?;
+            }
             u => {
                 debug!(
                     "\t- Unknown entity component type {:08X}, tag {:08X}, data type {:08X}/{} \

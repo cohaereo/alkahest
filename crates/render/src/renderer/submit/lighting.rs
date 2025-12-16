@@ -1,4 +1,4 @@
-use alkahest_data::tfx::{PipelineState, RenderStage};
+use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
 
 use super::Renderer;
 use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
@@ -51,11 +51,11 @@ impl Renderer {
         {
             cmd_event_span!(cmd, "cubemaps");
             let _gpuspan = self.profiler.scope(cmd, "cubemaps");
-            // self.submit_stage(
-            //     cmd,
-            //     RenderStage::Cubemaps,
-            //     FeatureRendererSubscription::all(),
-            // );
+            self.submit_stage(
+                cmd,
+                RenderStage::Cubemaps,
+                FeatureRendererSubscription::all(),
+            );
         }
         view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
         cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));

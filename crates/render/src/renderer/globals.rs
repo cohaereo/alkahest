@@ -186,6 +186,7 @@ tfx_global_pipelines! {
     debug_specular_smoothness,
     debug_metalness,
     debug_texture_ao,
+    debug_ambient_occlusion,
     debug_emissive,
     debug_transmission,
     debug_colored_overcoat_id,

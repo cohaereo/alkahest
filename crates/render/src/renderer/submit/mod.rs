@@ -151,7 +151,7 @@ impl Renderer {
                     DebugPipeline::Albedo => &p.debug_source_color,
                     DebugPipeline::Smoothness => &p.debug_specular_smoothness,
                     DebugPipeline::Metalness => &p.debug_metalness,
-                    DebugPipeline::AmbientOcclusion => &p.debug_texture_ao,
+                    DebugPipeline::AmbientOcclusion => &p.debug_ambient_occlusion,
                     DebugPipeline::Emission => &p.debug_emissive,
                     DebugPipeline::Transmission => &p.debug_transmission,
                     DebugPipeline::Overcoat => &p.debug_colored_overcoat_id,

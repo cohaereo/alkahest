@@ -2,20 +2,20 @@ pub mod controller;
 
 use std::{
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
     time::Instant,
 };
 
-use alkahest_data::tfx::{common::AxisAlignedBBox, FeatureRendererSubscription};
+use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use alkahest_render::{
-    camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline, tfx::view::View, Gpu,
-    Renderer,
+    Gpu, Renderer, camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline,
+    tfx::view::View,
 };
 use bitflags::Flags;
-use d3d11::{dxgi, ShaderResourceView, Texture2D, Texture2dDesc};
-use egui::{load::SizedTexture, vec2, FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2};
+use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
+use egui::{FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, load::SizedTexture, vec2};
 use glam::Vec3;
 use google_material_symbols::GoogleMaterialSymbols;
 
@@ -580,10 +580,10 @@ impl ExternalDataWidgetExt for FeatureRendererSubscription {
                 ui.add_enabled_ui(false, |ui| {
                     feature!(ui, FeatureRendererSubscription::LENS_FLARES, "Lens Flares");
                     feature!(ui, FeatureRendererSubscription::PARTICLES, "Particles");
-                    ui.section_separator("Lighting");
-                    feature!(ui, FeatureRendererSubscription::CUBEMAPS, "Cubemaps");
                 });
 
+                ui.section_separator("Lighting");
+                feature!(ui, FeatureRendererSubscription::CUBEMAPS, "Cubemaps");
                 feature!(
                     ui,
                     FeatureRendererSubscription::CHUNKED_LIGHTS,

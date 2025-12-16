@@ -2,7 +2,7 @@ use glam::{Mat4, Vec4};
 use tiger_parse::tiger_type;
 use tiger_pkg::TagHash;
 
-#[tiger_type(id = 0x80807F3C, size = 0x1D8)]
+#[tiger_type(id = 0x80806695, size = 0x1B8)]
 #[derive(Debug, Clone)]
 pub struct SCubemapComponent {
     pub unk0: u64,
@@ -28,28 +28,29 @@ pub struct SCubemapComponent {
     // pub unka0: u32,
     // pub unka4: u32,
     // pub pada8: u64,
-    #[tiger(offset = 0xc0)]
-    pub unkc0: Mat4,
+    #[tiger(offset = 0xb0)]
+    pub unkb0: Mat4,
+    pub unkf0: Vec4,
     pub unk100: Vec4,
-    pub unk110: Vec4,
-    pub unk120: Mat4,
+
+    #[tiger(offset = 0x110)]
+    pub unk110: Mat4,
 
     pub probes_resolution: [u32; 3],
-    pub unk16c: f32,
+    pub unk15c: f32,
 
+    pub unk160: Vec4,
     pub unk170: Vec4,
     pub unk180: Vec4,
-    pub unk190: Vec4,
-    pub unk1a0: [u64; 2],
 
-    pub unk1b0: u32,
-    pub unk1b4: TagHash,
+    pub unk190: u64,
+    pub unk198: u16,
+    pub unk19a: u16,
     pub texture_cube_specular_ibl: TagHash,
     pub texture_cube_alpha: TagHash,
     pub texture_voxel_diffuse: TagHash,
-    pub unk1c4_vb: TagHash,
-    pub unk1c8: TagHash,
-    pub unk1cc: [u32; 3],
+    pub unk1a8: TagHash,
+    pub unk1ac: [u32; 3],
 }
 
 #[derive(PartialEq)]
@@ -61,11 +62,11 @@ pub enum CubemapShape {
 
 impl SCubemapComponent {
     pub fn use_alpha(&self) -> bool {
-        (self.unk180.z > 0.0) && self.unk180.w != 0.0
+        (self.unk170.z > 0.0) && self.unk170.w != 0.0
     }
 
     pub fn use_relighting(&self) -> bool {
-        self.unk180.y > 0.0
+        self.unk170.y > 0.0
     }
 
     pub fn use_probes(&self) -> bool {

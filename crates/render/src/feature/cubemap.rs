@@ -6,7 +6,7 @@ use alkahest_data::tfx::{
     PrimitiveType, RenderStage, ShaderStage,
 };
 use d3d11::dxgi;
-use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
+use glam::{vec4, Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use itertools::Itertools;
 
 use super::FeatureRenderer;
@@ -75,7 +75,8 @@ impl CubemapRenderer {
 
 impl FeatureRenderer for CubemapRenderer {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
-        camera.is_visible(&self.bounds)
+        // camera.is_visible(&self.bounds)
+        true
     }
 
     fn extract_and_prepare(
@@ -162,7 +163,7 @@ impl FeatureRenderer for CubemapRenderer {
         };
 
         // let param_11 = self.cubemap.unk170.with_w(self.cubemap.unk74);
-        let param_11 = self.cubemap.unk170.with_w(1.0);
+        let param_11 = self.cubemap.unk160.with_w(1.0);
         let mut fvar27 = param_11.z;
         if 0.5 < fvar27 {
             fvar27 = ((fvar27 - 0.5) + (fvar27 - 0.5)).powf(4.0);
@@ -173,7 +174,7 @@ impl FeatureRenderer for CubemapRenderer {
         let unk14 = param_11.with_z(fvar27);
 
         // TODO(cohae): cb11[12] doesn't seem to be used, so i can't verify this
-        let mut unk9 = self.cubemap.unk120;
+        let mut unk9 = self.cubemap.unk110;
         unk9.w_axis = Vec4::W;
 
         const EPSILON: Vec4 = Vec4::splat(0.0001);
@@ -226,8 +227,8 @@ impl FeatureRenderer for CubemapRenderer {
             let sun_height = sun_light_direction.z.max(0.5);
             let fvar5 = sun_height * unk8f552b79 * (sun_intensity / 10.0);
 
-            let param_13 = self.cubemap.unk170;
-            let param_21 = self.cubemap.unk180;
+            let param_13 = self.cubemap.unk160;
+            let param_21 = self.cubemap.unk170;
 
             let param_3 = param_21.x;
             let param_4 = param_21.y;
@@ -251,18 +252,24 @@ impl FeatureRenderer for CubemapRenderer {
                     fade3: (fade1 - 1.0).with_w(8.5),
 
                     unk4: Vec4::Z,
-                    unk5: self.cubemap.unkc0,
+                    unk5: self.cubemap.unkb0,
                     unk9,
 
-                    unk13: Vec4::new(0.08333, 0.08333, 0.16667, 1.00), // cb11[14] in tfs
-                    unk14, // Vec4::new(25.00, 0.50, 0.00, 0.00),         // cb11[15] in tfs
+                    unk13: vec4(
+                        self.cubemap.unkb0.x_axis.x,
+                        self.cubemap.unkb0.y_axis.y,
+                        self.cubemap.unkb0.z_axis.z,
+                        0.0,
+                    ),
+                    unk14: Vec4::new(0.08333, 0.08333, 0.16667, 1.00),
+                    unk15: unk14, // Vec4::new(25.00, 0.50, 0.00, 0.00),
                     // p13
-                    unk15,                            // cb11[16] in tfs
-                    unk16, // Vec4::new(0.025, 10000.00, -9999.00, 0.00), // Seems universal
-                    unk17: Vec4::new(1., 1., 1., 0.), // cb11[18] in tfs
+                    unk16: unk15,
+                    unk17: unk16, // Vec4::new(0.025, 10000.00, -9999.00, 0.00), // Seems universal
+                    unk18: Vec4::new(1.0, 1.0, 1.0, 0.0),
                     // Relighting constants
-                    relighting_scale, //: Vec4::new(1.0, 1.0, 1.0, 0.00), // cb11[19] in tfs
-                    relighting_offset, //: Vec4::new(0.0, 0.0, 0.0, 0.00), // cb11[20] in tfs
+                    relighting_scale,  //: Vec4::new(1.0, 1.0, 1.0, 0.00),
+                    relighting_offset, //: Vec4::new(0.0, 0.0, 0.0, 0.00),
                 },
             )
             .unwrap();
@@ -328,18 +335,19 @@ pub struct CubemapTransform {
 #[repr(C)]
 pub struct CubemapPixelConstants {
     // Fade constants/points. W component is used for miscellaneous data
-    pub fade0: Vec4,
-    pub fade1: Vec4,
-    pub fade2: Vec4,
-    pub fade3: Vec4,
-    pub unk4: Vec4,
-    pub unk5: Mat4,
-    pub unk9: Mat4,
+    pub fade0: Vec4, // cb11[0]
+    pub fade1: Vec4, // cb11[1]
+    pub fade2: Vec4, // cb11[2]
+    pub fade3: Vec4, // cb11[3]
+    pub unk4: Vec4,  // cb11[4]
+    pub unk5: Mat4,  // cb11[5..=8]
+    pub unk9: Mat4,  // cb11[9..=12]
     pub unk13: Vec4,
-    pub unk14: Vec4,
-    pub unk15: Vec4,
-    pub unk16: Vec4,
-    pub unk17: Vec4,
-    pub relighting_scale: Vec4,
-    pub relighting_offset: Vec4,
+    pub unk14: Vec4,             // cb11[14]
+    pub unk15: Vec4,             // cb11[15]
+    pub unk16: Vec4,             // cb11[16]
+    pub unk17: Vec4,             // cb11[17]
+    pub unk18: Vec4,             // cb11[18]
+    pub relighting_scale: Vec4,  // cb11[19]
+    pub relighting_offset: Vec4, // cb11[20]
 }
