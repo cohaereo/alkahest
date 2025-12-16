@@ -34,13 +34,18 @@ SamplerState samplerState : register(s0);
 void mainPS(VSOutput input,
             out float4 out_albedo: SV_Target0,
             out float4 out_normal: SV_Target1,
-            out float4 out_third: SV_Target2)
+            out float4 out_third: SV_Target2,
+            out float out_ao: SV_Target3)
 {
 
     float4 rt2 = gbuffer_third.Sample(samplerState, input.uv);
-    if(rt2.w == 0.0) {
+    float textureAo = saturate(rt2.g * 2.0);
+    float vertexAo = rt2.a;
+    if(vertexAo == 0.0) {
         out_third = float4(rt2.xyz, 1.0);
+        out_ao = textureAo;
     } else {
-        discard;
+        out_third = float4(rt2.xyz, vertexAo);
+        out_ao = vertexAo * textureAo;
     }
 }

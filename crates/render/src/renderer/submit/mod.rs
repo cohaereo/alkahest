@@ -333,6 +333,8 @@ impl Renderer {
         //     ..Default::default()
         // };
 
+        ext.cubemaps.unk00 = view.lighting.vertex_ao.into();
+
         *ext.transparent = externs::Transparent {
             // unk00: todo!(), // t11, Atmosphere (near?)
             // unk08: todo!(), // t12, Atmosphere (3x2)
@@ -385,6 +387,7 @@ impl Renderer {
                 unk6: Vec4::ONE,
             },
         );
+
         self.frame_scope.bind(cmd, ShaderStage::Vertex, 13);
         self.frame_scope.bind(cmd, ShaderStage::Pixel, 13);
     }
