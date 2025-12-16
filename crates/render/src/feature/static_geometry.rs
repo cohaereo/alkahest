@@ -3,6 +3,7 @@ use std::{f32, io::Write, ops::Deref, sync::Arc};
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
     features::{
+        ao::SStaticAmbientOcclusion,
         dynamic::RenderStageSubscription,
         statics::{
             SStaticInstanceTransform, SStaticMesh, SStaticMeshInstances, SStaticSpecialMesh,
@@ -14,7 +15,6 @@ use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec3, Vec4};
 use hashbrown::HashMap;
-use itertools::Itertools;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{package_manager, TagHash};
@@ -175,6 +175,11 @@ impl StaticModelRenderer {
 
     #[profiling::function]
     pub fn render_all(&self, cmd: &mut CommandList, stage: RenderStage) {
+        let renderer = Renderer::instance();
+        if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+            cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
+        }
+
         self.instance_buffer
             .bind_cbuffer(cmd, ShaderStage::Vertex, 1);
 
@@ -248,6 +253,11 @@ impl StaticModelRenderer {
 
     #[profiling::function]
     pub fn render_group(&self, cmd: &mut CommandList, stage: RenderStage, group: usize) {
+        let renderer = Renderer::instance();
+        if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+            cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
+        }
+
         self.instance_buffer
             .bind_cbuffer(cmd, ShaderStage::Vertex, 1);
 
@@ -288,10 +298,12 @@ impl StaticModelRenderer {
     pub fn update_constants(
         &self,
         ctx: &d3d11::DeviceContext,
-        // ao: Option<&SStaticAmbientOcclusion>,
+        ao: Option<&SStaticAmbientOcclusion>,
     ) {
         let mut buffer = vec![];
         let model = &self.model.model.opaque_meshes;
+
+        let vao_base = ao.and_then(|ao| ao.get_offset_by_identifier(self.identifier));
 
         buffer
             .write_all(bytemuck::cast_slice(&[
@@ -321,12 +333,12 @@ impl StaticModelRenderer {
             .transpose();
             // let instance_transform = Mat4::IDENTITY;
 
-            // let matrix = instance_transform;
-            // let vertex_ao_offset = if let Some(vao_base) = vao_base {
-            //     transform.vertex_ao_offset + vao_base
-            // } else {
-            //     transform.vertex_ao_offset
-            // };
+            let vertex_ao_offset = if let Some(vao_base) = vao_base {
+                (transform.vertex_ao_offset + vao_base) >> 2
+            } else {
+                // println!("No AO for static model instance 0x{:016X}", self.identifier);
+                0xFFFF_FFFF
+            };
 
             buffer
                 .write_all(bytemuck::cast_slice(&[InstanceTransformBlock {
@@ -335,19 +347,7 @@ impl StaticModelRenderer {
                         instance_transform.y_axis,
                         instance_transform.z_axis,
                     ],
-                    params: Vec4::new(
-                        1.0,
-                        1.0,
-                        1.0,
-                        f32::from_bits(0x02000000),
-                        // f32::from_bits(
-                        //     ao_offsets
-                        //         .get(i)
-                        //         .copied()
-                        //         .map(|v| v.shr(2))
-                        //         .unwrap_or(0x02000000),
-                        // ),
-                    ),
+                    params: Vec4::new(1.0, 1.0, 1.0, f32::from_bits(vertex_ao_offset)),
                 }]))
                 .unwrap();
         }
@@ -464,9 +464,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
     fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {
         for (model, _visible) in self.models.iter_mut().filter(|(_, visible)| *visible) {
             if model.constants_dirty {
-                model.update_constants(
-                    &renderer.gpu.context(), /*, renderer.ao.read().as_ref() */
-                );
+                model.update_constants(&renderer.gpu.context(), renderer.ao.read().as_ref());
                 model.constants_dirty = false;
             }
         }

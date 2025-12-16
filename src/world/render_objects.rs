@@ -1,4 +1,10 @@
-use alkahest_render::{Renderer, object::RenderObjectHandle, tfx::packet::FramePacket};
+use alkahest_data::tfx::features::ao::SStaticAmbientOcclusion;
+use alkahest_render::{
+    Renderer,
+    asset::{Handle, vertex_buffer::VertexBuffer},
+    object::RenderObjectHandle,
+    tfx::packet::FramePacket,
+};
 
 use crate::world::{permutations::PermutationConfig, transform::Transform};
 
@@ -37,6 +43,26 @@ impl DynamicRenderObject {
 impl Drop for DynamicRenderObject {
     fn drop(&mut self) {
         Renderer::instance().remove_object(self.handle);
+    }
+}
+
+pub struct StaticAmbientOcclusion {
+    pub buffer: Handle<VertexBuffer>,
+    pub ao: SStaticAmbientOcclusion,
+}
+
+impl StaticAmbientOcclusion {
+    pub fn new(ao: SStaticAmbientOcclusion) -> Self {
+        let buffer = Renderer::instance().asset_manager.load(ao.ao0.buffer);
+        Self { buffer, ao }
+    }
+}
+
+pub fn s_extract_ambient_occlusion(world: &hecs::World) {
+    let renderer = Renderer::instance();
+    if let Some((_entity, ao)) = world.query::<&StaticAmbientOcclusion>().iter().next() {
+        *renderer.ao.write() = Some(ao.ao.clone());
+        *renderer.ao_buffer.lock() = Some(ao.buffer.clone());
     }
 }
 

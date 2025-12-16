@@ -141,11 +141,11 @@ float4 mainPS(VSOutput input) : SV_TARGET {
   float textureEmissive = saturate(rt2.g * 2.0 - 1.0);
   float textureAo = saturate(rt2.g * 2.0);
   // float transmission = saturate(rt2.g);
-  // float vertexAo = rt2.a;
+  float vertexAo = rt2.a;
   // return float4(linearToSrgb(vertexAo.xxx), 1.0f);
 
   // // float aoFactor = saturate(textureAo * vertexAo);
-  float ao = saturate(textureAo);
+  float ao = saturate(textureAo) * rt2.a;
 
   float3 F0 = float(0.04).xxx;
   F0 = lerp(F0, albedo, metallic);
@@ -172,12 +172,12 @@ float4 mainPS(VSOutput input) : SV_TARGET {
   // scale light by NdotL
   float NdotL = max(dot(N, L), 0.0);
 
-  float3 radiance = 2.2f;
+  float3 radiance = 4.4f;
   float3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
 
   float3 ambient = float(0.04).xxx * albedo * ao;
 
   float3 color = ambient + Lo;
 
-  return float4(color, 1.0f);
+  return float4(color * ao, 1.0f);
 }

@@ -33,6 +33,7 @@ serde = "1"
 sdl3 = { version = "0.16", features = [
     "raw-window-handle",
 ] }
+subsecond = "0.7.2"
 tiger-parse = { version = "0.7.1", git = "https://github.com/v4nguard/tiger-parse.git", features = [
     "check_types",
     "check_types_strict",
@@ -98,7 +99,7 @@ google_material_symbols = "0.2.9"
 hecs = "0.10.5"
 rayon.workspace = true
 chroma-dbg = "0.2.1"
-subsecond = "0.7.2"
+subsecond.workspace = true
 dioxus-devtools = "0.7.2"
 
 [build-dependencies]

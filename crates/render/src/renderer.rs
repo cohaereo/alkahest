@@ -10,7 +10,10 @@ use std::{
 };
 
 use alkahest_core::ConVars;
-use alkahest_data::tfx::{texture::DxgiFormat, ExternIndex, FeatureRendererSubscription};
+use alkahest_data::tfx::{
+    features::ao::SStaticAmbientOcclusion, texture::DxgiFormat, ExternIndex,
+    FeatureRendererSubscription,
+};
 use anyhow::Context;
 use crossbeam::atomic::AtomicCell;
 use d3d11::dxgi;
@@ -22,7 +25,8 @@ use surface::Surfaces;
 use crate::{
     asset::{
         texture::{Texture, TextureHandle},
-        AssetManager,
+        vertex_buffer::VertexBuffer,
+        AssetManager, Handle,
     },
     feature::immediate::ImmediateShapeRenderer,
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
@@ -62,6 +66,9 @@ pub struct Renderer {
     debug_ps: d3d11::PixelShader,
     clear_ao_vs: d3d11::VertexShader,
     clear_ao_ps: d3d11::PixelShader,
+
+    pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
+    pub ao_buffer: Mutex<Option<Handle<VertexBuffer>>>,
 
     start_time: Instant,
     pub(crate) common: CommonResources,
@@ -124,8 +131,8 @@ impl Renderer {
             ),
             objects: RwLock::new(Arena::new()),
             frame_packet: RwLock::new(FramePacket::default()),
-            // ao: RwLock::new(None),
-            // ao_buffer: Mutex::new(None),
+            ao: RwLock::new(None),
+            ao_buffer: Mutex::new(None),
             surfaces: RwLock::new(surfaces),
             submit_jobs: submit::lowlevel::SubmitJobManager::new(
                 &gpu,

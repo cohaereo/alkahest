@@ -97,7 +97,9 @@ pub struct SStaticInstanceTransform {
     pub translation: glam::Vec3,
     pub scale: f32,
 
-    pub unk20: [u32; 4],
+    pub unk20: [u32; 2],
+    pub vertex_ao_offset: u32,
+    pub unk2c: f32,
     pub unk30: [u32; 4],
 }
 

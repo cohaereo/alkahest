@@ -24,7 +24,7 @@ use crate::{
         scene::controller::CameraController,
         util::{ExternalDataWidgetExt, UiExt},
     },
-    world::render_objects::s_extract_render_objects,
+    world::render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
 };
 
 pub struct Scene {
@@ -246,6 +246,7 @@ impl Scene {
             .set_global_channel_by_name("sun_light_direction", sun_light_direction.extend(0.0));
 
         {
+            s_extract_ambient_occlusion(&self.world);
             let mut fp = self.renderer.frame_packet.write();
             s_extract_render_objects(&self.world, &mut fp);
         }

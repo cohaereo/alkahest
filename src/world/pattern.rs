@@ -27,7 +27,7 @@ use tiger_pkg::{TagHash, package_manager};
 use crate::world::{
     UnimplementedTigerComponent, UnimplementedTigerComponents,
     permutations::PermutationConfig,
-    render_objects::{DynamicRenderObject, StaticRenderObject},
+    render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
     transform::Transform,
 };
 
@@ -294,6 +294,12 @@ pub fn spawn_pattern_from_header(
                     entity,
                     DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
                 )?;
+            }
+            0x80806A3F => {
+                let data = get_component_data!(SStaticAmbientOcclusionComponent);
+                if let Some(ao) = data.ao.0.clone() {
+                    world.insert_one(entity, StaticAmbientOcclusion::new(ao))?;
+                }
             }
             u => {
                 debug!(

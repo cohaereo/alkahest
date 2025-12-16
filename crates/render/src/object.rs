@@ -5,11 +5,7 @@ use alkahest_data::tfx::{
 };
 
 use crate::{
-    camera::Camera,
-    feature::{FeatureRenderer, FeatureRendererData},
-    gpu::command_list::CommandList,
-    util::arena,
-    Renderer,
+    camera::Camera, feature::FeatureRenderer, gpu::command_list::CommandList, util::arena, Renderer,
 };
 
 #[repr(transparent)]

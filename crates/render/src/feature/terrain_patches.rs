@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use alkahest_data::tfx::{
     features::{
+        ao::SStaticAmbientOcclusion,
         dynamic::RenderStageSubscription,
         terrain::{STerrain, TerrainDetailLevel},
     },
@@ -144,14 +145,14 @@ impl TerrainPatchesRenderer {
     pub fn update_constants(
         &self,
         ctx: &d3d11::DeviceContext,
-        // ao: Option<&SStaticAmbientOcclusion>,
+        ao: Option<&SStaticAmbientOcclusion>,
     ) {
-        // if ao
-        //     .and_then(|ao| ao.get_offset_by_identifier(self.identifier))
-        //     .is_none()
-        // {
-        //     warn!("No AO for terrain 0x{:016X}", self.identifier);
-        // }
+        if ao
+            .and_then(|ao| ao.get_offset_by_identifier(self.identifier))
+            .is_none()
+        {
+            warn!("No AO for terrain 0x{:016X}", self.identifier);
+        }
 
         for (i, group) in self.terrain.mesh_groups.iter().enumerate() {
             let offset = Vec4::new(
@@ -168,10 +169,9 @@ impl TerrainPatchesRenderer {
             let scope_terrain = TerrainPatchGroupConstants {
                 offset,
                 texcoord_transform,
-                ao_offset: 0x02000000,
-                // ao_offset: ao
-                //     .and_then(|ao| ao.get_offset_by_identifier(self.identifier))
-                //     .unwrap_or(0x02000000),
+                ao_offset: ao
+                    .and_then(|ao| ao.get_offset_by_identifier(self.identifier))
+                    .unwrap_or_default(),
                 ..Default::default()
             };
 
@@ -198,12 +198,17 @@ impl FeatureRenderer for TerrainPatchesRenderer {
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {
         if self.constants_dirty {
-            self.update_constants(&renderer.gpu.context() /*renderer.ao.read().as_ref()*/);
+            self.update_constants(&renderer.gpu.context(), renderer.ao.read().as_ref());
             self.constants_dirty = false;
         }
     }
 
     fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
+        let renderer = Renderer::instance();
+        if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+            cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
+        }
+
         self.render(cmd, stage);
     }
 

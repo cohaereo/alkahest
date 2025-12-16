@@ -3,8 +3,9 @@ use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, OptionalVariantPointe
 use tiger_pkg::TagHash;
 
 use crate::{
-    tag::{OptionalTag, WideHash, WideTag},
+    tag::{OptionalTag, Tag, WideHash, WideTag},
     tfx::features::{
+        ao::SStaticAmbientOcclusion,
         cubemap::SCubemapComponent,
         decals::SDecalCollection,
         decorators::SDecorator,
@@ -74,7 +75,8 @@ tiger_variant_enum! {
         SDecoratorsComponent,
         SShadowingLightComponent,
         SLightCollectionComponent,
-        SCubemapComponent
+        SCubemapComponent,
+        SStaticAmbientOcclusionComponent
         // SMaterialPermutationsComponent,
     }
 }
@@ -84,10 +86,10 @@ pub struct SMaterialPermutationsComponent {
     pub config: Vec<(u32, u32)>,
 }
 
-// #[tiger_type(id = 0x80806F38)]
-// pub struct SStaticAmbientOcclusionComponent {
-//     pub ao: Tag<SStaticAmbientOcclusion>,
-// }
+#[tiger_type(id = 0x80806A40)]
+pub struct SStaticAmbientOcclusionComponent {
+    pub ao: OptionalTag<SStaticAmbientOcclusion>,
+}
 
 #[tiger_type(id = 0x80806CC9)]
 pub struct SStaticInstancesCollectionComponent {
