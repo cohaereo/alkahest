@@ -109,7 +109,7 @@ impl RenderStates {
 
         let blend_state_descs: &[QuadBlendState] =
             unsafe { byteutil::bytes_as_slice(Self::BLEND_STATE_DESC_DATA) };
-        // let chroma = ChromaConfig {
+        // let chroma = chroma_dbg::ChromaConfig {
         //     inline_struct: chroma_dbg::InlineThreshold::Always,
         //     ..Default::default()
         // };
@@ -117,15 +117,15 @@ impl RenderStates {
             // println!("{}", chroma.format(desc));
 
             let render_targets = [
-                desc.render_targets[0].clone().into(),
-                desc.render_targets[1].clone().into(),
-                desc.render_targets[2].clone().into(),
-                desc.render_targets[3].clone().into(),
-                desc.render_targets[4].clone().into(),
+                desc.render_targets[0].clone(),
+                desc.render_targets[1].clone(),
+                desc.render_targets[2].clone(),
+                desc.render_targets[3].clone(),
                 // Extend to 8 render targets
-                desc.render_targets[4].clone().into(),
-                desc.render_targets[4].clone().into(),
-                desc.render_targets[4].clone().into(),
+                desc.render_targets[3].clone(),
+                desc.render_targets[3].clone(),
+                desc.render_targets[3].clone(),
+                desc.render_targets[3].clone(),
             ];
 
             let state = device.create_blend_state(
@@ -266,91 +266,8 @@ impl RenderStates {
 #[repr(C)]
 #[derive(Debug)]
 pub struct QuadBlendState {
-    pub index: u32,
-    pub render_targets: [RenderTargetBlendDescD3D12; 5],
-}
-
-#[repr(C)]
-#[derive(Clone, Debug)]
-pub struct RenderTargetBlendDescD3D12 {
-    pub blend_enable: BOOL,
-    pub logic_op_enable: BOOL,
-    pub src_blend: BlendD3D12,
-    pub dest_blend: BlendD3D12,
-    pub blend_op: d3d11::BlendOp,
-    pub src_blend_alpha: BlendD3D12,
-    pub dest_blend_alpha: BlendD3D12,
-    pub blend_op_alpha: d3d11::BlendOp,
-    pub logic_op: u32,
-    pub render_target_write_mask: u8, // TODO: Bitflags
-}
-
-impl From<RenderTargetBlendDescD3D12> for d3d11::RenderTargetBlendDesc {
-    fn from(value: RenderTargetBlendDescD3D12) -> Self {
-        Self {
-            blend_enable: value.blend_enable,
-            src_blend: value.src_blend.into(),
-            dest_blend: value.dest_blend.into(),
-            blend_op: value.blend_op,
-            src_blend_alpha: value.src_blend_alpha.into(),
-            dest_blend_alpha: value.dest_blend_alpha.into(),
-            blend_op_alpha: value.blend_op_alpha,
-            render_target_write_mask: value.render_target_write_mask,
-        }
-    }
-}
-
-#[repr(i32)]
-#[derive(Clone, Debug)]
-pub enum BlendD3D12 {
-    Zero = d3d11::Blend::Zero as i32,
-    One = d3d11::Blend::One as i32,
-    SrcColor = d3d11::Blend::SrcColor as i32,
-    InvSrcColor = d3d11::Blend::InvSrcColor as i32,
-    SrcAlpha = d3d11::Blend::SrcAlpha as i32,
-    InvSrcAlpha = d3d11::Blend::InvSrcAlpha as i32,
-    DestAlpha = d3d11::Blend::DestAlpha as i32,
-    InvDestAlpha = d3d11::Blend::InvDestAlpha as i32,
-    DestColor = d3d11::Blend::DestColor as i32,
-    InvDestColor = d3d11::Blend::InvDestColor as i32,
-    SrcAlphaSat = d3d11::Blend::SrcAlphaSat as i32,
-    BlendFactor = d3d11::Blend::BlendFactor as i32,
-    InvBlendFactor = d3d11::Blend::InvBlendFactor as i32,
-    Src1Color = d3d11::Blend::Src1Color as i32,
-    InvSrc1Color = d3d11::Blend::InvSrc1Color as i32,
-    Src1Alpha = d3d11::Blend::Src1Alpha as i32,
-    InvSrc1Alpha = d3d11::Blend::InvSrc1Alpha as i32,
-
-    // New in D3D12
-    AlphaFactor = 20,
-    InvAlphaFactor = 21,
-}
-
-impl From<BlendD3D12> for d3d11::Blend {
-    fn from(value: BlendD3D12) -> Self {
-        match value {
-            BlendD3D12::Zero => d3d11::Blend::Zero,
-            BlendD3D12::One => d3d11::Blend::One,
-            BlendD3D12::SrcColor => d3d11::Blend::SrcColor,
-            BlendD3D12::InvSrcColor => d3d11::Blend::InvSrcColor,
-            BlendD3D12::SrcAlpha => d3d11::Blend::SrcAlpha,
-            BlendD3D12::InvSrcAlpha => d3d11::Blend::InvSrcAlpha,
-            BlendD3D12::DestAlpha => d3d11::Blend::DestAlpha,
-            BlendD3D12::InvDestAlpha => d3d11::Blend::InvDestAlpha,
-            BlendD3D12::DestColor => d3d11::Blend::DestColor,
-            BlendD3D12::InvDestColor => d3d11::Blend::InvDestColor,
-            BlendD3D12::SrcAlphaSat => d3d11::Blend::SrcAlphaSat,
-            BlendD3D12::BlendFactor => d3d11::Blend::BlendFactor,
-            BlendD3D12::InvBlendFactor => d3d11::Blend::InvBlendFactor,
-            BlendD3D12::Src1Color => d3d11::Blend::Src1Color,
-            BlendD3D12::InvSrc1Color => d3d11::Blend::InvSrc1Color,
-            BlendD3D12::Src1Alpha => d3d11::Blend::Src1Alpha,
-            BlendD3D12::InvSrc1Alpha => d3d11::Blend::InvSrc1Alpha,
-            // Convert alpha factor to ONE and inv alpha factor to ZERO as D3D11 does not support them
-            BlendD3D12::AlphaFactor => d3d11::Blend::One,
-            BlendD3D12::InvAlphaFactor => d3d11::Blend::Zero,
-        }
-    }
+    pub unk0: u32,
+    pub render_targets: [d3d11::RenderTargetBlendDesc; 4],
 }
 
 #[repr(C)]
