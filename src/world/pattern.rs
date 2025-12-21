@@ -227,6 +227,10 @@ pub fn spawn_pattern_from_header(
                     continue;
                 };
                 for obj in &objects.unk8 {
+                    if obj.unk70 == 5 {
+                        continue;
+                    }
+
                     let (scale, rotation, translation) =
                         obj.transform.to_scale_rotation_translation();
 

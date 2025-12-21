@@ -8,14 +8,14 @@ use crate::{tag::Tag, tfx::common::AxisAlignedBBox};
 #[tiger_type(id = 0x80806AA7)]
 pub struct SSkyObjectCollection {
     pub file_size: u64,
-    pub unk8: Vec<SUnk80806f97>,
+    pub unk8: Vec<SSkyObject>,
     pub unk18: Vec<()>, //Vec<SObjectOcclusionBounds>,
     pub unk28: Vec<u32>,
 }
 
 #[derive(Clone, Debug)]
 #[tiger_type(id = 0x80806AA9)]
-pub struct SUnk80806f97 {
+pub struct SSkyObject {
     /// Transformation matrix
     pub transform: Mat4,
 
