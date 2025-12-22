@@ -40,7 +40,7 @@ tiger-parse = { version = "0.7.1", git = "https://github.com/v4nguard/tiger-pars
     "tiger_pkg",
     "check_types_debug",
 ] }
-tiger-pkg = { version = "0.18.10", features = ["global_manager_instance"] }
+tiger-pkg = { version = "0.18.12", features = ["global_manager_instance"] }
 tracing = { version = "0.2.0", git = "https://github.com/cohaereo/tracing-lesspretty.git" }
 
 [dependencies]
