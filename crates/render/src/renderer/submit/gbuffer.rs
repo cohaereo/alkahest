@@ -73,7 +73,11 @@ impl Renderer {
                 None,
             );
             cmd.vertex_set_shader(Some(&self.clear_ao_vs));
-            cmd.pixel_set_shader(Some(&self.clear_ao_ps));
+            if view.settings.vertex_ao {
+                cmd.pixel_set_shader(Some(&self.clear_ao_ps));
+            } else {
+                cmd.pixel_set_shader(Some(&self.clear_ao_all_ps));
+            }
             cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::TriangleStrip);
             cmd.pixel_set_shader_resources(0, &[Some(&view.gbuffers.third_proxy.lock().srv)]);
             cmd.draw(4, 0);

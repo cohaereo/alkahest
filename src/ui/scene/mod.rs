@@ -10,12 +10,17 @@ use std::{
 
 use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use alkahest_render::{
-    Gpu, Renderer, camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline,
-    tfx::view::View,
+    Gpu, Renderer,
+    camera::Camera,
+    gpu::command_list::CommandList,
+    renderer::submit::DebugPipeline,
+    tfx::view::{RenderSettings, View},
 };
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
-use egui::{FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, load::SizedTexture, vec2};
+use egui::{
+    FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, Widget, load::SizedTexture, vec2,
+};
 use glam::Vec3;
 use google_material_symbols::GoogleMaterialSymbols;
 
@@ -207,10 +212,39 @@ impl Scene {
 
     fn show_toolbar(&mut self, ui: &mut Ui) {
         ui.style_mut().spacing.item_spacing = vec2(8.0, 0.0);
-        ui.label("");
-        if ui.button(GoogleMaterialSymbols::Tune.to_string()).clicked() {}
+        ui.menu_button(GoogleMaterialSymbols::Tune.to_string(), |ui| {
+            self.show_settings_ui(ui);
+        })
+        .response
+        .on_hover_text("Scene Settings");
+
         self.render_mode.ui(ui);
         self.view.subscribed_features.show_input(ui);
+    }
+
+    fn show_settings_ui(&mut self, ui: &mut Ui) {
+        let Self {
+            view: View { settings, .. },
+            ..
+        } = self;
+
+        ui.style_mut()
+            .text_styles
+            .insert(TextStyle::Body, FontId::proportional(16.0));
+        ui.style_mut()
+            .text_styles
+            .insert(TextStyle::Small, FontId::proportional(12.0));
+        ui.style_mut()
+            .text_styles
+            .insert(TextStyle::Button, FontId::proportional(16.0));
+
+        ui.strong("Scene Settings");
+        ui.checkbox(&mut settings.vertex_ao, "Vertex AO");
+        egui::Slider::new(&mut settings.exposure_scale, 0.01..=3.0)
+            .logarithmic(true)
+            .text("Exposure Scale")
+            .show_value(true)
+            .ui(ui);
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {

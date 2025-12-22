@@ -49,3 +49,15 @@ void mainPS(VSOutput input,
         out_ao = vertexAo * textureAo;
     }
 }
+
+void mainPSall(VSOutput input,
+            out float4 out_albedo: SV_Target0,
+            out float4 out_normal: SV_Target1,
+            out float4 out_third: SV_Target2,
+            out float out_ao: SV_Target3)
+{
+    float4 rt2 = gbuffer_third.Sample(samplerState, input.uv);
+    float textureAo = saturate(rt2.g * 2.0);
+    out_third = float4(rt2.xyz, textureAo);
+    out_ao = textureAo;
+}

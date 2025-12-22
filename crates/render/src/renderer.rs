@@ -66,6 +66,7 @@ pub struct Renderer {
     debug_ps: d3d11::PixelShader,
     clear_ao_vs: d3d11::VertexShader,
     clear_ao_ps: d3d11::PixelShader,
+    clear_ao_all_ps: d3d11::PixelShader,
 
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
     pub ao_buffer: Mutex<Option<Handle<VertexBuffer>>>,
@@ -119,6 +120,9 @@ impl Renderer {
         let (clear_ao_vs, clear_ao_ps) =
             gpu.compile_shader_vs_ps("clear_ao", CLEAR_AO_SHADER, "mainVS", "mainPS")?;
 
+        let (_clear_ao_vs, clear_ao_all_ps) =
+            gpu.compile_shader_vs_ps("clear_ao", CLEAR_AO_SHADER, "mainVS", "mainPSall")?;
+
         let globals = RenderGlobals::load(&gpu).context("Failed to load render globals")?;
         Ok(Self {
             externs: ThreadMutCell::new(Externs::new(&globals)),
@@ -146,6 +150,7 @@ impl Renderer {
             debug_ps,
             clear_ao_vs,
             clear_ao_ps,
+            clear_ao_all_ps,
 
             common: CommonResources::load(&gpu)?,
 

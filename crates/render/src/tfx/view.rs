@@ -24,6 +24,8 @@ pub struct View {
     pub(crate) shading_result: SurfaceHandle,
     pub output: SurfaceHandle,
     pub subscribed_features: FeatureRendererSubscription,
+
+    pub settings: RenderSettings,
 }
 
 impl View {
@@ -57,6 +59,7 @@ impl View {
             shading_result,
             output,
             subscribed_features: FeatureRendererSubscription::all(),
+            settings: RenderSettings::default(),
         })
     }
 
@@ -74,5 +77,19 @@ impl View {
 
     pub fn resolution(&self) -> (u32, u32) {
         self.resolution
+    }
+}
+
+pub struct RenderSettings {
+    pub exposure_scale: f32,
+    pub vertex_ao: bool,
+}
+
+impl Default for RenderSettings {
+    fn default() -> Self {
+        Self {
+            exposure_scale: 2.0,
+            vertex_ao: true,
+        }
     }
 }

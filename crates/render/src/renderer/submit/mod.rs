@@ -242,8 +242,7 @@ impl Renderer {
             render_time,            //self.start_time.elapsed().as_secs_f32();
             delta_game_time: delta_time,
             exposure_time: 0.016666668,
-            // exposure_scale: 7.71489,
-            exposure_scale: 2.0,
+            exposure_scale: view.settings.exposure_scale,
             exposure_illum_relative: 0.25438,
             ..*ext.frame.clone()
         };
