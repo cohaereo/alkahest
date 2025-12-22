@@ -43,7 +43,7 @@ pub struct DynamicModel {
 
     pub hash: TagHash,
 
-    pub cb: ConstantBuffer<RigidModel>,
+    pub cb: ConstantBuffer<RigidModelConstants>,
     pub channels: TempObjectChannels,
     pub transform: Mat4,
 }
@@ -284,7 +284,7 @@ impl FeatureRenderer for DynamicModel {
         self.cb
             .write(
                 &renderer.gpu.context(),
-                &RigidModel {
+                &RigidModelConstants {
                     mesh_to_world: obj_local_to_world.to_mat4(),
                     position_scale: self.model.model_scale,
                     position_offset: self.model.model_offset,
@@ -333,10 +333,10 @@ impl FeatureRenderer for DynamicModel {
 }
 
 #[repr(C)]
-pub struct RigidModel {
-    mesh_to_world: Mat4,          // c0-c3
-    position_scale: Vec4,         // c4
-    position_offset: Vec4,        // c5
-    texcoord0_scale_offset: Vec4, // c6
-    dynamic_sh_ao_values: Vec4,   // c7
+pub struct RigidModelConstants {
+    pub mesh_to_world: Mat4,          // c0-c3
+    pub position_scale: Vec4,         // c4
+    pub position_offset: Vec4,        // c5
+    pub texcoord0_scale_offset: Vec4, // c6
+    pub dynamic_sh_ao_values: Vec4,   // c7
 }

@@ -13,6 +13,7 @@ pub mod decorators;
 pub mod immediate;
 pub mod light;
 pub mod rigid_model;
+pub mod road_decals;
 mod shared;
 pub mod static_geometry;
 pub mod terrain_patches;

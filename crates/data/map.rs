@@ -10,6 +10,7 @@ use crate::{
         decals::SDecalCollection,
         decorators::SDecorator,
         light::{SLightCollection, SShadowingLight},
+        road_decals::SRoadDecalCollection,
         sky_objects::SSkyObjectCollection,
     },
 };
@@ -76,7 +77,8 @@ tiger_variant_enum! {
         SShadowingLightComponent,
         SLightCollectionComponent,
         SCubemapComponent,
-        SStaticAmbientOcclusionComponent
+        SStaticAmbientOcclusionComponent,
+        SRoadDecalCollectionComponent
         // SMaterialPermutationsComponent,
     }
 }
@@ -132,4 +134,9 @@ pub struct SDecalCollectionComponent {
 #[tiger_type(id = 0x80806CC3)]
 pub struct SDecoratorsComponent {
     pub decorators: OptionalTag<SDecorator>,
+}
+
+#[tiger_type(id = 0x808068E8)]
+pub struct SRoadDecalCollectionComponent {
+    pub tag: OptionalTag<SRoadDecalCollection>,
 }

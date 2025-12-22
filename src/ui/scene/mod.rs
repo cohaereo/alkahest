@@ -208,6 +208,7 @@ impl Scene {
     fn show_toolbar(&mut self, ui: &mut Ui) {
         ui.style_mut().spacing.item_spacing = vec2(8.0, 0.0);
         ui.label("");
+        if ui.button(GoogleMaterialSymbols::Tune.to_string()).clicked() {}
         self.render_mode.ui(ui);
         self.view.subscribed_features.show_input(ui);
     }
@@ -577,6 +578,7 @@ impl ExternalDataWidgetExt for FeatureRendererSubscription {
                     FeatureRendererSubscription::DYNAMIC_DECALS,
                     "Dynamic Decals"
                 );
+                feature!(ui, FeatureRendererSubscription::ROAD_DECALS, "Road Decals");
                 feature!(ui, FeatureRendererSubscription::WATER, "Water");
                 ui.add_enabled_ui(false, |ui| {
                     feature!(ui, FeatureRendererSubscription::LENS_FLARES, "Lens Flares");

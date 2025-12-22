@@ -13,8 +13,8 @@ use alkahest_render::{
     Renderer,
     feature::{
         cubemap::CubemapRenderer, decals::DecalCollectionRenderer, decorators::DecoratorRenderer,
-        light::LightRenderer, rigid_model::DynamicModel, static_geometry::StaticInstancesRenderer,
-        terrain_patches::TerrainPatchesRenderer,
+        light::LightRenderer, rigid_model::DynamicModel, road_decals::RoadDecalCollectionRenderer,
+        static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
 };
@@ -304,6 +304,23 @@ pub fn spawn_pattern_from_header(
                 if let Some(ao) = data.ao.0.clone() {
                     world.insert_one(entity, StaticAmbientOcclusion::new(ao))?;
                 }
+            }
+            0x808068E6 => {
+                let data = get_component_data!(SRoadDecalCollectionComponent);
+                let Some(_) = data.tag.as_ref() else {
+                    continue;
+                };
+
+                world.insert_one(
+                    entity,
+                    StaticRenderObject::new(
+                        Renderer::instance().add_object(RenderObject::new(
+                            TfxFeatureRenderer::RoadDecals,
+                            RoadDecalCollectionRenderer::load(data.tag.taghash())
+                                .context("Failed to load road decal collection")?,
+                        )),
+                    ),
+                )?;
             }
             u => {
                 debug!(

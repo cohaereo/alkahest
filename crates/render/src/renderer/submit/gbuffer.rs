@@ -38,7 +38,7 @@ impl Renderer {
 
             view.surfaces
                 .copy(cmd, view.gbuffers.normal, view.gbuffers.normal_read);
-            cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
+            cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(6));
             self.submit_stage(
                 cmd,
                 RenderStage::Decals,
