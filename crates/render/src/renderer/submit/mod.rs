@@ -290,7 +290,7 @@ impl Renderer {
         ext.deferred.light_specular = view.lighting.light_specular.into();
         ext.deferred.light_specular_ibl = view.lighting.light_specular_ibl.into();
 
-        // ext.deferred.sky_hemisphere_mips = self.common.temporary_sky_hemisphere.view.clone().into();
+        ext.deferred.sky_hemisphere_mips = self.common.temporary_sky_hemisphere.view.clone().into();
 
         ext.decal.depth_read = view.gbuffers.depth_proxy.lock().srv.clone().into();
         ext.decal.normals_read = view.gbuffers.normal_read.into();

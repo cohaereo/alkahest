@@ -350,7 +350,7 @@ impl CommonResources {
         Ok(Self {
             temporary_sky_hemisphere: Texture::load_2d_dds(
                 gpu,
-                include_bytes!("../builtin/textures/sky_hemisphere_divalian.dds"),
+                include_bytes!("../builtin/textures/sky_hemisphere_cosmo.dds"),
             )?,
             default_lut,
             temporary_vignette: Texture::load_2d_dds(
