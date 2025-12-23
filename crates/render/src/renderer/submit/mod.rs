@@ -4,13 +4,14 @@ pub mod gbuffer;
 pub mod lighting;
 pub mod lowlevel;
 pub mod transparent;
-// pub mod water;
+pub mod water;
 
 use std::fmt::Debug;
 
 use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, ShaderStage};
 use glam::{vec4, Mat4, Vec4};
+use itertools::Itertools;
 
 use super::Renderer;
 use crate::{
@@ -134,7 +135,7 @@ impl Renderer {
         //     cmd.draw(4, 0);
         // }
 
-        let output = view.surfaces.get(view.output);
+        let output = view.surfaces.get(view.shading_result);
         self.profiler.scope(cmd, "debug_view").span(|| {
             cmd.rasterizer_set_viewports(&[d3d11::Viewport::builder()
                 .width(output.resolution().0 as f32)
@@ -196,6 +197,24 @@ impl Renderer {
         });
 
         self.submit_transparent(cmd, view);
+
+        view.shading_result_read
+            .lock()
+            .update(cmd, view.surfaces.get(view.shading_result));
+
+        self.submit_water(cmd, view);
+
+        view.shading_result_read
+            .lock()
+            .update(cmd, view.surfaces.get(view.shading_result));
+
+        self.blit_srv(
+            cmd,
+            &view.shading_result_read.lock().srv,
+            &view.surfaces.get(view.output).rtv,
+            true,
+            "final_blit",
+        );
 
         {
             profiling::scope!("prepare/submit immediate geometry");

@@ -3,15 +3,18 @@ use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, OptionalVariantPointe
 use tiger_pkg::TagHash;
 
 use crate::{
-    tag::{OptionalTag, Tag, WideHash, WideTag},
-    tfx::features::{
-        ao::SStaticAmbientOcclusion,
-        cubemap::SCubemapComponent,
-        decals::SDecalCollection,
-        decorators::SDecorator,
-        light::{SLightCollection, SShadowingLight},
-        road_decals::SRoadDecalCollection,
-        sky_objects::SSkyObjectCollection,
+    tag::{OptionalTag, WideHash, WideTag},
+    tfx::{
+        common::AxisAlignedBBox,
+        features::{
+            ao::SStaticAmbientOcclusion,
+            cubemap::SCubemapComponent,
+            decals::SDecalCollection,
+            decorators::SDecorator,
+            light::{SLightCollection, SShadowingLight},
+            road_decals::SRoadDecalCollection,
+            sky_objects::SSkyObjectCollection,
+        },
     },
 };
 
@@ -78,7 +81,8 @@ tiger_variant_enum! {
         SLightCollectionComponent,
         SCubemapComponent,
         SStaticAmbientOcclusionComponent,
-        SRoadDecalCollectionComponent
+        SRoadDecalCollectionComponent,
+        SWaterPlaneComponent
         // SMaterialPermutationsComponent,
     }
 }
@@ -114,6 +118,13 @@ pub struct SSkyObjectCollectionComponent {
 #[tiger_type(id = 0x808068D4)]
 pub struct SWaterPlaneComponent {
     pub model: TagHash,
+    pub unk4: u32,
+    pub unk8: u32,
+    pub hash: FnvHash,
+    pub bounds: AxisAlignedBBox,
+    pub havok_file: TagHash,
+    pub unk34: u32,
+    pub unk38: TagHash,
 }
 
 #[tiger_type(id = 0x80806A63)]

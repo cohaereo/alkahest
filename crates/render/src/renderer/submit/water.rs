@@ -2,23 +2,23 @@ use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage
 use glam::Vec4;
 
 use super::Renderer;
-use crate::{cmd_event_span, gpu::command_list::CommandList};
+use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
 
 impl Renderer {
-    pub(super) fn submit_water(&self, cmd: &mut CommandList) {
+    pub(super) fn submit_water(&self, cmd: &mut CommandList, view: &View) {
         cmd_event_span!(cmd, "water_reflection");
         {
             let ext = &mut self.externs.get_mut();
-            ext.deferred.deferred_depth = self.gbuffers.depth_proxy.lock().srv.clone().into();
+            ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
             ext.view
-                .derive_matrices(self.surfaces.get(self.water.water_uv).resolution());
+                .derive_matrices(self.surfaces().get(view.water.water_uv).resolution());
         }
         self.globals.scopes.view.bind(cmd).unwrap();
 
-        self.clear_surface(cmd, self.water.water_uv, [0., 0., 0., 0.]);
-        self.clear_surface_depth(cmd, self.water.water_depth, 0.0, 0);
+        self.clear_surface(cmd, view.water.water_uv, [0., 0., 0., 0.]);
+        self.clear_surface_depth(cmd, view.water.water_depth, 0.0, 0);
         cmd.state = PipelineState::new(Some(1), Some(1), Some(2), Some(1));
-        self.bind_surfaces(cmd, &[self.water.water_uv], Some(self.water.water_depth));
+        self.bind_surfaces(cmd, &[view.water.water_uv], Some(view.water.water_depth));
         self.submit_stage(
             cmd,
             RenderStage::WaterReflection,
@@ -27,23 +27,23 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = self.water.water_uv.into();
-            ext.postprocess.unkb0 = Vec4::new(5.0, 1.0, 1.0, 1.0);
+            ext.postprocess.unk00 = view.water.water_uv.into();
+            ext.postprocess.unkc0 = Vec4::new(5.0, 1.0, 1.0, 1.0);
             ext.postprocess.res_for_unk00 = self
-                .surfaces
-                .get(self.water.water_uv)
+                .surfaces()
+                .get(view.water.water_uv)
                 .resolution_with_recip();
             ext.postprocess.output_res = self
-                .surfaces
-                .get(self.water.water_uv_healed)
+                .surfaces()
+                .get(view.water.water_uv_healed)
                 .resolution_with_recip();
 
             ext.view
-                .derive_matrices(self.surfaces.framebuffer_resolution());
+                .derive_matrices(self.surfaces().framebuffer_resolution());
         }
         self.globals.scopes.view.bind(cmd).unwrap();
         cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-        self.bind_surfaces(cmd, &[self.water.water_uv_healed], None);
+        self.bind_surfaces(cmd, &[view.water.water_uv_healed], None);
         self.execute_global_pipeline(
             cmd,
             &self.globals.pipelines.water_reflection_uv_healing,
@@ -52,24 +52,24 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = self.shading_result_read.lock().srv.clone().into();
-            ext.postprocess.unk08 = self.water.water_uv_healed.into();
-            ext.postprocess.unkb0 = Vec4::new(1.0, 1.0, 1.0, 1.0);
+            ext.postprocess.unk00 = view.shading_result_read.lock().srv.clone().into();
+            ext.postprocess.unk08 = view.water.water_uv_healed.into();
+            ext.postprocess.unkc0 = Vec4::new(1.0, 1.0, 1.0, 1.0);
             ext.postprocess.res_for_unk00 = self
-                .surfaces
-                .get(self.shading_result)
+                .surfaces()
+                .get(view.shading_result)
                 .resolution_with_recip();
             ext.postprocess.output_res = self
-                .surfaces
-                .get(self.water.water_reflection)
+                .surfaces()
+                .get(view.water.water_reflection)
                 .resolution_with_recip();
             // ext.view
-            //     .derive_matrices(self.surfaces.get(self.water.water_reflection).resolution());
+            //     .derive_matrices(self.surfaces.get(view.water.water_reflection).resolution());
         }
         self.globals.scopes.view.bind(cmd).unwrap();
 
         cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-        self.bind_surfaces(cmd, &[self.water.water_reflection], None);
+        self.bind_surfaces(cmd, &[view.water.water_reflection], None);
         self.execute_global_pipeline(
             cmd,
             &self.globals.pipelines.water_reflection_resolve,
@@ -78,21 +78,21 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = self.water.water_reflection.into();
-            ext.postprocess.unk08 = self.water.water_reflection_healed.into();
-            ext.postprocess.unkb0 = Vec4::new(5.0, 1.0, 1.0, 1.0);
+            ext.postprocess.unk00 = view.water.water_reflection.into();
+            ext.postprocess.unk08 = view.water.water_reflection_healed.into();
+            ext.postprocess.unkc0 = Vec4::new(5.0, 1.0, 1.0, 1.0);
             ext.postprocess.res_for_unk00 = self
-                .surfaces
-                .get(self.water.water_reflection)
+                .surfaces()
+                .get(view.water.water_reflection)
                 .resolution_with_recip();
             ext.postprocess.output_res = self
-                .surfaces
-                .get(self.water.water_reflection_healed)
+                .surfaces()
+                .get(view.water.water_reflection_healed)
                 .resolution_with_recip();
         }
 
         cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-        self.bind_surfaces(cmd, &[self.water.water_reflection_healed], None);
+        self.bind_surfaces(cmd, &[view.water.water_reflection_healed], None);
         self.execute_global_pipeline(
             cmd,
             &self.globals.pipelines.water_reflection_healing,
@@ -101,21 +101,21 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.water.unk00 = self.shading_result_read.lock().srv.clone().into();
-            ext.water.unk08 = self.water.water_uv.into();
-            ext.water.unk30 = self.water.water_reflection_healed.into();
+            ext.water.unk00 = view.shading_result_read.lock().srv.clone().into();
+            ext.water.unk08 = view.water.water_uv.into();
+            ext.water.unk30 = view.water.water_reflection_healed.into();
         }
 
-        self.submit_water_planes(cmd);
+        self.submit_water_planes(cmd, view);
     }
 
-    fn submit_water_planes(&self, cmd: &mut CommandList) {
+    fn submit_water_planes(&self, cmd: &mut CommandList, view: &View) {
         {
             {
                 let ext = &mut self.externs.get_mut();
-                ext.deferred.deferred_depth = self.gbuffers.depth_proxy.lock().srv.clone().into();
+                ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
                 ext.view
-                    .derive_matrices(self.surfaces.get(self.shading_result).resolution());
+                    .derive_matrices(self.surfaces().get(view.shading_result).resolution());
             }
             self.globals.scopes.view.bind(cmd).unwrap();
             self.globals.scopes.transparent.bind(cmd).unwrap();
@@ -125,7 +125,7 @@ impl Renderer {
         {
             cmd_event_span!(cmd, "water");
 
-            self.bind_surfaces(cmd, &[self.shading_result], Some(self.gbuffers.depth));
+            self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
             self.submit_stage(
                 cmd,

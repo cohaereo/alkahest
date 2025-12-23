@@ -2,33 +2,33 @@ use std::io::{Cursor, Seek, SeekFrom};
 
 use alkahest_data::{
     map::ComponentData,
-    pattern::{S8080841B, SPattern},
+    pattern::{SPattern, S8080841B},
     tfx::{
-        TfxFeatureRenderer,
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
+        TfxFeatureRenderer,
     },
 };
 use alkahest_render::{
-    Renderer,
     feature::{
         cubemap::CubemapRenderer, decals::DecalCollectionRenderer, decorators::DecoratorRenderer,
         light::LightRenderer, rigid_model::DynamicModel, road_decals::RoadDecalCollectionRenderer,
         static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
+    Renderer,
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
-use tiger_pkg::{TagHash, package_manager};
+use tiger_pkg::{package_manager, TagHash};
 
 use crate::world::{
-    UnimplementedTigerComponent, UnimplementedTigerComponents,
-    permutations::PermutationConfig,
-    render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
+    permutations::PermutationConfig, render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
     transform::Transform,
+    UnimplementedTigerComponent,
+    UnimplementedTigerComponents,
 };
 
 pub fn spawn_pattern(
@@ -321,6 +321,14 @@ pub fn spawn_pattern_from_header(
                         )),
                     ),
                 )?;
+            }
+            0x808068D9 => {
+                let data = get_component_data!(SWaterPlaneComponent);
+
+                let model = DynamicModel::load(data.model, vec![], vec![])?;
+                let obj = Renderer::instance()
+                    .add_object(RenderObject::new(TfxFeatureRenderer::Water, model));
+                world.insert_one(entity, DynamicRenderObject::new(obj))?;
             }
             u => {
                 debug!(

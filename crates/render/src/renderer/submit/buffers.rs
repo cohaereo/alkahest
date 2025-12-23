@@ -332,71 +332,71 @@ impl LightBuffers {
     }
 }
 
-// pub struct WaterBuffers {
-//     pub water_uv: SurfaceHandle,
-//     pub water_uv_healed: SurfaceHandle,
-//     pub water_depth: SurfaceHandle,
+pub struct WaterBuffers {
+    pub water_uv: SurfaceHandle,
+    pub water_uv_healed: SurfaceHandle,
+    pub water_depth: SurfaceHandle,
 
-//     pub water_reflection: SurfaceHandle,
-//     pub water_reflection_healed: SurfaceHandle,
-// }
+    pub water_reflection: SurfaceHandle,
+    pub water_reflection_healed: SurfaceHandle,
+}
 
-// impl WaterBuffers {
-//     pub fn create(surfaces: &Surfaces, base_resolution: (u32, u32)) -> anyhow::Result<Self> {
-//         let water_uv = surfaces.create_surface(
-//             base_resolution,
-//             SurfaceDesc::builder("water_uv", SizeRelativity::RelativeToFramebuffer)
-//                 .format(dxgi::Format::R16g16b16a16Typeless)
-//                 .view_format(dxgi::Format::R16g16b16a16Unorm)
-//                 .scale(SurfaceScale::Eighth)
-//                 .build(),
-//         )?;
+impl WaterBuffers {
+    pub fn create(surfaces: &Surfaces, base_resolution: (u32, u32)) -> anyhow::Result<Self> {
+        let water_uv = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("water_uv", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R16g16b16a16Typeless)
+                .view_format(dxgi::Format::R16g16b16a16Unorm)
+                .scale(SurfaceScale::Eighth)
+                .build(),
+        )?;
 
-//         let water_uv_healed = surfaces.create_surface(
-//             base_resolution,
-//             SurfaceDesc::builder("water_uv_healed", SizeRelativity::RelativeToFramebuffer)
-//                 .format(dxgi::Format::R16g16b16a16Typeless)
-//                 .view_format(dxgi::Format::R16g16b16a16Unorm)
-//                 .scale(SurfaceScale::Eighth)
-//                 .build(),
-//         )?;
+        let water_uv_healed = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("water_uv_healed", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R16g16b16a16Typeless)
+                .view_format(dxgi::Format::R16g16b16a16Unorm)
+                .scale(SurfaceScale::Eighth)
+                .build(),
+        )?;
 
-//         let water_depth = surfaces.create_surface(
-//             base_resolution,
-//             SurfaceDesc::builder("water_depth", SizeRelativity::RelativeToFramebuffer)
-//                 .format(dxgi::Format::R32g8x24Typeless)
-//                 .view_format(dxgi::Format::D32FloatS8x24Uint)
-//                 .scale(SurfaceScale::Eighth)
-//                 .build(),
-//         )?;
+        let water_depth = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("water_depth", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R32g8x24Typeless)
+                .view_format(dxgi::Format::D32FloatS8x24Uint)
+                .scale(SurfaceScale::Eighth)
+                .build(),
+        )?;
 
-//         let water_reflection = surfaces.create_surface(
-//             base_resolution,
-//             SurfaceDesc::builder("water_reflection", SizeRelativity::RelativeToFramebuffer)
-//                 .format(dxgi::Format::R16g16b16a16Typeless)
-//                 .view_format(dxgi::Format::R16g16b16a16Float)
-//                 .scale(SurfaceScale::Quarter)
-//                 .build(),
-//         )?;
+        let water_reflection = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("water_reflection", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R16g16b16a16Typeless)
+                .view_format(dxgi::Format::R16g16b16a16Float)
+                .scale(SurfaceScale::Quarter)
+                .build(),
+        )?;
 
-//         let water_reflection_healed = surfaces.create_surface(
-//             base_resolution,
-//             SurfaceDesc::builder(
-//                 "water_reflection_healed",
-//                 SizeRelativity::RelativeToFramebuffer,
-//             )
-//             .format(dxgi::Format::R16g16b16a16Typeless)
-//             .view_format(dxgi::Format::R16g16b16a16Float)
-//             .scale(SurfaceScale::Quarter)
-//             .build(),
-//         )?;
+        let water_reflection_healed = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder(
+                "water_reflection_healed",
+                SizeRelativity::RelativeToFramebuffer,
+            )
+            .format(dxgi::Format::R16g16b16a16Typeless)
+            .view_format(dxgi::Format::R16g16b16a16Float)
+            .scale(SurfaceScale::Quarter)
+            .build(),
+        )?;
 
-//         Ok(Self {
-//             water_uv,
-//             water_uv_healed,
-//             water_depth,
-//             water_reflection,
-//             water_reflection_healed,
-//         })
-//     }
-// }
+        Ok(Self {
+            water_uv,
+            water_uv_healed,
+            water_depth,
+            water_reflection,
+            water_reflection_healed,
+        })
+    }
+}

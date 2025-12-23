@@ -237,10 +237,13 @@ impl Renderer {
                     (ExternIndex::Transparent, 0x00) // Atmosphere (near?)
                     | (ExternIndex::Transparent, 0x08) // Atmosphere (3x2)
                     | (ExternIndex::Transparent, 0x10) // Atmosphere (far?)
-                    | (ExternIndex::Transparent, 0x48) // t20, unused?
                     | (ExternIndex::Transparent, 0x50) // t21, unused?
                     => {
                         bytemuck::cast_slice(&[[0u8, 0, 0, 0]; 4])
+                    }
+                    (ExternIndex::Transparent, 0x48) // t20
+                    => {
+                        bytemuck::cast_slice(&[[0u8, 0, 0, 0xff]; 4])
                     }
                     (ExternIndex::Water, 0x28) => bytemuck::cast_slice(&[[127u8, 127, 0, 0]; 4]), // RG16_UNORM
                     // VolumetricsPass inputs are generally the results of the last pass, alpha is *ALWAYS* cleared to zero

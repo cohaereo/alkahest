@@ -365,13 +365,37 @@ impl<'a> DecompilerState<'a> {
                         "Invalid constant index"
                     );
 
-                    let cl = get_constants(constant_start as usize..constant_start as usize + 60)?;
+                    let cl = get_constants(constant_start as usize..constant_start as usize + 6)?;
                     // cached_top = super::helpers::bytecode_op_gradient4_const(
                     //     cached_top, cl[0], cl[1], cl[2], cl[3], cl[4], cl[5],
                     // );
                     cached_top = format!(
                         "<fun>gradient4<reset>({}, {}, {}, {}, {}, {}, {})",
                         cached_top, cl[0], cl[1], cl[2], cl[3], cl[4], cl[5]
+                    );
+                }
+                Opcode::Unknown0x49 => {
+                    let constant_start = ptr[1];
+                    ensure!(
+                        (constant_start + 10) < constants.len() as u8,
+                        "Invalid constant index"
+                    );
+
+                    let cl = get_constants(constant_start as usize..constant_start as usize + 11)?;
+                    cached_top = format!(
+                        "<fun>unk49<reset>({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
+                        cached_top,
+                        cl[0],
+                        cl[1],
+                        cl[2],
+                        cl[3],
+                        cl[4],
+                        cl[5],
+                        cl[6],
+                        cl[7],
+                        cl[8],
+                        cl[9],
+                        cl[10]
                     );
                 }
                 Opcode::MultiplyAdd => {
@@ -610,6 +634,12 @@ impl<'a> DecompilerState<'a> {
                     let channel = ptr[1];
                     cached_top = self.push(format!(
                         "<ident>global_channels<reset>[<num>{channel}<reset>]"
+                    ))?;
+                }
+                Opcode::PushTexDimensions => {
+                    let tex_slot = ptr[1];
+                    cached_top = self.push(format!(
+                        "<fun>tex_dimensions<reset>(<ident>t{tex_slot}<reset>)"
                     ))?;
                 }
                 Opcode::Unknown0x5e => {

@@ -12,7 +12,7 @@ impl Renderer {
                 let ext = &mut self.externs.get_mut();
                 ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
                 ext.view
-                    .derive_matrices(self.surfaces().get(view.output).resolution());
+                    .derive_matrices(self.surfaces().get(view.shading_result).resolution());
             }
             self.globals.scopes.view.bind(cmd).unwrap();
             self.globals.scopes.transparent.bind(cmd).unwrap();
@@ -20,7 +20,7 @@ impl Renderer {
 
             cmd_event_span!(cmd, "decals_additive");
             let _gpuscope = self.profiler.scope(cmd, "decals_additive");
-            self.bind_surfaces(cmd, &[view.output], Some(view.gbuffers.depth));
+            self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
             cmd.flush_states();

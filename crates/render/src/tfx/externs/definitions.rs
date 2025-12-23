@@ -638,8 +638,8 @@ extern_struct! {
         0x38 => unk38: Uav,
         0x40 => unk40: Uav,
         0x48 => unk48: Uav,
-        0x50 => unk50: Vec4,
-        0x60 => unk60: Vec4,
+        0x50 => output_res: Vec4,
+        0x60 => res_for_unk00: Vec4,
         0x80 => unk80: Vec4,
         0xC0 => unkc0: Vec4,
         0xD0 => unkd0: Vec4,
@@ -1005,8 +1005,10 @@ extern_struct! {
         0x08 => unk08: TextureView,
         0x18 => unk18: TextureView,
         0x28 => unk28: TextureView,
+        0x30 => unk30: TextureView,
         0x40 => unk40: Vec4,
         0x50 => unk50: Vec4,
+        0x70 => unk70: f32,
     }
 }
 
