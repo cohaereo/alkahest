@@ -110,6 +110,9 @@ opt-level = 3
 [profile.dev.package.alkahest-data]
 opt-level = 3
 
+[profile.dev]
+opt-level = 1
+
 [profile.profiling]
 inherits = "release"
 debug = true

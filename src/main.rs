@@ -81,7 +81,6 @@ fn main() -> anyhow::Result<()> {
     }
 
     let mut app = App::new(sdl_context.clone(), Rc::new(window), args)?;
-
     let mut event_pump = sdl_context.event_pump().unwrap();
     'app: while app.running {
         for event in event_pump.poll_iter() {

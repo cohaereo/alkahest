@@ -58,8 +58,6 @@ impl CameraController {
                     *target += camera.up() * delta_adjusted.y;
                 }
 
-                // Pan
-
                 if response.dragged() {
                     Renderer::instance()
                         .immediate
