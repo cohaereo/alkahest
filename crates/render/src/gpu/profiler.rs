@@ -14,6 +14,7 @@ const MAX_PENDING_FRAMES: usize = 4;
 #[derive(Clone, Debug)]
 pub struct ProfileScope {
     pub name: String,
+    pub depth: u32,
     pub cpu_duration_us: f64,
     pub gpu_duration_us: f64,
 }
@@ -26,6 +27,7 @@ struct TimestampQuery {
     disjoint_query: Query,
     cpu_start: Instant,
     cpu_duration_us: f64,
+    depth: u32,
 }
 
 struct FrameQueries {
@@ -42,6 +44,8 @@ struct ProfilerState {
     last_results: Vec<ProfileScope>,
 
     frame_index: u64,
+
+    scope_depth: u32,
 }
 
 #[derive(Clone)]
@@ -61,6 +65,7 @@ impl D3D11Profiler {
             pending_frames: VecDeque::with_capacity(MAX_PENDING_FRAMES),
             last_results: Vec::new(),
             frame_index: 0,
+            scope_depth: 0,
         };
 
         Self {
@@ -100,6 +105,7 @@ impl D3D11Profiler {
         let cpu_start = Instant::now();
         let index = state.current_frame.queries.len();
 
+        let depth = state.scope_depth;
         state.current_frame.queries.push(TimestampQuery {
             context: context.clone(),
             name,
@@ -108,7 +114,9 @@ impl D3D11Profiler {
             disjoint_query,
             cpu_start,
             cpu_duration_us: 0.0,
+            depth,
         });
+        state.scope_depth += 1;
 
         Ok(ScopeHandle { index })
     }
@@ -117,6 +125,7 @@ impl D3D11Profiler {
         let ProfilerState {
             enabled,
             current_frame,
+            scope_depth,
             ..
         } = &mut *self.state.lock();
         if !*enabled {
@@ -135,6 +144,10 @@ impl D3D11Profiler {
 
         query.cpu_duration_us = query.cpu_start.elapsed().as_secs_f64() * 1_000_000.0;
 
+        *scope_depth = scope_depth
+            .checked_sub(1)
+            .context("Mismatched GPU profiling scope begin/end")?;
+
         Ok(())
     }
 
@@ -146,6 +159,7 @@ impl D3D11Profiler {
             pending_frames,
             last_results,
             frame_index,
+            scope_depth,
             ..
         } = &mut *self.state.lock();
         if !*enabled {
@@ -172,6 +186,11 @@ impl D3D11Profiler {
             }
         } else {
             warn!("No pending profiling frames");
+        }
+
+        if *scope_depth != 0 {
+            warn!("Some GPU profiling scopes were not properly ended before frame end");
+            *scope_depth = 0;
         }
     }
 
@@ -224,6 +243,7 @@ impl D3D11Profiler {
 
             results.push(ProfileScope {
                 name: query.name.clone(),
+                depth: query.depth,
                 cpu_duration_us: query.cpu_duration_us,
                 gpu_duration_us,
             });
@@ -259,9 +279,14 @@ impl D3D11Profiler {
         let mut longest_duration_cpu = 0f64;
         let mut longest_duration_gpu = 0f64;
         for scope in results {
+            let scope_name = if scope.depth > 0 {
+                format!("{}{}", "  ".repeat(scope.depth as usize), scope.name)
+            } else {
+                scope.name.clone()
+            };
             output.push_str(&format!(
                 "{:<30} {:>12.1} {:>12.1}\n",
-                scope.name, scope.cpu_duration_us, scope.gpu_duration_us
+                scope_name, scope.cpu_duration_us, scope.gpu_duration_us
             ));
             longest_duration_cpu = longest_duration_cpu.max(scope.cpu_duration_us);
             longest_duration_gpu = longest_duration_gpu.max(scope.gpu_duration_us);

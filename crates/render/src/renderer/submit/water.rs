@@ -6,6 +6,7 @@ use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
 
 impl Renderer {
     pub(super) fn submit_water(&self, cmd: &mut CommandList, view: &View) {
+        let _gpuscope = self.profiler.scope(cmd, "water");
         cmd_event_span!(cmd, "water_reflection");
         {
             let ext = &mut self.externs.get_mut();

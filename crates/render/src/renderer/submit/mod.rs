@@ -11,7 +11,6 @@ use std::fmt::Debug;
 use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, ShaderStage};
 use glam::{vec4, Mat4, Vec4};
-use itertools::Itertools;
 
 use super::Renderer;
 use crate::{

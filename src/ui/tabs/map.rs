@@ -48,7 +48,7 @@ impl MapTab {
         if self.load_task.is_pending() {
             let (_, rect) = ui.allocate_space(ui.available_size());
             ui.painter()
-                .rect_filled(rect, 0, Color32::from_rgb(45, 48, 56));
+                .rect_filled(rect, 0, Color32::from_rgb(14, 24, 28));
             ui.d_paint_spinner_at(Rect::from_center_size(rect.center(), vec2(64.0, 64.0)));
             ui.painter().text(
                 rect.center() + vec2(0.0, 42.0),
