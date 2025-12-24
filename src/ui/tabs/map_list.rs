@@ -2,18 +2,17 @@ use alkahest_data::{
     map::{SBubbleParent, SBubbleParentShallow},
     strings::StringContainerShared,
 };
-use egui::{Margin, TextEdit, Ui, ahash::HashMap};
+use egui::{Margin, Ui, ahash::HashMap, vec2};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
 use super::{Tab, TabResult, map::MapTab};
-use crate::ui::util::UiExt;
+use crate::ui::util::DButton;
 
 pub struct MapListTab {
     map_tags_by_package: Vec<(String, Vec<(TagHash, String)>)>,
-    map_tags_by_package_filtered: Vec<(String, Vec<(TagHash, String)>)>,
-
-    filter: String,
+    /// Indexes into `map_tags_by_package`
+    current_package_index: Option<usize>,
 }
 
 impl MapListTab {
@@ -47,37 +46,9 @@ impl MapListTab {
         };
 
         Self {
-            map_tags_by_package_filtered: map_tags_by_package.clone(),
             map_tags_by_package,
-            filter: String::new(),
+            current_package_index: None,
         }
-    }
-
-    fn filter_tags(&mut self) {
-        if self.filter.is_empty() {
-            self.map_tags_by_package_filtered = self.map_tags_by_package.clone();
-            return;
-        }
-
-        self.map_tags_by_package_filtered = self
-            .map_tags_by_package
-            .iter()
-            .map(|(package_name, map_tags)| {
-                let filtered_tags: Vec<(TagHash, String)> = map_tags
-                    .iter()
-                    .filter(|(tag, name)| {
-                        let path = &package_manager().package_paths[&tag.pkg_id()];
-                        path.name
-                            .to_lowercase()
-                            .contains(&self.filter.to_lowercase())
-                            || name.to_lowercase().contains(&self.filter.to_lowercase())
-                    })
-                    .cloned()
-                    .collect();
-                (package_name.clone(), filtered_tags)
-            })
-            .filter(|(_, tags)| !tags.is_empty())
-            .collect();
     }
 
     pub fn ui(&mut self, ui: &mut Ui) -> TabResult {
@@ -90,31 +61,50 @@ impl MapListTab {
                 right: 16,
             })
             .show(ui, |ui| {
-                if TextEdit::singleline(&mut self.filter)
-                    .hint_text("Filter maps...")
-                    .show(ui)
-                    .response
-                    .changed()
-                {
-                    self.filter_tags();
-                }
+                ui.horizontal_centered(|ui| {
+                    ui.vertical(|ui| {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([true, false])
+                            .id_salt("map_list_packages")
+                            .show(ui, |ui| {
+                                for (i, (package_name, _map_tags)) in
+                                    self.map_tags_by_package.iter().enumerate()
+                                {
+                                    if if self.current_package_index == Some(i) {
+                                        DButton::new_white(package_name)
+                                    } else {
+                                        DButton::new(package_name)
+                                    }
+                                    .min_size(vec2(512.0, 32.0))
+                                    .ui(ui)
+                                    .clicked()
+                                    {
+                                        self.current_package_index = Some(i);
+                                    }
+                                }
+                            });
+                    });
 
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        for (package_name, map_tags) in &self.map_tags_by_package_filtered {
-                            ui.separator();
-                            ui.heading(package_name);
-                            ui.add_space(8.0);
-                            ui.horizontal_wrapped(|ui| {
-                                for (tag, name) in map_tags.iter() {
-                                    let tag = *tag;
-                                    let path = &package_manager().package_paths[&tag.pkg_id()];
-                                    if ui
-                                        .d_button(format!("{} - {name} ({tag})", path.name))
+                    ui.separator();
+
+                    ui.vertical(|ui| {
+                        egui::ScrollArea::vertical()
+                            .id_salt("map_list_maps")
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                let current_index = match self.current_package_index {
+                                    Some(i) => i,
+                                    None => return,
+                                };
+
+                                for (tag, name) in self.map_tags_by_package[current_index].1.iter()
+                                {
+                                    if DButton::new(format!("{name} ({tag})"))
+                                        .min_size(vec2(512.0, 32.0))
+                                        .ui(ui)
                                         .clicked()
                                     {
-                                        match MapTab::new(tag) {
+                                        match MapTab::new(*tag) {
                                             Ok(map) => {
                                                 result = TabResult::Open(Tab::Map(map));
                                             }
@@ -125,8 +115,8 @@ impl MapListTab {
                                     }
                                 }
                             });
-                        }
                     });
+                });
             });
 
         result

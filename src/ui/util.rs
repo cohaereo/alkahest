@@ -1,4 +1,4 @@
-use std::{cell::RefCell, time::Instant};
+use std::{cell::RefCell, ops::Deref, time::Instant};
 
 use egui::*;
 
@@ -14,27 +14,28 @@ pub trait UiExt {
 
 impl UiExt for Ui {
     fn d_button(&mut self, text: impl Into<RichText>) -> Response {
-        let r = self
-            .add(
-                Button::new(text.into().color(Color32::WHITE))
-                    .min_size(vec2(120.0, 60.0))
-                    .corner_radius(0)
-                    .fill(Color32::from_gray(96).gamma_multiply(0.2))
-                    .stroke(Stroke::new(1.0, Color32::WHITE)),
-            )
-            .on_hover_cursor(CursorIcon::PointingHand);
+        DButton::new(text).ui(self)
+        // let r = self
+        //     .add(
+        //         Button::new(text.into().color(Color32::WHITE))
+        //             .min_size(vec2(120.0, 60.0))
+        //             .corner_radius(0)
+        //             .fill(Color32::from_gray(96).gamma_multiply(0.2))
+        //             .stroke(Stroke::new(1.0, Color32::WHITE)),
+        //     )
+        //     .on_hover_cursor(CursorIcon::PointingHand);
 
-        if r.hovered() {
-            self.painter().rect(
-                r.rect.expand(4.0),
-                0,
-                Color32::TRANSPARENT,
-                Stroke::new(2.0, Color32::from_white_alpha(196)),
-                StrokeKind::Outside,
-            );
-        }
+        // if r.hovered() {
+        //     self.painter().rect(
+        //         r.rect.expand(4.0),
+        //         0,
+        //         Color32::TRANSPARENT,
+        //         Stroke::new(2.0, Color32::from_white_alpha(196)),
+        //         StrokeKind::Outside,
+        //     );
+        // }
 
-        r
+        // r
     }
 
     fn d_spinner(&mut self, size: Vec2) -> Response {
@@ -97,4 +98,53 @@ pub fn spinner_image() -> (
 /// Extension trait for adding widgets for external data types.
 pub trait ExternalDataWidgetExt {
     fn show_input(&mut self, ui: &mut Ui) -> Response;
+}
+
+pub struct DButton<'a> {
+    button: egui::Button<'a>,
+}
+
+impl<'a> DButton<'a> {
+    pub fn new(text: impl Into<RichText>) -> Self {
+        Self {
+            button: egui::Button::new(text.into().color(Color32::WHITE))
+                .min_size(vec2(120.0, 60.0))
+                .corner_radius(0)
+                .fill(Color32::from_gray(96).gamma_multiply(0.2))
+                .stroke(Stroke::new(1.0, Color32::WHITE)),
+        }
+    }
+
+    pub fn new_white(text: impl Into<RichText>) -> Self {
+        Self {
+            button: egui::Button::new(text.into().color(Color32::BLACK))
+                .min_size(vec2(120.0, 60.0))
+                .corner_radius(0)
+                .fill(Color32::from_white_alpha(196))
+                .stroke(Stroke::new(1.0, Color32::WHITE)),
+        }
+    }
+
+    pub fn ui(self, ui: &mut Ui) -> Response {
+        let r = ui
+            .add(self.button)
+            .on_hover_cursor(CursorIcon::PointingHand);
+
+        if r.hovered() {
+            ui.painter().rect(
+                r.rect.expand(4.0),
+                0,
+                Color32::TRANSPARENT,
+                Stroke::new(2.0, Color32::from_white_alpha(196)),
+                StrokeKind::Outside,
+            );
+        }
+
+        r
+    }
+
+    pub fn min_size(mut self, size: Vec2) -> Self {
+        self.button = self.button.min_size(size);
+        self
+    }
 }
