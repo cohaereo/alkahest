@@ -4,6 +4,7 @@
 
 use std::{rc::Rc, sync::Arc, time::Instant};
 
+use alkahest_data::strings::{StringContainer, StringContainerShared};
 use alkahest_render::{
     Gpu, Renderer,
     gpu::{command_list::CommandList, spinner::FullscreenSpinner},
@@ -21,6 +22,8 @@ pub struct App {
     pub renderer: Arc<Renderer>,
     pub gui: Gui,
     pub running: bool,
+
+    shared_state: Arc<SharedState>,
 
     spinner: FullscreenSpinner,
     last_frame_time: Instant,
@@ -42,6 +45,10 @@ impl App {
             window,
             gpu,
             running: true,
+
+            shared_state: SharedState::new()
+                .context("Failed to create shared state")?
+                .into(),
 
             last_frame_time: Instant::now(),
             start_time: Instant::now(),
@@ -104,7 +111,7 @@ impl App {
         let gpu = &self.renderer.gpu;
         let mut cmd = CommandList::from_device_context(gpu, gpu.context().clone());
         subsecond::call(|| {
-            self.gui.draw(&mut cmd);
+            self.gui.draw(&mut cmd, &self.shared_state);
         });
 
         let vsync = false;
@@ -114,5 +121,17 @@ impl App {
         }
 
         profiling::finish_frame!();
+    }
+}
+
+pub struct SharedState {
+    pub strings: StringContainerShared,
+}
+
+impl SharedState {
+    pub fn new() -> anyhow::Result<Self> {
+        Ok(Self {
+            strings: StringContainer::load_all_global().into(),
+        })
     }
 }

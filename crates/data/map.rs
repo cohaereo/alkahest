@@ -20,6 +20,16 @@ use crate::{
 
 #[derive(Debug)]
 #[tiger_type(id = 0x8080891E, size = 0x50)]
+pub struct SBubbleParentShallow {
+    pub file_size: u64,
+
+    pub definition: WideHash, // WideHash as of 8.2.0
+    pub unk10: u64,
+    pub map_name: FnvHash,
+}
+
+#[derive(Debug)]
+#[tiger_type(id = 0x8080891E, size = 0x50)]
 pub struct SBubbleParent {
     pub file_size: u64,
 

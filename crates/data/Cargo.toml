@@ -9,12 +9,14 @@ path = "./lib.rs"
 [dependencies]
 alkahest-core = { path = "../core" }
 
+ahash.workspace = true
 anyhow.workspace = true
 assert-offset = "0.1"
 bitflags = "2"
 d3d11.workspace = true
 glam.workspace = true
-paste = "1"
-tiger-pkg.workspace = true
-tiger-parse.workspace = true
 int-enum = "1.2.0"
+paste = "1"
+rayon.workspace = true
+tiger-parse.workspace = true
+tiger-pkg.workspace = true

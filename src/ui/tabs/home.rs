@@ -1,13 +1,15 @@
+use std::sync::Arc;
+
 use egui::Ui;
 use google_material_symbols::GoogleMaterialSymbols;
 
 use super::{Tab, TabResult, entity_list::EntityListTab, map_list::MapListTab};
-use crate::ui::util::UiExt;
+use crate::{app::SharedState, ui::util::UiExt};
 
 pub struct HomeTab;
 
 impl HomeTab {
-    pub fn ui(&self, ui: &mut Ui) -> TabResult {
+    pub fn ui(&self, ui: &mut Ui, shared_state: &Arc<SharedState>) -> TabResult {
         let mut result = TabResult::Continue;
         ui.add_space(32.0);
         ui.columns(2, |uis| {
@@ -24,7 +26,7 @@ impl HomeTab {
                 .d_button(format!("{} MAPS", GoogleMaterialSymbols::Map))
                 .clicked()
             {
-                result = TabResult::Open(Tab::MapList(MapListTab::new()));
+                result = TabResult::Open(Tab::MapList(MapListTab::new(&shared_state.strings)));
             }
             uis[0].disable();
             let _ = uis[0].d_button(format!("{} STATICS", GoogleMaterialSymbols::Landscape));

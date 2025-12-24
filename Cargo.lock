@@ -157,6 +157,7 @@ dependencies = [
 name = "alkahest-data"
 version = "0.0.0"
 dependencies = [
+ "ahash",
  "alkahest-core",
  "anyhow",
  "assert-offset",
@@ -165,6 +166,7 @@ dependencies = [
  "glam",
  "int-enum",
  "paste",
+ "rayon",
  "tiger-parse",
  "tiger-pkg",
 ]

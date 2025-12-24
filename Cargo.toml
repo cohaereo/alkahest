@@ -19,6 +19,7 @@ members = [
 
 [workspace.dependencies]
 anyhow = "1"
+ahash = "0.8"
 crossbeam = "0.8"
 d3d11 = { git = "https://github.com/cohaereo/d3d11-rs.git", features = ["sdl3"] }
 egui = { version = "0.31.1", default-features = false, features = ["bytemuck"] }

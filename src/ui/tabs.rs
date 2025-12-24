@@ -4,7 +4,7 @@ mod map;
 mod map_list;
 mod tag_lookup;
 
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use egui::Margin;
 use egui_dock::{DockState, NodeIndex, SurfaceIndex, TabIndex};
@@ -60,6 +60,7 @@ impl Display for Tab {
 pub struct TabViewer<'a> {
     pub added_nodes: &'a mut Vec<Tab>,
     pub egui_d3d11: &'a mut egui_d3d11::D3D11Renderer,
+    pub shared_state: &'a Arc<crate::app::SharedState>,
 }
 
 impl<'a> egui_dock::TabViewer for TabViewer<'a> {
@@ -81,7 +82,7 @@ impl<'a> egui_dock::TabViewer for TabViewer<'a> {
                     egui::Layout::top_down(egui::Align::Center),
                     |ui| match tab {
                         Tab::Home => {
-                            self.process_result(HomeTab.ui(ui));
+                            self.process_result(HomeTab.ui(ui, self.shared_state));
                         }
                         Tab::Settings => {
                             ui.weak("No settings are available");

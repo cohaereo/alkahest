@@ -7,6 +7,8 @@ use egui_dock::{DockArea, DockState, TabInteractionStyle};
 use google_material_symbols::GoogleMaterialSymbols;
 use tabs::{DockStateExt, Tab, TabViewer};
 
+use crate::app::SharedState;
+
 pub mod colors;
 mod scene;
 mod style;
@@ -154,7 +156,7 @@ impl Gui {
         })
     }
 
-    pub fn draw(&mut self, cmd: &mut CommandList) {
+    pub fn draw(&mut self, cmd: &mut CommandList, shared_state: &Arc<SharedState>) {
         let ctx = self
             .egui_sdl3
             .begin_frame(self.window.size(), self.window.display_scale());
@@ -219,6 +221,7 @@ impl Gui {
                 &mut TabViewer {
                     added_nodes: &mut self.added_nodes,
                     egui_d3d11: &mut self.egui_d3d11,
+                    shared_state: &shared_state,
                 },
             );
 

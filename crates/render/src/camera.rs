@@ -44,7 +44,7 @@ impl Default for Camera {
 }
 
 impl Camera {
-    pub const NEAR: f32 = 0.15;
+    pub const NEAR: f32 = 0.02;
     pub const FAR: f32 = 50000.0;
 
     pub fn update(&mut self) {
