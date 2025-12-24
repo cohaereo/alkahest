@@ -13,6 +13,8 @@ pub struct MapListTab {
     map_tags_by_package: Vec<(String, Vec<(TagHash, String)>)>,
     /// Indexes into `map_tags_by_package`
     current_package_index: Option<usize>,
+
+    strings: StringContainerShared,
 }
 
 impl MapListTab {
@@ -20,16 +22,7 @@ impl MapListTab {
         let map_tags: Vec<(TagHash, String)> = package_manager()
             .get_all_by_reference(SBubbleParent::ID.unwrap())
             .into_iter()
-            .filter_map(|(t, _)| {
-                let map = package_manager()
-                    .read_tag_struct::<SBubbleParentShallow>(t)
-                    .ok();
-                let map_name_hash = match map {
-                    Some(m) => m.map_name,
-                    None => return None,
-                };
-                Some((t, strings.get(map_name_hash)))
-            })
+            .map(|(t, _)| (t, String::new()))
             .collect();
 
         let map_tags_by_package = {
@@ -48,6 +41,18 @@ impl MapListTab {
         Self {
             map_tags_by_package,
             current_package_index: None,
+            strings: strings.clone(),
+        }
+    }
+
+    fn load_map_names(&mut self, index: usize) {
+        for (tag, name) in self.map_tags_by_package[index].1.iter_mut() {
+            if name.is_empty()
+                && let Ok(bubble_parent) =
+                    package_manager().read_tag_struct::<SBubbleParentShallow>(*tag)
+            {
+                *name = self.strings.get(bubble_parent.map_name);
+            }
         }
     }
 
@@ -61,6 +66,7 @@ impl MapListTab {
                 right: 16,
             })
             .show(ui, |ui| {
+                let mut selected_map = None;
                 ui.horizontal_centered(|ui| {
                     ui.vertical(|ui| {
                         egui::ScrollArea::vertical()
@@ -80,10 +86,15 @@ impl MapListTab {
                                     .clicked()
                                     {
                                         self.current_package_index = Some(i);
+                                        selected_map = Some(i);
                                     }
                                 }
                             });
                     });
+
+                    if let Some(index) = selected_map {
+                        self.load_map_names(index);
+                    }
 
                     ui.separator();
 
