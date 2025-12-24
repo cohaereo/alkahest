@@ -5,10 +5,14 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-lazy_static = "1"
+breakpad-handler = "0.2.0"
+color-eyre = "0.6.5"
 game-detector = { version = "0.1.7" }
+lazy_static = "1"
+native-dialog = "0.7.0"
 parking_lot.workspace = true
+regex = "1.12.2"
 serde.workspace = true
+tiger-pkg.workspace = true
 toml = "0.8"
 tracing.workspace = true
-tiger-pkg.workspace = true

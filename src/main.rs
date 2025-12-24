@@ -10,7 +10,6 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
 mod cli;
-mod panic_hook;
 mod task;
 mod ui;
 mod world;
@@ -30,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     let _profiler = dhat::Profiler::new_heap();
 
     fix_windows_console();
-    std::panic::set_hook(Box::new(panic_hook::hook));
+    alkahest_core::setup_panic_hook();
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::builder()

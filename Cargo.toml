@@ -92,8 +92,6 @@ egui.workspace = true
 egui_extras = { version = "0.31.1", features = ["image"] }
 egui_dock.workspace = true
 image = { version = "0.25", features = ["png"] }
-nu-ansi-term = "0.50.1"
-native-dialog = "0.7.0"
 clap = { version = "4.5.37", features = ["derive"] }
 spin_sleep = "1.3.1"
 google_material_symbols = "0.2.9"
