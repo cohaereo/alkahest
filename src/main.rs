@@ -48,6 +48,7 @@ fn main() -> anyhow::Result<()> {
     let sdl_context = Rc::new(sdl3::init().expect("Failed to initialize SDL"));
     #[cfg(target_os = "linux")]
     sdl3::hint::set("SDL_VIDEO_DRIVER", "x11");
+
     let video_subsystem = sdl_context
         .video()
         .expect("Failed to initialize video subsystem");

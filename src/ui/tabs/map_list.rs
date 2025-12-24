@@ -54,6 +54,9 @@ impl MapListTab {
                 *name = self.strings.get(bubble_parent.map_name);
             }
         }
+        self.map_tags_by_package[index]
+            .1
+            .sort_by(|(_, a), (_, b)| a.cmp(b));
     }
 
     pub fn ui(&mut self, ui: &mut Ui) -> TabResult {
