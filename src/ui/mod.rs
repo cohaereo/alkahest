@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, mem::discriminant, rc::Rc, sync::Arc};
 
 use alkahest_render::{Gpu, gpu::command_list::CommandList};
 use anyhow::Context;
-use egui::{Color32, FontId};
+use egui::{Color32, FontId, vec2};
 use egui_dock::{DockArea, DockState, TabInteractionStyle};
 use google_material_symbols::GoogleMaterialSymbols;
 use tabs::{DockStateExt, Tab, TabViewer};
@@ -221,7 +221,7 @@ impl Gui {
                 &mut TabViewer {
                     added_nodes: &mut self.added_nodes,
                     egui_d3d11: &mut self.egui_d3d11,
-                    shared_state: &shared_state,
+                    shared_state,
                 },
             );
 
@@ -235,6 +235,24 @@ impl Gui {
             } else {
                 self.tree.push_to_focused_leaf(tab);
             }
+        }
+
+        {
+            let painter = ctx.layer_painter(egui::LayerId::new(
+                egui::Order::Foreground,
+                egui::Id::new("sodi"),
+            ));
+
+            painter.text(
+                ctx.screen_rect().left_bottom() + vec2(24.0, -16.0),
+                egui::Align2::LEFT_BOTTOM,
+                format!(
+                    "{} TEST BUILD, DO NOT DISTRIBUTE",
+                    GoogleMaterialSymbols::Lock
+                ),
+                egui::FontId::new(48.0, egui::FontFamily::Name("Medium".into())),
+                egui::Color32::from_white_alpha(127),
+            );
         }
 
         let output = self

@@ -116,6 +116,15 @@ opt-level = 3
 inherits = "release"
 debug = true
 
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+strip = true
+# panic = "abort"
+overflow-checks = false
+
 [features]
 tracy = ["profiling/profile-with-tracy", "dep:tracy-client"]
 dhat-heap = ["dep:dhat"]
