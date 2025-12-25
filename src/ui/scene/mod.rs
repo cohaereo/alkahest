@@ -10,11 +10,8 @@ use std::{
 
 use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use alkahest_render::{
-    Gpu, Renderer,
-    camera::Camera,
-    gpu::command_list::CommandList,
-    renderer::submit::DebugPipeline,
-    tfx::view::{RenderSettings, View},
+    Gpu, Renderer, camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline,
+    tfx::view::View,
 };
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
@@ -40,7 +37,7 @@ pub struct Scene {
     view: View,
     last_frame_time: Instant,
     sun_light_angle: f32,
-    render_mode: RenderMode,
+    pub render_mode: RenderMode,
 
     pub controller: CameraController,
 
@@ -466,6 +463,7 @@ pub enum RenderMode {
     Metalness,
     AmbientOcclusion,
     Emission,
+    EmissionIntensity,
     Transmission,
     IridescenceId,
 
@@ -479,11 +477,13 @@ pub enum RenderMode {
 }
 
 impl RenderMode {
-    pub fn ui(&mut self, ui: &mut Ui) {
+    /// Returns true if the render mode UI changed the value
+    pub fn ui(&mut self, ui: &mut Ui) -> bool {
         ui.style_mut()
             .text_styles
             .insert(TextStyle::Button, FontId::proportional(16.0));
 
+        let mut changed = false;
         egui::ComboBox::from_id_salt("Render Mode")
             .height(400.0)
             .selected_text(format!("{} {:?}", GoogleMaterialSymbols::EvShadow, self))
@@ -494,29 +494,40 @@ impl RenderMode {
                 ui.style_mut().spacing.button_padding = Vec2::new(8.0, 2.0);
                 ui.style_mut().spacing.item_spacing = Vec2::ZERO;
 
-                ui.selectable_value(self, RenderMode::Lookdev, "Lookdev");
-                ui.selectable_value(self, RenderMode::Shaded, "Shaded");
-                ui.selectable_value(self, RenderMode::ShadedNoSun, "Shaded (No Sun)");
-                // ui.selectable_value(self, RenderMode::Matcap, "Matcap");
+                macro_rules! mode {
+                    ($ui:ident, $variant:expr, $name:literal) => {
+                        if $ui.selectable_label(*self == $variant, $name).clicked() {
+                            *self = $variant;
+                            changed = true;
+                        }
+                    };
+                }
+
+                mode!(ui, RenderMode::Lookdev, "Lookdev");
+                mode!(ui, RenderMode::Shaded, "Shaded");
+                mode!(ui, RenderMode::ShadedNoSun, "Shaded (No Sun)");
+                // mode!(ui, RenderMode::Matcap, "Matcap");
 
                 ui.section_separator("Material:");
-                ui.selectable_value(self, RenderMode::Albedo, "Albedo");
-                // ui.selectable_value(self, RenderMode::Normals, "Normals");
-                ui.selectable_value(self, RenderMode::Smoothness, "Smoothness");
-                ui.selectable_value(self, RenderMode::Metalness, "Metalness");
-                ui.selectable_value(self, RenderMode::AmbientOcclusion, "Ambient Occlusion");
-                ui.selectable_value(self, RenderMode::Emission, "Emission");
-                ui.selectable_value(self, RenderMode::Transmission, "Transmission");
-                ui.selectable_value(self, RenderMode::IridescenceId, "Iridescence ID");
+                mode!(ui, RenderMode::Albedo, "Albedo");
+                mode!(ui, RenderMode::Smoothness, "Smoothness");
+                mode!(ui, RenderMode::Metalness, "Metalness");
+                mode!(ui, RenderMode::AmbientOcclusion, "Ambient Occlusion");
+                mode!(ui, RenderMode::Emission, "Emission");
+                mode!(ui, RenderMode::EmissionIntensity, "Emission Intensity");
+                mode!(ui, RenderMode::Transmission, "Transmission");
+                mode!(ui, RenderMode::IridescenceId, "Iridescence ID");
 
                 ui.section_separator("Geometry:");
-                ui.selectable_value(self, RenderMode::DepthEdges, "Depth Edges");
-                ui.selectable_value(self, RenderMode::WorldNormal, "World Normal");
+                mode!(ui, RenderMode::DepthEdges, "Depth Edges");
+                mode!(ui, RenderMode::WorldNormal, "World Normal");
 
                 ui.section_separator("Lighting:");
-                ui.selectable_value(self, RenderMode::LightDiffuse, "Diffuse Light");
-                ui.selectable_value(self, RenderMode::LightSpecular, "Specular Light");
+                mode!(ui, RenderMode::LightDiffuse, "Diffuse Light");
+                mode!(ui, RenderMode::LightSpecular, "Specular Light");
             });
+
+        changed
     }
 }
 
@@ -532,6 +543,7 @@ impl From<RenderMode> for Option<DebugPipeline> {
             RenderMode::Metalness => Some(DebugPipeline::Metalness),
             RenderMode::AmbientOcclusion => Some(DebugPipeline::AmbientOcclusion),
             RenderMode::Emission => Some(DebugPipeline::Emission),
+            RenderMode::EmissionIntensity => Some(DebugPipeline::EmissionIntensity),
             RenderMode::Transmission => Some(DebugPipeline::Transmission),
             RenderMode::IridescenceId => Some(DebugPipeline::Overcoat),
             RenderMode::DepthEdges => Some(DebugPipeline::DepthEdges),

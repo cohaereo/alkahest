@@ -138,6 +138,16 @@ impl EntityListTab {
         egui_ctx.request_repaint();
     }
 
+    fn clear_thumbnails(&mut self) {
+        let Some(entries) = self.packages.get_mut(&self.current_package) else {
+            return;
+        };
+
+        for entry in entries.iter_mut() {
+            entry.thumbnail = None;
+        }
+    }
+
     fn render_live_preview(&mut self, hash: TagHash, _hover_vector: Vec2) {
         let Some(entries) = self.packages.get_mut(&self.current_package) else {
             return;
@@ -331,6 +341,10 @@ impl EntityListTab {
                     .step_by(0.1)
                     .clamping(egui::SliderClamping::Always)
                     .ui(ui);
+                ui.separator();
+                if self.thumbnail_scene.render_mode.ui(ui) {
+                    self.clear_thumbnails();
+                }
                 ui.separator();
                 if let Some(entries) = self.packages.get(&self.current_package) {
                     let total = entries.len();

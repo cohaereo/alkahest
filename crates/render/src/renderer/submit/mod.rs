@@ -153,6 +153,7 @@ impl Renderer {
                     DebugPipeline::Metalness => &p.debug_metalness,
                     DebugPipeline::AmbientOcclusion => &p.debug_ambient_occlusion,
                     DebugPipeline::Emission => &p.debug_emissive,
+                    DebugPipeline::EmissionIntensity => &p.debug_emissive_intensity,
                     DebugPipeline::Transmission => &p.debug_transmission,
                     DebugPipeline::Overcoat => &p.debug_colored_overcoat_id,
                     DebugPipeline::DepthEdges => &p.debug_depth_edges,
@@ -446,6 +447,7 @@ pub enum DebugPipeline {
     Metalness,
     AmbientOcclusion,
     Emission,
+    EmissionIntensity,
     Transmission,
     Overcoat,
 

@@ -188,6 +188,7 @@ tfx_global_pipelines! {
     debug_texture_ao,
     debug_ambient_occlusion,
     debug_emissive,
+    debug_emissive_intensity,
     debug_transmission,
     debug_colored_overcoat_id,
     debug_depth_edges,
