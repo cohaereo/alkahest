@@ -207,10 +207,6 @@ impl Renderer {
         }
     }
 
-    pub fn shutdown(&self) {
-        self.asset_manager.shutdown();
-    }
-
     pub fn resize_swapchain(&self, resolution: (u32, u32)) {
         self.gpu.resize_swapchain(resolution);
     }
