@@ -28,7 +28,7 @@ gdt-cpus = "25.5.0"
 glam = { version = "0.29", features = ["bytemuck", "fast-math"] }
 itertools = "0.14"
 parking_lot = "0.12"
-potassium = "0.2.1"
+potassium = "0.2.2"
 profiling = "1"
 rayon = "1.11.0"
 serde = "1"
@@ -129,4 +129,5 @@ overflow-checks = false
 
 [features]
 tracy = ["profiling/profile-with-tracy", "dep:tracy-client"]
+tracy-alloc = ["tracy"]
 dhat-heap = ["dep:dhat"]

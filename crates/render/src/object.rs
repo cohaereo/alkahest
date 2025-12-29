@@ -1,5 +1,6 @@
 use std::any::Any;
 
+use alkahest_core::job::potassium::JobHandle;
 use alkahest_data::tfx::{
     features::dynamic::RenderStageSubscription, RenderStage, TfxFeatureRenderer,
 };
@@ -61,6 +62,15 @@ impl RenderObject {
 
     pub fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
         self.renderer.submit(cmd, stage);
+    }
+
+    pub fn submit_parallel(
+        &self,
+        renderer: &Renderer,
+        stage: RenderStage,
+        jobs: &mut Vec<JobHandle>,
+    ) {
+        self.renderer.submit_parallel(renderer, stage, jobs);
     }
 
     pub fn is_loaded(&self) -> bool {

@@ -18,10 +18,10 @@ mod world;
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
-// #[cfg(feature = "tracy")]
-// #[global_allocator]
-// static GLOBAL: tracy_client::ProfiledAllocator<std::alloc::System> =
-//     tracy_client::ProfiledAllocator::new(std::alloc::System, 100);
+#[cfg(feature = "tracy-alloc")]
+#[global_allocator]
+static GLOBAL: tracy_client::ProfiledAllocator<std::alloc::System> =
+    tracy_client::ProfiledAllocator::new(std::alloc::System, 100);
 
 fn main() -> anyhow::Result<()> {
     dioxus_devtools::connect_subsecond();

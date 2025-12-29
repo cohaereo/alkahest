@@ -1,6 +1,16 @@
-use std::{cell::UnsafeCell, ops::Deref, sync::Arc};
+use std::{
+    cell::UnsafeCell,
+    ops::Deref,
+    sync::{atomic::AtomicUsize, Arc},
+};
 
-use crate::{gpu::command_list::CommandList, Gpu};
+use alkahest_core::job::SCHEDULER;
+use parking_lot::Mutex;
+
+use crate::{
+    gpu::{command_list::CommandList, state::GpuState},
+    Gpu,
+};
 
 // cohae: This is a kinda stinky way to prevent stuff being mutated on jobs that didn't create the value (ie. the renderer may only be mutated on the main thread).
 // It should technically be unsafe, since you can get multiple mutable references to the same value, and the value can be mutated while it's being read, so its only slightly safer than an UnsafeCell
@@ -46,60 +56,65 @@ impl<T> Deref for ThreadMutCell<T> {
     }
 }
 
-pub struct CommandThreadPool {
-    _threads: Vec<std::thread::JoinHandle<()>>,
-    sender: crossbeam::channel::Sender<Box<dyn FnOnce(&mut CommandList) + Send + 'static>>,
-    receiver: crossbeam::channel::Receiver<d3d11::CommandList>,
+#[derive(Clone)]
+pub struct CommandListPool {
+    command_lists: Arc<Vec<UnsafeCell<CommandList>>>,
 }
 
-impl CommandThreadPool {
-    pub fn new(thread_count: usize, gpu: &Arc<Gpu>) -> Self {
-        let (job_sender, job_receiver) =
-            crossbeam::channel::unbounded::<Box<dyn FnOnce(&mut CommandList) + Send + 'static>>();
-        let (result_sender, result_receiver) =
-            crossbeam::channel::unbounded::<d3d11::CommandList>();
+unsafe impl Send for CommandListPool {}
 
-        let mut threads = Vec::with_capacity(thread_count);
-        for i in 0..thread_count {
-            let gpu = gpu.clone();
-            let job_receiver = job_receiver.clone();
-            let result_sender = result_sender.clone();
-            let handle = std::thread::Builder::new()
-                .name(format!("cmd_thread_{i}"))
-                .spawn(move || {
-                    let mut command_list = gpu.create_command_list();
-                    while let Ok(job) = job_receiver.recv() {
-                        job(&mut command_list);
-                        result_sender
-                            .send(command_list.finish_command_list(false).unwrap())
-                            .unwrap();
-                    }
-                })
-                .unwrap();
-            threads.push(handle);
-        }
+impl CommandListPool {
+    pub fn new(gpu: &Arc<Gpu>) -> Self {
+        let command_lists = (0..SCHEDULER.num_workers())
+            .map(|_| UnsafeCell::new(gpu.create_command_list()))
+            .collect::<Vec<_>>();
 
         Self {
-            _threads: threads,
-            sender: job_sender,
-            receiver: result_receiver,
+            command_lists: Arc::new(command_lists),
         }
     }
 
-    pub fn queue_job<F>(&self, job: F)
-    where
-        F: FnOnce(&mut CommandList) + Send + 'static,
-    {
-        self.sender.send(Box::new(job)).unwrap();
+    fn thread_idx() -> usize {
+        static IDX_COUNTER: AtomicUsize = AtomicUsize::new(0);
+        thread_local! {
+            static THREAD_IDX: usize = IDX_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+        THREAD_IDX.with(|idx| *idx)
     }
 
-    pub fn collect_results(&self, count: usize) -> Vec<d3d11::CommandList> {
-        let mut results = Vec::with_capacity(count);
-        for _ in 0..count {
-            if let Ok(result) = self.receiver.recv() {
-                results.push(result);
-            }
+    #[profiling::function]
+    #[allow(clippy::mut_from_ref)]
+    pub fn get_command_list(&self) -> &mut CommandList {
+        let idx = Self::thread_idx() % self.command_lists.len();
+        let cell = &self.command_lists[idx];
+        unsafe { &mut *cell.get() }
+    }
+
+    /// Copy the given command list's state to all command lists in the pool and begin recording on them.
+    /// # Safety
+    /// - The caller must ensure that none of the command lists in the pool are being used while this function is called.
+    #[profiling::function]
+    pub unsafe fn begin(&self, cmd: &mut CommandList) {
+        let initial_state = GpuState::backup(cmd);
+        for cell in self.command_lists.iter() {
+            let worker_cmd = unsafe { &mut *cell.get() };
+            initial_state.restore(worker_cmd);
         }
-        results
+    }
+
+    /// Finish all command lists in the pool and execute them on the given command list.
+    /// # Safety
+    /// - The caller must ensure that none of the command lists in the pool are being used while this function is called.
+    #[profiling::function]
+    pub unsafe fn finish(&self, cmd: &mut CommandList) {
+        for cell in self.command_lists.iter() {
+            let worker_cmd = unsafe { &mut *cell.get() };
+            cmd.execute_command_list(
+                &worker_cmd
+                    .finish_command_list(false)
+                    .expect("Failed to finish command list"),
+                true,
+            );
+        }
     }
 }

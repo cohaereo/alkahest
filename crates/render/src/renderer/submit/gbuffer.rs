@@ -24,7 +24,21 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
 
-            self.submit_stage_multi(cmd, RenderStage::GenerateGbuffer, 16);
+            // self.submit_stage(
+            //     cmd,
+            //     RenderStage::GenerateGbuffer,
+            //     FeatureRendererSubscription::all(),
+            // );
+            unsafe {
+                self.cmd_pool.begin(cmd);
+            }
+            self.submit_stage_parallel(
+                RenderStage::GenerateGbuffer,
+                FeatureRendererSubscription::all(),
+            );
+            unsafe {
+                self.cmd_pool.finish(cmd);
+            }
         }
 
         {

@@ -1,5 +1,6 @@
 use std::any::Any;
 
+use alkahest_core::job::potassium::JobHandle;
 use alkahest_data::tfx::{features::dynamic::RenderStageSubscription, RenderStage};
 use glam::Mat4;
 
@@ -26,7 +27,12 @@ pub trait FeatureRenderer {
 
     // TODO(cohae): Storing the extracted data in the render object seems a bit excessive when the frame node data is guaranteed to be valid for the duration of this call, do we really need it?
     fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn Any);
+
     fn submit(&self, cmd: &mut CommandList, stage: RenderStage);
+
+    fn submit_parallel(&self, renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+        _ = (renderer, stage, jobs);
+    }
 
     fn dyn_clone(&self) -> Option<Box<dyn FeatureRenderer>> {
         None

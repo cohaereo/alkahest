@@ -62,7 +62,11 @@ impl Renderer {
         {
             cmd_event_span!(cmd, "local_lights");
             let _gpuspan = self.profiler.scope(cmd, "local_lights");
-            self.submit_stage_multi(cmd, RenderStage::LightingApply, 16);
+            self.submit_stage(
+                cmd,
+                RenderStage::LightingApply,
+                FeatureRendererSubscription::all(),
+            );
         }
 
         // self.submit_volumetrics(cmd);

@@ -16,3 +16,7 @@ keys.txt
 /crashes
 /misc
 /.cargo
+
+/profile.json.gz
+/dhat-heap.json
+/vgcore.*
