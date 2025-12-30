@@ -2603,9 +2603,9 @@ dependencies = [
 
 [[package]]
 name = "potassium"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9df64b1a92958e3865d8ab4095a014b55463b58a4cb9c4c0cfd46f5f024f1c12"
+checksum = "5737fdc6aa1d01f1bd85050f413a008673e04967100fadeed6ddd024c2117b58"
 dependencies = [
  "crossbeam-deque",
  "gdt-cpus",

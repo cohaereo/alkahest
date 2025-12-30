@@ -1,5 +1,6 @@
 use std::any::Any;
 
+use alkahest_core::job::{potassium::JobHandle, SCHEDULER};
 use alkahest_data::tfx::{
     features::dynamic::{
         RenderStageSubscription, SDynamicMesh, SDynamicMeshMaterialVariants, SDynamicMeshPart,
@@ -309,6 +310,21 @@ impl FeatureRenderer for DynamicModel {
         self.draw_wrapped(cmd, stage, u16::MAX, |_model, cmd, _mesh, part| {
             cmd.draw_indexed(part.index_count, part.index_start, 0);
         });
+    }
+
+    fn submit_parallel(&self, renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+        let self_p = &raw const *self as u64;
+        let pool = renderer.cmd_pool.clone();
+        let job = SCHEDULER
+            .job_builder("terrain_patches_render")
+            .spawn(move || {
+                let self_ref = unsafe { &*(self_p as *const Self) };
+                let cmd = pool.get_command_list();
+                self_ref.draw_wrapped(cmd, stage, u16::MAX, |_model, cmd, _mesh, part| {
+                    cmd.draw_indexed(part.index_count, part.index_start, 0);
+                });
+            });
+        jobs.push(job);
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription {

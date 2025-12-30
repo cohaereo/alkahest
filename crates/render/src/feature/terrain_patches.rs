@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use alkahest_core::job::{potassium::JobHandle, SCHEDULER};
 use alkahest_data::tfx::{
     features::{
         ao::SStaticAmbientOcclusion,
@@ -210,6 +211,24 @@ impl FeatureRenderer for TerrainPatchesRenderer {
         }
 
         self.render(cmd, stage);
+    }
+
+    fn submit_parallel(&self, _renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+        let renderer = Renderer::instance();
+
+        let self_p = &raw const *self as u64;
+        let pool = renderer.cmd_pool.clone();
+        let job = SCHEDULER
+            .job_builder("terrain_patches_render")
+            .spawn(move || {
+                let self_ref = unsafe { &*(self_p as *const Self) };
+                let cmd = pool.get_command_list();
+                if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+                    cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
+                }
+                self_ref.render(cmd, stage);
+            });
+        jobs.push(job);
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription {

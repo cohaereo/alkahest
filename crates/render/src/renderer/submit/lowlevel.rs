@@ -102,14 +102,8 @@ impl Renderer {
             .job_builder("submit_stage_parallel_sync")
             .dependencies(job_handles)
             .spawn(|| {});
-        if sync.wait_timeout(Duration::from_secs(2)) == WaitResult::Timeout {
-            error!(
-                "Deadlock detected: submit_stage_parallel_sync did not complete within the timeout"
-            );
-            error!(
-                "Remaining dependencies: 0x{:08X}",
-                sync.remaining_dependencies()
-            );
+        if sync.wait_timeout(Duration::from_millis(500)) == WaitResult::Timeout {
+            error!("Deadlock detected: submit_stage_parallel_sync timed out");
         }
     }
 
