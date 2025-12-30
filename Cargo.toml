@@ -28,7 +28,8 @@ gdt-cpus = "25.5.0"
 glam = { version = "0.29", features = ["bytemuck", "fast-math"] }
 itertools = "0.14"
 parking_lot = "0.12"
-potassium = "0.2.3"
+# potassium = "0.2.3"
+potassium = { path = "/home/luca/Documents/potassium" }
 profiling = "1"
 rayon = "1.11.0"
 serde = "1"

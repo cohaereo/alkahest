@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use alkahest_core::job::{potassium::Priority, SCHEDULER};
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
     features::{
@@ -22,14 +25,19 @@ use crate::{
     util::geometry,
     Renderer,
 };
-pub struct LightRenderer {
+
+struct LightRendererData {
     technique_lighting_apply: Technique,
-    technique_volumetrics: Option<Technique>,
+    _technique_volumetrics: Option<Technique>,
     // technique_light_probe_apply: Technique,
 
     // TODO(cohae): This should be a shared resource (eg. a struct in the renderer that we can use instead of recreating it for every light/cubemap)
     vb: d3d11::Buffer,
     ib: d3d11::Buffer,
+}
+
+pub struct LightRenderer {
+    data: Arc<LightRendererData>,
 
     local_to_world: glam::Mat4,
     light_space_transform: glam::Mat4,
@@ -92,14 +100,16 @@ impl LightRenderer {
         )?;
 
         Ok(Box::new(Self {
-            technique_lighting_apply: Technique::load(&renderer.gpu, technique_shading)?,
-            technique_volumetrics: technique_volumetrics
-                .is_some()
-                .then(|| Technique::load(&renderer.gpu, technique_volumetrics))
-                .transpose()?,
-            // technique_light_probe_apply: Technique::load(&renderer.gpu, technique_light_probe)?,
-            vb,
-            ib,
+            data: Arc::new(LightRendererData {
+                technique_lighting_apply: Technique::load(&renderer.gpu, technique_shading)?,
+                _technique_volumetrics: technique_volumetrics
+                    .is_some()
+                    .then(|| Technique::load(&renderer.gpu, technique_volumetrics))
+                    .transpose()?,
+                // technique_light_probe_apply: Technique::load(&renderer.gpu, technique_light_probe)?,
+                vb,
+                ib,
+            }),
             local_to_world: Mat4::IDENTITY,
             light_space_transform,
             bounds,
@@ -176,17 +186,87 @@ impl FeatureRenderer for LightRenderer {
             }));
         }
 
-        self.technique_lighting_apply.bind(cmd).unwrap();
+        self.data.technique_lighting_apply.bind(cmd).unwrap();
 
         cmd.set_input_topology(PrimitiveType::Triangles);
         cmd.set_input_layout(1); // float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12
 
-        cmd.input_assembler_set_index_buffer(&self.ib, dxgi::Format::R16Uint, 0);
-        cmd.input_assembler_set_vertex_buffers(0, &[Some(&self.vb)], Some(&[12]), Some(&[0]))
+        cmd.input_assembler_set_index_buffer(&self.data.ib, dxgi::Format::R16Uint, 0);
+        cmd.input_assembler_set_vertex_buffers(0, &[Some(&self.data.vb)], Some(&[12]), Some(&[0]))
             .unwrap();
 
         cmd.draw_indexed(geometry::CUBE_INDICES.len() as u32, 0, 0);
         cmd.flush_states();
+    }
+
+    fn submit_parallel(
+        &self,
+        renderer: &std::sync::Arc<Renderer>,
+        _stage: RenderStage,
+        jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
+    ) {
+        // let (scale, _rotation, _translation) =
+        //     self.local_to_world.to_scale_rotation_translation();
+
+        let pool_clone = renderer.cmd_pool.clone();
+        let light_space_transform = self.light_space_transform;
+        let local_to_world = self.local_to_world;
+        let local_to_world_scaled = local_to_world * light_space_transform;
+        let data = self.data.clone();
+
+        let job = SCHEDULER
+            .job_builder("light_render")
+            .priority(Priority::High)
+            .spawn(move || {
+                let cmd = pool_clone.get_command_list();
+                {
+                    let externs = Renderer::instance().externs.get();
+                    cmd.externs.simple_geometry = Some(Box::new(SimpleGeometry {
+                        local_to_world: externs.view.world_to_projective
+                            * local_to_world_scaled
+                            * Mat4::from_scale(Vec3::NEG_ONE),
+                    }));
+
+                    let view_translation_inverse_mat4 =
+                        Mat4::from_translation(-externs.view.position());
+                    let local_to_world_relative = view_translation_inverse_mat4 * local_to_world;
+
+                    let (min, max) = compute_light_bounds(light_space_transform);
+                    let light_local_to_world =
+                        compute_light_local_to_world(local_to_world, min, max);
+
+                    cmd.externs.deferred_light = Some(Box::new(DeferredLight {
+                        // unk40: local_to_world_relative.inverse().transpose(),
+                        unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
+                        unk80: local_to_world_relative,
+
+                        ..Default::default()
+                    }));
+
+                    cmd.externs.rigid_model = Some(Box::new(externs::RigidModel {
+                        local_to_world: light_local_to_world,
+                        ..Default::default()
+                    }));
+                }
+
+                data.technique_lighting_apply.bind(cmd).unwrap();
+
+                cmd.set_input_topology(PrimitiveType::Triangles);
+                cmd.set_input_layout(1); // float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12
+
+                cmd.input_assembler_set_index_buffer(&data.ib, dxgi::Format::R16Uint, 0);
+                cmd.input_assembler_set_vertex_buffers(
+                    0,
+                    &[Some(&data.vb)],
+                    Some(&[12]),
+                    Some(&[0]),
+                )
+                .unwrap();
+
+                cmd.draw_indexed(geometry::CUBE_INDICES.len() as u32, 0, 0);
+            });
+
+        jobs.push(job);
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription {

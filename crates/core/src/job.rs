@@ -1,12 +1,14 @@
 use lazy_static::lazy_static;
 pub use potassium;
+use potassium::SchedulerConfiguration;
 
 lazy_static! {
-    pub static ref SCHEDULER: potassium::Scheduler = potassium::Scheduler::new();
+    pub static ref SCHEDULER: potassium::Scheduler = potassium::Scheduler::new(&{
+        let mut config = SchedulerConfiguration::default();
+        config
+            .workers
+            .iter_mut()
+            .for_each(|w| w.priority = potassium::ThreadPriority::Highest);
+        config
+    });
 }
-
-// pub fn job_builder<'a>(
-//     name: impl Into<potassium::util::SharedString>,
-// ) -> potassium::JobBuilder<'a> {
-//     SCHEDULER.job_builder(name)
-// }

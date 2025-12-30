@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
 
 use super::Renderer;
 use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
 
 impl Renderer {
-    pub(super) fn submit_lighting(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_lighting(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
         // self.compute_ssao(cmd);
         profiling::scope!("submit_lighting");
         let _gpuspan = self.profiler.scope(cmd, "submit_lighting");
@@ -62,7 +64,12 @@ impl Renderer {
         {
             cmd_event_span!(cmd, "local_lights");
             let _gpuspan = self.profiler.scope(cmd, "local_lights");
-            self.submit_stage(
+            // self.submit_stage(
+            //     cmd,
+            //     RenderStage::LightingApply,
+            //     FeatureRendererSubscription::all(),
+            // );
+            self.submit_stage_parallel(
                 cmd,
                 RenderStage::LightingApply,
                 FeatureRendererSubscription::all(),

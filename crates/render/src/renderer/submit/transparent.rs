@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::tfx::{
     FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
 };
@@ -6,7 +8,7 @@ use super::Renderer;
 use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
 
 impl Renderer {
-    pub(super) fn submit_transparent(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_transparent(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
         {
             {
                 let ext = &mut self.externs.get_mut();
@@ -24,7 +26,7 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
             cmd.flush_states();
-            self.submit_stage(
+            self.submit_stage_parallel(
                 cmd,
                 RenderStage::DecalsAdditive,
                 FeatureRendererSubscription::all(),
@@ -35,7 +37,7 @@ impl Renderer {
             let _gpuscope = self.profiler.scope(cmd, "transparents");
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
-            self.submit_stage(
+            self.submit_stage_parallel(
                 cmd,
                 RenderStage::Transparents,
                 FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water),

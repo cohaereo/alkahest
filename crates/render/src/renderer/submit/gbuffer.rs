@@ -26,16 +26,11 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
 
-            unsafe {
-                self.cmd_pool.begin(cmd);
-            }
             self.submit_stage_parallel(
+                cmd,
                 RenderStage::GenerateGbuffer,
                 FeatureRendererSubscription::all(),
             );
-            unsafe {
-                self.cmd_pool.finish(cmd);
-            }
         }
 
         {
@@ -51,36 +46,20 @@ impl Renderer {
                 .copy(cmd, view.gbuffers.normal, view.gbuffers.normal_read);
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(0));
 
-            unsafe {
-                self.cmd_pool.begin(cmd);
-            }
             self.submit_stage_parallel(
+                cmd,
                 RenderStage::Decals,
                 FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
             );
-            // finish is called after dynamic decals
-            // unsafe {
-            //     self.cmd_pool.finish(cmd);
-            // }
 
             // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
             cmd.state_override = PipelineState::new(None, None, Some(1), None);
             cmd.set_depth_mode(DepthMode::Forward);
-            // self.submit_stage(
-            //     cmd,
-            //     RenderStage::Decals,
-            //     FeatureRendererSubscription::DYNAMIC_DECALS,
-            // );
-            unsafe {
-                self.cmd_pool.begin(cmd);
-            }
             self.submit_stage_parallel(
+                cmd,
                 RenderStage::Decals,
                 FeatureRendererSubscription::DYNAMIC_DECALS,
             );
-            unsafe {
-                self.cmd_pool.finish(cmd);
-            }
 
             cmd.set_depth_mode(DepthMode::Reverse);
             cmd.state_override.reset();

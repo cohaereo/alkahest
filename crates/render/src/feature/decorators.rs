@@ -1,3 +1,4 @@
+use alkahest_core::job::{potassium::Priority, SCHEDULER};
 use alkahest_data::tfx::{
     features::{decorators::SDecorator, dynamic::RenderStageSubscription},
     ShaderStage,
@@ -249,6 +250,26 @@ impl FeatureRenderer for DecoratorRenderer {
                 );
             });
         }
+    }
+
+    fn submit_parallel(
+        &self,
+        renderer: &std::sync::Arc<Renderer>,
+        stage: alkahest_data::tfx::RenderStage,
+        jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
+    ) {
+        let self_p = (&raw const *self) as u64;
+        let pool_clone = renderer.cmd_pool.clone();
+        let job = SCHEDULER
+            .job_builder("decorators_render")
+            .priority(Priority::High)
+            .spawn(move || {
+                let self_ref = unsafe { &*(self_p as *const DecoratorRenderer) };
+                let cmd = pool_clone.get_command_list();
+                self_ref.submit(cmd, stage);
+            });
+
+        jobs.push(job);
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription {

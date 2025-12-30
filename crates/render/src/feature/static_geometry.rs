@@ -27,7 +27,7 @@ use super::{shared::ModelBuffers, FeatureRenderer};
 use crate::{
     asset::Handle,
     camera::Camera,
-    gpu::{cbuffer::ConstantBuffer, command_list::CommandList, state::GpuState},
+    gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::technique::Technique,
     Gpu, Renderer,
 };

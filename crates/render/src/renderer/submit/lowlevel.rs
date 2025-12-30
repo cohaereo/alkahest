@@ -1,26 +1,10 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    thread::JoinHandle,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
-use alkahest_core::{
-    convar::ConVars,
-    job::{potassium::job::WaitResult, SCHEDULER},
-};
+use alkahest_core::job::{potassium::WaitResult, SCHEDULER};
 use alkahest_data::tfx::{FeatureRendererSubscription, RenderStage};
-use crossbeam::channel::{unbounded, Receiver, Sender};
-use parking_lot::RwLock;
 
 use super::Renderer;
-use crate::{
-    gpu::{command_list::CommandList, state::GpuState},
-    Gpu,
-};
+use crate::gpu::{command_list::CommandList, state::GpuState};
 
 impl Renderer {
     pub fn submit_stage_range(
@@ -71,6 +55,7 @@ impl Renderer {
 
     pub fn submit_stage_parallel(
         self: &Arc<Self>,
+        cmd: &mut CommandList,
         stage: RenderStage,
         mut features: FeatureRendererSubscription,
     ) {
@@ -80,6 +65,9 @@ impl Renderer {
         }
         profiling::scope!("submit_stage", &format!("stage={stage:?}"));
 
+        unsafe {
+            self.cmd_pool.begin(cmd);
+        }
         let mut job_handles = Vec::new();
         for obj in self
             .frame_packet
@@ -104,6 +92,9 @@ impl Renderer {
             .spawn(|| {});
         if sync.wait_timeout(Duration::from_millis(500)) == WaitResult::Timeout {
             error!("Deadlock detected: submit_stage_parallel_sync timed out");
+        }
+        unsafe {
+            self.cmd_pool.finish(cmd);
         }
     }
 

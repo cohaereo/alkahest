@@ -99,6 +99,7 @@ impl CommandListPool {
         for cell in self.command_lists.iter() {
             let worker_cmd = unsafe { &mut *cell.get() };
             initial_state.restore(worker_cmd);
+            worker_cmd.flush_states();
         }
     }
 
