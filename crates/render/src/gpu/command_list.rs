@@ -23,6 +23,7 @@ pub struct CommandList {
     pub(super) current_stencil_ref: u32,
     pub(super) depth_mode: DepthMode,
     pub(super) bound_technique: TagHash,
+    smart_rebind: bool,
 
     pub externs: LocalExterns,
 }
@@ -61,6 +62,7 @@ impl CommandList {
             depth_mode: DepthMode::Reverse,
             bound_technique: TagHash::NONE,
 
+            smart_rebind: false,
             externs: LocalExterns::default(),
         }
     }
@@ -87,6 +89,16 @@ impl CommandList {
     pub fn global_states(&self) -> &global_state::RenderStates {
         &self.gpu().global_states
     }
+
+    /// Rebinds techniques even if they are already bound
+    pub fn disable_smart_technique_binding(&mut self) {
+        self.smart_rebind = false;
+    }
+
+    /// Skips rebinding techniques that are already bound
+    pub fn enable_smart_technique_binding(&mut self) {
+        self.smart_rebind = true;
+    }
 }
 
 // GPU state management
@@ -100,6 +112,7 @@ impl CommandList {
         self.current_depth_bias = usize::MAX;
         self.current_input_topology = usize::MAX;
         self.bound_technique = TagHash::NONE;
+        self.smart_rebind = false;
     }
 
     pub fn flush_states(&mut self) {
@@ -191,7 +204,7 @@ impl CommandList {
             self.bound_technique = index;
             false
         } else {
-            true
+            self.smart_rebind
         }
     }
 

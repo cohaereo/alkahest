@@ -281,6 +281,7 @@ impl StaticModelRenderer {
         }
 
         if let Some(technique) = &self.model.materials.get(i).and_then(Handle::get) {
+            cmd.enable_smart_technique_binding();
             technique.bind(cmd);
         } else {
             return;
@@ -506,7 +507,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 .job_builder("static_geometry")
                 .priority(Priority::High)
                 .spawn(move || {
-                    let cmd_pooled = pool_clone.get_command_list();
+                    let cmd = pool_clone.get_command_list();
                     // Safety: p_models is valid for the lifetime of this closure
                     // TODO(cohae): need a better way to pass self.models to the job
                     let p_models = p_models as *const Vec<(StaticModelRenderer, bool)>;
@@ -516,7 +517,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                     {
                         let (model, visible) = &models[*model_index];
                         if *visible {
-                            model.render_group(cmd_pooled, stage, *group_index);
+                            model.render_group(cmd, stage, *group_index);
                         }
                     }
                 });
