@@ -481,7 +481,12 @@ impl FeatureRenderer for StaticInstancesRenderer {
         }
     }
 
-    fn submit_parallel(&self, _renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+    fn submit_parallel(
+        &self,
+        _renderer: &Arc<Renderer>,
+        stage: RenderStage,
+        jobs: &mut Vec<JobHandle>,
+    ) {
         let Some(groups_sorted_by_technique) = self.groups_by_stage_sorted_by_technique.get(&stage)
         else {
             return;

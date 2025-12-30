@@ -70,7 +70,7 @@ impl Renderer {
     }
 
     pub fn submit_stage_parallel(
-        &self,
+        self: &Arc<Self>,
         stage: RenderStage,
         mut features: FeatureRendererSubscription,
     ) {

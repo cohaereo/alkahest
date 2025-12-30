@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::tfx::{
     common::AxisAlignedBBox,
     features::{decals::SDecalCollection, dynamic::RenderStageSubscription},
@@ -105,6 +107,49 @@ impl FeatureRenderer for DecalCollectionRenderer {
             t.bind(cmd).unwrap();
             cmd.draw_instanced(36_u32, set.count as u32, 0, set.start as u32);
         }
+    }
+
+    fn submit_parallel(
+        &self,
+        renderer: &Arc<Renderer>,
+        _stage: alkahest_data::tfx::RenderStage,
+        jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
+    ) {
+        let renderer = renderer.clone();
+
+        let self_p = &raw const *self as u64;
+        let pool = renderer.cmd_pool.clone();
+        // TODO(cohae): There's opportunity for optimization here. These jobs are currently quite coarse
+        let job = alkahest_core::job::SCHEDULER
+            .job_builder("decals_render")
+            .spawn(move || {
+                let self_ref = unsafe { &*(self_p as *const Self) };
+                let cmd = pool.get_command_list();
+
+                let Some((vb0, vb1)) = self_ref.vb0.get().zip(self_ref.vb1.get()) else {
+                    return;
+                };
+
+                renderer.globals.scopes.decal.bind(cmd).unwrap();
+
+                cmd.input_assembler_set_vertex_buffers(
+                    0,
+                    &[Some(&vb1.buffer), Some(&vb0.buffer)],
+                    Some(&[vb1.stride, vb0.stride]),
+                    Some(&[0, 0]),
+                )
+                .unwrap();
+                cmd.set_input_layout(17);
+                cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::Triangles);
+                for set in self_ref.sets.iter().filter(|s| s.visible) {
+                    let Some(t) = set.technique.get() else {
+                        continue;
+                    };
+                    t.bind(cmd).unwrap();
+                    cmd.draw_instanced(36_u32, set.count as u32, 0, set.start as u32);
+                }
+            });
+        jobs.push(job);
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription {

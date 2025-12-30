@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
 use alkahest_core::job::potassium::JobHandle;
 use alkahest_data::tfx::{features::dynamic::RenderStageSubscription, RenderStage};
@@ -30,7 +30,12 @@ pub trait FeatureRenderer {
 
     fn submit(&self, cmd: &mut CommandList, stage: RenderStage);
 
-    fn submit_parallel(&self, renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+    fn submit_parallel(
+        &self,
+        renderer: &Arc<Renderer>,
+        stage: RenderStage,
+        jobs: &mut Vec<JobHandle>,
+    ) {
         _ = (renderer, stage, jobs);
     }
 

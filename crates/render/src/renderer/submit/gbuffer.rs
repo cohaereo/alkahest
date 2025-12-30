@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{
     FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
@@ -11,7 +13,7 @@ use crate::{
 };
 
 impl Renderer {
-    pub(super) fn submit_gbuffer_generation(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_gbuffer_generation(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
         profiling::scope!("submit_gbuffer_generation");
         let _gpuscope = self.profiler.scope(cmd, "submit_gbuffer");
 
@@ -24,11 +26,6 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
 
-            // self.submit_stage(
-            //     cmd,
-            //     RenderStage::GenerateGbuffer,
-            //     FeatureRendererSubscription::all(),
-            // );
             unsafe {
                 self.cmd_pool.begin(cmd);
             }
@@ -53,20 +50,38 @@ impl Renderer {
             view.surfaces
                 .copy(cmd, view.gbuffers.normal, view.gbuffers.normal_read);
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(0));
-            self.submit_stage(
-                cmd,
+
+            unsafe {
+                self.cmd_pool.begin(cmd);
+            }
+            self.submit_stage_parallel(
                 RenderStage::Decals,
                 FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
             );
+            // finish is called after dynamic decals
+            // unsafe {
+            //     self.cmd_pool.finish(cmd);
+            // }
 
             // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
             cmd.state_override = PipelineState::new(None, None, Some(1), None);
             cmd.set_depth_mode(DepthMode::Forward);
-            self.submit_stage(
-                cmd,
+            // self.submit_stage(
+            //     cmd,
+            //     RenderStage::Decals,
+            //     FeatureRendererSubscription::DYNAMIC_DECALS,
+            // );
+            unsafe {
+                self.cmd_pool.begin(cmd);
+            }
+            self.submit_stage_parallel(
                 RenderStage::Decals,
                 FeatureRendererSubscription::DYNAMIC_DECALS,
             );
+            unsafe {
+                self.cmd_pool.finish(cmd);
+            }
+
             cmd.set_depth_mode(DepthMode::Reverse);
             cmd.state_override.reset();
         }

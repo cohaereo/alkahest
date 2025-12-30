@@ -6,7 +6,7 @@ pub mod lowlevel;
 pub mod transparent;
 pub mod water;
 
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, ShaderStage};
@@ -26,7 +26,7 @@ use crate::{
 
 impl Renderer {
     pub fn submit_world(
-        &self,
+        self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
         delta_time: f32,

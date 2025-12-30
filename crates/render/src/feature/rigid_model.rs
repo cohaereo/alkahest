@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
 use alkahest_core::job::{potassium::JobHandle, SCHEDULER};
 use alkahest_data::tfx::{
@@ -312,7 +312,12 @@ impl FeatureRenderer for DynamicModel {
         });
     }
 
-    fn submit_parallel(&self, renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+    fn submit_parallel(
+        &self,
+        renderer: &Arc<Renderer>,
+        stage: RenderStage,
+        jobs: &mut Vec<JobHandle>,
+    ) {
         let self_p = &raw const *self as u64;
         let pool = renderer.cmd_pool.clone();
         let job = SCHEDULER

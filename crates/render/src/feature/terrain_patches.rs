@@ -213,7 +213,12 @@ impl FeatureRenderer for TerrainPatchesRenderer {
         self.render(cmd, stage);
     }
 
-    fn submit_parallel(&self, _renderer: &Renderer, stage: RenderStage, jobs: &mut Vec<JobHandle>) {
+    fn submit_parallel(
+        &self,
+        _renderer: &Arc<Renderer>,
+        stage: RenderStage,
+        jobs: &mut Vec<JobHandle>,
+    ) {
         let renderer = Renderer::instance();
 
         let self_p = &raw const *self as u64;

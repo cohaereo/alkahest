@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
 use alkahest_core::job::potassium::JobHandle;
 use alkahest_data::tfx::{
@@ -66,7 +66,7 @@ impl RenderObject {
 
     pub fn submit_parallel(
         &self,
-        renderer: &Renderer,
+        renderer: &Arc<Renderer>,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
