@@ -271,7 +271,7 @@ impl D3D11Profiler {
         let mut output = String::new();
         output.push_str(&format!(
             "{:<30} {:>12} {:>12}\n",
-            "Scope", "CPU (µs)", "GPU (µs)"
+            "Scope", "CPU (ms)", "GPU (ms)"
         ));
         output.push_str(&"-".repeat(56));
         output.push('\n');
@@ -285,8 +285,10 @@ impl D3D11Profiler {
                 scope.name.clone()
             };
             output.push_str(&format!(
-                "{:<30} {:>12.1} {:>12.1}\n",
-                scope_name, scope.cpu_duration_us, scope.gpu_duration_us
+                "{:<30} {:>12.3} {:>12.3}\n",
+                scope_name,
+                scope.cpu_duration_us / 1000.0,
+                scope.gpu_duration_us / 1000.0
             ));
             longest_duration_cpu = longest_duration_cpu.max(scope.cpu_duration_us);
             longest_duration_gpu = longest_duration_gpu.max(scope.gpu_duration_us);
