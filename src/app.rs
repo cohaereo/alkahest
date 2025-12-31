@@ -4,6 +4,7 @@
 
 use std::{rc::Rc, sync::Arc, time::Instant};
 
+use alkahest_core::job::SCHEDULER;
 use alkahest_data::strings::{StringContainer, StringContainerShared};
 use alkahest_render::{
     Gpu, Renderer,
@@ -121,6 +122,12 @@ impl App {
         }
 
         profiling::finish_frame!();
+    }
+}
+
+impl Drop for App {
+    fn drop(&mut self) {
+        SCHEDULER.shutdown();
     }
 }
 

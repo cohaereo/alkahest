@@ -206,6 +206,10 @@ impl FeatureRendererSubscription {
         Self::all().difference(Self::from_bits_truncate(1 << feature as u32))
     }
 
+    pub const fn without(self, feature: TfxFeatureRenderer) -> Self {
+        self.difference(Self::from_bits_truncate(1 << feature as u32))
+    }
+
     pub fn is_subscribed(&self, feature: TfxFeatureRenderer) -> bool {
         self.contains(Self::from_bits_truncate(1 << feature as u32))
     }

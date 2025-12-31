@@ -1,7 +1,7 @@
 use alkahest_data::tfx::{PipelineState, ShaderStage};
 
 use super::command_list::CommandList;
-use crate::gpu::command_list::ContextExt;
+use crate::gpu::command_list::{ContextExt, DepthMode};
 
 pub struct GpuState {
     tfx_state: PipelineState,
@@ -11,6 +11,7 @@ pub struct GpuState {
     current_depth_bias: usize,
     current_input_layout: usize,
     current_input_topology: usize,
+    depth_mode: DepthMode,
 
     state_vs: GpuStageState,
     state_ps: GpuStageState,
@@ -39,6 +40,7 @@ impl GpuState {
             current_depth_bias: cmd.current_depth_bias,
             current_input_layout: cmd.current_input_layout,
             current_input_topology: cmd.current_input_topology,
+            depth_mode: cmd.depth_mode,
             state_vs: GpuStageState {
                 cbuffers: cmd.vertex_get_constant_buffers(),
                 samplers: cmd.vertex_get_samplers(),
@@ -89,5 +91,6 @@ impl GpuState {
             self.dsv.as_ref(),
         );
         cmd.flush_states();
+        cmd.set_depth_mode(self.depth_mode);
     }
 }

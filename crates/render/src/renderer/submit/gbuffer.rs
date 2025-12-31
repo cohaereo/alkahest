@@ -55,7 +55,7 @@ impl Renderer {
             // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
             cmd.state_override = PipelineState::new(None, None, Some(1), None);
             cmd.set_depth_mode(DepthMode::Forward);
-            self.submit_stage_parallel(
+            self.submit_stage(
                 cmd,
                 RenderStage::Decals,
                 FeatureRendererSubscription::DYNAMIC_DECALS,

@@ -37,10 +37,16 @@ impl Renderer {
             let _gpuscope = self.profiler.scope(cmd, "transparents");
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
+            self.submit_stage_parallel(
+                cmd,
+                RenderStage::Transparents,
+                FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+                    .without(TfxFeatureRenderer::SkyTransparent),
+            );
             self.submit_stage(
                 cmd,
                 RenderStage::Transparents,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water),
+                FeatureRendererSubscription::SKY_TRANSPARENT,
             );
         }
 
