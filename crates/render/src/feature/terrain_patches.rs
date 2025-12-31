@@ -206,7 +206,7 @@ impl FeatureRenderer for TerrainPatchesRenderer {
 
     fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
         let renderer = Renderer::instance();
-        if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+        if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
             cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
         }
 
@@ -229,7 +229,7 @@ impl FeatureRenderer for TerrainPatchesRenderer {
                 let self_ref = unsafe { &*(self_p as *const Self) };
                 let cmd = pool.get_command_list();
                 cmd.enable_smart_technique_binding();
-                if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+                if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
                     cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
                 }
                 self_ref.render(cmd, stage);

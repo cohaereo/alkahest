@@ -67,7 +67,7 @@ pub struct Renderer {
     clear_ao_all_ps: d3d11::PixelShader,
 
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
-    pub ao_buffer: Mutex<Option<Handle<VertexBuffer>>>,
+    pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
 
     start_time: Instant,
     pub(crate) common: CommonResources,
@@ -134,7 +134,7 @@ impl Renderer {
             objects: RwLock::new(Arena::new()),
             frame_packet: RwLock::new(FramePacket::default()),
             ao: RwLock::new(None),
-            ao_buffer: Mutex::new(None),
+            ao_buffer: RwLock::new(None),
             surfaces: RwLock::new(surfaces),
             cmd_pool: CommandListPool::new(&gpu),
             frame_scope: ConstantBuffer::create(&gpu, None)?,

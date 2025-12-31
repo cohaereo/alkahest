@@ -62,7 +62,7 @@ pub fn s_extract_ambient_occlusion(world: &hecs::World) {
     let renderer = Renderer::instance();
     if let Some((_entity, ao)) = world.query::<&StaticAmbientOcclusion>().iter().next() {
         *renderer.ao.write() = Some(ao.ao.clone());
-        *renderer.ao_buffer.lock() = Some(ao.buffer.clone());
+        *renderer.ao_buffer.write() = Some(ao.buffer.clone());
     }
 }
 

@@ -180,7 +180,7 @@ impl StaticModelRenderer {
     #[profiling::function]
     pub fn render_all(&self, cmd: &mut CommandList, stage: RenderStage) {
         let renderer = Renderer::instance();
-        if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+        if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
             cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
         }
 
@@ -258,7 +258,7 @@ impl StaticModelRenderer {
     #[profiling::function]
     pub fn render_group(&self, cmd: &mut CommandList, stage: RenderStage, group: usize) {
         let renderer = Renderer::instance();
-        if let Some(ao_vb) = renderer.ao_buffer.lock().as_ref().and_then(|h| h.get()) {
+        if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
             cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
         }
 
@@ -488,12 +488,33 @@ impl FeatureRenderer for StaticInstancesRenderer {
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
+        let renderer = Renderer::instance();
+
         let Some(groups_sorted_by_technique) = self.groups_by_stage_sorted_by_technique.get(&stage)
         else {
+            for (model, _visible) in self.models.iter().filter(|(m, v)| {
+                *v && m
+                    .model
+                    .special_meshes
+                    .iter()
+                    .any(|s| s.render_stage == stage)
+            }) {
+                let p_model = &raw const *model as u64;
+                let pool_clone = renderer.cmd_pool.clone();
+                let job = SCHEDULER
+                    .job_builder("static_geometry_special_meshes")
+                    .priority(Priority::High)
+                    .spawn(move || {
+                        let model_ref = unsafe { &*(p_model as *const StaticModelRenderer) };
+                        let cmd = pool_clone.get_command_list();
+                        model_ref.render_all(cmd, stage);
+                    });
+
+                jobs.push(job);
+            }
+
             return;
         };
-
-        let renderer = Renderer::instance();
 
         let node_count = groups_sorted_by_technique.len();
         // let nodes_per_job = node_count / job_count;
