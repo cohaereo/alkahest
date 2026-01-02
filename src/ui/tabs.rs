@@ -1,8 +1,8 @@
-mod entity_list;
-mod home;
-mod map;
-mod map_list;
-mod tag_lookup;
+pub mod entity_list;
+pub mod home;
+pub mod map;
+pub mod map_list;
+pub mod tag_lookup;
 
 use std::{fmt::Display, sync::Arc};
 

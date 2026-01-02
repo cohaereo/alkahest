@@ -10,4 +10,7 @@ pub struct AppArgs {
     /// What display the window should be on
     #[arg(long)]
     pub display: Option<usize>,
+
+    #[arg(long)]
+    pub open_map: Option<String>,
 }

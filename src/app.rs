@@ -2,7 +2,7 @@
 #![deny(clippy::correctness, clippy::suspicious, clippy::complexity)]
 #![allow(clippy::collapsible_else_if, clippy::missing_transmute_annotations)]
 
-use std::{rc::Rc, sync::Arc, time::Instant};
+use std::{rc::Rc, str::FromStr, sync::Arc, time::Instant};
 
 use alkahest_core::job::SCHEDULER;
 use alkahest_data::strings::{StringContainer, StringContainerShared};
@@ -13,8 +13,15 @@ use alkahest_render::{
 };
 use anyhow::Context;
 use sdl3::video::Window;
+use tiger_pkg::TagHash;
 
-use crate::{cli::AppArgs, ui::Gui};
+use crate::{
+    cli::AppArgs,
+    ui::{
+        Gui,
+        tabs::{Tab, map::MapTab},
+    },
+};
 
 pub struct App {
     pub sdl: Rc<sdl3::Sdl>,
@@ -33,15 +40,28 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(sdl: Rc<sdl3::Sdl>, window: Rc<Window>, _args: AppArgs) -> anyhow::Result<Self> {
+    pub fn new(sdl: Rc<sdl3::Sdl>, window: Rc<Window>, args: AppArgs) -> anyhow::Result<Self> {
         let gpu = Arc::new(Gpu::create(&window).context("Failed to create GPU")?);
         let renderer = Arc::new(Renderer::new(gpu.clone()).context("Failed to create renderer")?);
         Renderer::set_instance(renderer.clone());
 
+        let mut gui = Gui::new(&gpu, sdl.clone(), window.clone())?;
+        if let Some(map_hash) = args.open_map.as_ref() {
+            match TagHash::from_str(map_hash) {
+                Ok(tag) => match MapTab::new(tag) {
+                    Ok(tab) => gui.add_tab(Tab::Map(tab)),
+                    Err(e) => error!("Failed to open map tab for {}: {:?}", map_hash, e),
+                },
+                Err(e) => {
+                    error!("Failed to parse map hash {}: {:?}", map_hash, e);
+                }
+            };
+        }
+
         Ok(Self {
             spinner: FullscreenSpinner::create(&renderer.gpu)?,
             renderer,
-            gui: Gui::new(&gpu, sdl.clone(), window.clone())?,
+            gui,
             sdl,
             window,
             gpu,

@@ -156,6 +156,10 @@ impl Gui {
         })
     }
 
+    pub fn add_tab(&mut self, tab: Tab) {
+        self.added_nodes.push(tab);
+    }
+
     pub fn draw(&mut self, cmd: &mut CommandList, shared_state: &Arc<SharedState>) {
         let ctx = self
             .egui_sdl3
