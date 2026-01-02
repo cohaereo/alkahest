@@ -6,7 +6,11 @@ use alkahest_data::tfx::{
 };
 
 use crate::{
-    camera::Camera, feature::FeatureRenderer, gpu::command_list::CommandList, util::arena, Renderer,
+    camera::Camera,
+    feature::FeatureRenderer,
+    gpu::command_list::CommandList,
+    util::{arena, threading::CommandListSetId},
+    Renderer,
 };
 
 #[repr(transparent)]
@@ -67,10 +71,11 @@ impl RenderObject {
     pub fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
-        self.renderer.submit_parallel(renderer, stage, jobs);
+        self.renderer.submit_parallel(renderer, set, stage, jobs);
     }
 
     pub fn is_loaded(&self) -> bool {

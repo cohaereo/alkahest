@@ -21,6 +21,7 @@ use crate::{
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     gpu_span,
     tfx::technique::Technique,
+    util::threading::CommandListSetId,
     Gpu, Renderer,
 };
 
@@ -216,6 +217,7 @@ impl FeatureRenderer for TerrainPatchesRenderer {
     fn submit_parallel(
         &self,
         _renderer: &Arc<Renderer>,
+        set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
@@ -227,7 +229,7 @@ impl FeatureRenderer for TerrainPatchesRenderer {
             .job_builder("terrain_patches_render")
             .spawn(move || {
                 let self_ref = unsafe { &*(self_p as *const Self) };
-                let cmd = pool.get_command_list();
+                let cmd = pool.get_command_list(set);
                 cmd.enable_smart_technique_binding();
                 if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
                     cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));

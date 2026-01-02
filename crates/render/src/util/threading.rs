@@ -4,6 +4,7 @@ use std::{
     sync::{atomic::AtomicUsize, Arc},
 };
 
+use ahash::HashSet;
 use alkahest_core::job::SCHEDULER;
 use parking_lot::Mutex;
 
@@ -56,21 +57,48 @@ impl<T> Deref for ThreadMutCell<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct CommandListSetId(usize);
+
+struct CommandListSet {
+    command_lists: Vec<UnsafeCell<CommandList>>,
+    finished_command_list: Mutex<Option<d3d11::CommandList>>,
+}
+
 pub struct CommandListPool {
-    command_lists: Arc<Vec<UnsafeCell<CommandList>>>,
+    gpu: Arc<Gpu>,
+    sets: Vec<CommandListSet>,
+    next_set: AtomicUsize,
+    sets_in_use: Mutex<HashSet<usize>>,
 }
 
 unsafe impl Send for CommandListPool {}
+unsafe impl Sync for CommandListPool {}
 
 impl CommandListPool {
+    const NUM_SETS: usize = 8;
+
     pub fn new(gpu: &Arc<Gpu>) -> Self {
-        let command_lists = (0..SCHEDULER.num_workers())
-            .map(|_| UnsafeCell::new(gpu.create_command_list()))
-            .collect::<Vec<_>>();
+        // let command_lists = (0..SCHEDULER.num_workers())
+        //     .map(|_| UnsafeCell::new(gpu.create_command_list()))
+        //     .collect::<Vec<_>>();
+
+        let mut sets = Vec::with_capacity(Self::NUM_SETS);
+        for _ in 0..Self::NUM_SETS {
+            let command_lists = (0..SCHEDULER.num_workers())
+                .map(|_| UnsafeCell::new(gpu.create_command_list()))
+                .collect::<Vec<_>>();
+            sets.push(CommandListSet {
+                command_lists,
+                finished_command_list: Mutex::new(None),
+            });
+        }
 
         Self {
-            command_lists: Arc::new(command_lists),
+            gpu: gpu.clone(),
+            sets,
+            next_set: AtomicUsize::new(0),
+            sets_in_use: Mutex::new(HashSet::default()),
         }
     }
 
@@ -84,38 +112,83 @@ impl CommandListPool {
 
     #[profiling::function]
     #[allow(clippy::mut_from_ref)]
-    pub fn get_command_list(&self) -> &mut CommandList {
-        let idx = Self::thread_idx() % self.command_lists.len();
-        let cell = &self.command_lists[idx];
+    pub fn get_command_list(&self, set: CommandListSetId) -> &mut CommandList {
+        let set = &self.sets[set.0 % self.sets.len()];
+        let idx = Self::thread_idx() % set.command_lists.len();
+        let cell = &set.command_lists[idx];
         unsafe { &mut *cell.get() }
+    }
+
+    fn acquire_set(&self) -> CommandListSetId {
+        let set_idx = self
+            .next_set
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        let set = CommandListSetId(set_idx % self.sets.len());
+        if self.sets_in_use.lock().contains(&set_idx) {
+            panic!(
+                "All command list sets are in use! Increase NUM_SETS in CommandListPool \
+                 (currently {}).",
+                Self::NUM_SETS
+            );
+        }
+
+        set
+    }
+
+    fn release_set(&self, set: CommandListSetId) {
+        self.sets_in_use.lock().remove(&set.0);
+    }
+
+    pub fn finalize_set(&self, set: CommandListSetId) {
+        if self.sets_in_use.lock().contains(&set.0) {
+            panic!("Command list set {:?} is not in use!", set);
+        }
+
+        let set = &self.sets[set.0 % self.sets.len()];
+        let combined_cmd = self.gpu.create_command_list();
+        for cell in set.command_lists.iter() {
+            let worker_cmd = unsafe { &mut *cell.get() };
+            combined_cmd.execute_command_list(
+                &worker_cmd
+                    .finish_command_list(false)
+                    .expect("Failed to finalize command list"),
+                true,
+            );
+        }
+        let finished_cmd = combined_cmd
+            .finish_command_list(false)
+            .expect("Failed to finalize combined command list");
+        *set.finished_command_list.lock() = Some(finished_cmd);
     }
 
     /// Copy the given command list's state to all command lists in the pool and begin recording on them.
     /// # Safety
     /// - The caller must ensure that none of the command lists in the pool are being used while this function is called.
     #[profiling::function]
-    pub unsafe fn begin(&self, cmd: &mut CommandList) {
+    pub unsafe fn begin(&self, cmd: &mut CommandList) -> CommandListSetId {
         let initial_state = GpuState::backup(cmd);
-        for cell in self.command_lists.iter() {
+        let set_id = self.acquire_set();
+
+        let set = &self.sets[set_id.0 % self.sets.len()];
+        for cell in set.command_lists.iter() {
             let worker_cmd = unsafe { &mut *cell.get() };
             initial_state.restore(worker_cmd);
             worker_cmd.flush_states();
         }
+
+        set_id
     }
 
-    /// Finish all command lists in the pool and execute them on the given command list.
-    /// # Safety
-    /// - The caller must ensure that none of the command lists in the pool are being used while this function is called.
+    /// Execute the finalized command lists onto the given command list.
     #[profiling::function]
-    pub unsafe fn finish(&self, cmd: &mut CommandList) {
-        for cell in self.command_lists.iter() {
-            let worker_cmd = unsafe { &mut *cell.get() };
-            cmd.execute_command_list(
-                &worker_cmd
-                    .finish_command_list(false)
-                    .expect("Failed to finish command list"),
-                true,
-            );
+    pub fn finish(&self, cmd: &mut CommandList, set: CommandListSetId) -> bool {
+        let set = &self.sets[set.0 % self.sets.len()];
+        if let Some(finished_cmd) = set.finished_command_list.lock().take() {
+            cmd.execute_command_list(&finished_cmd, true);
+            true
+        } else {
+            false
         }
     }
 }

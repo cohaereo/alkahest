@@ -22,7 +22,7 @@ use crate::{
         packet::CompactTransform,
         technique::Technique,
     },
-    util::geometry,
+    util::{geometry, threading::CommandListSetId},
     Renderer,
 };
 
@@ -202,6 +202,7 @@ impl FeatureRenderer for LightRenderer {
     fn submit_parallel(
         &self,
         renderer: &std::sync::Arc<Renderer>,
+        set: CommandListSetId,
         _stage: RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
     ) {
@@ -218,7 +219,7 @@ impl FeatureRenderer for LightRenderer {
             .job_builder("light_render")
             .priority(Priority::High)
             .spawn(move || {
-                let cmd = pool_clone.get_command_list();
+                let cmd = pool_clone.get_command_list(set);
                 {
                     let externs = Renderer::instance().externs.get();
                     cmd.externs.simple_geometry = Some(Box::new(SimpleGeometry {

@@ -57,7 +57,7 @@ pub struct Renderer {
     pub globals: RenderGlobals,
 
     surfaces: RwLock<Arc<Surfaces>>,
-    pub cmd_pool: CommandListPool,
+    pub cmd_pool: Arc<CommandListPool>,
 
     frame_scope: ConstantBuffer<TempFrameScope>,
     debug_vs: d3d11::VertexShader,
@@ -136,7 +136,7 @@ impl Renderer {
             ao: RwLock::new(None),
             ao_buffer: RwLock::new(None),
             surfaces: RwLock::new(surfaces),
-            cmd_pool: CommandListPool::new(&gpu),
+            cmd_pool: CommandListPool::new(&gpu).into(),
             frame_scope: ConstantBuffer::create(&gpu, None)?,
             debug_cbuffer: ConstantBuffer::create(&gpu, Some(&Mat4::ZERO))?,
 

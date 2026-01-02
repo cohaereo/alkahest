@@ -11,6 +11,7 @@ use crate::{
     feature::{rigid_model::DynamicModel, FeatureRenderer},
     gpu::cbuffer::ConstantBuffer,
     tfx::externs,
+    util::threading::CommandListSetId,
     Renderer,
 };
 
@@ -255,6 +256,7 @@ impl FeatureRenderer for DecoratorRenderer {
     fn submit_parallel(
         &self,
         renderer: &std::sync::Arc<Renderer>,
+        set: CommandListSetId,
         stage: alkahest_data::tfx::RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
     ) {
@@ -265,7 +267,7 @@ impl FeatureRenderer for DecoratorRenderer {
             .priority(Priority::High)
             .spawn(move || {
                 let self_ref = unsafe { &*(self_p as *const DecoratorRenderer) };
-                let cmd = pool_clone.get_command_list();
+                let cmd = pool_clone.get_command_list(set);
                 self_ref.submit(cmd, stage);
             });
 

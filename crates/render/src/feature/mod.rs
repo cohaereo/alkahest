@@ -5,7 +5,8 @@ use alkahest_data::tfx::{features::dynamic::RenderStageSubscription, RenderStage
 use glam::Mat4;
 
 use crate::{
-    camera::Camera, gpu::command_list::CommandList, tfx::packet::CompactTransform, Renderer,
+    camera::Camera, gpu::command_list::CommandList, tfx::packet::CompactTransform,
+    util::threading::CommandListSetId, Renderer,
 };
 
 pub mod cubemap;
@@ -33,6 +34,7 @@ pub trait FeatureRenderer {
     fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {

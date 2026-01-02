@@ -65,9 +65,7 @@ impl Renderer {
         }
         profiling::scope!("submit_stage", &format!("stage={stage:?}"));
 
-        unsafe {
-            self.cmd_pool.begin(cmd);
-        }
+        let cmd_set = unsafe { self.cmd_pool.begin(cmd) };
         let mut job_handles = Vec::new();
         for obj in self
             .frame_packet
@@ -82,19 +80,26 @@ impl Renderer {
                 .get(obj.render_object_handle.into())
                 .filter(|p| p.stages.is_subscribed(stage) && features.is_subscribed(p.feature_type))
             {
-                render_object.submit_parallel(self, stage, &mut job_handles);
+                render_object.submit_parallel(self, cmd_set, stage, &mut job_handles);
             }
         }
 
+        let cmd_pool = self.cmd_pool.clone();
         let sync = SCHEDULER
             .job_builder("submit_stage_parallel_sync")
             .dependencies(job_handles)
-            .spawn(|| {});
+            .spawn(move || {
+                cmd_pool.finalize_set(cmd_set);
+            });
+
         if sync.wait_timeout(Duration::from_millis(500)) == WaitResult::Timeout {
+            // cohae: This is a leftover debug check from an issue in Potassium where jobs would deadlock sometimes due to faulty dependency tracking.
+            // This should never be able to happen after potassium 0.3, but just in case, we keep this log here.
             error!("Deadlock detected: submit_stage_parallel_sync timed out");
         }
-        unsafe {
-            self.cmd_pool.finish(cmd);
+
+        if !self.cmd_pool.finish(cmd, cmd_set) {
+            error!("Failed to finish command list set for submit_stage_parallel");
         }
     }
 

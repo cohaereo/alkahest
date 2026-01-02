@@ -10,6 +10,7 @@ use crate::{
     asset::{vertex_buffer::VertexBuffer, Handle},
     gpu::command_list::CommandList,
     tfx::technique::Technique,
+    util::threading::CommandListSetId,
     Renderer,
 };
 
@@ -112,6 +113,7 @@ impl FeatureRenderer for DecalCollectionRenderer {
     fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        set: CommandListSetId,
         _stage: alkahest_data::tfx::RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
     ) {
@@ -124,7 +126,7 @@ impl FeatureRenderer for DecalCollectionRenderer {
             .job_builder("decals_render")
             .spawn(move || {
                 let self_ref = unsafe { &*(self_p as *const Self) };
-                let cmd = pool.get_command_list();
+                let cmd = pool.get_command_list(set);
 
                 let Some((vb0, vb1)) = self_ref.vb0.get().zip(self_ref.vb1.get()) else {
                     return;

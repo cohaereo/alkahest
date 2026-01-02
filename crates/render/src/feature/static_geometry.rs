@@ -29,6 +29,7 @@ use crate::{
     camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::technique::Technique,
+    util::threading::CommandListSetId,
     Gpu, Renderer,
 };
 
@@ -485,6 +486,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
     fn submit_parallel(
         &self,
         _renderer: &Arc<Renderer>,
+        set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
@@ -506,7 +508,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                     .priority(Priority::High)
                     .spawn(move || {
                         let model_ref = unsafe { &*(p_model as *const StaticModelRenderer) };
-                        let cmd = pool_clone.get_command_list();
+                        let cmd = pool_clone.get_command_list(set);
                         model_ref.render_all(cmd, stage);
                     });
 
@@ -528,7 +530,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 .job_builder("static_geometry")
                 .priority(Priority::High)
                 .spawn(move || {
-                    let cmd = pool_clone.get_command_list();
+                    let cmd = pool_clone.get_command_list(set);
                     // Safety: p_models is valid for the lifetime of this closure
                     // TODO(cohae): need a better way to pass self.models to the job
                     let p_models = p_models as *const Vec<(StaticModelRenderer, bool)>;

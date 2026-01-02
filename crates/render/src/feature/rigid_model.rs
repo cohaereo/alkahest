@@ -22,6 +22,7 @@ use crate::{
         expression_vm::interpreter::TempObjectChannels, packet::CompactTransform,
         technique::Technique,
     },
+    util::threading::CommandListSetId,
     Renderer,
 };
 
@@ -315,6 +316,7 @@ impl FeatureRenderer for DynamicModel {
     fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
@@ -322,7 +324,7 @@ impl FeatureRenderer for DynamicModel {
         let pool = renderer.cmd_pool.clone();
         let job = SCHEDULER.job_builder("rigid_model").spawn(move || {
             let self_ref = unsafe { &*(self_p as *const Self) };
-            let cmd = pool.get_command_list();
+            let cmd = pool.get_command_list(set);
             self_ref.draw_wrapped(cmd, stage, u16::MAX, |_model, cmd, _mesh, part| {
                 cmd.draw_indexed(part.index_count, part.index_start, 0);
             });

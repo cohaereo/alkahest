@@ -178,6 +178,7 @@ dependencies = [
 name = "alkahest-render"
 version = "0.1.0"
 dependencies = [
+ "ahash",
  "alkahest-core",
  "alkahest-data",
  "anyhow",

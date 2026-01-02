@@ -42,6 +42,7 @@ tracing.workspace = true
 # tracy-client.workspace = true
 uuid = "1"
 int-enum = "1.2.0"
+ahash.workspace = true
 
 [features]
 tracy = []
