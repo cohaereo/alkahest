@@ -20,3 +20,5 @@ keys.txt
 /profile.json.gz
 /dhat-heap.json
 /vgcore.*
+/perf.data
+/perf.data.old

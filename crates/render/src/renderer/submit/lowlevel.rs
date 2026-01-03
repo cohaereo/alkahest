@@ -1,10 +1,16 @@
 use std::{sync::Arc, time::Duration};
 
-use alkahest_core::job::{potassium::WaitResult, SCHEDULER};
+use alkahest_core::job::{
+    potassium::{JobHandle, WaitResult},
+    SCHEDULER,
+};
 use alkahest_data::tfx::{FeatureRendererSubscription, RenderStage};
 
 use super::Renderer;
-use crate::gpu::{command_list::CommandList, state::GpuState};
+use crate::{
+    gpu::{command_list::CommandList, state::GpuState},
+    util::threading::CommandListSetId,
+};
 
 impl Renderer {
     pub fn submit_stage_range(
@@ -58,12 +64,12 @@ impl Renderer {
         cmd: &mut CommandList,
         stage: RenderStage,
         mut features: FeatureRendererSubscription,
-    ) {
+    ) -> (JobHandle, CommandListSetId) {
         features = self.active_feature_renderers.load().intersection(features);
-        if features.is_empty() {
-            return;
-        }
-        profiling::scope!("submit_stage", &format!("stage={stage:?}"));
+        // if features.is_empty() {
+        //     return None;
+        // }
+        profiling::scope!("submit_stage_parallel", &format!("stage={stage:?}"));
 
         let cmd_set = unsafe { self.cmd_pool.begin(cmd) };
         let mut job_handles = Vec::new();
@@ -84,23 +90,31 @@ impl Renderer {
             }
         }
 
-        let cmd_pool = self.cmd_pool.clone();
-        let sync = SCHEDULER
+        let sync_job = SCHEDULER
             .job_builder("submit_stage_parallel_sync")
             .dependencies(job_handles)
-            .spawn(move || {
-                cmd_pool.finalize_set(cmd_set);
-            });
+            .spawn(|| {});
 
-        if sync.wait_timeout(Duration::from_millis(500)) == WaitResult::Timeout {
+        (sync_job, cmd_set)
+    }
+
+    /// Submits the given render stage in parallel using multiple jobs, applying the results to the given command list.
+    ///
+    /// This function will block until all jobs have completed and the command list has been updated. `submit_stage_parallel` is often preferred to prevent wasting job threads while waiting.
+    pub fn submit_stage_parallel_apply(
+        self: &Arc<Self>,
+        cmd: &mut CommandList,
+        stage: RenderStage,
+        features: FeatureRendererSubscription,
+    ) {
+        let (sync_job, cmd_set) = self.submit_stage_parallel(cmd, stage, features);
+        if sync_job.wait_timeout(Duration::from_millis(500)) == WaitResult::Timeout {
             // cohae: This is a leftover debug check from an issue in Potassium where jobs would deadlock sometimes due to faulty dependency tracking.
             // This should never be able to happen after potassium 0.3, but just in case, we keep this log here.
             error!("Deadlock detected: submit_stage_parallel_sync timed out");
         }
 
-        if !self.cmd_pool.finish(cmd, cmd_set) {
-            error!("Failed to finish command list set for submit_stage_parallel");
-        }
+        self.cmd_pool.finish(cmd, cmd_set);
     }
 
     // pub fn submit_stage_multi(&self, cmd: &mut CommandList, stage: RenderStage, job_count: usize) {

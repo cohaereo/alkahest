@@ -1,6 +1,7 @@
 // pub mod bloom;
 pub mod buffers;
 pub mod gbuffer;
+pub mod geometry;
 pub mod lighting;
 pub mod lowlevel;
 pub mod transparent;
@@ -52,7 +53,17 @@ impl Renderer {
 
         self.globals.scopes.view.bind(cmd).unwrap();
 
-        self.submit_gbuffer_generation(cmd, view);
+        let geo = self.submit_geometry_command_lists(cmd, view);
+        // geo.generate_gbuffer.0.wait();
+        // self.cmd_pool.finish(cmd, geo.generate_gbuffer.1);
+        // geo.decals.0.wait();
+        // self.cmd_pool.finish(cmd, geo.decals.1);
+        // geo.lighting.0.wait();
+        // self.cmd_pool.finish(cmd, geo.lighting.1);
+        // geo.transparent.0.wait();
+        // self.cmd_pool.finish(cmd, geo.transparent.1);
+
+        self.submit_gbuffer_generation(cmd, view, &geo);
 
         if matches!(
             debug_pipeline,
@@ -61,7 +72,7 @@ impl Renderer {
                 | Some(DebugPipeline::LightDiffuse)
                 | Some(DebugPipeline::LightSpecular)
         ) {
-            self.submit_lighting(cmd, view);
+            self.submit_lighting(cmd, view, &geo);
         }
 
         self.clear_surface(cmd, view.shading_result, [0., 0., 0., 1.0]);
@@ -196,7 +207,7 @@ impl Renderer {
             }
         });
 
-        self.submit_transparent(cmd, view);
+        self.submit_transparent(cmd, view, &geo);
 
         view.shading_result_read
             .lock()

@@ -9,11 +9,17 @@ use super::Renderer;
 use crate::{
     cmd_event_span,
     gpu::command_list::{CommandList, DepthMode},
+    renderer::submit::geometry::GeometryCommandLists,
     tfx::view::View,
 };
 
 impl Renderer {
-    pub(super) fn submit_gbuffer_generation(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_gbuffer_generation(
+        self: &Arc<Self>,
+        cmd: &mut CommandList,
+        view: &View,
+        geo: &GeometryCommandLists,
+    ) {
         profiling::scope!("submit_gbuffer_generation");
         let _gpuscope = self.profiler.scope(cmd, "submit_gbuffer");
 
@@ -26,11 +32,9 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
 
-            self.submit_stage_parallel(
-                cmd,
-                RenderStage::GenerateGbuffer,
-                FeatureRendererSubscription::all(),
-            );
+            let (sync_job, set) = &geo.generate_gbuffer;
+            sync_job.wait();
+            self.cmd_pool.finish(cmd, *set);
         }
 
         {
@@ -46,11 +50,14 @@ impl Renderer {
                 .copy(cmd, view.gbuffers.normal, view.gbuffers.normal_read);
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(0));
 
-            self.submit_stage_parallel(
-                cmd,
-                RenderStage::Decals,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
-            );
+            let (sync_job, set) = &geo.decals;
+            sync_job.wait();
+            self.cmd_pool.finish(cmd, *set);
+            // self.submit_stage_parallel_apply(
+            //     cmd,
+            //     RenderStage::Decals,
+            //     FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
+            // );
 
             // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
             cmd.state_override = PipelineState::new(None, None, Some(1), None);

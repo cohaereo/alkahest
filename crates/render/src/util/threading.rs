@@ -62,11 +62,9 @@ pub struct CommandListSetId(usize);
 
 struct CommandListSet {
     command_lists: Vec<UnsafeCell<CommandList>>,
-    finished_command_list: Mutex<Option<d3d11::CommandList>>,
 }
 
 pub struct CommandListPool {
-    gpu: Arc<Gpu>,
     sets: Vec<CommandListSet>,
     next_set: AtomicUsize,
     sets_in_use: Mutex<HashSet<usize>>,
@@ -88,14 +86,10 @@ impl CommandListPool {
             let command_lists = (0..SCHEDULER.num_workers())
                 .map(|_| UnsafeCell::new(gpu.create_command_list()))
                 .collect::<Vec<_>>();
-            sets.push(CommandListSet {
-                command_lists,
-                finished_command_list: Mutex::new(None),
-            });
+            sets.push(CommandListSet { command_lists });
         }
 
         Self {
-            gpu: gpu.clone(),
             sets,
             next_set: AtomicUsize::new(0),
             sets_in_use: Mutex::new(HashSet::default()),
@@ -140,27 +134,27 @@ impl CommandListPool {
         self.sets_in_use.lock().remove(&set.0);
     }
 
-    pub fn finalize_set(&self, set: CommandListSetId) {
-        if self.sets_in_use.lock().contains(&set.0) {
-            panic!("Command list set {:?} is not in use!", set);
-        }
+    // pub fn finalize_set(&self, set: CommandListSetId) {
+    //     if self.sets_in_use.lock().contains(&set.0) {
+    //         panic!("Command list set {:?} is not in use!", set);
+    //     }
 
-        let set = &self.sets[set.0 % self.sets.len()];
-        let combined_cmd = self.gpu.create_command_list();
-        for cell in set.command_lists.iter() {
-            let worker_cmd = unsafe { &mut *cell.get() };
-            combined_cmd.execute_command_list(
-                &worker_cmd
-                    .finish_command_list(false)
-                    .expect("Failed to finalize command list"),
-                true,
-            );
-        }
-        let finished_cmd = combined_cmd
-            .finish_command_list(false)
-            .expect("Failed to finalize combined command list");
-        *set.finished_command_list.lock() = Some(finished_cmd);
-    }
+    //     let set = &self.sets[set.0 % self.sets.len()];
+    //     let combined_cmd = self.gpu.create_command_list();
+    //     for cell in set.command_lists.iter() {
+    //         let worker_cmd = unsafe { &mut *cell.get() };
+    //         combined_cmd.execute_command_list(
+    //             &worker_cmd
+    //                 .finish_command_list(false)
+    //                 .expect("Failed to finalize command list"),
+    //             true,
+    //         );
+    //     }
+    //     let finished_cmd = combined_cmd
+    //         .finish_command_list(false)
+    //         .expect("Failed to finalize combined command list");
+    //     *set.finished_command_list.lock() = Some(finished_cmd);
+    // }
 
     /// Copy the given command list's state to all command lists in the pool and begin recording on them.
     /// # Safety
@@ -180,15 +174,31 @@ impl CommandListPool {
         set_id
     }
 
+    // #[profiling::function]
+    // pub fn get_finalized_command_list(&self, id: CommandListSetId) -> Option<d3d11::CommandList> {
+    //     let set = &self.sets[id.0 % self.sets.len()];
+    //     let cmd = set.finished_command_list.lock().take();
+    //     if cmd.is_some() {
+    //         self.release_set(id);
+    //     }
+
+    //     cmd
+    // }
+
     /// Execute the finalized command lists onto the given command list.
     #[profiling::function]
-    pub fn finish(&self, cmd: &mut CommandList, set: CommandListSetId) -> bool {
-        let set = &self.sets[set.0 % self.sets.len()];
-        if let Some(finished_cmd) = set.finished_command_list.lock().take() {
-            cmd.execute_command_list(&finished_cmd, true);
-            true
-        } else {
-            false
+    pub fn finish(&self, cmd: &mut CommandList, set: CommandListSetId) {
+        {
+            let set = &self.sets[set.0 % self.sets.len()];
+            for cell in set.command_lists.iter() {
+                let worker_cmd = unsafe { &mut *cell.get() };
+                let finished_cmd = worker_cmd
+                    .finish_command_list(false)
+                    .expect("Failed to finalize command list");
+
+                cmd.execute_command_list(&finished_cmd, true);
+            }
         }
+        self.release_set(set);
     }
 }

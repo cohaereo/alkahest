@@ -5,10 +5,18 @@ use alkahest_data::tfx::{
 };
 
 use super::Renderer;
-use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
+use crate::{
+    cmd_event_span, gpu::command_list::CommandList,
+    renderer::submit::geometry::GeometryCommandLists, tfx::view::View,
+};
 
 impl Renderer {
-    pub(super) fn submit_transparent(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_transparent(
+        self: &Arc<Self>,
+        cmd: &mut CommandList,
+        view: &View,
+        geo: &GeometryCommandLists,
+    ) {
         {
             {
                 let ext = &mut self.externs.get_mut();
@@ -26,7 +34,7 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
             cmd.flush_states();
-            self.submit_stage_parallel(
+            self.submit_stage_parallel_apply(
                 cmd,
                 RenderStage::DecalsAdditive,
                 FeatureRendererSubscription::all(),
@@ -37,16 +45,21 @@ impl Renderer {
             let _gpuscope = self.profiler.scope(cmd, "transparents");
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
-            self.submit_stage_parallel(
-                cmd,
-                RenderStage::Transparents,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
-                    .without(TfxFeatureRenderer::SkyTransparent),
-            );
+
+            let (sync_job, set) = &geo.transparent;
+            sync_job.wait();
+            self.cmd_pool.finish(cmd, *set);
+            // self.submit_stage_parallel_apply(
+            //     cmd,
+            //     RenderStage::Transparents,
+            //     FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+            //         .without(TfxFeatureRenderer::SkyTransparent),
+            // );
             self.submit_stage(
                 cmd,
                 RenderStage::Transparents,
-                FeatureRendererSubscription::SKY_TRANSPARENT,
+                FeatureRendererSubscription::SKY_TRANSPARENT
+                    | FeatureRendererSubscription::RIGID_OBJECT,
             );
         }
 
