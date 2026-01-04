@@ -4,11 +4,8 @@ use glam::{vec4, Vec4};
 use crate::{
     cmd_event_span,
     gpu::command_list::CommandList,
-    renderer::surface::{Surface, SurfaceHandle},
-    tfx::{
-        externs::{Postprocess, PostprocessInitialDownsample},
-        view::View,
-    },
+    renderer::surface::SurfaceHandle,
+    tfx::{externs::PostprocessInitialDownsample, view::View},
     Renderer,
 };
 
@@ -69,6 +66,7 @@ impl Renderer {
                     in_surface: SurfaceHandle,
                     temp_surface: SurfaceHandle,
                     variant: BlurVariant,
+                    strip_alpha: bool,
                     horz_unk3: Vec4,
                     horz_unk4: Vec4,
                     horz_unk5: Vec4,
@@ -112,8 +110,12 @@ impl Renderer {
                 vert_unk3,
                 vert_unk4,
                 vert_unk5,
-                Vec4::ONE,
-                Vec4::ZERO,
+                if strip_alpha {
+                    Vec4::new(1.0, 1.0, 1.0, 0.0)
+                } else {
+                    Vec4::ONE
+                },
+                if strip_alpha { Vec4::W } else { Vec4::ZERO },
             );
 
             match variant {
@@ -299,6 +301,7 @@ impl Renderer {
             view.bloom.bloom_24th,
             view.bloom.bloom_24th_temp,
             BlurVariant::Gaussian10,
+            true,
             vec4(0.05882, 0.17647, 0.52941, 0.00),
             vec4(-0.05625, -0.02917, -0.00625, 0.01111),
             vec4(0.01667, 0.04375, 0.00, 0.01111),
@@ -332,6 +335,7 @@ impl Renderer {
             view.bloom.bloom_12th_combined,
             view.bloom.bloom_12th_temp,
             BlurVariant::Gaussian10,
+            false,
             vec4(0.05882, 0.17647, 0.52941, 0.00),
             vec4(-0.02813, -0.01458, -0.00313, 0.00556),
             vec4(0.00833, 0.02187, 0.00, 0.00556),
@@ -366,6 +370,7 @@ impl Renderer {
             view.bloom.bloom_6th_combined,
             view.bloom.bloom_6th_temp,
             BlurVariant::Gaussian10,
+            false,
             vec4(0.05882, 0.17647, 0.52941, 0.00),
             vec4(-0.01406, -0.00729, -0.00156, 0.00278),
             vec4(0.00417, 0.01094, 0.00, 0.00278),
@@ -404,6 +409,7 @@ impl Renderer {
             view.bloom.bloom_3rd_combined,
             view.bloom.bloom_3rd_temp,
             BlurVariant::Weighted6,
+            false,
             vec4(0.25, 0.50, 0.00, 0.00),
             vec4(0.00, -0.00359, -0.00078, 0.00139),
             vec4(0.00203, 0.00, 0.00, 0.00139),
