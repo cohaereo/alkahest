@@ -9,7 +9,7 @@ use tiger_pkg::{TagHash, package_manager};
 
 fn main() -> anyhow::Result<()> {
     let Some(hash) = std::env::args().nth(1) else {
-        anyhow::bail!("Usage: technique_decompile <package dir> <technique tag>");
+        anyhow::bail!("Usage: technique_decompile <technique tag>");
     };
 
     let Ok(hash) = TagHash::from_str(&hash) else {
@@ -39,7 +39,7 @@ fn main() -> anyhow::Result<()> {
 
         println!("\t// Decompiled assignments:");
         match DecompilerState::new(&shader.constants.bytecode)
-            .with_ansi(true)
+            .with_ansi(false)
             .evaluate(&shader.constants.bytecode_constants)
         {
             Ok(o) => {
