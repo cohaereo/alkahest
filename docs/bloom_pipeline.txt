@@ -10,7 +10,7 @@ in
 out
     o0: unknown0 (third res) - 221707
     01: unknown1 (third res) - 398988
-    
+
 eid 8927
 shader downsample_block_2x2_with_nan_kill
 in t0: unknown0 (third res) - 221707
@@ -68,7 +68,7 @@ in
     t1: unknown3 (12th res) - 221715
 out
     o0: unknown11 (12th res combined) - 221746
-    
+
 eid 9122
 shader weighted/gaussian_10_horz
 in t0: unknown11 (12th res combined) - 221746
@@ -86,7 +86,7 @@ in
     t1: unknown2 (sixth res) - 221711
 out
     o0: unknown14 (sixth res combined) - 221751
-    
+
 eid 9158
 shader weighted/gaussian_10_horz
 in t0: unknown14 (sixth res combined) - 221751
@@ -105,7 +105,7 @@ in
     t6: unknown8 (12th res quarter-width blurred again) - 221738
 out
     o0: unknown17 (third res combined) - 221703
-    
+
 eid 9196
 shader copy_texture_bilinear
 in t4: unknown17 (third res combined) - 221703

@@ -31,6 +31,7 @@ use crate::{
     feature::immediate::ImmediateShapeRenderer,
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
     object::{RenderObject, RenderObjectHandle},
+    renderer::submit::bloom::PostProcessScope,
     tfx::{externs::Externs, packet::FramePacket, scope::TempFrameScope},
     util::{
         arena::Arena,
@@ -76,6 +77,7 @@ pub struct Renderer {
         RwLock<HashMap<(ExternIndex, u32), (Texture, d3d11::UnorderedAccessView)>>,
 
     debug_cbuffer: ConstantBuffer<Mat4>,
+    postprocess_cbuffer: ConstantBuffer<PostProcessScope>,
     pub profiler: D3D11Profiler,
 }
 
@@ -139,6 +141,7 @@ impl Renderer {
             cmd_pool: CommandListPool::new(&gpu).into(),
             frame_scope: ConstantBuffer::create(&gpu, None)?,
             debug_cbuffer: ConstantBuffer::create(&gpu, Some(&Mat4::ZERO))?,
+            postprocess_cbuffer: ConstantBuffer::create(&gpu, None)?,
 
             debug_vs,
             debug_ps,

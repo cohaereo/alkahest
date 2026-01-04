@@ -268,6 +268,8 @@ impl Scene {
             .text("Exposure Scale")
             .show_value(true)
             .ui(ui);
+
+        ui.checkbox(&mut settings.bloom, "Bloom");
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {

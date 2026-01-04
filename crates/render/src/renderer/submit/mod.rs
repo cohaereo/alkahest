@@ -1,4 +1,4 @@
-// pub mod bloom;
+pub mod bloom;
 pub mod buffers;
 pub mod gbuffer;
 pub mod geometry;
@@ -181,7 +181,7 @@ impl Renderer {
         //     self.apply_volume_fog(cmd);
         // }
 
-        // self.submit_bloom(cmd);
+        self.submit_bloom(cmd, view);
 
         if matches!(
             debug_pipeline,
@@ -340,7 +340,11 @@ impl Renderer {
             unk00: view.shading_result_read.lock().srv.clone().into(),
             unk30: TextureView::None, // health overlay
             unk38: self.common.default_lut.view.clone().into(), // LUT
-            unk40: self.common.temporary_bloom.view.clone().into(), // bloom
+            unk40: if view.settings.bloom {
+                view.bloom.bloom_final.into()
+            } else {
+                self.common.temporary_bloom.view.clone().into()
+            }, // bloom
             unk48: view.lighting.distortion.into(), // distortion
             unk58: self.common.temporary_vignette.view.clone().into(), // vignette
             unk7c: 0.9968,

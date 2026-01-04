@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 
 use crate::{
     renderer::{
-        submit::buffers::{Gbuffers, LightBuffers, WaterBuffers},
+        submit::buffers::{BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
         surface::{SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, Surfaces},
     },
     Gpu,
@@ -23,6 +23,7 @@ pub struct View {
     pub(crate) gbuffers: Gbuffers,
     pub(crate) lighting: LightBuffers,
     pub(crate) water: WaterBuffers,
+    pub(crate) bloom: BloomBuffers,
 
     pub(crate) shading_result: SurfaceHandle,
     pub(crate) shading_result_read: Mutex<SurfaceProxy>,
@@ -39,6 +40,7 @@ impl View {
         let gbuffers = Gbuffers::create(gpu, &surfaces, resolution)?;
         let lighting = LightBuffers::create(&surfaces, resolution)?;
         let water = WaterBuffers::create(&surfaces, resolution)?;
+        let bloom = BloomBuffers::create(&surfaces, resolution)?;
 
         let shading_result = surfaces.create_surface(
             resolution,
@@ -68,6 +70,7 @@ impl View {
             gbuffers,
             lighting,
             water,
+            bloom,
             shading_result,
             shading_result_read,
             output,
@@ -100,6 +103,7 @@ impl View {
 pub struct RenderSettings {
     pub exposure_scale: f32,
     pub vertex_ao: bool,
+    pub bloom: bool,
 }
 
 impl Default for RenderSettings {
@@ -107,6 +111,7 @@ impl Default for RenderSettings {
         Self {
             exposure_scale: 0.050,
             vertex_ao: true,
+            bloom: true,
         }
     }
 }

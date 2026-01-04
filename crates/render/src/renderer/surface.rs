@@ -330,7 +330,6 @@ impl Surface {
 }
 
 #[derive(Builder, Clone)]
-#[builder(derive(Clone))]
 pub struct SurfaceDesc {
     #[builder(start_fn, into)]
     pub label: String,
@@ -351,10 +350,7 @@ pub struct SurfaceDesc {
     create_uav: bool,
 }
 
-impl<S> SurfaceDescBuilder<S>
-where
-    S: surface_desc_builder::State,
-{
+impl SurfaceDesc {
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.label = name.into();
         self
@@ -382,10 +378,16 @@ pub enum SurfaceScale {
     Third,
     /// 1:4 scale (1920x1080 => 480x270)
     Quarter,
+    /// 1:6 scale (1920x1080 => 320x180)
+    Sixth,
     /// 1:8 scale (1920x1080 => 240x135)
     Eighth,
+    /// 1:12 scale (1920x1080 => 160x90)
+    Twelfth,
     /// 1:16 scale (1920x1080 => 120x67)
     Sixteenth,
+    /// 1:24 scale (1920x1080 => 80x45)
+    TwentyFourth,
     /// Custom scale fraction
     Nth(f32, f32),
 }
@@ -396,9 +398,12 @@ impl SurfaceScale {
             Self::Full => (1.0, 1.0),
             Self::Half => (2.0, 2.0),
             Self::Third => (3.0, 3.0),
+            Self::Sixth => (6.0, 6.0),
             Self::Quarter => (4.0, 4.0),
+            Self::Twelfth => (12.0, 12.0),
             Self::Eighth => (8.0, 8.0),
             Self::Sixteenth => (16.0, 16.0),
+            Self::TwentyFourth => (24.0, 24.0),
             Self::Nth(x, y) => (*x, *y),
         }
     }
@@ -419,8 +424,11 @@ impl Display for SurfaceScale {
             Self::Half => write!(f, "1/2"),
             Self::Third => write!(f, "1/3"),
             Self::Quarter => write!(f, "1/4"),
+            Self::Sixth => write!(f, "1/6"),
             Self::Eighth => write!(f, "1/8"),
+            Self::Twelfth => write!(f, "1/12"),
             Self::Sixteenth => write!(f, "1/16"),
+            Self::TwentyFourth => write!(f, "1/24"),
             Self::Nth(x, y) => write!(f, "1/{x}, 1/{y}"),
         }
     }

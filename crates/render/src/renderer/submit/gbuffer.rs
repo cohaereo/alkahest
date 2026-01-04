@@ -119,7 +119,7 @@ impl Renderer {
             );
         }
 
-        self.submit_uber_depth_generation(cmd, view);
+        // self.submit_uber_depth_generation(cmd, view);
     }
 
     fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &View) {

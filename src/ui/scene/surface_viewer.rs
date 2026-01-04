@@ -27,10 +27,11 @@ impl super::Scene {
                 ui.label(surface.name());
                 ui.weak(
                     RichText::new(format!(
-                        "{}x{} ({:?}, {:?})",
+                        "{}x{} ({:?}, {}, {:?})",
                         surface.resolution().0,
                         surface.resolution().1,
                         surface.desc().format,
+                        surface.desc().scale,
                         surface.desc().size_relativity
                     ))
                     .size(12.0),

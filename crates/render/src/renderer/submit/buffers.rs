@@ -44,11 +44,12 @@ impl Gbuffers {
         let desc_normal =
             SurfaceDesc::builder("gbuffer_normal", SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R10g10b10a2Typeless)
-                .view_format(dxgi::Format::R10g10b10a2Unorm);
-        let normal = surfaces.create_surface(base_resolution, desc_normal.clone().build())?;
+                .view_format(dxgi::Format::R10g10b10a2Unorm)
+                .build();
+        let normal = surfaces.create_surface(base_resolution, desc_normal.clone())?;
         let normal_read = surfaces.create_surface(
             base_resolution,
-            desc_normal.with_name("gbuffer_normal_read").build(),
+            desc_normal.with_name("gbuffer_normal_read"),
         )?;
         let third = surfaces.create_surface(
             base_resolution,
@@ -399,6 +400,87 @@ impl WaterBuffers {
             water_depth,
             water_reflection,
             water_reflection_healed,
+        })
+    }
+}
+
+pub struct BloomBuffers {
+    pub bloom_3rd: SurfaceHandle,
+    pub bloom_3rd_temp: SurfaceHandle,
+    pub bloom_3rd_combined: SurfaceHandle,
+
+    pub bloom_6th: SurfaceHandle,
+    pub bloom_6th_temp: SurfaceHandle,
+    pub bloom_6th_combined: SurfaceHandle,
+
+    pub bloom_12th: SurfaceHandle,
+    pub bloom_12th_temp: SurfaceHandle,
+    pub bloom_12th_combined: SurfaceHandle,
+
+    pub bloom_12th_half_width: SurfaceHandle,
+    pub bloom_12th_quarter_width: SurfaceHandle,
+    pub bloom_12th_quarter_width_temp: SurfaceHandle,
+
+    pub bloom_24th: SurfaceHandle,
+    pub bloom_24th_temp: SurfaceHandle,
+
+    pub bloom_final: SurfaceHandle,
+}
+
+impl BloomBuffers {
+    pub fn create(surfaces: &Surfaces, base_resolution: (u32, u32)) -> anyhow::Result<Self> {
+        let create_desc = |name: &str, scale: SurfaceScale| {
+            let desc = SurfaceDesc::builder(name, SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R16g16b16a16Float)
+                .scale(scale)
+                .build();
+            surfaces.create_surface(base_resolution, desc)
+        };
+
+        let bloom_3rd = create_desc("bloom_3rd", SurfaceScale::Third)?;
+        let bloom_3rd_temp = create_desc("bloom_3rd_temp", SurfaceScale::Third)?;
+        let bloom_3rd_combined = create_desc("bloom_3rd_combined", SurfaceScale::Third)?;
+
+        let bloom_6th = create_desc("bloom_6th", SurfaceScale::Sixth)?;
+        let bloom_6th_temp = create_desc("bloom_6th_temp", SurfaceScale::Sixth)?;
+        let bloom_6th_combined = create_desc("bloom_6th_combined", SurfaceScale::Sixth)?;
+
+        let bloom_12th = create_desc("bloom_12th", SurfaceScale::Twelfth)?;
+        let bloom_12th_temp = create_desc("bloom_12th_temp", SurfaceScale::Twelfth)?;
+        let bloom_12th_combined = create_desc("bloom_12th_combined", SurfaceScale::Twelfth)?;
+
+        let bloom_12th_half_width =
+            create_desc("bloom_12th_half_width", SurfaceScale::Nth(12.0 * 2.0, 12.0))?;
+        let bloom_12th_quarter_width = create_desc(
+            "bloom_12th_quarter_width",
+            SurfaceScale::Nth(12.0 * 4.0, 12.0),
+        )?;
+        let bloom_12th_quarter_width_temp = create_desc(
+            "bloom_12th_quarter_width_temp",
+            SurfaceScale::Nth(12.0 * 4.0, 12.0),
+        )?;
+
+        let bloom_24th = create_desc("bloom_24th", SurfaceScale::TwentyFourth)?;
+        let bloom_24th_temp = create_desc("bloom_24th_temp", SurfaceScale::TwentyFourth)?;
+
+        let bloom_final = create_desc("bloom_final", SurfaceScale::Half)?;
+
+        Ok(Self {
+            bloom_3rd,
+            bloom_3rd_temp,
+            bloom_3rd_combined,
+            bloom_6th,
+            bloom_6th_temp,
+            bloom_6th_combined,
+            bloom_12th,
+            bloom_12th_temp,
+            bloom_12th_combined,
+            bloom_12th_half_width,
+            bloom_12th_quarter_width,
+            bloom_12th_quarter_width_temp,
+            bloom_24th,
+            bloom_24th_temp,
+            bloom_final,
         })
     }
 }

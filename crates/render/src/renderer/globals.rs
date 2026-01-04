@@ -209,7 +209,15 @@ tfx_global_pipelines! {
 
     downsample_depth_buffer, uber_depth_default, downsample_max_min_avg_no_swizzle,
 
-    bloom_initial_downsample_block_2x2, downsample_block_2x2_with_nan_kill,
+    bloom_initial_downsample_block_2x2, downsample_block_2x2_with_nan_kill, downsample_block_2x2,
+    downsample_gaussian_1x8, downsample_gaussian_8x1,
+    downsample_gaussian_1x16, downsample_gaussian_16x1,
+
+    gaussian_10_horz, gaussian_10_vert,
+    weighted_6_horz, weighted_6_vert,
+    combined_bloom_line_blur,
+
+    weighted_add,
 
     volumetrics_upres_1,
 
