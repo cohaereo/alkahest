@@ -1,0 +1,161 @@
+// "Z:\d2beta\RenderDoc\Unsorted\20250502_edz_nessus_dc\stuff-capture_4.rdc"
+
+eid 8909
+shader bloom_initial_downsample_ironsight_dof_2x2
+in
+    t0: half res uberdepth - 208536
+    t1: full res depth - 221471
+    t2: unknown (half res black) - 234827
+    t3: shading output - 221616
+out
+    o0: unknown0 (third res) - 221707
+    01: unknown1 (third res) - 398988
+    
+eid 8927
+shader downsample_block_2x2_with_nan_kill
+in t0: unknown0 (third res) - 221707
+out o0: unknown2 (sixth res) - 221711
+
+eid 8939
+shader downsample_block_2x2
+in t0: unknown2 (sixth res) - 221711
+out o0: unknown3 (12th res) - 221715
+
+eid 8945
+shader downsample_block_2x2
+in t0: unknown3 (12th res) - 221715
+out o0: unknown4 (24th res) - 221719
+
+eid 8957
+shader autoexposure_sample_columns
+in t0: unknown4 (24th res) - 221719
+out o0: autoexposure buffer - 210294
+
+eid 9044
+shader downsample_gaussian_8x1
+in t0: unknown3 (12th res) - 221715
+out o0: unknown5 (12th res half-width) - 221727
+
+eid 9050
+shader downsample_gaussian_8x1
+in t0: unknown5 (12th res half-width) - 221727
+out o0: unknown6 (12th res quarter-width) - 221730
+
+eid 9062
+shader downsample_gaussian_16x1
+in t0: unknown6 (12th res quarter-width) - 221730
+out o0: unknown7 (12th res quarter-width blurred) - 221734
+
+eid 9074
+shader downsample_gaussian_16x1
+in t0: unknown7 (12th res quarter-width blurred) - 221734
+out o0: unknown8 (12th res quarter-width blurred again) - 221738
+
+eid 9086
+shader weighted/gaussian_10_horz
+in t0: unknown4 (24th res) - 221719
+out o0: unknown9 (24th res blurred horizontal) - 221742
+
+eid 9098
+shader weighted/gaussian_10_vert
+in t0: unknown9 (24th res blurred horizontal) - 221742
+out o0: unknown10 (24th res blurred) - 221719
+
+eid 9110
+shader weighted_add
+in
+    t0: unknown10 (24th res blurred) - 221719
+    t1: unknown3 (12th res) - 221715
+out
+    o0: unknown11 (12th res combined) - 221746
+    
+eid 9122
+shader weighted/gaussian_10_horz
+in t0: unknown11 (12th res combined) - 221746
+out o0: unknown12 (12th res blurred horizontal) - 221715
+
+eid 9134
+shader weighted/gaussian_10_vert
+in t0: unknown12 (12th res blurred horizontal) - 221715
+out o0: unknown13 (12th res blurred) - 221746
+
+eid 9146
+shader weighted_add
+in
+    t0: unknown13 (12th res blurred) - 221746
+    t1: unknown2 (sixth res) - 221711
+out
+    o0: unknown14 (sixth res combined) - 221751
+    
+eid 9158
+shader weighted/gaussian_10_horz
+in t0: unknown14 (sixth res combined) - 221751
+out o0: unknown15 (sixth res blurred horizontal) - 221711
+
+eid 9170
+shader weighted/gaussian_10_vert
+in t0: unknown15 (sixth res blurred horizontal) - 221711
+out o0: unknown16 (sixth res blurred) - 221751
+
+eid 9184
+shader combined_bloom_line_blur
+in
+    t4: unknown16 (sixth res blurred) - 221751
+    t5: unknown0 (third res) - 221707
+    t6: unknown8 (12th res quarter-width blurred again) - 221738
+out
+    o0: unknown17 (third res combined) - 221703
+    
+eid 9196
+shader copy_texture_bilinear
+in t4: unknown17 (third res combined) - 221703
+out o0: unknown18 (third res combined copy) - 398988
+
+eid 9208
+shader weighted_6_horz(_diffuse) (same bytecode)
+in t0: unknown18 (third res combined copy) - 398988
+out o0: unknown19 (third res blurred horizontal) - 221707
+
+eid 9220
+shader weighted_6_vert(_diffuse) (same bytecode)
+in t0: unknown19 (third res blurred horizontal) - 221707
+out o0: unknown20 (third res blurred) - 398988
+
+eid 9232
+shader downsample_gaussian_32x1
+in t0: unknown10 (24th res blurred) - 221719
+out o0: unknown21 (24th res blurred, blurred horizontally) - 221757
+
+eid 9244
+shader downsample_gaussian_1x32
+in t0: unknown21 (24th res blurred, blurred horizontally) - 221757
+out o0: unknown22 (24th res blurred twice) - 221760
+
+eid 9256
+shader bilateral_upsample (needs to be double checked)
+in t4: unknown22 (24th res blurred twice) - 221760
+out o0: unknown23 (4th res (upsampled from 24th res), rgba8) - 221764
+
+eid 9279
+shader ????? (apply lens dirt??)
+in
+    t0: unknown23 (4th res (upsampled from 24th res), rgba8) - 221764
+    t1: lens dirt texture
+out
+    o0: shading output - 221616
+
+eid 9283
+shader copy_texture_bilinear
+in t4: unknown20 (third res blurred) - 398988
+out o0: final bloom buffer (half res) - 221769
+
+eid 9341
+shader screen_area_global_lut3d_distort_noise
+in
+    t0: shading output - 221616
+    t1: final bloom buffer (half res) - 221769
+    t2: health overlay
+    t3: vignette overlay
+    t4: <not bound>
+    t5: global LUT 3D - 221776
+    t6: distortion buffer - 234827

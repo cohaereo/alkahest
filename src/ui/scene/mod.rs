@@ -1,4 +1,5 @@
 pub mod controller;
+mod surface_viewer;
 
 use std::{
     sync::{
@@ -45,6 +46,7 @@ pub struct Scene {
     surface_srv: d3d11::ShaderResourceView,
 
     profiler_results: Option<String>,
+    show_surface_viewer: bool,
 }
 
 impl Scene {
@@ -63,6 +65,7 @@ impl Scene {
             surface_srv,
             last_frame_time: Instant::now(),
             profiler_results: None,
+            show_surface_viewer: false,
         })
     }
 
@@ -104,107 +107,119 @@ impl Scene {
     }
 
     pub fn show(&mut self, ui: &mut Ui, size: Vec2, egui_d3d11: &mut egui_d3d11::D3D11Renderer) {
-        let r = ui
-            .image(SizedTexture {
-                id: egui_d3d11.textures_mut().allocate_dx_temporary(
-                    self.surface_srv.clone(),
-                    Some(egui::TextureFilter::Linear),
-                ),
-                size,
-            })
-            .interact(Sense::CLICK | Sense::DRAG | Sense::HOVER);
-
-        if !ui.is_rect_visible(r.rect) {
-            return;
-        }
-
-        let mut bar_rect = r.rect;
-        bar_rect.set_height(32.0);
-        ui.painter().rect_filled(
-            bar_rect,
-            0.0,
-            egui::Color32::from_black_alpha(if ui.rect_contains_pointer(bar_rect) {
-                160
-            } else {
-                64
-            }),
-        );
-        ui.allocate_new_ui(UiBuilder::new().max_rect(bar_rect), |ui| {
-            egui::menu::bar(ui, |ui| {
-                self.show_toolbar(ui);
-            })
-        });
-
         let now = Instant::now();
         let delta_time = (now - self.last_frame_time).as_secs_f32();
         self.last_frame_time = now;
 
-        let fps_rect = ui.painter_at(r.rect).text(
-            r.rect.right_top() + Vec2::new(0.0, 3.0) + Vec2::splat(1.0),
-            egui::Align2::RIGHT_TOP,
-            format!("{} ", (1. / delta_time).round()),
-            egui::FontId::monospace(16.0),
-            egui::Color32::BLACK,
-        );
-
-        ui.painter_at(r.rect).text(
-            r.rect.right_top() + Vec2::new(0.0, 3.0),
-            egui::Align2::RIGHT_TOP,
-            format!("{} ", (1. / delta_time).round()),
-            egui::FontId::monospace(16.0),
-            egui::Color32::GREEN,
-        );
-
-        ui.scope_builder(egui::UiBuilder::new().max_rect(r.rect), |ui| {
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                if self.world.is_empty() {
-                    ui.label(
-                        RichText::new(format!("{} Scene is empty", GoogleMaterialSymbols::Warning))
-                            .size(16.0),
-                    );
-                }
-
-                if self.renderer.asset_manager.count_loading() > 0 {
-                    ui.label(
-                        RichText::new(format!(
-                            "{} Loading assets... ({} in progress)",
-                            GoogleMaterialSymbols::HardDrive,
-                            self.renderer.asset_manager.count_loading()
-                        ))
-                        .size(16.0),
-                    );
-                }
+        if self.show_surface_viewer {
+            egui::SidePanel::right("surface_viewer").show_inside(ui, |ui| {
+                self.show_surface_viewer(ui, egui_d3d11);
             });
-        });
-
-        ui.style_mut().spacing.tooltip_width = 4096.0;
-        ui.interact(
-            fps_rect,
-            "frame_counter_profiler_tooltip".into(),
-            Sense::hover(),
-        )
-        .on_hover_ui(|ui| {
-            if let Some(profiler_results) = &self.profiler_results {
-                ui.add(
-                    egui::Label::new(RichText::new(profiler_results.clone()).monospace()).extend(),
-                );
-            } else {
-                ui.weak("Profiler data not available yet.");
-            }
-        });
-
-        let size_pixels = size * ui.ctx().pixels_per_point();
-        let resolution = (size_pixels.x as u32, size_pixels.y as u32);
-
-        self.controller.update(&mut self.camera, ui, &r, delta_time);
-
-        if r.dragged_by(egui::PointerButton::Middle) {
-            let delta_adjusted = r.drag_delta() / 4.0;
-            self.sun_light_angle += delta_adjusted.x;
-            self.sun_light_angle = self.sun_light_angle.rem_euclid(360.0);
         }
 
-        self.render(delta_time, resolution);
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            let r = ui
+                .image(SizedTexture {
+                    id: egui_d3d11.textures_mut().allocate_dx_temporary(
+                        self.surface_srv.clone(),
+                        Some(egui::TextureFilter::Linear),
+                    ),
+                    size,
+                })
+                .interact(Sense::CLICK | Sense::DRAG | Sense::HOVER);
+
+            if !ui.is_rect_visible(r.rect) {
+                return;
+            }
+
+            let mut bar_rect = r.rect;
+            bar_rect.set_height(32.0);
+            ui.painter().rect_filled(
+                bar_rect,
+                0.0,
+                egui::Color32::from_black_alpha(if ui.rect_contains_pointer(bar_rect) {
+                    160
+                } else {
+                    64
+                }),
+            );
+            ui.allocate_new_ui(UiBuilder::new().max_rect(bar_rect), |ui| {
+                egui::menu::bar(ui, |ui| {
+                    self.show_toolbar(ui);
+                })
+            });
+
+            let fps_rect = ui.painter_at(r.rect).text(
+                r.rect.right_top() + Vec2::new(0.0, 3.0) + Vec2::splat(1.0),
+                egui::Align2::RIGHT_TOP,
+                format!("{} ", (1. / delta_time).round()),
+                egui::FontId::monospace(16.0),
+                egui::Color32::BLACK,
+            );
+
+            ui.painter_at(r.rect).text(
+                r.rect.right_top() + Vec2::new(0.0, 3.0),
+                egui::Align2::RIGHT_TOP,
+                format!("{} ", (1. / delta_time).round()),
+                egui::FontId::monospace(16.0),
+                egui::Color32::GREEN,
+            );
+
+            ui.scope_builder(egui::UiBuilder::new().max_rect(r.rect), |ui| {
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                    if self.world.is_empty() {
+                        ui.label(
+                            RichText::new(format!(
+                                "{} Scene is empty",
+                                GoogleMaterialSymbols::Warning
+                            ))
+                            .size(16.0),
+                        );
+                    }
+
+                    if self.renderer.asset_manager.count_loading() > 0 {
+                        ui.label(
+                            RichText::new(format!(
+                                "{} Loading assets... ({} in progress)",
+                                GoogleMaterialSymbols::HardDrive,
+                                self.renderer.asset_manager.count_loading()
+                            ))
+                            .size(16.0),
+                        );
+                    }
+                });
+            });
+
+            ui.style_mut().spacing.tooltip_width = 4096.0;
+            ui.interact(
+                fps_rect,
+                "frame_counter_profiler_tooltip".into(),
+                Sense::hover(),
+            )
+            .on_hover_ui(|ui| {
+                if let Some(profiler_results) = &self.profiler_results {
+                    ui.add(
+                        egui::Label::new(RichText::new(profiler_results.clone()).monospace())
+                            .extend(),
+                    );
+                } else {
+                    ui.weak("Profiler data not available yet.");
+                }
+            });
+
+            let size_pixels = size * ui.ctx().pixels_per_point();
+            let resolution = (size_pixels.x as u32, size_pixels.y as u32);
+
+            self.controller.update(&mut self.camera, ui, &r, delta_time);
+
+            if r.dragged_by(egui::PointerButton::Middle) {
+                let delta_adjusted = r.drag_delta() / 4.0;
+                self.sun_light_angle += delta_adjusted.x;
+                self.sun_light_angle = self.sun_light_angle.rem_euclid(360.0);
+            }
+
+            self.render(delta_time, resolution);
+        });
     }
 
     fn show_toolbar(&mut self, ui: &mut Ui) {
@@ -214,6 +229,16 @@ impl Scene {
         })
         .response
         .on_hover_text("Scene Settings");
+
+        if ui
+            .selectable_label(
+                self.show_surface_viewer,
+                GoogleMaterialSymbols::ImageSearch.to_string(),
+            )
+            .clicked()
+        {
+            self.show_surface_viewer = !self.show_surface_viewer;
+        }
 
         self.render_mode.ui(ui);
         self.view.subscribed_features.show_input(ui);

@@ -10,7 +10,7 @@ use crate::{
     cmd_event_span,
     gpu::command_list::{CommandList, DepthMode},
     renderer::submit::geometry::GeometryCommandLists,
-    tfx::view::View,
+    tfx::{externs::DownsampleTextureGeneric, view::View},
 };
 
 impl Renderer {
@@ -119,39 +119,41 @@ impl Renderer {
         //     );
         // }
 
-        // self.submit_uber_depth_generation(cmd);
+        self.submit_uber_depth_generation(cmd, view);
     }
 
-    // fn submit_uber_depth_generation(&self, cmd: &mut CommandList) {
-    //     cmd_event_span!(cmd, "submit_uber_depth_generation");
+    fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &View) {
+        cmd_event_span!(cmd, "submit_uber_depth_generation");
+        let _gpuscope = self.profiler.scope(cmd, "uber_depth_generation");
 
-    //     {
-    //         cmd_event_span!(cmd, "[uber_depth_default]");
+        {
+            cmd_event_span!(cmd, "[uber_depth_default]");
 
-    //         self.globals.pipelines.uber_depth_default.bind(cmd).unwrap();
-    //         let (width, height) = view.surfaces.get(view.gbuffers.depth).resolution();
-    //         cmd.dispatch(width.div_ceil(16), height.div_ceil(16), 1);
-    //         cmd.compute_set_unordered_access_views(0, &[None, None, None, None], None);
-    //     }
+            self.globals.pipelines.uber_depth_default.bind(cmd).unwrap();
+            let (width, height) = view.surfaces.get(view.gbuffers.depth).resolution();
+            cmd.dispatch(width.div_ceil(16), height.div_ceil(16), 1);
+            cmd.compute_set_unordered_access_views(0, &[None, None, None, None], None);
+        }
 
-    //     cmd_event_span!(cmd, "[downsample_max_min_avg_no_swizzle]");
-    //     self.externs.get_mut().downsample_texture_generic = DownsampleTextureGeneric {
-    //         source: view.gbuffers.uber_depth_quarter.into(),
-    //         resolution_dest: self
-    //             .surfaces
-    //             .get(view.gbuffers.uber_depth_eighth)
-    //             .resolution_with_recip(),
-    //         resolution_source: self
-    //             .surfaces
-    //             .get(view.gbuffers.uber_depth_quarter)
-    //             .resolution_with_recip(),
-    //     };
-    //     self.bind_surfaces(cmd, &[view.gbuffers.uber_depth_eighth], None);
-    //     cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-    //     self.execute_global_pipeline(
-    //         cmd,
-    //         &self.globals.pipelines.downsample_max_min_avg_no_swizzle,
-    //         "downsample_max_min_avg_no_swizzle",
-    //     );
-    // }
+        cmd_event_span!(cmd, "[downsample_max_min_avg_no_swizzle]");
+        self.externs.get_mut().downsample_texture_generic = DownsampleTextureGeneric {
+            source: view.gbuffers.uber_depth_quarter.into(),
+            resolution_dest: view
+                .surfaces
+                .get(view.gbuffers.uber_depth_eighth)
+                .resolution_with_recip(),
+            resolution_source: view
+                .surfaces
+                .get(view.gbuffers.uber_depth_quarter)
+                .resolution_with_recip(),
+        }
+        .into();
+        self.bind_surfaces(cmd, &[view.gbuffers.uber_depth_eighth], None);
+        cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+        self.execute_global_pipeline(
+            cmd,
+            &self.globals.pipelines.downsample_max_min_avg_no_swizzle,
+            "downsample_max_min_avg_no_swizzle",
+        );
+    }
 }

@@ -19,7 +19,7 @@ use crate::{
     cmd_event_span,
     gpu::command_list::CommandList,
     tfx::{
-        externs::{self, GlobalLighting},
+        externs::{self, GlobalLighting, ScreenArea, TextureView},
         scope::TempFrameScope,
         view::View,
     },
@@ -54,14 +54,6 @@ impl Renderer {
         self.globals.scopes.view.bind(cmd).unwrap();
 
         let geo = self.submit_geometry_command_lists(cmd, view);
-        // geo.generate_gbuffer.0.wait();
-        // self.cmd_pool.finish(cmd, geo.generate_gbuffer.1);
-        // geo.decals.0.wait();
-        // self.cmd_pool.finish(cmd, geo.decals.1);
-        // geo.lighting.0.wait();
-        // self.cmd_pool.finish(cmd, geo.lighting.1);
-        // geo.transparent.0.wait();
-        // self.cmd_pool.finish(cmd, geo.transparent.1);
 
         self.submit_gbuffer_generation(cmd, view, &geo);
 
@@ -94,40 +86,6 @@ impl Renderer {
             );
         }
 
-        // view.shading_result_read
-        //     .lock()
-        //     .update(cmd, view.surfaces.get(view.shading_result));
-
-        // self.submit_transparent(cmd);
-
-        // self.shading_result_read
-        //     .lock()
-        //     .update(&cmd, view.surfaces.get(self.shading_result));
-
-        // self.submit_water(cmd);
-
-        // if ConVars::get_flag("render.feature.volumetrics") {
-        //     self.apply_volume_fog(cmd);
-        // }
-
-        // self.submit_bloom(cmd);
-
-        {
-            // view.shading_result_read
-            //     .lock()
-            //     .update(cmd, view.surfaces.get(view.shading_result));
-            view.surfaces.get(view.shading_result).bind_single(cmd);
-            cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-            // cmd.flush_states();
-            self.execute_global_pipeline(
-                cmd,
-                self.globals
-                    .pipelines
-                    // .screen_area_global_lut3d_no_tonemap,
-                    .get_specialized_lut3d_pipeline(true, false, false),
-                "screen_area_global_lut3d",
-            );
-        }
         // {
         //     cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
         //     cmd.flush_states();
@@ -207,6 +165,10 @@ impl Renderer {
             }
         });
 
+        // view.shading_result_read
+        //     .lock()
+        //     .update(cmd, view.surfaces.get(view.shading_result));
+
         self.submit_transparent(cmd, view, &geo);
 
         view.shading_result_read
@@ -215,17 +177,40 @@ impl Renderer {
 
         self.submit_water(cmd, view);
 
+        // if ConVars::get_flag("render.feature.volumetrics") {
+        //     self.apply_volume_fog(cmd);
+        // }
+
+        // self.submit_bloom(cmd);
+
         view.shading_result_read
             .lock()
             .update(cmd, view.surfaces.get(view.shading_result));
 
-        self.blit_srv(
-            cmd,
-            &view.shading_result_read.lock().srv,
-            &view.surfaces.get(view.output).rtv,
-            true,
-            "final_blit",
-        );
+        {
+            // view.shading_result_read
+            //     .lock()
+            //     .update(cmd, view.surfaces.get(view.shading_result));
+            view.surfaces.get(view.output).bind_single(cmd);
+            cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+            // cmd.flush_states();
+            self.execute_global_pipeline(
+                cmd,
+                self.globals
+                            .pipelines
+                            // .screen_area_global_lut3d_no_tonemap,
+                            .get_specialized_lut3d_pipeline(true, false, true),
+                "screen_area_global_lut3d",
+            );
+        }
+
+        // self.blit_srv(
+        //     cmd,
+        //     &view.shading_result_read.lock().srv,
+        //     &view.surfaces.get(view.output).rtv,
+        //     true,
+        //     "final_blit",
+        // );
 
         {
             profiling::scope!("prepare/submit immediate geometry");
@@ -337,20 +322,21 @@ impl Renderer {
         // ext.atmosphere.unk38 = self.common.temporary_depth_lookup.view.clone().into();
         // ext.atmosphere.unk88 = self.common.temporary_atmos.view.clone().into();
 
-        // ext.screen_area = ScreenArea {
-        //     unk00: self.shading_result_read.lock().srv.clone().into(),
-        //     unk10: self.common.default_lut.view.clone().into(), // LUT
-        //     unk18: self.common.temporary_bloom.view.clone().into(), // bloom
-        //     unk20: self.lighting.distortion.into(),             // distortion
-        //     unk28: TextureView::None,                           // health overlay
-        //     unk30: self.common.temporary_vignette.view.clone().into(), // vignette
-        //     unk48: 0.9968,
-        //     unk70: Vec4::new(0.13281, 0.23611, 0.00, 0.00), // distortion related
-        //     unkd0: Vec4::new(0.3, 0.5, 0.0, 0.02),
-        //     unkc0: 0.05,
-        //     unke0: Vec4::new(0.3, 0.5, 0.0, 0.5),
-        //     ..Default::default()
-        // };
+        ext.screen_area = ScreenArea {
+            unk00: view.shading_result_read.lock().srv.clone().into(),
+            unk30: TextureView::None, // health overlay
+            unk38: self.common.default_lut.view.clone().into(), // LUT
+            unk40: self.common.temporary_bloom.view.clone().into(), // bloom
+            unk48: view.lighting.distortion.into(), // distortion
+            unk58: self.common.temporary_vignette.view.clone().into(), // vignette
+            unk7c: 0.9968,
+            unkf0: Vec4::new(0.13281, 0.23611, 0.00, 0.00), // distortion related
+            unk140: 0.05,
+            unk150: Vec4::new(0.3, 0.5, 0.0, 0.02),
+            unk160: Vec4::new(0.3, 0.5, 0.0, 0.5),
+            ..Default::default()
+        }
+        .into();
 
         // let depth_res = view.surfaces.get(self.gbuffers.depth).resolution();
         // ext.uber_depth = UberDepth {

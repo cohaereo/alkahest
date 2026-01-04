@@ -91,6 +91,10 @@ impl View {
     pub fn resolution(&self) -> (u32, u32) {
         self.resolution
     }
+
+    pub fn surfaces(&self) -> &Arc<Surfaces> {
+        &self.surfaces
+    }
 }
 
 pub struct RenderSettings {

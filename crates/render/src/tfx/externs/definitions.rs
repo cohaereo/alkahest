@@ -596,9 +596,9 @@ extern_struct! {
 
 extern_struct! {
     struct DownsampleTextureGeneric("downsample_texture_generic") {
-        0x38 => unk38: TextureView,
-        0x40 => unk40: Vec4,
-        0x50 => unk50: Vec4,
+        0x38 => source: TextureView,
+        0x40 => resolution_dest: Vec4,
+        0x50 => resolution_source: Vec4,
     }
 }
 
@@ -838,11 +838,11 @@ extern_struct! {
 
 extern_struct! {
     struct PostprocessInitialDownsample("postprocess_initial_downsample") {
-        0x00 => unk00: TextureView,
+        0x00 => distortion: TextureView,
         0x08 => unk08: TextureView,
         0x10 => unk10: Vec4,
-        0x20 => unk20: Vec4,
-        0x30 => unk30: Vec4,
+        0x20 => unk20: Vec4 > default(vec4(0.13281, 0.23611, 0.00, 0.00)),
+        0x30 => unk30: Vec4 > default(Vec4::W),
         0x40 => unk40: f32,
     }
 }

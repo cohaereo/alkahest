@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use alkahest_data::tfx::{
-    FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
-};
+use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
 
 use super::Renderer;
 use crate::{
@@ -49,12 +47,7 @@ impl Renderer {
             let (sync_job, set) = &geo.transparent;
             sync_job.wait();
             self.cmd_pool.finish(cmd, *set);
-            // self.submit_stage_parallel_apply(
-            //     cmd,
-            //     RenderStage::Transparents,
-            //     FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
-            //         .without(TfxFeatureRenderer::SkyTransparent),
-            // );
+
             self.submit_stage(
                 cmd,
                 RenderStage::Transparents,
@@ -63,42 +56,41 @@ impl Renderer {
             );
         }
 
-        // {
-        //     cmd_event_span!(cmd, "distortion");
+        {
+            cmd_event_span!(cmd, "distortion");
+            let _gpuscope = self.profiler.scope(cmd, "distortion");
 
-        //     {
-        //         let distortion = self.surfaces().get(self.lighting.distortion);
-        //         let externs = &mut self.externs.get_mut();
-        //         externs.view.derive_matrices(distortion.resolution());
-        //         externs.deferred.deferred_depth = view.gbuffers.uber_depth_half.into();
-        //     }
-        //     self.globals.scopes.view.bind(cmd).unwrap();
+            {
+                let distortion = view.surfaces.get(view.lighting.distortion);
+                let externs = &mut self.externs.get_mut();
+                externs.view.derive_matrices(distortion.resolution());
+                externs.deferred.deferred_depth = view.gbuffers.uber_depth_half.into();
+            }
+            self.globals.scopes.view.bind(cmd).unwrap();
 
-        //     self.clear_surface(cmd, self.lighting.distortion, [0., 0., 0., 0.]);
-        //     self.bind_surfaces(
-        //         cmd,
-        //         &[self.lighting.distortion],
-        //         Some(view.gbuffers.depth_half),
-        //     );
+            self.clear_surface(cmd, view.lighting.distortion, [0., 0., 0., 0.]);
+            self.bind_surfaces(
+                cmd,
+                &[view.lighting.distortion],
+                Some(view.gbuffers.depth_half),
+            );
 
-        //     cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
-        //     cmd.flush_states();
-        //     self.submit_stage(
-        //         cmd,
-        //         RenderStage::Distortion,
-        //         FeatureRendererSubscription::all(),
-        //     );
-        // }
+            cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
+            cmd.flush_states();
+            self.submit_stage_parallel(
+                cmd,
+                RenderStage::Distortion,
+                FeatureRendererSubscription::all(),
+            );
+        }
 
         // Rebind full resolution depth buffer
-        // {
-        //     let output = self.surfaces().get(self.output);
-        //     let externs = &mut self.externs.get_mut();
-        //     externs.view.derive_matrices(output.resolution());
-        //     externs.deferred.deferred_depth = view.gbuffers.depth.into();
-
-        //     self.output_read.lock().update(&cmd, output);
-        // }
+        {
+            let output = view.surfaces.get(view.output);
+            let externs = &mut self.externs.get_mut();
+            externs.view.derive_matrices(output.resolution());
+            externs.deferred.deferred_depth = view.gbuffers.depth.into();
+        }
         self.globals.scopes.view.bind(cmd).unwrap();
     }
 }
