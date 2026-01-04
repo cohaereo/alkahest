@@ -585,12 +585,13 @@ extern_struct! {
         0x20 => unk20: Vec4,
         0x30 => unk30: Vec4,
         0x40 => unk40: Vec4,
-        0x50 => unk50: TextureView,
-        0x58 => unk58: TextureView,
-        0x60 => unk60: Vec4,
-        0x70 => unk70: Vec4,
-        0x80 => unk80: Vec4,
-        0x90 => unk90: Uav,
+        0x50 => unk50: Vec4,
+        0x60 => unk60_source: TextureView,
+        0x68 => unk68: TextureView,
+        0x70 => unk70_dest_res: Vec4,
+        0x80 => unk80_source_res: Vec4,
+        0x90 => unk90: Vec4,
+        0xA0 => unka0: Uav,
     }
 }
 
@@ -1180,22 +1181,22 @@ extern_struct! {
 
 extern_struct! {
     struct UberDepth("uber_depth") {
-        0x00 => unk00: TextureView,
+        0x00 => original_depth: TextureView,
         0x18 => unk18: Uav,
         0x28 => unk28: Uav,
         0x30 => unk30: Uav,
         0x40 => unk40: Uav,
         0x48 => unk48: Uav,
-        0x60 => unk60: Vec4,
+        0x50 => unk50: Vec4,
+        0x70 => unk70: Vec4,
         0x80 => unk80: Vec4,
         0x90 => unk90: Vec4,
         0xA0 => unka0: Vec4,
         0xB0 => unkb0: Vec4,
-        0xC0 => unkc0: Vec4,
+        0xC0 => unkc0: Uav,
+        0xC8 => unkc8: Uav,
         0xD0 => unkd0: Uav,
         0xD8 => unkd8: Uav,
-        0xE0 => unke0: Uav,
-        0xE8 => unke8: Uav,
     }
 }
 

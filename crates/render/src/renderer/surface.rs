@@ -330,6 +330,7 @@ impl Surface {
 }
 
 #[derive(Builder, Clone)]
+#[builder(derive(Clone))]
 pub struct SurfaceDesc {
     #[builder(start_fn, into)]
     pub label: String,
@@ -348,6 +349,16 @@ pub struct SurfaceDesc {
 
     #[builder(default = false)]
     create_uav: bool,
+}
+
+impl<S> SurfaceDescBuilder<S>
+where
+    S: surface_desc_builder::State,
+{
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.label = name.into();
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

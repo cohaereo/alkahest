@@ -44,10 +44,12 @@ impl Gbuffers {
         let desc_normal =
             SurfaceDesc::builder("gbuffer_normal", SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R10g10b10a2Typeless)
-                .view_format(dxgi::Format::R10g10b10a2Unorm)
-                .build();
-        let normal = surfaces.create_surface(base_resolution, desc_normal.clone())?;
-        let normal_read = surfaces.create_surface(base_resolution, desc_normal)?;
+                .view_format(dxgi::Format::R10g10b10a2Unorm);
+        let normal = surfaces.create_surface(base_resolution, desc_normal.clone().build())?;
+        let normal_read = surfaces.create_surface(
+            base_resolution,
+            desc_normal.with_name("gbuffer_normal_read").build(),
+        )?;
         let third = surfaces.create_surface(
             base_resolution,
             SurfaceDesc::builder("gbuffer_third", SizeRelativity::RelativeToFramebuffer)

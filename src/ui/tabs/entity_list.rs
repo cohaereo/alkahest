@@ -446,9 +446,11 @@ impl EntityListTab {
                                     thumbnail.clone()
                                 };
 
-                                let tid = egui_d3d11
-                                    .textures_mut()
-                                    .allocate_dx_temporary(srv, Some(egui::TextureFilter::Linear));
+                                let tid = egui_d3d11.textures_mut().allocate_dx_temporary(
+                                    srv,
+                                    Some(egui::TextureFilter::Linear),
+                                    true,
+                                );
                                 card_painter.image(
                                     tid,
                                     card_image_rect,

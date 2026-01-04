@@ -123,6 +123,7 @@ impl Scene {
                     id: egui_d3d11.textures_mut().allocate_dx_temporary(
                         self.surface_srv.clone(),
                         Some(egui::TextureFilter::Linear),
+                        true,
                     ),
                     size,
                 })

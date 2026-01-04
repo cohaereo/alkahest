@@ -98,26 +98,26 @@ impl Renderer {
             cmd.draw(4, 0);
         }
 
-        // {
-        //     cmd.state = PipelineState::new(Some(0), Some(2), Some(0), Some(0));
-        //     let depth_half_surf = view.surfaces.get(view.gbuffers.depth_half);
-        //     depth_half_surf.clear_depth(cmd, 0.0, 0);
-        //     depth_half_surf.bind_single(cmd);
-        //     let depth_full_surf = view.surfaces.get(view.gbuffers.depth);
+        {
+            cmd.state = PipelineState::new(Some(0), Some(2), Some(0), Some(0));
+            let depth_half_surf = view.surfaces.get(view.gbuffers.depth_half);
+            depth_half_surf.clear_depth(cmd, 0.0, 0);
+            depth_half_surf.bind_single(cmd);
+            let depth_full_surf = view.surfaces.get(view.gbuffers.depth);
 
-        //     {
-        //         let hdao = &mut self.externs.get_mut().hdao;
-        //         hdao.unk60_source = view.gbuffers.depth_proxy.lock().srv.clone().into();
-        //         hdao.unk70_dest_res = depth_half_surf.resolution_with_recip();
-        //         hdao.unk80_source_res = depth_full_surf.resolution_with_recip();
-        //     }
+            {
+                let hdao = &mut self.externs.get_mut().hdao;
+                hdao.unk60_source = view.gbuffers.depth_proxy.lock().srv.clone().into();
+                hdao.unk70_dest_res = depth_half_surf.resolution_with_recip();
+                hdao.unk80_source_res = depth_full_surf.resolution_with_recip();
+            }
 
-        //     self.execute_global_pipeline(
-        //         cmd,
-        //         &self.globals.pipelines.downsample_depth_buffer,
-        //         "downsample_depth_buffer",
-        //     );
-        // }
+            self.execute_global_pipeline(
+                cmd,
+                &self.globals.pipelines.downsample_depth_buffer,
+                "downsample_depth_buffer",
+            );
+        }
 
         self.submit_uber_depth_generation(cmd, view);
     }

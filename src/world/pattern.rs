@@ -2,33 +2,33 @@ use std::io::{Cursor, Seek, SeekFrom};
 
 use alkahest_data::{
     map::ComponentData,
-    pattern::{SPattern, S8080841B},
+    pattern::{S8080841B, SPattern},
     tfx::{
+        TfxFeatureRenderer,
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
-        TfxFeatureRenderer,
     },
 };
 use alkahest_render::{
+    Renderer,
     feature::{
         cubemap::CubemapRenderer, decals::DecalCollectionRenderer, decorators::DecoratorRenderer,
         light::LightRenderer, rigid_model::DynamicModel, road_decals::RoadDecalCollectionRenderer,
         static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
-    Renderer,
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use crate::world::{
-    permutations::PermutationConfig, render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
+    UnimplementedTigerComponent, UnimplementedTigerComponents,
+    permutations::PermutationConfig,
+    render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
     transform::Transform,
-    UnimplementedTigerComponent,
-    UnimplementedTigerComponents,
 };
 
 pub fn spawn_pattern(
@@ -358,16 +358,7 @@ pub fn spawn_pattern_from_header(
                     );
                 }
 
-                let component = UnimplementedTigerComponent {
-                    class_id: component.unk10.resource_type,
-                    hash: component.taghash(),
-                    name: None,
-                };
-                if let Ok(mut components) = world.get::<&mut UnimplementedTigerComponents>(entity) {
-                    components.0.push(component);
-                } else {
-                    world.insert_one(entity, UnimplementedTigerComponents(vec![component]))?;
-                }
+                add_unknown_component!(None);
             }
         }
     }

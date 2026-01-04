@@ -183,15 +183,14 @@ impl Renderer {
 
         // self.submit_bloom(cmd);
 
-        view.shading_result_read
-            .lock()
-            .update(cmd, view.surfaces.get(view.shading_result));
-
-        {
-            // view.shading_result_read
-            //     .lock()
-            //     .update(cmd, view.surfaces.get(view.shading_result));
-            view.surfaces.get(view.output).bind_single(cmd);
+        if matches!(
+            debug_pipeline,
+            None | Some(DebugPipeline::DeferredShading) | Some(DebugPipeline::DeferredShadingNoSun)
+        ) {
+            view.shading_result_read
+                .lock()
+                .update(cmd, view.surfaces.get(view.shading_result));
+            view.surfaces.get(view.shading_result).bind_single(cmd);
             cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
             // cmd.flush_states();
             self.execute_global_pipeline(
@@ -199,8 +198,23 @@ impl Renderer {
                 self.globals
                             .pipelines
                             // .screen_area_global_lut3d_no_tonemap,
-                            .get_specialized_lut3d_pipeline(true, false, true),
+                            .get_specialized_lut3d_pipeline(true, false, false),
                 "screen_area_global_lut3d",
+            );
+        }
+
+        view.shading_result_read
+            .lock()
+            .update(cmd, view.surfaces.get(view.shading_result));
+
+        {
+            // Directly blit to output
+            self.blit_srv(
+                cmd,
+                &view.shading_result_read.lock().srv,
+                &view.surfaces.get(view.output).rtv,
+                true,
+                "final_blit_debug",
             );
         }
 
@@ -268,7 +282,7 @@ impl Renderer {
 
         let near = Camera::NEAR;
         let far = Camera::FAR;
-        ext.deferred.depth_constants = Vec4::new(
+        ext.deferred.depth_constants = vec4(
             1.0 / far,
             (far - near) / (far * near),
             0.00000000,
@@ -276,7 +290,7 @@ impl Renderer {
         );
 
         // ext.deferred.gbuffer_resolution_scale_offset =
-        //     Vec4::new(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
+        //     vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
         ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
         ext.deferred.deferred_rt0 = view.gbuffers.albedo.into();
         ext.deferred.deferred_rt1 = view.gbuffers.normal.into();
@@ -291,7 +305,7 @@ impl Renderer {
         ext.decal.depth_read = view.gbuffers.depth_proxy.lock().srv.clone().into();
         ext.decal.normals_read = view.gbuffers.normal_read.into();
         ext.decal.depth_constants = ext.deferred.depth_constants;
-        ext.decal.unk30 = Vec4::new(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
+        ext.decal.unk30 = vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
 
         *ext.global_lighting = GlobalLighting {
             unk08: self.gpu.placeholder_white.view.clone().into(),
@@ -330,10 +344,20 @@ impl Renderer {
             unk48: view.lighting.distortion.into(), // distortion
             unk58: self.common.temporary_vignette.view.clone().into(), // vignette
             unk7c: 0.9968,
-            unkf0: Vec4::new(0.13281, 0.23611, 0.00, 0.00), // distortion related
+
+            // unk80: 0.9968, // Skydock IV
+            unk80: 0.1, // Orbit
+
+            unk90: vec4(32.0, 1024.0, 0.0, 0.0),
+            unka0: vec4(0.03125, -5.0, 14.0, 25.0),
+            unkb0: 0.5,
+            unkb4: 2.0,
+            unke0: vec4(0.25, -0.225, 0.40, 0.96),
+            unkf0: vec4(0.13281, 0.23611, 0.00, 0.00), // distortion related
+            // unkf0: Vec4::ZERO,
             unk140: 0.05,
-            unk150: Vec4::new(0.3, 0.5, 0.0, 0.02),
-            unk160: Vec4::new(0.3, 0.5, 0.0, 0.5),
+            unk150: Vec4::default(), //vec4(0.3, 0.5, 0.0, 0.02),
+            unk160: Vec4::default(), //vec4(0.3, 0.5, 0.0, 0.5),
             ..Default::default()
         }
         .into();
@@ -344,7 +368,7 @@ impl Renderer {
         //     unk30: self.gbuffers.uber_depth_half.into(),
         //     unk40: self.gbuffers.uber_depth_quarter.into(),
         //     unk50: ext.deferred.depth_constants,
-        //     unk70: Vec4::new(0.0, 0.0, depth_res.0 as f32, depth_res.1 as f32),
+        //     unk70: vec4(0.0, 0.0, depth_res.0 as f32, depth_res.1 as f32),
         //     ..Default::default()
         // };
 
@@ -390,15 +414,15 @@ impl Renderer {
                 exposure_illum_relative_glow: ext.frame.exposure_illum_relative * 16.0,
                 exposure_scale_for_shading: ext.frame.exposure_scale,
                 exposure_illum_relative: ext.frame.exposure_illum_relative,
-                random_seed_scales: Vec4::new(
+                random_seed_scales: vec4(
                     (render_time * 60.0 + 33.75) * 1.258699,
                     (render_time * 60.0 + 60.0) * 0.9583125,
                     (render_time * 60.0 + 60.0) * 8.789123,
                     (render_time * 60.0 + 33.75) * 2.311535,
                 ),
-                unk3: Vec4::new(0.5, 0.5, 0.0, 0.0),
-                unk4: Vec4::new(1.0, 1.0, 0.0, 1.0),
-                unk5: Vec4::new(0.00, -f32::NAN, 512.00, 0.00),
+                unk3: vec4(0.5, 0.5, 0.0, 0.0),
+                unk4: vec4(1.0, 1.0, 0.0, 1.0),
+                unk5: vec4(0.00, -f32::NAN, 512.00, 0.00),
                 unk6: Vec4::ONE,
             },
         );
@@ -434,7 +458,7 @@ impl Renderer {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DebugPipeline {
     DeferredShading,
     DeferredShadingNoSun,

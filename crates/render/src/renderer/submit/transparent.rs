@@ -77,7 +77,7 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
             cmd.flush_states();
-            self.submit_stage_parallel(
+            self.submit_stage(
                 cmd,
                 RenderStage::Distortion,
                 FeatureRendererSubscription::all(),

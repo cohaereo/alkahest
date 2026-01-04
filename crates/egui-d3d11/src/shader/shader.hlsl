@@ -24,5 +24,8 @@ Texture2D texture0;
 
 float4 ps_main(vs_out input) : SV_TARGET {
   float4 t = texture0.Sample(sampler0, input.uv);
+#ifdef CLEAR_ALPHA
+    t.a = 1.0;
+#endif
   return float4(pow(input.color.rgb, 1.0 / 1.9) * t.rgb, input.color.a * t.a);
 }

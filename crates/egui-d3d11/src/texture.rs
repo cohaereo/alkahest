@@ -17,7 +17,7 @@ pub struct TextureAllocator {
     allocated: HashMap<TextureId, ManagedTexture>,
     /// User-loaded DX11 textures
     allocated_unmanaged:
-        HashMap<TextureId, (d3d11::ShaderResourceView, Option<egui::TextureFilter>)>,
+        HashMap<TextureId, (d3d11::ShaderResourceView, Option<egui::TextureFilter>, bool)>,
     unmanaged_free_handles: Vec<TextureId>,
     unmanaged_index: u64,
     unmanaged_temporary_index: u64,
@@ -49,10 +49,10 @@ impl TextureAllocator {
     pub fn get_by_id(
         &self,
         tid: TextureId,
-    ) -> Option<(d3d11::ShaderResourceView, Option<egui::TextureFilter>)> {
+    ) -> Option<(d3d11::ShaderResourceView, Option<egui::TextureFilter>, bool)> {
         self.allocated
             .get(&tid)
-            .map(|t| (t.resource.clone(), None))
+            .map(|t| (t.resource.clone(), None, true))
             .or_else(|| self.allocated_unmanaged.get(&tid).cloned())
     }
 
@@ -67,7 +67,7 @@ impl TextureAllocator {
             self.unmanaged_index += 1;
             TextureId::User((1 << 60) + self.unmanaged_index)
         };
-        self.allocated_unmanaged.insert(tid, (srv, filter));
+        self.allocated_unmanaged.insert(tid, (srv, filter, true));
         tid
     }
 
@@ -76,11 +76,12 @@ impl TextureAllocator {
         &mut self,
         srv: d3d11::ShaderResourceView,
         filter: Option<egui::TextureFilter>,
+        alpha: bool,
     ) -> TextureId {
         self.unmanaged_temporary_index += 1;
         let tid = TextureId::User((1 << 63) + self.unmanaged_temporary_index);
 
-        self.allocated_unmanaged.insert(tid, (srv, filter));
+        self.allocated_unmanaged.insert(tid, (srv, filter, alpha));
         tid
     }
 
@@ -93,7 +94,7 @@ impl TextureAllocator {
     }
 
     pub fn set_filter(&mut self, tid: TextureId, filter: Option<egui::TextureFilter>) {
-        if let Some((_, f)) = self.allocated_unmanaged.get_mut(&tid) {
+        if let Some((_, f, _)) = self.allocated_unmanaged.get_mut(&tid) {
             *f = filter;
         }
     }

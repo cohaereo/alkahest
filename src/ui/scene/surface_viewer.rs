@@ -16,10 +16,11 @@ impl super::Scene {
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (_handle, surface) in surfaces.iter() {
-                let texture_id = surface
-                    .srv
-                    .clone()
-                    .map(|srv| renderer.textures_mut().allocate_dx_temporary(srv, None));
+                let texture_id = surface.srv.clone().map(|srv| {
+                    renderer
+                        .textures_mut()
+                        .allocate_dx_temporary(srv, None, false)
+                });
 
                 let aspect_ratio = surface.resolution().0 as f32 / surface.resolution().1 as f32;
 

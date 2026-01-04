@@ -105,7 +105,7 @@ pub struct RenderSettings {
 impl Default for RenderSettings {
     fn default() -> Self {
         Self {
-            exposure_scale: 2.0,
+            exposure_scale: 0.050,
             vertex_ao: true,
         }
     }

@@ -227,7 +227,9 @@ impl D3D11Renderer {
                 bottom: mesh.clip.bottom() as _,
             }]);
 
-            if let Some((texture, texture_filter)) = &texture {
+            let mut use_alpha = false;
+            if let Some((texture, texture_filter, texture_uses_alpha)) = &texture {
+                use_alpha = *texture_uses_alpha;
                 self.set_sampler_state(cmd, texture_filter.unwrap_or(egui::TextureFilter::Linear))?;
                 cmd.pixel_set_shader_resources(0, &[Some(texture)]);
             }
@@ -240,7 +242,11 @@ impl D3D11Renderer {
             )?;
             cmd.input_assembler_set_index_buffer(&idx, dxgi::Format::R32Uint, 0);
             cmd.vertex_set_shader(&self.shaders.vertex);
-            cmd.pixel_set_shader(&self.shaders.pixel);
+            cmd.pixel_set_shader(if use_alpha {
+                &self.shaders.pixel
+            } else {
+                &self.shaders.pixel_no_alpha
+            });
 
             cmd.draw_indexed(mesh.indices.len() as _, 0, 0);
 
