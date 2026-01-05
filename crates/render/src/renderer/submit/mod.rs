@@ -11,7 +11,7 @@ use std::{fmt::Debug, sync::Arc};
 
 use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, ShaderStage};
-use glam::{vec4, Mat4, Vec4};
+use glam::{Mat4, Vec4, vec4};
 
 use super::Renderer;
 use crate::{
@@ -109,12 +109,8 @@ impl Renderer {
 
         let output = view.surfaces.get(view.shading_result);
         self.profiler.scope(cmd, "debug_view").span(|| {
-            cmd.rasterizer_set_viewports(&[d3d11::Viewport::builder()
-                .width(output.resolution().0 as f32)
-                .height(output.resolution().1 as f32)
-                .build()]);
             cmd.clear_render_target_view(output.rtv.as_ref().unwrap(), &[0., 0., 0., 1.0]);
-            cmd.output_merger_set_render_targets(std::slice::from_ref(&output.rtv.as_ref()), None);
+            output.bind_single(cmd);
 
             if let Some(debug_pipeline) = debug_pipeline {
                 let p = &self.globals.pipelines;
@@ -212,6 +208,7 @@ impl Renderer {
             .update(cmd, view.surfaces.get(view.shading_result));
 
         {
+            self.bind_surfaces(cmd, &[view.output], None);
             // Directly blit to output
             self.blit_srv(
                 cmd,
