@@ -266,7 +266,7 @@ impl Scene {
 
         ui.strong("Scene Settings");
         ui.checkbox(&mut settings.vertex_ao, "Vertex AO");
-        egui::Slider::new(&mut settings.exposure_scale, 0.01..=3.0)
+        egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
             .logarithmic(true)
             .text("Exposure Scale")
             .show_value(true)
