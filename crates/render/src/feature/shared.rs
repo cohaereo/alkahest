@@ -1,9 +1,9 @@
 use tiger_pkg::TagHash;
 
 use crate::{
+    Renderer,
     asset::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     gpu::command_list::CommandList,
-    Renderer,
 };
 
 pub(super) struct ModelBuffers {
@@ -54,6 +54,15 @@ impl ModelBuffers {
 
         if let Some(color_buffer) = &self.color_buffer {
             cmd.vertex_set_shader_resources(0, &[color_buffer.srv.as_ref()]);
+        } else {
+            cmd.vertex_set_shader_resources(
+                0,
+                &[Renderer::instance()
+                    .common
+                    .vertex_color_fallback
+                    .srv
+                    .as_ref()],
+            );
         }
 
         Some(())

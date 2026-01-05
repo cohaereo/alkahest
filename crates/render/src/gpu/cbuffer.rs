@@ -3,13 +3,12 @@ use std::marker::PhantomData;
 use alkahest_data::tfx::ShaderStage;
 use anyhow::Context;
 use d3d11::{
-    dxgi,
-    srv::{SrvBufferExFlags, SrvDimension},
     BindFlags, BufferDesc, CpuAccessFlags, ResourceMiscFlags, ShaderResourceViewDesc,
-    SubresourceMapGuard, Usage,
+    SubresourceMapGuard, Usage, dxgi,
+    srv::{SrvBufferExFlags, SrvDimension},
 };
 
-use super::{command_list::CommandList, Gpu};
+use super::{Gpu, command_list::CommandList};
 use crate::gpu::command_list::ContextExt;
 
 pub struct ConstantBuffer<T: Sized> {
@@ -178,6 +177,7 @@ impl<T> ConstantBuffer<T> {
         &self.buffer
     }
 
+    // TODO(cohae): The hidden control flow here can be confusing. We should
     pub fn bind(&self, cmd: &mut CommandList, stage: ShaderStage, slot: u32) {
         if self.srv.is_some() {
             self.bind_srv(cmd, stage, slot);

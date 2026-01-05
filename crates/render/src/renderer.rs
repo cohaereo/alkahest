@@ -289,6 +289,7 @@ pub struct CommonResources {
     default_lut: Texture,
 
     pub shadowmap_vs_t2: Texture,
+    pub vertex_color_fallback: VertexBuffer,
 
     blit_vs: d3d11::VertexShader,
     blit_ps: d3d11::PixelShader,
@@ -354,12 +355,16 @@ impl CommonResources {
             false,
         )?;
 
+        let vertex_color_fallback =
+            VertexBuffer::load_data(gpu, bytemuck::cast_slice(&[[255u8, 255, 255, 255]]), 4)?;
+
         Ok(Self {
             temporary_sky_hemisphere: Texture::load_2d_dds(
                 gpu,
                 include_bytes!("../builtin/textures/sky_hemisphere_cosmo.dds"),
             )?,
             shadowmap_vs_t2,
+            vertex_color_fallback,
             default_lut,
             temporary_vignette: Texture::load_2d_dds(
                 gpu,
