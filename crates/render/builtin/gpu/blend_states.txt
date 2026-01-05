@@ -1,0 +1,540 @@
+QuadBlendState { unk0: 0, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 1, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 2, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 3, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 4, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 5, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 6, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 7, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 8, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 9, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Min, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Min, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Min, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Min, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Min, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Min, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Min, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Min, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 10, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Max, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Max, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Max, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Max, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Max, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Max, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Max, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Max, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 11, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: One, blend_op: Add, src_blend_alpha: DestAlpha, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 12, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: SrcAlpha, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: SrcAlpha, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: SrcAlpha, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: SrcAlpha, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: SrcAlpha, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: SrcAlpha, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: SrcAlpha, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: SrcAlpha, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 13, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: BlendFactor, dest_blend: InvBlendFactor, blend_op: Add, src_blend_alpha: BlendFactor, dest_blend_alpha: InvBlendFactor, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: BlendFactor, dest_blend: InvBlendFactor, blend_op: Add, src_blend_alpha: BlendFactor, dest_blend_alpha: InvBlendFactor, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: BlendFactor, dest_blend: InvBlendFactor, blend_op: Add, src_blend_alpha: BlendFactor, dest_blend_alpha: InvBlendFactor, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: BlendFactor, dest_blend: InvBlendFactor, blend_op: Add, src_blend_alpha: BlendFactor, dest_blend_alpha: InvBlendFactor, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 14, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvSrcAlpha, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: InvSrcAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvSrcAlpha, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: InvSrcAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvSrcAlpha, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: InvSrcAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvSrcAlpha, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: InvSrcAlpha, dest_blend_alpha: SrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 15, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 16, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 17, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 1 },
+] }
+QuadBlendState { unk0: 18, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+] }
+QuadBlendState { unk0: 19, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+] }
+QuadBlendState { unk0: 20, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+] }
+QuadBlendState { unk0: 21, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+] }
+QuadBlendState { unk0: 22, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 23, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 24, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 25, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 26, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 5 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 27, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 28, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 29, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 30, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 31, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 3 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 32, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 33, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 34, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 35, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: SrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 36, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 37, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 38, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 39, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 40, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 41, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 42, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 43, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 44, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 5 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 45, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 46, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 47, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 48, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 49, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 50, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 5 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 51, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 52, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 53, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 54, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 55, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 5 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 56, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 57, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 58, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 59, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 60, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 5 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 61, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 1 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 62, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 63, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 64, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 65, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 66, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 67, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 68, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 69, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 70, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 5 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 71, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 72, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 73, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 4 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 74, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 2 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 75, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 6 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 76, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: Zero, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 77, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestColor, dest_blend: SrcColor, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 78, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 79, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: DestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+] }
+QuadBlendState { unk0: 80, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvDestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvDestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvDestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: InvDestAlpha, dest_blend: One, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+] }
+QuadBlendState { unk0: 81, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: DestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: DestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: DestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: DestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+] }
+QuadBlendState { unk0: 82, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvDestAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 7 },
+] }
+QuadBlendState { unk0: 83, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 84, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 7 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 7 },
+] }
+QuadBlendState { unk0: 85, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 8 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 8 },
+] }
+QuadBlendState { unk0: 86, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Src1Color, dest_blend: InvSrc1Color, blend_op: Add, src_blend_alpha: Src1Alpha, dest_blend_alpha: InvSrc1Alpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+    RenderTargetBlendDesc { blend_enable: BOOL(0), src_blend: One, dest_blend: Zero, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: Zero, blend_op_alpha: Add, render_target_write_mask: 0 },
+] }
+QuadBlendState { unk0: 87, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: Add, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 88, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: Zero, dest_blend: InvSrcAlpha, blend_op: Add, src_blend_alpha: Zero, dest_blend_alpha: InvSrcAlpha, blend_op_alpha: Add, render_target_write_mask: 15 },
+] }
+QuadBlendState { unk0: 89, render_targets: [
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: RevSubtract, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: RevSubtract, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: RevSubtract, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: RevSubtract, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: RevSubtract, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: RevSubtract, render_target_write_mask: 15 },
+    RenderTargetBlendDesc { blend_enable: BOOL(1), src_blend: One, dest_blend: One, blend_op: RevSubtract, src_blend_alpha: One, dest_blend_alpha: One, blend_op_alpha: RevSubtract, render_target_write_mask: 15 },
+] }

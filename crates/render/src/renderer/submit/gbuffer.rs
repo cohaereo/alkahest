@@ -18,7 +18,7 @@ impl Renderer {
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
-        geo: &GeometryCommandLists,
+        geo: Option<&GeometryCommandLists>,
     ) {
         profiling::scope!("submit_gbuffer_generation");
         let _gpuscope = self.profiler.scope(cmd, "submit_gbuffer");
@@ -32,9 +32,17 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
 
-            let (sync_job, set) = &geo.generate_gbuffer;
-            sync_job.wait();
-            self.cmd_pool.finish(cmd, *set);
+            if let Some(geo) = geo {
+                let (sync_job, set) = &geo.generate_gbuffer;
+                sync_job.wait();
+                self.cmd_pool.finish(cmd, *set);
+            } else {
+                self.submit_stage(
+                    cmd,
+                    RenderStage::GenerateGbuffer,
+                    FeatureRendererSubscription::all(),
+                );
+            }
         }
 
         {
@@ -50,14 +58,22 @@ impl Renderer {
                 .copy(cmd, view.gbuffers.normal, view.gbuffers.normal_read);
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(0));
 
-            let (sync_job, set) = &geo.decals;
-            sync_job.wait();
-            self.cmd_pool.finish(cmd, *set);
-            // self.submit_stage_parallel_apply(
-            //     cmd,
-            //     RenderStage::Decals,
-            //     FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
-            // );
+            if let Some(geo) = geo {
+                let (sync_job, set) = &geo.decals;
+                sync_job.wait();
+                self.cmd_pool.finish(cmd, *set);
+                self.submit_stage_parallel_apply(
+                    cmd,
+                    RenderStage::Decals,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
+                );
+            } else {
+                self.submit_stage(
+                    cmd,
+                    RenderStage::Decals,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
+                );
+            }
 
             // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
             cmd.state_override = PipelineState::new(None, None, Some(1), None);
@@ -119,7 +135,7 @@ impl Renderer {
             );
         }
 
-        // self.submit_uber_depth_generation(cmd, view);
+        self.submit_uber_depth_generation(cmd, view);
     }
 
     fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &View) {

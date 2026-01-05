@@ -17,7 +17,7 @@ use alkahest_data::tfx::{
 use anyhow::Context;
 use crossbeam::atomic::AtomicCell;
 use d3d11::dxgi;
-use glam::Mat4;
+use glam::{Mat4, Vec4};
 use globals::RenderGlobals;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use surface::Surfaces;
@@ -61,6 +61,7 @@ pub struct Renderer {
     pub cmd_pool: Arc<CommandListPool>,
 
     frame_scope: ConstantBuffer<TempFrameScope>,
+    transparent_advanced_scope: ConstantBuffer<[Vec4; 8]>,
     debug_vs: d3d11::VertexShader,
     debug_ps: d3d11::PixelShader,
     clear_ao_vs: d3d11::VertexShader,
@@ -140,6 +141,7 @@ impl Renderer {
             surfaces: RwLock::new(surfaces),
             cmd_pool: CommandListPool::new(&gpu).into(),
             frame_scope: ConstantBuffer::create(&gpu, None)?,
+            transparent_advanced_scope: ConstantBuffer::create(&gpu, None)?,
             debug_cbuffer: ConstantBuffer::create(&gpu, Some(&Mat4::ZERO))?,
             postprocess_cbuffer: ConstantBuffer::create(&gpu, None)?,
 

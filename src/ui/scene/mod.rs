@@ -270,6 +270,8 @@ impl Scene {
             .ui(ui);
 
         ui.checkbox(&mut settings.bloom, "Bloom");
+        ui.checkbox(&mut settings.volumetrics, "Volumetrics");
+        ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit");
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {

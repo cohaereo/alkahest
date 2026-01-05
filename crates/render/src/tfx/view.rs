@@ -104,6 +104,8 @@ pub struct RenderSettings {
     pub exposure_scale: f32,
     pub vertex_ao: bool,
     pub bloom: bool,
+    pub multithreading: bool,
+    pub volumetrics: bool,
 }
 
 impl Default for RenderSettings {
@@ -112,6 +114,8 @@ impl Default for RenderSettings {
             exposure_scale: 0.050,
             vertex_ao: true,
             bloom: true,
+            multithreading: true,
+            volumetrics: true,
         }
     }
 }

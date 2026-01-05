@@ -4,8 +4,10 @@ use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage
 
 use super::Renderer;
 use crate::{
-    cmd_event_span, gpu::command_list::CommandList,
-    renderer::submit::geometry::GeometryCommandLists, tfx::view::View,
+    cmd_event_span,
+    gpu::command_list::CommandList,
+    renderer::submit::geometry::GeometryCommandLists,
+    tfx::{externs, view::View},
 };
 
 impl Renderer {
@@ -13,7 +15,7 @@ impl Renderer {
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
-        geo: &GeometryCommandLists,
+        geo: Option<&GeometryCommandLists>,
     ) {
         // self.compute_ssao(cmd);
         profiling::scope!("submit_lighting");
@@ -73,112 +75,126 @@ impl Renderer {
 
             view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
             cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
-            let (sync_job, set) = &geo.lighting;
-            sync_job.wait();
-            self.cmd_pool.finish(cmd, *set);
+            if let Some(geo) = geo {
+                let (sync_job, set) = &geo.lighting;
+                sync_job.wait();
+                self.cmd_pool.finish(cmd, *set);
+            } else {
+                view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
+                cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
+                cmd.flush_states();
+                self.submit_stage(
+                    cmd,
+                    RenderStage::LightingApply,
+                    FeatureRendererSubscription::all(),
+                );
+            }
         }
 
-        // self.submit_volumetrics(cmd);
+        self.submit_volumetrics(cmd, view);
     }
 
-    // pub(super) fn submit_volumetrics(&self, cmd: &mut CommandList) {
-    //     profiling::scope!("submit_volumetrics");
+    pub(super) fn submit_volumetrics(&self, cmd: &mut CommandList, view: &View) {
+        profiling::scope!("submit_volumetrics");
+        let _gpuspan = self.profiler.scope(cmd, "submit_volumetrics");
 
-    //     // cmd.pixel_set_shader_resources(
-    //     //     10,
-    //     //     &[self
-    //     //         .surfaces
-    //     //         .get(self.gbuffers.uber_depth_eigth)
-    //     //         .srv
-    //     //         .clone()],
-    //     // );
-    //     {
-    //         let ext = self.externs.get_mut();
-    //         // ext.deferred.depth_constants = Vec4::new(0.0, 1. / 0.01, 0.0, 0.0);
-    //         ext.deferred.deferred_depth = self.gbuffers.uber_depth_eighth.into();
-    //         let volumetrics = self.surfaces.get(self.lighting.volumetrics_rt0);
-    //         ext.view.derive_matrices(volumetrics.resolution());
-    //     }
-    //     self.globals.scopes.view.bind(cmd).unwrap();
-    //     self.globals.scopes.transparent.bind(cmd).unwrap();
+        // cmd.pixel_set_shader_resources(
+        //     10,
+        //     &[self
+        //         .surfaces
+        //         .get(view.gbuffers.uber_depth_eigth)
+        //         .srv
+        //         .clone()],
+        // );
+        {
+            let ext = self.externs.get_mut();
+            // ext.deferred.depth_constants = Vec4::new(0.0, 1. / 0.01, 0.0, 0.0);
+            ext.deferred.deferred_depth = view.gbuffers.uber_depth_eighth.into();
+            let volumetrics = view.surfaces.get(view.lighting.volumetrics_rt0);
+            ext.view.derive_matrices(volumetrics.resolution());
+        }
+        self.globals.scopes.view.bind(cmd).unwrap();
+        self.globals.scopes.transparent.bind(cmd).unwrap();
 
-    //     self.lighting.bind_volumetrics(self, cmd);
-    //     cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
-    //     {
-    //         cmd_event_span!(cmd, "volumetrics");
-    //         self.submit_stage(
-    //             cmd,
-    //             RenderStage::Volumetrics,
-    //             FeatureRendererSubscription::all(),
-    //         );
-    //     }
+        view.lighting.bind_volumetrics(self, cmd);
+        cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
+        {
+            cmd_event_span!(cmd, "volumetrics");
+            self.submit_stage(
+                cmd,
+                RenderStage::Volumetrics,
+                FeatureRendererSubscription::all(),
+            );
+        }
 
-    //     {
-    //         let volumetrics_upres = self.surfaces.get(self.lighting.volumetrics_upres);
-    //         let ext = self.externs.get_mut();
-    //         ext.view.derive_matrices(volumetrics_upres.resolution());
+        {
+            let volumetrics_upres = view.surfaces.get(view.lighting.volumetrics_upres);
+            let ext = self.externs.get_mut();
+            ext.view.derive_matrices(volumetrics_upres.resolution());
 
-    //         ext.deferred.deferred_depth = self.gbuffers.uber_depth_half.into();
-    //         ext.postprocess = externs::Postprocess {
-    //             unk08: self.lighting.volumetrics_rt1.into(),
-    //             unk00: self.lighting.volumetrics_rt0.into(),
-    //             unk18: self.gbuffers.uber_depth_eighth.into(),
-    //             res_for_unk00: self
-    //                 .surfaces
-    //                 .get(self.lighting.volumetrics_rt0)
-    //                 .resolution_with_recip(),
-    //             output_res: volumetrics_upres.resolution_with_recip(),
-    //             ..Default::default()
-    //         }
-    //     }
-    //     self.globals.scopes.view.bind(cmd).unwrap();
-    //     self.bind_surfaces(cmd, &[self.lighting.volumetrics_upres], None);
-    //     cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-    //     self.execute_global_pipeline(
-    //         cmd,
-    //         &self.globals.pipelines.volumetrics_upres_1,
-    //         "volumetrics_upres_1",
-    //     );
+            ext.deferred.deferred_depth = view.gbuffers.uber_depth_half.into();
+            ext.postprocess = externs::Postprocess {
+                unk08: view.lighting.volumetrics_rt1.into(),
+                unk00: view.lighting.volumetrics_rt0.into(),
+                unk18: view.gbuffers.uber_depth_eighth.into(),
+                res_for_unk00: view
+                    .surfaces
+                    .get(view.lighting.volumetrics_rt0)
+                    .resolution_with_recip(),
+                output_res: volumetrics_upres.resolution_with_recip(),
+                ..Default::default()
+            }
+            .into();
+        }
+        self.globals.scopes.view.bind(cmd).unwrap();
+        self.bind_surfaces(cmd, &[view.lighting.volumetrics_upres], None);
+        cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+        self.execute_global_pipeline(
+            cmd,
+            &self.globals.pipelines.volumetrics_upres_1,
+            "volumetrics_upres_1",
+        );
 
-    //     // Rebind full resolution depth buffer
-    //     {
-    //         let shading_result = self.surfaces.get(self.shading_result);
-    //         let ext = self.externs.get_mut();
-    //         ext.deferred.deferred_depth = self.gbuffers.depth_proxy.lock().srv.clone().into();
-    //         ext.view.derive_matrices(shading_result.resolution());
-    //     }
-    //     self.globals.scopes.view.bind(cmd).unwrap();
-    // }
+        // Rebind full resolution depth buffer
+        {
+            let shading_result = view.surfaces.get(view.shading_result);
+            let ext = self.externs.get_mut();
+            ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
+            ext.view.derive_matrices(shading_result.resolution());
+        }
+        self.globals.scopes.view.bind(cmd).unwrap();
+    }
 
-    // pub(super) fn apply_volume_fog(&self, cmd: &mut CommandList) {
-    //     profiling::scope!("apply_volume_fog");
+    pub(super) fn apply_volume_fog(&self, cmd: &mut CommandList, view: &View) {
+        profiling::scope!("apply_volume_fog");
 
-    //     {
-    //         let shading_result = self.surfaces.get(self.shading_result);
-    //         let ext = self.externs.get_mut();
-    //         ext.deferred.deferred_depth = self.gbuffers.depth_proxy.lock().srv.clone().into();
-    //         ext.view.derive_matrices(shading_result.resolution());
+        {
+            let shading_result = view.surfaces.get(view.shading_result);
+            let ext = self.externs.get_mut();
+            ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
+            ext.view.derive_matrices(shading_result.resolution());
 
-    //         ext.postprocess = externs::Postprocess {
-    //             unk00: self.lighting.volumetrics_upres.into(),
-    //             res_for_unk00: self
-    //                 .surfaces
-    //                 .get(self.lighting.volumetrics_upres)
-    //                 .resolution_with_recip(),
-    //             output_res: shading_result.resolution_with_recip(),
-    //             ..Default::default()
-    //         }
-    //     }
+            ext.postprocess = externs::Postprocess {
+                unk00: view.lighting.volumetrics_upres.into(),
+                res_for_unk00: view
+                    .surfaces
+                    .get(view.lighting.volumetrics_upres)
+                    .resolution_with_recip(),
+                output_res: shading_result.resolution_with_recip(),
+                ..Default::default()
+            }
+            .into();
+        }
 
-    //     self.globals.scopes.view.bind(cmd).unwrap();
-    //     self.bind_surfaces(cmd, &[self.shading_result], None);
-    //     cmd.state = PipelineState::new(Some(5), Some(0), Some(0), Some(0));
-    //     self.execute_global_pipeline(
-    //         cmd,
-    //         &self.globals.pipelines.copy_texture_bilinear,
-    //         "copy_texture_bilinear (apply volumetrics)",
-    //     );
-    // }
+        self.globals.scopes.view.bind(cmd).unwrap();
+        self.bind_surfaces(cmd, &[view.shading_result], None);
+        cmd.state = PipelineState::new(Some(5), Some(0), Some(0), Some(0));
+        self.execute_global_pipeline(
+            cmd,
+            &self.globals.pipelines.copy_texture_bilinear,
+            "copy_texture_bilinear (apply volumetrics)",
+        );
+    }
 
     // fn compute_ssao(&self, cmd: &mut CommandList) {
     //     cmd_event_span!(cmd, "compute_ssao");
@@ -186,10 +202,10 @@ impl Renderer {
     //         let ext = self.externs.get_mut();
     //         let main_res = self
     //             .surfaces
-    //             .get(self.shading_result)
+    //             .get(view.shading_result)
     //             .resolution_with_recip();
     //         ext.ssao = externs::Ssao {
-    //             unk08: self.gbuffers.depth_proxy.lock().srv.clone().into(),
+    //             unk08: view.gbuffers.depth_proxy.lock().srv.clone().into(),
     //             unk20: main_res,
     //             unk30: main_res,
     //             unk40: main_res,
@@ -198,7 +214,7 @@ impl Renderer {
     //         };
     //     }
 
-    //     self.bind_surfaces(cmd, &[self.lighting.ssao], None);
+    //     self.bind_surfaces(cmd, &[view.lighting.ssao], None);
     //     cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
     //     self.execute_global_pipeline(
     //         cmd,
@@ -208,10 +224,10 @@ impl Renderer {
 
     //     {
     //         let ext = self.externs.get_mut();
-    //         ext.ssao.unk00 = self.lighting.ssao.into();
+    //         ext.ssao.unk00 = view.lighting.ssao.into();
     //         ext.ssao.unka0_bilateral_blur = Vec4::new(2.40, 0.0, 0.0, 0.0);
     //     }
-    //     self.bind_surfaces(cmd, &[self.lighting.ssao_pong], None);
+    //     self.bind_surfaces(cmd, &[view.lighting.ssao_pong], None);
     //     self.execute_global_pipeline(
     //         cmd,
     //         &self.globals.pipelines.ssao_bilateral_filter,
@@ -220,10 +236,10 @@ impl Renderer {
 
     //     {
     //         let ext = self.externs.get_mut();
-    //         ext.ssao.unk00 = self.lighting.ssao_pong.into();
+    //         ext.ssao.unk00 = view.lighting.ssao_pong.into();
     //         ext.ssao.unka0_bilateral_blur = Vec4::new(0.0, 2.40, 0.0, 0.0);
     //     }
-    //     self.bind_surfaces(cmd, &[self.lighting.ssao], None);
+    //     self.bind_surfaces(cmd, &[view.lighting.ssao], None);
     //     self.execute_global_pipeline(
     //         cmd,
     //         &self.globals.pipelines.ssao_bilateral_filter,

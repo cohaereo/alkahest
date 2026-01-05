@@ -18,7 +18,7 @@ use super::FeatureRenderer;
 use crate::{
     camera::Camera,
     tfx::{
-        externs::{self, DeferredLight, SimpleGeometry},
+        externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
         packet::CompactTransform,
         technique::Technique,
     },
@@ -28,7 +28,7 @@ use crate::{
 
 struct LightRendererData {
     technique_lighting_apply: Technique,
-    _technique_volumetrics: Option<Technique>,
+    technique_volumetrics: Option<Technique>,
     // technique_light_probe_apply: Technique,
 
     // TODO(cohae): This should be a shared resource (eg. a struct in the renderer that we can use instead of recreating it for every light/cubemap)
@@ -102,7 +102,7 @@ impl LightRenderer {
         Ok(Box::new(Self {
             data: Arc::new(LightRendererData {
                 technique_lighting_apply: Technique::load(&renderer.gpu, technique_shading)?,
-                _technique_volumetrics: technique_volumetrics
+                technique_volumetrics: technique_volumetrics
                     .is_some()
                     .then(|| Technique::load(&renderer.gpu, technique_volumetrics))
                     .transpose()?,
@@ -149,24 +149,21 @@ impl FeatureRenderer for LightRenderer {
     }
 
     fn submit(&self, cmd: &mut crate::gpu::command_list::CommandList, stage: RenderStage) {
-        if stage != RenderStage::LightingApply {
-            // TODO
+        if stage == RenderStage::LightProbeApply {
             return;
         }
 
         {
-            // let (scale, _rotation, _translation) =
-            //     self.local_to_world.to_scale_rotation_translation();
-
             let local_to_world_scaled = self.local_to_world * self.light_space_transform;
-            let externs = Renderer::instance().externs.get();
+            let global_externs = Renderer::instance().externs.get();
             cmd.externs.simple_geometry = Some(Box::new(SimpleGeometry {
-                local_to_world: externs.view.world_to_projective
+                local_to_world: global_externs.view.world_to_projective
                     * local_to_world_scaled
                     * Mat4::from_scale(Vec3::NEG_ONE),
             }));
 
-            let view_translation_inverse_mat4 = Mat4::from_translation(-externs.view.position());
+            let view_translation_inverse_mat4 =
+                Mat4::from_translation(-global_externs.view.position());
             let local_to_world_relative = view_translation_inverse_mat4 * self.local_to_world;
 
             let (min, max) = compute_light_bounds(self.light_space_transform);
@@ -184,9 +181,52 @@ impl FeatureRenderer for LightRenderer {
                 local_to_world: light_local_to_world,
                 ..Default::default()
             }));
+
+            if stage == RenderStage::Volumetrics {
+                let mut fog = VolumeFog::default();
+                fog.unk00 = light_local_to_world.inverse();
+                fog.unk40 = fog.unk00 * global_externs.view.target_pixel_to_world;
+                fog.unka0 = (max - min).extend(1.);
+                fog.unkb0 = 1.0;
+
+                let p = fog
+                    .unk00
+                    .mul_vec4(global_externs.view.position().extend(1.0));
+                let point_w_abs = (-p.wwww()).abs();
+                fog.unk80 = Vec4::select(point_w_abs.cmpge(Vec4::splat(0.0001)), p / p.wwww(), p);
+                // fog.unk80 = fog
+                //     .unk00
+                //     .project_point3(externs.view.position())
+                //     .extend(1.0);
+
+                if ((fog.unk80.x < -0.2) || (1.2 < fog.unk80.x))
+                    || ((fog.unk80.y < -0.2) || (1.2 < fog.unk80.y))
+                    || ((fog.unk80.z < -0.2) || (1.2 < fog.unk80.z))
+                {
+                    // cmd.state =
+                    //     cmd.state
+                    //         .select(&PipelineState::new(Some(0xf), Some(3), None, None));
+                    fog.unkb4 = -1.0;
+                } else {
+                    // cmd.state = cmd
+                    //     .state
+                    //     .select(&PipelineState::new(Some(1), Some(2), None, None));
+                    fog.unkb4 = 1.0;
+                }
+
+                cmd.externs.volume_fog = Some(fog.into());
+            }
         }
 
-        self.data.technique_lighting_apply.bind(cmd).unwrap();
+        if stage == RenderStage::Volumetrics {
+            if let Some(ref technique) = self.data.technique_volumetrics {
+                technique.bind(cmd).unwrap();
+            } else {
+                return;
+            }
+        } else {
+            self.data.technique_lighting_apply.bind(cmd).unwrap();
+        }
 
         cmd.set_input_topology(PrimitiveType::Triangles);
         cmd.set_input_layout(1); // float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12

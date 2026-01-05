@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
+use alkahest_data::tfx::{
+    FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
+};
 
 use super::Renderer;
 use crate::{
@@ -13,7 +15,7 @@ impl Renderer {
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
-        geo: &GeometryCommandLists,
+        geo: Option<&GeometryCommandLists>,
     ) {
         {
             {
@@ -44,9 +46,21 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
 
-            let (sync_job, set) = &geo.transparent;
-            sync_job.wait();
-            self.cmd_pool.finish(cmd, *set);
+            if let Some(geo) = geo {
+                let (sync_job, set) = &geo.transparent;
+                sync_job.wait();
+                self.cmd_pool.finish(cmd, *set);
+            } else {
+                self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
+                cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
+                self.submit_stage(
+                    cmd,
+                    RenderStage::Transparents,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+                        .without(TfxFeatureRenderer::SkyTransparent)
+                        .without(TfxFeatureRenderer::RigidObject),
+                );
+            }
 
             self.submit_stage(
                 cmd,

@@ -19,7 +19,7 @@ use crate::{
     cmd_event_span,
     gpu::command_list::CommandList,
     tfx::{
-        externs::{self, GlobalLighting, ScreenArea, TextureView},
+        externs::{self, GlobalLighting, ScreenArea, TextureView, UberDepth},
         scope::TempFrameScope,
         view::View,
     },
@@ -53,9 +53,13 @@ impl Renderer {
 
         self.globals.scopes.view.bind(cmd).unwrap();
 
-        let geo = self.submit_geometry_command_lists(cmd, view);
+        let geo = if view.settings.multithreading {
+            Some(self.submit_geometry_command_lists(cmd, view))
+        } else {
+            None
+        };
 
-        self.submit_gbuffer_generation(cmd, view, &geo);
+        self.submit_gbuffer_generation(cmd, view, geo.as_ref());
 
         if matches!(
             debug_pipeline,
@@ -64,7 +68,7 @@ impl Renderer {
                 | Some(DebugPipeline::LightDiffuse)
                 | Some(DebugPipeline::LightSpecular)
         ) {
-            self.submit_lighting(cmd, view, &geo);
+            self.submit_lighting(cmd, view, geo.as_ref());
         }
 
         self.clear_surface(cmd, view.shading_result, [0., 0., 0., 1.0]);
@@ -169,7 +173,7 @@ impl Renderer {
         //     .lock()
         //     .update(cmd, view.surfaces.get(view.shading_result));
 
-        self.submit_transparent(cmd, view, &geo);
+        self.submit_transparent(cmd, view, geo.as_ref());
 
         view.shading_result_read
             .lock()
@@ -177,9 +181,9 @@ impl Renderer {
 
         self.submit_water(cmd, view);
 
-        // if ConVars::get_flag("render.feature.volumetrics") {
-        //     self.apply_volume_fog(cmd);
-        // }
+        if view.settings.volumetrics {
+            self.apply_volume_fog(cmd, view);
+        }
 
         self.submit_bloom(cmd, view);
 
@@ -327,7 +331,7 @@ impl Renderer {
 
         // ext.shadow_mask.unk00 = self.gpu.placeholder_white.view.clone().into();
         // ext.shadow_mask.unk08 = self.lighting.ssao.into();
-        // ext.shadow_mask.unk10 = self.gbuffers.uber_depth_half.into();
+        // ext.shadow_mask.unk10 = view.gbuffers.uber_depth_half.into();
 
         // if let Some(vao_srv) = view.surfaces.get(self.lighting.vertex_ao).srv.clone() {
         //     ext.cubemaps.vertex_ao = vao_srv.into();
@@ -366,15 +370,16 @@ impl Renderer {
         }
         .into();
 
-        // let depth_res = view.surfaces.get(self.gbuffers.depth).resolution();
-        // ext.uber_depth = UberDepth {
-        //     original_depth: self.gbuffers.depth_proxy.lock().srv.clone().into(),
-        //     unk30: self.gbuffers.uber_depth_half.into(),
-        //     unk40: self.gbuffers.uber_depth_quarter.into(),
-        //     unk50: ext.deferred.depth_constants,
-        //     unk70: vec4(0.0, 0.0, depth_res.0 as f32, depth_res.1 as f32),
-        //     ..Default::default()
-        // };
+        let depth_res = view.surfaces.get(view.gbuffers.depth).resolution();
+        ext.uber_depth = UberDepth {
+            original_depth: view.gbuffers.depth_proxy.lock().srv.clone().into(),
+            unk30: view.gbuffers.uber_depth_half.into(),
+            unk40: view.gbuffers.uber_depth_quarter.into(),
+            unk50: ext.deferred.depth_constants,
+            unk70: vec4(0.0, 0.0, depth_res.0 as f32, depth_res.1 as f32),
+            ..Default::default()
+        }
+        .into();
 
         ext.cubemaps.unk00 = view.lighting.vertex_ao.into();
 
@@ -399,6 +404,27 @@ impl Renderer {
             unkb0: vec4(0.00, 0.00, 0.00, 0.00),
             ..Default::default()
         };
+
+        self.transparent_advanced_scope
+            .write(
+                cmd,
+                &[
+                    vec4(0.01817, 0.00, 1.01544, 0.00), // vec4(0.0158, 0.00, 5.77862, 0.00),
+                    vec4(0.01837, 0.00, 0.01797, 0.00), // vec4(0.01667, 0.00, 0.01497, 0.00),
+                    vec4(0.982, 0.00, 1.10176, 0.00),   // vec4(6.16857, 0.00, 5.6451, 0.00),
+                    vec4(55.52763, 2.29569, -0.08604, 0.00), // vec4(369.85815, 2.47415, 0.70208, 0.00),
+                    vec4(0.00, 0.99768, 0.85938, 0.01563), // vec4(0.00, 0.54753, 0.98438, 0.01563),
+                    vec4(0.00337, 0.00337, 0.00366, 0.46643), // vec4(0.90359, 0.90359, 0.90359, 0.99596),
+                    vec4(0.80, 0.55046, 0.55046, 0.09495), // vec4(0.02392, 0.23915, 0.09581, 0.14895),
+                    vec4(0.99946, 0.99968, 0.9997, 0.94473), // vec4(0.99866, 0.99866, 0.99866, 0.98197),
+                ],
+            )
+            .unwrap();
+
+        self.transparent_advanced_scope
+            .bind(cmd, ShaderStage::Vertex, 8);
+        self.transparent_advanced_scope
+            .bind(cmd, ShaderStage::Pixel, 8);
 
         // TODO(cohae): use the actual frame scope instead of the temporary `frame_scope`
         self.globals.scopes.frame.bind(cmd).unwrap();

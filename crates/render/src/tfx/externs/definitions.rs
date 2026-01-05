@@ -757,6 +757,7 @@ extern_struct! {
 
 extern_struct! {
     struct VolumeFog("volume_fog") {
+        0x00 => unk00: Mat4, // Unused in expressions
         0x40 => unk40: Mat4,
         0x80 => unk80: Vec4,
         0xA0 => unka0: Vec4,
