@@ -1,4 +1,4 @@
-use egui::{FontId, ImageSource, RichText, TextStyle, load::SizedTexture, vec2};
+use egui::{FontId, RichText, TextStyle, vec2};
 
 impl super::Scene {
     pub(super) fn show_surface_viewer(

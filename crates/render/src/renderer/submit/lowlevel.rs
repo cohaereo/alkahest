@@ -59,6 +59,7 @@ impl Renderer {
         );
     }
 
+    #[must_use]
     pub fn submit_stage_parallel(
         self: &Arc<Self>,
         cmd: &mut CommandList,

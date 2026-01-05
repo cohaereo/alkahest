@@ -7,9 +7,9 @@ use anyhow::Context;
 use bon::Builder;
 use crossbeam::atomic::AtomicCell;
 use d3d11::{
-    dsv::DsvFlags, dxgi, srv::SrvDimension, uav::UavDimension, BindFlags, ClearFlags,
-    CpuAccessFlags, DepthStencilViewDesc, DeviceChild, RenderTargetViewDesc,
-    ShaderResourceViewDesc, Texture2dDesc, UnorderedAccessViewDesc,
+    BindFlags, ClearFlags, CpuAccessFlags, DepthStencilViewDesc, DeviceChild, RenderTargetViewDesc,
+    ShaderResourceViewDesc, Texture2dDesc, UnorderedAccessViewDesc, dsv::DsvFlags, dxgi,
+    srv::SrvDimension, uav::UavDimension,
 };
 use glam::Vec4;
 use smallvec::SmallVec;
@@ -154,7 +154,8 @@ impl Surface {
     ) -> anyhow::Result<Self> {
         let (width, height) = desc.scale.scale_resolution(base_resolution);
 
-        let mut bind_flags = if desc.format.is_depth() {
+        let depth_format = desc.depth_format.unwrap_or(desc.format);
+        let mut bind_flags = if depth_format.is_depth() {
             BindFlags::DEPTH_STENCIL
         } else {
             BindFlags::RENDER_TARGET
@@ -180,7 +181,7 @@ impl Surface {
         let mut srv = None;
         let mut uav = None;
 
-        if !desc.format.is_depth() {
+        if !desc.view_format.is_depth() {
             let r = device
                 .create_shader_resource_view(
                     &texture,
@@ -216,13 +217,13 @@ impl Surface {
         let mut rtv = None;
         let mut dsv = None;
 
-        if desc.format.is_depth() {
+        if depth_format.is_depth() {
             let r = device
                 .create_depth_stencil_view(
                     &texture,
                     Some(
                         &DepthStencilViewDesc::builder()
-                            .format(desc.view_format)
+                            .format(depth_format)
                             .view_dimension(d3d11::dsv::DsvDimension::Texture2D {
                                 flags: DsvFlags::empty(),
                                 mip_slice: 0,
@@ -343,6 +344,7 @@ pub struct SurfaceDesc {
     pub scale: SurfaceScale,
 
     pub format: dxgi::Format,
+    pub depth_format: Option<dxgi::Format>,
     #[builder(default = format)]
     pub view_format: dxgi::Format,
 

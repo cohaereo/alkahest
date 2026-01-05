@@ -66,6 +66,7 @@ bytemuck = "1.22.0"
 dhat = { version = "0.3.3", optional = true }
 env_logger = "0.11.8"
 itertools.workspace = true
+parking_lot.workspace = true
 profiling.workspace = true
 tracing-subscriber = { version = "0.3", git = "https://github.com/cohaereo/tracing-lesspretty.git", features = [
     "env-filter",

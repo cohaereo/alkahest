@@ -135,5 +135,6 @@ local_extern_container! {
     speedtree_placements: SpeedtreePlacements,
     simple_geometry: SimpleGeometry,
     deferred_light: DeferredLight,
-    volume_fog: VolumeFog
+    volume_fog: VolumeFog,
+    deferred_shadow: DeferredShadow
 }

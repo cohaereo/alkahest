@@ -40,17 +40,13 @@ pub fn load_map_into_world(taghash: TagHash, world: &mut hecs::World) -> anyhow:
                     );
                 }
 
-                match spawn_pattern(
+                if let Err(e) = spawn_pattern(
                     world,
                     node.entity.hash32(),
                     node.primary_component_data.as_ref(),
+                    Some(transform),
                 ) {
-                    Ok(entity) => {
-                        world.insert_one(entity, transform)?;
-                    }
-                    Err(e) => {
-                        error!("Failed to load entity: {:?}", e);
-                    }
+                    error!("Failed to load entity: {:?}", e);
                 }
             }
         }

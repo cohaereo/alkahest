@@ -3,11 +3,11 @@ use d3d11::dxgi;
 use parking_lot::Mutex;
 
 use crate::{
+    Gpu, Renderer,
     gpu::command_list::CommandList,
     renderer::surface::{
         SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale, Surfaces,
     },
-    Gpu, Renderer,
 };
 
 pub struct Gbuffers {
@@ -63,14 +63,14 @@ impl Gbuffers {
             base_resolution,
             SurfaceDesc::builder("gbuffer_depth", SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R32g8x24Typeless)
-                .view_format(dxgi::Format::D32FloatS8x24Uint)
+                .depth_format(dxgi::Format::D32FloatS8x24Uint)
                 .build(),
         )?;
         let depth_half = surfaces.create_surface(
             base_resolution,
             SurfaceDesc::builder("gbuffer_depth_half", SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R32g8x24Typeless)
-                .view_format(dxgi::Format::D32FloatS8x24Uint)
+                .depth_format(dxgi::Format::D32FloatS8x24Uint)
                 .scale(SurfaceScale::Half)
                 .build(),
         )?;
@@ -217,20 +217,24 @@ impl LightBuffers {
                 .build(),
         )?;
 
-        let [volumetrics_rt0, volumetrics_rt1, volumetrics_rt2, volumetrics_rt3] =
-            std::array::from_fn(|i| {
-                surfaces.create_surface(
-                    base_resolution,
-                    SurfaceDesc::builder(
-                        format!("volumetrics_{i}"),
-                        SizeRelativity::RelativeToFramebuffer,
-                    )
-                    .format(dxgi::Format::R16g16b16a16Typeless)
-                    .view_format(dxgi::Format::R16g16b16a16Float)
-                    .scale(SurfaceScale::Eighth)
-                    .build(),
+        let [
+            volumetrics_rt0,
+            volumetrics_rt1,
+            volumetrics_rt2,
+            volumetrics_rt3,
+        ] = std::array::from_fn(|i| {
+            surfaces.create_surface(
+                base_resolution,
+                SurfaceDesc::builder(
+                    format!("volumetrics_{i}"),
+                    SizeRelativity::RelativeToFramebuffer,
                 )
-            });
+                .format(dxgi::Format::R16g16b16a16Typeless)
+                .view_format(dxgi::Format::R16g16b16a16Float)
+                .scale(SurfaceScale::Eighth)
+                .build(),
+            )
+        });
 
         let volumetrics_upres = surfaces.create_surface(
             base_resolution,
@@ -368,7 +372,7 @@ impl WaterBuffers {
             base_resolution,
             SurfaceDesc::builder("water_depth", SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R32g8x24Typeless)
-                .view_format(dxgi::Format::D32FloatS8x24Uint)
+                .depth_format(dxgi::Format::D32FloatS8x24Uint)
                 .scale(SurfaceScale::Eighth)
                 .build(),
         )?;

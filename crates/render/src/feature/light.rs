@@ -1,34 +1,38 @@
 use std::sync::Arc;
 
-use alkahest_core::job::{potassium::Priority, SCHEDULER};
+use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
+    PrimitiveType, RenderStage, ShaderStage,
     common::AxisAlignedBBox,
     features::{
         dynamic::RenderStageSubscription,
         light::{SLight, SShadowingLight},
     },
-    PrimitiveType, RenderStage,
 };
 use d3d11::dxgi;
 use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use itertools::Itertools;
+use parking_lot::Mutex;
 use tiger_pkg::TagHash;
 
 use super::FeatureRenderer;
 use crate::{
+    Renderer,
     camera::Camera,
+    renderer::surface::Surface,
     tfx::{
         externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
         packet::CompactTransform,
         technique::Technique,
     },
     util::{geometry, threading::CommandListSetId},
-    Renderer,
 };
 
 struct LightRendererData {
     technique_lighting_apply: Technique,
+    technique_lighting_apply_shadowing: Option<Technique>,
     technique_volumetrics: Option<Technique>,
+    technique_volumetrics_shadowing: Option<Technique>,
     // technique_light_probe_apply: Technique,
 
     // TODO(cohae): This should be a shared resource (eg. a struct in the renderer that we can use instead of recreating it for every light/cubemap)
@@ -41,7 +45,10 @@ pub struct LightRenderer {
 
     local_to_world: glam::Mat4,
     light_space_transform: glam::Mat4,
+    shadowmap_projection: glam::Mat4,
     bounds: Option<AxisAlignedBBox>,
+
+    pub shadowmap: Option<Arc<Mutex<Option<Surface>>>>,
 }
 
 impl LightRenderer {
@@ -53,9 +60,12 @@ impl LightRenderer {
         Self::new_impl(
             renderer,
             light.technique_lighting_apply,
+            TagHash::NONE,
             light.technique_volumetrics,
+            TagHash::NONE,
             // light.technique_light_probe_apply,
             light.light_space_transform,
+            Mat4::IDENTITY,
             Some(bounds),
         )
     }
@@ -63,12 +73,16 @@ impl LightRenderer {
     pub fn new_shadowing(
         renderer: &Renderer,
         light: &SShadowingLight,
+        shadowmap_projection: Mat4,
     ) -> anyhow::Result<Box<Self>> {
         Self::new_impl(
             renderer,
             light.technique_lighting_apply,
+            light.technique_lighting_apply_shadowing,
             light.technique_volumetrics,
+            light.technique_volumetrics_shadowing,
             light.light_space_transform,
+            shadowmap_projection,
             None,
         )
     }
@@ -76,9 +90,12 @@ impl LightRenderer {
     fn new_impl(
         renderer: &Renderer,
         technique_shading: TagHash,
+        technique_shading_shadowing: TagHash,
         technique_volumetrics: TagHash,
+        technique_volumetrics_shadowing: TagHash,
         // technique_light_probe: TagHash,
         light_space_transform: Mat4,
+        shadowmap_projection: Mat4,
         bounds: Option<AxisAlignedBBox>,
     ) -> anyhow::Result<Box<Self>> {
         let vb = renderer.gpu.create_buffer(
@@ -102,9 +119,17 @@ impl LightRenderer {
         Ok(Box::new(Self {
             data: Arc::new(LightRendererData {
                 technique_lighting_apply: Technique::load(&renderer.gpu, technique_shading)?,
+                technique_lighting_apply_shadowing: technique_shading_shadowing
+                    .is_some()
+                    .then(|| Technique::load(&renderer.gpu, technique_shading_shadowing))
+                    .transpose()?,
                 technique_volumetrics: technique_volumetrics
                     .is_some()
                     .then(|| Technique::load(&renderer.gpu, technique_volumetrics))
+                    .transpose()?,
+                technique_volumetrics_shadowing: technique_volumetrics_shadowing
+                    .is_some()
+                    .then(|| Technique::load(&renderer.gpu, technique_volumetrics_shadowing))
                     .transpose()?,
                 // technique_light_probe_apply: Technique::load(&renderer.gpu, technique_light_probe)?,
                 vb,
@@ -112,7 +137,9 @@ impl LightRenderer {
             }),
             local_to_world: Mat4::IDENTITY,
             light_space_transform,
+            shadowmap_projection,
             bounds,
+            shadowmap: None,
         }))
     }
 }
@@ -174,6 +201,12 @@ impl FeatureRenderer for LightRenderer {
                 unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
                 unk80: local_to_world_relative,
 
+                unk114: if stage == RenderStage::Volumetrics {
+                    0.0 // TODO(cohae): figure out what this value is. It's necessary for shadows to work properly, but values that work for normal shading break volumetrics
+                } else {
+                    7500.0
+                },
+
                 ..Default::default()
             }));
 
@@ -218,7 +251,58 @@ impl FeatureRenderer for LightRenderer {
             }
         }
 
-        if stage == RenderStage::Volumetrics {
+        // TODO(cohae): The shadowmap lock is *extremely* messy, needs to be cleaned up
+        let shadowmap_lock = self.shadowmap.as_ref().map(|v| v.lock());
+        if let Some(shadowmap2) = shadowmap_lock
+            && let Some(shadowmap) = shadowmap2.as_ref()
+        {
+            // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
+            Renderer::instance()
+                .common
+                .shadowmap_vs_t2
+                .bind(cmd, 2, ShaderStage::Vertex);
+            let existing_shadowmap = cmd
+                .externs
+                .deferred_shadow
+                .as_ref()
+                .cloned()
+                .unwrap_or_default();
+
+            cmd.externs.deferred_shadow = Some(
+                externs::DeferredShadow {
+                    shadow_depthmap: shadowmap.srv.clone().into(),
+                    resolution_width: shadowmap.resolution().0 as f32,
+                    resolution_height: shadowmap.resolution().1 as f32,
+                    // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
+                    unkc0: self.shadowmap_projection,
+                    unk180: 1.0,
+                    // unk180: renderer.settings.shadow_quality.pcf_samples() as u8 as f32,
+                    ..*existing_shadowmap
+                }
+                .into(),
+            );
+
+            if stage == RenderStage::Volumetrics {
+                if let Some(technique) = self
+                    .data
+                    .technique_volumetrics_shadowing
+                    .as_ref()
+                    .or(self.data.technique_volumetrics.as_ref())
+                {
+                    technique.bind(cmd).unwrap();
+                } else {
+                    return;
+                }
+            } else {
+                // self.data.technique_lighting_apply.bind(cmd).unwrap();
+                self.data
+                    .technique_lighting_apply_shadowing
+                    .as_ref()
+                    .unwrap_or(&self.data.technique_lighting_apply)
+                    .bind(cmd)
+                    .unwrap();
+            }
+        } else if stage == RenderStage::Volumetrics {
             if let Some(ref technique) = self.data.technique_volumetrics {
                 technique.bind(cmd).unwrap();
             } else {
@@ -243,7 +327,7 @@ impl FeatureRenderer for LightRenderer {
         &self,
         renderer: &std::sync::Arc<Renderer>,
         set: CommandListSetId,
-        _stage: RenderStage,
+        stage: RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
     ) {
         // let (scale, _rotation, _translation) =
@@ -252,8 +336,20 @@ impl FeatureRenderer for LightRenderer {
         let pool_clone = renderer.cmd_pool.clone();
         let light_space_transform = self.light_space_transform;
         let local_to_world = self.local_to_world;
+        let shadowmap_projection = self.shadowmap_projection;
         let local_to_world_scaled = local_to_world * light_space_transform;
         let data = self.data.clone();
+
+        let (_, transform_rot, transform_translation) =
+            self.local_to_world.to_scale_rotation_translation();
+
+        let forward = transform_rot * Vec3::X;
+        let up = transform_rot * Vec3::Z;
+        let transform_translation = transform_translation - renderer.externs.view.position();
+        let transform_relative =
+            Mat4::look_at_rh(transform_translation, transform_translation + forward, up);
+
+        let shadowmap = self.shadowmap.clone();
 
         let job = SCHEDULER
             .job_builder("light_render")
@@ -281,6 +377,12 @@ impl FeatureRenderer for LightRenderer {
                         unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
                         unk80: local_to_world_relative,
 
+                        unk114: if stage == RenderStage::Volumetrics {
+                            0.0 // TODO(cohae): figure out what this value is. It's necessary for shadows to work properly, but values that work for normal shading break volumetrics
+                        } else {
+                            7500.0
+                        },
+
                         ..Default::default()
                     }));
 
@@ -290,7 +392,64 @@ impl FeatureRenderer for LightRenderer {
                     }));
                 }
 
-                data.technique_lighting_apply.bind(cmd).unwrap();
+                // TODO(cohae): The shadowmap lock is *extremely* messy, needs to be cleaned up
+                let shadowmap_lock = shadowmap.as_ref().map(|v| v.lock());
+                if let Some(shadowmap2) = shadowmap_lock
+                    && let Some(shadowmap) = shadowmap2.as_ref()
+                {
+                    // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
+                    Renderer::instance()
+                        .common
+                        .shadowmap_vs_t2
+                        .bind(cmd, 2, ShaderStage::Vertex);
+                    let existing_shadowmap = cmd
+                        .externs
+                        .deferred_shadow
+                        .as_ref()
+                        .cloned()
+                        .unwrap_or_default();
+
+                    debug_assert!(shadowmap.srv.is_some());
+                    cmd.externs.deferred_shadow = Some(
+                        externs::DeferredShadow {
+                            shadow_depthmap: shadowmap.srv.clone().into(),
+                            resolution_width: shadowmap.resolution().0 as f32,
+                            resolution_height: shadowmap.resolution().1 as f32,
+                            // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
+                            unkc0: shadowmap_projection * transform_relative,
+                            unk180: 2.0,
+                            // unk180: renderer.settings.shadow_quality.pcf_samples() as u8 as f32,
+                            ..*existing_shadowmap
+                        }
+                        .into(),
+                    );
+
+                    if stage == RenderStage::Volumetrics {
+                        if let Some(technique) = data
+                            .technique_volumetrics_shadowing
+                            .as_ref()
+                            .or(data.technique_volumetrics.as_ref())
+                        {
+                            technique.bind(cmd).unwrap();
+                        } else {
+                            return;
+                        }
+                    } else {
+                        data.technique_lighting_apply_shadowing
+                            .as_ref()
+                            .unwrap_or(&data.technique_lighting_apply)
+                            .bind(cmd)
+                            .unwrap();
+                    }
+                } else if stage == RenderStage::Volumetrics {
+                    if let Some(ref technique) = data.technique_volumetrics {
+                        technique.bind(cmd).unwrap();
+                    } else {
+                        return;
+                    }
+                } else {
+                    data.technique_lighting_apply.bind(cmd).unwrap();
+                }
 
                 cmd.set_input_topology(PrimitiveType::Triangles);
                 cmd.set_input_layout(1); // float3 v0 : POSITION0, // Format DXGI_FORMAT_R32G32B32_FLOAT size 12

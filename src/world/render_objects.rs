@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use alkahest_data::tfx::features::ao::SStaticAmbientOcclusion;
 use alkahest_render::{
     Renderer,
     asset::{Handle, vertex_buffer::VertexBuffer},
     object::RenderObjectHandle,
+    renderer::surface::Surface,
     tfx::packet::FramePacket,
 };
 

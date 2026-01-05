@@ -27,7 +27,10 @@ use crate::{
         scene::controller::CameraController,
         util::{ExternalDataWidgetExt, UiExt},
     },
-    world::render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
+    world::{
+        render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
+        shadowmap::s_render_all_shadowmaps,
+    },
 };
 
 pub struct Scene {
@@ -316,6 +319,9 @@ impl Scene {
         {
             profiling::scope!("prepare");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare");
+
+            // TODO(cohae): Remove the dependency on the world here, shadowmaps should be part of the frame packet
+            s_render_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
 
             cmd.clear_render_target_view(&gpu.acquire_rtv(), &[0.0, 0.0, 0.0, 1.0]);
 

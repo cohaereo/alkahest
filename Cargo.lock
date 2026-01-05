@@ -124,6 +124,7 @@ dependencies = [
  "hecs",
  "image",
  "itertools 0.14.0",
+ "parking_lot",
  "profiling",
  "rayon",
  "sdl3",

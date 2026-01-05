@@ -11,8 +11,8 @@ use std::{
 
 use alkahest_core::ConVars;
 use alkahest_data::tfx::{
-    features::ao::SStaticAmbientOcclusion, texture::DxgiFormat, ExternIndex,
-    FeatureRendererSubscription,
+    ExternIndex, FeatureRendererSubscription, features::ao::SStaticAmbientOcclusion,
+    texture::DxgiFormat,
 };
 use anyhow::Context;
 use crossbeam::atomic::AtomicCell;
@@ -23,10 +23,11 @@ use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use surface::Surfaces;
 
 use crate::{
+    Gpu,
     asset::{
+        AssetManager, Handle,
         texture::{Texture, TextureHandle},
         vertex_buffer::VertexBuffer,
-        AssetManager, Handle,
     },
     feature::immediate::ImmediateShapeRenderer,
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
@@ -37,7 +38,6 @@ use crate::{
         arena::Arena,
         threading::{CommandListPool, ThreadMutCell},
     },
-    Gpu,
 };
 
 const DEBUG_SHADER: &str = include_str!("../builtin/shaders/debug.hlsl");
@@ -72,7 +72,7 @@ pub struct Renderer {
     pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
 
     start_time: Instant,
-    pub(crate) common: CommonResources,
+    pub common: CommonResources,
     active_feature_renderers: AtomicCell<FeatureRendererSubscription>,
     placeholder_textures:
         RwLock<HashMap<(ExternIndex, u32), (Texture, d3d11::UnorderedAccessView)>>,
@@ -288,6 +288,8 @@ impl Renderer {
 pub struct CommonResources {
     default_lut: Texture,
 
+    pub shadowmap_vs_t2: Texture,
+
     blit_vs: d3d11::VertexShader,
     blit_ps: d3d11::PixelShader,
     blit_ps_linear: d3d11::PixelShader,
@@ -342,11 +344,22 @@ impl CommonResources {
         let (blit_fw_vs, blit_fw_ps) =
             gpu.compile_shader_vs_ps("blit_fw", BLIT_FAKE_WEAPON_SHADER, "mainVS", "mainPS")?;
 
+        let shadowmap_vs_t2 = Texture::load_2d_raw(
+            &gpu,
+            1,
+            1,
+            &[0, 0, 255, 255],
+            dxgi::Format::R8g8b8a8UnormSrgb,
+            Some("shadowmap_vs_t2"),
+            false,
+        )?;
+
         Ok(Self {
             temporary_sky_hemisphere: Texture::load_2d_dds(
                 gpu,
                 include_bytes!("../builtin/textures/sky_hemisphere_cosmo.dds"),
             )?,
+            shadowmap_vs_t2,
             default_lut,
             temporary_vignette: Texture::load_2d_dds(
                 gpu,

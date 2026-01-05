@@ -189,7 +189,8 @@ impl EntityListTab {
                 match package_manager().read_tag_struct::<SPattern>(hash) {
                     Ok(pattern) => {
                         let mut world = hecs::World::new();
-                        if let Err(e) = spawn_pattern_from_header(&mut world, &pattern, None) {
+                        if let Err(e) = spawn_pattern_from_header(&mut world, &pattern, None, None)
+                        {
                             error!("Failed to load pattern {hash}: {e}");
                         }
                         Some(EntityEntry {
@@ -490,7 +491,8 @@ impl EntityListTab {
                                 self.current_tag = entity.hash;
 
                                 self.scene.clear();
-                                match spawn_pattern(&mut self.scene.world, entity.hash, None) {
+                                match spawn_pattern(&mut self.scene.world, entity.hash, None, None)
+                                {
                                     Ok(_entity) => {
                                         let bb = self
                                             .scene

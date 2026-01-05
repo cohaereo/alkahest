@@ -28,6 +28,7 @@ use crate::world::{
     UnimplementedTigerComponent, UnimplementedTigerComponents,
     permutations::PermutationConfig,
     render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
+    shadowmap::ShadowMap,
     transform::Transform,
 };
 
@@ -35,21 +36,26 @@ pub fn spawn_pattern(
     world: &mut hecs::World,
     pattern_tag: TagHash,
     map_data: Option<&ComponentData>,
+    transform: Option<Transform>,
 ) -> anyhow::Result<hecs::Entity> {
     let header = package_manager()
         .read_tag_struct::<SPattern>(pattern_tag)
         .context("Failed to read SEntity")?;
-    spawn_pattern_from_header(world, &header, map_data)
+    spawn_pattern_from_header(world, &header, map_data, transform)
 }
 
 pub fn spawn_pattern_from_header(
     world: &mut hecs::World,
     header: &SPattern,
     map_data: Option<&ComponentData>,
+    transform: Option<Transform>,
 ) -> anyhow::Result<hecs::Entity> {
     let renderer = Renderer::instance();
 
     let entity = world.spawn(());
+    if let Some(transform) = transform {
+        world.insert_one(entity, transform)?;
+    }
 
     for e in &header.components {
         let component = &e.unk0;
@@ -130,7 +136,7 @@ pub fn spawn_pattern_from_header(
 
                 for v1 in array {
                     for v2 in v1.unk30 {
-                        if let Err(e) = spawn_pattern(world, v2.entity.hash32(), None) {
+                        if let Err(e) = spawn_pattern(world, v2.entity.hash32(), None, None) {
                             error!(
                                 "Failed to spawn nested pattern {:?}/{} in pattern component {}: \
                                  {:?}",
@@ -252,14 +258,32 @@ pub fn spawn_pattern_from_header(
                     continue;
                 };
 
-                let render_obj = RenderObject::new(
-                    TfxFeatureRenderer::DeferredLights,
-                    LightRenderer::new_shadowing(renderer, light)?,
+                let transform = world
+                    .get::<&Transform>(entity)
+                    .clone()
+                    .map(|c| *c)
+                    .unwrap_or_default();
+                let shadowmap = ShadowMap::create(
+                    transform,
+                    (light.half_fov * 2.0).to_degrees(),
+                    0.5,
+                    light.far_plane,
                 );
 
-                world.insert_one(
+                let mut light_renderer =
+                    LightRenderer::new_shadowing(renderer, light, shadowmap.camera_to_projective)?;
+
+                light_renderer.shadowmap = Some(shadowmap.surface.clone());
+
+                let render_obj =
+                    RenderObject::new(TfxFeatureRenderer::DeferredLights, light_renderer);
+
+                world.insert(
                     entity,
-                    DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
+                    (
+                        DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
+                        shadowmap,
+                    ),
                 )?;
             }
             0x80806A62 => {

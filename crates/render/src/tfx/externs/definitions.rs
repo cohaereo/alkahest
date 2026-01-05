@@ -1,8 +1,8 @@
 use std::any::TypeId;
 
-use glam::{vec4, Mat3, Mat4, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat3, Mat4, Vec3, Vec4, Vec4Swizzles, vec4};
 
-use crate::tfx::externs::{macros::extern_struct, Extern, ExternDefault, TextureView, Uav};
+use crate::tfx::externs::{Extern, ExternDefault, TextureView, Uav, macros::extern_struct};
 
 extern_struct! {
     struct Frame("frame") {
@@ -196,20 +196,20 @@ extern_struct! {
 
 extern_struct! {
     struct DeferredShadow("deferred_shadow") {
-        0x00 => unk00: TextureView,
+        0x00 => shadow_depthmap: TextureView,
         0x08 => unk08: TextureView,
         0x10 => unk10: TextureView,
         0x18 => resolution_width: f32,
         0x1C => resolution_height: f32,
         0x20 => unk20: f32,
         0x28 => unk28: TextureView,
-        0x30 => unk30: Vec4,
+        0x30 => unk30: Vec4 > default(Vec4::new(1.5, 1.0, 1.0, 1.0)),
         0x40 => unk40: Vec4,
         0x50 => unk50: Vec4,
         0x80 => unk80: Vec4,
         0x90 => unk90: Vec4,
         0xA0 => unka0: Vec4,
-        0xB0 => unkb0: Vec4,
+        0xB0 => unkb0: Vec4 > default(Vec4::new(0.0, 0.0, 1.0, 1.0)),
         0xC0 => unkc0: Mat4,
         0x100 => unk100: Mat4,
         0x180 => unk180: f32,

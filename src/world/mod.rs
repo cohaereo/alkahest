@@ -4,6 +4,7 @@ pub mod map;
 pub mod pattern;
 pub mod permutations;
 pub mod render_objects;
+pub mod shadowmap;
 pub mod transform;
 
 pub struct UnimplementedTigerComponent {

@@ -4,7 +4,7 @@ use alkahest_data::tfx::{PipelineState, PrimitiveType, ShaderStage};
 use d3d11::DeviceContext;
 use tiger_pkg::TagHash;
 
-use super::{global_state, Gpu};
+use super::{Gpu, global_state};
 use crate::tfx::externs::LocalExterns;
 
 pub struct CommandList {
