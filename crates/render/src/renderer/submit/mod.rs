@@ -36,6 +36,8 @@ impl Renderer {
         cmd_event_span!(cmd, "submit_world");
         let _gpuspan = self.profiler.scope(cmd, "submit_world");
 
+        *self.settings.write() = view.settings.clone();
+
         *self.surfaces.write() = view.surfaces.clone();
         view.surfaces.resize_surfaces(view.resolution);
 

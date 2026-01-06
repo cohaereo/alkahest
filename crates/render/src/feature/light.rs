@@ -253,7 +253,8 @@ impl FeatureRenderer for LightRenderer {
 
         // TODO(cohae): The shadowmap lock is *extremely* messy, needs to be cleaned up
         let shadowmap_lock = self.shadowmap.as_ref().map(|v| v.lock());
-        if let Some(shadowmap2) = shadowmap_lock
+        if Renderer::instance().settings().shadows
+            && let Some(shadowmap2) = shadowmap_lock
             && let Some(shadowmap) = shadowmap2.as_ref()
         {
             // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
@@ -394,7 +395,8 @@ impl FeatureRenderer for LightRenderer {
 
                 // TODO(cohae): The shadowmap lock is *extremely* messy, needs to be cleaned up
                 let shadowmap_lock = shadowmap.as_ref().map(|v| v.lock());
-                if let Some(shadowmap2) = shadowmap_lock
+                if Renderer::instance().settings().shadows
+                    && let Some(shadowmap2) = shadowmap_lock
                     && let Some(shadowmap) = shadowmap2.as_ref()
                 {
                     // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs

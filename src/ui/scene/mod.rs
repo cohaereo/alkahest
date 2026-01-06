@@ -274,6 +274,7 @@ impl Scene {
 
         ui.checkbox(&mut settings.bloom, "Bloom");
         ui.checkbox(&mut settings.volumetrics, "Volumetrics");
+        ui.checkbox(&mut settings.shadows, "Shadows");
         ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit");
     }
 
