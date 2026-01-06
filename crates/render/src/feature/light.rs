@@ -366,7 +366,7 @@ impl FeatureRenderer for LightRenderer {
 
         let job = SCHEDULER
             .job_builder("light_render")
-            .priority(Priority::High)
+            .priority(Priority::Medium)
             .spawn(move || {
                 let cmd = pool_clone.get_command_list(set);
                 {
