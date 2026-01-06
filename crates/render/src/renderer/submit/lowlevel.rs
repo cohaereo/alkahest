@@ -1,8 +1,8 @@
 use std::{sync::Arc, time::Duration};
 
 use alkahest_core::job::{
-    potassium::{JobHandle, WaitResult},
     SCHEDULER,
+    potassium::{JobHandle, WaitResult},
 };
 use alkahest_data::tfx::{FeatureRendererSubscription, RenderStage};
 
@@ -28,7 +28,8 @@ impl Renderer {
 
         for obj in self.frame_packet.read().frame_nodes[frame_node_range]
             .iter()
-            .filter(|n| n.visible)
+            // TODO(cohae): ShadowGenerate workaround until lights have their own culling
+            .filter(|n| n.visible || stage == RenderStage::ShadowGenerate)
         {
             if let Some(render_object) = self
                 .objects

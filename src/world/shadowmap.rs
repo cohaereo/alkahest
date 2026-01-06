@@ -70,6 +70,15 @@ impl ShadowMap {
     }
 }
 
+pub fn s_wants_to_render_shadowmaps(world: &hecs::World) -> bool {
+    for (_entity, shadowmap) in world.query::<&ShadowMap>().iter() {
+        if shadowmap.surface.lock().is_none() {
+            return true;
+        }
+    }
+    false
+}
+
 pub fn s_render_all_shadowmaps(
     world: &hecs::World,
     cmd: &mut CommandList,

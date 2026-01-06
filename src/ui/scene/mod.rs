@@ -30,7 +30,7 @@ use crate::{
     },
     world::{
         render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
-        shadowmap::s_render_all_shadowmaps,
+        shadowmap::{s_render_all_shadowmaps, s_wants_to_render_shadowmaps},
     },
 };
 
@@ -361,6 +361,8 @@ impl Scene {
             profiling::scope!("prepare");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare");
 
+            let wants_to_render_shadowmaps = s_wants_to_render_shadowmaps(&self.world);
+
             // TODO(cohae): Remove the dependency on the world here, shadowmaps should be part of the frame packet
             s_render_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
 
@@ -368,30 +370,32 @@ impl Scene {
 
             {
                 profiling::scope!("visibility");
-                let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
-                self.renderer
-                    .frame_packet
-                    .write()
-                    .frame_nodes
-                    .retain(|node| {
-                        if let Some(render_object) = self
-                            .renderer
-                            .objects
-                            .write()
-                            .get_mut(node.render_object_handle.into())
-                        {
-                            if !self
-                                .view
-                                .subscribed_features
-                                .is_subscribed(render_object.feature_type)
+                if !wants_to_render_shadowmaps {
+                    let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
+                    self.renderer
+                        .frame_packet
+                        .write()
+                        .frame_nodes
+                        .retain(|node| {
+                            if let Some(render_object) = self
+                                .renderer
+                                .objects
+                                .write()
+                                .get_mut(node.render_object_handle.into())
                             {
-                                return false;
+                                if !self
+                                    .view
+                                    .subscribed_features
+                                    .is_subscribed(render_object.feature_type)
+                                {
+                                    return false;
+                                }
+                                render_object.visibility_test(&self.camera)
+                            } else {
+                                true
                             }
-                            render_object.visibility_test(&self.camera)
-                        } else {
-                            true
-                        }
-                    });
+                        });
+                }
 
                 // self.renderer
                 //     .frame_packet

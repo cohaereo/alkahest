@@ -514,7 +514,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
         else {
             for (i, _group) in self.groups.iter().enumerate().filter(|(_i, g)| {
                 let model = &self.static_models[g.static_index as usize];
-                model.subscribed_stages.is_subscribed(stage)
+                g.visible && model.subscribed_stages.is_subscribed(stage)
             }) {
                 let p_models = &self.static_models as *const _ as u64;
                 let p_groups = &self.groups as *const _ as u64;
