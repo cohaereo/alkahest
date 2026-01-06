@@ -6,15 +6,15 @@ use alkahest_data::tfx::{
 };
 
 use crate::{
-    cmd_event_span, gpu::command_list::CommandList, tfx::view::View,
-    util::threading::CommandListSetId, Renderer,
+    Renderer, cmd_event_span, gpu::command_list::CommandList, tfx::view::View,
+    util::threading::CommandListSetId,
 };
 
 pub struct GeometryCommandLists {
     pub generate_gbuffer: (JobHandle, CommandListSetId),
     pub decals: (JobHandle, CommandListSetId),
     pub lighting: (JobHandle, CommandListSetId),
-    pub transparent: (JobHandle, CommandListSetId),
+    // pub transparent: (JobHandle, CommandListSetId),
 }
 
 impl Renderer {
@@ -61,23 +61,23 @@ impl Renderer {
             }
         };
 
-        let transparent = {
-            self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
-            cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
-            self.submit_stage_parallel(
-                cmd,
-                RenderStage::Transparents,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
-                    .without(TfxFeatureRenderer::SkyTransparent)
-                    .without(TfxFeatureRenderer::RigidObject),
-            )
-        };
+        // let transparent = {
+        //     self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
+        //     cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
+        //     self.submit_stage_parallel(
+        //         cmd,
+        //         RenderStage::Transparents,
+        //         FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+        //             .without(TfxFeatureRenderer::SkyTransparent)
+        //             .without(TfxFeatureRenderer::RigidObject),
+        //     )
+        // };
 
         GeometryCommandLists {
             generate_gbuffer,
             decals,
             lighting,
-            transparent,
+            // transparent,
         }
     }
 }

@@ -46,27 +46,27 @@ impl Renderer {
 
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
 
-            if let Some(geo) = geo {
-                let (sync_job, set) = &geo.transparent;
-                sync_job.wait();
-                self.cmd_pool.finish(cmd, *set);
-            } else {
-                self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
-                cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
-                self.submit_stage(
-                    cmd,
-                    RenderStage::Transparents,
-                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
-                        .without(TfxFeatureRenderer::SkyTransparent)
-                        .without(TfxFeatureRenderer::RigidObject),
-                );
-            }
+            // if let Some(geo) = geo {
+            //     let (sync_job, set) = &geo.transparent;
+            //     sync_job.wait();
+            //     self.cmd_pool.finish(cmd, *set);
+            // } else {
+            //     self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
+            //     cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
+            //     self.submit_stage(
+            //         cmd,
+            //         RenderStage::Transparents,
+            //         FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+            //             .without(TfxFeatureRenderer::SkyTransparent)
+            //             .without(TfxFeatureRenderer::RigidObject),
+            //     );
+            // }
 
             self.submit_stage(
                 cmd,
                 RenderStage::Transparents,
-                FeatureRendererSubscription::SKY_TRANSPARENT
-                    | FeatureRendererSubscription::RIGID_OBJECT,
+                FeatureRendererSubscription::all(), // FeatureRendererSubscription::SKY_TRANSPARENT
+                                                    //     | FeatureRendererSubscription::RIGID_OBJECT,
             );
         }
 
