@@ -1,18 +1,21 @@
 use alkahest_data::tfx::PipelineState;
-use glam::{vec4, Vec4};
+use glam::{Vec4, vec4};
 
 use crate::{
-    cmd_event_span,
+    Renderer, cmd_event_span,
     gpu::command_list::CommandList,
     renderer::surface::SurfaceHandle,
     tfx::{externs::PostprocessInitialDownsample, view::View},
-    Renderer,
 };
 
 impl Renderer {
     pub(super) fn submit_bloom(&self, cmd: &mut CommandList, view: &View) {
         cmd_event_span!(cmd, "bloom");
         let _gpu_span = self.profiler.scope(cmd, "bloom");
+
+        if !view.settings.bloom {
+            return;
+        }
 
         cmd.output_merger_set_depth_stencil_state(None, 0);
         cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));

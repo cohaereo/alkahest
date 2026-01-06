@@ -7,6 +7,7 @@ use alkahest_core::job::{
 };
 use alkahest_data::tfx::{
     RenderStage, ShaderStage,
+    common::AxisAlignedBBox,
     features::{
         ao::SStaticAmbientOcclusion,
         dynamic::RenderStageSubscription,
@@ -18,6 +19,7 @@ use alkahest_data::tfx::{
 use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec3, Vec4};
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use smallvec::SmallVec;
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
@@ -249,6 +251,9 @@ struct StaticInstanceGroup {
     pub transforms: Vec<SStaticInstanceTransform>,
     pub static_index: u16,
     pub cbuffer: ConstantBuffer<u8>,
+    pub bounds: Vec<AxisAlignedBBox>,
+    pub group_bounds: AxisAlignedBBox,
+    pub visible: bool,
 }
 
 impl StaticInstanceGroup {
@@ -325,6 +330,7 @@ pub struct StaticInstancesRenderer {
     vao_identifier: u64,
     constants_dirty: bool,
     groups_by_stage_sorted_by_technique: HashMap<RenderStage, Arc<Vec<SortedModel>>>,
+    bounds: AxisAlignedBBox,
 }
 
 impl StaticInstancesRenderer {
@@ -350,6 +356,26 @@ impl StaticInstancesRenderer {
                 .context("Invalid instance transform range")?
                 .to_vec();
 
+            let mut bounds = Vec::with_capacity(transforms.len());
+            for i in range {
+                let bounds_index = if instances.transform_to_bounds_index.is_empty() {
+                    i
+                } else {
+                    *instances
+                        .transform_to_bounds_index
+                        .get(i)
+                        .context("Invalid transform to bounds index")? as usize
+                };
+                let b = instances
+                    .occlusion_bounds
+                    .bounds
+                    .get(bounds_index)
+                    .context("Invalid occlusion bounds index")?;
+                bounds.push(b.bb.clone());
+            }
+
+            let group_bounds = bounds.iter().cloned().sum();
+
             let cbuffer = ConstantBuffer::create_raw(
                 gpu,
                 2 * size_of::<Vec4>() // quantization headers
@@ -358,8 +384,11 @@ impl StaticInstancesRenderer {
 
             groups.push(StaticInstanceGroup {
                 transforms,
+                bounds,
+                group_bounds,
                 static_index: group.static_index,
                 cbuffer,
+                visible: true,
             });
             model_to_instance_groups
                 .entry(group.static_index)
@@ -417,26 +446,28 @@ impl StaticInstancesRenderer {
             constants_dirty: true,
             vao_identifier: instances.vertex_ao_identifier,
             groups_by_stage_sorted_by_technique,
+            bounds: instances.bounds,
         })
     }
 }
 
 impl FeatureRenderer for StaticInstancesRenderer {
-    fn visibility_test(&mut self, _camera: &Camera) -> bool {
-        // self.models.par_iter_mut().for_each(|(_model, visible)| {
-        //     *visible = true; // model.visibility_test(camera);
-        // });
-        true
+    fn visibility_test(&mut self, camera: &Camera) -> bool {
+        if !camera.is_visible(&self.bounds) {
+            return false;
+        }
+
+        self.groups.par_iter_mut().for_each(|group| {
+            group.visible = camera.is_visible(&group.group_bounds);
+            if group.visible {
+                group.visible = group.bounds.iter().any(|b| camera.is_visible(b));
+            }
+        });
+
+        self.groups.iter().any(|m| m.visible)
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {
-        // for (model, _visible) in self.models.iter_mut().filter(|(_, visible)| *visible) {
-        //     if model.constants_dirty {
-        //         model.update_constants(&renderer.gpu.context(), renderer.ao.read().as_ref());
-        //         model.constants_dirty = false;
-        //     }
-        // }
-
         if self.constants_dirty {
             for group in &self.groups {
                 let model = &self.static_models[group.static_index as usize];
@@ -454,7 +485,15 @@ impl FeatureRenderer for StaticInstancesRenderer {
     fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
         for group in self.groups.iter().filter(|g| {
             let model = &self.static_models[g.static_index as usize];
-            model.subscribed_stages.is_subscribed(stage)
+
+            // TODO(cohae): This is a hack for getting shadow generation to work, since shadow mapped lights dont have their own views yet, and thus can't cull statics
+            let visible = if stage == RenderStage::ShadowGenerate {
+                true
+            } else {
+                g.visible
+            };
+
+            visible && model.subscribed_stages.is_subscribed(stage)
         }) {
             let model = &self.static_models[group.static_index as usize];
             group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
@@ -527,6 +566,10 @@ impl FeatureRenderer for StaticInstancesRenderer {
                         let model = &models[range.model_index];
                         for group_index in &range.instance_groups {
                             let group = &groups[*group_index];
+                            if !group.visible {
+                                continue;
+                            }
+
                             group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
                             model.render_group(
                                 cmd,

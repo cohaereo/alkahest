@@ -71,6 +71,8 @@ pub struct SStaticMeshGroup {
 pub struct SStaticMeshInstances {
     #[tiger(offset = 0x18)]
     pub occlusion_bounds: Tag<SOcclusionBounds>,
+    #[tiger(offset = 0x20)]
+    pub transform_to_bounds_index: Vec<u32>,
     #[tiger(offset = 0x40)]
     pub transforms: Vec<SStaticInstanceTransform>,
     pub unk50: u64,

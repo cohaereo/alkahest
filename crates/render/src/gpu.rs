@@ -13,11 +13,11 @@ use anyhow::Context;
 use d3d11::{
     dxgi::{self, DxgiUsage, ModeDesc, SwapChainDesc},
     sys::{
-        core::Interface,
         Dxgi::{
-            CreateDXGIFactory, IDXGIAdapter3, IDXGIFactory, DXGI_MEMORY_SEGMENT_GROUP_LOCAL,
-            DXGI_QUERY_VIDEO_MEMORY_INFO,
+            CreateDXGIFactory, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, DXGI_QUERY_VIDEO_MEMORY_INFO,
+            IDXGIAdapter3, IDXGIFactory,
         },
+        core::Interface,
     },
 };
 use parking_lot::{Mutex, ReentrantMutex, ReentrantMutexGuard};
