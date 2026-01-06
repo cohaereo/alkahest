@@ -12,11 +12,13 @@ use alkahest_render::{
     util::fps_histogram::FrametimeHistogram,
 };
 use anyhow::Context;
+use parking_lot::RwLock;
 use sdl3::video::Window;
 use tiger_pkg::TagHash;
 
 use crate::{
     cli::AppArgs,
+    config::AppConfig,
     ui::{
         Gui,
         tabs::{Tab, map::MapTab},
@@ -135,11 +137,8 @@ impl App {
             self.gui.draw(&mut cmd, &self.shared_state);
         });
 
-        let vsync = false;
-        self.renderer.present_frame(vsync);
-        if !vsync {
-            spin_sleep::sleep_until(frame_end);
-        }
+        self.renderer
+            .present_frame(self.shared_state.config.read().vsync);
 
         profiling::finish_frame!();
     }
@@ -147,18 +146,47 @@ impl App {
 
 impl Drop for App {
     fn drop(&mut self) {
+        self.shared_state.save_config().ok();
         SCHEDULER.shutdown();
     }
 }
 
 pub struct SharedState {
     pub strings: StringContainerShared,
+    pub config: RwLock<AppConfig>,
 }
 
 impl SharedState {
     pub fn new() -> anyhow::Result<Self> {
-        Ok(Self {
+        let s = Self {
             strings: StringContainer::load_all_global().into(),
-        })
+            config: RwLock::new(AppConfig::default()),
+        };
+        if let Err(e) = s.load_config() {
+            warn!("Failed to load config: {:?}", e);
+        }
+
+        Ok(s)
+    }
+
+    pub fn load_config(&self) -> anyhow::Result<()> {
+        let exe_path = std::env::current_exe()?.parent().unwrap().to_path_buf();
+        let config_path = exe_path.join("config.toml");
+        if config_path.exists() {
+            let config_str = std::fs::read_to_string(&config_path)?;
+            let config: AppConfig = toml::from_str(&config_str)?;
+            *self.config.write() = config;
+        }
+
+        Ok(())
+    }
+
+    pub fn save_config(&self) -> anyhow::Result<()> {
+        let exe_path = std::env::current_exe()?.parent().unwrap().to_path_buf();
+        let config_path = exe_path.join("config.toml");
+        let config_str = toml::to_string_pretty(&*self.config.read())?;
+        std::fs::write(&config_path, config_str)?;
+
+        Ok(())
     }
 }

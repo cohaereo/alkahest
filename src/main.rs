@@ -10,6 +10,7 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
 mod cli;
+mod config;
 mod task;
 mod ui;
 mod world;

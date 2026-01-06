@@ -2,6 +2,7 @@ pub mod entity_list;
 pub mod home;
 pub mod map;
 pub mod map_list;
+pub mod settings;
 pub mod tag_lookup;
 
 use std::{fmt::Display, sync::Arc};
@@ -14,6 +15,8 @@ use home::HomeTab;
 use map::MapTab;
 use map_list::MapListTab;
 use tag_lookup::TagLookupTab;
+
+use crate::ui::tabs::settings::SettingsTab;
 
 pub enum Tab {
     Home,
@@ -85,7 +88,7 @@ impl<'a> egui_dock::TabViewer for TabViewer<'a> {
                             self.process_result(HomeTab.ui(ui, self.shared_state));
                         }
                         Tab::Settings => {
-                            ui.weak("No settings are available");
+                            SettingsTab::ui(ui, self.shared_state);
                         }
                         Tab::EntityList(tab) => {
                             let res = tab.ui(ui, self.egui_d3d11);

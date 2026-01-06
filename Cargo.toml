@@ -32,7 +32,7 @@ parking_lot = "0.12"
 potassium = { path = "/home/luca/Documents/potassium" }
 profiling = "1"
 rayon = "1.11.0"
-serde = "1"
+serde = { version = "1.0", features = ["derive"] }
 sdl3 = { version = "0.16", features = [
     "raw-window-handle",
 ] }
@@ -103,6 +103,8 @@ rayon.workspace = true
 chroma-dbg = "0.2.1"
 subsecond.workspace = true
 dioxus-devtools = "0.7.2"
+serde.workspace = true
+toml = "0.9.10"
 
 [build-dependencies]
 embed-resource = "3.0.1"
