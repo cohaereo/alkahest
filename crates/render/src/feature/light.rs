@@ -180,6 +180,18 @@ impl FeatureRenderer for LightRenderer {
             return;
         }
 
+        let shadowmap_projection = self.shadowmap_projection;
+
+        let (_, transform_rot, transform_translation) =
+            self.local_to_world.to_scale_rotation_translation();
+
+        let forward = transform_rot * Vec3::X;
+        let up = transform_rot * Vec3::Z;
+        let transform_translation =
+            transform_translation - Renderer::instance().externs.view.position();
+        let transform_relative =
+            Mat4::look_at_rh(transform_translation, transform_translation + forward, up);
+
         {
             let local_to_world_scaled = self.local_to_world * self.light_space_transform;
             let global_externs = Renderer::instance().externs.get();
@@ -275,7 +287,7 @@ impl FeatureRenderer for LightRenderer {
                     resolution_width: shadowmap.resolution().0 as f32,
                     resolution_height: shadowmap.resolution().1 as f32,
                     // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
-                    unkc0: self.shadowmap_projection,
+                    unkc0: shadowmap_projection * transform_relative,
                     unk180: 1.0,
                     // unk180: renderer.settings.shadow_quality.pcf_samples() as u8 as f32,
                     ..*existing_shadowmap
