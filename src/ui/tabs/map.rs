@@ -12,12 +12,13 @@ use crate::{
 
 pub struct MapTab {
     pub tag: TagHash,
+    pub name: String,
     load_task: Task<hecs::World>,
     scene: Box<Scene>,
 }
 
 impl MapTab {
-    pub fn new(tag: TagHash) -> anyhow::Result<Self> {
+    pub fn new(tag: TagHash, name: String) -> anyhow::Result<Self> {
         Ok(Self {
             load_task: Task::new(move || {
                 let mut world = hecs::World::new();
@@ -26,6 +27,7 @@ impl MapTab {
                 world
             }),
             tag,
+            name,
             scene: Box::new(
                 Scene::new(Renderer::instance().clone(), Camera::default())?
                     .with_controller(CameraController::new_first_person()),

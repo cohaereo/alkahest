@@ -118,7 +118,7 @@ impl MapListTab {
                                         .ui(ui)
                                         .clicked()
                                     {
-                                        match MapTab::new(*tag) {
+                                        match MapTab::new(*tag, name.clone()) {
                                             Ok(map) => {
                                                 result = TabResult::Open(Tab::Map(map));
                                             }

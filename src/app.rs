@@ -48,7 +48,7 @@ impl App {
         let mut gui = Gui::new(&gpu, sdl.clone(), window.clone())?;
         if let Some(map_hash) = args.open_map.as_ref() {
             match TagHash::from_str(map_hash) {
-                Ok(tag) => match MapTab::new(tag) {
+                Ok(tag) => match MapTab::new(tag, String::new()) {
                     Ok(tab) => gui.add_tab(Tab::Map(tab)),
                     Err(e) => error!("Failed to open map tab for {}: {:?}", map_hash, e),
                 },

@@ -49,7 +49,7 @@ impl Display for Tab {
             Tab::Home => format!("{} Home", GoogleMaterialSymbols::Home),
             Tab::EntityList(_) => format!("{} Entities", GoogleMaterialSymbols::DeployedCode),
             Tab::MapList(_) => format!("{} Maps", GoogleMaterialSymbols::Map),
-            Tab::Map(tab) => format!("Map {}", tab.tag),
+            Tab::Map(tab) => format!("{} ({})", tab.name, tab.tag),
             Tab::TagLookup(_) => format!("{} Tag Lookup", GoogleMaterialSymbols::Search),
         };
 
