@@ -51,6 +51,8 @@ pub struct Scene {
 
     profiler_results: Option<String>,
     show_surface_viewer: bool,
+
+    frametimes: Vec<f32>,
 }
 
 impl Scene {
@@ -70,6 +72,7 @@ impl Scene {
             last_frame_time: Instant::now(),
             profiler_results: None,
             show_surface_viewer: false,
+            frametimes: Vec::new(),
         })
     }
 
@@ -113,7 +116,18 @@ impl Scene {
     pub fn show(&mut self, ui: &mut Ui, size: Vec2, egui_d3d11: &mut egui_d3d11::D3D11Renderer) {
         let now = Instant::now();
         let delta_time = (now - self.last_frame_time).as_secs_f32();
+        self.frametimes.push(delta_time);
+        while self.frametimes.len() > 60 {
+            self.frametimes.remove(0);
+        }
+
         self.last_frame_time = now;
+        let delta_time_average = if !self.frametimes.is_empty() {
+            let sum: f32 = self.frametimes.iter().sum();
+            sum / self.frametimes.len() as f32
+        } else {
+            delta_time
+        };
 
         if self.show_surface_viewer {
             egui::SidePanel::right("surface_viewer").show_inside(ui, |ui| {
@@ -157,7 +171,7 @@ impl Scene {
             let fps_rect = ui.painter_at(r.rect).text(
                 r.rect.right_top() + Vec2::new(0.0, 3.0) + Vec2::splat(1.0),
                 egui::Align2::RIGHT_TOP,
-                format!("{} ", (1. / delta_time).round()),
+                format!("{} ", (1. / delta_time_average).round()),
                 egui::FontId::monospace(16.0),
                 egui::Color32::BLACK,
             );
@@ -165,7 +179,7 @@ impl Scene {
             ui.painter_at(r.rect).text(
                 r.rect.right_top() + Vec2::new(0.0, 3.0),
                 egui::Align2::RIGHT_TOP,
-                format!("{} ", (1. / delta_time).round()),
+                format!("{} ", (1. / delta_time_average).round()),
                 egui::FontId::monospace(16.0),
                 egui::Color32::GREEN,
             );

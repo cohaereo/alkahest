@@ -2,8 +2,8 @@ use std::{collections::VecDeque, sync::Arc, time::Instant};
 
 use anyhow::Context;
 use d3d11::{
-    query::{QueryDesc, D3D11_QUERY_DATA_TIMESTAMP_DISJOINT},
     DeviceContext, Query,
+    query::{D3D11_QUERY_DATA_TIMESTAMP_DISJOINT, QueryDesc},
 };
 use parking_lot::Mutex;
 
@@ -41,7 +41,8 @@ struct ProfilerState {
 
     current_frame: FrameQueries,
     pending_frames: VecDeque<FrameQueries>,
-    last_results: Vec<ProfileScope>,
+    /// Last 10 completed frame results.
+    results: Vec<Vec<ProfileScope>>,
 
     frame_index: u64,
 
@@ -63,7 +64,7 @@ impl D3D11Profiler {
                 frame_index: 0,
             },
             pending_frames: VecDeque::with_capacity(MAX_PENDING_FRAMES),
-            last_results: Vec::new(),
+            results: Vec::new(),
             frame_index: 0,
             scope_depth: 0,
         };
@@ -157,7 +158,7 @@ impl D3D11Profiler {
             enabled,
             current_frame,
             pending_frames,
-            last_results,
+            results: all_results,
             frame_index,
             scope_depth,
             ..
@@ -181,7 +182,10 @@ impl D3D11Profiler {
 
         if let Some(oldest_frame) = pending_frames.front() {
             if let Ok(results) = Self::try_get_frame_results(&gpu.context(), oldest_frame) {
-                *last_results = results;
+                all_results.push(results);
+                while all_results.len() > 60 {
+                    all_results.remove(0);
+                }
                 pending_frames.pop_front();
             }
         } else {
@@ -252,20 +256,39 @@ impl D3D11Profiler {
         Ok(results)
     }
 
-    pub fn get_results(&self) -> Vec<ProfileScope> {
-        let state = self.state.lock();
-        state.last_results.clone()
-    }
-
     pub fn get_results_string(&self) -> String {
         if !self.state.lock().enabled {
             return "GPU profiling is disabled".to_string();
         }
 
-        let results = self.get_results();
-
-        if results.is_empty() {
+        let results_raw = self.state.lock().results.clone();
+        if results_raw.is_empty() {
             return "No profiling data available yet".to_string();
+        }
+
+        let mut results = Vec::new();
+        for scope in &results_raw[results_raw.len() - 1] {
+            // Average over last 10 frames
+            let mut total_cpu = 0.0;
+            let mut total_gpu = 0.0;
+            let mut count = 0;
+            for frame in results_raw.iter().rev() {
+                if let Some(s) = frame
+                    .iter()
+                    .find(|s| s.name == scope.name && s.depth == scope.depth)
+                {
+                    total_cpu += s.cpu_duration_us;
+                    total_gpu += s.gpu_duration_us;
+                    count += 1;
+                }
+            }
+
+            results.push(ProfileScope {
+                name: scope.name.clone(),
+                depth: scope.depth,
+                cpu_duration_us: total_cpu / count as f64,
+                gpu_duration_us: total_gpu / count as f64,
+            });
         }
 
         let mut output = String::new();
