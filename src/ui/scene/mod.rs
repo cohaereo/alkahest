@@ -17,7 +17,8 @@ use alkahest_render::{
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
 use egui::{
-    FontId, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, Widget, load::SizedTexture, vec2,
+    FontId, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, Widget, load::SizedTexture,
+    vec2,
 };
 use glam::Vec3;
 use google_material_symbols::GoogleMaterialSymbols;
@@ -265,17 +266,42 @@ impl Scene {
             .insert(TextStyle::Button, FontId::proportional(16.0));
 
         ui.strong("Scene Settings");
-        ui.checkbox(&mut settings.vertex_ao, "Vertex AO");
+        ui.checkbox(&mut settings.vertex_ao, "Vertex AO")
+            .setting_description_tooltip(
+                "Enables ambient occlusion based on mesh vertex data.\nCan highly impact the look \
+                 and feel of a scene, as it darkens indoor areas and crevices.",
+                PerformanceImpact::None,
+            );
         egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
             .logarithmic(true)
             .text("Exposure Scale")
             .show_value(true)
             .ui(ui);
 
-        ui.checkbox(&mut settings.bloom, "Bloom");
-        ui.checkbox(&mut settings.volumetrics, "Volumetrics");
-        ui.checkbox(&mut settings.shadows, "Shadows");
-        ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit");
+        ui.checkbox(&mut settings.bloom, "Bloom")
+            .setting_description_tooltip(
+                "Enables bloom effect, which adds a glow to bright areas of the scene.",
+                PerformanceImpact::Low,
+            );
+
+        ui.checkbox(&mut settings.volumetrics, "Volumetrics")
+            .setting_description_tooltip(
+                "Enables volumetric lighting effects, such as light shafts and fog.",
+                PerformanceImpact::Medium,
+            );
+        ui.checkbox(&mut settings.shadows, "Shadows")
+            .setting_description_tooltip(
+                "Enables dynamic shadows from lights in the scene.",
+                PerformanceImpact::Medium,
+            );
+
+        ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
+            .setting_description_tooltip(
+                "Enables multi-threaded submission of commands to the GPU. May improve \
+                 performance on systems with many CPU cores, but can introduce stuttering on \
+                 older systems",
+                PerformanceImpact::High,
+            );
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {
@@ -683,4 +709,52 @@ impl ExternalDataWidgetExt for FeatureRendererSubscription {
             })
             .response
     }
+}
+
+trait SettingDescriptionTooltipExt {
+    fn setting_description_tooltip(
+        self,
+        description: &str,
+        performance_impact: PerformanceImpact,
+    ) -> Self;
+}
+
+impl SettingDescriptionTooltipExt for Response {
+    fn setting_description_tooltip(
+        self,
+        description: &str,
+        performance_impact: PerformanceImpact,
+    ) -> Response {
+        self.on_hover_ui(|ui| {
+            ui.style_mut()
+                .text_styles
+                .insert(TextStyle::Body, FontId::proportional(16.0));
+
+            let perf_color = match performance_impact {
+                PerformanceImpact::None => egui::Color32::GRAY,
+                PerformanceImpact::Low => egui::Color32::GREEN,
+                PerformanceImpact::Medium => egui::Color32::YELLOW,
+                PerformanceImpact::High => egui::Color32::RED,
+            };
+
+            ui.label(description);
+            ui.separator();
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing = Vec2::splat(0.0);
+                ui.label("Performance Impact: ");
+                ui.label(
+                    RichText::new(format!("{:?}", performance_impact))
+                        .color(perf_color)
+                        .strong(),
+                );
+            });
+        })
+    }
+}
+#[derive(Debug)]
+enum PerformanceImpact {
+    None,
+    Low,
+    Medium,
+    High,
 }

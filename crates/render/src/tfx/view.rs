@@ -6,11 +6,11 @@ use glam::{Mat4, Vec3};
 use parking_lot::Mutex;
 
 use crate::{
+    Gpu,
     renderer::{
         submit::buffers::{BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
         surface::{SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, Surfaces},
     },
-    Gpu,
 };
 
 pub struct View {
@@ -100,12 +100,14 @@ impl View {
     }
 }
 
+#[derive(Clone)]
 pub struct RenderSettings {
     pub exposure_scale: f32,
     pub vertex_ao: bool,
     pub bloom: bool,
     pub multithreading: bool,
     pub volumetrics: bool,
+    pub shadows: bool,
 }
 
 impl Default for RenderSettings {
@@ -116,6 +118,7 @@ impl Default for RenderSettings {
             bloom: true,
             multithreading: true,
             volumetrics: true,
+            shadows: true,
         }
     }
 }

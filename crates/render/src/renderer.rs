@@ -33,7 +33,7 @@ use crate::{
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
     object::{RenderObject, RenderObjectHandle},
     renderer::submit::bloom::PostProcessScope,
-    tfx::{externs::Externs, packet::FramePacket, scope::TempFrameScope},
+    tfx::{externs::Externs, packet::FramePacket, scope::TempFrameScope, view::RenderSettings},
     util::{
         arena::Arena,
         threading::{CommandListPool, ThreadMutCell},
@@ -80,6 +80,8 @@ pub struct Renderer {
     debug_cbuffer: ConstantBuffer<Mat4>,
     postprocess_cbuffer: ConstantBuffer<PostProcessScope>,
     pub profiler: D3D11Profiler,
+
+    pub settings: RwLock<RenderSettings>,
 }
 
 unsafe impl Send for Renderer {}
@@ -158,6 +160,8 @@ impl Renderer {
             start_time: Instant::now(),
             active_feature_renderers: AtomicCell::new(FeatureRendererSubscription::all()),
             placeholder_textures: RwLock::new(HashMap::new()),
+
+            settings: RwLock::new(RenderSettings::default()),
         })
     }
 
@@ -269,6 +273,10 @@ impl Renderer {
             });
 
         f(texture, uav);
+    }
+
+    pub fn settings(&self) -> RwLockReadGuard<'_, RenderSettings> {
+        self.settings.read()
     }
 }
 
