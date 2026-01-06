@@ -550,6 +550,16 @@ impl FeatureRenderer for StaticInstancesRenderer {
             let p_models = &self.static_models as *const _ as u64;
             let p_groups = &self.groups as *const _ as u64;
             let pool_clone = renderer.cmd_pool.clone();
+
+            let visible = groups_sorted_by_technique[range.clone()].iter().any(|r| {
+                let group_indices = &r.instance_groups;
+                group_indices.iter().any(|&gi| self.groups[gi].visible)
+            });
+
+            if !visible {
+                return;
+            }
+
             let job = SCHEDULER
                 .job_builder("static_geometry")
                 .priority(Priority::High)
