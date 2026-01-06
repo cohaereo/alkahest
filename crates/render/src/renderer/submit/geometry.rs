@@ -15,6 +15,7 @@ pub struct GeometryCommandLists {
     pub decals: (JobHandle, CommandListSetId),
     pub lighting: (JobHandle, CommandListSetId),
     // pub transparent: (JobHandle, CommandListSetId),
+    pub volumetrics: (JobHandle, CommandListSetId),
 }
 
 impl Renderer {
@@ -61,6 +62,18 @@ impl Renderer {
             }
         };
 
+        let volumetrics = {
+            view.lighting.bind_volumetrics(self, cmd);
+            cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
+            {
+                self.submit_stage_parallel(
+                    cmd,
+                    RenderStage::Volumetrics,
+                    FeatureRendererSubscription::all(),
+                )
+            }
+        };
+
         // let transparent = {
         //     self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
         //     cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
@@ -78,6 +91,7 @@ impl Renderer {
             decals,
             lighting,
             // transparent,
+            volumetrics,
         }
     }
 }

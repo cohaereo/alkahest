@@ -91,10 +91,17 @@ impl Renderer {
             }
         }
 
-        self.submit_volumetrics(cmd, view);
+        if self.settings().volumetrics {
+            self.submit_volumetrics(cmd, view, geo);
+        }
     }
 
-    pub(super) fn submit_volumetrics(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_volumetrics(
+        &self,
+        cmd: &mut CommandList,
+        view: &View,
+        geo: Option<&GeometryCommandLists>,
+    ) {
         profiling::scope!("submit_volumetrics");
         let _gpuspan = self.profiler.scope(cmd, "submit_volumetrics");
 
@@ -120,11 +127,18 @@ impl Renderer {
         cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
         {
             cmd_event_span!(cmd, "volumetrics");
-            self.submit_stage(
-                cmd,
-                RenderStage::Volumetrics,
-                FeatureRendererSubscription::all(),
-            );
+
+            if let Some(geo) = geo {
+                let (sync_job, set) = &geo.volumetrics;
+                sync_job.wait();
+                self.cmd_pool.finish(cmd, *set);
+            } else {
+                self.submit_stage(
+                    cmd,
+                    RenderStage::Volumetrics,
+                    FeatureRendererSubscription::all(),
+                );
+            }
         }
 
         {
