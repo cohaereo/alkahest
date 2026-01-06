@@ -65,8 +65,8 @@ impl Renderer {
             self.submit_stage(
                 cmd,
                 RenderStage::Transparents,
-                FeatureRendererSubscription::all(), // FeatureRendererSubscription::SKY_TRANSPARENT
-                                                    //     | FeatureRendererSubscription::RIGID_OBJECT,
+                FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water), // FeatureRendererSubscription::SKY_TRANSPARENT
+                                                                                 //     | FeatureRendererSubscription::RIGID_OBJECT,
             );
         }
 
