@@ -1,6 +1,6 @@
 use std::ops::{Add, BitAnd, Mul, Shr, Sub};
 
-use glam::{vec4, IVec4, UVec4, Vec4, Vec4Swizzles};
+use glam::{IVec4, UVec4, Vec4, Vec4Swizzles, vec4};
 
 fn lerp(start: f32, end: f32, t: f32) -> f32 {
     start + (end - start) * t
@@ -183,6 +183,7 @@ pub fn bytecode_op_spline4_const(
     c3: Vec4,
     c4: Vec4,
 ) -> Vec4 {
+    #[cfg(target_arch = "x86_64")]
     unsafe {
         use std::arch::x86_64::*;
         let t0: __m128 = v.into();
@@ -202,6 +203,30 @@ pub fn bytecode_op_spline4_const(
         );
         let v266 = _mm_xor_ps(_mm_shuffle_ps::<78>(v265, v265), v265);
         _mm_xor_ps(_mm_shuffle_ps::<27>(v266, v266), v266).into()
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        let high = c3 * v + c2;
+        let low = c1 * v + c0;
+
+        let v2 = v * v;
+
+        let evaluated_spline = high * v2 + low;
+
+        let threshold_mask = step(c4, v);
+
+        let channel_mask = _fake_bitwise_ops_fake_xor(threshold_mask, threshold_mask.yzww())
+            .xyz()
+            .extend(threshold_mask.w);
+
+        let spline_result_in_4 = evaluated_spline * channel_mask;
+
+        let spline_result = spline_result_in_4.x
+            + spline_result_in_4.y
+            + spline_result_in_4.z
+            + spline_result_in_4.w;
+
+        Vec4::splat(spline_result)
     }
 }
 
@@ -367,6 +392,7 @@ pub fn bytecode_op_25(v: Vec4) -> Vec4 {
 }
 
 pub fn bytecode_op_unk3b_const(input: Vec4, constants: &[Vec4]) -> Vec4 {
+    #[cfg(target_arch = "x86_64")]
     unsafe {
         use std::arch::x86_64::{
             __m128, _mm_add_ps, _mm_and_ps, _mm_andnot_ps, _mm_cmple_ps, _mm_cmplt_ps, _mm_div_ps,
@@ -492,6 +518,12 @@ pub fn bytecode_op_unk3b_const(input: Vec4, constants: &[Vec4]) -> Vec4 {
         );
 
         Vec4::from(result)
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        // warn!("bytecode_op_unk3b_const is not implemented for this architecture");
+        Vec4::ZERO
     }
 }
 

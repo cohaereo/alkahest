@@ -1,5 +1,3 @@
-use std::arch::x86_64::{_mm_rsqrt_ps, _mm_sqrt_ps};
-
 use glam::{Vec3, Vec4};
 
 pub trait Vec3Ext {
@@ -20,10 +18,29 @@ pub trait Vec4Ext {
 
 impl Vec4Ext for Vec4 {
     fn sqrt(&self) -> Vec4 {
-        unsafe { Vec4::from(_mm_sqrt_ps((*self).into())) }
+        #[cfg(target_feature = "sse")]
+        unsafe {
+            Vec4::from(std::arch::x86_64::_mm_sqrt_ps((*self).into()))
+        }
+        #[cfg(not(target_feature = "sse"))]
+        {
+            Vec4::new(self.x.sqrt(), self.y.sqrt(), self.z.sqrt(), self.w.sqrt())
+        }
     }
 
     fn rsqrt(&self) -> Vec4 {
-        unsafe { Vec4::from(_mm_rsqrt_ps((*self).into())) }
+        #[cfg(target_feature = "sse")]
+        unsafe {
+            Vec4::from(std::arch::x86_64::_mm_rsqrt_ps((*self).into()))
+        }
+        #[cfg(not(target_feature = "sse"))]
+        {
+            Vec4::new(
+                1.0 / self.x.sqrt(),
+                1.0 / self.y.sqrt(),
+                1.0 / self.z.sqrt(),
+                1.0 / self.w.sqrt(),
+            )
+        }
     }
 }
