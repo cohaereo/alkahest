@@ -1,18 +1,18 @@
-use alkahest_core::job::{potassium::Priority, SCHEDULER};
+use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
-    features::{decorators::SDecorator, dynamic::RenderStageSubscription},
     ShaderStage,
+    features::{decorators::SDecorator, dynamic::RenderStageSubscription},
 };
 use glam::{Mat4, Vec4};
 use tiger_pkg::TagHash;
 
 use crate::{
-    asset::{vertex_buffer::VertexBuffer, Handle},
-    feature::{rigid_model::DynamicModel, FeatureRenderer},
+    Renderer,
+    asset::{Handle, vertex_buffer::VertexBuffer},
+    feature::{FeatureRenderer, rigid_model::DynamicModel},
     gpu::cbuffer::ConstantBuffer,
     tfx::externs,
     util::threading::CommandListSetId,
-    Renderer,
 };
 
 pub struct DecoratorRenderer {
@@ -130,6 +130,7 @@ impl DecoratorRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for DecoratorRenderer {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
         camera.culling_frustum.aabb_intersecting(&self.data.bounds)

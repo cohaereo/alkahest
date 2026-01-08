@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
 use alkahest_data::tfx::{
+    PrimitiveType, RenderStage, ShaderStage,
     common::AxisAlignedBBox,
     features::{cubemap::SCubemapComponent, dynamic::RenderStageSubscription},
-    PrimitiveType, RenderStage, ShaderStage,
 };
 use d3d11::dxgi;
-use glam::{vec4, Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles, vec4};
 use itertools::Itertools;
 
 use super::FeatureRenderer;
 use crate::{
-    asset::{texture::Texture, Handle},
+    Gpu, Renderer,
+    asset::{Handle, texture::Texture},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::packet::CompactTransform,
     util::geometry,
-    Gpu, Renderer,
 };
 
 pub struct CubemapRenderer {
@@ -73,6 +73,7 @@ impl CubemapRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for CubemapRenderer {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
         // camera.is_visible(&self.bounds)

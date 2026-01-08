@@ -262,6 +262,7 @@ impl DynamicModel {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for DynamicModel {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
         // TODO(cohae): frustum culling is broken for some moving models (such as the vertex animated fan segments in Irkalla Complex)

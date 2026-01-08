@@ -76,7 +76,7 @@ impl Renderer {
         //     view.lighting.bind_volumetrics(self, cmd);
         //     cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
         //     {
-        //         self.submit_stage_parallel(
+        //         self.submit_stage_parallel_linear(
         //             cmd,
         //             RenderStage::Volumetrics,
         //             FeatureRendererSubscription::all(),
@@ -87,7 +87,7 @@ impl Renderer {
         // let transparent = {
         //     self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
         //     cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
-        //     self.submit_stage_parallel(
+        //     self.submit_stage_parallel_linear(
         //         cmd,
         //         RenderStage::Transparents,
         //         FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)

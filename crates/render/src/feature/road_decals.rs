@@ -1,21 +1,21 @@
 use alkahest_data::tfx::{
+    ShaderStage,
     features::{
         dynamic::RenderStageSubscription,
         road_decals::{SRoadDecal, SRoadDecalCollection},
     },
-    ShaderStage,
 };
-use glam::{vec4, Mat4, Vec4Swizzles};
+use glam::{Mat4, Vec4Swizzles, vec4};
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use super::FeatureRenderer;
 use crate::{
-    asset::{index_buffer::IndexBuffer, vertex_buffer::VertexBuffer, Handle},
+    Renderer,
+    asset::{Handle, index_buffer::IndexBuffer, vertex_buffer::VertexBuffer},
     feature::rigid_model::RigidModelConstants,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::technique::Technique,
-    Renderer,
 };
 
 pub struct RoadDecalCollectionRenderer {
@@ -73,6 +73,7 @@ impl RoadDecalCollectionRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for RoadDecalCollectionRenderer {
     fn extract_and_prepare(&mut self, _renderer: &Renderer, _extracted_data: &dyn std::any::Any) {}
 

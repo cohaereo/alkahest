@@ -1,28 +1,28 @@
 use std::sync::Arc;
 
-use alkahest_core::job::{potassium::JobHandle, SCHEDULER};
+use alkahest_core::job::{SCHEDULER, potassium::JobHandle};
 use alkahest_data::tfx::{
+    RenderStage, ShaderStage,
     features::{
         ao::SStaticAmbientOcclusion,
         dynamic::RenderStageSubscription,
         terrain::{STerrain, TerrainDetailLevel},
     },
-    RenderStage, ShaderStage,
 };
 use anyhow::Context;
 use glam::Vec4;
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use super::FeatureRenderer;
 use crate::{
-    asset::{index_buffer::IndexBuffer, texture::Texture, vertex_buffer::VertexBuffer, Handle},
+    Gpu, Renderer,
+    asset::{Handle, index_buffer::IndexBuffer, texture::Texture, vertex_buffer::VertexBuffer},
     camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     gpu_span,
     tfx::technique::Technique,
     util::threading::CommandListSetId,
-    Gpu, Renderer,
 };
 
 #[repr(C)]
@@ -182,6 +182,7 @@ impl TerrainPatchesRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for TerrainPatchesRenderer {
     fn visibility_test(&mut self, camera: &Camera) -> bool {
         let center = self.terrain.bounds.center();

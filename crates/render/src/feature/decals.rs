@@ -7,11 +7,11 @@ use alkahest_data::tfx::{
 
 use super::FeatureRenderer;
 use crate::{
-    asset::{vertex_buffer::VertexBuffer, Handle},
+    Renderer,
+    asset::{Handle, vertex_buffer::VertexBuffer},
     gpu::command_list::CommandList,
     tfx::technique::Technique,
     util::threading::CommandListSetId,
-    Renderer,
 };
 
 pub struct DecalCollectionRenderer {
@@ -63,6 +63,7 @@ impl DecalCollectionRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for DecalCollectionRenderer {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
         if !camera.culling_frustum.aabb_intersecting(&self.bounds) {

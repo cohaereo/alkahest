@@ -144,6 +144,7 @@ impl LightRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for LightRenderer {
     fn visibility_test(&mut self, camera: &Camera) -> bool {
         if let Some(ref bounds) = self.bounds {

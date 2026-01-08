@@ -463,6 +463,7 @@ impl StaticInstancesRenderer {
     }
 }
 
+#[profiling::all_functions]
 impl FeatureRenderer for StaticInstancesRenderer {
     fn visibility_test(&mut self, camera: &Camera) -> bool {
         if !camera.is_visible(&self.bounds) {

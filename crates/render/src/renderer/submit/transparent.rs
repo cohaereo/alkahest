@@ -62,12 +62,21 @@ impl Renderer {
             //     );
             // }
 
-            self.submit_stage(
-                cmd,
-                RenderStage::Transparents,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water), // FeatureRendererSubscription::SKY_TRANSPARENT
-                                                                                 //     | FeatureRendererSubscription::RIGID_OBJECT,
-            );
+            if self.settings().multithreading {
+                self.submit_stage_parallel_linear(
+                    cmd,
+                    RenderStage::Transparents,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water), // FeatureRendererSubscription::SKY_TRANSPARENT
+                                                                                     //     | FeatureRendererSubscription::RIGID_OBJECT,
+                );
+            } else {
+                self.submit_stage(
+                    cmd,
+                    RenderStage::Transparents,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water), // FeatureRendererSubscription::SKY_TRANSPARENT
+                                                                                     //     | FeatureRendererSubscription::RIGID_OBJECT,
+                );
+            }
         }
 
         {

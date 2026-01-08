@@ -25,7 +25,7 @@ pub struct GpuState {
 struct GpuStageState {
     cbuffers: [Option<d3d11::Buffer>; d3d11::DeviceContext::CONSTANT_BUFFER_SLOT_COUNT],
     samplers: [Option<d3d11::SamplerState>; d3d11::DeviceContext::SAMPLER_SLOT_COUNT],
-    // srvs: [Option<d3d11::ShaderResourceView>; d3d11::DeviceContext::SHADER_RESOURCE_SLOT_COUNT],
+    srvs: [Option<d3d11::ShaderResourceView>; d3d11::DeviceContext::SHADER_RESOURCE_SLOT_COUNT],
 }
 
 impl GpuState {
@@ -44,10 +44,12 @@ impl GpuState {
             state_vs: GpuStageState {
                 cbuffers: cmd.vertex_get_constant_buffers(),
                 samplers: cmd.vertex_get_samplers(),
+                srvs: cmd.vertex_get_shader_resources(),
             },
             state_ps: GpuStageState {
                 cbuffers: cmd.pixel_get_constant_buffers(),
                 samplers: cmd.pixel_get_samplers(),
+                srvs: cmd.pixel_get_shader_resources(),
             },
             viewports: cmd.rasterizer_get_viewports(),
             rtvs,
@@ -66,18 +68,54 @@ impl GpuState {
         cmd.current_input_topology = self.current_input_topology;
         {
             profiling::scope!("restore_vs");
-            cmd.set_sampler(ShaderStage::Vertex, 0, &self.state_vs.samplers[0]);
-            cmd.set_sampler(ShaderStage::Vertex, 1, &self.state_vs.samplers[1]);
-            cmd.set_constant_buffer(ShaderStage::Vertex, 12, &self.state_vs.cbuffers[12]);
-            cmd.set_constant_buffer(ShaderStage::Vertex, 13, &self.state_vs.cbuffers[13]);
+            let mut samplers_refs: [Option<&d3d11::SamplerState>;
+                d3d11::DeviceContext::SAMPLER_SLOT_COUNT] =
+                [None; d3d11::DeviceContext::SAMPLER_SLOT_COUNT];
+            for (i, sampler) in self.state_vs.samplers.iter().enumerate() {
+                samplers_refs[i] = sampler.as_ref();
+            }
+            cmd.vertex_set_samplers(0, samplers_refs.as_slice());
+
+            let mut cbuffers_refs: [Option<&d3d11::Buffer>;
+                d3d11::DeviceContext::CONSTANT_BUFFER_SLOT_COUNT] =
+                [None; d3d11::DeviceContext::CONSTANT_BUFFER_SLOT_COUNT];
+            for (i, cbuffer) in self.state_vs.cbuffers.iter().enumerate() {
+                cbuffers_refs[i] = cbuffer.as_ref();
+            }
+            cmd.vertex_set_constant_buffers(0, cbuffers_refs.as_slice());
+            let mut srvs_refs: [Option<&d3d11::ShaderResourceView>;
+                d3d11::DeviceContext::SHADER_RESOURCE_SLOT_COUNT] =
+                [None; d3d11::DeviceContext::SHADER_RESOURCE_SLOT_COUNT];
+            for (i, srv) in self.state_vs.srvs.iter().enumerate() {
+                srvs_refs[i] = srv.as_ref();
+            }
+            cmd.vertex_set_shader_resources(0, srvs_refs.as_slice());
         }
 
         {
             profiling::scope!("restore_ps");
-            cmd.set_sampler(ShaderStage::Pixel, 0, &self.state_ps.samplers[0]);
-            cmd.set_sampler(ShaderStage::Pixel, 1, &self.state_ps.samplers[1]);
-            cmd.set_constant_buffer(ShaderStage::Pixel, 12, &self.state_ps.cbuffers[12]);
-            cmd.set_constant_buffer(ShaderStage::Pixel, 13, &self.state_ps.cbuffers[13]);
+            let mut samplers_refs: [Option<&d3d11::SamplerState>;
+                d3d11::DeviceContext::SAMPLER_SLOT_COUNT] =
+                [None; d3d11::DeviceContext::SAMPLER_SLOT_COUNT];
+            for (i, sampler) in self.state_ps.samplers.iter().enumerate() {
+                samplers_refs[i] = sampler.as_ref();
+            }
+            cmd.pixel_set_samplers(0, samplers_refs.as_slice());
+
+            let mut cbuffers_refs: [Option<&d3d11::Buffer>;
+                d3d11::DeviceContext::CONSTANT_BUFFER_SLOT_COUNT] =
+                [None; d3d11::DeviceContext::CONSTANT_BUFFER_SLOT_COUNT];
+            for (i, cbuffer) in self.state_ps.cbuffers.iter().enumerate() {
+                cbuffers_refs[i] = cbuffer.as_ref();
+            }
+            cmd.pixel_set_constant_buffers(0, cbuffers_refs.as_slice());
+            let mut srvs_refs: [Option<&d3d11::ShaderResourceView>;
+                d3d11::DeviceContext::SHADER_RESOURCE_SLOT_COUNT] =
+                [None; d3d11::DeviceContext::SHADER_RESOURCE_SLOT_COUNT];
+            for (i, srv) in self.state_ps.srvs.iter().enumerate() {
+                srvs_refs[i] = srv.as_ref();
+            }
+            cmd.pixel_set_shader_resources(0, srvs_refs.as_slice());
         }
 
         cmd.rasterizer_set_viewports(&self.viewports[0..4]);

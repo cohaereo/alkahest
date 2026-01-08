@@ -128,23 +128,19 @@ impl Renderer {
         {
             cmd_event_span!(cmd, "volumetrics");
 
-            // if let Some(_geo) = geo {
-            //     self.submit_stage_parallel_apply(
-            //         cmd,
-            //         RenderStage::Volumetrics,
-            //         FeatureRendererSubscription::all(),
-            //     );
-
-            //     // let (sync_job, set) = &geo.volumetrics;
-            //     // sync_job.wait();
-            //     // self.cmd_pool.finish(cmd, *set);
-            // } else {
-            self.submit_stage(
-                cmd,
-                RenderStage::Volumetrics,
-                FeatureRendererSubscription::all(),
-            );
-            // }
+            if self.settings().multithreading {
+                self.submit_stage_parallel_linear(
+                    cmd,
+                    RenderStage::Volumetrics,
+                    FeatureRendererSubscription::all(),
+                );
+            } else {
+                self.submit_stage(
+                    cmd,
+                    RenderStage::Volumetrics,
+                    FeatureRendererSubscription::all(),
+                );
+            }
         }
 
         {
