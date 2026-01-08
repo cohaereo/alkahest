@@ -97,7 +97,7 @@ impl Renderer {
     }
 
     pub(super) fn submit_volumetrics(
-        &self,
+        self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
         geo: Option<&GeometryCommandLists>,
@@ -128,17 +128,23 @@ impl Renderer {
         {
             cmd_event_span!(cmd, "volumetrics");
 
-            if let Some(geo) = geo {
-                let (sync_job, set) = &geo.volumetrics;
-                sync_job.wait();
-                self.cmd_pool.finish(cmd, *set);
-            } else {
-                self.submit_stage(
-                    cmd,
-                    RenderStage::Volumetrics,
-                    FeatureRendererSubscription::all(),
-                );
-            }
+            // if let Some(_geo) = geo {
+            //     self.submit_stage_parallel_apply(
+            //         cmd,
+            //         RenderStage::Volumetrics,
+            //         FeatureRendererSubscription::all(),
+            //     );
+
+            //     // let (sync_job, set) = &geo.volumetrics;
+            //     // sync_job.wait();
+            //     // self.cmd_pool.finish(cmd, *set);
+            // } else {
+            self.submit_stage(
+                cmd,
+                RenderStage::Volumetrics,
+                FeatureRendererSubscription::all(),
+            );
+            // }
         }
 
         {

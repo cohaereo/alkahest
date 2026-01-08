@@ -121,7 +121,7 @@ impl Camera {
 
         // If the projected size is too small, consider it not visible
         let ndc_size = max_ndc - min_ndc;
-        let screen_size_threshold = 0.001; // Adjust this threshold as needed
+        let screen_size_threshold = 0.006; // Adjust this threshold as needed
         if ndc_size.x < screen_size_threshold && ndc_size.y < screen_size_threshold {
             return false;
         }

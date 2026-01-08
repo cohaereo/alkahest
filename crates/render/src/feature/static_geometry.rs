@@ -204,14 +204,23 @@ impl StaticModel {
         }
     }
 
-    #[profiling::function]
-    pub fn render_group(
+    // #[profiling::function]
+    /// The draw closure is called with (cmd, part.index_count, part.index_start)
+    pub fn render_group<F>(
         &self,
         cmd: &mut CommandList,
         stage: RenderStage,
-        instance_count: u32,
         group: usize,
-    ) {
+        bind_technique: bool,
+        draw: F,
+    ) where
+        F: Fn(&mut CommandList, u32, u32),
+    {
+        profiling::scope!(
+            "render static model group",
+            &format!("model={}, group={}", self.hash, group)
+        );
+
         let i = group;
         let group = &self.model.opaque_meshes.mesh_groups[i];
         if group.render_stage != stage {
@@ -223,27 +232,30 @@ impl StaticModel {
             return;
         }
 
-        let renderer = Renderer::instance();
-        if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
-            cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
+        {
+            profiling::scope!(
+                "bind buffers",
+                &format!("buffer_index={}", part.buffer_index)
+            );
+            let buffers = &self.buffers[part.buffer_index as usize];
+            if buffers.bind(cmd).is_none() {
+                return;
+            }
         }
 
-        let buffers = &self.buffers[part.buffer_index as usize];
-        if buffers.bind(cmd).is_none() {
-            return;
-        }
-
-        if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
-            cmd.enable_smart_technique_binding();
-            technique.bind(cmd);
-        } else {
-            return;
+        if bind_technique {
+            if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
+                technique.bind(cmd);
+            } else {
+                return;
+            }
         }
 
         cmd.set_input_layout(group.input_layout_index as usize);
         cmd.set_input_topology(part.primitive_type);
 
-        cmd.draw_indexed_instanced(part.index_count, instance_count, part.index_start, 0, 0);
+        // cmd.draw_indexed_instanced(part.index_count, instance_count, part.index_start, 0, 0);
+        draw(cmd, part.index_count, part.index_start);
     }
 }
 
@@ -524,6 +536,16 @@ impl FeatureRenderer for StaticInstancesRenderer {
                     .priority(Priority::High)
                     .spawn(move || {
                         let cmd = pool_clone.get_command_list(set);
+                        let renderer = Renderer::instance();
+                        if let Some(ao_vb) =
+                            renderer.ao_buffer.read().as_ref().and_then(|h| h.get())
+                        {
+                            cmd.vertex_set_shader_resources(
+                                1,
+                                std::slice::from_ref(&ao_vb.srv.as_ref()),
+                            );
+                        }
+
                         // Safety: p_models/p_groups are (practically) valid for the lifetime of this closure
                         // TODO(cohae): need a safer way to pass self.models to the job
                         let p_models = p_models as *const Vec<StaticModel>;
@@ -565,6 +587,15 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 .priority(Priority::High)
                 .spawn(move || {
                     let cmd = pool_clone.get_command_list(set);
+
+                    let renderer = Renderer::instance();
+                    if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
+                        cmd.vertex_set_shader_resources(
+                            1,
+                            std::slice::from_ref(&ao_vb.srv.as_ref()),
+                        );
+                    }
+
                     // Safety: p_models/p_groups are (practically) valid for the lifetime of this closure
                     // TODO(cohae): need a safer way to pass self.models to the job
                     let p_models = p_models as *const Vec<StaticModel>;
@@ -572,22 +603,33 @@ impl FeatureRenderer for StaticInstancesRenderer {
                     let p_groups = p_groups as *const Vec<StaticInstanceGroup>;
                     let groups = unsafe { &*p_groups };
 
+                    let mut bind_technique = true;
                     for range in &groups_sorted_by_technique[range.clone()] {
                         let model = &models[range.model_index];
-                        for group_index in &range.instance_groups {
-                            let group = &groups[*group_index];
-                            if !group.visible {
-                                continue;
-                            }
 
-                            group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
-                            model.render_group(
-                                cmd,
-                                stage,
-                                group.transforms.len() as u32,
-                                range.group_index,
-                            );
-                        }
+                        model.render_group(
+                            cmd,
+                            stage,
+                            range.group_index,
+                            bind_technique,
+                            |cmd, index_count, index_start| {
+                                for group_index in &range.instance_groups {
+                                    let group = &groups[*group_index];
+                                    group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
+                                    if group.visible {
+                                        cmd.draw_indexed_instanced(
+                                            index_count,
+                                            group.transforms.len() as u32,
+                                            index_start,
+                                            0,
+                                            0,
+                                        );
+                                    }
+                                }
+                            },
+                        );
+
+                        bind_technique = false;
                     }
                 });
 

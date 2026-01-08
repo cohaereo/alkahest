@@ -41,16 +41,15 @@ impl ModelBuffers {
     pub fn bind(&self, cmd: &mut CommandList) -> Option<()> {
         self.index_buffer.bind(cmd);
 
-        if let Some(vertex1) = &self.vertex1_buffer {
-            cmd.input_assembler_set_vertex_buffers(
-                0,
-                &[Some(&self.vertex0_buffer.buffer), Some(&vertex1.buffer)],
-                Some(&[self.vertex0_buffer.stride as _, vertex1.stride as _]),
-                Some(&[0, 0]),
-            );
-        } else {
-            self.vertex0_buffer.bind_single(cmd, 0);
-        }
+        let vertex1 = self.vertex1_buffer.as_ref().unwrap_or(&self.vertex0_buffer); // or a dummy buffer
+
+        cmd.input_assembler_set_vertex_buffers(
+            0,
+            &[Some(&self.vertex0_buffer.buffer), Some(&vertex1.buffer)],
+            Some(&[self.vertex0_buffer.stride as _, vertex1.stride as _]),
+            Some(&[0, 0]),
+        )
+        .ok()?;
 
         if let Some(color_buffer) = &self.color_buffer {
             cmd.vertex_set_shader_resources(0, &[color_buffer.srv.as_ref()]);

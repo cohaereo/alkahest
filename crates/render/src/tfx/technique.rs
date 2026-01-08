@@ -1,15 +1,15 @@
 use std::{ops::Deref, sync::Arc};
 
 use alkahest_data::tfx::{STechnique, STechniqueShader, ShaderStage, TechniqueBindMode};
-use anyhow::{ensure, Context};
+use anyhow::{Context, ensure};
 use d3d11::DeviceChild;
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use super::dynamic_constants::DynamicConstants;
 use crate::{
-    asset::Handle, gpu::command_list::CommandList,
-    tfx::expression_vm::interpreter::TempObjectChannels, Gpu,
+    Gpu, asset::Handle, gpu::command_list::CommandList,
+    tfx::expression_vm::interpreter::TempObjectChannels,
 };
 
 pub struct Technique {
@@ -49,10 +49,10 @@ impl Technique {
 
     pub fn is_loaded(&self) -> bool {
         for (_shader, stage) in self.all_stages() {
-            if let Some(stage) = stage {
-                if !stage.is_loaded() {
-                    return false;
-                }
+            if let Some(stage) = stage
+                && !stage.is_loaded()
+            {
+                return false;
             }
         }
 
@@ -254,12 +254,16 @@ impl TechniqueStage {
         }))
     }
 
-    #[profiling::function]
     pub fn bind(
         &self,
         cmd: &mut CommandList,
         channels: Option<&TempObjectChannels>,
     ) -> anyhow::Result<()> {
+        profiling::scope!(
+            "TechniqueStage::bind",
+            &format!("stage={}", self.stage.short_name())
+        );
+
         self.shader_module.bind(cmd);
         self.dynamic_constants.bind(cmd, self.stage, channels)?;
 

@@ -74,6 +74,10 @@ impl D3D11Profiler {
         }
     }
 
+    pub fn set_enabled(&self, enabled: bool) {
+        self.state.lock().enabled = enabled;
+    }
+
     pub fn scope(&self, context: &DeviceContext, name: impl Into<String>) -> ProfileScopeGuard {
         if !self.state.lock().enabled {
             ProfileScopeGuard::none(self.clone())

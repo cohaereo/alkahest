@@ -11,16 +11,16 @@ use super::expression_vm::{
     interpreter::{InterpreterState, TempObjectChannels},
 };
 use crate::{
+    Gpu, Renderer,
     asset::{
-        texture::{load_sampler, Texture},
         Handle,
+        texture::{Texture, load_sampler},
     },
     gpu::{
         cbuffer::ConstantBuffer,
         command_list::{CommandList, ContextExt},
     },
     tfx::expression_vm::opcodes::{Opcode, OpcodeIterator},
-    Gpu, Renderer,
 };
 
 /// Holds all dynamically bound resources for a shader
@@ -104,7 +104,7 @@ impl DynamicConstants {
     }
 
     #[profiling::function]
-    fn prepare(
+    fn prepare_constants(
         &self,
         cmd: &mut CommandList,
         channels: Option<&TempObjectChannels>,
@@ -136,6 +136,11 @@ impl DynamicConstants {
         output: Option<&mut [Vec4]>,
         channels: Option<&TempObjectChannels>,
     ) {
+        // profiling::scope!(
+        //     "evaluate_expression_bytecode",
+        //     &format!("bytes={}", self.bytecode.len())
+        // );
+
         let mut interpreter = InterpreterState::new(&self.bytecode)
             .with_d3d11_context(cmd)
             .with_externs(&cmd.externs);
@@ -177,7 +182,9 @@ impl DynamicConstants {
         stage: ShaderStage,
         channels: Option<&TempObjectChannels>,
     ) -> anyhow::Result<()> {
-        self.prepare(cmd, channels)?;
+        if !self.bytecode.is_empty() {
+            self.prepare_constants(cmd, channels)?;
+        }
 
         if self.cbuffer_slot != u32::MAX {
             if let Some(ref cbuffer) = self.cbuffer {

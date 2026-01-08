@@ -15,7 +15,7 @@ pub struct GeometryCommandLists {
     pub decals: (JobHandle, CommandListSetId),
     pub lighting: (JobHandle, CommandListSetId),
     // pub transparent: (JobHandle, CommandListSetId),
-    pub volumetrics: (JobHandle, CommandListSetId),
+    // pub volumetrics: (JobHandle, CommandListSetId),
 }
 
 impl Renderer {
@@ -62,17 +62,27 @@ impl Renderer {
             }
         };
 
-        let volumetrics = {
-            view.lighting.bind_volumetrics(self, cmd);
-            cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
-            {
-                self.submit_stage_parallel(
-                    cmd,
-                    RenderStage::Volumetrics,
-                    FeatureRendererSubscription::all(),
-                )
-            }
-        };
+        // let volumetrics = {
+        //     {
+        //         let ext = self.externs.get_mut();
+        //         // ext.deferred.depth_constants = Vec4::new(0.0, 1. / 0.01, 0.0, 0.0);
+        //         ext.deferred.deferred_depth = view.gbuffers.uber_depth_eighth.into();
+        //         let volumetrics = view.surfaces.get(view.lighting.volumetrics_rt0);
+        //         ext.view.derive_matrices(volumetrics.resolution());
+        //     }
+        //     self.globals.scopes.view.bind(cmd).unwrap();
+        //     self.globals.scopes.transparent.bind(cmd).unwrap();
+
+        //     view.lighting.bind_volumetrics(self, cmd);
+        //     cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
+        //     {
+        //         self.submit_stage_parallel(
+        //             cmd,
+        //             RenderStage::Volumetrics,
+        //             FeatureRendererSubscription::all(),
+        //         )
+        //     }
+        // };
 
         // let transparent = {
         //     self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
@@ -91,7 +101,7 @@ impl Renderer {
             decals,
             lighting,
             // transparent,
-            volumetrics,
+            // volumetrics,
         }
     }
 }
