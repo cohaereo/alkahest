@@ -210,12 +210,14 @@ impl Scene {
             });
 
             ui.style_mut().spacing.tooltip_width = 4096.0;
+            Renderer::instance().profiler.set_enabled(false);
             ui.interact(
                 fps_rect,
                 "frame_counter_profiler_tooltip".into(),
                 Sense::hover(),
             )
             .on_hover_ui(|ui| {
+                Renderer::instance().profiler.set_enabled(true);
                 if let Some(profiler_results) = &self.profiler_results {
                     ui.add(
                         egui::Label::new(RichText::new(profiler_results.clone()).monospace())
