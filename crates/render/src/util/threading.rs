@@ -215,3 +215,78 @@ impl CommandListPool {
         self.release_set(set);
     }
 }
+
+pub fn parallel_iter<T>(slice: &mut [T], func: impl Fn(&mut T) + Send + Sync)
+where
+    T: Send + 'static,
+{
+    struct JobContext<T: Send> {
+        chunk: *mut T,
+        func: *const dyn Fn(&mut T),
+    }
+
+    unsafe impl<T: Send> Send for JobContext<T> {}
+
+    let mut job_handles = Vec::with_capacity(slice.len());
+    for item in slice.iter_mut() {
+        let context = JobContext {
+            chunk: item as *mut T,
+            func: &raw const func as *const dyn Fn(&mut T),
+        };
+
+        let job_handle = SCHEDULER.job_builder("parallel_iter_chunk").spawn(move || {
+            let context = &context;
+            let chunk = unsafe { &mut *context.chunk };
+            let func = unsafe { &*context.func };
+            func(chunk);
+        });
+
+        job_handles.push(job_handle);
+    }
+
+    let sync_job = SCHEDULER
+        .job_builder("parallel_iter_sync")
+        .dependencies(job_handles)
+        .spawn(|| {});
+
+    sync_job.wait();
+}
+
+// pub fn parallel_iter<T>(slice: &mut [T], func: impl Fn(&mut [T]) + Send + Sync)
+// where
+//     T: Send + 'static,
+// {
+//     let num_workers = SCHEDULER.num_workers();
+//     let chunk_size = slice.len().div_ceil(num_workers);
+
+//     struct JobContext<T: Send> {
+//         chunk: *mut [T],
+//         func: *const dyn Fn(&mut [T]),
+//     }
+
+//     unsafe impl<T: Send> Send for JobContext<T> {}
+
+//     let mut job_handles = Vec::with_capacity(num_workers);
+//     for chunk in slice.chunks_mut(chunk_size) {
+//         let context = JobContext {
+//             chunk: chunk as *mut [T],
+//             func: &raw const func as *const dyn Fn(&mut [T]),
+//         };
+
+//         let job_handle = SCHEDULER.job_builder("parallel_iter_chunk").spawn(move || {
+//             let context = &context;
+//             let chunk = unsafe { &mut *context.chunk };
+//             let func = unsafe { &*context.func };
+//             func(chunk);
+//         });
+
+//         job_handles.push(job_handle);
+//     }
+
+//     let sync_job = SCHEDULER
+//         .job_builder("parallel_iter_sync")
+//         .dependencies(job_handles)
+//         .spawn(|| {});
+
+//     sync_job.wait();
+// }

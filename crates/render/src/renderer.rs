@@ -2,6 +2,7 @@ pub mod globals;
 pub mod submit;
 pub mod surface;
 pub mod util;
+pub mod visibility;
 
 use std::{
     collections::HashMap,
