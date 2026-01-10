@@ -1,6 +1,6 @@
 use std::{f32, io::Write, ops::Deref, sync::Arc};
 
-use ahash::{HashMap, HashSet};
+use ahash::HashMap;
 use alkahest_core::job::{
     SCHEDULER,
     potassium::{JobHandle, Priority},

@@ -33,7 +33,7 @@ pub struct DecalSet {
 }
 
 impl DecalCollectionRenderer {
-    #[profiling::function]
+    // #[profiling::function]
     pub fn load(collection: SDecalCollection) -> anyhow::Result<Box<Self>> {
         let vb0 = Renderer::instance().asset_manager.load(collection.vb0);
         let vb1 = Renderer::instance().asset_manager.load(collection.vb1);
@@ -48,7 +48,7 @@ impl DecalCollectionRenderer {
                         .iter()
                         .map(|b| b.bb.clone())
                         .sum(),
-                    visible: false,
+                    visible: true,
                     technique: Renderer::instance().asset_manager.load(set.technique),
                     start: set.start,
                     count: set.count,
@@ -66,25 +66,26 @@ impl DecalCollectionRenderer {
     }
 }
 
-#[profiling::all_functions]
+// #[profiling::all_functions]
 impl FeatureRenderer for DecalCollectionRenderer {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
         if !camera.culling_frustum.aabb_intersecting(&self.bounds) {
             return false;
         }
 
-        let mut any_visible = false;
-        for set in &mut self.sets {
-            let is_visible = camera.culling_frustum.aabb_intersecting(&set.bounds);
-            if is_visible {
-                set.visible = true;
-                any_visible = true;
-            } else {
-                set.visible = false;
-            }
-        }
+        // let mut any_visible = false;
+        // for set in &mut self.sets {
+        //     let is_visible = camera.culling_frustum.aabb_intersecting(&set.bounds);
+        //     if is_visible {
+        //         set.visible = true;
+        //         any_visible = true;
+        //     } else {
+        //         set.visible = false;
+        //     }
+        // }
 
-        any_visible
+        // any_visible
+        true
     }
 
     fn extract_and_prepare(&mut self, _renderer: &Renderer, _extracted_data: &dyn std::any::Any) {}

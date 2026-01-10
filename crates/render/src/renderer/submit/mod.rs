@@ -205,6 +205,16 @@ impl Renderer {
             );
         }
 
+        {
+            profiling::scope!("prepare/submit immediate geometry");
+            let _gpuspan = self.profiler.scope(cmd, "immediate_geometry");
+            self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
+            cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
+            cmd.flush_states();
+            self.immediate.lock().prepare(gpu);
+            self.immediate.lock().submit(cmd);
+        }
+
         view.shading_result_read
             .lock()
             .update(cmd, view.surfaces.get(view.shading_result));
@@ -228,19 +238,6 @@ impl Renderer {
         //     true,
         //     "final_blit",
         // );
-
-        {
-            profiling::scope!("prepare/submit immediate geometry");
-            let _gpuspan = self.profiler.scope(cmd, "immediate_geometry");
-            cmd.output_merger_set_render_targets(
-                std::slice::from_ref(&output.rtv.as_ref()),
-                view.surfaces.get(view.gbuffers.depth).dsv.as_ref(),
-            );
-            cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
-            cmd.flush_states();
-            self.immediate.lock().prepare(gpu);
-            self.immediate.lock().submit(cmd);
-        }
     }
 
     fn prepare_externs(
