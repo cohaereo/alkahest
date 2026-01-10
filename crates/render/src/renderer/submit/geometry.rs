@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use alkahest_core::job::potassium::JobHandle;
-use alkahest_data::tfx::{
-    FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
-};
+use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
 
 use crate::{
     Renderer, cmd_event_span, gpu::command_list::CommandList, tfx::view::View,
@@ -42,11 +40,7 @@ impl Renderer {
             view.gbuffers.bind(cmd, self);
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(0));
 
-            self.submit_stage_parallel(
-                cmd,
-                RenderStage::Decals,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
-            )
+            self.submit_stage_parallel(cmd, RenderStage::Decals, FeatureRendererSubscription::all())
         };
 
         let lighting = {

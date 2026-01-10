@@ -9,7 +9,6 @@ use alkahest_data::tfx::{FeatureRendererSubscription, RenderStage};
 use super::Renderer;
 use crate::{
     gpu::{command_list::CommandList, state::GpuState},
-    renderer,
     util::threading::CommandListSetId,
 };
 

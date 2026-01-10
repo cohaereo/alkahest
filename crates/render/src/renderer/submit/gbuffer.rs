@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
 use alkahest_core::convar::ConVars;
-use alkahest_data::tfx::{
-    FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
-};
+use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage};
 
 use super::Renderer;
 use crate::{
     cmd_event_span,
-    gpu::command_list::{CommandList, DepthMode},
+    gpu::command_list::CommandList,
     renderer::submit::geometry::GeometryCommandLists,
     tfx::{externs::DownsampleTextureGeneric, view::View},
 };
@@ -63,34 +61,8 @@ impl Renderer {
                 sync_job.wait();
                 self.cmd_pool.finish(cmd, *set);
             } else {
-                self.submit_stage(
-                    cmd,
-                    RenderStage::Decals,
-                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
-                );
+                self.submit_stage(cmd, RenderStage::Decals, FeatureRendererSubscription::all());
             }
-
-            // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
-            // TODO(cohae): we should be able to just submit this along with the other decal submits, decals just need to set depth mode and rasterizer state themselves
-            cmd.state_override = PipelineState::new(None, None, Some(1), None);
-            cmd.set_depth_mode(DepthMode::Forward);
-
-            // if self.settings().multithreading {
-            //     self.submit_stage_parallel_linear(
-            //         cmd,
-            //         RenderStage::Decals,
-            //         FeatureRendererSubscription::DYNAMIC_DECALS,
-            //     );
-            // } else {
-            self.submit_stage(
-                cmd,
-                RenderStage::Decals,
-                FeatureRendererSubscription::DYNAMIC_DECALS,
-            );
-            // }
-
-            cmd.set_depth_mode(DepthMode::Reverse);
-            cmd.state_override.reset();
         }
 
         view.gbuffers

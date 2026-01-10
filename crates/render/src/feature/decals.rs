@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alkahest_data::tfx::{
-    RenderStage,
+    PipelineState, RenderStage,
     common::AxisAlignedBBox,
     features::{decals::SDecalCollection, dynamic::RenderStageSubscription},
 };
@@ -10,7 +10,7 @@ use super::FeatureRenderer;
 use crate::{
     Renderer,
     asset::{Handle, vertex_buffer::VertexBuffer},
-    gpu::command_list::CommandList,
+    gpu::command_list::{CommandList, DepthMode},
     tfx::technique::Technique,
     util::threading::CommandListSetId,
 };
@@ -94,6 +94,8 @@ impl FeatureRenderer for DecalCollectionRenderer {
             return;
         };
 
+        cmd.state_override = PipelineState::new(None, None, Some(1), None);
+        cmd.set_depth_mode(DepthMode::Forward);
         Renderer::instance().globals.scopes.decal.bind(cmd).unwrap();
 
         cmd.input_assembler_set_vertex_buffers(
@@ -112,6 +114,9 @@ impl FeatureRenderer for DecalCollectionRenderer {
             t.bind(cmd).unwrap();
             cmd.draw_instanced(36_u32, set.count as u32, 0, set.start as u32);
         }
+
+        cmd.set_depth_mode(DepthMode::Reverse);
+        cmd.state_override.reset();
     }
 
     fn submit_parallel(
@@ -131,6 +136,9 @@ impl FeatureRenderer for DecalCollectionRenderer {
             .spawn(move || {
                 let self_ref = unsafe { &*(self_p as *const Self) };
                 let cmd = pool.get_command_list(set);
+
+                cmd.state_override = PipelineState::new(None, None, Some(1), None);
+                cmd.set_depth_mode(DepthMode::Forward);
 
                 let Some((vb0, vb1)) = self_ref.vb0.get().zip(self_ref.vb1.get()) else {
                     return;
@@ -154,6 +162,9 @@ impl FeatureRenderer for DecalCollectionRenderer {
                     t.bind(cmd).unwrap();
                     cmd.draw_instanced(36_u32, set.count as u32, 0, set.start as u32);
                 }
+
+                cmd.set_depth_mode(DepthMode::Reverse);
+                cmd.state_override.reset();
             });
         jobs.push(job);
     }

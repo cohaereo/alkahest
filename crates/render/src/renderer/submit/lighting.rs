@@ -100,7 +100,7 @@ impl Renderer {
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
-        geo: Option<&GeometryCommandLists>,
+        _geo: Option<&GeometryCommandLists>,
     ) {
         profiling::scope!("submit_volumetrics");
         let _gpuspan = self.profiler.scope(cmd, "submit_volumetrics");
