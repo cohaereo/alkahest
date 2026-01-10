@@ -214,12 +214,6 @@ impl FeatureRenderer for LightRenderer {
                 unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
                 unk80: local_to_world_relative,
 
-                unk114: if stage == RenderStage::Volumetrics {
-                    0.0 // TODO(cohae): figure out what this value is. It's necessary for shadows to work properly, but values that work for normal shading break volumetrics
-                } else {
-                    7500.0
-                },
-
                 ..Default::default()
             }));
 
@@ -390,12 +384,6 @@ impl FeatureRenderer for LightRenderer {
                         // unk40: local_to_world_relative.inverse().transpose(),
                         unk40: (view_translation_inverse_mat4 * light_local_to_world).inverse(),
                         unk80: local_to_world_relative,
-
-                        unk114: if stage == RenderStage::Volumetrics {
-                            0.0 // TODO(cohae): figure out what this value is. It's necessary for shadows to work properly, but values that work for normal shading break volumetrics
-                        } else {
-                            7500.0
-                        },
 
                         ..Default::default()
                     }));

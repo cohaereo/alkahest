@@ -3,6 +3,7 @@ use std::sync::Arc;
 use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage, ShaderStage};
 use alkahest_render::{
     Gpu, Renderer,
+    camera::CameraProjection,
     gpu::command_list::{CommandList, DepthMode},
     renderer::surface::{SizeRelativity, Surface, SurfaceDesc},
 };
@@ -23,7 +24,7 @@ impl ShadowMap {
     const SHADOWMAP_RESOLUTION: u32 = 2048;
     pub fn create(transform: Transform, fov: f32, near: f32, far: f32) -> Self {
         let view = transform.view_matrix();
-        let projection = Mat4::perspective_rh(fov.to_radians(), 1.0, near, far);
+        let projection = CameraProjection::Perspective.matrix(1.0, fov, near, far);
 
         ShadowMap {
             surface: Arc::new(Mutex::new(None)),
@@ -57,7 +58,7 @@ impl ShadowMap {
         let shadow_surface = surface_lock
             .as_ref()
             .expect("unreachable: shadow surface was just initialized");
-        shadow_surface.clear_depth(cmd, 1.0, 0);
+        shadow_surface.clear_depth(cmd, 0.0, 0);
         shadow_surface.bind_single(cmd);
 
         let ext = renderer.externs.get_mut();
@@ -93,7 +94,7 @@ pub fn s_render_all_shadowmaps(
     cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(6));
     cmd.flush_states();
 
-    cmd.set_depth_mode(DepthMode::Forward);
+    // cmd.set_depth_mode(DepthMode::Forward);
     for (_entity, shadowmap) in world.query::<&mut ShadowMap>().iter() {
         renderer
             .common
@@ -112,5 +113,5 @@ pub fn s_render_all_shadowmaps(
             FeatureRendererSubscription::all(),
         );
     }
-    cmd.set_depth_mode(DepthMode::Reverse);
+    // cmd.set_depth_mode(DepthMode::Reverse);
 }

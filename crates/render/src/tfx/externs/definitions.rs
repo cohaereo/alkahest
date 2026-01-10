@@ -167,10 +167,10 @@ extern_struct! {
         0xf0 => unkf0: Vec4 > default(Vec4::W),
         0x100 => unk100: Vec4,
         0x110 => unk110: f32,
-        0x114 => unk114: f32 > default(7500.0),
+        0x114 => unk114: f32 > default(1.0),
         0x118 => unk118: f32,
         0x11c => unk11c: f32,
-        0x120 => unk120: f32,
+        0x120 => unk120: f32 > default(1.0),
     }
 }
 
@@ -203,7 +203,7 @@ extern_struct! {
         0x1C => resolution_height: f32,
         0x20 => unk20: f32,
         0x28 => unk28: TextureView,
-        0x30 => unk30: Vec4 > default(Vec4::new(1.5, 1.0, 1.0, 1.0)),
+        0x30 => unk30: Vec4 > default(Vec4::new(-7000.0, 0.0, 1.0, 0.0)),
         0x40 => unk40: Vec4,
         0x50 => unk50: Vec4,
         0x80 => unk80: Vec4,
@@ -212,7 +212,7 @@ extern_struct! {
         0xB0 => unkb0: Vec4 > default(Vec4::new(0.0, 0.0, 1.0, 1.0)),
         0xC0 => unkc0: Mat4,
         0x100 => unk100: Mat4,
-        0x180 => unk180: f32,
+        0x180 => unk180: f32 > default(2.0),
     }
 }
 
