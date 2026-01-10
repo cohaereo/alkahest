@@ -216,7 +216,7 @@ impl CommandListPool {
     }
 }
 
-pub fn parallel_iter<T>(slice: &mut [T], func: impl Fn(&mut T) + Send + Sync)
+pub fn parallel_iter<T>(slice: &mut [T], func: impl Fn(&mut T) + Send + Sync + 'static)
 where
     T: Send + 'static,
 {
