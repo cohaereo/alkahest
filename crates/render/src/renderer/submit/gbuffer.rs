@@ -71,6 +71,7 @@ impl Renderer {
             }
 
             // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
+            // TODO(cohae): we should be able to just submit this along with the other decal submits, decals just need to set depth mode and rasterizer state themselves
             cmd.state_override = PipelineState::new(None, None, Some(1), None);
             cmd.set_depth_mode(DepthMode::Forward);
 

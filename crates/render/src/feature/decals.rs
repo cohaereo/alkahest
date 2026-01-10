@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use alkahest_data::tfx::{
+    RenderStage,
     common::AxisAlignedBBox,
     features::{decals::SDecalCollection, dynamic::RenderStageSubscription},
 };
@@ -19,6 +20,7 @@ pub struct DecalCollectionRenderer {
     vb0: Handle<VertexBuffer>,
     vb1: Handle<VertexBuffer>,
     bounds: AxisAlignedBBox,
+    render_stage: RenderStage,
 }
 
 pub struct DecalSet {
@@ -59,6 +61,7 @@ impl DecalCollectionRenderer {
             vb0,
             vb1,
             bounds: collection.bounds,
+            render_stage: collection.render_stage,
         }))
     }
 }
@@ -156,6 +159,11 @@ impl FeatureRenderer for DecalCollectionRenderer {
     }
 
     fn subscribed_stages(&self) -> RenderStageSubscription {
-        RenderStageSubscription::DECALS
+        // TODO(cohae): Dynamic decals never actually use the decals stage, they should actually use GenerateGbuffer instead
+        if self.render_stage == RenderStage::GenerateGbuffer {
+            RenderStage::Decals.into()
+        } else {
+            self.render_stage.into()
+        }
     }
 }

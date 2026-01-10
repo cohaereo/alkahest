@@ -6,8 +6,10 @@ use alkahest_data::tfx::{
 
 use super::Renderer;
 use crate::{
-    cmd_event_span, gpu::command_list::CommandList,
-    renderer::submit::geometry::GeometryCommandLists, tfx::view::View,
+    cmd_event_span,
+    gpu::command_list::{CommandList, DepthMode},
+    renderer::submit::geometry::GeometryCommandLists,
+    tfx::view::View,
 };
 
 impl Renderer {
@@ -66,17 +68,39 @@ impl Renderer {
                 self.submit_stage_parallel_linear(
                     cmd,
                     RenderStage::Transparents,
-                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water), // FeatureRendererSubscription::SKY_TRANSPARENT
-                                                                                     //     | FeatureRendererSubscription::RIGID_OBJECT,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+                        .without(TfxFeatureRenderer::DynamicDecals), // FeatureRendererSubscription::SKY_TRANSPARENT
+                                                                     //     | FeatureRendererSubscription::RIGID_OBJECT,
                 );
             } else {
                 self.submit_stage(
                     cmd,
                     RenderStage::Transparents,
-                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water), // FeatureRendererSubscription::SKY_TRANSPARENT
-                                                                                     //     | FeatureRendererSubscription::RIGID_OBJECT,
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water)
+                        .without(TfxFeatureRenderer::DynamicDecals), // FeatureRendererSubscription::SKY_TRANSPARENT
+                                                                     //     | FeatureRendererSubscription::RIGID_OBJECT,
                 );
             }
+
+            // TODO(cohae): We should only reverse the depth mode for decals that we are inside of
+            cmd.state_override = PipelineState::new(None, None, Some(1), None);
+            cmd.set_depth_mode(DepthMode::Forward);
+
+            // if self.settings().multithreading {
+            //     self.submit_stage_parallel_linear(
+            //         cmd,
+            //         RenderStage::Decals,
+            //         FeatureRendererSubscription::DYNAMIC_DECALS,
+            //     );
+            // } else {
+            self.submit_stage(
+                cmd,
+                RenderStage::Transparents,
+                FeatureRendererSubscription::DYNAMIC_DECALS,
+            );
+            // }
+
+            cmd.set_depth_mode(DepthMode::Reverse);
         }
 
         {
