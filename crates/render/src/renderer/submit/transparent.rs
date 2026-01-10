@@ -15,7 +15,7 @@ impl Renderer {
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
-        geo: Option<&GeometryCommandLists>,
+        _geo: Option<&GeometryCommandLists>,
     ) {
         {
             {

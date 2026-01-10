@@ -62,11 +62,6 @@ impl Renderer {
                 let (sync_job, set) = &geo.decals;
                 sync_job.wait();
                 self.cmd_pool.finish(cmd, *set);
-                self.submit_stage_parallel_apply(
-                    cmd,
-                    RenderStage::Decals,
-                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
-                );
             } else {
                 self.submit_stage(
                     cmd,
