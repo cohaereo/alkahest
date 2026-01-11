@@ -1,6 +1,6 @@
 use std::ops::{Add, BitAnd, Mul, Shr, Sub};
 
-use glam::{IVec4, UVec4, Vec4, Vec4Swizzles, vec4};
+use glam::{IVec4, UVec4, Vec4, Vec4Swizzles, uvec4, vec4};
 
 fn lerp(start: f32, end: f32, t: f32) -> f32 {
     start + (end - start) * t
@@ -351,75 +351,92 @@ pub fn bytecode_op_spline8_chain_const(
 
 // TODO(cohae): Fuzztest against original SIMD code
 pub fn bytecode_op_24(v15: Vec4) -> Vec4 {
-    const C_0_25: Vec4 = Vec4::splat(0.25);
-    const C_0_225: Vec4 = Vec4::splat(0.225);
-    const C_0_775: Vec4 = Vec4::splat(0.775);
-    const C_8_0: Vec4 = Vec4::splat(8.0);
-    const C_NEG16_0: Vec4 = Vec4::splat(-16.0);
-    const C_0_0001: Vec4 = Vec4::splat(0.0001);
-    const C_8388608: f32 = 8388608.0; // 0x4B000000 as float
-    const MASK: u32 = 0x7FFFFFFF;
+    #[allow(non_snake_case)]
+    unsafe {
+        use std::arch::x86_64::*;
+        let v15 = __m128::from(v15);
+        let xmmword_7FF6308FFF50 = __m128::from(Vec4::splat(0.25));
+        let xmmword_7FF6309035D0 = _mm_set1_epi32(0x7FFFFFFF);
+        let xmmword_7FF630908220 = _mm_set1_epi32(0x4B000000);
+        let xmmword_7FF63090E210 = __m128::from(Vec4::splat(0.225));
+        let xmmword_7FF63090E260 = __m128::from(Vec4::splat(0.775));
+        let xmmword_7FF63090E2D0 = __m128::from(Vec4::splat(8.0));
+        let xmmword_7FF63090E350 = __m128::from(Vec4::splat(-16.0));
+        let xmmword_7FF631703720 = __m128::from(Vec4::splat(0.0001));
 
-    // v87 = v15 + 0.25
-    let v87 = v15 + C_0_25;
+        let v87 = _mm_add_ps(xmmword_7FF6308FFF50, v15);
+        let v88 = _mm_cmpgt_epi32(
+            xmmword_7FF630908220,
+            _mm_and_si128(xmmword_7FF6309035D0, _mm_cvtps_epi32(v15)),
+        );
+        let v89 = _mm_cmpgt_epi32(
+            xmmword_7FF630908220,
+            _mm_and_si128(xmmword_7FF6309035D0, _mm_cvtps_epi32(v87)),
+        );
+        let v90 = _mm_sub_ps(
+            v15,
+            _mm_or_ps(
+                _mm_and_ps(_mm_cvtepi32_ps(_mm_cvtps_epi32(v15)), _mm_cvtepi32_ps(v88)),
+                _mm_cvtepi32_ps(_mm_andnot_si128(v88, _mm_cvtps_epi32(v15))),
+            ),
+        );
+        let v91 = _mm_mul_ps(
+            _mm_add_ps(
+                _mm_mul_ps(
+                    _mm_max_ps(_mm_sub_ps(Vec4::ZERO.into(), v90), v90),
+                    xmmword_7FF63090E350,
+                ),
+                xmmword_7FF63090E2D0,
+            ),
+            v90,
+        );
+        let v92 = _mm_sub_ps(
+            v87,
+            _mm_or_ps(
+                _mm_and_ps(_mm_cvtepi32_ps(_mm_cvtps_epi32(v87)), _mm_cvtepi32_ps(v89)),
+                _mm_cvtepi32_ps(_mm_andnot_si128(v89, _mm_cvtps_epi32(v87))),
+            ),
+        );
+        let v93 = _mm_mul_ps(
+            _mm_add_ps(
+                _mm_mul_ps(
+                    _mm_max_ps(_mm_sub_ps(Vec4::ZERO.into(), v92), v92),
+                    xmmword_7FF63090E350,
+                ),
+                xmmword_7FF63090E2D0,
+            ),
+            v92,
+        );
+        let v94 = _mm_mul_ps(
+            _mm_add_ps(
+                _mm_mul_ps(
+                    _mm_max_ps(_mm_sub_ps(Vec4::ZERO.into(), v93), v93),
+                    xmmword_7FF63090E210,
+                ),
+                xmmword_7FF63090E260,
+            ),
+            v93,
+        );
+        let v5 = _mm_cmplt_ps(
+            xmmword_7FF631703720,
+            _mm_max_ps(_mm_sub_ps(Vec4::ZERO.into(), v94), v94),
+        );
+        let v39 = _mm_div_ps(
+            _mm_mul_ps(
+                _mm_add_ps(
+                    _mm_mul_ps(
+                        _mm_max_ps(_mm_sub_ps(Vec4::ZERO.into(), v91), v91),
+                        xmmword_7FF63090E210,
+                    ),
+                    xmmword_7FF63090E260,
+                ),
+                v91,
+            ),
+            v94,
+        );
 
-    let abs_v15 = Vec4::new(
-        f32::from_bits(v15.x.to_bits() & MASK),
-        f32::from_bits(v15.y.to_bits() & MASK),
-        f32::from_bits(v15.z.to_bits() & MASK),
-        f32::from_bits(v15.w.to_bits() & MASK),
-    );
-    let abs_v87 = Vec4::new(
-        f32::from_bits(v87.x.to_bits() & MASK),
-        f32::from_bits(v87.y.to_bits() & MASK),
-        f32::from_bits(v87.z.to_bits() & MASK),
-        f32::from_bits(v87.w.to_bits() & MASK),
-    );
-
-    let v88 = abs_v15.cmplt(Vec4::splat(C_8388608));
-    let v89 = abs_v87.cmplt(Vec4::splat(C_8388608));
-
-    // v90: fractional part of v15
-    // If v88 is true, round to int and convert back, else keep original
-    let rounded_v15 = Vec4::new(
-        (v15.x as i32) as f32,
-        (v15.y as i32) as f32,
-        (v15.z as i32) as f32,
-        (v15.w as i32) as f32,
-    );
-    let v90_base = Vec4::select(v88, rounded_v15, v15);
-    let v90 = v15 - v90_base;
-
-    // v91: Apply smoothstep-like function to v90
-    let abs_v90 = v90.abs();
-    let v91 = (abs_v90 * C_NEG16_0 + C_8_0) * v90;
-
-    // v92: fractional part of v87
-    let rounded_v87 = Vec4::new(
-        (v87.x as i32) as f32,
-        (v87.y as i32) as f32,
-        (v87.z as i32) as f32,
-        (v87.w as i32) as f32,
-    );
-    let v92_base = Vec4::select(v89, rounded_v87, v87);
-    let v92 = v87 - v92_base;
-
-    // v93: Apply smoothstep-like function to v92
-    let abs_v92 = v92.abs();
-    let v93 = (abs_v92 * C_NEG16_0 + C_8_0) * v92;
-
-    // v94: Apply another smoothstep-like function to v93
-    let abs_v93 = v93.abs();
-    let v94 = (abs_v93 * C_0_225 + C_0_775) * v93;
-
-    let abs_v91 = v91.abs();
-    let numerator = (abs_v91 * C_0_225 + C_0_775) * v91;
-    let v39 = numerator / v94;
-
-    let abs_v94 = v94.abs();
-    let v5 = abs_v94.cmpgt(C_0_0001);
-
-    Vec4::select(v5, v39, Vec4::ZERO)
+        Vec4::from(_mm_and_ps(v39, v5))
+    }
 }
 
 // TODO(cohae): Fuzztest against original SIMD code
@@ -432,7 +449,7 @@ pub fn bytecode_op_25(v: Vec4) -> Vec4 {
 
     // let   v1 = Vec4::mul(
     //     _mm_cvtepi32_ps(_mm_and_si128(_mm_load_si128((const __m128i *)&XMMWORD_7FF73A1FCBE0), *a1)),
-    //     (__m128)XMMWORD_7FF73A1FCBF0);
+    //     XMMWORD_7FF73A1FCBF0);
 
     let v1 = Vec4::mul(
         Vec4::from_bits_uvec4(XMMWORD_7FF73A1FCBE0 & v.as_bits_uvec4()),
