@@ -350,6 +350,79 @@ pub fn bytecode_op_spline8_chain_const(
 }
 
 // TODO(cohae): Fuzztest against original SIMD code
+pub fn bytecode_op_24(v15: Vec4) -> Vec4 {
+    const C_0_25: Vec4 = Vec4::splat(0.25);
+    const C_0_225: Vec4 = Vec4::splat(0.225);
+    const C_0_775: Vec4 = Vec4::splat(0.775);
+    const C_8_0: Vec4 = Vec4::splat(8.0);
+    const C_NEG16_0: Vec4 = Vec4::splat(-16.0);
+    const C_0_0001: Vec4 = Vec4::splat(0.0001);
+    const C_8388608: f32 = 8388608.0; // 0x4B000000 as float
+    const MASK: u32 = 0x7FFFFFFF;
+
+    // v87 = v15 + 0.25
+    let v87 = v15 + C_0_25;
+
+    let abs_v15 = Vec4::new(
+        f32::from_bits(v15.x.to_bits() & MASK),
+        f32::from_bits(v15.y.to_bits() & MASK),
+        f32::from_bits(v15.z.to_bits() & MASK),
+        f32::from_bits(v15.w.to_bits() & MASK),
+    );
+    let abs_v87 = Vec4::new(
+        f32::from_bits(v87.x.to_bits() & MASK),
+        f32::from_bits(v87.y.to_bits() & MASK),
+        f32::from_bits(v87.z.to_bits() & MASK),
+        f32::from_bits(v87.w.to_bits() & MASK),
+    );
+
+    let v88 = abs_v15.cmplt(Vec4::splat(C_8388608));
+    let v89 = abs_v87.cmplt(Vec4::splat(C_8388608));
+
+    // v90: fractional part of v15
+    // If v88 is true, round to int and convert back, else keep original
+    let rounded_v15 = Vec4::new(
+        (v15.x as i32) as f32,
+        (v15.y as i32) as f32,
+        (v15.z as i32) as f32,
+        (v15.w as i32) as f32,
+    );
+    let v90_base = Vec4::select(v88, rounded_v15, v15);
+    let v90 = v15 - v90_base;
+
+    // v91: Apply smoothstep-like function to v90
+    let abs_v90 = v90.abs();
+    let v91 = (abs_v90 * C_NEG16_0 + C_8_0) * v90;
+
+    // v92: fractional part of v87
+    let rounded_v87 = Vec4::new(
+        (v87.x as i32) as f32,
+        (v87.y as i32) as f32,
+        (v87.z as i32) as f32,
+        (v87.w as i32) as f32,
+    );
+    let v92_base = Vec4::select(v89, rounded_v87, v87);
+    let v92 = v87 - v92_base;
+
+    // v93: Apply smoothstep-like function to v92
+    let abs_v92 = v92.abs();
+    let v93 = (abs_v92 * C_NEG16_0 + C_8_0) * v92;
+
+    // v94: Apply another smoothstep-like function to v93
+    let abs_v93 = v93.abs();
+    let v94 = (abs_v93 * C_0_225 + C_0_775) * v93;
+
+    let abs_v91 = v91.abs();
+    let numerator = (abs_v91 * C_0_225 + C_0_775) * v91;
+    let v39 = numerator / v94;
+
+    let abs_v94 = v94.abs();
+    let v5 = abs_v94.cmpgt(C_0_0001);
+
+    Vec4::select(v5, v39, Vec4::ZERO)
+}
+
+// TODO(cohae): Fuzztest against original SIMD code
 pub fn bytecode_op_25(v: Vec4) -> Vec4 {
     const XMMWORD_7FF73A1FCBD0: UVec4 = UVec4::splat(0x0000007F);
     const XMMWORD_7FF73A1FCBE0: UVec4 = UVec4::splat(0x007FFFFF);

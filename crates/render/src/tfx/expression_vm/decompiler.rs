@@ -1,5 +1,5 @@
 use alkahest_data::tfx::{ExternIndex, ShaderStage};
-use anyhow::{ensure, Context};
+use anyhow::{Context, ensure};
 use glam::Vec4;
 
 use super::opcodes::Opcode;
@@ -452,6 +452,9 @@ impl<'a> DecompilerState<'a> {
                 }
                 Opcode::Saturate => {
                     set_top!(format!("<fun>saturate<reset>({cached_top})"));
+                }
+                Opcode::Unknown0x24 => {
+                    set_top!(format!("<fun>bytecode_op_24<reset>({cached_top})"));
                 }
                 Opcode::Unknown0x25 => {
                     set_top!(format!("<fun>bytecode_op_25<reset>({cached_top})"));

@@ -3,16 +3,22 @@ use std::any::Any;
 use assert_offset::AssertOffsets;
 use glam::{Mat4, Vec3, Vec4};
 
-use crate::object::RenderObjectHandle;
+use crate::{object::RenderObjectHandle, renderer::submit::atmosphere::AtmosphereData};
 
 #[derive(Default)]
 pub struct FramePacket {
     // pub alloc: Bump,
     pub frame_nodes: Vec<FrameNode>,
     // pub view_nodes: Vec<ViewNode>,
+    pub misc: FramePacketMisc,
 }
 
 impl FramePacket {
+    pub fn begin_frame(&mut self, misc: FramePacketMisc) {
+        self.reset();
+        self.misc = misc;
+    }
+
     pub fn reset(&mut self) {
         // self.alloc.reset();
         self.frame_nodes.clear();
@@ -120,3 +126,12 @@ impl From<Mat4> for CompactTransform {
 //     pub translation: Vec3,
 //     pub scale: f32,
 // }
+
+#[derive(Default)]
+pub struct FramePacketMisc {
+    pub time: f32,
+    pub delta_time: f32,
+
+    pub atmosphere: AtmosphereData,
+    pub time_of_day: f32,
+}

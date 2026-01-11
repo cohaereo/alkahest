@@ -28,8 +28,8 @@ impl Renderer {
             cmd.pixel_set_shader_resources(0, &[surf.srv.as_ref()]);
 
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = surface.into();
-            ext.postprocess.res_for_unk00 = surf.resolution_with_recip();
+            ext.postprocess.input = surface.into();
+            ext.postprocess.res_for_input = surf.resolution_with_recip();
             ext.postprocess.output_res = view.surfaces.get(out_surface).resolution_with_recip();
             ext.postprocess.unkc0 = unkc0;
             self.bind_surfaces(cmd, &[out_surface], None);

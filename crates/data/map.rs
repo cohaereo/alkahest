@@ -5,6 +5,7 @@ use tiger_pkg::TagHash;
 use crate::{
     tag::{OptionalTag, WideHash, WideTag},
     tfx::{
+        atmosphere::SAtmosphereDataComponent,
         common::AxisAlignedBBox,
         features::{
             ao::SStaticAmbientOcclusion,
@@ -92,7 +93,8 @@ tiger_variant_enum! {
         SCubemapComponent,
         SStaticAmbientOcclusionComponent,
         SRoadDecalCollectionComponent,
-        SWaterPlaneComponent
+        SWaterPlaneComponent,
+        SAtmosphereDataComponent
         // SMaterialPermutationsComponent,
     }
 }

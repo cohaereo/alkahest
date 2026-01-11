@@ -2,8 +2,8 @@ use std::{
     any::Any,
     cell::UnsafeCell,
     sync::{
-        atomic::{AtomicBool, AtomicUsize},
         Arc,
+        atomic::{AtomicBool, AtomicUsize},
     },
 };
 
@@ -161,6 +161,15 @@ impl<T: Asset + 'static> Clone for Handle<T> {
     fn clone(&self) -> Self {
         Self {
             asset: self.asset.clone(),
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: Asset + 'static> Default for Handle<T> {
+    fn default() -> Self {
+        Self {
+            asset: UntypedHandle::default(),
             _marker: std::marker::PhantomData,
         }
     }

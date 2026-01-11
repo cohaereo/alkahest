@@ -4,7 +4,7 @@ use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage
 use alkahest_render::{
     Gpu, Renderer,
     camera::CameraProjection,
-    gpu::command_list::{CommandList, DepthMode},
+    gpu::command_list::CommandList,
     renderer::surface::{SizeRelativity, Surface, SurfaceDesc},
 };
 use d3d11::dxgi;

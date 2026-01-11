@@ -1,3 +1,4 @@
+pub mod atmosphere;
 pub mod bloom;
 pub mod buffers;
 pub mod gbuffer;
@@ -30,7 +31,6 @@ impl Renderer {
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
-        delta_time: f32,
         debug_pipeline: Option<DebugPipeline>,
     ) {
         cmd_event_span!(cmd, "submit_world");
@@ -46,12 +46,7 @@ impl Renderer {
 
         let gpu = &self.gpu;
 
-        self.prepare_externs(
-            cmd,
-            view,
-            self.start_time.elapsed().as_secs_f32(),
-            delta_time,
-        );
+        self.prepare_externs(cmd, view);
 
         self.globals.scopes.view.bind(cmd).unwrap();
 
@@ -72,6 +67,8 @@ impl Renderer {
         ) {
             self.submit_lighting(cmd, view, geo.as_ref());
         }
+
+        self.submit_atmosphere(cmd, view);
 
         self.clear_surface(cmd, view.shading_result, [0., 0., 0., 1.0]);
         self.bind_surfaces(cmd, &[view.shading_result], None);
@@ -240,14 +237,10 @@ impl Renderer {
         // );
     }
 
-    fn prepare_externs(
-        &self,
-        cmd: &mut CommandList,
-        view: &View,
-        render_time: f32,
-        delta_time: f32,
-    ) {
+    fn prepare_externs(&self, cmd: &mut CommandList, view: &View) {
         let fb_res = view.surfaces.framebuffer_resolution();
+
+        let misc = &self.frame_packet.read().misc;
 
         // let cam_view = Mat4::from_cols(
         //     [-0.962532818, -0.027713167, -0.269745320, 0.000000000].into(),
@@ -267,9 +260,10 @@ impl Renderer {
             .update(view.world_to_camera, view.camera_to_projective, fb_res);
 
         *ext.frame = externs::Frame {
-            game_time: render_time, //self.start_time.elapsed().as_secs_f32();
-            render_time,            //self.start_time.elapsed().as_secs_f32();
-            delta_game_time: delta_time,
+            game_time: misc.time,   //self.start_time.elapsed().as_secs_f32();
+            render_time: misc.time, //self.start_time.elapsed().as_secs_f32();
+            delta_game_time: misc.delta_time,
+            unk10: misc.time_of_day,
             exposure_time: 0.016666668,
             exposure_scale: view.settings.exposure_scale,
             exposure_illum_relative: 0.25438,
@@ -336,6 +330,34 @@ impl Renderer {
         // ext.atmosphere.unk38 = self.common.temporary_depth_lookup.view.clone().into();
         // ext.atmosphere.unk88 = self.common.temporary_atmos.view.clone().into();
 
+        *ext.atmosphere = externs::Atmosphere {
+            time_of_day_normalized: misc.time_of_day,
+            unk80: misc.atmosphere.atmosphere_lookup_vertical.clone().into(),
+            unke0: view.atmosphere.sky_lookup_near.into(),
+            unkf0: view.atmosphere.sky_lookup_far.into(),
+            unk1ec: 150.0,
+            unk1c4: 600.0,
+
+            // From EDZ nighttime capture
+            unk150: -0.97563,
+            unk154: 0.00386,
+            unk1b4: 0.94444,
+            unk1b8: 1.00,
+            unk1bc: 0.00427,
+            // time_of_day_normalized: 0.05198,
+            unk110: vec4(0.99605, 0.03099, -0.0832, 0.00),
+            sky_lookup_resolution: view
+                .surfaces()
+                .get(view.atmosphere.sky_lookup_near)
+                .resolution_with_recip(),
+            unk1d0: vec4(0.00, 0.00, 0.00, 0.00),
+            unk1e0: 0.00,
+            unk1e4: 0.00386,
+            unk1e8: 0.00427,
+
+            ..Default::default()
+        };
+
         ext.screen_area = ScreenArea {
             unk00: view.shading_result_read.lock().srv.clone().into(),
             unk30: TextureView::None, // health overlay
@@ -380,6 +402,8 @@ impl Renderer {
         ext.cubemaps.unk00 = view.lighting.vertex_ao.into();
 
         *ext.transparent = externs::Transparent {
+            unk00: view.atmosphere.sky_lookup_near.into(),
+            unk10: view.atmosphere.sky_lookup_far.into(),
             // unk00: todo!(), // t11, Atmosphere (near?)
             // unk08: todo!(), // t12, Atmosphere (3x2)
             // unk10: todo!(), // t13, Atmosphere (far?)
@@ -441,10 +465,10 @@ impl Renderer {
                 exposure_scale_for_shading: ext.frame.exposure_scale,
                 exposure_illum_relative: ext.frame.exposure_illum_relative,
                 random_seed_scales: vec4(
-                    (render_time * 60.0 + 33.75) * 1.258699,
-                    (render_time * 60.0 + 60.0) * 0.9583125,
-                    (render_time * 60.0 + 60.0) * 8.789123,
-                    (render_time * 60.0 + 33.75) * 2.311535,
+                    (misc.time * 60.0 + 33.75) * 1.258699,
+                    (misc.time * 60.0 + 60.0) * 0.9583125,
+                    (misc.time * 60.0 + 60.0) * 8.789123,
+                    (misc.time * 60.0 + 33.75) * 2.311535,
                 ),
                 unk3: vec4(0.5, 0.5, 0.0, 0.0),
                 unk4: vec4(1.0, 1.0, 0.0, 1.0),

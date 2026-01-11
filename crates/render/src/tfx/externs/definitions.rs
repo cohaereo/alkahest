@@ -224,12 +224,12 @@ extern_struct! {
         0x18 => unk18: TextureView,
         0x40 => unk40: TextureView,
         0x58 => unk58: TextureView,
-        0x70 => unk70: f32,
+        0x70 => time_of_day_normalized: f32,
         0x74 => unk74: f32,
         0x78 => unk78: f32,
         0x80 => unk80: TextureView,
         0x88 => unk88: TextureView,
-        0x90 => unk90: Vec4,
+        0x90 => sky_lookup_resolution: Vec4,
         0xA0 => unka0: TextureView,
         0xC0 => unkc0: TextureView,
         0xD0 => unkd0: Vec4,
@@ -629,7 +629,7 @@ extern_struct! {
 
 extern_struct! {
     struct Postprocess("postprocess") {
-        0x00 => unk00: TextureView,
+        0x00 => input: TextureView,
         0x08 => unk08: TextureView,
         0x10 => unk10: TextureView,
         0x18 => unk18: TextureView,
@@ -640,7 +640,7 @@ extern_struct! {
         0x40 => unk40: Uav,
         0x48 => unk48: Uav,
         0x50 => output_res: Vec4,
-        0x60 => res_for_unk00: Vec4,
+        0x60 => res_for_input: Vec4,
         0x80 => unk80: Vec4,
         0xC0 => unkc0: Vec4,
         0xD0 => unkd0: Vec4,

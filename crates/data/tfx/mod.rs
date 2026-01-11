@@ -1,3 +1,4 @@
+pub mod atmosphere;
 pub mod buffers;
 pub mod common;
 pub mod enums;

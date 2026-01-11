@@ -355,6 +355,9 @@ impl<'a> InterpreterState<'a> {
                 Opcode::Saturate => {
                     set_top!(cached_top.clamp(Vec4::ZERO, Vec4::ONE))
                 }
+                Opcode::Unknown0x24 => {
+                    set_top!(super::helpers::bytecode_op_24(cached_top));
+                }
                 Opcode::Unknown0x25 => {
                     set_top!(super::helpers::bytecode_op_25(cached_top));
                 }

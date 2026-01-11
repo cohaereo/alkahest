@@ -1,26 +1,27 @@
 use std::{
     any::TypeId,
-    sync::{atomic::AtomicUsize, Arc},
+    sync::{Arc, atomic::AtomicUsize},
 };
 
-use alkahest_core::job::{potassium::Priority, SCHEDULER};
+use alkahest_core::job::{SCHEDULER, potassium::Priority};
+use alkahest_data::tag::WideHash;
 use hashbrown::HashMap;
 use parking_lot::Mutex;
 use tiger_pkg::TagHash;
 use uuid::Uuid;
 
 use super::{
-    handle::{Handle, UntypedHandle},
     Asset,
+    handle::{Handle, UntypedHandle},
 };
 use crate::{
+    Gpu,
     asset::{
-        index_buffer::{load_index_buffer, IndexBuffer},
+        index_buffer::{IndexBuffer, load_index_buffer},
         technique::Technique,
         texture::Texture,
-        vertex_buffer::{load_vertex_buffer, VertexBuffer},
+        vertex_buffer::{VertexBuffer, load_vertex_buffer},
     },
-    Gpu,
 };
 
 // Asynchronous asset manager. Allows taking a handle to an ArcShift<Option<T>> (where T: Asset), which will be populated with the asset once it is loaded.
@@ -53,7 +54,7 @@ impl AssetManager {
         None
     }
 
-    pub fn load<T: Asset + 'static>(&self, tag: TagHash) -> Handle<T> {
+    pub fn load<T: Asset + 'static>(&self, tag: impl Into<WideHash>) -> Handle<T> {
         self.try_load(tag)
             .unwrap_or_else(|| unsafe { self.dummy_handle.clone_as_typed_unchecked() })
     }
@@ -61,7 +62,8 @@ impl AssetManager {
     /// Get the asset handle for the given tag, or create a new one, and send it to the loader thread.
     /// Returns None if the tag is null
     #[profiling::function]
-    pub fn try_load<T: Asset + 'static>(&self, tag: TagHash) -> Option<Handle<T>> {
+    pub fn try_load<T: Asset + 'static>(&self, tag: impl Into<WideHash>) -> Option<Handle<T>> {
+        let tag = tag.into().hash32();
         if tag.is_none() {
             // TODO: Return a dummy handle instead of None
             return None;

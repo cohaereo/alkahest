@@ -151,9 +151,9 @@ impl Renderer {
             ext.deferred.deferred_depth = view.gbuffers.uber_depth_half.into();
             ext.postprocess = externs::Postprocess {
                 unk08: view.lighting.volumetrics_rt1.into(),
-                unk00: view.lighting.volumetrics_rt0.into(),
+                input: view.lighting.volumetrics_rt0.into(),
                 unk18: view.gbuffers.uber_depth_eighth.into(),
-                res_for_unk00: view
+                res_for_input: view
                     .surfaces
                     .get(view.lighting.volumetrics_rt0)
                     .resolution_with_recip(),
@@ -191,8 +191,8 @@ impl Renderer {
             ext.view.derive_matrices(shading_result.resolution());
 
             ext.postprocess = externs::Postprocess {
-                unk00: view.lighting.volumetrics_upres.into(),
-                res_for_unk00: view
+                input: view.lighting.volumetrics_upres.into(),
+                res_for_input: view
                     .surfaces
                     .get(view.lighting.volumetrics_upres)
                     .resolution_with_recip(),

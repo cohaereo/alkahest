@@ -28,9 +28,9 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = view.water.water_uv.into();
+            ext.postprocess.input = view.water.water_uv.into();
             ext.postprocess.unkc0 = Vec4::new(5.0, 1.0, 1.0, 1.0);
-            ext.postprocess.res_for_unk00 = self
+            ext.postprocess.res_for_input = self
                 .surfaces()
                 .get(view.water.water_uv)
                 .resolution_with_recip();
@@ -53,10 +53,10 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = view.shading_result_read.lock().srv.clone().into();
+            ext.postprocess.input = view.shading_result_read.lock().srv.clone().into();
             ext.postprocess.unk08 = view.water.water_uv_healed.into();
             ext.postprocess.unkc0 = Vec4::new(1.0, 1.0, 1.0, 1.0);
-            ext.postprocess.res_for_unk00 = self
+            ext.postprocess.res_for_input = self
                 .surfaces()
                 .get(view.shading_result)
                 .resolution_with_recip();
@@ -79,10 +79,10 @@ impl Renderer {
 
         {
             let ext = &mut self.externs.get_mut();
-            ext.postprocess.unk00 = view.water.water_reflection.into();
+            ext.postprocess.input = view.water.water_reflection.into();
             ext.postprocess.unk08 = view.water.water_reflection_healed.into();
             ext.postprocess.unkc0 = Vec4::new(5.0, 1.0, 1.0, 1.0);
-            ext.postprocess.res_for_unk00 = self
+            ext.postprocess.res_for_input = self
                 .surfaces()
                 .get(view.water.water_reflection)
                 .resolution_with_recip();

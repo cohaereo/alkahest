@@ -17,6 +17,7 @@ use alkahest_render::{
         static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
+    renderer::submit::atmosphere::AtmosphereData,
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
@@ -353,6 +354,20 @@ pub fn spawn_pattern_from_header(
                 let obj = Renderer::instance()
                     .add_object(RenderObject::new(TfxFeatureRenderer::Water, model));
                 world.insert_one(entity, DynamicRenderObject::new(obj))?;
+            }
+            0x80806BBF => {
+                let data = get_component_data!(SAtmosphereDataComponent);
+
+                let am = &renderer.asset_manager;
+                let atmosphere = AtmosphereData {
+                    atmosphere_lookup_near_0: am.load(data.unk80_tex),
+                    atmosphere_lookup_far_0: am.load(data.unk90_tex),
+                    atmosphere_lookup_near_1: am.load(data.unka0_tex),
+                    atmosphere_lookup_far_1: am.load(data.unkb0_tex),
+                    atmosphere_lookup_vertical: am.load(data.unkc0_tex),
+                };
+
+                world.insert_one(entity, atmosphere)?;
             }
             u => {
                 debug!(

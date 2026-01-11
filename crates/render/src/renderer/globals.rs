@@ -9,12 +9,12 @@ use alkahest_data::tfx::{
 };
 use anyhow::Context;
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use crate::{
+    Gpu,
     asset::texture::Texture,
     tfx::{scope::Scope, technique::Technique},
-    Gpu,
 };
 
 pub struct RenderGlobals {
@@ -180,6 +180,8 @@ tfx_global_pipelines! {
     cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_off, cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_on,
 
     cubemap_apply_sky_copy_ao,
+    sky_generate_sky_mask,
+    sky_lookup_generate_near, sky_lookup_generate_far,
 
     debug_cubemap_diffuse_probes,
     debug_source_color,
@@ -216,6 +218,7 @@ tfx_global_pipelines! {
     gaussian_10_horz, gaussian_10_vert,
     weighted_6_horz, weighted_6_vert,
     combined_bloom_line_blur,
+    radial_blur_8,
 
     weighted_add,
 

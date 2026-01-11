@@ -488,3 +488,65 @@ impl BloomBuffers {
         })
     }
 }
+
+pub struct AtmosphereBuffers {
+    pub sky_mask_initial: SurfaceHandle,
+    pub sky_mask: SurfaceHandle,
+    pub sky_mask_temp: SurfaceHandle,
+
+    pub sky_lookup_near: SurfaceHandle,
+    pub sky_lookup_far: SurfaceHandle,
+}
+
+impl AtmosphereBuffers {
+    pub fn create(surfaces: &Surfaces, base_resolution: (u32, u32)) -> anyhow::Result<Self> {
+        let sky_mask_initial = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("sky_mask_initial", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R8Typeless)
+                .view_format(dxgi::Format::R8Unorm)
+                .scale(SurfaceScale::Quarter)
+                .build(),
+        )?;
+
+        let sky_mask = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("sky_mask", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R8Typeless)
+                .view_format(dxgi::Format::R8Unorm)
+                .scale(SurfaceScale::Eighth)
+                .build(),
+        )?;
+
+        let sky_mask_temp = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("sky_mask_temp", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R8Typeless)
+                .view_format(dxgi::Format::R8Unorm)
+                .scale(SurfaceScale::Eighth)
+                .build(),
+        )?;
+
+        let sky_lookup_desc = SurfaceDesc::builder("sky_lookup", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R16g16b16a16Typeless)
+                .view_format(dxgi::Format::R16g16b16a16Float)
+                .scale(SurfaceScale::even(1.0 / 0.375)) // 3 x (1/8) resolution
+                .build();
+
+        let sky_lookup_near = surfaces.create_surface(
+            base_resolution,
+            sky_lookup_desc.clone().with_name("sky_lookup_near"),
+        )?;
+
+        let sky_lookup_far = surfaces
+            .create_surface(base_resolution, sky_lookup_desc.with_name("sky_lookup_far"))?;
+
+        Ok(Self {
+            sky_mask_initial,
+            sky_mask,
+            sky_mask_temp,
+            sky_lookup_near,
+            sky_lookup_far,
+        })
+    }
+}

@@ -11,18 +11,20 @@ use std::{
 
 use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use alkahest_render::{
-    Gpu, Renderer, camera::Camera, gpu::command_list::CommandList, renderer::submit::DebugPipeline,
-    tfx::view::View,
+    Gpu, Renderer,
+    camera::Camera,
+    gpu::command_list::CommandList,
+    renderer::submit::{DebugPipeline, atmosphere::AtmosphereData},
+    tfx::{packet::FramePacketMisc, view::View},
 };
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
 use egui::{
-    FontId, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2, Widget, load::SizedTexture,
-    vec2,
+    FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
+    Widget, load::SizedTexture, vec2,
 };
 use glam::Vec3;
 use google_material_symbols::GoogleMaterialSymbols;
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
     ui::{
@@ -42,6 +44,9 @@ pub struct Scene {
     camera: Camera,
     view: View,
     last_frame_time: Instant,
+    start_time: Instant,
+    /// Time of day (0 - 3600)
+    time_of_day: f32,
     sun_light_angle: f32,
     pub render_mode: RenderMode,
 
@@ -65,12 +70,14 @@ impl Scene {
             view: View::new(&renderer.gpu, (128, 128))?,
             renderer,
             camera,
+            time_of_day: 1800.0,
             sun_light_angle: 60f32,
             render_mode: RenderMode::Shaded,
             controller: CameraController::new_orbit(Vec3::ZERO, 2.5),
             surface,
             surface_srv,
             last_frame_time: Instant::now(),
+            start_time: Instant::now(),
             profiler_results: None,
             show_surface_viewer: false,
             frametimes: Vec::new(),
@@ -277,23 +284,73 @@ impl Scene {
             .insert(TextStyle::Body, FontId::proportional(16.0));
         ui.style_mut()
             .text_styles
+            .insert(TextStyle::Heading, FontId::proportional(24.0));
+        ui.style_mut()
+            .text_styles
             .insert(TextStyle::Small, FontId::proportional(12.0));
         ui.style_mut()
             .text_styles
             .insert(TextStyle::Button, FontId::proportional(16.0));
 
-        ui.strong("Scene Settings");
+        ui.heading("Scene Settings");
+
+        ui.strong("Exposure Scale");
+        ui.spacing_mut().slider_width = ui.available_width() * 0.75;
+        egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
+            .logarithmic(true)
+            .show_value(true)
+            .ui(ui);
+
+        ui.add_space(4.0);
+
+        ui.horizontal(|ui| {
+            ui.strong("Time of Day");
+            ui.label(format!(
+                " ({:02}:{:02})",
+                (self.time_of_day / 3600.0 * 24.0).floor() as u32,
+                ((self.time_of_day / 3600.0 * 24.0 * 60.0) % 60.0).floor() as u32
+            ));
+        });
+
+        ui.spacing_mut().slider_width = ui.available_width();
+
+        const DAYNIGHT_GRADIENT: ImageSource =
+            egui::include_image!("../../../assets/ui/daynight_gradient_bar.png");
+        Image::new(DAYNIGHT_GRADIENT).paint_at(
+            ui,
+            Rect::from_min_size(
+                ui.cursor().min + vec2(0.0, 6.0),
+                Vec2::new(ui.available_width(), 8.0),
+            ),
+        );
+
+        ui.scope(|ui| {
+            ui.style_mut().visuals.widgets.inactive.bg_fill = egui::Color32::from_black_alpha(48);
+            ui.style_mut().visuals.widgets.inactive.bg_stroke =
+                egui::Stroke::new(8.0, egui::Color32::WHITE);
+            egui::Slider::new(&mut self.time_of_day, 0.0..=3600.0)
+                .show_value(false)
+                .step_by(1.0)
+                .handle_shape(egui::style::HandleShape::Rect { aspect_ratio: 0.5 })
+                .ui(ui);
+        });
+
+        // ui.horizontal(|ui| {
+        //     ui.label("0:00");
+        //     ui.add_space(ui.available_width() / 2.0 - 24.0);
+        //     ui.label("12:00");
+        //     ui.add_space(ui.available_width() / 2.0 - 24.0);
+        //     ui.label("24:00");
+        // });
+
+        ui.separator();
+
         ui.checkbox(&mut settings.vertex_ao, "Vertex AO")
             .setting_description_tooltip(
                 "Enables ambient occlusion based on mesh vertex data.\nCan highly impact the look \
                  and feel of a scene, as it darkens indoor areas and crevices.",
                 PerformanceImpact::None,
             );
-        egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
-            .logarithmic(true)
-            .text("Exposure Scale")
-            .show_value(true)
-            .ui(ui);
 
         ui.checkbox(&mut settings.bloom, "Bloom")
             .setting_description_tooltip(
@@ -337,10 +394,25 @@ impl Scene {
         self.view
             .update(world_to_camera, camera_to_projective, resolution);
 
+        let mut packet_misc = FramePacketMisc {
+            delta_time,
+            time: self.start_time.elapsed().as_secs_f32(),
+            time_of_day: (self.time_of_day / 3600.0).fract(),
+            ..Default::default()
+        };
+
+        {
+            if let Some((_, atmos)) = self.world.query::<&AtmosphereData>().iter().next() {
+                packet_misc.atmosphere = atmos.clone();
+            } else {
+                packet_misc.atmosphere = Default::default();
+            }
+        }
+
         let gpu = &self.renderer.gpu;
         let mut cmd = CommandList::from_device_context(gpu, gpu.context().clone());
         let _gpuspan = self.renderer.profiler.scope(&cmd, "Scene::render (total)");
-        self.renderer.frame_packet.write().reset();
+        self.renderer.frame_packet.write().begin_frame(packet_misc);
 
         let sun_light_direction = Vec3::new(
             self.sun_light_angle.to_radians().cos(),
@@ -403,7 +475,7 @@ impl Scene {
         }
 
         self.renderer
-            .submit_world(&mut cmd, &self.view, delta_time, self.render_mode.into());
+            .submit_world(&mut cmd, &self.view, self.render_mode.into());
         cmd.copy_resource(
             &self.renderer.surfaces().get(self.view.output).texture,
             &self.surface,
@@ -484,7 +556,7 @@ impl Scene {
 pub enum RenderMode {
     Lookdev,
     Shaded,
-    ShadedNoSun,
+    ShadedNoAtm,
     // Matcap,
 
     // Material:
@@ -535,7 +607,7 @@ impl RenderMode {
 
                 mode!(ui, RenderMode::Lookdev, "Lookdev");
                 mode!(ui, RenderMode::Shaded, "Shaded");
-                mode!(ui, RenderMode::ShadedNoSun, "Shaded (No Sun)");
+                mode!(ui, RenderMode::ShadedNoAtm, "Shaded (No Atmosphere)");
                 // mode!(ui, RenderMode::Matcap, "Matcap");
 
                 ui.section_separator("Material:");
@@ -566,7 +638,7 @@ impl From<RenderMode> for Option<DebugPipeline> {
         match val {
             RenderMode::Lookdev => None,
             RenderMode::Shaded => Some(DebugPipeline::DeferredShading),
-            RenderMode::ShadedNoSun => Some(DebugPipeline::DeferredShadingNoSun),
+            RenderMode::ShadedNoAtm => Some(DebugPipeline::DeferredShadingNoSun),
             // RenderMode::Matcap => Some(DebugPipeline::Matcap),
             RenderMode::Albedo => Some(DebugPipeline::Albedo),
             RenderMode::Smoothness => Some(DebugPipeline::Smoothness),

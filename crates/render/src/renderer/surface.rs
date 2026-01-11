@@ -395,6 +395,10 @@ pub enum SurfaceScale {
 }
 
 impl SurfaceScale {
+    pub fn even(fraction: f32) -> Self {
+        Self::Nth(fraction, fraction)
+    }
+
     pub fn factor(&self) -> (f32, f32) {
         match self {
             Self::Full => (1.0, 1.0),
