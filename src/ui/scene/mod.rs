@@ -376,6 +376,12 @@ impl Scene {
         ui.checkbox(&mut self.animate_time_of_day, "Automate Time")
             .on_hover_text("Automatically animate time of day");
 
+        ui.spacing_mut().slider_width = ui.available_width() * 0.75;
+        egui::Slider::new(&mut self.camera.fov_y, 10.0..=120.0)
+            .text("Camera FOV")
+            .show_value(true)
+            .ui(ui);
+
         ui.separator();
 
         ui.checkbox(&mut settings.vertex_ao, "Vertex AO")
