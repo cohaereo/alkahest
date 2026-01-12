@@ -5,6 +5,7 @@ use alkahest_data::{
     pattern::{S8080841B, SPattern},
     tfx::{
         TfxFeatureRenderer,
+        atmosphere::{SSunAngles, SUnk80808ac8Variant},
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
         sequencer::{SUnk808091f1Variant, SUnk80808179},
@@ -371,6 +372,14 @@ pub fn spawn_pattern_from_header(
                 };
 
                 world.insert_one(entity, atmosphere)?;
+            }
+            0x80806A6F => {
+                if let Some(ref sun) = *get_component_data!(SSunDataComponent).unk0 {
+                    let SUnk80808ac8Variant::SSunAngles(a) = &*sun.unk10.unk10;
+
+                    let component: SSunAngles = *a.clone();
+                    world.insert_one(entity, component)?;
+                }
             }
             0x80809479 => {
                 let mut f = Cursor::new(package_manager().read_tag(component.taghash())?);

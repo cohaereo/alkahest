@@ -9,7 +9,9 @@ use std::{
     time::Instant,
 };
 
-use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
+use alkahest_data::tfx::{
+    FeatureRendererSubscription, atmosphere::SSunAngles, common::AxisAlignedBBox,
+};
 use alkahest_render::{
     Gpu, Renderer,
     camera::Camera,
@@ -419,17 +421,33 @@ impl Scene {
         let _gpuspan = self.renderer.profiler.scope(&cmd, "Scene::render (total)");
         self.renderer.frame_packet.write().begin_frame(packet_misc);
 
-        let sun_light_direction = Vec3::new(
-            self.sun_light_angle.to_radians().cos(),
-            self.sun_light_angle.to_radians().sin(),
-            0.7,
-        )
-        .normalize();
+        if let Some((_, sun_angles)) = self.world.query::<&SSunAngles>().iter().next() {
+            let time_of_day_half = self.time_of_day / 2.0;
+            let a = time_of_day_half.floor() as usize;
+            let b = time_of_day_half.ceil() as usize;
+            let t = time_of_day_half.fract();
 
-        self.renderer
-            .externs
-            .get_mut()
-            .set_global_channel_by_name("sun_light_direction", sun_light_direction.extend(0.0));
+            let angles = &sun_angles.angles;
+            let a = angles.get(a).copied().unwrap_or_default();
+            let b = angles.get(b).copied().unwrap_or_default();
+
+            self.renderer
+                .externs
+                .get_mut()
+                .set_global_channel_by_name("sun_light_direction", a.lerp(b, t));
+        } else {
+            let sun_light_direction = Vec3::new(
+                self.sun_light_angle.to_radians().cos(),
+                self.sun_light_angle.to_radians().sin(),
+                0.7,
+            )
+            .normalize();
+
+            self.renderer
+                .externs
+                .get_mut()
+                .set_global_channel_by_name("sun_light_direction", sun_light_direction.extend(0.0));
+        }
 
         {
             s_extract_ambient_occlusion(&self.world);

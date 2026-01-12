@@ -1,7 +1,8 @@
-use tiger_parse::tiger_type;
+use glam::Vec4;
+use tiger_parse::{tiger_type, tiger_variant_enum, VariantPointer};
 use tiger_pkg::TagHash;
 
-use crate::tag::WideHash;
+use crate::tag::{Tag, WideHash};
 
 #[tiger_type(id = 0x80806BC1)]
 pub struct SAtmosphereDataComponent {
@@ -14,4 +15,34 @@ pub struct SAtmosphereDataComponent {
     pub unkc4: TagHash,
 
     pub unkc8: [f32; 4 * 4],
+}
+
+#[tiger_type(id = 0x80806A74)]
+pub struct SUnk80806a74 {
+    pub unk0: Vec4,
+    pub unk10: Tag<SUnk80808ac8>,
+    pub unk14: TagHash,
+    pub unk18: TagHash,
+    pub unk1c: TagHash,
+}
+
+#[tiger_type(id = 0x80808AC8)]
+pub struct SUnk80808ac8 {
+    pub file_size: u64,
+    pub unk8: u32,
+    pub unkc: f32,
+    pub unk10: VariantPointer<SUnk80808ac8Variant>,
+}
+
+tiger_variant_enum! {
+    [offset = 0x10]
+    enum SUnk80808ac8Variant {
+        SSunAngles
+    }
+}
+
+#[derive(Clone)]
+#[tiger_type(id = 0x80808B49)]
+pub struct SSunAngles {
+    pub angles: Vec<Vec4>,
 }

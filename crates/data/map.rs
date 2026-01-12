@@ -5,7 +5,7 @@ use tiger_pkg::TagHash;
 use crate::{
     tag::{OptionalTag, WideHash, WideTag},
     tfx::{
-        atmosphere::SAtmosphereDataComponent,
+        atmosphere::{SAtmosphereDataComponent, SUnk80806a74},
         common::AxisAlignedBBox,
         features::{
             ao::SStaticAmbientOcclusion,
@@ -94,7 +94,8 @@ tiger_variant_enum! {
         SStaticAmbientOcclusionComponent,
         SRoadDecalCollectionComponent,
         SWaterPlaneComponent,
-        SAtmosphereDataComponent
+        SAtmosphereDataComponent,
+        SSunDataComponent
         // SMaterialPermutationsComponent,
     }
 }
@@ -162,4 +163,14 @@ pub struct SDecoratorsComponent {
 #[tiger_type(id = 0x808068E8)]
 pub struct SRoadDecalCollectionComponent {
     pub tag: OptionalTag<SRoadDecalCollection>,
+}
+
+#[tiger_type(id = 0x80806A71)]
+pub struct SSunDataComponent {
+    pub unk0: OptionalTag<SUnk80806a74>,
+    pub unk4: u32,
+    pub unk8: u32,
+    pub unkc: TagHash,
+    pub unk10: TagHash,
+    pub unk14: TagHash,
 }
