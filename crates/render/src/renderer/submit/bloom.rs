@@ -5,7 +5,10 @@ use crate::{
     Renderer, cmd_event_span,
     gpu::command_list::CommandList,
     renderer::surface::SurfaceHandle,
-    tfx::{externs::PostprocessInitialDownsample, view::View},
+    tfx::{
+        externs::{self, PostprocessInitialDownsample},
+        view::View,
+    },
 };
 
 impl Renderer {
@@ -192,6 +195,37 @@ impl Renderer {
                 cmd,
                 &self.globals.pipelines.downsample_block_2x2,
                 "downsample_block_2x2",
+            );
+        }
+
+        // Sample columns for autoexposure
+        {
+            let ext = &mut self.externs.get_mut();
+            *ext.postprocess = externs::Postprocess {
+                input: view.bloom.bloom_24th.into(),
+                output_res: view
+                    .surfaces()
+                    .get(view.bloom.autoexposure_sample_columns)
+                    .resolution_with_recip(),
+                unkd0: Vec4::new(0.01, 0.90, 1.00, 1.00),
+                ..Default::default()
+            };
+        }
+
+        {
+            self.bind_surfaces(cmd, &[view.bloom.autoexposure_sample_columns], None);
+            cmd.output_merger_set_depth_stencil_state(None, 0);
+
+            cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+            self.execute_global_pipeline(
+                cmd,
+                &self.globals.pipelines.autoexposure_sample_columns,
+                "autoexposure_sample_columns",
+            );
+
+            view.bloom.autoexposure_sample_columns_cpu.lock().update(
+                cmd,
+                view.surfaces().get(view.bloom.autoexposure_sample_columns),
             );
         }
 

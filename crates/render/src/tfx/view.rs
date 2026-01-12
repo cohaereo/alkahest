@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use alkahest_data::tfx::FeatureRendererSubscription;
 use d3d11::dxgi;
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Vec3, Vec4};
 use parking_lot::Mutex;
 
 use crate::{
     Gpu,
     renderer::{
+        autoexposure::AutoExposureSystem,
         submit::buffers::{AtmosphereBuffers, BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
         surface::{SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, Surfaces},
     },
@@ -34,6 +35,9 @@ pub struct View {
     pub subscribed_features: FeatureRendererSubscription,
 
     pub settings: RenderSettings,
+
+    pub autoexposure: AutoExposureSystem,
+    frame_index: u64,
 }
 
 impl View {
@@ -42,7 +46,7 @@ impl View {
         let gbuffers = Gbuffers::create(gpu, &surfaces, resolution)?;
         let lighting = LightBuffers::create(&surfaces, resolution)?;
         let water = WaterBuffers::create(&surfaces, resolution)?;
-        let bloom = BloomBuffers::create(&surfaces, resolution)?;
+        let bloom = BloomBuffers::create(gpu, &surfaces, resolution)?;
         let atmosphere = AtmosphereBuffers::create(&surfaces, resolution)?;
 
         let shading_result = surfaces.create_surface(
@@ -80,6 +84,8 @@ impl View {
             output,
             subscribed_features: FeatureRendererSubscription::all(),
             settings: RenderSettings::default(),
+            autoexposure: AutoExposureSystem::default(),
+            frame_index: 0,
         })
     }
 
@@ -95,6 +101,33 @@ impl View {
         self.resolution = resolution;
     }
 
+    pub fn update_autoexposure(&mut self, gpu: &Gpu, delta_time: f32) {
+        if self.frame_index > 0 && self.settings.autoexposure {
+            let autoexposure_columns = self.bloom.autoexposure_sample_columns_cpu.lock();
+            let column_count = autoexposure_columns.res.get_desc().width;
+
+            let mapped_buffer = gpu
+                .context()
+                .map(&autoexposure_columns.res, 0, d3d11::MapType::Read, false)
+                .expect("Failed to map buffer");
+
+            let data = unsafe {
+                std::slice::from_raw_parts(mapped_buffer.data as *const Vec4, column_count as usize)
+            }
+            .to_vec();
+
+            let exposure_result = self.autoexposure.update_from_raw(&data, delta_time);
+
+            self.settings.exposure_scale = exposure_result.exposure_scale;
+            // self.settings.exposure_illum_relative = exposure_result.exposure_illum_relative;
+        } else {
+            self.autoexposure.current_exposure_scale = self.settings.exposure_scale;
+            self.autoexposure.current_illum_relative = self.settings.exposure_illum_relative;
+        }
+
+        self.frame_index += 1;
+    }
+
     pub fn resolution(&self) -> (u32, u32) {
         self.resolution
     }
@@ -107,22 +140,26 @@ impl View {
 #[derive(Clone)]
 pub struct RenderSettings {
     pub exposure_scale: f32,
+    pub exposure_illum_relative: f32,
     pub vertex_ao: bool,
     pub bloom: bool,
     pub multithreading: bool,
     pub volumetrics: bool,
     pub shadows: bool,
+    pub autoexposure: bool,
 }
 
 impl Default for RenderSettings {
     fn default() -> Self {
         Self {
             exposure_scale: 0.050,
+            exposure_illum_relative: 0.50,
             vertex_ao: true,
             bloom: true,
             multithreading: true,
             volumetrics: true,
             shadows: true,
+            autoexposure: true,
         }
     }
 }

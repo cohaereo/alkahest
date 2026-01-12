@@ -270,7 +270,7 @@ impl Renderer {
             unk10: misc.time_of_day,
             exposure_time: 0.016666668,
             exposure_scale: view.settings.exposure_scale,
-            exposure_illum_relative: 0.25438,
+            exposure_illum_relative: view.settings.exposure_illum_relative,
             ..*ext.frame.clone()
         };
 
@@ -532,6 +532,7 @@ impl Renderer {
                 exposure_illum_relative_glow: ext.frame.exposure_illum_relative * 16.0,
                 exposure_scale_for_shading: ext.frame.exposure_scale,
                 exposure_illum_relative: ext.frame.exposure_illum_relative,
+
                 random_seed_scales: vec4(
                     (misc.time * 60.0 + 33.75) * 1.258699,
                     (misc.time * 60.0 + 60.0) * 0.9583125,

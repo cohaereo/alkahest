@@ -429,10 +429,17 @@ pub struct BloomBuffers {
     pub bloom_24th_temp: SurfaceHandle,
 
     pub bloom_final: SurfaceHandle,
+
+    pub autoexposure_sample_columns: SurfaceHandle,
+    pub autoexposure_sample_columns_cpu: Mutex<SurfaceProxy>,
 }
 
 impl BloomBuffers {
-    pub fn create(surfaces: &Surfaces, base_resolution: (u32, u32)) -> anyhow::Result<Self> {
+    pub fn create(
+        gpu: &Gpu,
+        surfaces: &Surfaces,
+        base_resolution: (u32, u32),
+    ) -> anyhow::Result<Self> {
         let create_desc = |name: &str, scale: SurfaceScale| {
             let desc = SurfaceDesc::builder(name, SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R16g16b16a16Float)
@@ -469,6 +476,18 @@ impl BloomBuffers {
 
         let bloom_final = create_desc("bloom_final", SurfaceScale::Half)?;
 
+        let autoexposure_sample_columns = surfaces.create_surface(
+            (40, 1),
+            SurfaceDesc::builder("autoexposure_sample_columns", SizeRelativity::Absolute)
+                .format(dxgi::Format::R32g32b32a32Float)
+                .view_format(dxgi::Format::R32g32b32a32Float)
+                .build(),
+        )?;
+
+        let autoexposure_sample_columns_cpu =
+            SurfaceProxy::new(gpu, surfaces.get(autoexposure_sample_columns), None, true)
+                .expect("Failed to create CPU autoexposure_sample_columns surface proxy");
+
         Ok(Self {
             bloom_3rd,
             bloom_3rd_temp,
@@ -485,6 +504,9 @@ impl BloomBuffers {
             bloom_24th,
             bloom_24th_temp,
             bloom_final,
+
+            autoexposure_sample_columns,
+            autoexposure_sample_columns_cpu: Mutex::new(autoexposure_sample_columns_cpu),
         })
     }
 }

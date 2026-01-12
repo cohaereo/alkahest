@@ -302,12 +302,40 @@ impl Scene {
 
         ui.heading("Scene Settings");
 
-        ui.strong("Exposure Scale");
-        ui.spacing_mut().slider_width = ui.available_width() * 0.75;
-        egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
-            .logarithmic(true)
+        ui.spacing_mut().item_spacing = vec2(8.0, 4.0);
+        ui.checkbox(&mut settings.autoexposure, "Auto-exposure")
+            .setting_description_tooltip(
+                "Enables automatic exposure adjustment based on scene brightness.",
+                PerformanceImpact::None,
+            );
+
+        if settings.autoexposure {
+            ui.strong("Target Luminance");
+            ui.spacing_mut().slider_width = ui.available_width() * 0.75;
+            egui::Slider::new(
+                &mut self.view.autoexposure.config.target_luminance,
+                0.000002..=0.0004,
+            )
+            .logarithmic(false)
             .show_value(true)
             .ui(ui);
+        }
+
+        ui.add_enabled_ui(!settings.autoexposure, |ui| {
+            ui.strong("Exposure Scale");
+            ui.spacing_mut().slider_width = ui.available_width() * 0.75;
+            egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
+                .logarithmic(true)
+                .show_value(true)
+                .ui(ui);
+
+            ui.strong("Exposure Illum Relative");
+            ui.spacing_mut().slider_width = ui.available_width() * 0.75;
+            egui::Slider::new(&mut settings.exposure_illum_relative, 0.01..=2.0)
+                .logarithmic(false)
+                .show_value(true)
+                .ui(ui);
+        });
 
         ui.add_space(4.0);
 
@@ -403,6 +431,8 @@ impl Scene {
         let world_to_camera = self.camera.view_matrix();
         self.view
             .update(world_to_camera, camera_to_projective, resolution);
+        self.view
+            .update_autoexposure(&self.renderer.gpu, delta_time);
 
         let mut packet_misc = FramePacketMisc {
             delta_time,

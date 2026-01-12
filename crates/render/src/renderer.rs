@@ -1,3 +1,4 @@
+pub mod autoexposure;
 pub mod globals;
 pub mod submit;
 pub mod surface;
