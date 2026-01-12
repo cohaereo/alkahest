@@ -3,5 +3,6 @@ pub mod expression_vm;
 pub mod externs;
 pub mod packet;
 pub mod scope;
+pub mod sequencer_vm;
 pub mod technique;
 pub mod view;

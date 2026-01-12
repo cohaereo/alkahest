@@ -1,5 +1,5 @@
 pub mod decompiler;
-mod helpers;
+pub(crate) mod helpers;
 pub mod interpreter;
 pub mod opcodes;
 #[cfg(test)]

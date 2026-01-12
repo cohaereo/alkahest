@@ -8,6 +8,7 @@ macro_rules! extern_container {
 
             pub globals: [Vec4; 256],
             pub global_ids: Vec<u32>,
+            pub unk_sequencer_values: [Vec4; 256],
         }
 
         impl Externs {
@@ -74,6 +75,7 @@ macro_rules! extern_container {
                     )*
                     globals,
                     global_ids: globs.channels.channel_ids.clone(),
+                    unk_sequencer_values: [Vec4::ZERO; 256],
                 };
 
                 // for hash in [743670141, 743670142, 743670143, 743670136, 743670137, 743670138, 743670139, 743670132, 743670133] {

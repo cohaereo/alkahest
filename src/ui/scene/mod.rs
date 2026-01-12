@@ -23,7 +23,7 @@ use egui::{
     FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
     Widget, load::SizedTexture, vec2,
 };
-use glam::Vec3;
+use glam::{Vec3, Vec4};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use crate::{
@@ -33,6 +33,7 @@ use crate::{
     },
     world::{
         render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
+        sequencer::s_evaluate_global_channel_expressions,
         shadowmap::{s_render_all_shadowmaps, s_wants_to_render_shadowmaps},
     },
 };
@@ -47,6 +48,7 @@ pub struct Scene {
     start_time: Instant,
     /// Time of day (0 - 3600)
     time_of_day: f32,
+    animate_time_of_day: bool,
     sun_light_angle: f32,
     pub render_mode: RenderMode,
 
@@ -71,6 +73,7 @@ impl Scene {
             renderer,
             camera,
             time_of_day: 1800.0,
+            animate_time_of_day: true,
             sun_light_angle: 60f32,
             render_mode: RenderMode::Shaded,
             controller: CameraController::new_orbit(Vec3::ZERO, 2.5),
@@ -303,10 +306,12 @@ impl Scene {
 
         ui.add_space(4.0);
 
+        // Time of Day slider
         ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing = vec2(8.0, 0.0);
             ui.strong("Time of Day");
             ui.label(format!(
-                " ({:02}:{:02})",
+                "({:02}:{:02})",
                 (self.time_of_day / 3600.0 * 24.0).floor() as u32,
                 ((self.time_of_day / 3600.0 * 24.0 * 60.0) % 60.0).floor() as u32
             ));
@@ -328,20 +333,15 @@ impl Scene {
             ui.style_mut().visuals.widgets.inactive.bg_fill = egui::Color32::from_black_alpha(48);
             ui.style_mut().visuals.widgets.inactive.bg_stroke =
                 egui::Stroke::new(8.0, egui::Color32::WHITE);
+
             egui::Slider::new(&mut self.time_of_day, 0.0..=3600.0)
                 .show_value(false)
-                .step_by(1.0)
                 .handle_shape(egui::style::HandleShape::Rect { aspect_ratio: 0.5 })
                 .ui(ui);
         });
 
-        // ui.horizontal(|ui| {
-        //     ui.label("0:00");
-        //     ui.add_space(ui.available_width() / 2.0 - 24.0);
-        //     ui.label("12:00");
-        //     ui.add_space(ui.available_width() / 2.0 - 24.0);
-        //     ui.label("24:00");
-        // });
+        ui.checkbox(&mut self.animate_time_of_day, "Automate Time")
+            .on_hover_text("Automatically animate time of day");
 
         ui.separator();
 
@@ -384,6 +384,11 @@ impl Scene {
                 .expect("Failed to resize scene surface");
             self.surface = texture;
             self.surface_srv = srv;
+        }
+
+        if self.animate_time_of_day {
+            self.time_of_day += delta_time;
+            self.time_of_day = self.time_of_day.rem_euclid(3600.0);
         }
 
         self.camera.aspect_ratio = resolution.0 as f32 / resolution.1 as f32;
@@ -430,6 +435,13 @@ impl Scene {
             s_extract_ambient_occlusion(&self.world);
             let mut fp = self.renderer.frame_packet.write();
             s_extract_render_objects(&self.world, &mut fp);
+
+            {
+                let ext = self.renderer.externs.get_mut();
+                let distance_to_night = (self.time_of_day / 1800.0 - 1.0).abs();
+                ext.unk_sequencer_values[0] = Vec4::splat((1.0 - distance_to_night) * 0.725);
+            }
+            s_evaluate_global_channel_expressions(&self.world);
         }
 
         {

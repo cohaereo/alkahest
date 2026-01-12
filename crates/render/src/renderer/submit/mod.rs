@@ -358,6 +358,44 @@ impl Renderer {
             ..Default::default()
         };
 
+        // TODO(cohae): Most of these need to be verified, currently they are just shifted +0x70 from pre-BL
+        ext.atmosphere.unk110 = ext.get_global_channel_by_name("sun_light_direction");
+
+        // Sun
+        ext.atmosphere.unk140 = ext.get_global_channel_by_id(0x56007c7);
+        ext.atmosphere.unk150 = ext.get_global_channel_by_id(0x4aa1bef5).x;
+        ext.atmosphere.unk154 = ext.get_global_channel_by_id(0x9859daf1).x;
+        // ext.atmosphere.unk158 = ext.get_global_channel_by_id(0xc876108a).x;
+        // ext.atmosphere.unk15c = ext.get_global_channel_by_id(0xe111d856).x;
+        ext.atmosphere.unk160 = ext.get_global_channel_by_id(0xf853533c).x;
+
+        // Fog
+        ext.atmosphere.unk164 = ext.get_global_channel_by_id(0xed4bb08a).x;
+        ext.atmosphere.unk168 = ext.get_global_channel_by_id(0x9e769ed2).x;
+        ext.atmosphere.unk16c = ext.get_global_channel_by_id(0x49fbbce1).x;
+        ext.atmosphere.unk170 = ext.get_global_channel_by_id(0x94d8ecdc).x;
+        // ext.atmosphere.unk174 = ext.get_global_channel_by_id(0xbd2c7fe8).x;
+        ext.atmosphere.unk180 = ext.get_global_channel_by_id(0x9ec7a5e8);
+        ext.atmosphere.unk190 = ext.get_global_channel_by_id(0xb630810b).x;
+        ext.atmosphere.unk194 = ext.get_global_channel_by_id(0x3eeacb23).x;
+        ext.atmosphere.unk198 = ext.get_global_channel_by_id(0x7e92eb31).x;
+        // ext.atmosphere.unk19c = ext.get_global_channel_by_id(0x9f4cb78f).x;
+
+        // ext.atmosphere.unk1a0 = ext.get_global_channel_by_id(0x3e9cb6ed);
+        // ext.atmosphere.unk1b0 = ext.get_global_channel_by_id(0x5fc9836).x;
+        ext.atmosphere.unk1b4 = ext.get_global_channel_by_id(0xe283fbe0).x;
+        ext.atmosphere.unk1b8 = ext.get_global_channel_by_id(0x5f3b8491).x;
+        ext.atmosphere.unk1bc = ext.get_global_channel_by_id(0x79f2e305).x;
+        ext.atmosphere.unk1c0 = ext.get_global_channel_by_id(0x62e4542e).x;
+        ext.atmosphere.unk1c4 = ext.get_global_channel_by_id(0x949768cf).x;
+        ext.atmosphere.unk1d0 = ext.get_global_channel_by_id(0xd9a2d8a3);
+        ext.atmosphere.unk1e0 = ext.get_global_channel_by_id(0xd8281393).x;
+        ext.atmosphere.unk1e4 = ext.get_global_channel_by_id(0x4da73ca7).x;
+        ext.atmosphere.unk1e8 = ext.get_global_channel_by_id(0xe685c537).x;
+        ext.atmosphere.unk1ec = ext.get_global_channel_by_id(0xe4a1bf60).x;
+        // ext.atmosphere.unk1f0 = ext.get_global_channel_by_id(0x63d92f7).x;
+        // ext.atmosphere.unk1f4 = ext.get_global_channel_by_id(0x49864a42).x;
+
         ext.screen_area = ScreenArea {
             unk00: view.shading_result_read.lock().srv.clone().into(),
             unk30: TextureView::None, // health overlay

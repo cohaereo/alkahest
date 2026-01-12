@@ -6,6 +6,7 @@ use glam::{Vec4, vec4};
 use crate::{
     Renderer,
     asset::{Handle, texture::Texture},
+    cmd_event_span,
     gpu::command_list::CommandList,
     tfx::{externs, view::View},
 };
@@ -22,6 +23,9 @@ pub struct AtmosphereData {
 
 impl Renderer {
     pub(crate) fn submit_atmosphere(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+        cmd_event_span!(cmd, "atmosphere");
+        let _gpu_span = self.profiler.scope(cmd, "atmosphere");
+
         self.generate_sky_mask(cmd, view);
 
         self.generate_sky_lookup(cmd, view);

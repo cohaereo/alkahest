@@ -7,6 +7,7 @@ use alkahest_data::{
         TfxFeatureRenderer,
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
+        sequencer::{SUnk808091f1Variant, SUnk80808179},
     },
 };
 use alkahest_render::{
@@ -18,8 +19,10 @@ use alkahest_render::{
     },
     object::RenderObject,
     renderer::submit::atmosphere::AtmosphereData,
+    tfx::sequencer_vm::global_channel::GlobalChannelExpression,
 };
 use anyhow::Context;
+use chroma_dbg::ChromaDebug;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
@@ -368,6 +371,36 @@ pub fn spawn_pattern_from_header(
                 };
 
                 world.insert_one(entity, atmosphere)?;
+            }
+            0x80809479 => {
+                let mut f = Cursor::new(package_manager().read_tag(component.taghash())?);
+                f.seek(SeekFrom::Start(component.unk18.offset))?;
+
+                let globals = SUnk80808179::read_ds(&mut f)?;
+                for g in globals.unk1c8.iter().chain(globals.unk1d8.iter()) {
+                    match &*g.unk18 {
+                        SUnk808091f1Variant::SSequenceGlobalChannel(c) => {
+                            world.spawn((GlobalChannelExpression {
+                                channel_id: c.channel_hash,
+                                bytecode: c.bytecode.clone(),
+                                bytecode_constants: c.bytecode_constants.clone(),
+                            },));
+                        }
+                        SUnk808091f1Variant::Unknown { class, offset } => {
+                            warn!(
+                                "Unknown sequence class: {:08X} at offset: {:#X} in {}",
+                                class,
+                                offset,
+                                component.taghash()
+                            );
+                        }
+                        _ => {
+                            debug!("Unimplemented SUnk80809e6Variant: {g:?}");
+                        }
+                    }
+                }
+
+                add_unknown_component!("Sequence");
             }
             u => {
                 debug!(
