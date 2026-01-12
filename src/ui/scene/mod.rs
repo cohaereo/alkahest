@@ -16,7 +16,10 @@ use alkahest_render::{
     Gpu, Renderer,
     camera::Camera,
     gpu::command_list::CommandList,
-    renderer::submit::{DebugPipeline, atmosphere::AtmosphereData},
+    renderer::submit::{
+        DebugPipeline,
+        atmosphere::{AtmosphereData, SunDirections},
+    },
     tfx::{packet::FramePacketMisc, view::View},
 };
 use bitflags::Flags;
@@ -421,20 +424,31 @@ impl Scene {
         let _gpuspan = self.renderer.profiler.scope(&cmd, "Scene::render (total)");
         self.renderer.frame_packet.write().begin_frame(packet_misc);
 
-        if let Some((_, sun_angles)) = self.world.query::<&SSunAngles>().iter().next() {
+        if let Some((_, directions)) = self.world.query::<&SunDirections>().iter().next() {
             let time_of_day_half = self.time_of_day / 2.0;
             let a = time_of_day_half.floor() as usize;
             let b = time_of_day_half.ceil() as usize;
             let t = time_of_day_half.fract();
 
-            let angles = &sun_angles.angles;
-            let a = angles.get(a).copied().unwrap_or_default();
-            let b = angles.get(b).copied().unwrap_or_default();
+            let angles = &directions.sun_directions;
+            let va = angles.get(a).copied().unwrap_or_default();
+            let vb = angles.get(b).copied().unwrap_or_default();
+            let sun_direction = va.lerp(vb, t);
+
+            let angles = &directions.atmosphere_directions;
+            let va = angles.get(a).copied().unwrap_or_default();
+            let vb = angles.get(b).copied().unwrap_or_default();
+            let atmos_direction = va.lerp(vb, t);
 
             self.renderer
                 .externs
                 .get_mut()
-                .set_global_channel_by_name("sun_light_direction", a.lerp(b, t));
+                .set_global_channel_by_name("sun_light_direction", sun_direction);
+
+            self.renderer
+                .externs
+                .get_mut()
+                .set_global_channel_by_name("sun_atmosphere_direction", atmos_direction);
         } else {
             let sun_light_direction = Vec3::new(
                 self.sun_light_angle.to_radians().cos(),

@@ -21,6 +21,11 @@ pub struct AtmosphereData {
     pub atmosphere_lookup_vertical: Handle<Texture>,
 }
 
+pub struct SunDirections {
+    pub sun_directions: Vec<Vec4>,
+    pub atmosphere_directions: Vec<Vec4>,
+}
+
 impl Renderer {
     pub(crate) fn submit_atmosphere(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
         cmd_event_span!(cmd, "atmosphere");

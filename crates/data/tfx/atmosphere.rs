@@ -4,6 +4,7 @@ use tiger_pkg::TagHash;
 
 use crate::tag::{Tag, WideHash};
 
+#[derive(Debug)]
 #[tiger_type(id = 0x80806BC1)]
 pub struct SAtmosphereDataComponent {
     pub unk0: [u32; 4 * 8],
@@ -17,15 +18,17 @@ pub struct SAtmosphereDataComponent {
     pub unkc8: [f32; 4 * 4],
 }
 
+#[derive(Debug)]
 #[tiger_type(id = 0x80806A74)]
 pub struct SUnk80806a74 {
     pub unk0: Vec4,
     pub unk10: Tag<SUnk80808ac8>,
-    pub unk14: TagHash,
-    pub unk18: TagHash,
-    pub unk1c: TagHash,
+    pub unk14: Tag<SUnk80808ac8>,
+    pub unk18: Tag<SUnk80808ac8>,
+    pub unk1c: Tag<SUnk80808ac8>,
 }
 
+#[derive(Debug)]
 #[tiger_type(id = 0x80808AC8)]
 pub struct SUnk80808ac8 {
     pub file_size: u64,
@@ -35,13 +38,14 @@ pub struct SUnk80808ac8 {
 }
 
 tiger_variant_enum! {
+    #[derive(Debug)]
     [offset = 0x10]
     enum SUnk80808ac8Variant {
         SSunAngles
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[tiger_type(id = 0x80808B49)]
 pub struct SSunAngles {
     pub angles: Vec<Vec4>,

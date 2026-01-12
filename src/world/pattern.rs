@@ -19,7 +19,7 @@ use alkahest_render::{
         static_geometry::StaticInstancesRenderer, terrain_patches::TerrainPatchesRenderer,
     },
     object::RenderObject,
-    renderer::submit::atmosphere::AtmosphereData,
+    renderer::submit::atmosphere::{AtmosphereData, SunDirections},
     tfx::sequencer_vm::global_channel::GlobalChannelExpression,
 };
 use anyhow::Context;
@@ -375,10 +375,18 @@ pub fn spawn_pattern_from_header(
             }
             0x80806A6F => {
                 if let Some(ref sun) = *get_component_data!(SSunDataComponent).unk0 {
-                    let SUnk80808ac8Variant::SSunAngles(a) = &*sun.unk10.unk10;
+                    let SUnk80808ac8Variant::SSunAngles(a0) = &*sun.unk10.unk10;
+                    let SUnk80808ac8Variant::SSunAngles(a1) = &*sun.unk14.unk10;
+                    let SUnk80808ac8Variant::SSunAngles(a2) = &*sun.unk18.unk10;
+                    let SUnk80808ac8Variant::SSunAngles(a3) = &*sun.unk1c.unk10;
 
-                    let component: SSunAngles = *a.clone();
-                    world.insert_one(entity, component)?;
+                    world.insert_one(
+                        entity,
+                        SunDirections {
+                            sun_directions: a0.angles.clone(),
+                            atmosphere_directions: a2.angles.clone(),
+                        },
+                    )?;
                 }
             }
             0x80809479 => {
