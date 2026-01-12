@@ -29,7 +29,7 @@ pub struct SRenderGlobalsData {
     /// Lookup textures
     pub unk30: Tag<SRenderGlobalLookupTextures>,
     pub global_channels: Tag<SRenderGlobalsGlobalChannels>,
-    pub unk38: TagHash,
+    pub unk38: Tag<SWaterDisplacementGlobals>,
 }
 
 #[derive(Debug)]
@@ -124,4 +124,19 @@ pub struct SVertexInputElement {
     pub semantic: u8,
     pub semantic_index: u8,
     pub format: u8,
+}
+
+#[tiger_type(id = 0x8080684B)]
+pub struct SWaterDisplacementGlobals {
+    pub file_size: u64,
+    pub water_displacement_unk00: TagHash,
+    pub water_displacement_unk08: TagHash,
+    pub unk10: TagHash,
+    pub unk14: f32,
+    pub unk18: f32,
+    pub unk1c: f32,
+    pub unk20: f32,
+    pub unk24: f32,
+    pub unk28: f32,
+    pub unk2c: f32,
 }

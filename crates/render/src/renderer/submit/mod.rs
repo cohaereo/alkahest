@@ -283,6 +283,32 @@ impl Renderer {
             0.00000000,
         );
 
+        *ext.water_displacement = externs::WaterDisplacement {
+            unk00: self
+                .globals
+                .textures
+                .water_displacement_unk00
+                .view
+                .clone()
+                .into(),
+            unk08: self
+                .globals
+                .textures
+                .water_displacement_unk08
+                .view
+                .clone()
+                .into(),
+            unk10: 0.045,
+            unk14: 1.0, // value unknown, dont know where this is used
+            unk18: 0.0,
+            unk1c: 20.0,
+            unk20: 600.0,
+            unk24: 0.5,
+            unk28: 2.0,
+            unk2c: 0.0,
+            unk30: 7.7,
+        };
+
         // ext.deferred.gbuffer_resolution_scale_offset =
         //     vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
         ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();

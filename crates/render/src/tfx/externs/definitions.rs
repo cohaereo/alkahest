@@ -1245,7 +1245,17 @@ extern_struct! {
 
 extern_struct! {
     struct WaterDisplacement("water_displacement") {
+        0x00 => unk00: TextureView,
         0x08 => unk08: TextureView,
+        0x10 => unk10: f32,
+        0x14 => unk14: f32,
+        0x18 => unk18: f32,
+        0x1C => unk1c: f32,
+        0x20 => unk20: f32,
+        0x24 => unk24: f32,
+        0x28 => unk28: f32,
+        0x2C => unk2c: f32,
+        0x30 => unk30: f32,
     }
 }
 
