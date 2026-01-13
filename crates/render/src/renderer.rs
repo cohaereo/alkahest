@@ -8,7 +8,6 @@ pub mod visibility;
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
-    time::Instant,
 };
 
 use alkahest_core::ConVars;
@@ -73,7 +72,6 @@ pub struct Renderer {
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
     pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
 
-    start_time: Instant,
     pub common: CommonResources,
     active_feature_renderers: AtomicCell<FeatureRendererSubscription>,
     placeholder_textures:
@@ -159,7 +157,6 @@ impl Renderer {
 
             profiler: D3D11Profiler::new(&gpu),
             gpu,
-            start_time: Instant::now(),
             active_feature_renderers: AtomicCell::new(FeatureRendererSubscription::all()),
             placeholder_textures: RwLock::new(HashMap::new()),
 

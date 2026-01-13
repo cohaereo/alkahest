@@ -509,6 +509,10 @@ impl BloomBuffers {
             autoexposure_sample_columns_cpu: Mutex::new(autoexposure_sample_columns_cpu),
         })
     }
+
+    pub fn clear_results(&self, cmd: &mut CommandList) {
+        Renderer::instance().clear_surface(cmd, self.bloom_final, [0.0, 0.0, 0.0, 1.0]);
+    }
 }
 
 pub struct AtmosphereBuffers {

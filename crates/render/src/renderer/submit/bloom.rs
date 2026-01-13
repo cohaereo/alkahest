@@ -17,6 +17,7 @@ impl Renderer {
         let _gpu_span = self.profiler.scope(cmd, "bloom");
 
         if !view.settings.bloom {
+            view.bloom.clear_results(cmd);
             return;
         }
 

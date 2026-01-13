@@ -65,6 +65,26 @@ pub struct EntityListTab {
 
 impl EntityListTab {
     pub fn new() -> Self {
+        let mut thumbnail_scene = Scene::new(
+            Renderer::instance().clone(),
+            Camera {
+                max_ortho_width: 1.0,
+                projection: alkahest_render::camera::CameraProjection::Orthographic,
+                near: 0.1,
+                far: 250.0,
+                ..Default::default()
+            },
+        )
+        .unwrap()
+        .with_controller(CameraController::new_orbit(Vec3::ZERO, 25.0));
+
+        thumbnail_scene.view.settings.autoexposure = false;
+        thumbnail_scene.view.settings.exposure_scale = 0.250;
+        thumbnail_scene.view.settings.bloom = false;
+
+        let mut scene = Scene::new(Renderer::instance().clone(), Camera::default()).unwrap();
+        scene.view.settings = thumbnail_scene.view.settings.clone();
+
         Self {
             packages: package_manager()
                 .package_paths
@@ -85,19 +105,8 @@ impl EntityListTab {
             current_tag: TagHash::NONE,
             show_entities_without_models: false,
             zoom: 1.0,
-            scene: Scene::new(Renderer::instance().clone(), Camera::default()).unwrap(),
-            thumbnail_scene: Scene::new(
-                Renderer::instance().clone(),
-                Camera {
-                    max_ortho_width: 1.0,
-                    projection: alkahest_render::camera::CameraProjection::Orthographic,
-                    near: 0.1,
-                    far: 250.0,
-                    ..Default::default()
-                },
-            )
-            .unwrap()
-            .with_controller(CameraController::new_orbit(Vec3::ZERO, 25.0)),
+            scene,
+            thumbnail_scene,
             hovered_tag: TagHash::NONE,
             hover_vector: Vec2::ZERO,
         }

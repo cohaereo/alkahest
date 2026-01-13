@@ -31,10 +31,10 @@ pub struct AutoExposureConfig {
 impl Default for AutoExposureConfig {
     fn default() -> Self {
         Self {
-            target_luminance: 0.00004,
+            target_luminance: 0.0050,
             min_luminance: 0.0001,
             max_luminance: 65000.0,
-            speed_dark_to_light: 3.0, // Fast reaction to flashbangs/sun
+            speed_dark_to_light: 2.0, // Fast reaction to flashbangs/sun
             speed_light_to_dark: 1.0, // Slow reaction to entering caves
         }
     }

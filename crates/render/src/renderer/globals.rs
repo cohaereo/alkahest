@@ -324,21 +324,33 @@ impl GlobalPipelines {
     ) -> &Technique {
         let pipeline_list = [
             // No Distort
-            &self.screen_area_global_lut3d,
-            &self.screen_area_global_lut3d_hdr,
-            &self.screen_area_global_lut3d_noise,
-            &self.screen_area_global_lut3d_noise_hdr,
+            [
+                // No Noise
+                [
+                    &self.screen_area_global_lut3d,
+                    &self.screen_area_global_lut3d_hdr,
+                ],
+                // Noise
+                [
+                    &self.screen_area_global_lut3d_noise,
+                    &self.screen_area_global_lut3d_noise_hdr,
+                ],
+            ],
             // Distort
-            &self.screen_area_global_lut3d_distort,
-            &self.screen_area_global_lut3d_distort_hdr,
-            &self.screen_area_global_lut3d_distort_noise,
-            &self.screen_area_global_lut3d_distort_noise_hdr,
+            [
+                // No Noise
+                [
+                    &self.screen_area_global_lut3d_distort,
+                    &self.screen_area_global_lut3d_distort_hdr,
+                ],
+                // Noise
+                [
+                    &self.screen_area_global_lut3d_distort_noise,
+                    &self.screen_area_global_lut3d_distort_noise_hdr,
+                ],
+            ],
         ];
 
-        let distort_index = distort as usize;
-        let hdr_index = hdr as usize;
-        let noise_index = noise as usize;
-
-        pipeline_list[distort_index * 4 + noise_index * 2 + hdr_index]
+        pipeline_list[distort as usize][noise as usize][hdr as usize]
     }
 }

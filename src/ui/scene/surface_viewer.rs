@@ -22,7 +22,14 @@ impl super::Scene {
                         .allocate_dx_temporary(srv, None, false)
                 });
 
-                let aspect_ratio = surface.resolution().0 as f32 / surface.resolution().1 as f32;
+                let (width, height) = surface.resolution();
+                let vertical_aspect_ratio = if width > height {
+                    // Landscape
+                    height as f32 / width as f32
+                } else {
+                    // Portrait
+                    height as f32 / width as f32
+                };
 
                 ui.label(surface.name());
                 ui.weak(
@@ -38,7 +45,7 @@ impl super::Scene {
                 );
                 if let Some(tid) = texture_id {
                     let (rect, _) = ui.allocate_exact_size(
-                        vec2(texture_size * aspect_ratio, texture_size),
+                        vec2(384.0, 384.0 * vertical_aspect_ratio),
                         egui::Sense::hover(),
                     );
 

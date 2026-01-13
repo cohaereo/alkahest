@@ -9,9 +9,7 @@ use std::{
     time::Instant,
 };
 
-use alkahest_data::tfx::{
-    FeatureRendererSubscription, atmosphere::SSunAngles, common::AxisAlignedBBox,
-};
+use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use alkahest_render::{
     Gpu, Renderer,
     camera::Camera,
@@ -48,7 +46,7 @@ pub struct Scene {
 
     renderer: Arc<Renderer>,
     camera: Camera,
-    view: View,
+    pub view: View,
     last_frame_time: Instant,
     start_time: Instant,
     /// Time of day (0 - 3600)
@@ -314,7 +312,7 @@ impl Scene {
             ui.spacing_mut().slider_width = ui.available_width() * 0.75;
             egui::Slider::new(
                 &mut self.view.autoexposure.config.target_luminance,
-                0.000002..=0.0004,
+                0.000002..=0.04,
             )
             .logarithmic(false)
             .show_value(true)
@@ -324,7 +322,7 @@ impl Scene {
         ui.add_enabled_ui(!settings.autoexposure, |ui| {
             ui.strong("Exposure Scale");
             ui.spacing_mut().slider_width = ui.available_width() * 0.75;
-            egui::Slider::new(&mut settings.exposure_scale, 0.001..=2.0)
+            egui::Slider::new(&mut settings.exposure_scale, 0.001..=4.0)
                 .logarithmic(true)
                 .show_value(true)
                 .ui(ui);

@@ -443,15 +443,15 @@ impl Renderer {
             unk80: 0.1, // Orbit
 
             unk90: vec4(32.0, 1024.0, 0.0, 0.0),
-            unka0: vec4(0.03125, -5.0, 14.0, 25.0),
+            unka0: vec4(0.03125, -5.0, 14.0, 2.5),
             unkb0: 0.5,
             unkb4: 2.0,
             unke0: vec4(0.25, -0.225, 0.40, 0.96),
             unkf0: vec4(0.13281, 0.23611, 0.00, 0.00), // distortion related
             // unkf0: Vec4::ZERO,
             unk140: 0.05,
-            unk150: Vec4::default(), //vec4(0.3, 0.5, 0.0, 0.02),
-            unk160: Vec4::default(), //vec4(0.3, 0.5, 0.0, 0.5),
+            unk150: vec4(0.3, 0.5, 0.0, 0.02),
+            unk160: vec4(0.3, 0.5, 0.0, 0.5),
             ..Default::default()
         }
         .into();
