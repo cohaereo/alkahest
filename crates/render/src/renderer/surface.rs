@@ -417,8 +417,16 @@ impl SurfaceScale {
     pub fn scale_resolution(&self, base_resolution: (u32, u32)) -> (u32, u32) {
         let (factor_x, factor_y) = self.factor();
         (
-            (base_resolution.0 as f32 / factor_x).ceil() as u32,
-            (base_resolution.1 as f32 / factor_y).ceil() as u32,
+            if factor_x == 0.0 {
+                1
+            } else {
+                (base_resolution.0 as f32 / factor_x).ceil() as u32
+            },
+            if factor_y == 0.0 {
+                1
+            } else {
+                (base_resolution.1 as f32 / factor_y).ceil() as u32
+            },
         )
     }
 }

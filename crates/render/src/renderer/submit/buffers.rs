@@ -477,11 +477,15 @@ impl BloomBuffers {
         let bloom_final = create_desc("bloom_final", SurfaceScale::Half)?;
 
         let autoexposure_sample_columns = surfaces.create_surface(
-            (40, 1),
-            SurfaceDesc::builder("autoexposure_sample_columns", SizeRelativity::Absolute)
-                .format(dxgi::Format::R32g32b32a32Float)
-                .view_format(dxgi::Format::R32g32b32a32Float)
-                .build(),
+            base_resolution,
+            SurfaceDesc::builder(
+                "autoexposure_sample_columns",
+                SizeRelativity::RelativeToFramebuffer,
+            )
+            .format(dxgi::Format::R32g32b32a32Float)
+            .view_format(dxgi::Format::R32g32b32a32Float)
+            .scale(SurfaceScale::Nth(48.0, 0.0))
+            .build(),
         )?;
 
         let autoexposure_sample_columns_cpu =
