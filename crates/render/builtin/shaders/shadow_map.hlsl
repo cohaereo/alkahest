@@ -98,8 +98,13 @@ float2 GetTexelSize(Texture2D tex) {
     return float2(1.0f / width, 1.0f / height);
 }
 
-float4 mainPS(VSOutput input)
-    : SV_TARGET
+float InterleavedGradientNoise(float2 position_screen)
+{
+    float3 magic = float3(0.06711056f, 0.00583715f, 52.9829189f);
+    return frac(magic.z * frac(dot(position_screen, magic.xy)));
+}
+
+float4 mainPS(VSOutput input) : SV_TARGET
 {
     float depth = deferred_depth.Sample(samplerState, input.uv).x;
     if (depth == 0)
@@ -114,22 +119,32 @@ float4 mainPS(VSOutput input)
 
     float2 cascadeUv;
     cascadeUv.x = posLightSpace.x * 0.5 + 0.5;
-    cascadeUv.y = 1.0 - (posLightSpace.y * 0.5 + 0.5); // Invert Y-axis
+    cascadeUv.y = 1.0 - (posLightSpace.y * 0.5 + 0.5);
+
+    // Bounds check
     if(cascadeUv.x < 0.0 || cascadeUv.x > 1.0 || cascadeUv.y < 0.0 || cascadeUv.y > 1.0)
-        discard; // Outside of shadow map bounds
-
+        discard;
     if (posLightSpace.z < 0.0 || posLightSpace.z > 1.0)
-        return float4(1, 1, 1, 1); // Outside of shadow map bounds
+        return float4(1, 1, 1, 1);
 
-    float3 normal = normalize(input.normal);
-    float bias = 0.0002;
-    // float bias = max(0.05 * (1.0 - dot(normal, light_dir)), 0.005);
-    // bias *= 1 / (plane_distance * 0.5f);
-
+    float bias = 0.0001;
     float2 texelSize = GetTexelSize(cascade_shadowmap);
+
+    float filterSpread = 2.5;
+
+    float randomAngle = InterleavedGradientNoise(input.pos.xy) * 6.28318530718; // 2 * PI
+    float s = sin(randomAngle);
+    float c = cos(randomAngle);
+
+    float2x2 rot = float2x2(c, -s, s, c);
+
     float shadow = 0.0;
+
+    [unroll] // Optional: unrolling can help performance for small loops
     for(int i = 0; i < SAMPLE_NUM; ++i) {
-        float2 offset = POISSON_SAMPLES[i] * texelSize;
+        float2 rotatedOffset = mul(rot, POISSON_SAMPLES[i]);
+        float2 offset = rotatedOffset * texelSize * filterSpread;
+
         float shadowDepth = cascade_shadowmap.Sample(samplerState, cascadeUv + offset).x;
         shadow += (posLightSpace.z - bias) > shadowDepth ? 0.0 : 1.0;
     }

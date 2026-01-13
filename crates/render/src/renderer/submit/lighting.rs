@@ -317,7 +317,8 @@ impl Renderer {
                             camera_to_projective: self.externs.view.camera_to_projective,
                             world_to_camera: self.externs.view.world_to_camera,
                             light_dir: sun_dir.normalize().into(),
-                            plane_distance: Self::CASCADE_DISTANCE_RANGES[cascade_index],
+                            // plane_distance: Self::CASCADE_DISTANCE_RANGES[cascade_index],
+                            plane_distance: Self::get_cascade_distance_range(cascade_index).1,
                             world_to_cascade: view.cascade_matrices.read()[cascade_index],
                         },
                     )

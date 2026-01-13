@@ -104,6 +104,7 @@ subsecond.workspace = true
 dioxus-devtools = "0.7.2"
 serde.workspace = true
 toml = "0.9.10"
+inline_tweak = "1.2.2"
 
 [build-dependencies]
 embed-resource = "3.0.1"

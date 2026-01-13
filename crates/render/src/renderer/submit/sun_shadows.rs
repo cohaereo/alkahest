@@ -14,8 +14,18 @@ use crate::{
 impl Renderer {
     pub const NUM_CASCADES: usize = 4;
     pub const MAX_CASCADE_DISTANCE: f32 = 600.0;
-    pub const CASCADE_DISTANCE_RANGES: [f32; Self::NUM_CASCADES] =
-        [30.0, 80.0, 200.0, Self::MAX_CASCADE_DISTANCE];
+    pub const CASCADE_DISTANCES: [f32; Self::NUM_CASCADES] =
+        [10.0, 30.0, 100.0, Self::MAX_CASCADE_DISTANCE];
+
+    pub fn get_cascade_distance_range(index: usize) -> (f32, f32) {
+        let z_near = if index == 0 {
+            0.05
+        } else {
+            Self::CASCADE_DISTANCES[index - 1]
+        };
+        let z_far = Self::CASCADE_DISTANCES[index];
+        (z_near, z_far)
+    }
 
     pub fn submit_sun_shadows(
         self: &Arc<Self>,
@@ -59,8 +69,7 @@ impl Renderer {
             self.bind_surfaces(cmd, &[], Some(shadow_map));
             self.clear_surface_depth(cmd, shadow_map, 1.0, 0);
 
-            let z_near = 0.05;
-            let z_far = Self::CASCADE_DISTANCE_RANGES[c];
+            let (z_near, z_far) = Self::get_cascade_distance_range(c);
 
             let (world_to_camera, camera_to_projective) =
                 camera.build_shadow_cascade(sun_dir, z_near, z_far);
