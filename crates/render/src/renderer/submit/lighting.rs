@@ -269,6 +269,13 @@ impl Renderer {
     // }
 
     fn compute_shadow_map(&self, cmd: &mut CommandList, view: &View) {
+        if !view.settings.sun_shadows {
+            view.surfaces()
+                .get(view.shadow_mask)
+                .clear_color(cmd, [1.0; 4]);
+            return;
+        }
+
         cmd_event_span!(cmd, "compute_shadow_map");
         let _gpuspan = self.profiler.scope(cmd, "compute_shadow_map");
 

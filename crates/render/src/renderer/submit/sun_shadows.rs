@@ -15,7 +15,7 @@ impl Renderer {
     pub const NUM_CASCADES: usize = 4;
     pub const MAX_CASCADE_DISTANCE: f32 = 600.0;
     pub const CASCADE_DISTANCE_RANGES: [f32; Self::NUM_CASCADES] =
-        [10.0, 50.0, 200.0, Self::MAX_CASCADE_DISTANCE];
+        [30.0, 80.0, 200.0, Self::MAX_CASCADE_DISTANCE];
 
     pub fn submit_sun_shadows(
         self: &Arc<Self>,
@@ -23,6 +23,10 @@ impl Renderer {
         camera: &Camera,
         view: &View,
     ) {
+        if !view.settings.sun_shadows {
+            return;
+        }
+
         profiling::scope!("submit_sun_shadows");
         let _gpuspan = self.profiler.scope(cmd, "submit_sun_shadows");
 
@@ -50,6 +54,7 @@ impl Renderer {
         cmd.set_depth_mode(DepthMode::Forward);
         for c in 0..Self::NUM_CASCADES {
             profiling::scope!("submit_sun_shadow_cascade", &format!("cascade {}", c));
+            let _gpuspan = self.profiler.scope(cmd, format!("shadow_cascade_{c}"));
             let shadow_map = view.sun_shadow_map_cascades[c];
             self.bind_surfaces(cmd, &[], Some(shadow_map));
             self.clear_surface_depth(cmd, shadow_map, 1.0, 0);

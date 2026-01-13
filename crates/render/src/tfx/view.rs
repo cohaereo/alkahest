@@ -180,6 +180,7 @@ pub struct RenderSettings {
     pub volumetrics: bool,
     pub shadows: bool,
     pub autoexposure: bool,
+    pub sun_shadows: bool,
 }
 
 impl Default for RenderSettings {
@@ -193,6 +194,7 @@ impl Default for RenderSettings {
             volumetrics: true,
             shadows: true,
             autoexposure: true,
+            sun_shadows: false,
         }
     }
 }

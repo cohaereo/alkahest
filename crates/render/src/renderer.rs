@@ -371,7 +371,7 @@ impl CommonResources {
             gpu.compile_shader_vs_ps("blit_fw", BLIT_FAKE_WEAPON_SHADER, "mainVS", "mainPS")?;
 
         let shadowmap_vs_t2 = Texture::load_2d_raw(
-            &gpu,
+            gpu,
             1,
             1,
             &[0, 0, 255, 255],

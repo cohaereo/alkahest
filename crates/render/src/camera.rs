@@ -173,7 +173,7 @@ impl Camera {
         }
 
         // Tune this according to the scene
-        const Z_MULT: f32 = 9.5;
+        const Z_MULT: f32 = 12.0;
         let min_z = if min_z < 0.0 {
             min_z * Z_MULT
         } else {

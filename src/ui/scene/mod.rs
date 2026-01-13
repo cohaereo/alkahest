@@ -402,8 +402,14 @@ impl Scene {
             );
         ui.checkbox(&mut settings.shadows, "Shadows")
             .setting_description_tooltip(
-                "Enables dynamic shadows from lights in the scene.",
+                "Enables (static) shadows for lights.",
                 PerformanceImpact::Medium,
+            );
+
+        ui.checkbox(&mut settings.sun_shadows, "Sun Shadows")
+            .setting_description_tooltip(
+                "Enables (dynamic) shadows for the sun light.",
+                PerformanceImpact::High,
             );
 
         ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
