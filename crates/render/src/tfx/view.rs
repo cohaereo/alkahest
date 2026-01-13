@@ -3,14 +3,16 @@ use std::sync::Arc;
 use alkahest_data::tfx::FeatureRendererSubscription;
 use d3d11::dxgi;
 use glam::{Mat4, Vec3, Vec4};
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 
 use crate::{
-    Gpu,
+    Gpu, Renderer,
     renderer::{
         autoexposure::AutoExposureSystem,
         submit::buffers::{AtmosphereBuffers, BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
-        surface::{SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, Surfaces},
+        surface::{
+            SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale, Surfaces,
+        },
     },
 };
 
@@ -27,6 +29,9 @@ pub struct View {
     pub(crate) water: WaterBuffers,
     pub(crate) bloom: BloomBuffers,
     pub(crate) atmosphere: AtmosphereBuffers,
+    pub(crate) sun_shadow_map_cascades: Vec<SurfaceHandle>,
+    pub(crate) cascade_matrices: RwLock<[Mat4; Renderer::NUM_CASCADES]>,
+    pub(crate) shadow_mask: SurfaceHandle,
 
     pub(crate) shading_result: SurfaceHandle,
     pub(crate) shading_result_read: Mutex<SurfaceProxy>,
@@ -68,6 +73,31 @@ impl View {
                 .expect("Failed to create shading result read proxy"),
         );
 
+        let sun_shadow_map_cascades = (0..Renderer::NUM_CASCADES)
+            .map(|i| {
+                surfaces.create_surface(
+                    (2048, 2048),
+                    SurfaceDesc::builder(
+                        format!("sun_shadow_cascade_{i}"),
+                        SizeRelativity::Absolute,
+                    )
+                    .format(dxgi::Format::R16Typeless)
+                    .view_format(dxgi::Format::R16Unorm)
+                    .depth_format(dxgi::Format::D16Unorm)
+                    .build(),
+                )
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        let shadow_mask = surfaces.create_surface(
+            resolution,
+            SurfaceDesc::builder("shadow_mask", SizeRelativity::RelativeToFramebuffer)
+                .scale(SurfaceScale::Half)
+                .format(dxgi::Format::R8g8Typeless)
+                .view_format(dxgi::Format::R8g8Unorm)
+                .build(),
+        )?;
+
         Ok(Self {
             position: Vec3::ZERO,
             world_to_camera: Mat4::IDENTITY,
@@ -79,6 +109,9 @@ impl View {
             water,
             bloom,
             atmosphere,
+            sun_shadow_map_cascades,
+            shadow_mask,
+            cascade_matrices: RwLock::new([Mat4::IDENTITY; Renderer::NUM_CASCADES]),
             shading_result,
             shading_result_read,
             output,

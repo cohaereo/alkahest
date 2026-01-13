@@ -89,6 +89,17 @@ impl Camera {
         )
     }
 
+    pub fn projection_matrix_slice(&self, near: f32, far: f32) -> glam::Mat4 {
+        let f = 1.0 / f32::tan(0.5 * self.fov_y.to_radians());
+        let far = (1. / far) * near;
+        Mat4::from_cols(
+            Vec4::new(f / self.aspect_ratio, 0.0, 0.0, 0.0),
+            Vec4::new(0.0, f, 0.0, 0.0),
+            Vec4::new(0.0, 0.0, far, -1.0),
+            Vec4::new(0.0, 0.0, near, 0.0),
+        )
+    }
+
     pub fn forward(&self) -> Vec3 {
         self.rotation.mul_vec3(Vec3::X)
     }
@@ -127,6 +138,58 @@ impl Camera {
         }
 
         true
+    }
+
+    /// Returns (world_to_camera, camera_to_projective) matrices for cascaded shadow mapping.
+    pub fn build_shadow_cascade(&self, light_dir: Vec3, z_start: f32, z_end: f32) -> (Mat4, Mat4) {
+        let proj_slice = self.projection_matrix_slice(z_start, z_end);
+
+        let frustum = Frustum::from_view_and_projection(self.view_matrix(), proj_slice);
+        let frustum_corners = frustum.points;
+        let frustum_center = frustum.center();
+
+        // let frustum_pos = frustum_center - light_dir * 250.0;
+
+        let cascade_world_to_camera =
+            Mat4::look_at_rh(frustum_center, frustum_center + light_dir, Vec3::Z);
+
+        // Initialize min and max values
+        let mut min_x = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut min_y = f32::MAX;
+        let mut max_y = f32::MIN;
+        let mut min_z = f32::MAX;
+        let mut max_z = f32::MIN;
+
+        // Calculate min and max values for the transformed corners
+        for v in &frustum_corners {
+            let trf = cascade_world_to_camera.transform_point3(Vec3::from(*v));
+            min_x = min_x.min(trf.x);
+            max_x = max_x.max(trf.x);
+            min_y = min_y.min(trf.y);
+            max_y = max_y.max(trf.y);
+            min_z = min_z.min(trf.z);
+            max_z = max_z.max(trf.z);
+        }
+
+        // Tune this according to the scene
+        const Z_MULT: f32 = 9.5;
+        let min_z = if min_z < 0.0 {
+            min_z * Z_MULT
+        } else {
+            min_z / Z_MULT
+        };
+
+        let max_z = if max_z < 0.0 {
+            max_z / Z_MULT
+        } else {
+            max_z * Z_MULT
+        };
+
+        let cascade_camera_to_projective =
+            Mat4::orthographic_rh(min_x, max_x, min_y, max_y, min_z, max_z);
+
+        (cascade_world_to_camera, cascade_camera_to_projective)
     }
 }
 

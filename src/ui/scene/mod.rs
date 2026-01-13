@@ -552,8 +552,12 @@ impl Scene {
                 });
         }
 
-        self.renderer
-            .submit_world(&mut cmd, &self.view, self.render_mode.into());
+        {
+            self.renderer
+                .submit_sun_shadows(&mut cmd, &self.camera, &self.view);
+            self.renderer
+                .submit_world(&mut cmd, &self.view, self.render_mode.into());
+        }
         cmd.copy_resource(
             &self.renderer.surfaces().get(self.view.output).texture,
             &self.surface,

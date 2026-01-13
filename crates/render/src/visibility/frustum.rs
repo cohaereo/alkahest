@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use alkahest_data::tfx::common::AxisAlignedBBox;
-use glam::{vec4, Vec3A, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec3, Vec3A, Vec4, Vec4Swizzles, vec4};
 
 use crate::camera::Camera;
 
@@ -69,7 +69,15 @@ impl Frustum {
     }
 
     pub fn from_camera(cam: &Camera) -> Self {
-        let cols = (cam.projection_matrix_standard() * cam.view_matrix()).to_cols_array_2d();
+        Self::from_view_and_projection(cam.view_matrix(), cam.projection_matrix_standard())
+    }
+
+    pub fn from_view_and_projection(view: Mat4, projection: Mat4) -> Self {
+        Self::from_world_to_projective(projection * view)
+    }
+
+    pub fn from_world_to_projective(world_to_projective: Mat4) -> Self {
+        let cols = world_to_projective.to_cols_array_2d();
 
         let left = Plane(vec4(
             cols[0][3] + cols[0][0],
@@ -133,4 +141,8 @@ impl Frustum {
     //     }
     //     true
     // }
+
+    pub fn center(&self) -> Vec3 {
+        Vec3::from(self.points.iter().sum::<Vec3A>()) / self.points.len() as f32
+    }
 }

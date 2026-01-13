@@ -34,7 +34,12 @@ use crate::{
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
     object::{RenderObject, RenderObjectHandle},
     renderer::submit::bloom::PostProcessScope,
-    tfx::{externs::Externs, packet::FramePacket, scope::TempFrameScope, view::RenderSettings},
+    tfx::{
+        externs::Externs,
+        packet::FramePacket,
+        scope::{CascadeScope, TempFrameScope},
+        view::RenderSettings,
+    },
     util::{
         arena::Arena,
         threading::{CommandListPool, ThreadMutCell},
@@ -43,6 +48,7 @@ use crate::{
 
 const DEBUG_SHADER: &str = include_str!("../builtin/shaders/debug.hlsl");
 const CLEAR_AO_SHADER: &str = include_str!("../builtin/shaders/clear_ao.hlsl");
+const SHADOW_MAP_SHADER: &str = include_str!("../builtin/shaders/shadow_map.hlsl");
 const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
 const BLIT_FAKE_WEAPON_SHADER: &str = include_str!("../builtin/shaders/blit_fake_weapon.hlsl");
 
@@ -68,6 +74,9 @@ pub struct Renderer {
     clear_ao_vs: d3d11::VertexShader,
     clear_ao_ps: d3d11::PixelShader,
     clear_ao_all_ps: d3d11::PixelShader,
+    shadow_map_vs: d3d11::VertexShader,
+    shadow_map_ps: d3d11::PixelShader,
+    cascade_scope: ConstantBuffer<CascadeScope>,
 
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
     pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
@@ -126,6 +135,9 @@ impl Renderer {
         let (_clear_ao_vs, clear_ao_all_ps) =
             gpu.compile_shader_vs_ps("clear_ao", CLEAR_AO_SHADER, "mainVS", "mainPSall")?;
 
+        let (shadow_map_vs, shadow_map_ps) =
+            gpu.compile_shader_vs_ps("shadow_map", SHADOW_MAP_SHADER, "mainVS", "mainPS")?;
+
         let globals = RenderGlobals::load(&gpu).context("Failed to load render globals")?;
         Ok(Self {
             externs: ThreadMutCell::new(Externs::new(&globals)),
@@ -152,6 +164,9 @@ impl Renderer {
             clear_ao_vs,
             clear_ao_ps,
             clear_ao_all_ps,
+            shadow_map_vs,
+            shadow_map_ps,
+            cascade_scope: ConstantBuffer::create(&gpu, None)?,
 
             common: CommonResources::load(&gpu)?,
 
@@ -315,6 +330,9 @@ pub struct CommonResources {
     temporary_depth_lookup: Texture,
 
     pub disable_skinning_vs: d3d11::VertexShader,
+
+    sampler_point: d3d11::SamplerState,
+    sampler_linear: d3d11::SamplerState,
 }
 
 impl CommonResources {
@@ -365,6 +383,22 @@ impl CommonResources {
         let vertex_color_fallback =
             VertexBuffer::load_data(gpu, bytemuck::cast_slice(&[[255u8, 255, 255, 255]]), 4)?;
 
+        let sampler_point = gpu.create_sampler_state(&d3d11::SamplerDesc {
+            filter: d3d11::Filter::MinMagMipPoint,
+            address_u: d3d11::TextureAddress::Clamp,
+            address_v: d3d11::TextureAddress::Clamp,
+            address_w: d3d11::TextureAddress::Clamp,
+            ..Default::default()
+        })?;
+
+        let sampler_linear = gpu.create_sampler_state(&d3d11::SamplerDesc {
+            filter: d3d11::Filter::MinMagMipLinear,
+            address_u: d3d11::TextureAddress::Clamp,
+            address_v: d3d11::TextureAddress::Clamp,
+            address_w: d3d11::TextureAddress::Clamp,
+            ..Default::default()
+        })?;
+
         Ok(Self {
             temporary_sky_hemisphere: Texture::load_2d_dds(
                 gpu,
@@ -405,6 +439,8 @@ impl CommonResources {
             blit_ps_linear,
             blit_fw_vs,
             blit_fw_ps,
+            sampler_point,
+            sampler_linear,
         })
     }
 }

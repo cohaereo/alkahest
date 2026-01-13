@@ -189,6 +189,7 @@ tfx_global_pipelines! {
     cubemap_apply_sky_copy_ao,
     sky_generate_sky_mask,
     sky_lookup_generate_near, sky_lookup_generate_far,
+    sky,
 
     debug_cubemap_diffuse_probes,
     debug_source_color,

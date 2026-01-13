@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use alkahest_data::tfx::{
-    scope::{SScope, SScopeStage},
     ShaderStage,
+    scope::{SScope, SScopeStage},
 };
-use glam::Vec4;
+use glam::{Mat4, Vec3A, Vec4};
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use super::dynamic_constants::DynamicConstants;
-use crate::{gpu::command_list::CommandList, Gpu};
+use crate::{Gpu, gpu::command_list::CommandList};
 
 pub struct Scope {
     scope: SScope,
@@ -143,4 +143,14 @@ pub struct TempFrameScope {
     pub unk4: Vec4,
     pub unk5: Vec4,
     pub unk6: Vec4,
+}
+
+#[repr(C)]
+pub struct CascadeScope {
+    pub target_pixel_to_world: Mat4,
+    pub camera_to_projective: Mat4,
+    pub world_to_camera: Mat4,
+    pub world_to_cascade: Mat4,
+    pub light_dir: Vec3A,
+    pub plane_distance: f32,
 }

@@ -5,6 +5,7 @@ pub mod gbuffer;
 pub mod geometry;
 pub mod lighting;
 pub mod lowlevel;
+pub mod sun_shadows;
 pub mod transparent;
 pub mod water;
 
@@ -35,8 +36,6 @@ impl Renderer {
     ) {
         cmd_event_span!(cmd, "submit_world");
         let _gpuspan = self.profiler.scope(cmd, "submit_world");
-
-        *self.settings.write() = view.settings.clone();
 
         *self.surfaces.write() = view.surfaces.clone();
         view.surfaces.resize_surfaces(view.resolution);
@@ -186,6 +185,26 @@ impl Renderer {
             debug_pipeline,
             None | Some(DebugPipeline::DeferredShading) | Some(DebugPipeline::DeferredShadingNoSun)
         ) {
+            // // Turn on bit 0x10 for all stencil buffer pixels
+            // {
+            //     cmd_event_span!(cmd, "set_stencil_bit_0x10");
+            //     cmd.set_stencil_ref(0x10);
+            //     cmd.state = PipelineState::new(Some(0), Some(77), Some(0), Some(0));
+            //     cmd.flush_states();
+            //     cmd.vertex_set_shader(Some(&self.common.blit_vs));
+            //     cmd.pixel_set_shader(None);
+            //     cmd.set_input_topology(PrimitiveType::TriangleStrip);
+            //     cmd.draw(4, 0);
+            // }
+
+            // {
+            //     cmd.set_stencil_ref(0);
+            //     cmd.state = PipelineState::new(Some(0), Some(50), Some(0), Some(0));
+            //     // Copies the sky lookup to the screen where depth is infinite, and masks out sky pixels in the stencil buffer
+            //     self.execute_global_pipeline(cmd, &self.globals.pipelines.sky, "sky");
+            // }
+
+            cmd.set_stencil_ref(0);
             view.shading_result_read
                 .lock()
                 .update(cmd, view.surfaces.get(view.shading_result));
@@ -330,6 +349,10 @@ impl Renderer {
         ext.decal.normals_read = view.gbuffers.normal_read.into();
         ext.decal.depth_constants = ext.deferred.depth_constants;
         ext.decal.unk30 = vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
+
+        ext.shadow_mask.unk00 = view.shadow_mask.into();
+        // ext.shadow_mask.unk08 = view.lighting.ssao.into();
+        ext.shadow_mask.unk10 = view.gbuffers.uber_depth_half.into();
 
         *ext.global_lighting = GlobalLighting {
             unk08: self.gpu.placeholder_white.view.clone().into(),
