@@ -172,19 +172,8 @@ impl Camera {
             max_z = max_z.max(trf.z);
         }
 
-        // Tune this according to the scene
-        const Z_MULT: f32 = 12.0;
-        let min_z = if min_z < 0.0 {
-            min_z * Z_MULT
-        } else {
-            min_z / Z_MULT
-        };
-
-        let max_z = if max_z < 0.0 {
-            max_z / Z_MULT
-        } else {
-            max_z * Z_MULT
-        };
+        min_z -= 100.0;
+        max_z += 100.0;
 
         let cascade_camera_to_projective =
             Mat4::orthographic_rh(min_x, max_x, min_y, max_y, min_z, max_z);
