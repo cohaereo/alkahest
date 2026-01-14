@@ -1,5 +1,6 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use inline_tweak::tweak;
 
 use crate::visibility::frustum::Frustum;
 
@@ -172,8 +173,9 @@ impl Camera {
             max_z = max_z.max(trf.z);
         }
 
-        min_z -= 100.0;
-        max_z += 100.0;
+        const SHADOW_Z_OFFSET: f32 = 1000.0;
+        min_z -= SHADOW_Z_OFFSET;
+        max_z += SHADOW_Z_OFFSET;
 
         let cascade_camera_to_projective =
             Mat4::orthographic_rh(min_x, max_x, min_y, max_y, min_z, max_z);
