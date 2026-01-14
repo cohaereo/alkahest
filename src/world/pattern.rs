@@ -5,7 +5,7 @@ use alkahest_data::{
     pattern::{S8080841B, SPattern},
     tfx::{
         TfxFeatureRenderer,
-        atmosphere::{SSunAngles, SUnk80808ac8Variant},
+        atmosphere::SUnk80808ac8Variant,
         common::AxisAlignedBBox,
         features::{dynamic::SDynamicModelComponent, statics::SUnk808082D5},
         sequencer::{SUnk808091f1Variant, SUnk80808179},
@@ -23,7 +23,6 @@ use alkahest_render::{
     tfx::sequencer_vm::global_channel::GlobalChannelExpression,
 };
 use anyhow::Context;
-use chroma_dbg::ChromaDebug;
 use glam::{Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
@@ -410,10 +409,9 @@ pub fn spawn_pattern_from_header(
                                 offset,
                                 component.taghash()
                             );
-                        }
-                        _ => {
-                            debug!("Unimplemented SUnk80809e6Variant: {g:?}");
-                        }
+                        } // _ => {
+                          //     debug!("Unimplemented SUnk80809e6Variant: {g:?}");
+                          // }
                     }
                 }
 

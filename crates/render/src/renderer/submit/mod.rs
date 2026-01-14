@@ -167,24 +167,20 @@ impl Renderer {
         //     .lock()
         //     .update(cmd, view.surfaces.get(view.shading_result));
 
-        self.submit_transparent(cmd, view, geo.as_ref());
-
-        view.shading_result_read
-            .lock()
-            .update(cmd, view.surfaces.get(view.shading_result));
-
-        self.submit_water(cmd, view);
-
-        if view.settings.volumetrics {
-            self.apply_volume_fog(cmd, view);
-        }
-
-        self.submit_bloom(cmd, view);
-
         if matches!(
             debug_pipeline,
             None | Some(DebugPipeline::DeferredShading) | Some(DebugPipeline::DeferredShadingNoSun)
         ) {
+            self.submit_transparent(cmd, view, geo.as_ref());
+
+            view.shading_result_read
+                .lock()
+                .update(cmd, view.surfaces.get(view.shading_result));
+
+            self.submit_water(cmd, view);
+            self.apply_volume_fog(cmd, view);
+            self.submit_bloom(cmd, view);
+
             // // Turn on bit 0x10 for all stencil buffer pixels
             // {
             //     cmd_event_span!(cmd, "set_stencil_bit_0x10");
@@ -219,6 +215,8 @@ impl Renderer {
                             .get_specialized_lut3d_pipeline(true, false, false),
                 "screen_area_global_lut3d",
             );
+        } else {
+            view.surfaces.get(view.shading_result).bind_single(cmd);
         }
 
         {
@@ -282,6 +280,8 @@ impl Renderer {
         ext.set_global_channel_by_id(0x2C53817D, Vec4::ONE); // global_channels[46]
         ext.set_global_channel_by_id(0x2C53817E, Vec4::ONE); // global_channels[47]
 
+        let global_tex = &self.globals.textures;
+
         *ext.frame = externs::Frame {
             game_time: misc.time,   //self.start_time.elapsed().as_secs_f32();
             render_time: misc.time, //self.start_time.elapsed().as_secs_f32();
@@ -290,6 +290,10 @@ impl Renderer {
             exposure_time: 0.016666668,
             exposure_scale: view.settings.exposure_scale,
             exposure_illum_relative: view.settings.exposure_illum_relative,
+            specular_tint_lookup: global_tex.specular_tint_lookup.view.clone().into(),
+            specular_lobe_lookup: global_tex.specular_lobe_lookup.view.clone().into(),
+            specular_lobe_3d_lookup: global_tex.specular_lobe_3d_lookup.view.clone().into(),
+            iridescence_lookup: global_tex.iridescence_lookup.view.clone().into(),
             ..*ext.frame.clone()
         };
 
@@ -307,20 +311,8 @@ impl Renderer {
         );
 
         *ext.water_displacement = externs::WaterDisplacement {
-            unk00: self
-                .globals
-                .textures
-                .water_displacement_unk00
-                .view
-                .clone()
-                .into(),
-            unk08: self
-                .globals
-                .textures
-                .water_displacement_unk08
-                .view
-                .clone()
-                .into(),
+            unk00: global_tex.water_displacement_unk00.view.clone().into(),
+            unk08: global_tex.water_displacement_unk08.view.clone().into(),
             unk10: 0.045,
             unk14: 1.0, // value unknown, dont know where this is used
             unk18: 0.0,

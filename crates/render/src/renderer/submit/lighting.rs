@@ -188,6 +188,9 @@ impl Renderer {
 
     pub(super) fn apply_volume_fog(&self, cmd: &mut CommandList, view: &View) {
         profiling::scope!("apply_volume_fog");
+        if !view.settings.volumetrics {
+            return;
+        }
 
         {
             let shading_result = view.surfaces.get(view.shading_result);
