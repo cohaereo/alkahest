@@ -7,8 +7,11 @@ use tiger_pkg::PackageManager;
 use tracing::{error, info};
 pub mod config;
 pub mod job;
+
+#[cfg(feature = "panic-hook")]
 pub mod panic_hook;
 
+#[cfg(feature = "panic-hook")]
 pub use panic_hook::setup_panic_hook;
 
 pub const DESTINY2_APP_ID: u64 = 1085660;
