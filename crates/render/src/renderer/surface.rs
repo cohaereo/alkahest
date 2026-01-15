@@ -452,7 +452,7 @@ impl Display for SurfaceScale {
 pub struct SurfaceProxy {
     pub res: d3d11::Texture2D,
     pub srv: d3d11::ShaderResourceView,
-    format: Option<dxgi::Format>,
+    view_format: Option<dxgi::Format>,
     cpu_read: bool,
 }
 
@@ -460,34 +460,36 @@ impl SurfaceProxy {
     pub fn new(
         device: &d3d11::Device,
         surface: &Surface,
-        format: Option<dxgi::Format>,
+        view_format: Option<dxgi::Format>,
         cpu_read: bool,
     ) -> anyhow::Result<Self> {
         let desc = surface.texture.get_desc();
-        let res = device.create_texture2d(
-            &Texture2dDesc::builder()
-                .width(desc.width)
-                .height(desc.height)
-                .mip_levels(1)
-                .format(format.unwrap_or(surface.desc.format))
-                .bind_flags(if cpu_read {
-                    BindFlags::empty()
-                } else {
-                    BindFlags::SHADER_RESOURCE
-                })
-                .cpu_access_flags(if cpu_read {
-                    CpuAccessFlags::READ
-                } else {
-                    CpuAccessFlags::empty()
-                })
-                .usage(if cpu_read {
-                    d3d11::Usage::Staging
-                } else {
-                    d3d11::Usage::Default
-                })
-                .build(),
-            None,
-        )?;
+        let res = device
+            .create_texture2d(
+                &Texture2dDesc::builder()
+                    .width(desc.width)
+                    .height(desc.height)
+                    .mip_levels(1)
+                    .format(surface.desc.format)
+                    .bind_flags(if cpu_read {
+                        BindFlags::empty()
+                    } else {
+                        BindFlags::SHADER_RESOURCE
+                    })
+                    .cpu_access_flags(if cpu_read {
+                        CpuAccessFlags::READ
+                    } else {
+                        CpuAccessFlags::empty()
+                    })
+                    .usage(if cpu_read {
+                        d3d11::Usage::Staging
+                    } else {
+                        d3d11::Usage::Default
+                    })
+                    .build(),
+                None,
+            )
+            .context("Failed to create surface proxy texture")?;
 
         res.set_debug_name(format!("{} proxy", surface.name()));
 
@@ -504,24 +506,37 @@ impl SurfaceProxy {
                     .build(),
                 None,
             )?;
-            device.create_shader_resource_view(&dummy_tex, None)?
+            device.create_shader_resource_view(&dummy_tex, None)
         } else {
-            device.create_shader_resource_view(&res, None)?
-        };
+            device.create_shader_resource_view(
+                &res,
+                Some(
+                    &ShaderResourceViewDesc::builder()
+                        .format(view_format.unwrap_or(surface.desc.view_format))
+                        .view_dimension(SrvDimension::Texture2D {
+                            mip_levels: 1,
+                            most_detailed_mip: 0,
+                        })
+                        .build(),
+                ),
+            )
+        }
+        .context("Failed to create surface proxy SRV")?;
 
         Ok(Self {
+            view_format: srv.get_desc().format.into(),
             res,
             srv,
-            format,
             cpu_read,
         })
     }
 
     pub fn update(&mut self, ctx: &d3d11::DeviceContext, surface: &Surface) {
         if surface.texture.get_desc().resolution() != self.res.get_desc().resolution() {
-            *self = Self::new(&ctx.get_device(), surface, self.format, self.cpu_read)
+            *self = Self::new(&ctx.get_device(), surface, self.view_format, self.cpu_read)
                 .expect("Failed to resize surface proxy");
         }
+
         ctx.copy_resource(&surface.texture, &self.res);
     }
 }

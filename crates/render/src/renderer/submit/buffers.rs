@@ -117,7 +117,6 @@ impl Gbuffers {
                     gpu,
                     surfaces.get(depth),
                     Some(dxgi::Format::R32FloatX8x24Typeless),
-                    // Some(dxgi::Format::R32Float),
                     false,
                 )
                 .context("Failed to create surface proxy")?,
