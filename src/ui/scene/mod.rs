@@ -24,7 +24,7 @@ use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
 use egui::{
     FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
-    Widget, load::SizedTexture, vec2,
+    Widget, containers::menu::MenuConfig, load::SizedTexture, vec2,
 };
 use glam::{Vec3, Vec4};
 use google_material_symbols::GoogleMaterialSymbols;
@@ -54,6 +54,7 @@ pub struct Scene {
     animate_time_of_day: bool,
     sun_light_angle: f32,
     pub render_mode: RenderMode,
+    keep_settings_open: bool,
 
     pub controller: CameraController,
 
@@ -90,6 +91,7 @@ impl Scene {
             animate_time_of_day: true,
             sun_light_angle: 60f32,
             render_mode: RenderMode::Shaded,
+            keep_settings_open: false,
             controller: CameraController::new_orbit(Vec3::ZERO, 2.5),
             surface,
             surface_srv,
@@ -271,11 +273,19 @@ impl Scene {
 
     fn show_toolbar(&mut self, ui: &mut Ui) {
         ui.style_mut().spacing.item_spacing = vec2(8.0, 0.0);
-        ui.menu_button(GoogleMaterialSymbols::Tune.to_string(), |ui| {
-            self.show_settings_ui(ui);
-        })
-        .response
-        .on_hover_text("Scene Settings");
+        egui::containers::menu::MenuButton::new(GoogleMaterialSymbols::Tune.to_string())
+            .config(
+                MenuConfig::new().close_behavior(if self.keep_settings_open {
+                    egui::PopupCloseBehavior::IgnoreClicks
+                } else {
+                    egui::PopupCloseBehavior::CloseOnClickOutside
+                }),
+            )
+            .ui(ui, |ui| {
+                self.show_settings_ui(ui);
+            })
+            .0
+            .on_hover_text("Scene Settings");
 
         if ui
             .selectable_label(
@@ -310,7 +320,20 @@ impl Scene {
             .text_styles
             .insert(TextStyle::Button, FontId::proportional(16.0));
 
-        ui.heading("Scene Settings");
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
+            ui.heading("Scene Settings");
+            if ui
+                .selectable_label(
+                    self.keep_settings_open,
+                    GoogleMaterialSymbols::PushPin.to_string(),
+                )
+                .on_hover_text("Keep panel open")
+                .clicked()
+            {
+                self.keep_settings_open = !self.keep_settings_open;
+            }
+        });
 
         ui.spacing_mut().item_spacing = vec2(8.0, 4.0);
         ui.checkbox(&mut settings.autoexposure, "Auto-exposure")
