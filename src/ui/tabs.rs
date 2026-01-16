@@ -112,7 +112,7 @@ impl<'a> egui_dock::TabViewer for TabViewer<'a> {
         !tab.is_fixed()
     }
 
-    fn closeable(&mut self, tab: &mut Self::Tab) -> bool {
+    fn is_closeable(&self, tab: &Self::Tab) -> bool {
         !tab.is_fixed()
     }
 }

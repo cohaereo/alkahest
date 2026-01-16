@@ -137,17 +137,13 @@ impl TextureAllocator {
             let subr = ctx.map(&old.texture, 0, d3d11::MapType::WriteDiscard, false)?;
 
             match image {
-                ImageData::Font(f) => unsafe {
+                ImageData::Color(f) => unsafe {
                     let data: &mut [Color32] =
                         from_raw_parts_mut(subr.data as *mut Color32, old.pixels.len());
                     data.as_mut_ptr()
                         .copy_from_nonoverlapping(old.pixels.as_ptr(), old.pixels.len());
 
-                    let new: Vec<Color32> = f
-                        .pixels
-                        .iter()
-                        .map(|a| Color32::from_rgba_premultiplied(255, 255, 255, (a * 255.) as u8))
-                        .collect();
+                    let new: Vec<Color32> = f.pixels.to_vec();
 
                     for y in 0..f.height() {
                         for x in 0..f.width() {
@@ -158,7 +154,6 @@ impl TextureAllocator {
                         }
                     }
                 },
-                _ => unreachable!(),
             }
 
             Ok(true)
@@ -183,11 +178,6 @@ impl TextureAllocator {
 
         let pixels = match image {
             ImageData::Color(c) => c.pixels.clone(),
-            ImageData::Font(f) => f
-                .pixels
-                .iter()
-                .map(|a| Color32::from_rgba_premultiplied(255, 255, 255, (a * 255.) as u8))
-                .collect(),
         };
 
         let data = D3D11_SUBRESOURCE_DATA {
