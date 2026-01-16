@@ -52,22 +52,6 @@ macro_rules! extern_container {
             pub fn new(globs: &RenderGlobals) -> Self {
                 let mut globals = [Vec4::ONE; 256];
                 globals[..globs.channels.default_values.len()].copy_from_slice(&globs.channels.default_values);
-                // globals[102] = Vec4::splat(0.1); // Affects exposure(?) of some sky objects
-                // // Sky/cubemap light related
-                // globals[124] = Vec4::splat(0.1);
-                // globals[125] = Vec4::splat(0.5);
-                // globals[127] = Vec4::splat(4.0);
-                // globals[128] = Vec4::splat(1.0);
-                // globals[135] = Vec4::splat(1.0);
-                // globals[98] = Vec4::new(-0.74583, 0.33515, 0.57568, 0.00); // sun light direction
-                // globals[136] = Vec4::splat(0.0);
-
-
-                // Atmosphere/hemisphere
-                // globals[85] = Vec4::new(0.70, 0.8218, 1.00, 1.00);
-                // globals[129] = Vec4::new(0.00, 0.00, 0.00, 0.00);
-                // globals[130] = Vec4::splat(0.50);
-
 
                 let mut r = Self {
                     $(
@@ -78,9 +62,6 @@ macro_rules! extern_container {
                     unk_sequencer_values: [Vec4::ZERO; 256],
                 };
 
-                // for hash in [743670141, 743670142, 743670143, 743670136, 743670137, 743670138, 743670139, 743670132, 743670133] {
-                //     r.set_global_channel_by_id(hash, Vec4::splat(0.5));
-                // }
                 r.set_global_channel_by_id(743670137, Vec4::splat(0.1));
 
                 r

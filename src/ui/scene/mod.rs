@@ -64,11 +64,22 @@ pub struct Scene {
     show_surface_viewer: bool,
 
     frametimes: Vec<f32>,
+    global_channels: [Vec4; 256],
 }
 
 impl Scene {
     pub fn new(renderer: Arc<Renderer>, camera: Camera) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
+
+        let global_channels = std::array::from_fn(|i| {
+            renderer
+                .globals
+                .channels
+                .default_values
+                .get(i)
+                .copied()
+                .unwrap_or_default()
+        });
 
         Ok(Self {
             world: hecs::World::new(),
@@ -87,6 +98,7 @@ impl Scene {
             profiler_results: None,
             show_surface_viewer: false,
             frametimes: Vec::new(),
+            global_channels,
         })
     }
 
@@ -463,6 +475,11 @@ impl Scene {
         let mut cmd = CommandList::from_device_context(gpu, gpu.context().clone());
         let _gpuspan = self.renderer.profiler.scope(&cmd, "Scene::render (total)");
         self.renderer.frame_packet.write().begin_frame(packet_misc);
+        self.renderer
+            .externs
+            .get_mut()
+            .globals
+            .copy_from_slice(&self.global_channels);
 
         if let Some((_, directions)) = self.world.query::<&SunDirections>().iter().next() {
             let time_of_day_half = self.time_of_day / 2.0;
@@ -568,6 +585,9 @@ impl Scene {
             &self.renderer.surfaces().get(self.view.output).texture,
             &self.surface,
         );
+
+        self.global_channels
+            .copy_from_slice(&self.renderer.externs.globals);
 
         // let cmd = self.draw_world(delta_time);
         // self.renderer.gpu.submit_command_list(cmd);
