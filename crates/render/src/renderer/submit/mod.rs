@@ -39,7 +39,6 @@ impl Renderer {
 
         *self.surfaces.write() = view.surfaces.clone();
         view.surfaces.resize_surfaces(view.resolution);
-        cmd.clear_state();
 
         self.active_feature_renderers
             .store(self.calculate_active_feature_renderers());

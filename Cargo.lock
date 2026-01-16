@@ -780,6 +780,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "context"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0adf149597f6e75ab7c41ec360dd1a74c86667cf0ef09bd3c207d508665f60e8"
+dependencies = [
+ "cc",
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -931,8 +942,9 @@ dependencies = [
 
 [[package]]
 name = "d3d11"
-version = "0.3.0"
-source = "git+https://github.com/cohaereo/d3d11-rs.git#dcc9dee3b539fce2994397e4d6f18869058f5b5d"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29e753b87d48864725aea8ffe6705e869d0dd89883066ade8f653f47a191b4f2"
 dependencies = [
  "bincode",
  "bitflags 2.10.0",
@@ -949,7 +961,8 @@ dependencies = [
 [[package]]
 name = "d3d11-ffi"
 version = "0.3.0"
-source = "git+https://github.com/cohaereo/d3d11-rs.git#dcc9dee3b539fce2994397e4d6f18869058f5b5d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6609bff5fff9f8975f86ff1064641c7ee252c48833dbc3f8acf1dd244e359a59"
 dependencies = [
  "windows-core 0.58.0",
  "windows-targets 0.52.6",
@@ -1385,6 +1398,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
+]
+
+[[package]]
+name = "fibrous"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32f744674521652b78cfdc8c09c76a2d6ec5a5eefbe2750b60a64c014bafcd75"
+dependencies = [
+ "cfg-if",
+ "context",
 ]
 
 [[package]]
@@ -2621,11 +2644,14 @@ dependencies = [
 
 [[package]]
 name = "potassium"
-version = "0.3.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5efb037c361ec5777e65478fe2c78ca34dede4f1e28d020466b011f8e1e3eb1f"
+checksum = "66f1f09ffe55ce22ae646ac70a99e675a3f07c077b60fc7700135f09eb640fbd"
 dependencies = [
+ "crossbeam-channel",
  "crossbeam-deque",
+ "crossbeam-queue",
+ "fibrous",
  "gdt-cpus",
  "log",
  "profiling",
