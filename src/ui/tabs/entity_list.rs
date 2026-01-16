@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 
 use alkahest_data::{pattern::SPattern, tfx::common::AxisAlignedBBox};
 use alkahest_render::{Renderer, camera::Camera};
-use egui::{Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget, vec2};
+use egui::{
+    Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget,
+    scroll_area::ScrollSource, vec2,
+};
 use glam::Vec3;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
@@ -260,7 +263,7 @@ impl EntityListTab {
         });
 
         egui::SidePanel::right("entities_scene")
-            .default_width(ui.ctx().screen_rect().width() * 0.3)
+            .default_width(ui.ctx().content_rect().width() * 0.3)
             .show_inside(ui, |ui| {
                 if let Some((_, config)) = self
                     .scene
@@ -372,7 +375,7 @@ impl EntityListTab {
             });
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])
-                .drag_to_scroll(false)
+                .scroll_source(ScrollSource::MOUSE_WHEEL | ScrollSource::SCROLL_BAR)
                 .show(ui, |ui| {
                     let Some(entries) = self.packages.get(&self.current_package) else {
                         ui.label("No package selected");
@@ -537,13 +540,13 @@ impl EntityListTab {
                                     .insert(TextStyle::Button, FontId::proportional(16.0));
                                 if ui.button("Copy hash").clicked() {
                                     ui.ctx().copy_text(entity.hash.to_string());
-                                    ui.close_menu();
+                                    ui.close();
                                 }
 
                                 if ui.button("Copy hash (Charm)").clicked() {
                                     ui.ctx()
                                         .copy_text(format!("{:08X}", entity.hash.0.swap_bytes()));
-                                    ui.close_menu();
+                                    ui.close();
                                 }
                             });
                         }

@@ -248,7 +248,7 @@ impl Gui {
             ));
 
             painter.text(
-                ctx.screen_rect().left_bottom() + vec2(24.0, -16.0),
+                ctx.content_rect().left_bottom() + vec2(24.0, -16.0),
                 egui::Align2::LEFT_BOTTOM,
                 format!(
                     "{} TEST BUILD, DO NOT DISTRIBUTE",

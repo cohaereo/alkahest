@@ -12,8 +12,6 @@ impl super::Scene {
 
         let surfaces = self.view.surfaces();
 
-        let texture_size = surfaces.swapchain_resolution().1 as f32 / 10.0;
-
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (_handle, surface) in surfaces.iter() {
                 let texture_id = surface.srv.clone().map(|srv| {

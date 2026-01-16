@@ -190,8 +190,8 @@ impl Scene {
                     64
                 }),
             );
-            ui.allocate_new_ui(UiBuilder::new().max_rect(bar_rect), |ui| {
-                egui::menu::bar(ui, |ui| {
+            ui.scope_builder(UiBuilder::new().max_rect(bar_rect), |ui| {
+                egui::MenuBar::new().ui(ui, |ui| {
                     self.show_toolbar(ui);
                 })
             });
