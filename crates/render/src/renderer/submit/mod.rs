@@ -276,10 +276,6 @@ impl Renderer {
         ext.view
             .update(view.world_to_camera, view.camera_to_projective, fb_res);
 
-        ext.set_global_channel_by_id(0x2E538441, Vec4::ONE); // global_channels[68]
-        ext.set_global_channel_by_id(0x2C53817D, Vec4::ONE); // global_channels[46]
-        ext.set_global_channel_by_id(0x2C53817E, Vec4::ONE); // global_channels[47]
-
         let global_tex = &self.globals.textures;
 
         *ext.frame = externs::Frame {

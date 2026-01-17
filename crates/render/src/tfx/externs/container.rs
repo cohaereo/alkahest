@@ -5,12 +5,12 @@ use glam::Vec4;
 
 use super::definitions::*;
 use crate::{
+    Renderer,
     renderer::globals::RenderGlobals,
     tfx::externs::{
-        macros::{extern_container, local_extern_container},
         Extern, ExternAccessor,
+        macros::{extern_container, local_extern_container},
     },
-    Renderer,
 };
 
 extern_container! {

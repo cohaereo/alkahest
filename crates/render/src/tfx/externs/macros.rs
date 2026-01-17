@@ -6,6 +6,8 @@ macro_rules! extern_container {
             pub $name: Box<$t>,
             )*
 
+            pub default_globals: [Vec4; 256],
+
             pub globals: [Vec4; 256],
             pub global_ids: Vec<u32>,
             pub unk_sequencer_values: [Vec4; 256],
@@ -50,19 +52,42 @@ macro_rules! extern_container {
 
         impl Externs {
             pub fn new(globs: &RenderGlobals) -> Self {
-                let mut globals = [Vec4::ONE; 256];
-                globals[..globs.channels.default_values.len()].copy_from_slice(&globs.channels.default_values);
+                let mut r = {
+                    let mut globals = [Vec4::ONE; 256];
+                    globals[..globs.channels.default_values.len()].copy_from_slice(&globs.channels.default_values);
 
-                let mut r = Self {
-                    $(
-                        $name: Default::default(),
-                    )*
-                    globals,
-                    global_ids: globs.channels.channel_ids.clone(),
-                    unk_sequencer_values: [Vec4::ZERO; 256],
+                    Self {
+                        $(
+                            $name: Default::default(),
+                        )*
+                        default_globals: globals,
+                        globals,
+                        global_ids: globs.channels.channel_ids.clone(),
+                        unk_sequencer_values: [Vec4::ZERO; 256],
+                    }
                 };
 
-                r.set_global_channel_by_id(743670137, Vec4::splat(0.1));
+                r.set_global_channel_by_id(0x2C538179, Vec4::splat(0.1));
+
+                r.set_global_channel_by_id(777225282, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225283, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225280, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225281, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225286, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225287, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225284, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225285, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225290, Vec4::splat(1.0));
+                r.set_global_channel_by_id(777225291, Vec4::splat(1.0));
+
+                r.set_global_channel_by_id(0x2E538441, Vec4::ZERO); // global_channels[68]
+                r.set_global_channel_by_id(0x2C53817D, Vec4::ONE); // global_channels[46]
+                r.set_global_channel_by_id(0x2C53817E, Vec4::ONE); // global_channels[47]
+
+                r.set_global_channel_by_id(0xCF70AC7C, Vec4::new(1.5, 0.0, 0.0, 0.0)); // global_channels[82]
+                r.set_global_channel_by_id(0xCF70AC7C, Vec4::ZERO); // global_channels[138]
+
+                r.default_globals = r.globals.clone();
 
                 r
             }
