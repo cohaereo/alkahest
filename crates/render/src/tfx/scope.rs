@@ -11,7 +11,7 @@ use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
 
 use super::dynamic_constants::DynamicConstants;
-use crate::{Gpu, Renderer, gpu::command_list::CommandList};
+use crate::{Gpu, gpu::command_list::CommandList};
 
 pub struct Scope {
     scope: SScope,

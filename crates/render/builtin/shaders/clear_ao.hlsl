@@ -29,7 +29,8 @@ VSOutput mainVS(uint vertexID: SV_VertexID)
     return output;
 }
 
-Texture2D gbuffer_third : register(t0);
+Texture2D gbuffer_albedo : register(t0);
+Texture2D gbuffer_third : register(t1);
 SamplerState samplerState : register(s0);
 void mainPS(VSOutput input,
             out float4 out_albedo: SV_Target0,
@@ -37,6 +38,14 @@ void mainPS(VSOutput input,
             out float4 out_third: SV_Target2,
             out float out_ao: SV_Target3)
 {
+    float4 rt0 = gbuffer_albedo.Sample(samplerState, input.uv);
+    // Invalid iridescence value, reset it
+    if(rt0.a == 1.0) {
+        out_albedo.xyz = rt0.xyz;
+        out_albedo.a = 0.0;
+    } else {
+        out_albedo = rt0;
+    }
 
     float4 rt2 = gbuffer_third.Sample(samplerState, input.uv);
     float textureAo = saturate(rt2.g * 2.0);
@@ -56,6 +65,15 @@ void mainPSall(VSOutput input,
             out float4 out_third: SV_Target2,
             out float out_ao: SV_Target3)
 {
+    float4 rt0 = gbuffer_albedo.Sample(samplerState, input.uv);
+    // Invalid iridescence value, reset it
+    if(rt0.a == 1.0) {
+        out_albedo.xyz = rt0.xyz;
+        out_albedo.a = 0.0;
+    } else {
+        out_albedo = rt0;
+    }
+
     float4 rt2 = gbuffer_third.Sample(samplerState, input.uv);
     float textureAo = saturate(rt2.g * 2.0);
     out_third = float4(rt2.xyz, textureAo);

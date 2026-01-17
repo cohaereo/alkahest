@@ -19,6 +19,7 @@ pub struct Gbuffers {
     pub depth: SurfaceHandle,
     pub depth_half: SurfaceHandle,
     pub depth_proxy: Mutex<SurfaceProxy>,
+    pub albedo_proxy: Mutex<SurfaceProxy>,
     pub third_proxy: Mutex<SurfaceProxy>,
 
     pub uber_depth_half: SurfaceHandle,
@@ -121,6 +122,7 @@ impl Gbuffers {
                 )
                 .context("Failed to create surface proxy")?,
             ),
+            albedo_proxy: Mutex::new(SurfaceProxy::new(gpu, surfaces.get(albedo), None, false)?),
             third_proxy: Mutex::new(SurfaceProxy::new(
                 gpu,
                 surfaces.get(third),

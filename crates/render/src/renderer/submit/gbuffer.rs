@@ -78,18 +78,28 @@ impl Renderer {
         }
 
         view.gbuffers
+            .albedo_proxy
+            .lock()
+            .update(cmd, view.surfaces.get(view.gbuffers.albedo));
+        view.gbuffers
             .third_proxy
             .lock()
             .update(cmd, view.surfaces.get(view.gbuffers.third));
 
         // TODO(cohae): Can we reduce boilerplate for these kinds of pipelines?
-        if ConVars::get_flag("render.vertex_ao_workaround") {
+        if true {
             cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
             cmd.flush_states();
+            let albedo_surf = view.surfaces.get(view.gbuffers.albedo);
             let third_surf = view.surfaces.get(view.gbuffers.third);
             let vao_surf = view.surfaces.get(view.lighting.vertex_ao);
             cmd.output_merger_set_render_targets(
-                &[None, None, third_surf.rtv.as_ref(), vao_surf.rtv.as_ref()],
+                &[
+                    albedo_surf.rtv.as_ref(),
+                    None,
+                    third_surf.rtv.as_ref(),
+                    vao_surf.rtv.as_ref(),
+                ],
                 None,
             );
             cmd.vertex_set_shader(Some(&self.clear_ao_vs));
@@ -99,7 +109,13 @@ impl Renderer {
                 cmd.pixel_set_shader(Some(&self.clear_ao_all_ps));
             }
             cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::TriangleStrip);
-            cmd.pixel_set_shader_resources(0, &[Some(&view.gbuffers.third_proxy.lock().srv)]);
+            cmd.pixel_set_shader_resources(
+                0,
+                &[
+                    Some(&view.gbuffers.albedo_proxy.lock().srv),
+                    Some(&view.gbuffers.third_proxy.lock().srv),
+                ],
+            );
             cmd.draw(4, 0);
         }
 
