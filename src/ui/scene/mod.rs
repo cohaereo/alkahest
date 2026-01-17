@@ -72,15 +72,10 @@ impl Scene {
     pub fn new(renderer: Arc<Renderer>, camera: Camera) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
 
-        let global_channels = std::array::from_fn(|i| {
-            renderer
-                .globals
-                .channels
-                .default_values
-                .get(i)
-                .copied()
-                .unwrap_or_default()
-        });
+        let global_channels = renderer.externs.default_globals;
+        for i in 0..256 {
+            println!("Global Channel {}: {:?}", i, global_channels[i]);
+        }
 
         Ok(Self {
             world: hecs::World::new(),

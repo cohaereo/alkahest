@@ -22,7 +22,7 @@ use crate::{
     gpu::command_list::CommandList,
     tfx::{
         externs::{self, GlobalLighting, ScreenArea, TextureView, UberDepth},
-        scope::TempFrameScope,
+        scope::FrameScope,
         view::View,
     },
 };
@@ -508,32 +508,27 @@ impl Renderer {
             ..Default::default()
         };
 
-        self.transparent_advanced_scope
-            .write(
+        self.globals
+            .scopes
+            .transparent_advanced
+            .write_initial_constants(
                 cmd,
                 &[
-                    vec4(0.01817, 0.00, 1.01544, 0.00), // vec4(0.0158, 0.00, 5.77862, 0.00),
-                    vec4(0.01837, 0.00, 0.01797, 0.00), // vec4(0.01667, 0.00, 0.01497, 0.00),
-                    vec4(0.982, 0.00, 1.10176, 0.00),   // vec4(6.16857, 0.00, 5.6451, 0.00),
-                    vec4(55.52763, 2.29569, -0.08604, 0.00), // vec4(369.85815, 2.47415, 0.70208, 0.00),
-                    vec4(0.00, 0.99768, 0.85938, 0.01563), // vec4(0.00, 0.54753, 0.98438, 0.01563),
-                    vec4(0.00337, 0.00337, 0.00366, 0.46643), // vec4(0.90359, 0.90359, 0.90359, 0.99596),
-                    vec4(0.80, 0.55046, 0.55046, 0.09495), // vec4(0.02392, 0.23915, 0.09581, 0.14895),
-                    vec4(0.99946, 0.99968, 0.9997, 0.94473), // vec4(0.99866, 0.99866, 0.99866, 0.98197),
+                    vec4(0.00227, 0.00896, 0.32782, 0.6419),
+                    vec4(0.0026, 4.86115, 0.00198, 0.00002),
+                    vec4(0.9158, 233.93063, 0.51102, 0.08905),
+                    vec4(147.09909, 0.55492, 0.52397, 0.00),
+                    vec4(0.00, 0.64794, 0.14063, 0.01563),
+                    vec4(0.58584, 0.58584, 0.58584, 0.58584),
+                    vec4(1.38137, 2.08133, 0.85451, 0.4165),
+                    vec4(0.90933, 0.90933, 0.90933, 0.90933),
                 ],
             )
-            .unwrap();
+            .expect("Failed to write transparent_advanced initial constants");
 
-        self.transparent_advanced_scope
-            .bind(cmd, ShaderStage::Vertex, 8);
-        self.transparent_advanced_scope
-            .bind(cmd, ShaderStage::Pixel, 8);
-
-        // TODO(cohae): use the actual frame scope instead of the temporary `frame_scope`
-        self.globals.scopes.frame.bind(cmd).unwrap();
-        let _ = self.frame_scope.write(
+        let _ = self.globals.scopes.frame.write_initial_constants(
             cmd,
-            &TempFrameScope {
+            FrameScope {
                 game_time: ext.frame.game_time, //self.start_time.elapsed().as_secs_f32(),
                 render_time: ext.frame.render_time, //self.start_time.elapsed().as_secs_f32(),
                 delta_game_time: ext.frame.delta_game_time,
@@ -558,11 +553,12 @@ impl Renderer {
                 unk4: vec4(1.0, 1.0, 0.0, 1.0),
                 unk5: vec4(0.00, -f32::NAN, 512.00, 0.00),
                 unk6: Vec4::ONE,
-            },
+            }
+            .to_array()
+            .as_ref(),
         );
 
-        self.frame_scope.bind(cmd, ShaderStage::Vertex, 13);
-        self.frame_scope.bind(cmd, ShaderStage::Pixel, 13);
+        self.globals.scopes.frame.bind(cmd).unwrap();
     }
 
     fn calculate_active_feature_renderers(&self) -> FeatureRendererSubscription {

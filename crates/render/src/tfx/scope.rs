@@ -4,12 +4,14 @@ use alkahest_data::tfx::{
     ShaderStage,
     scope::{SScope, SScopeStage},
 };
+use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec3A, Vec4};
+use parking_lot::RwLock;
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
 
 use super::dynamic_constants::DynamicConstants;
-use crate::{Gpu, gpu::command_list::CommandList};
+use crate::{Gpu, Renderer, gpu::command_list::CommandList};
 
 pub struct Scope {
     scope: SScope,
@@ -99,11 +101,31 @@ impl Scope {
     pub fn vertex_slot(&self) -> i32 {
         self.scope.stage_vertex.constants.constant_buffer_slot
     }
+
+    pub fn write_initial_constants(
+        &self,
+        cmd: &mut CommandList,
+        new_constants: &[Vec4],
+    ) -> anyhow::Result<()> {
+        if let Some(stage) = &self.stage_vertex {
+            stage.write_initial_constants(cmd, new_constants)?;
+        }
+        if let Some(stage) = &self.stage_pixel {
+            stage.write_initial_constants(cmd, new_constants)?;
+        }
+        if let Some(stage) = &self.stage_geometry {
+            stage.write_initial_constants(cmd, new_constants)?;
+        }
+        if let Some(stage) = &self.stage_compute {
+            stage.write_initial_constants(cmd, new_constants)?;
+        }
+        Ok(())
+    }
 }
 
 pub struct ScopeStage {
     shader_stage: ShaderStage,
-    constants: DynamicConstants,
+    constants: RwLock<DynamicConstants>,
 }
 
 impl ScopeStage {
@@ -115,19 +137,66 @@ impl ScopeStage {
         let constants = DynamicConstants::load(gpu, &stage.constants)?;
 
         Ok(Box::new(Self {
-            constants,
+            constants: RwLock::new(constants),
             shader_stage,
         }))
     }
 
     pub fn bind(&self, cmd: &mut CommandList) -> anyhow::Result<()> {
-        self.constants.bind(cmd, self.shader_stage, None)
+        self.constants.read().bind(cmd, self.shader_stage, None)
+    }
+
+    /// Overrides the initial constants with the given values.
+    ///
+    /// Returns an error if the given slice is bigger than the cbuffer. If the slice is smaller, the remaining values are left unchanged.
+    pub fn write_initial_constants(
+        &self,
+        cmd: &mut CommandList,
+        new_constants: &[Vec4],
+    ) -> anyhow::Result<()> {
+        let Some(cbuffer_size) = self
+            .constants
+            .read()
+            .cbuffer
+            .as_ref()
+            .map(|c| c.size() / 16)
+        else {
+            // Not all stages have a cbuffer
+            return Ok(());
+        };
+
+        let mut constants = self.constants.write();
+        {
+            let initial_constants = &mut constants.initial_constants;
+            if initial_constants.len() < cbuffer_size {
+                initial_constants.resize(cbuffer_size, Vec4::ZERO);
+            }
+
+            if new_constants.len() > initial_constants.len() {
+                return Err(anyhow::anyhow!("Given slice is bigger than the cbuffer"));
+            }
+            initial_constants[..new_constants.len()].copy_from_slice(new_constants);
+        }
+
+        // Initial constants aren't normally copied to the cbuffer unless there's expression bytecode, so we need to copy them manually
+        if (constants.bytecode.is_empty() || !constants.writes_cbuffer)
+            && let Some(cbuffer) = constants.cbuffer.as_ref()
+        {
+            unsafe {
+                cbuffer
+                    .write_array(cmd, new_constants)
+                    .expect("Failed to write new initial constants to cbuffer");
+            }
+        }
+
+        Ok(())
     }
 }
 
 // TODO(cohae): We need to somehow be able to hook into the existing scopes in order to update the ones that are not populated by expressions
 #[repr(C)]
-pub struct TempFrameScope {
+#[derive(Clone, Copy, Zeroable, Pod)]
+pub struct FrameScope {
     pub game_time: f32,
     pub render_time: f32,
     pub delta_game_time: f32,
@@ -143,6 +212,12 @@ pub struct TempFrameScope {
     pub unk4: Vec4,
     pub unk5: Vec4,
     pub unk6: Vec4,
+}
+
+impl FrameScope {
+    pub fn to_array(&self) -> &[Vec4; 7] {
+        bytemuck::cast_ref::<FrameScope, [Vec4; _]>(self)
+    }
 }
 
 #[repr(C)]

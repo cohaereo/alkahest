@@ -35,7 +35,7 @@ pub struct DynamicConstants {
     pub initial_constants: Vec<Vec4>,
 
     /// Indicates if the expression bytecode writes to the constant buffer. If this is false, then the cbuffer is not mapped for writing.
-    writes_cbuffer: bool,
+    pub writes_cbuffer: bool,
 }
 
 impl DynamicConstants {
