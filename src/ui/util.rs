@@ -126,6 +126,9 @@ impl<'a> DButton<'a> {
     }
 
     pub fn ui(self, ui: &mut Ui) -> Response {
+        let mut old_padding = egui::vec2(25.0, 20.0);
+        std::mem::swap(&mut old_padding, &mut ui.spacing_mut().button_padding);
+
         let r = ui
             .add(self.button)
             .on_hover_cursor(CursorIcon::PointingHand);
@@ -139,6 +142,8 @@ impl<'a> DButton<'a> {
                 StrokeKind::Outside,
             );
         }
+
+        std::mem::swap(&mut old_padding, &mut ui.spacing_mut().button_padding);
 
         r
     }

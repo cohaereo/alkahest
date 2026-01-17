@@ -36,7 +36,7 @@ use crate::{
     },
     world::{
         render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
-        sequencer::s_evaluate_global_channel_expressions,
+        sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
         shadowmap::{s_render_all_shadowmaps, s_wants_to_render_shadowmaps},
     },
 };
@@ -63,6 +63,7 @@ pub struct Scene {
 
     profiler_results: Option<String>,
     show_surface_viewer: bool,
+    show_channel_editor: bool,
 
     frametimes: Vec<f32>,
     global_channels: [Vec4; 256],
@@ -72,14 +73,10 @@ impl Scene {
     pub fn new(renderer: Arc<Renderer>, camera: Camera) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
 
-        let global_channels = renderer.externs.default_globals;
-        for i in 0..256 {
-            println!("Global Channel {}: {:?}", i, global_channels[i]);
-        }
-
         Ok(Self {
             world: hecs::World::new(),
             view: View::new(&renderer.gpu, (128, 128))?,
+            global_channels: renderer.externs.default_globals,
             renderer,
             camera,
             time_of_day: 1800.0,
@@ -94,8 +91,8 @@ impl Scene {
             start_time: Instant::now(),
             profiler_results: None,
             show_surface_viewer: false,
+            show_channel_editor: false,
             frametimes: Vec::new(),
-            global_channels,
         })
     }
 
@@ -155,6 +152,12 @@ impl Scene {
         if self.show_surface_viewer {
             egui::SidePanel::right("surface_viewer").show_inside(ui, |ui| {
                 self.show_surface_viewer(ui, egui_d3d11);
+            });
+        }
+
+        if self.show_channel_editor {
+            egui::SidePanel::right("channel_editor").show_inside(ui, |ui| {
+                self.show_channel_editor(ui);
             });
         }
 
@@ -290,6 +293,16 @@ impl Scene {
             .clicked()
         {
             self.show_surface_viewer = !self.show_surface_viewer;
+        }
+
+        if ui
+            .selectable_label(
+                self.show_channel_editor,
+                GoogleMaterialSymbols::BarChart4Bars.to_string(),
+            )
+            .clicked()
+        {
+            self.show_channel_editor = !self.show_channel_editor;
         }
 
         self.render_mode.ui(ui);
@@ -677,6 +690,54 @@ impl Scene {
             }
             CameraController::FirstPerson { .. } => {}
         }
+    }
+
+    fn show_channel_editor(&mut self, ui: &mut Ui) {
+        ui.style_mut()
+            .text_styles
+            .insert(TextStyle::Body, FontId::proportional(16.0));
+        ui.style_mut()
+            .text_styles
+            .insert(TextStyle::Button, FontId::proportional(16.0));
+
+        let automated_ids = s_get_all_global_channel_ids(&self.world);
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Global Channels");
+            for (i, channel) in self.global_channels.iter_mut().enumerate() {
+                let Some(channel_id) = self.renderer.externs.global_ids.get(i) else {
+                    continue;
+                };
+                let is_automated = automated_ids.contains(channel_id);
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    ui.label(format!("Channel #{i} 0x{channel_id:08X}"));
+                    if is_automated {
+                        ui.weak("(automated)");
+                    }
+                });
+                ui.add_enabled_ui(!is_automated, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().interact_size = egui::vec2(100.0, 32.0);
+                        egui::DragValue::new(&mut channel.x)
+                            .fixed_decimals(4)
+                            .speed(0.01)
+                            .ui(ui);
+                        egui::DragValue::new(&mut channel.y)
+                            .fixed_decimals(4)
+                            .speed(0.01)
+                            .ui(ui);
+                        egui::DragValue::new(&mut channel.z)
+                            .fixed_decimals(4)
+                            .speed(0.01)
+                            .ui(ui);
+                        egui::DragValue::new(&mut channel.w)
+                            .fixed_decimals(4)
+                            .speed(0.01)
+                            .ui(ui);
+                    });
+                });
+            }
+        });
     }
 }
 
