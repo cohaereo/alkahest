@@ -307,6 +307,8 @@ impl Scene {
             ..
         } = self;
 
+        ui.label(format!("Camera Pos: {:.1?}", self.camera.position));
+
         ui.style_mut()
             .text_styles
             .insert(TextStyle::Body, FontId::proportional(16.0));

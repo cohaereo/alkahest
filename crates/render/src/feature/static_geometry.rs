@@ -243,12 +243,12 @@ impl StaticModel {
             }
         }
 
-        if bind_technique {
-            if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
+        if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
+            if bind_technique {
                 technique.bind(cmd);
-            } else {
-                return;
             }
+        } else {
+            return;
         }
 
         cmd.set_input_layout(group.input_layout_index as usize);
