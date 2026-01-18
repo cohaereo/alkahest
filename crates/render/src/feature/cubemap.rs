@@ -214,8 +214,8 @@ impl FeatureRenderer for CubemapRenderer {
             Vec3::new(f_var9, f_var4, f_var3).extend(self.cubemap.unk60.w)
         };
 
-        let relighting_scale;
-        let relighting_offset;
+        let unk19;
+        let unk20;
         {
             let ext = &*Renderer::instance().externs;
             let sun_intensity = ext.get_global_channel_by_id(0x615E07A3).x; // sun_intensity
@@ -226,21 +226,17 @@ impl FeatureRenderer for CubemapRenderer {
             let cubemap_relighting_sky_intensity = ext.get_global_channel_by_id(0x4DD25C48).x; // cubemap_relighting_sky_intensity
 
             let sun_height = sun_light_direction.z.max(0.5);
-            let fvar5 = sun_height * unk8f552b79 * (sun_intensity / 10.0);
+            let unk_sun_scale = sun_height * unk8f552b79 * (sun_intensity / 10.0);
 
-            let param_13 = self.cubemap.unk160;
-            let param_21 = self.cubemap.unk170;
+            let param_11 = self.cubemap.unk160;
+            let param_17 = self.cubemap.unk170;
 
-            let param_3 = param_21.x;
-            let param_4 = param_21.y;
-            let param_5 = param_13.x;
+            let fvar6 = (unk_sun_scale * sun_color - 1.0) * param_17.x + 1.0;
+            let global_cubemap_scale = Vec4::ONE;
 
-            let fvar6 = (fvar5 * sun_color - 1.0) * param_3 + 1.0;
-            let misc_unk10 = Vec4::ONE;
-
-            relighting_scale = (cubemap_bounce_scale * param_5 * fvar6).with_w(0.0);
-            relighting_offset =
-                (param_4 * cubemap_relighting_sky_intensity * misc_unk10 + fvar6).with_w(0.0);
+            unk19 = (cubemap_bounce_scale * param_11.x * fvar6).with_w(0.0);
+            unk20 = (cubemap_relighting_sky_intensity * global_cubemap_scale * param_17.y + fvar6)
+                .with_w(0.0);
         }
 
         self.cb_ps
@@ -248,8 +244,8 @@ impl FeatureRenderer for CubemapRenderer {
                 &renderer.gpu.context(),
                 &CubemapPixelConstants {
                     fade0: fade0.with_w(0.00),
-                    fade1: fade1.with_w(0.075),
-                    fade2: (fade0 - 1.0).with_w(20.0),
+                    fade1: fade1.with_w(self.cubemap.unk70.max(0.0001)),
+                    fade2: (fade0 - 1.0).with_w(self.cubemap.unk30),
                     fade3: (fade1 - 1.0).with_w(8.5),
 
                     unk4: Vec4::Z,
@@ -269,8 +265,8 @@ impl FeatureRenderer for CubemapRenderer {
                     unk17: unk16, // Vec4::new(0.025, 10000.00, -9999.00, 0.00), // Seems universal
                     unk18: Vec4::new(1.0, 1.0, 1.0, 0.0),
                     // Relighting constants
-                    relighting_scale,  //: Vec4::new(1.0, 1.0, 1.0, 0.00),
-                    relighting_offset, //: Vec4::new(0.0, 0.0, 0.0, 0.00),
+                    unk19, //: Vec4::new(1.0, 1.0, 1.0, 0.00),
+                    unk20, //: Vec4::new(0.0, 0.0, 0.0, 0.00),
                 },
             )
             .unwrap();
@@ -344,11 +340,11 @@ pub struct CubemapPixelConstants {
     pub unk5: Mat4,  // cb11[5..=8]
     pub unk9: Mat4,  // cb11[9..=12]
     pub unk13: Vec4,
-    pub unk14: Vec4,             // cb11[14]
-    pub unk15: Vec4,             // cb11[15]
-    pub unk16: Vec4,             // cb11[16]
-    pub unk17: Vec4,             // cb11[17]
-    pub unk18: Vec4,             // cb11[18]
-    pub relighting_scale: Vec4,  // cb11[19]
-    pub relighting_offset: Vec4, // cb11[20]
+    pub unk14: Vec4, // cb11[14]
+    pub unk15: Vec4, // cb11[15]
+    pub unk16: Vec4, // cb11[16]
+    pub unk17: Vec4, // cb11[17]
+    pub unk18: Vec4, // cb11[18]
+    pub unk19: Vec4, // cb11[19]
+    pub unk20: Vec4, // cb11[20]
 }

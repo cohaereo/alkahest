@@ -17,8 +17,8 @@ pub struct SCubemapComponent {
     pub unk50_fade2: Vec4,
 
     pub unk60: Vec4,
+    pub unk70: f32,
 
-    // pub unk70: f32,
     // pub unk74: f32,
     // pub unk78: u32,
     // pub unk7c: u32,
