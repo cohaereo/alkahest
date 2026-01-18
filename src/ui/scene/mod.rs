@@ -55,6 +55,7 @@ pub struct Scene {
     sun_light_angle: f32,
     pub render_mode: RenderMode,
     keep_settings_open: bool,
+    lock_resolution: bool,
 
     pub controller: CameraController,
 
@@ -84,6 +85,7 @@ impl Scene {
             sun_light_angle: 60f32,
             render_mode: RenderMode::Shaded,
             keep_settings_open: false,
+            lock_resolution: false,
             controller: CameraController::new_orbit(Vec3::ZERO, 2.5),
             surface,
             surface_srv,
@@ -345,14 +347,22 @@ impl Scene {
             }
             #[cfg(debug_assertions)]
             if ui
-                .selectable_label(
-                    self.keep_settings_open,
-                    GoogleMaterialSymbols::Code.to_string(),
-                )
+                .selectable_label(false, GoogleMaterialSymbols::Code.to_string())
                 .on_hover_text("Load camera cbuffers")
                 .clicked()
             {
                 self.load_camera_cbuffers();
+            }
+            #[cfg(debug_assertions)]
+            if ui
+                .selectable_label(
+                    self.lock_resolution,
+                    GoogleMaterialSymbols::ScreenLockLandscape.to_string(),
+                )
+                .on_hover_text("Lock resolution to 1920x1080")
+                .clicked()
+            {
+                self.lock_resolution = !self.lock_resolution;
             }
         });
 
@@ -483,6 +493,12 @@ impl Scene {
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {
+        let resolution = if self.lock_resolution {
+            (1920, 1080)
+        } else {
+            resolution
+        };
+
         if resolution != self.surface.get_desc().resolution() {
             let (texture, srv) = Self::create_surface(&self.renderer.gpu, resolution)
                 .expect("Failed to resize scene surface");
