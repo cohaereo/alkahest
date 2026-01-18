@@ -26,7 +26,7 @@ use egui::{
     FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
     Widget, containers::menu::MenuConfig, load::SizedTexture, vec2,
 };
-use glam::{Vec3, Vec4};
+use glam::{EulerRot, Mat3, Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use crate::{
@@ -310,12 +310,12 @@ impl Scene {
     }
 
     fn show_settings_ui(&mut self, ui: &mut Ui) {
-        let Self {
-            view: View { settings, .. },
-            ..
-        } = self;
-
         ui.label(format!("Camera Pos: {:.1?}", self.camera.position));
+        ui.label(format!(
+            "Camera Yaw/Pitch: {:.1}/{:.1}",
+            self.controller.yaw_pitch().x,
+            self.controller.yaw_pitch().y
+        ));
 
         ui.style_mut()
             .text_styles
@@ -343,7 +343,23 @@ impl Scene {
             {
                 self.keep_settings_open = !self.keep_settings_open;
             }
+            #[cfg(debug_assertions)]
+            if ui
+                .selectable_label(
+                    self.keep_settings_open,
+                    GoogleMaterialSymbols::Code.to_string(),
+                )
+                .on_hover_text("Load camera cbuffers")
+                .clicked()
+            {
+                self.load_camera_cbuffers();
+            }
         });
+
+        let Self {
+            view: View { settings, .. },
+            ..
+        } = self;
 
         ui.spacing_mut().item_spacing = vec2(8.0, 4.0);
         ui.checkbox(&mut settings.autoexposure, "Auto-exposure")
@@ -738,6 +754,67 @@ impl Scene {
                 });
             }
         });
+    }
+
+    fn load_camera_cbuffers(&mut self) {
+        if let Ok(data) = std::fs::read("cb12.bin") {
+            if data.len() < 240 {
+                error!("Not enough data to reconstruct camera (need at least 240 bytes)");
+                return;
+            }
+
+            let data_vec: &[Vec4] = bytemuck::cast_slice(&data);
+            let camera_to_world =
+                Mat4::from_cols(data_vec[4], data_vec[5], data_vec[6], data_vec[7]);
+            let camera_to_projective =
+                Mat4::from_cols(data_vec[11], data_vec[12], data_vec[13], data_vec[14]);
+
+            let (_, rotation, position) = camera_to_world.to_scale_rotation_translation();
+            let fov = (1.0 / camera_to_projective.y_axis.y).atan().to_degrees() * 2.0;
+            info!(
+                "Parsed camera from view scope data: pos={position:?} rot={rotation:?} fov={fov}"
+            );
+
+            let camera = &mut self.camera;
+            camera.set_position(position);
+            camera.set_fov(fov);
+
+            fn extract_pitch_yaw(inv_view: Mat4) -> (f32, f32) {
+                let r2 = Vec3::new(inv_view.x_axis.z, inv_view.y_axis.z, inv_view.z_axis.z);
+                let forward = (-r2).normalize();
+                let pitch = (-forward.z).clamp(-1.0, 1.0).asin().to_degrees();
+                let yaw = forward.y.atan2(forward.x).to_degrees();
+
+                let yaw = if yaw > 180.0 {
+                    yaw - 360.0
+                } else if yaw <= -180.0 {
+                    yaw + 360.0
+                } else {
+                    yaw
+                };
+
+                (pitch, yaw)
+            }
+
+            let (pitch, yaw) = extract_pitch_yaw(camera_to_world.transpose());
+            self.controller.set_yaw_pitch(glam::vec2(yaw, pitch));
+        }
+
+        if let Ok(cb13_data) = std::fs::read("cb13.bin") {
+            let cb13_vec: &[Vec4] = bytemuck::cast_slice(&cb13_data);
+            if cb13_vec.len() < 2 {
+                error!("Not enough data to reconstruct camera (need at least 32 bytes)");
+                return;
+            }
+
+            self.view.settings.autoexposure = false;
+            self.view.settings.exposure_scale = cb13_vec[1].x;
+            self.view.settings.exposure_illum_relative = cb13_vec[1].w;
+            info!(
+                "Parsed frame scope data, exposure scale: {}, illumination relative: {}",
+                self.view.settings.exposure_scale, self.view.settings.exposure_illum_relative
+            );
+        }
     }
 }
 

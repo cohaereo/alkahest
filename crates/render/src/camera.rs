@@ -1,5 +1,5 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
 
 use crate::visibility::frustum::Frustum;
 
@@ -110,6 +110,42 @@ impl Camera {
 
     pub fn up(&self) -> Vec3 {
         self.rotation.mul_vec3(Vec3::Z)
+    }
+
+    pub fn set_position(&mut self, position: Vec3) {
+        self.position = position;
+    }
+
+    pub fn set_rotation(&mut self, rotation: Quat) {
+        self.rotation = rotation;
+    }
+
+    pub fn get_look_angle(&self, forward: Vec3) -> Quat {
+        let forward = forward.normalize();
+        let default_forward = Vec3::X;
+
+        // Handle the case where forward is parallel to default_forward
+        if forward.dot(default_forward).abs() > 0.9999 {
+            if forward.dot(default_forward) > 0.0 {
+                // Same direction - no rotation needed
+                return Quat::IDENTITY;
+            } else {
+                // Opposite direction - rotate 180° around up axis
+                return Quat::from_axis_angle(Vec3::Z, std::f32::consts::PI);
+            }
+        }
+
+        // Calculate rotation from default_forward to forward
+        Quat::from_rotation_arc(default_forward, forward)
+    }
+
+    pub fn get_yaw_pitch(&self) -> Vec2 {
+        let (yaw, pitch, _) = self.rotation.to_euler(EulerRot::YXZ);
+        Vec2::new(yaw, pitch)
+    }
+
+    pub fn set_fov(&mut self, fov: f32) {
+        self.fov_y = fov;
     }
 
     pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {

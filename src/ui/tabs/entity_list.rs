@@ -13,7 +13,10 @@ use tiger_pkg::{TagHash, package_manager};
 use super::TabResult;
 use crate::{
     ui::{
-        scene::{Scene, controller::CameraController},
+        scene::{
+            Scene,
+            controller::{CameraController, egui_to_glam_vec2},
+        },
         util::UiExt,
     },
     world::{
@@ -177,7 +180,8 @@ impl EntityListTab {
             self.thumbnail_scene.set_world(world);
             self.thumbnail_scene.focus_fit_ortho(&bb);
             self.thumbnail_scene.controller.set_yaw_pitch(
-                CameraController::DEFAULT_YAW_PITCH + self.hover_vector * vec2(-15.0, 15.0),
+                CameraController::DEFAULT_YAW_PITCH
+                    + egui_to_glam_vec2(self.hover_vector) * glam::vec2(-15.0, 15.0),
             );
             self.thumbnail_scene.render(1.0 / 60.0, (512, 512));
             entry.thumbnail_world = Some(self.thumbnail_scene.take_world());
