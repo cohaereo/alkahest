@@ -483,6 +483,12 @@ impl Scene {
                 PerformanceImpact::High,
             );
 
+        ui.checkbox(&mut settings.anti_aliasing, "Anti-Aliasing")
+            .setting_description_tooltip(
+                "Enables FXAA anti-aliasing to smooth out jagged edges.",
+                PerformanceImpact::Low,
+            );
+
         ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
             .setting_description_tooltip(
                 "Enables multi-threaded submission of commands to the GPU. May improve \

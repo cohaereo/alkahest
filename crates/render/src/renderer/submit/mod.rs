@@ -202,7 +202,7 @@ impl Renderer {
             view.shading_result_read
                 .lock()
                 .update(cmd, view.surfaces.get(view.shading_result));
-            view.surfaces.get(view.shading_result).bind_single(cmd);
+            view.surfaces.get(view.postprocess).bind_single(cmd);
             cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
             // cmd.flush_states();
             self.execute_global_pipeline(
@@ -214,29 +214,63 @@ impl Renderer {
                 "screen_area_global_lut3d",
             );
         } else {
-            view.surfaces.get(view.shading_result).bind_single(cmd);
+            view.shading_result_read
+                .lock()
+                .update(cmd, view.surfaces.get(view.shading_result));
+            self.bind_surfaces(cmd, &[view.postprocess], None);
+            // Directly blit to output
+            self.blit_srv(
+                cmd,
+                &view.shading_result_read.lock().srv.clone(),
+                &view.surfaces.get(view.postprocess).rtv,
+                true,
+                "final_blit_debug",
+            );
         }
 
         {
             profiling::scope!("prepare/submit immediate geometry");
             let _gpuspan = self.profiler.scope(cmd, "immediate_geometry");
-            self.bind_surfaces(cmd, &[view.shading_result], Some(view.gbuffers.depth));
+            self.bind_surfaces(cmd, &[view.postprocess], Some(view.gbuffers.depth));
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
             cmd.flush_states();
             self.immediate.lock().prepare(gpu);
             self.immediate.lock().submit(cmd);
         }
 
-        view.shading_result_read
-            .lock()
-            .update(cmd, view.surfaces.get(view.shading_result));
+        cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+        if debug_pipeline.is_none_or(|p| p.is_shaded()) {
+            if view.settings.anti_aliasing {
+                self.bind_surfaces(cmd, &[view.output], None);
+                let _gpuspan = self.profiler.scope(cmd, "fxaa");
+                *self.externs.get_mut().fxaa = externs::Fxaa {
+                    source: view.postprocess.into(),
+                    unk50: 0.75,
+                    unk54: 1. / 6.,
+                    unk58: 1. / 12.,
+                    // unk80: self.externs.frame.render_time,
+                    // unk90: vec4(0.25, -0.225, 0.40, 0.96),
+                    ..Default::default()
+                };
 
-        {
+                self.execute_global_pipeline(cmd, &self.globals.pipelines.fxaa, "fxaa");
+            } else {
+                self.bind_surfaces(cmd, &[view.output], None);
+                // Directly blit to output
+                self.blit_srv(
+                    cmd,
+                    &view.surfaces.get(view.postprocess).srv,
+                    &view.surfaces.get(view.output).rtv,
+                    true,
+                    "final_blit_debug",
+                );
+            }
+        } else {
             self.bind_surfaces(cmd, &[view.output], None);
             // Directly blit to output
             self.blit_srv(
                 cmd,
-                &view.shading_result_read.lock().srv,
+                &view.shading_result_read.lock().srv.clone(),
                 &view.surfaces.get(view.output).rtv,
                 true,
                 "final_blit_debug",

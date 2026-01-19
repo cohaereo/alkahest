@@ -768,7 +768,7 @@ extern_struct! {
 
 extern_struct! {
     struct Fxaa("fxaa") {
-        0x00 => unk00: TextureView,
+        0x00 => source: TextureView,
         0x50 => unk50: f32,
         0x54 => unk54: f32,
         0x58 => unk58: f32,

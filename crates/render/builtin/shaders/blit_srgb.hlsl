@@ -44,11 +44,11 @@ float4 mainPS(VSOutput input)
     : SV_TARGET
 {
     float4 rt0 = source.Sample(samplerState, input.uv);
-    return float4(linearToSrgb(rt0.rgb), rt0.a);
+    return float4(linearToSrgb(rt0.rgb), 1.0);
 }
 
 float4 mainPS_linear(VSOutput input)
     : SV_TARGET
 {
-    return source.Sample(samplerState, input.uv);
+    return float4(source.Sample(samplerState, input.uv).rgb, 1.0);
 }

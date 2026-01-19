@@ -34,6 +34,7 @@ pub struct View {
     pub(crate) shadow_mask: SurfaceHandle,
 
     pub(crate) shading_result: SurfaceHandle,
+    pub(crate) postprocess: SurfaceHandle,
     pub(crate) shading_result_read: Mutex<SurfaceProxy>,
     pub output: SurfaceHandle,
 
@@ -58,6 +59,13 @@ impl View {
             resolution,
             SurfaceDesc::builder("shading_result", SizeRelativity::RelativeToFramebuffer)
                 .format(dxgi::Format::R11g11b10Float)
+                .build(),
+        )?;
+
+        let postprocess = surfaces.create_surface(
+            resolution,
+            SurfaceDesc::builder("postprocess", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R8g8b8a8Unorm)
                 .build(),
         )?;
 
@@ -114,6 +122,7 @@ impl View {
             cascade_matrices: RwLock::new([Mat4::IDENTITY; Renderer::NUM_CASCADES]),
             shading_result,
             shading_result_read,
+            postprocess,
             output,
             subscribed_features: FeatureRendererSubscription::all(),
             settings: RenderSettings::default(),
@@ -181,6 +190,7 @@ pub struct RenderSettings {
     pub shadows: bool,
     pub autoexposure: bool,
     pub sun_shadows: bool,
+    pub anti_aliasing: bool,
 }
 
 impl Default for RenderSettings {
@@ -195,6 +205,7 @@ impl Default for RenderSettings {
             shadows: true,
             autoexposure: true,
             sun_shadows: false,
+            anti_aliasing: true,
         }
     }
 }
