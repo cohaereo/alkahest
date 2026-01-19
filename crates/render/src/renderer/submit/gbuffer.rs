@@ -37,6 +37,15 @@ impl Renderer {
                 sync_job.wait();
                 self.cmd_pool.finish(cmd, *set);
             } else {
+                // cmd.state = PipelineState::new(Some(0), Some(2), Some(1), Some(0));
+                // view.gbuffers.bind_depth_only(cmd, self);
+                // self.submit_stage(
+                //     cmd,
+                //     RenderStage::DepthPrepass,
+                //     FeatureRendererSubscription::all(),
+                // );
+                // cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
+                // view.gbuffers.bind(cmd, self);
                 self.submit_stage(
                     cmd,
                     RenderStage::GenerateGbuffer,

@@ -20,7 +20,9 @@ use alkahest_render::{
     },
     object::RenderObject,
     renderer::submit::atmosphere::{AtmosphereData, SunDirections},
-    tfx::sequencer_vm::global_channel::GlobalChannelExpression,
+    tfx::{
+        externs::get_global_channel_name, sequencer_vm::global_channel::GlobalChannelExpression,
+    },
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
@@ -396,24 +398,34 @@ pub fn spawn_pattern_from_header(
                 for g in globals.unk1c8.iter().chain(globals.unk1d8.iter()) {
                     match &*g.unk18 {
                         SUnk808091f1Variant::SSequenceGlobalChannel(c) => {
+                            let r = &globals.unk1f8[c.other_index as usize];
                             world.spawn((GlobalChannelExpression {
-                                channel_id: c.channel_hash,
+                                channel_id: r.unk30,
                                 bytecode: c.bytecode.clone(),
                                 bytecode_constants: c.bytecode_constants.clone(),
                             },));
                         }
                         SUnk808091f1Variant::Unknown { class, offset } => {
-                            warn!(
-                                "Unknown sequence class: {:08X} at offset: {:#X} in {}",
-                                class,
-                                offset,
-                                component.taghash()
-                            );
-                        } // _ => {
-                          //     debug!("Unimplemented SUnk80809e6Variant: {g:?}");
-                          // }
+                            // warn!(
+                            //     "Unknown sequence class: {:08X} at offset: {:#X} in {}",
+                            //     class,
+                            //     offset,
+                            //     component.taghash()
+                            // );
+                        }
+                        _ => {
+                            debug!("Unimplemented SUnk808091f1Variant: {g:?}");
+                        }
                     }
                 }
+
+                // for (i, v) in globals.unk1f8.iter().enumerate() {
+                //     println!(
+                //         "{i}: 0x{:08X} ({:?})",
+                //         v.unk30,
+                //         get_global_channel_name(v.unk30)
+                //     );
+                // }
 
                 add_unknown_component!("Sequence");
             }

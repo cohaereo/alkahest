@@ -18,7 +18,7 @@ use alkahest_render::{
         DebugPipeline,
         atmosphere::{AtmosphereData, SunDirections},
     },
-    tfx::{packet::FramePacketMisc, view::View},
+    tfx::{externs::get_global_channel_name, packet::FramePacketMisc, view::View},
 };
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
@@ -742,7 +742,11 @@ impl Scene {
                 let is_automated = automated_ids.contains(channel_id);
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 4.0;
-                    ui.label(format!("Channel #{i} 0x{channel_id:08X}"));
+                    if let Some(name) = get_global_channel_name(*channel_id) {
+                        ui.label(format!("Channel #{i} {name} (0x{channel_id:08X})"));
+                    } else {
+                        ui.label(format!("Channel #{i} 0x{channel_id:08X}"));
+                    }
                     if is_automated {
                         ui.weak("(automated)");
                     }

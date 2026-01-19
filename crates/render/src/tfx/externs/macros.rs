@@ -87,6 +87,8 @@ macro_rules! extern_container {
                 r.set_global_channel_by_id(0xCF70AC7C, Vec4::new(1.5, 0.0, 0.0, 0.0)); // global_channels[82]
                 r.set_global_channel_by_id(0xCF70AC7C, Vec4::ZERO); // global_channels[138]
 
+                // r.set_global_channel_by_name("sun_intensity", Vec4::ONE * 2.0);
+
                 r.default_globals = r.globals.clone();
 
                 r

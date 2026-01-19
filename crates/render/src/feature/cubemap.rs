@@ -218,12 +218,14 @@ impl FeatureRenderer for CubemapRenderer {
         let unk20;
         {
             let ext = &*Renderer::instance().externs;
-            let sun_intensity = ext.get_global_channel_by_id(0x615E07A3).x; // sun_intensity
-            let sun_light_direction = ext.get_global_channel_by_id(0x5C579DFA); // sun_light_direction
-            let unk8f552b79 = ext.get_global_channel_by_id(0x8F552B79).x; // ?
-            let sun_color = ext.get_global_channel_by_id(0x90745795); // sun_color
-            let cubemap_bounce_scale = ext.get_global_channel_by_id(0x4FBD4620).x; // cubemap_bounce_scale
-            let cubemap_relighting_sky_intensity = ext.get_global_channel_by_id(0x4DD25C48).x; // cubemap_relighting_sky_intensity
+            let sun_intensity = ext.get_global_channel_by_name("sun_intensity").x; // sun_intensity
+            let sun_light_direction = ext.get_global_channel_by_name("sun_light_direction"); // sun_light_direction
+            let unk8f552b79 = ext.get_global_channel_by_id(0x8f552b79).x; // ?
+            let sun_color = ext.get_global_channel_by_name("sun_color"); // sun_color
+            let cubemap_bounce_scale = ext.get_global_channel_by_name("cubemap_bounce_scale").x; // cubemap_bounce_scale
+            let cubemap_relighting_sky_intensity = ext
+                .get_global_channel_by_name("cubemap_relighting_sky_intensity")
+                .x; // cubemap_relighting_sky_intensity
 
             let sun_height = sun_light_direction.z.max(0.5);
             let unk_sun_scale = sun_height * unk8f552b79 * (sun_intensity / 10.0);

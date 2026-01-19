@@ -145,6 +145,10 @@ impl Gbuffers {
         );
     }
 
+    pub fn bind_depth_only(&self, cmd: &mut CommandList, renderer: &Renderer) {
+        renderer.bind_surfaces(cmd, &[], Some(self.depth));
+    }
+
     pub fn clear(&self, context: &d3d11::DeviceContext, surfaces: &Surfaces) {
         surfaces
             .get(self.albedo)
