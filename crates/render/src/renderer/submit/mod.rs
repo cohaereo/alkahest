@@ -59,11 +59,9 @@ impl Renderer {
 
         if matches!(
             debug_pipeline,
-            Some(DebugPipeline::DeferredShading)
-                | Some(DebugPipeline::DeferredShadingNoSun)
-                | Some(DebugPipeline::LightDiffuse)
-                | Some(DebugPipeline::LightSpecular)
-        ) {
+            Some(DebugPipeline::LightDiffuse) | Some(DebugPipeline::LightSpecular)
+        ) || debug_pipeline.is_some_and(|p| p.is_shaded())
+        {
             self.submit_lighting(cmd, view, geo.as_ref());
         }
 
@@ -113,8 +111,9 @@ impl Renderer {
             if let Some(debug_pipeline) = debug_pipeline {
                 let p = &self.globals.pipelines;
                 let technique = match debug_pipeline {
-                    DebugPipeline::DeferredShading => &p.global_lighting_and_shading,
-                    DebugPipeline::DeferredShadingNoSun => &p.deferred_shading_no_atm,
+                    DebugPipeline::GlobalLightingShading => &p.global_lighting_and_shading,
+                    DebugPipeline::DeferredShading => &p.deferred_shading,
+                    DebugPipeline::DeferredShadingNoAtm => &p.deferred_shading_no_atm,
                     DebugPipeline::Albedo => &p.debug_source_color,
                     DebugPipeline::Smoothness => &p.debug_specular_smoothness,
                     DebugPipeline::Metalness => &p.debug_metalness,
@@ -167,10 +166,7 @@ impl Renderer {
         //     .lock()
         //     .update(cmd, view.surfaces.get(view.shading_result));
 
-        if matches!(
-            debug_pipeline,
-            None | Some(DebugPipeline::DeferredShading) | Some(DebugPipeline::DeferredShadingNoSun)
-        ) {
+        if debug_pipeline.is_none_or(|p| p.is_shaded()) {
             self.submit_transparent(cmd, view, geo.as_ref());
 
             view.shading_result_read
@@ -617,8 +613,9 @@ impl Renderer {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DebugPipeline {
+    GlobalLightingShading,
     DeferredShading,
-    DeferredShadingNoSun,
+    DeferredShadingNoAtm,
 
     Albedo,
     Smoothness,
@@ -634,4 +631,15 @@ pub enum DebugPipeline {
 
     LightDiffuse,
     LightSpecular,
+}
+
+impl DebugPipeline {
+    pub fn is_shaded(&self) -> bool {
+        matches!(
+            self,
+            DebugPipeline::GlobalLightingShading
+                | DebugPipeline::DeferredShading
+                | DebugPipeline::DeferredShadingNoAtm
+        )
+    }
 }

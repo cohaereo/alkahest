@@ -842,7 +842,8 @@ impl Scene {
 pub enum RenderMode {
     Lookdev,
     Shaded,
-    ShadedNoAtm,
+    ShadedNoSun,
+    ShadingOnly,
     // Matcap,
 
     // Material:
@@ -893,7 +894,12 @@ impl RenderMode {
 
                 mode!(ui, RenderMode::Lookdev, "Lookdev");
                 mode!(ui, RenderMode::Shaded, "Shaded");
-                mode!(ui, RenderMode::ShadedNoAtm, "Shaded (No Atmosphere)");
+                mode!(ui, RenderMode::ShadedNoSun, "Shaded (No sun)");
+                mode!(
+                    ui,
+                    RenderMode::ShadingOnly,
+                    "Shading Only (No atmosphere, no sun)"
+                );
                 // mode!(ui, RenderMode::Matcap, "Matcap");
 
                 ui.section_separator("Material:");
@@ -923,8 +929,9 @@ impl From<RenderMode> for Option<DebugPipeline> {
     fn from(val: RenderMode) -> Self {
         match val {
             RenderMode::Lookdev => None,
-            RenderMode::Shaded => Some(DebugPipeline::DeferredShading),
-            RenderMode::ShadedNoAtm => Some(DebugPipeline::DeferredShadingNoSun),
+            RenderMode::Shaded => Some(DebugPipeline::GlobalLightingShading),
+            RenderMode::ShadedNoSun => Some(DebugPipeline::DeferredShading),
+            RenderMode::ShadingOnly => Some(DebugPipeline::DeferredShadingNoAtm),
             // RenderMode::Matcap => Some(DebugPipeline::Matcap),
             RenderMode::Albedo => Some(DebugPipeline::Albedo),
             RenderMode::Smoothness => Some(DebugPipeline::Smoothness),
