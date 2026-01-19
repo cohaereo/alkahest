@@ -178,7 +178,9 @@ impl Renderer {
                 .update(cmd, view.surfaces.get(view.shading_result));
 
             self.submit_water(cmd, view);
-            self.apply_volume_fog(cmd, view);
+            if debug_pipeline.is_some() {
+                self.apply_volume_fog(cmd, view);
+            }
             self.submit_bloom(cmd, view);
 
             // // Turn on bit 0x10 for all stencil buffer pixels
