@@ -2,10 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use alkahest_data::tfx::{
     features::cubemap::CubemapShape,
-    render_globals::{
-        SRenderGlobalLookupTextures, SRenderGlobals, SRenderGlobalsData,
-        SRenderGlobalsGlobalChannels,
-    },
+    render_globals::{SRenderGlobals, SRenderGlobalsData, SRenderGlobalsGlobalChannels},
 };
 use anyhow::Context;
 use tiger_parse::PackageManagerExt;
@@ -248,73 +245,190 @@ impl GlobalPipelines {
         parallax: bool,
     ) -> &Technique {
         let pipeline_list = [
-            // Cube
-            &self.cubemap_apply_cube_alpha_off_probes_off_relighting_off,
-            &self.cubemap_apply_cube_alpha_off_probes_off_relighting_on,
-            &self.cubemap_apply_cube_alpha_off_probes_on_relighting_off,
-            &self.cubemap_apply_cube_alpha_off_probes_on_relighting_on,
-            &self.cubemap_apply_cube_alpha_on_probes_off_relighting_off,
-            &self.cubemap_apply_cube_alpha_on_probes_off_relighting_on,
-            &self.cubemap_apply_cube_alpha_on_probes_on_relighting_off,
-            &self.cubemap_apply_cube_alpha_on_probes_on_relighting_on,
-            // Sphere
-            &self.cubemap_apply_sphere_alpha_off_probes_off_relighting_off,
-            &self.cubemap_apply_sphere_alpha_off_probes_off_relighting_on,
-            &self.cubemap_apply_sphere_alpha_off_probes_on_relighting_off,
-            &self.cubemap_apply_sphere_alpha_off_probes_on_relighting_on,
-            &self.cubemap_apply_sphere_alpha_on_probes_off_relighting_off,
-            &self.cubemap_apply_sphere_alpha_on_probes_off_relighting_on,
-            &self.cubemap_apply_sphere_alpha_on_probes_on_relighting_off,
-            &self.cubemap_apply_sphere_alpha_on_probes_on_relighting_on,
-            // CubeSphere
-            &self.cubemap_apply_cube_sphere_alpha_off_probes_off_relighting_off,
-            &self.cubemap_apply_cube_sphere_alpha_off_probes_off_relighting_on,
-            &self.cubemap_apply_cube_sphere_alpha_off_probes_on_relighting_off,
-            &self.cubemap_apply_cube_sphere_alpha_off_probes_on_relighting_on,
-            &self.cubemap_apply_cube_sphere_alpha_on_probes_off_relighting_off,
-            &self.cubemap_apply_cube_sphere_alpha_on_probes_off_relighting_on,
-            &self.cubemap_apply_cube_sphere_alpha_on_probes_on_relighting_off,
-            &self.cubemap_apply_cube_sphere_alpha_on_probes_on_relighting_on,
-            // ParallCube
-            &self.cubemap_apply_parall_cube_alpha_off_probes_off_relighting_off,
-            &self.cubemap_apply_parall_cube_alpha_off_probes_off_relighting_on,
-            &self.cubemap_apply_parall_cube_alpha_off_probes_on_relighting_off,
-            &self.cubemap_apply_parall_cube_alpha_off_probes_on_relighting_on,
-            &self.cubemap_apply_parall_cube_alpha_on_probes_off_relighting_off,
-            &self.cubemap_apply_parall_cube_alpha_on_probes_off_relighting_on,
-            &self.cubemap_apply_parall_cube_alpha_on_probes_on_relighting_off,
-            &self.cubemap_apply_parall_cube_alpha_on_probes_on_relighting_on,
-            // ParallSphere
-            &self.cubemap_apply_parall_sphere_alpha_off_probes_off_relighting_off,
-            &self.cubemap_apply_parall_sphere_alpha_off_probes_off_relighting_on,
-            &self.cubemap_apply_parall_sphere_alpha_off_probes_on_relighting_off,
-            &self.cubemap_apply_parall_sphere_alpha_off_probes_on_relighting_on,
-            &self.cubemap_apply_parall_sphere_alpha_on_probes_off_relighting_off,
-            &self.cubemap_apply_parall_sphere_alpha_on_probes_off_relighting_on,
-            &self.cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_off,
-            &self.cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_on,
-            // ParallCubeSphere
-            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_off_relighting_off,
-            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_off_relighting_on,
-            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_on_relighting_off,
-            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_on_relighting_on,
-            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_off_relighting_off,
-            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_off_relighting_on,
-            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_on_relighting_off,
-            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_on_relighting_on,
+            // No Parallax
+            [
+                // Cube
+                [
+                    // Alpha Off
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_cube_alpha_off_probes_off_relighting_off,
+                            &self.cubemap_apply_cube_alpha_off_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_cube_alpha_off_probes_on_relighting_off,
+                            &self.cubemap_apply_cube_alpha_off_probes_on_relighting_on,
+                        ],
+                    ],
+                    // Alpha On
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_cube_alpha_on_probes_off_relighting_off,
+                            &self.cubemap_apply_cube_alpha_on_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_cube_alpha_on_probes_on_relighting_off,
+                            &self.cubemap_apply_cube_alpha_on_probes_on_relighting_on,
+                        ],
+                    ],
+                ],
+                // Sphere
+                [
+                    // Alpha Off
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_sphere_alpha_off_probes_off_relighting_off,
+                            &self.cubemap_apply_sphere_alpha_off_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_sphere_alpha_off_probes_on_relighting_off,
+                            &self.cubemap_apply_sphere_alpha_off_probes_on_relighting_on,
+                        ],
+                    ],
+                    // Alpha On
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_sphere_alpha_on_probes_off_relighting_off,
+                            &self.cubemap_apply_sphere_alpha_on_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_sphere_alpha_on_probes_on_relighting_off,
+                            &self.cubemap_apply_sphere_alpha_on_probes_on_relighting_on,
+                        ],
+                    ],
+                ],
+                // CubeSphere
+                [
+                    // Alpha Off
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_cube_sphere_alpha_off_probes_off_relighting_off,
+                            &self.cubemap_apply_cube_sphere_alpha_off_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_cube_sphere_alpha_off_probes_on_relighting_off,
+                            &self.cubemap_apply_cube_sphere_alpha_off_probes_on_relighting_on,
+                        ],
+                    ],
+                    // Alpha On
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_cube_sphere_alpha_on_probes_off_relighting_off,
+                            &self.cubemap_apply_cube_sphere_alpha_on_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_cube_sphere_alpha_on_probes_on_relighting_off,
+                            &self.cubemap_apply_cube_sphere_alpha_on_probes_on_relighting_on,
+                        ],
+                    ],
+                ],
+            ],
+            // Parallax
+            [
+                // ParallCube
+                [
+                    // Alpha Off
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_parall_cube_alpha_off_probes_off_relighting_off,
+                            &self.cubemap_apply_parall_cube_alpha_off_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_parall_cube_alpha_off_probes_on_relighting_off,
+                            &self.cubemap_apply_parall_cube_alpha_off_probes_on_relighting_on,
+                        ],
+                    ],
+                    // Alpha On
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_parall_cube_alpha_on_probes_off_relighting_off,
+                            &self.cubemap_apply_parall_cube_alpha_on_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_parall_cube_alpha_on_probes_on_relighting_off,
+                            &self.cubemap_apply_parall_cube_alpha_on_probes_on_relighting_on,
+                        ],
+                    ],
+                ],
+                // ParallSphere
+                [
+                    // Alpha Off
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_parall_sphere_alpha_off_probes_off_relighting_off,
+                            &self.cubemap_apply_parall_sphere_alpha_off_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_parall_sphere_alpha_off_probes_on_relighting_off,
+                            &self.cubemap_apply_parall_sphere_alpha_off_probes_on_relighting_on,
+                        ],
+                    ],
+                    // Alpha On
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_parall_sphere_alpha_on_probes_off_relighting_off,
+                            &self.cubemap_apply_parall_sphere_alpha_on_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_off,
+                            &self.cubemap_apply_parall_sphere_alpha_on_probes_on_relighting_on,
+                        ],
+                    ],
+                ],
+                // ParallCubeSphere
+                [
+                    // Alpha Off
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_off_relighting_off,
+                            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_on_relighting_off,
+                            &self.cubemap_apply_parall_cube_sphere_alpha_off_probes_on_relighting_on,
+                        ],
+                    ],
+                    // Alpha On
+                    [
+                        // Probes Off
+                        [
+                            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_off_relighting_off,
+                            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_off_relighting_on,
+                        ],
+                        // Probes On
+                        [
+                            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_on_relighting_off,
+                            &self.cubemap_apply_parall_cube_sphere_alpha_on_probes_on_relighting_on,
+                        ],
+                    ],
+                ],
+            ],
         ];
 
-        let shape_index = shape as usize;
-        let alpha_index = alpha as usize;
-        let probes_index = probes as usize;
-        let relighting_index = relighting as usize;
-        let parallax_index = parallax as usize;
-
-        pipeline_list[parallax_index * 24
-            + shape_index * 8
-            + alpha_index * 4
-            + probes_index * 2
-            + relighting_index]
+        pipeline_list[parallax as usize][shape as usize][alpha as usize][probes as usize]
+            [relighting as usize]
     }
 
     pub fn get_specialized_lut3d_pipeline(

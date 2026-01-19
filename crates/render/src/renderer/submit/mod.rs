@@ -239,7 +239,7 @@ impl Renderer {
         }
 
         cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
-        if debug_pipeline.is_none_or(|p| p.is_shaded()) {
+        if debug_pipeline.is_none_or(|p| p.aa_enabled()) {
             if view.settings.anti_aliasing {
                 self.bind_surfaces(cmd, &[view.output], None);
                 let _gpuspan = self.profiler.scope(cmd, "fxaa");
@@ -675,5 +675,9 @@ impl DebugPipeline {
                 | DebugPipeline::DeferredShading
                 | DebugPipeline::DeferredShadingNoAtm
         )
+    }
+
+    pub fn aa_enabled(&self) -> bool {
+        self.is_shaded() || matches!(self, DebugPipeline::DepthEdges | DebugPipeline::WorldNormal)
     }
 }

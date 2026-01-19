@@ -86,11 +86,10 @@ impl SCubemapComponent {
 
     pub fn shape(&self) -> CubemapShape {
         // // TODO(cohae): uses some more funky math to determine, but this is generally correct
-        // if self.unk60.w > 0.0 {
-        //     CubemapShape::CubeSphere
-        // } else {
-        //     CubemapShape::Cube
-        // }
-        CubemapShape::Cube
+        if self.unk60.w <= 0.0 {
+            CubemapShape::Cube
+        } else {
+            CubemapShape::CubeSphere
+        }
     }
 }
