@@ -212,7 +212,7 @@ impl Scene {
                 egui::Color32::GREEN,
             );
 
-            ui.scope_builder(egui::UiBuilder::new().max_rect(r.rect), |ui| {
+            ui.scope_builder(egui::UiBuilder::new().max_rect(r.rect.shrink(16.0)), |ui| {
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                     if self.world.is_empty() {
                         ui.label(
