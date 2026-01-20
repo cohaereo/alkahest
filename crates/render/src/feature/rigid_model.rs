@@ -199,14 +199,16 @@ impl DynamicModel {
         identifier: u16,
         mut f: F,
     ) where
-        F: FnMut(&Self, &mut CommandList, &SDynamicMesh, &SDynamicMeshPart),
+        F: FnMut(&Self, &mut CommandList, (usize, &SDynamicMesh), (usize, &SDynamicMeshPart)),
     {
-        for (mesh, subscribed_stages, mesh_buffers, mesh_techniques) in multizip((
+        for (mesh_index, (mesh, subscribed_stages, mesh_buffers, mesh_techniques)) in multizip((
             self.model.meshes.iter(),
             self.mesh_stages.iter(),
             self.mesh_buffers.iter(),
             self.part_techniques.iter(),
-        )) {
+        ))
+        .enumerate()
+        {
             if !subscribed_stages.is_subscribed(stage) {
                 continue;
             }
@@ -256,7 +258,7 @@ impl DynamicModel {
 
                 cmd.set_input_topology(part.primitive_type);
 
-                f(self, cmd, mesh, part);
+                f(self, cmd, (mesh_index, mesh), (part_index, part));
             }
         }
     }
@@ -308,9 +310,14 @@ impl FeatureRenderer for DynamicModel {
     fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
         profiling::scope!("DynamicModel::draw");
 
-        self.draw_wrapped(cmd, stage, u16::MAX, |_model, cmd, _mesh, part| {
-            cmd.draw_indexed(part.index_count, part.index_start, 0);
-        });
+        self.draw_wrapped(
+            cmd,
+            stage,
+            u16::MAX,
+            |_model, cmd, (_mesh_index, _mesh), (_part_index, part)| {
+                cmd.draw_indexed(part.index_count, part.index_start, 0);
+            },
+        );
     }
 
     fn submit_parallel(
@@ -325,9 +332,14 @@ impl FeatureRenderer for DynamicModel {
         let job = SCHEDULER.job_builder("rigid_model").spawn(move || {
             let self_ref = unsafe { &*(self_p as *const Self) };
             let cmd = pool.get_command_list(set);
-            self_ref.draw_wrapped(cmd, stage, u16::MAX, |_model, cmd, _mesh, part| {
-                cmd.draw_indexed(part.index_count, part.index_start, 0);
-            });
+            self_ref.draw_wrapped(
+                cmd,
+                stage,
+                u16::MAX,
+                |_model, cmd, (_mesh_index, _mesh), (_part_index, part)| {
+                    cmd.draw_indexed(part.index_count, part.index_start, 0);
+                },
+            );
         });
         jobs.push(job);
     }
