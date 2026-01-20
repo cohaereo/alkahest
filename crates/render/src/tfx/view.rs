@@ -65,7 +65,7 @@ impl View {
         let postprocess = surfaces.create_surface(
             resolution,
             SurfaceDesc::builder("postprocess", SizeRelativity::RelativeToFramebuffer)
-                .format(dxgi::Format::R8g8b8a8Unorm)
+                .format(dxgi::Format::R16g16b16a16Float)
                 .build(),
         )?;
 
