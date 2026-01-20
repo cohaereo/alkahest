@@ -1,8 +1,11 @@
+use std::u16;
+
 use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
     ShaderStage,
     features::{decorators::SDecorator, dynamic::RenderStageSubscription},
 };
+use chroma_dbg::ChromaDebug;
 use glam::{Mat4, Vec4};
 use tiger_pkg::TagHash;
 
@@ -122,11 +125,6 @@ impl DecoratorRenderer {
             anyhow::bail!("No models found in decorator");
         }
 
-        if models.len() > 1 {
-            // anyhow::bail!("Decorators with more than one model are not supported yet");
-            warn!("Decorators with more than one model are WIP");
-        }
-
         // u8 for decorators, f32 for speedtree
         // let blend_index_data = vec![0xC8u8; decorator.unk48.instance_data.data.len() * 4];
         let blend_index_data = vec![1f32; decorator.unk48.instance_data.data.len() * 4];
@@ -225,16 +223,8 @@ impl FeatureRenderer for DecoratorRenderer {
                 id as u16
             } else {
                 // cohae: Multi-models (usually trees) seem to use the ID as a LOD level?
-                0
+                u16::MAX
             };
-
-            // println!(
-            //     "Drawing ID {id} (max {}, {} identifiers for model {} in set {})",
-            //     self.models.len(),
-            //     model.identifier_count(),
-            //     model_index,
-            //     self.hash
-            // );
 
             self.instance_blend_indices_vb.bind_single(cmd, 3);
             model.model.draw_wrapped(
@@ -246,6 +236,11 @@ impl FeatureRenderer for DecoratorRenderer {
                     // if part.unk17 != 2 {
                     //     return;
                     // }
+
+                    // Last mesh is an impostor billboard, skip it
+                    if dyn_id == u16::MAX && mesh_index == _model.mesh_count() - 1 {
+                        return;
+                    }
 
                     if let Some(cb) = model.cbuffers.get(mesh_index) {
                         cb.bind(cmd, ShaderStage::Vertex, speedtree_vertex_slot);
