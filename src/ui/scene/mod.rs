@@ -164,6 +164,8 @@ impl Scene {
         }
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
+            let panel_rect = ui.available_rect_before_wrap();
+
             let r = ui
                 .image(SizedTexture {
                     id: egui_d3d11.textures_mut().allocate_dx_temporary(
@@ -196,46 +198,49 @@ impl Scene {
                 })
             });
 
-            let fps_rect = ui.painter_at(r.rect).text(
-                r.rect.right_top() + Vec2::new(0.0, 3.0) + Vec2::splat(1.0),
+            let fps_rect = ui.painter_at(panel_rect).text(
+                panel_rect.right_top() + Vec2::new(0.0, 3.0) + Vec2::splat(1.0),
                 egui::Align2::RIGHT_TOP,
                 format!("{} ", (1. / delta_time_average).round()),
                 egui::FontId::monospace(16.0),
                 egui::Color32::BLACK,
             );
 
-            ui.painter_at(r.rect).text(
-                r.rect.right_top() + Vec2::new(0.0, 3.0),
+            ui.painter_at(panel_rect).text(
+                panel_rect.right_top() + Vec2::new(0.0, 3.0),
                 egui::Align2::RIGHT_TOP,
                 format!("{} ", (1. / delta_time_average).round()),
                 egui::FontId::monospace(16.0),
                 egui::Color32::GREEN,
             );
 
-            ui.scope_builder(egui::UiBuilder::new().max_rect(r.rect.shrink(16.0)), |ui| {
-                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                    if self.world.is_empty() {
-                        ui.label(
-                            RichText::new(format!(
-                                "{} Scene is empty",
-                                GoogleMaterialSymbols::Warning
-                            ))
-                            .size(16.0),
-                        );
-                    }
+            ui.scope_builder(
+                egui::UiBuilder::new().max_rect(panel_rect.shrink2(vec2(12.0, 4.0))),
+                |ui| {
+                    ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                        if self.world.is_empty() {
+                            ui.label(
+                                RichText::new(format!(
+                                    "{} Scene is empty",
+                                    GoogleMaterialSymbols::Warning
+                                ))
+                                .size(16.0),
+                            );
+                        }
 
-                    if self.renderer.asset_manager.count_loading() > 0 {
-                        ui.label(
-                            RichText::new(format!(
-                                "{} Loading assets... ({} in progress)",
-                                GoogleMaterialSymbols::HardDrive,
-                                self.renderer.asset_manager.count_loading()
-                            ))
-                            .size(16.0),
-                        );
-                    }
-                });
-            });
+                        if self.renderer.asset_manager.count_loading() > 0 {
+                            ui.label(
+                                RichText::new(format!(
+                                    "{} Loading assets... ({} in progress)",
+                                    GoogleMaterialSymbols::HardDrive,
+                                    self.renderer.asset_manager.count_loading()
+                                ))
+                                .size(16.0),
+                            );
+                        }
+                    });
+                },
+            );
 
             ui.style_mut().spacing.tooltip_width = 4096.0;
             Renderer::instance().profiler.set_enabled(false);
