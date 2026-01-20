@@ -26,7 +26,7 @@ use egui::{
     FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
     Widget, containers::menu::MenuConfig, load::SizedTexture, vec2,
 };
-use glam::{EulerRot, Mat3, Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec3, Vec4};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use crate::{

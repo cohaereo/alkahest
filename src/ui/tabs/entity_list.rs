@@ -269,6 +269,8 @@ impl EntityListTab {
         egui::SidePanel::right("entities_scene")
             .default_width(ui.ctx().content_rect().width() * 0.3)
             .show_inside(ui, |ui| {
+                ui.take_available_space();
+
                 if let Some((_, config)) = self
                     .scene
                     .world
