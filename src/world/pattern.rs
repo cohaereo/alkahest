@@ -377,9 +377,9 @@ pub fn spawn_pattern_from_header(
             0x80806A6F => {
                 if let Some(ref sun) = *get_component_data!(SSunDataComponent).unk0 {
                     let SUnk80808ac8Variant::SSunAngles(a0) = &*sun.unk10.unk10;
-                    let SUnk80808ac8Variant::SSunAngles(_a1) = &*sun.unk14.unk10;
+                    // let SUnk80808ac8Variant::SSunAngles(_a1) = &*sun.unk14.unk10;
                     let SUnk80808ac8Variant::SSunAngles(a2) = &*sun.unk18.unk10;
-                    let SUnk80808ac8Variant::SSunAngles(_a3) = &*sun.unk1c.unk10;
+                    // let SUnk80808ac8Variant::SSunAngles(_a3) = &*sun.unk1c.unk10;
 
                     world.insert_one(
                         entity,

@@ -2,6 +2,8 @@ use glam::Vec4;
 use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, VariantPointer};
 use tiger_pkg::TagHash;
 
+use crate::tag::WideHash;
+
 #[derive(Debug, Clone)]
 #[tiger_type(id = 0x80808179, size = 0x220)]
 pub struct SUnk80808179 {
@@ -37,9 +39,14 @@ tiger_variant_enum! {
     [Unknown(true)]
     enum SUnk808091f1Variant {
         SSequenceGlobalChannel,
+        SUnk808091e3,
         SUnk808091df,
         SUnk808091db,
-        SUnk808091dd
+        SUnk808091dd,
+        SSequenceLight,
+        SSequenceLensFlare,
+        // SSequenceEmbeddedParticleSystem,
+        SSequenceAudioEvent
     }
 }
 
@@ -54,6 +61,13 @@ pub struct SSequenceGlobalChannel {
 
     pub bytecode: Vec<u8>,
     pub bytecode_constants: Vec<Vec4>,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x808091e3, size = 0x60)]
+pub struct SUnk808091e3 {
+    pub base: SSequenceNodeBase,
+    pub children: Vec<(u16, u16)>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +89,73 @@ pub struct SUnk808091df {
 pub struct SUnk808091db {
     pub base: SSequenceNodeBase,
     pub children: Vec<(u16, u16)>,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x80806a52, size = 0x130)]
+pub struct SSequenceLight {
+    pub base: SSequenceNodeBase,
+    pub unk20: u32,
+    pub light: TagHash,
+    pub unk28: u32,
+    pub unk2c: u32,
+    pub unk30: Vec4,
+    pub unk40: Vec4,
+    pub unk50: u64,
+
+    pub unk58: SUnknownEventExpressions,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x80806a48, size = 0x130)]
+pub struct SSequenceLensFlare {
+    pub base: SSequenceNodeBase,
+    pub unk20: u32,
+    pub flare: TagHash,
+
+    #[tiger(offset = 0x40)]
+    pub unk40: SUnknownEventExpressions,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x80806640, size = 0x60)]
+pub struct SSequenceAudioEvent {
+    pub base: SSequenceNodeBase,
+    #[tiger(offset = 0x50)]
+    pub wwise_event: WideHash,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x808067b9, size = 0x110)]
+pub struct SSequenceEmbeddedParticleSystem {
+    pub base: SSequenceNodeBase,
+    pub unk20: u64,
+    pub unk28: Vec<SUnk808067bb>,
+
+    pub unk38: SUnknownEventExpressions,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x808067bb, size = 0x20)]
+pub struct SUnk808067bb {
+    pub unk0: Vec<u8>,
+    pub particle_system: TagHash,
+    pub unk14: TagHash,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x00000000, size = 0xd8)]
+pub struct SUnknownEventExpressions {
+    pub unk00: Vec<u8>,
+    pub unk10: Vec<Vec4>,
+
+    #[tiger(offset = 0x48)]
+    pub unk48: Vec<u8>,
+    pub unk58: Vec<Vec4>,
+
+    #[tiger(offset = 0x90)]
+    pub unk88: Vec<u8>,
+    pub unk98: Vec<Vec4>,
 }
 
 #[derive(Debug, Clone)]

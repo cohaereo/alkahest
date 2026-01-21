@@ -33,7 +33,9 @@ fn main() -> anyhow::Result<()> {
 
     println!("Wordlist loaded");
 
-    let data = package_manager().read_tag(0x81090511)?;
+    // let data = package_manager().read_tag(0x80CF5634)?;
+    // let data = package_manager().read_tag(0x80D857A6)?;
+    let data = package_manager().read_tag(0x80D91630)?;
     let mut f = Cursor::new(data);
     let component: SComponent = TigerReadable::read_ds(&mut f)?;
     // println!("{:#?}", component);
@@ -176,24 +178,24 @@ fn print_node_recursive<F: Read + Seek>(
         //         printshit(f, *c, first, second, third, indent + 1);
         //     }
         // }
-        // dawn_data::entity::SUnk80809e6Variant::SSequenceEmbeddedParticles(s) => {
-        //     print_node("EmbeddedParticles", &s.base);
+        // SUnk808091f1Variant::SSequenceEmbeddedParticleSystem(s) => {
+        //     print_node("EmbeddedParticleSystem", &s.base);
         // }
         // dawn_data::entity::SUnk80809e6Variant::SSequenceEmbeddedScreenAreaFx(s) => {
         //     print_node("EmbeddedScreenAreaFx", &s.base);
         // }
-        // dawn_data::entity::SUnk80809e6Variant::SSequenceLight(s) => {
-        //     print_node("Light", &s.base);
-        // }
-        // dawn_data::entity::SUnk80809e6Variant::SSequenceLensFlare(s) => {
-        //     print_node("LensFlare", &s.base);
-        // }
+        SUnk808091f1Variant::SSequenceLight(s) => {
+            print_node("Light", &s.base);
+        }
+        SUnk808091f1Variant::SSequenceLensFlare(s) => {
+            print_node("LensFlare", &s.base);
+        }
         // dawn_data::entity::SUnk80809e6Variant::SSequenceDelay(s) => {
         //     print_node("Delay", &s.base);
         // }
-        // dawn_data::entity::SUnk80809e6Variant::SSequenceAudioEvent(s) => {
-        //     print_node(&format!("AudioEvent {}", s.event), &s.base);
-        // }
+        SUnk808091f1Variant::SSequenceAudioEvent(s) => {
+            print_node(&format!("AudioEvent {}", s.wwise_event.hash32()), &s.base);
+        }
         // dawn_data::entity::SUnk80809e6Variant::SSequencePlayerFeedback(s) => {
         //     print_node("PlayerFeedback", &s.base);
         // }
@@ -203,6 +205,12 @@ fn print_node_recursive<F: Read + Seek>(
         // dawn_data::entity::SUnk80809e6Variant::SSequenceDamageImpulse(s) => {
         //     print_node("DamageImpulse", &s.base);
         // }
+        SUnk808091f1Variant::SUnk808091e3(s) => {
+            println!("Parallel {i}: [{}]", get_string_fnv(wordlist, s.base.name));
+            for c in &s.children {
+                print_node_recursive(f, wordlist, *c, first, second, third, indent + 1);
+            }
+        }
         SUnk808091f1Variant::SUnk808091df(s) => {
             println!(
                 "unk_flow_808091df {i}: [{}]",
@@ -245,8 +253,13 @@ fn print_node_recursive<F: Read + Seek>(
         SUnk808091f1Variant::Unknown { class, offset } => {
             f.seek(SeekFrom::Start(*offset)).unwrap();
             let hash = u32::read_ds(f).unwrap();
+
+            const ANSI_RED: &str = "\x1b[31m";
+            const ANSI_RESET: &str = "\x1b[0m";
+
             println!(
-                "unk {i}: Unknown resource type: {class:08X} @ 0x{offset:X} (name '{}')",
+                "{ANSI_RED}unk {i}: Unknown resource type: {class:08X} @ 0x{offset:X} (name \
+                 '{}'){ANSI_RESET}",
                 get_string_fnv(wordlist, hash)
             );
         }

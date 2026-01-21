@@ -2,7 +2,7 @@ use glam::Vec4;
 use tiger_parse::{tiger_type, tiger_variant_enum, VariantPointer};
 use tiger_pkg::TagHash;
 
-use crate::tag::{Tag, WideHash};
+use crate::tag::{OptionalTag, Tag, WideHash};
 
 #[derive(Debug)]
 #[tiger_type(id = 0x80806BC1)]
@@ -23,9 +23,9 @@ pub struct SAtmosphereDataComponent {
 pub struct SUnk80806a74 {
     pub unk0: Vec4,
     pub unk10: Tag<SUnk80808ac8>,
-    pub unk14: Tag<SUnk80808ac8>,
+    pub unk14: OptionalTag<SUnk80808ac8>,
     pub unk18: Tag<SUnk80808ac8>,
-    pub unk1c: Tag<SUnk80808ac8>,
+    pub unk1c: OptionalTag<SUnk80808ac8>,
 }
 
 #[derive(Debug)]
