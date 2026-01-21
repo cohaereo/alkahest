@@ -80,7 +80,7 @@ impl Scene {
             global_channels: renderer.externs.default_globals,
             renderer,
             camera,
-            time_of_day: 1800.0,
+            time_of_day: 1200.0,
             animate_time_of_day: true,
             sun_light_angle: 60f32,
             render_mode: RenderMode::Shaded,
