@@ -1,4 +1,4 @@
-use glam::Vec4;
+use glam::{Vec4, Vec4Swizzles};
 use int_enum::IntEnum;
 use tiger_parse::{tiger_type, TigerReadable};
 use tiger_pkg::TagHash;
@@ -31,11 +31,8 @@ pub struct STerrain {
 #[derive(Debug)]
 #[tiger_type(id = 0x80806C86)]
 pub struct STerrainMeshGroup {
-    pub unk0: Vec4,
-    pub unk10: f32,
-    pub unk14: f32,
-    pub unk18: f32,
-    pub unk1c: u32,
+    pub center: Vec4,
+    pub extents: Vec4,
     pub unk20: Vec4,
     pub unk30: u32,
     pub unk34: u32,
@@ -49,6 +46,12 @@ pub struct STerrainMeshGroup {
     pub unk54: u32,
     pub unk58: u32,
     pub unk5c: u32,
+}
+
+impl STerrainMeshGroup {
+    pub fn aabb(&self) -> AxisAlignedBBox {
+        AxisAlignedBBox::from_center_extents(self.center.xyz(), self.extents.xyz())
+    }
 }
 
 #[derive(Debug)]

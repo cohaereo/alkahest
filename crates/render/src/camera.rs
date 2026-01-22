@@ -48,9 +48,7 @@ impl Camera {
     pub const FAR: f32 = 50000.0;
 
     pub fn update(&mut self) {
-        self.fov_y += 10.0;
         self.culling_frustum = Frustum::from_camera(self);
-        self.fov_y -= 10.0;
 
         self.local_to_camera = self.view_matrix();
         self.camera_to_projective = self.projection_matrix(self.aspect_ratio);

@@ -3,13 +3,13 @@ use std::sync::Arc;
 use alkahest_core::job::{SCHEDULER, potassium::JobHandle};
 use alkahest_data::tfx::{
     RenderStage, ShaderStage,
+    common::AxisAlignedBBox,
     features::{
         ao::SStaticAmbientOcclusion,
         dynamic::RenderStageSubscription,
         terrain::{STerrain, TerrainDetailLevel},
     },
 };
-use anyhow::Context;
 use glam::Vec4;
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
@@ -41,7 +41,11 @@ pub struct TerrainPatchesRenderer {
     terrain: STerrain,
     techniques: Vec<Handle<Technique>>,
     dyemaps: Vec<Handle<Texture>>,
-    group_cbuffers: Vec<ConstantBuffer<TerrainPatchGroupConstants>>,
+    group_cbuffers: Vec<(
+        ConstantBuffer<TerrainPatchGroupConstants>,
+        AxisAlignedBBox,
+        bool,
+    )>,
     constants_dirty: bool,
     detail_level: TerrainDetailLevel,
 
@@ -70,10 +74,15 @@ impl TerrainPatchesRenderer {
             .map(|part| assets.load(part.technique))
             .collect();
 
-        let group_cbuffers = (0..terrain.mesh_groups.len())
-            .map(|_| ConstantBuffer::create(gpu, None))
-            .collect::<Result<Vec<_>, _>>()
-            .context("Failed to create group constant buffers")?;
+        let group_cbuffers = terrain
+            .mesh_groups
+            .iter()
+            .map(|g| {
+                let cbuffer = ConstantBuffer::create(gpu, None)
+                    .expect("Failed to create group constant buffer");
+                (cbuffer, g.aabb(), false)
+            })
+            .collect::<Vec<_>>();
 
         Ok(Box::new(Self {
             vertex0_buffer: assets.load(terrain.vertex0_buffer),
@@ -126,7 +135,10 @@ impl TerrainPatchesRenderer {
             .enumerate()
             .filter(|(_, u)| u.detail_level == self.detail_level)
         {
-            let cb11 = &self.group_cbuffers[part.group_index as usize];
+            let (cb11, _aabb, visible) = &self.group_cbuffers[part.group_index as usize];
+            if !visible {
+                continue;
+            }
 
             cb11.bind(cmd, ShaderStage::Vertex, 11);
             if let Some(dyemap) = self.dyemaps[part.group_index as usize].get() {
@@ -177,7 +189,7 @@ impl TerrainPatchesRenderer {
                 ..Default::default()
             };
 
-            self.group_cbuffers[i].write(ctx, &scope_terrain).ok();
+            self.group_cbuffers[i].0.write(ctx, &scope_terrain).ok();
         }
     }
 }
@@ -193,6 +205,10 @@ impl FeatureRenderer for TerrainPatchesRenderer {
         //     d if d > radius * 2.0 => TerrainDetailLevel::Medium,
         //     _ => TerrainDetailLevel::High,
         // };
+
+        for (_cb11, aabb, visible) in &mut self.group_cbuffers {
+            *visible = camera.is_visible(aabb);
+        }
 
         camera
             .culling_frustum
