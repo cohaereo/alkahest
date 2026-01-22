@@ -7,6 +7,7 @@ use alkahest_data::tfx::{
 };
 use chroma_dbg::ChromaDebug;
 use glam::{Mat4, Vec4, vec4};
+use inline_tweak::tweak;
 use tiger_pkg::TagHash;
 
 use crate::{
@@ -22,6 +23,7 @@ struct DecoratorModel {
     model: Box<DynamicModel>,
     ext: Box<externs::RigidModel>,
     cbuffers: Vec<ConstantBuffer<Vec4>>,
+    identifier_mask: u32,
 }
 
 pub struct DecoratorRenderer {
@@ -106,10 +108,30 @@ impl DecoratorRenderer {
                 vec![]
             };
 
+            let identifier_mask = if decorator.unk8.len() <= 1 {
+                u32::MAX
+            } else {
+                model.model.meshes[0..model.model.meshes.len() - 1]
+                    .iter()
+                    .fold(0, |acc, mesh| {
+                        let first_id = mesh
+                            .parts
+                            .first()
+                            .map(|p| p.external_identifier)
+                            .unwrap_or(0);
+                        if first_id > 31 {
+                            acc
+                        } else {
+                            acc | 1 << first_id
+                        }
+                    })
+            };
+
             models.push(DecoratorModel {
                 model,
                 ext,
                 cbuffers,
+                identifier_mask,
             });
         }
 
@@ -211,29 +233,18 @@ impl FeatureRenderer for DecoratorRenderer {
 
             cmd.externs.rigid_model = model.ext.clone().into();
 
-            let dyn_id = if self.models.len() == 1 {
-                id as u16
+            let identifier_mask = if self.models.len() == 1 {
+                1u32.unbounded_shl(id as u32)
             } else {
-                // cohae: Multi-models (usually trees) seem to use the ID as a LOD level?
-                u16::MAX
+                model.identifier_mask
             };
 
             self.instance_blend_indices_vb.bind_single(cmd, 3);
             model.model.draw_wrapped(
                 cmd,
                 stage,
-                dyn_id,
+                identifier_mask,
                 move |_model, cmd, (mesh_index, _mesh), (_part_index, part)| {
-                    // Seems to be the LOD selector. 0=high, 1=medium, 2=low
-                    // if part.unk17 != 2 {
-                    //     return;
-                    // }
-
-                    // Last mesh is an impostor billboard, skip it
-                    if dyn_id == u16::MAX && mesh_index == _model.mesh_count() - 1 {
-                        return;
-                    }
-
                     if let Some(cb) = model.cbuffers.get(mesh_index) {
                         cb.bind(cmd, ShaderStage::Vertex, speedtree_vertex_slot);
                     } else {

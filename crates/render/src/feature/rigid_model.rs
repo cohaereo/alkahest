@@ -196,7 +196,7 @@ impl DynamicModel {
         &self,
         cmd: &mut CommandList,
         stage: RenderStage,
-        identifier: u16,
+        identifier_mask: u32,
         mut f: F,
     ) where
         F: FnMut(&Self, &mut CommandList, (usize, &SDynamicMesh), (usize, &SDynamicMeshPart)),
@@ -221,7 +221,7 @@ impl DynamicModel {
             mesh_buffers.bind(cmd);
             for part_index in mesh.get_range_for_stage(stage) {
                 let part = &mesh.parts[part_index];
-                if identifier != u16::MAX && part.external_identifier != identifier {
+                if identifier_mask & 1u32.unbounded_shl(part.external_identifier as u32) == 0 {
                     continue;
                 }
 
@@ -314,7 +314,7 @@ impl FeatureRenderer for DynamicModel {
         self.draw_wrapped(
             cmd,
             stage,
-            u16::MAX,
+            u32::MAX,
             |_model, cmd, (_mesh_index, _mesh), (_part_index, part)| {
                 cmd.draw_indexed(part.index_count, part.index_start, 0);
             },
@@ -336,7 +336,7 @@ impl FeatureRenderer for DynamicModel {
             self_ref.draw_wrapped(
                 cmd,
                 stage,
-                u16::MAX,
+                u32::MAX,
                 |_model, cmd, (_mesh_index, _mesh), (_part_index, part)| {
                     cmd.draw_indexed(part.index_count, part.index_start, 0);
                 },
