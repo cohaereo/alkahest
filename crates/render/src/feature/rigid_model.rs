@@ -201,6 +201,7 @@ impl DynamicModel {
     ) where
         F: FnMut(&Self, &mut CommandList, (usize, &SDynamicMesh), (usize, &SDynamicMeshPart)),
     {
+        cmd.disable_smart_technique_binding();
         for (mesh_index, (mesh, subscribed_stages, mesh_buffers, mesh_techniques)) in multizip((
             self.model.meshes.iter(),
             self.mesh_stages.iter(),
@@ -232,19 +233,19 @@ impl DynamicModel {
                     self.get_permutation_technique(part.variant_shader_index, self.permutation);
 
                 let mut all_scopes = TfxScopeBits::empty();
-                if let Some(technique) = mesh_techniques[part_index].get() {
+                mesh_techniques[part_index].get_ref(|technique| {
                     technique
                         .bind_with_channels(cmd, Some(&self.channels))
                         .expect("Failed to bind technique");
                     all_scopes |= technique.used_scopes;
-                }
+                });
 
                 if let Some(technique) = &variant_material {
-                    if let Some(tech) = technique.get() {
+                    technique.get_ref(|tech| {
                         tech.bind_with_channels(cmd, Some(&self.channels))
                             .expect("Failed to bind variant technique");
                         all_scopes |= tech.used_scopes;
-                    }
+                    });
                 }
 
                 // No technique, no scopes, no draw
