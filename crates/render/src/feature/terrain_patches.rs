@@ -11,6 +11,7 @@ use alkahest_data::tfx::{
     },
 };
 use glam::Vec4;
+use inline_tweak::tweak;
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
 
@@ -41,7 +42,7 @@ pub struct TerrainPatchesRenderer {
     terrain: STerrain,
     techniques: Vec<Handle<Technique>>,
     dyemaps: Vec<Handle<Texture>>,
-    group_cbuffers: Vec<(
+    groups: Vec<(
         ConstantBuffer<TerrainPatchGroupConstants>,
         AxisAlignedBBox,
         bool,
@@ -52,6 +53,10 @@ pub struct TerrainPatchesRenderer {
     pub vertex0_buffer: Handle<VertexBuffer>,
     pub vertex1_buffer: Handle<VertexBuffer>,
     pub index_buffer: Handle<IndexBuffer>,
+
+    pub thumb_vertex0_buffer: Handle<VertexBuffer>,
+    pub thumb_vertex1_buffer: Handle<VertexBuffer>,
+    pub thumb_index_buffer: Handle<IndexBuffer>,
 
     pub hash: TagHash,
     pub identifier: u64,
@@ -88,12 +93,15 @@ impl TerrainPatchesRenderer {
             vertex0_buffer: assets.load(terrain.vertex0_buffer),
             vertex1_buffer: assets.load(terrain.vertex1_buffer),
             index_buffer: assets.load(terrain.index_buffer),
+            thumb_vertex0_buffer: assets.load(terrain.thumb_vertex0_buffer),
+            thumb_vertex1_buffer: assets.load(terrain.thumb_vertex1_buffer),
+            thumb_index_buffer: assets.load(terrain.thumb_index_buffer),
             constants_dirty: true,
             detail_level: TerrainDetailLevel::Medium,
             terrain,
             techniques,
             dyemaps,
-            group_cbuffers,
+            groups: group_cbuffers,
             hash,
             identifier,
         }))
@@ -111,11 +119,21 @@ impl TerrainPatchesRenderer {
         cmd.set_input_layout(22);
         cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::TriangleStrip);
 
-        if let (Some(vertex0), Some(vertex1), Some(index)) = (
-            self.vertex0_buffer.get(),
-            self.vertex1_buffer.get(),
-            self.index_buffer.get(),
-        ) {
+        if let (Some(vertex0), Some(vertex1), Some(index)) =
+            if self.detail_level == TerrainDetailLevel::Thumbnail {
+                (
+                    self.thumb_vertex0_buffer.get(),
+                    self.thumb_vertex1_buffer.get(),
+                    self.thumb_index_buffer.get(),
+                )
+            } else {
+                (
+                    self.vertex0_buffer.get(),
+                    self.vertex1_buffer.get(),
+                    self.index_buffer.get(),
+                )
+            }
+        {
             index.bind(cmd);
             cmd.input_assembler_set_vertex_buffers(
                 0,
@@ -135,7 +153,7 @@ impl TerrainPatchesRenderer {
             .enumerate()
             .filter(|(_, u)| u.detail_level == self.detail_level)
         {
-            let (cb11, _aabb, visible) = &self.group_cbuffers[part.group_index as usize];
+            let (cb11, _aabb, visible) = &self.groups[part.group_index as usize];
             if !visible {
                 continue;
             }
@@ -189,7 +207,7 @@ impl TerrainPatchesRenderer {
                 ..Default::default()
             };
 
-            self.group_cbuffers[i].0.write(ctx, &scope_terrain).ok();
+            self.groups[i].0.write(ctx, &scope_terrain).ok();
         }
     }
 }
@@ -198,15 +216,16 @@ impl TerrainPatchesRenderer {
 impl FeatureRenderer for TerrainPatchesRenderer {
     fn visibility_test(&mut self, camera: &Camera) -> bool {
         let center = self.terrain.bounds.center();
-        let _radius = self.terrain.bounds.radius();
-        let _distance = camera.position.distance(center);
-        // self.detail_level = match distance {
-        //     d if d > radius * 4.0 => TerrainDetailLevel::Low,
-        //     d if d > radius * 2.0 => TerrainDetailLevel::Medium,
-        //     _ => TerrainDetailLevel::High,
-        // };
+        let radius = self.terrain.bounds.radius();
+        let distance = camera.position.distance(center);
+        self.detail_level = match distance {
+            d if d > radius * 8.0 => TerrainDetailLevel::Thumbnail,
+            d if d > radius * 4.0 => TerrainDetailLevel::Low,
+            d if d > radius * 2.0 => TerrainDetailLevel::Medium,
+            _ => TerrainDetailLevel::High,
+        };
 
-        for (_cb11, aabb, visible) in &mut self.group_cbuffers {
+        for (_cb11, aabb, visible) in &mut self.groups {
             *visible = camera.is_visible(aabb);
         }
 
