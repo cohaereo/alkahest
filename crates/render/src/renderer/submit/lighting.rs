@@ -8,7 +8,7 @@ use glam::{Mat4, Vec3, Vec4Swizzles};
 use super::Renderer;
 use crate::{
     cmd_event_span,
-    gpu::command_list::CommandList,
+    gpu::command_list::{CommandList, DepthMode},
     renderer::submit::geometry::GeometryCommandLists,
     tfx::{externs, scope::CascadeScope, view::View},
 };
@@ -78,14 +78,14 @@ impl Renderer {
             cmd_event_span!(cmd, "local_lights");
             let _gpuspan = self.profiler.scope(cmd, "local_lights");
 
-            view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
-            cmd.state = PipelineState::new(Some(2), None, Some(2), Some(2));
+            view.lighting
+                .bind_diffuse_specular(cmd, &view.surfaces, &view.gbuffers);
+            cmd.state = PipelineState::new(Some(2), Some(30), Some(2), Some(2));
             if let Some(geo) = geo {
                 let (sync_job, set) = &geo.lighting;
                 sync_job.wait();
                 self.cmd_pool.finish(cmd, *set);
             } else {
-                view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
                 cmd.flush_states();
                 self.submit_stage(
                     cmd,
@@ -93,6 +93,7 @@ impl Renderer {
                     FeatureRendererSubscription::all(),
                 );
             }
+            cmd.state_override = PipelineState::default();
         }
 
         if self.settings().volumetrics {

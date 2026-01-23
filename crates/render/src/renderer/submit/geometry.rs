@@ -51,8 +51,9 @@ impl Renderer {
         };
 
         let lighting = {
-            view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
-            cmd.state = PipelineState::new(Some(2), None, Some(2), Some(2));
+            view.lighting
+                .bind_diffuse_specular(cmd, &view.surfaces, &view.gbuffers);
+            cmd.state = PipelineState::new(Some(2), Some(30), Some(2), Some(2));
             cmd.flush_states();
             {
                 self.submit_stage_parallel(

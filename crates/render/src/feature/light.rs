@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
-    PrimitiveType, RenderStage, ShaderStage,
+    PipelineState, PrimitiveType, RenderStage, ShaderStage,
     common::AxisAlignedBBox,
     features::{
         dynamic::RenderStageSubscription,
@@ -19,6 +19,7 @@ use super::FeatureRenderer;
 use crate::{
     Renderer,
     camera::Camera,
+    gpu::command_list::DepthMode,
     renderer::surface::Surface,
     tfx::{
         externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
@@ -196,10 +197,29 @@ impl FeatureRenderer for LightRenderer {
         {
             let local_to_world_scaled = self.local_to_world * self.light_space_transform;
             let global_externs = Renderer::instance().externs.get();
+            let is_camera_in_volume = self
+                .bounds
+                .as_ref()
+                .is_none_or(|b| b.contains(global_externs.view.position()));
+
+            if is_camera_in_volume {
+                cmd.state = cmd
+                    .state
+                    .select(&PipelineState::new(None, Some(0), None, None));
+            } else {
+                cmd.state = cmd
+                    .state
+                    .select(&PipelineState::new(None, Some(30), None, None));
+            }
+
             cmd.externs.simple_geometry = Some(Box::new(SimpleGeometry {
                 local_to_world: global_externs.view.world_to_projective
                     * local_to_world_scaled
-                    * Mat4::from_scale(Vec3::NEG_ONE),
+                    * if is_camera_in_volume {
+                        Mat4::from_scale(Vec3::NEG_ONE)
+                    } else {
+                        Mat4::IDENTITY
+                    },
             }));
 
             let view_translation_inverse_mat4 =
@@ -347,6 +367,7 @@ impl FeatureRenderer for LightRenderer {
         let shadowmap_projection = self.shadowmap_projection;
         let local_to_world_scaled = local_to_world * light_space_transform;
         let data = self.data.clone();
+        let bounds = self.bounds.clone();
 
         let (_, transform_rot, transform_translation) =
             self.local_to_world.to_scale_rotation_translation();
@@ -366,10 +387,29 @@ impl FeatureRenderer for LightRenderer {
                 let cmd = pool_clone.get_command_list(set);
                 {
                     let externs = Renderer::instance().externs.get();
+
+                    let is_camera_in_volume = bounds
+                        .as_ref()
+                        .is_none_or(|b| b.contains(externs.view.position()));
+
+                    if is_camera_in_volume {
+                        cmd.state =
+                            cmd.state
+                                .select(&PipelineState::new(None, Some(0), None, None));
+                    } else {
+                        cmd.state =
+                            cmd.state
+                                .select(&PipelineState::new(None, Some(30), None, None));
+                    }
+
                     cmd.externs.simple_geometry = Some(Box::new(SimpleGeometry {
                         local_to_world: externs.view.world_to_projective
                             * local_to_world_scaled
-                            * Mat4::from_scale(Vec3::NEG_ONE),
+                            * if is_camera_in_volume {
+                                Mat4::from_scale(Vec3::NEG_ONE)
+                            } else {
+                                Mat4::IDENTITY
+                            },
                     }));
 
                     let view_translation_inverse_mat4 =

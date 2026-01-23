@@ -116,6 +116,15 @@ impl AxisAlignedBBox {
             max: self.max.max(other.max),
         }
     }
+
+    pub fn contains(&self, point: Vec3) -> bool {
+        self.min.x <= point.x
+            && point.x <= self.max.x
+            && self.min.y <= point.y
+            && point.y <= self.max.y
+            && self.min.z <= point.z
+            && point.z <= self.max.z
+    }
 }
 
 impl Sum for AxisAlignedBBox {

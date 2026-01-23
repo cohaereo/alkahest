@@ -320,13 +320,18 @@ impl LightBuffers {
         );
     }
 
-    pub fn bind_diffuse_specular(&self, context: &d3d11::DeviceContext, surfaces: &Surfaces) {
+    pub fn bind_diffuse_specular(
+        &self,
+        context: &d3d11::DeviceContext,
+        surfaces: &Surfaces,
+        gbuffers: &Gbuffers,
+    ) {
         context.output_merger_set_render_targets(
             &[
                 Some(surfaces.get(self.light_diffuse).rtv.as_ref().unwrap()),
                 Some(surfaces.get(self.light_specular).rtv.as_ref().unwrap()),
             ],
-            None,
+            surfaces.get(gbuffers.depth).dsv.as_ref(),
         );
     }
 
