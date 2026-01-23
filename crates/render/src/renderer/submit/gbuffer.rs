@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use alkahest_core::convar::ConVars;
 use alkahest_data::tfx::{
     FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
 };
@@ -75,14 +74,16 @@ impl Renderer {
                 self.submit_stage(
                     cmd,
                     RenderStage::Decals,
-                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
+                    FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals)
+                        .without(TfxFeatureRenderer::RoadDecals),
                 );
             }
 
             self.submit_stage_parallel_linear(
                 cmd,
                 RenderStage::Decals,
-                FeatureRendererSubscription::DYNAMIC_DECALS,
+                FeatureRendererSubscription::DYNAMIC_DECALS
+                    | FeatureRendererSubscription::ROAD_DECALS,
             );
         }
 

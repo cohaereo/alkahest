@@ -45,7 +45,8 @@ impl Renderer {
             self.submit_stage_parallel(
                 cmd,
                 RenderStage::Decals,
-                FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals),
+                FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals)
+                    .without(TfxFeatureRenderer::RoadDecals),
             )
         };
 
