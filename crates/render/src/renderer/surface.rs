@@ -140,10 +140,11 @@ pub struct Surface {
     desc: SurfaceDesc,
     current_base_resolution: (u32, u32),
     pub texture: d3d11::Texture2D,
-    pub srv: Option<d3d11::ShaderResourceView>,
+    pub srvs: Option<Vec<d3d11::ShaderResourceView>>,
     pub rtv: Option<d3d11::RenderTargetView>,
     pub dsv: Option<d3d11::DepthStencilView>,
-    pub uav: Option<d3d11::UnorderedAccessView>,
+    pub uavs: Option<Vec<d3d11::UnorderedAccessView>>,
+    pub mip_count: u32,
 }
 
 impl Surface {
@@ -165,12 +166,18 @@ impl Surface {
             bind_flags |= BindFlags::UNORDERED_ACCESS;
         }
 
+        let mip_count = if desc.use_mips {
+            d3d11::calc_mip_count(width, height)
+        } else {
+            1
+        };
+
         let texture = device
             .create_texture2d(
                 &Texture2dDesc::builder()
                     .width(width)
                     .height(height)
-                    .mip_levels(1)
+                    .mip_levels(mip_count)
                     .format(desc.format)
                     .bind_flags(bind_flags | BindFlags::SHADER_RESOURCE)
                     .build(),
@@ -178,40 +185,44 @@ impl Surface {
             )
             .context("Failed to create surface texture")?;
 
-        let mut srv = None;
-        let mut uav = None;
+        let mut srvs = vec![];
+        let mut uavs = vec![];
 
         if !desc.view_format.is_depth() {
-            let r = device
-                .create_shader_resource_view(
-                    &texture,
-                    &ShaderResourceViewDesc::builder()
-                        .format(desc.view_format)
-                        .view_dimension(SrvDimension::Texture2D {
-                            mip_levels: 1,
-                            most_detailed_mip: 0,
-                        })
-                        .build(),
-                )
-                .context("Failed to create surface SRV")?;
+            for mip in 0..mip_count {
+                let r = device
+                    .create_shader_resource_view(
+                        &texture,
+                        &ShaderResourceViewDesc::builder()
+                            .format(desc.view_format)
+                            .view_dimension(SrvDimension::Texture2D {
+                                mip_levels: 1,
+                                most_detailed_mip: mip,
+                            })
+                            .build(),
+                    )
+                    .context("Failed to create surface SRV")?;
 
-            r.set_debug_name(format!("{} (View)", &desc.label));
-            srv = Some(r);
+                r.set_debug_name(format!("{} (View, mip={mip})", &desc.label));
+                srvs.push(r);
+            }
         }
 
         if desc.create_uav {
-            let r = device
-                .create_unordered_access_view(
-                    &texture,
-                    &UnorderedAccessViewDesc::builder()
-                        .format(desc.view_format)
-                        .view_dimension(UavDimension::Texture2D { mip_slice: 0 })
-                        .build(),
-                )
-                .context("Failed to create surface UAV")?;
+            for mip in 0..mip_count {
+                let r = device
+                    .create_unordered_access_view(
+                        &texture,
+                        &UnorderedAccessViewDesc::builder()
+                            .format(desc.view_format)
+                            .view_dimension(UavDimension::Texture2D { mip_slice: mip })
+                            .build(),
+                    )
+                    .context("Failed to create surface UAV")?;
 
-            r.set_debug_name(format!("{} (UAV)", &desc.label));
-            uav = Some(r);
+                r.set_debug_name(format!("{} (UAV, mip={mip})", &desc.label));
+                uavs.push(r);
+            }
         }
 
         let mut rtv = None;
@@ -256,10 +267,11 @@ impl Surface {
             desc,
             current_base_resolution: base_resolution,
             texture,
-            srv,
+            srvs: (!srvs.is_empty()).then_some(srvs),
             rtv,
             dsv,
-            uav,
+            uavs: (!uavs.is_empty()).then_some(uavs),
+            mip_count,
         })
     }
 
@@ -328,6 +340,14 @@ impl Surface {
             1.0 / height as f32,
         )
     }
+
+    pub fn srv(&self, index: usize) -> Option<&d3d11::ShaderResourceView> {
+        self.srvs.as_ref().and_then(|s| s.get(index))
+    }
+
+    pub fn uav(&self, index: usize) -> Option<&d3d11::UnorderedAccessView> {
+        self.uavs.as_ref().and_then(|u| u.get(index))
+    }
 }
 
 #[derive(Builder, Clone)]
@@ -349,7 +369,11 @@ pub struct SurfaceDesc {
     pub view_format: dxgi::Format,
 
     #[builder(default = false)]
-    create_uav: bool,
+    pub create_uav: bool,
+
+    /// If true, the surface texture will be created with mip levels based on the resolution of the surface.
+    #[builder(default = false)]
+    pub use_mips: bool,
 }
 
 impl SurfaceDesc {
@@ -469,7 +493,7 @@ impl SurfaceProxy {
                 &Texture2dDesc::builder()
                     .width(desc.width)
                     .height(desc.height)
-                    .mip_levels(1)
+                    .mip_levels(desc.mip_levels)
                     .format(surface.desc.format)
                     .bind_flags(if cpu_read {
                         BindFlags::empty()
@@ -538,6 +562,10 @@ impl SurfaceProxy {
         }
 
         ctx.copy_resource(&surface.texture, &self.res);
+    }
+
+    pub fn mip_count(&self) -> u32 {
+        self.res.get_desc().mip_levels
     }
 }
 

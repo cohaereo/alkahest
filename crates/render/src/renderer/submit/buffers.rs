@@ -27,6 +27,8 @@ pub struct Gbuffers {
     pub uber_depth_eighth: SurfaceHandle,
     // pub uber_depth_sixteenth: SurfaceHandle,
     // pub uber_depth_fortieth: SurfaceHandle,
+    pub hzb_depth_chain: SurfaceHandle,
+    pub hzb_depth_chain_cpu: Mutex<SurfaceProxy>,
 }
 
 impl Gbuffers {
@@ -106,6 +108,16 @@ impl Gbuffers {
                 .build(),
         )?;
 
+        let hzb_depth_chain = surfaces.create_surface(
+            base_resolution,
+            SurfaceDesc::builder("hzb_depth_chain", SizeRelativity::RelativeToFramebuffer)
+                .format(dxgi::Format::R32Typeless)
+                .view_format(dxgi::Format::R32Float)
+                .use_mips(true)
+                .create_uav(true)
+                .build(),
+        )?;
+
         Ok(Gbuffers {
             albedo,
             normal,
@@ -134,6 +146,12 @@ impl Gbuffers {
             uber_depth_half,
             uber_depth_quarter,
             uber_depth_eighth: uber_depth_eigth,
+
+            hzb_depth_chain,
+            hzb_depth_chain_cpu: Mutex::new(
+                SurfaceProxy::new(gpu, surfaces.get(hzb_depth_chain), None, true)
+                    .expect("Failed to create CPU hzb_depth_chain surface proxy"),
+            ),
         })
     }
 

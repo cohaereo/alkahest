@@ -226,6 +226,27 @@ impl Gpu {
 
         Ok((vs, ps))
     }
+
+    pub fn compile_shader_cs(
+        &self,
+        name: &str,
+        source: &str,
+        entry_cs: &str,
+    ) -> anyhow::Result<d3d11::ComputeShader> {
+        let cs_source = d3d11::fxc::compile(
+            source.as_bytes(),
+            Some(name),
+            &[],
+            entry_cs,
+            d3d11::fxc::ShaderTarget::Compute,
+        )?;
+
+        let cs = self
+            .create_compute_shader(&cs_source)
+            .context("Failed to create compute shader")?;
+
+        Ok(cs)
+    }
 }
 
 impl std::ops::Deref for Gpu {

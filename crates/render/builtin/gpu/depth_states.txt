@@ -1,0 +1,1660 @@
+0 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+1 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+2 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+3 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: Less,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+4 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 175,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+5 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 2,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+6 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 1,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+7 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+8 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 4,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+9 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+10 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 6,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+11 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 7,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: LessEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: LessEqual,
+    },
+}
+12 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 3,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Greater,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Greater,
+    },
+}
+13 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: LessEqual,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+14 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: Less,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+15 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+16 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: LessEqual,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+17 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+}
+18 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+}
+19 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Zero,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Zero,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+20 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+21 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: LessEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+22 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: LessEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+23 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+24 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Invert,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Invert,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+25 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+26 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: Less,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 32,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+27 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+28 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+29 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Invert,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Invert,
+        stencil_func: Always,
+    },
+}
+30 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+31 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+32 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+33 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+34 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+35 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: Always,
+    stencil_enable: BOOL(0),
+    stencil_read_mask: 0,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Always,
+    },
+}
+36 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+37 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: Never,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 255,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+38 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 255,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+39 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 255,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+40 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+41 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+42 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+43 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: Less,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 255,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+44 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 255,
+    stencil_write_mask: 255,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+45 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 4,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+46 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 6,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+47 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 7,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: LessEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: LessEqual,
+    },
+}
+48 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 3,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Greater,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Greater,
+    },
+}
+49 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+50 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Zero,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Zero,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+}
+51 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+52 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+53 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: LessEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+54 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+}
+55 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+}
+56 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Replace,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Replace,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+}
+57 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+58 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: Equal,
+    },
+}
+59 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+}
+60 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+}
+61 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 32,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+62 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 32,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Keep,
+        stencil_func: NotEqual,
+    },
+}
+63 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 64,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+64 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 4,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+65 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 4,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+66 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 175,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+67 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 4,
+    stencil_write_mask: 0,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Equal,
+    },
+}
+68 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 20,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+}
+69 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Always,
+    },
+}
+70 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 22,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Equal,
+    },
+}
+71 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 23,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: LessEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: LessEqual,
+    },
+}
+72 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: Zero,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 19,
+    stencil_write_mask: 184,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Greater,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: Greater,
+    },
+}
+73 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 1,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+74 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 2,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+75 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 4,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+76 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 8,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+77 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+78 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 32,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+79 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 64,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+80 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 128,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}
+81 DepthStencilDesc {
+    depth_enable: BOOL(0),
+    depth_write_mask: Zero,
+    depth_func: Always,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 16,
+    stencil_write_mask: 16,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Zero,
+        stencil_func: NotEqual,
+    },
+}
+82 DepthStencilDesc {
+    depth_enable: BOOL(1),
+    depth_write_mask: All,
+    depth_func: GreaterEqual,
+    stencil_enable: BOOL(1),
+    stencil_read_mask: 0,
+    stencil_write_mask: 255,
+    front_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+    back_face: DepthStencilOpDesc {
+        stencil_fail_op: Keep,
+        stencil_depth_fail_op: Keep,
+        stencil_pass_op: Replace,
+        stencil_func: Always,
+    },
+}

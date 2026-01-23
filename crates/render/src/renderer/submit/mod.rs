@@ -153,9 +153,9 @@ impl Renderer {
                 cmd.pixel_set_shader_resources(
                     0,
                     &[
-                        view.surfaces.get(view.gbuffers.albedo).srv.as_ref(),
-                        view.surfaces.get(view.gbuffers.normal).srv.as_ref(),
-                        view.surfaces.get(view.gbuffers.third).srv.as_ref(),
+                        view.surfaces.get(view.gbuffers.albedo).srv(0),
+                        view.surfaces.get(view.gbuffers.normal).srv(0),
+                        view.surfaces.get(view.gbuffers.third).srv(0),
                         Some(&view.gbuffers.depth_proxy.lock().srv),
                     ],
                 );
@@ -232,6 +232,14 @@ impl Renderer {
         {
             profiling::scope!("prepare/submit immediate geometry");
             let _gpuspan = self.profiler.scope(cmd, "immediate_geometry");
+
+            const IMMEDIATE_GEOMETRY_XRAY: bool = true;
+            if IMMEDIATE_GEOMETRY_XRAY {
+                view.surfaces()
+                    .get(view.gbuffers.depth)
+                    .clear_depth(cmd, 0.0, 0xff);
+            }
+
             self.bind_surfaces(cmd, &[view.postprocess], Some(view.gbuffers.depth));
             cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
             cmd.flush_states();
@@ -260,7 +268,7 @@ impl Renderer {
                 // Directly blit to output
                 self.blit_srv(
                     cmd,
-                    &view.surfaces.get(view.postprocess).srv,
+                    view.surfaces.get(view.postprocess).srv(0),
                     &view.surfaces.get(view.output).rtv,
                     true,
                     "final_blit_debug",

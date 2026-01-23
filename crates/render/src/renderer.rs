@@ -1,5 +1,6 @@
 pub mod autoexposure;
 pub mod globals;
+pub mod hzb;
 pub mod submit;
 pub mod surface;
 pub mod util;
@@ -33,7 +34,7 @@ use crate::{
     feature::immediate::ImmediateShapeRenderer,
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
     object::{RenderObject, RenderObjectHandle},
-    renderer::submit::bloom::PostProcessScope,
+    renderer::submit::{bloom::PostProcessScope, gbuffer::HzbDownsampleParams},
     tfx::{externs::Externs, packet::FramePacket, scope::CascadeScope, view::RenderSettings},
     util::{
         arena::Arena,
@@ -46,6 +47,7 @@ const CLEAR_AO_SHADER: &str = include_str!("../builtin/shaders/clear_ao.hlsl");
 const SHADOW_MAP_SHADER: &str = include_str!("../builtin/shaders/shadow_map.hlsl");
 const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
 const BLIT_FAKE_WEAPON_SHADER: &str = include_str!("../builtin/shaders/blit_fake_weapon.hlsl");
+const HZB_DOWNSAMPLE_SHADER: &str = include_str!("../builtin/shaders/hzb_downsample.hlsl");
 
 pub struct Renderer {
     pub gpu: Arc<Gpu>,
@@ -70,6 +72,8 @@ pub struct Renderer {
     shadow_map_vs: d3d11::VertexShader,
     shadow_map_ps: d3d11::PixelShader,
     cascade_scope: ConstantBuffer<CascadeScope>,
+    hzb_downsample_cs: d3d11::ComputeShader,
+    hzb_downsample_params: ConstantBuffer<HzbDownsampleParams>,
 
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
     pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
@@ -131,6 +135,9 @@ impl Renderer {
         let (shadow_map_vs, shadow_map_ps) =
             gpu.compile_shader_vs_ps("shadow_map", SHADOW_MAP_SHADER, "mainVS", "mainPS")?;
 
+        let hzb_downsample_cs =
+            gpu.compile_shader_cs("hzb_downsample", HZB_DOWNSAMPLE_SHADER, "main")?;
+
         let globals = RenderGlobals::load(&gpu).context("Failed to load render globals")?;
         Ok(Self {
             externs: ThreadMutCell::new(Externs::new(&globals)),
@@ -157,6 +164,8 @@ impl Renderer {
             clear_ao_all_ps,
             shadow_map_vs,
             shadow_map_ps,
+            hzb_downsample_cs,
+            hzb_downsample_params: ConstantBuffer::create(&gpu, None)?,
             cascade_scope: ConstantBuffer::create(&gpu, None)?,
 
             common: CommonResources::load(&gpu)?,

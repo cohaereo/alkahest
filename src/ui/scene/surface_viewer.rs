@@ -14,7 +14,7 @@ impl super::Scene {
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (_handle, surface) in surfaces.iter() {
-                let texture_id = surface.srv.clone().map(|srv| {
+                let texture_id = surface.srv(0).cloned().map(|srv| {
                     renderer
                         .textures_mut()
                         .allocate_dx_temporary(srv, None, false)

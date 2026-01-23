@@ -328,7 +328,7 @@ impl Renderer {
                     .expect("Failed to write cascade scope");
                 self.cascade_scope.bind(cmd, ShaderStage::Vertex, 0);
                 self.cascade_scope.bind(cmd, ShaderStage::Pixel, 0);
-                cmd.pixel_set_shader_resources(0, &[Some(&depth), cascade.srv.as_ref()]);
+                cmd.pixel_set_shader_resources(0, &[Some(&depth), cascade.srv(0)]);
                 cmd.pixel_set_samplers(1, &[Some(&self.common.sampler_linear)]);
                 cmd.flush_states();
                 cmd.vertex_set_shader(Some(&self.shadow_map_vs));

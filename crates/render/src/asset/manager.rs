@@ -28,7 +28,7 @@ use crate::{
 // Works for any asset type that implements the Asset trait.
 pub struct AssetManager {
     gpu: Arc<Gpu>,
-    assets: Mutex<HashMap<TagHash, (TypeId, UntypedHandle)>>,
+    pub assets: Mutex<HashMap<TagHash, (TypeId, UntypedHandle)>>,
     num_loading: Arc<AtomicUsize>,
     // request_tx: Mutex<crossbeam::channel::Sender<LoadRequest>>,
     // pub(crate) loading_threads: Mutex<Vec<std::thread::JoinHandle<()>>>,

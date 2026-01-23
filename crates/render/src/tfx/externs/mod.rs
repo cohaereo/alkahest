@@ -9,9 +9,9 @@ pub use definitions::*;
 use glam::{Mat4, Vec4};
 
 use crate::{
-    asset::{texture::Texture, Handle},
-    renderer::surface::SurfaceHandle,
     Renderer,
+    asset::{Handle, texture::Texture},
+    renderer::surface::SurfaceHandle,
 };
 
 trait Extern {
@@ -78,7 +78,13 @@ impl TextureView {
     {
         match self {
             TextureView::Surface(surface) => {
-                if let Some(srv) = Renderer::instance().surfaces().get(*surface).srv.as_ref() {
+                if let Some(srv) = Renderer::instance()
+                    .surfaces()
+                    .get(*surface)
+                    .srvs
+                    .as_ref()
+                    .and_then(|s| s.first())
+                {
                     f(srv)
                 }
             }
@@ -158,7 +164,13 @@ impl Uav {
     {
         match self {
             Uav::Surface(surface) => {
-                if let Some(uav) = Renderer::instance().surfaces().get(*surface).uav.as_ref() {
+                if let Some(uav) = Renderer::instance()
+                    .surfaces()
+                    .get(*surface)
+                    .uavs
+                    .as_ref()
+                    .and_then(|u| u.first())
+                {
                     f(uav)
                 }
             }

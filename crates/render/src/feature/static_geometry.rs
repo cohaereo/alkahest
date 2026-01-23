@@ -18,7 +18,7 @@ use alkahest_data::tfx::{
 };
 use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec3, Vec4, vec3};
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use smallvec::SmallVec;
@@ -494,6 +494,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 group.visible = false;
                 for ((_transform, visible), bounds) in transforms.iter_mut().zip(bounds.iter()) {
                     let bounds_visible = camera.is_visible(bounds);
+
                     if enable_instance_culling {
                         *visible = bounds_visible;
                         if *visible {

@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use alkahest_data::tfx::{
-    FeatureRendererSubscription, PipelineState, RenderStage, TfxFeatureRenderer,
+    FeatureRendererSubscription, PipelineState, PrimitiveType, RenderStage, ShaderStage,
+    TfxFeatureRenderer,
 };
+use glam::UVec2;
 
 use super::Renderer;
 use crate::{
@@ -151,6 +153,7 @@ impl Renderer {
         }
 
         self.submit_uber_depth_generation(cmd, view);
+        self.generate_hzb_chain(cmd, view);
     }
 
     fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &View) {
@@ -187,4 +190,76 @@ impl Renderer {
             "downsample_max_min_avg_no_swizzle",
         );
     }
+
+    fn generate_hzb_chain(&self, cmd: &mut CommandList, view: &View) {
+        cmd_event_span!(cmd, "generate_hzb_chain");
+        let _gpuscope = self.profiler.scope(cmd, "generate_hzb_chain");
+
+        let hzb_chain = view.surfaces().get(view.gbuffers.hzb_depth_chain);
+
+        let depth = view.gbuffers.depth_proxy.lock();
+        // Copy main depth to mip 0
+        {
+            cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+            cmd.flush_states();
+            cmd.rasterizer_set_viewports(&[d3d11::Viewport::builder()
+                .width(hzb_chain.resolution().0 as f32)
+                .height(hzb_chain.resolution().1 as f32)
+                .build()]);
+            cmd.vertex_set_shader(Some(&self.common.blit_vs));
+            cmd.pixel_set_shader(Some(&self.common.blit_ps_linear));
+            cmd.set_input_topology(PrimitiveType::TriangleStrip);
+            hzb_chain.bind_single(cmd);
+            cmd.pixel_set_shader_resources(0, std::slice::from_ref(&Some(&depth.srv)));
+            cmd.draw(4, 0);
+        }
+
+        let (mut width, mut height) = hzb_chain.resolution();
+        for mip in 1..hzb_chain.mip_count {
+            let current_width = width >> 1;
+            let current_height = height >> 1;
+
+            let srv = if mip == 1 {
+                Some(depth.srv.clone())
+            } else {
+                hzb_chain.srv(mip as usize - 1).cloned()
+            };
+
+            cmd.compute_set_unordered_access_views(0, &[hzb_chain.uav(mip as usize)], None);
+            cmd.compute_set_shader_resources(0, &[srv.as_ref()]);
+            cmd.compute_set_shader(&self.hzb_downsample_cs);
+
+            _ = self.hzb_downsample_params.write(
+                cmd,
+                &HzbDownsampleParams {
+                    prev_size: UVec2::new(width, height),
+                    current_size: UVec2::new(current_width, current_height),
+                },
+            );
+            self.hzb_downsample_params
+                .bind(cmd, ShaderStage::Compute, 0);
+
+            const GROUP_SIZE: u32 = 8;
+            let x = current_width.div_ceil(GROUP_SIZE);
+            let y = current_height.div_ceil(GROUP_SIZE);
+            cmd.dispatch(x, y, 1);
+
+            width = current_width;
+            height = current_height;
+        }
+
+        {
+            let _gpuscope = self.profiler.scope(cmd, "copy_hzb_to_cpu");
+            view.gbuffers
+                .hzb_depth_chain_cpu
+                .lock()
+                .update(cmd, hzb_chain);
+        }
+    }
+}
+
+#[repr(C)]
+pub struct HzbDownsampleParams {
+    prev_size: UVec2,
+    current_size: UVec2,
 }

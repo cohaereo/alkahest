@@ -30,7 +30,11 @@ impl Renderer {
     ) {
         self.blit_srv(
             cmd,
-            &self.surfaces().get(src).srv,
+            self.surfaces()
+                .get(src)
+                .srvs
+                .as_ref()
+                .and_then(|s| s.first()),
             &self.surfaces().get(dst).rtv,
             linear,
             name,

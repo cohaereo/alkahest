@@ -24,7 +24,7 @@ pub struct View {
     pub(crate) surfaces: Arc<Surfaces>,
     pub(crate) resolution: (u32, u32),
 
-    pub(crate) gbuffers: Gbuffers,
+    pub gbuffers: Gbuffers,
     pub(crate) lighting: LightBuffers,
     pub(crate) water: WaterBuffers,
     pub(crate) bloom: BloomBuffers,

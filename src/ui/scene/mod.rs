@@ -1,3 +1,4 @@
+mod asset_viewer;
 pub mod controller;
 mod surface_viewer;
 
@@ -14,9 +15,12 @@ use alkahest_render::{
     Gpu, Renderer,
     camera::Camera,
     gpu::command_list::CommandList,
-    renderer::submit::{
-        DebugPipeline,
-        atmosphere::{AtmosphereData, SunDirections},
+    renderer::{
+        hzb::Hzb,
+        submit::{
+            DebugPipeline,
+            atmosphere::{AtmosphereData, SunDirections},
+        },
     },
     tfx::{externs::get_global_channel_name, packet::FramePacketMisc, view::View},
 };
@@ -153,6 +157,7 @@ impl Scene {
 
         if self.show_surface_viewer {
             egui::SidePanel::right("surface_viewer").show_inside(ui, |ui| {
+                // self.show_texture_viewer(ui, egui_d3d11);
                 self.show_surface_viewer(ui, egui_d3d11);
             });
         }
@@ -497,14 +502,15 @@ impl Scene {
         ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
             .setting_description_tooltip(
                 "Enables multi-threaded submission of commands to the GPU. May improve \
-                    performance on systems with many CPU cores, but can introduce stuttering on \
-                    older systems",
+                 performance on systems with many CPU cores, but can introduce stuttering on \
+                 older systems",
                 PerformanceImpact::High,
             );
 
         ui.checkbox(&mut settings.instance_culling, "Instance Culling")
             .setting_description_tooltip(
-                "Enables static/decorator instance culling to reduce draw calls that fall outside the camera's view.",
+                "Enables static/decorator instance culling to reduce draw calls that fall outside \
+                 the camera's view.",
                 PerformanceImpact::High,
             );
     }
@@ -619,12 +625,20 @@ impl Scene {
             profiling::scope!("prepare");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare");
 
+            {
+                profiling::scope!("download_hzb");
+                let _gpuspan = self.renderer.profiler.scope(&cmd, "download_hzb");
+                self.camera.hzb = Hzb::download(
+                    gpu,
+                    &self.view.gbuffers.hzb_depth_chain_cpu.lock(),
+                    &self.camera,
+                );
+            }
+
             let wants_to_render_shadowmaps = s_wants_to_render_shadowmaps(&self.world);
 
             // TODO(cohae): Remove the dependency on the world here, shadowmaps should be part of the frame packet
             s_render_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
-
-            cmd.clear_render_target_view(&gpu.acquire_rtv(), &[0.0, 0.0, 0.0, 1.0]);
 
             if !wants_to_render_shadowmaps {
                 profiling::scope!("visibility");

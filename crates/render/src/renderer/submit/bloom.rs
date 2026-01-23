@@ -29,7 +29,7 @@ impl Renderer {
                                    out_surface: SurfaceHandle,
                                    unkc0: Vec4| {
             let surf = view.surfaces.get(surface);
-            cmd.pixel_set_shader_resources(0, &[surf.srv.as_ref()]);
+            cmd.pixel_set_shader_resources(0, &[surf.srv(0)]);
 
             let ext = &mut self.externs.get_mut();
             ext.postprocess.input = surface.into();
@@ -49,7 +49,7 @@ impl Renderer {
                           unk7: Vec4| {
             let in_surf = view.surfaces.get(in_surface);
             let out_surf = view.surfaces.get(out_surface);
-            cmd.pixel_set_shader_resources(0, &[in_surf.srv.as_ref()]);
+            cmd.pixel_set_shader_resources(0, &[in_surf.srv(0)]);
             self.postprocess_cbuffer
                 .write(
                     cmd,

@@ -6,24 +6,24 @@ use std::{
 use alkahest_data::{
     tag::WideHash,
     tfx::{
-        texture::{DxgiFormat, STextureHeader},
         ShaderStage,
+        texture::{DxgiFormat, STextureHeader},
     },
 };
-use anyhow::{ensure, Context};
+use anyhow::{Context, ensure};
 use d3d11::{
-    dxgi, BindFlags, DeviceChild, ResourceMiscFlags, SamplerDesc, Texture2dDesc, Texture3dDesc,
-    D3D11_SUBRESOURCE_DATA,
+    BindFlags, D3D11_SUBRESOURCE_DATA, DeviceChild, ResourceMiscFlags, SamplerDesc, Texture2dDesc,
+    Texture3dDesc, dxgi,
 };
 use ddsfile::Dds;
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 use tracing::{debug_span, error};
 
 use crate::{
+    Gpu,
     gpu::command_list::{CommandList, ContextExt},
     util::d3d::calc_dx_subresource,
-    Gpu,
 };
 
 pub static LOW_RES: AtomicBool = AtomicBool::new(false);
@@ -98,26 +98,6 @@ impl Texture {
                 };
 
                 let _span_load = debug_span!("Load texture3d").entered();
-                // let mut tex = None;
-                // device
-                //     .CreateTexture3D(
-                //         &D3D11_TEXTURE3D_DESC {
-                //             Width: texture.width as _,
-                //             Height: texture.height as _,
-                //             Depth: texture.depth as _,
-                //             MipLevels: 1,
-                //             Format: dxgi_to_win(texture.format),
-                //             Usage: D3D11_USAGE_DEFAULT,
-                //             BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
-                //             CPUAccessFlags: Default::default(),
-                //             MiscFlags: Default::default(),
-                //         },
-                //         Some([initial_data].as_ptr()),
-                //         Some(&mut tex),
-                //     )
-                //     .context("Failed to create 3D texture")?;
-
-                // let tex = tex.unwrap();
 
                 let tex = device.create_texture3d(
                     &Texture3dDesc::builder()
@@ -126,7 +106,7 @@ impl Texture {
                         .depth(texture.depth as _)
                         .mip_levels(1)
                         .format(texture.format.into())
-                        .usage(d3d11::Usage::Default)
+                        .usage(d3d11::Usage::Immutable)
                         .bind_flags(BindFlags::SHADER_RESOURCE)
                         .build(),
                     Some(&[initial_data]),
@@ -294,7 +274,7 @@ impl Texture {
                         BindFlags::empty()
                     },
             )
-            .usage(d3d11::Usage::Default)
+            .usage(d3d11::Usage::Immutable)
             .build();
 
         let tex = device
@@ -340,7 +320,7 @@ impl Texture {
                 .depth(depth)
                 .mip_levels(1)
                 .format(format.into())
-                .usage(d3d11::Usage::Default)
+                .usage(d3d11::Usage::Immutable)
                 .bind_flags(BindFlags::SHADER_RESOURCE)
                 .build(),
             Some(&[D3D11_SUBRESOURCE_DATA {
@@ -497,6 +477,10 @@ impl Texture {
 
     pub fn bind(&self, cmd: &mut CommandList, slot: u32, stage: ShaderStage) {
         cmd.set_shader_resource(stage, slot, &self.view);
+    }
+
+    pub fn resolution(&self) -> (u32, u32) {
+        (self.width, self.height)
     }
 }
 

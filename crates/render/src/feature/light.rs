@@ -298,7 +298,7 @@ impl FeatureRenderer for LightRenderer {
 
             cmd.externs.deferred_shadow = Some(
                 externs::DeferredShadow {
-                    shadow_depthmap: shadowmap.srv.clone().into(),
+                    shadow_depthmap: shadowmap.srv(0).cloned().into(),
                     resolution_width: shadowmap.resolution().0 as f32,
                     resolution_height: shadowmap.resolution().1 as f32,
                     // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
@@ -452,10 +452,10 @@ impl FeatureRenderer for LightRenderer {
                         .cloned()
                         .unwrap_or_default();
 
-                    debug_assert!(shadowmap.srv.is_some());
+                    debug_assert!(shadowmap.srv(0).is_some());
                     cmd.externs.deferred_shadow = Some(
                         externs::DeferredShadow {
-                            shadow_depthmap: shadowmap.srv.clone().into(),
+                            shadow_depthmap: shadowmap.srv(0).cloned().into(),
                             resolution_width: shadowmap.resolution().0 as f32,
                             resolution_height: shadowmap.resolution().1 as f32,
                             // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),

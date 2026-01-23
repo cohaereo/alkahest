@@ -2,7 +2,7 @@ use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
 use inline_tweak::tweak;
 
-use crate::{Renderer, visibility::frustum::Frustum};
+use crate::{renderer::hzb::Hzb, visibility::frustum::Frustum};
 
 // A simple camera controller (X forward, Z up)
 pub struct Camera {
@@ -22,6 +22,8 @@ pub struct Camera {
     pub local_to_camera: Mat4,
     pub camera_to_projective: Mat4,
     pub local_to_projective: Mat4,
+
+    pub hzb: Hzb,
 }
 
 impl Default for Camera {
@@ -40,6 +42,7 @@ impl Default for Camera {
             local_to_camera: Mat4::IDENTITY,
             camera_to_projective: Mat4::IDENTITY,
             local_to_projective: Mat4::IDENTITY,
+            hzb: Hzb::EMPTY,
         }
     }
 }
@@ -74,6 +77,12 @@ impl Camera {
             self.near,
             self.far,
         )
+    }
+
+    pub fn world_to_clip_space(&self) -> Mat4 {
+        let view_matrix = self.view_matrix();
+        let projection_matrix = self.projection_matrix(self.aspect_ratio);
+        projection_matrix * view_matrix
     }
 
     pub fn projection_matrix_standard(&self) -> glam::Mat4 {
@@ -172,7 +181,7 @@ impl Camera {
             return false;
         }
 
-        true
+        self.hzb.is_aabb_visible(aabb)
     }
 
     /// Returns (world_to_camera, camera_to_projective) matrices for cascaded shadow mapping.
