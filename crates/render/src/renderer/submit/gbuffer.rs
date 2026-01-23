@@ -250,10 +250,15 @@ impl Renderer {
 
         {
             let _gpuscope = self.profiler.scope(cmd, "copy_hzb_to_cpu");
+
+            let num_mips = hzb_chain.mip_count;
+
+            let mip_range = num_mips.saturating_sub(5)..num_mips;
+
             view.gbuffers
                 .hzb_depth_chain_cpu
                 .lock()
-                .update(cmd, hzb_chain);
+                .update_mips(cmd, hzb_chain, mip_range);
         }
     }
 }

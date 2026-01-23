@@ -564,6 +564,35 @@ impl SurfaceProxy {
         ctx.copy_resource(&surface.texture, &self.res);
     }
 
+    /// Update a range of MIPs instead of the whole texture
+    pub fn update_mips(
+        &mut self,
+        ctx: &d3d11::DeviceContext,
+        surface: &Surface,
+        mip_range: std::ops::Range<u32>,
+    ) {
+        if surface.texture.get_desc().resolution() != self.res.get_desc().resolution() {
+            *self = Self::new(&ctx.get_device(), surface, self.view_format, self.cpu_read)
+                .expect("Failed to resize surface proxy");
+        }
+
+        // ctx.copy_resource(&surface.texture, &self.res);
+        let mip_count = surface.mip_count;
+        for mip in mip_range {
+            let src_sub = d3d11::calc_subresource_index(mip, 0, mip_count);
+            let dst_sub = d3d11::calc_subresource_index(mip, 0, mip_count);
+
+            ctx.copy_subresource_region(
+                &surface.texture,
+                src_sub,
+                None,
+                &self.res,
+                dst_sub,
+                (0, 0, 0),
+            );
+        }
+    }
+
     pub fn mip_count(&self) -> u32 {
         self.res.get_desc().mip_levels
     }
