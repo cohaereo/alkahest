@@ -79,14 +79,13 @@ impl Renderer {
             let _gpuspan = self.profiler.scope(cmd, "local_lights");
 
             view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
-            cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
+            cmd.state = PipelineState::new(Some(2), None, Some(2), Some(2));
             if let Some(geo) = geo {
                 let (sync_job, set) = &geo.lighting;
                 sync_job.wait();
                 self.cmd_pool.finish(cmd, *set);
             } else {
                 view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
-                cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
                 cmd.flush_states();
                 self.submit_stage(
                     cmd,

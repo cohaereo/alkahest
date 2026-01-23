@@ -40,7 +40,7 @@ impl Renderer {
 
         let decals = {
             view.gbuffers.bind(cmd, self);
-            cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(0));
+            cmd.state = PipelineState::new(Some(23), Some(15), Some(2), Some(0));
 
             self.submit_stage_parallel(
                 cmd,
@@ -52,7 +52,7 @@ impl Renderer {
 
         let lighting = {
             view.lighting.bind_diffuse_specular(cmd, &view.surfaces);
-            cmd.state = PipelineState::new(Some(8), None, Some(2), Some(2));
+            cmd.state = PipelineState::new(Some(2), None, Some(2), Some(2));
             cmd.flush_states();
             {
                 self.submit_stage_parallel(
