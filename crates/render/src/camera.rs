@@ -1,7 +1,8 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
+use inline_tweak::tweak;
 
-use crate::visibility::frustum::Frustum;
+use crate::{Renderer, visibility::frustum::Frustum};
 
 // A simple camera controller (X forward, Z up)
 pub struct Camera {
@@ -166,7 +167,7 @@ impl Camera {
 
         // If the projected size is too small, consider it not visible
         let ndc_size = max_ndc - min_ndc;
-        let screen_size_threshold = 0.006; // Adjust this threshold as needed
+        let screen_size_threshold = tweak!(0.01); // Adjust this threshold as needed
         if ndc_size.x < screen_size_threshold && ndc_size.y < screen_size_threshold {
             return false;
         }

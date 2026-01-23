@@ -1,10 +1,7 @@
 use std::{collections::VecDeque, sync::Arc, time::Instant};
 
 use anyhow::Context;
-use d3d11::{
-    DeviceContext, Query,
-    query::{D3D11_QUERY_DATA_TIMESTAMP_DISJOINT, QueryDesc},
-};
+use d3d11::{D3D11_QUERY_DATA_TIMESTAMP_DISJOINT, DeviceContext, Query, QueryDesc};
 use parking_lot::Mutex;
 
 use crate::Gpu;

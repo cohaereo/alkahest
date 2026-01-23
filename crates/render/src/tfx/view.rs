@@ -185,12 +185,15 @@ pub struct RenderSettings {
     pub exposure_illum_relative: f32,
     pub vertex_ao: bool,
     pub bloom: bool,
-    pub multithreading: bool,
     pub volumetrics: bool,
     pub shadows: bool,
     pub autoexposure: bool,
     pub sun_shadows: bool,
     pub anti_aliasing: bool,
+
+    // Performance
+    pub multithreading: bool,
+    pub instance_culling: bool,
 }
 
 impl Default for RenderSettings {
@@ -200,12 +203,14 @@ impl Default for RenderSettings {
             exposure_illum_relative: 0.50,
             vertex_ao: true,
             bloom: true,
-            multithreading: true,
             volumetrics: true,
             shadows: true,
             autoexposure: true,
             sun_shadows: false,
             anti_aliasing: true,
+
+            multithreading: true,
+            instance_culling: true,
         }
     }
 }

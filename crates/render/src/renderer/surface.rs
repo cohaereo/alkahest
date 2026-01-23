@@ -7,9 +7,9 @@ use anyhow::Context;
 use bon::Builder;
 use crossbeam::atomic::AtomicCell;
 use d3d11::{
-    BindFlags, ClearFlags, CpuAccessFlags, DepthStencilViewDesc, DeviceChild, RenderTargetViewDesc,
-    ShaderResourceViewDesc, Texture2dDesc, UnorderedAccessViewDesc, dsv::DsvFlags, dxgi,
-    srv::SrvDimension, uav::UavDimension,
+    BindFlags, ClearFlags, CpuAccessFlags, DepthStencilViewDesc, DeviceChild, DsvFlags,
+    RenderTargetViewDesc, ShaderResourceViewDesc, SrvDimension, Texture2dDesc, UavDimension,
+    UnorderedAccessViewDesc, dxgi,
 };
 use glam::Vec4;
 use smallvec::SmallVec;
@@ -224,7 +224,7 @@ impl Surface {
                     Some(
                         &DepthStencilViewDesc::builder()
                             .format(depth_format)
-                            .view_dimension(d3d11::dsv::DsvDimension::Texture2D {
+                            .view_dimension(d3d11::DsvDimension::Texture2D {
                                 flags: DsvFlags::empty(),
                                 mip_slice: 0,
                             })
@@ -241,7 +241,7 @@ impl Surface {
                     Some(
                         &RenderTargetViewDesc::builder()
                             .format(desc.view_format)
-                            .view_dimension(d3d11::rtv::RtvDimension::Texture2D { mip_slice: 0 })
+                            .view_dimension(d3d11::RtvDimension::Texture2D { mip_slice: 0 })
                             .build(),
                     ),
                 )

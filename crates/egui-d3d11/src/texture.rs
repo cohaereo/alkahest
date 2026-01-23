@@ -192,7 +192,7 @@ impl TextureAllocator {
             &texture,
             &d3d11::ShaderResourceViewDesc::builder()
                 .format(dxgi::Format::R8g8b8a8Unorm)
-                .view_dimension(d3d11::srv::SrvDimension::Texture2D {
+                .view_dimension(d3d11::SrvDimension::Texture2D {
                     most_detailed_mip: 0,
                     mip_levels: desc.mip_levels,
                 })

@@ -943,9 +943,9 @@ dependencies = [
 
 [[package]]
 name = "d3d11"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29e753b87d48864725aea8ffe6705e869d0dd89883066ade8f653f47a191b4f2"
+checksum = "c918ab43a68687794b2596abd4084ebf674ce720c4b8229a8c7419375bc879f4"
 dependencies = [
  "bincode",
  "bitflags 2.10.0",

@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use alkahest_data::tfx::render_globals::SRenderGlobals;
 use anyhow::Context;
-use d3d11::{dxgi, sys::Foundation::BOOL, DeviceChild, InputElementDesc};
+use d3d11::{DeviceChild, InputElementDesc, dxgi, sys::Foundation::BOOL};
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::package_manager;
 
@@ -181,13 +181,13 @@ impl RenderStates {
                 stencil_enable: false.into(), //stencil.enabled,
                 stencil_read_mask: stencil.read_mask,
                 stencil_write_mask: stencil.write_mask,
-                front_face: d3d11::dsv::DepthStencilOpDesc {
+                front_face: d3d11::DepthStencilOpDesc {
                     stencil_fail_op: stencil.front_face.2,
                     stencil_depth_fail_op: stencil.front_face.3,
                     stencil_pass_op: stencil.front_face.1,
                     stencil_func: stencil.front_face.0,
                 },
-                back_face: d3d11::dsv::DepthStencilOpDesc {
+                back_face: d3d11::DepthStencilOpDesc {
                     stencil_fail_op: stencil.back_face.2,
                     stencil_depth_fail_op: stencil.back_face.3,
                     stencil_pass_op: stencil.back_face.1,
@@ -283,7 +283,7 @@ pub struct ShortDepthBias(u32, i32, f32, f32);
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct ShortDepthState(i32, d3d11::dsv::DepthWriteMask, d3d11::ComparisonFunc, u32);
+pub struct ShortDepthState(i32, d3d11::DepthWriteMask, d3d11::ComparisonFunc, u32);
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -295,15 +295,15 @@ pub struct ShortStencilDesc {
     _pad0: u16,
     pub front_face: (
         d3d11::ComparisonFunc,
-        d3d11::dsv::StencilOp,
-        d3d11::dsv::StencilOp,
-        d3d11::dsv::StencilOp,
+        d3d11::StencilOp,
+        d3d11::StencilOp,
+        d3d11::StencilOp,
     ),
     pub back_face: (
         d3d11::ComparisonFunc,
-        d3d11::dsv::StencilOp,
-        d3d11::dsv::StencilOp,
-        d3d11::dsv::StencilOp,
+        d3d11::StencilOp,
+        d3d11::StencilOp,
+        d3d11::StencilOp,
     ),
 }
 

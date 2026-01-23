@@ -4,8 +4,7 @@ use alkahest_data::tfx::ShaderStage;
 use anyhow::Context;
 use d3d11::{
     BindFlags, BufferDesc, CpuAccessFlags, ResourceMiscFlags, ShaderResourceViewDesc,
-    SubresourceMapGuard, Usage, dxgi,
-    srv::{SrvBufferExFlags, SrvDimension},
+    SrvBufferExFlags, SrvDimension, SubresourceMapGuard, Usage, dxgi,
 };
 
 use super::{Gpu, command_list::CommandList};

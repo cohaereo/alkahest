@@ -497,8 +497,14 @@ impl Scene {
         ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
             .setting_description_tooltip(
                 "Enables multi-threaded submission of commands to the GPU. May improve \
-                 performance on systems with many CPU cores, but can introduce stuttering on \
-                 older systems",
+                    performance on systems with many CPU cores, but can introduce stuttering on \
+                    older systems",
+                PerformanceImpact::High,
+            );
+
+        ui.checkbox(&mut settings.instance_culling, "Instance Culling")
+            .setting_description_tooltip(
+                "Enables static/decorator instance culling to reduce draw calls that fall outside the camera's view.",
                 PerformanceImpact::High,
             );
     }
@@ -626,19 +632,23 @@ impl Scene {
                 self.renderer.cull_frame_packet(&self.view, &self.camera);
             }
 
-            for node in self.renderer.frame_packet.read().iter_visible() {
-                if let Some(render_object) = self
-                    .renderer
-                    .objects
-                    .write()
-                    .get_mut(node.render_object_handle.into())
-                {
-                    render_object.extract_and_prepare(&self.renderer, &*node.data);
-                } else if node.render_object_handle.is_valid() {
-                    error!("Render object not found: {:?}", node.render_object_handle);
+            {
+                profiling::scope!("prepare/upload");
+                let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare_upload");
+
+                for node in self.renderer.frame_packet.read().iter_visible() {
+                    if let Some(render_object) = self
+                        .renderer
+                        .objects
+                        .write()
+                        .get_mut(node.render_object_handle.into())
+                    {
+                        render_object.extract_and_prepare(&self.renderer, &*node.data);
+                    } else if node.render_object_handle.is_valid() {
+                        error!("Render object not found: {:?}", node.render_object_handle);
+                    }
                 }
             }
-
             // Sort nodes by distance
             self.renderer
                 .frame_packet

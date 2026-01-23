@@ -21,7 +21,7 @@ members = [
 anyhow = "1"
 ahash = "0.8"
 crossbeam = "0.8"
-d3d11 = { version = "0.3.1", features = ["sdl3"] }
+d3d11 = { version = "0.3.2", features = ["sdl3"] }
 egui = { version = "0.33.3", default-features = false, features = ["bytemuck"] }
 egui_dock = "0.18"
 gdt-cpus = "25.5.0"

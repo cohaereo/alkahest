@@ -2,13 +2,12 @@ use std::{borrow::Cow, sync::Arc};
 
 use alkahest_data::tfx::ShaderStage;
 use d3d11::{
-    blend_state::{Blend, BlendOp, RenderTargetBlendDesc},
-    dxgi, BindFlags, BlendDesc, InputElementDesc, SamplerDesc, Texture2dDesc,
-    D3D11_SUBRESOURCE_DATA,
+    BindFlags, Blend, BlendDesc, BlendOp, D3D11_SUBRESOURCE_DATA, InputElementDesc,
+    RenderTargetBlendDesc, SamplerDesc, Texture2dDesc, dxgi,
 };
 use glam::{IVec2, Mat4, Vec2, Vec3, Vec4};
 
-use super::{cbuffer::ConstantBuffer, command_list::CommandList, Gpu};
+use super::{Gpu, cbuffer::ConstantBuffer, command_list::CommandList};
 use crate::gpu_span;
 
 #[repr(C)]

@@ -1,8 +1,8 @@
 use alkahest_data::tfx::buffers::VertexBufferHeader;
 use anyhow::Context;
-use d3d11::{dxgi, BindFlags, BufferDesc, DeviceChild, DeviceContext, ShaderResourceViewDesc};
+use d3d11::{BindFlags, BufferDesc, DeviceChild, DeviceContext, ShaderResourceViewDesc, dxgi};
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
 use crate::gpu::command_list::CommandList;
 
@@ -79,7 +79,7 @@ impl VertexBuffer {
                             } else {
                                 dxgi::Format::R8g8b8a8Unorm
                             })
-                            .view_dimension(d3d11::srv::SrvDimension::Buffer {
+                            .view_dimension(d3d11::SrvDimension::Buffer {
                                 first_element_or_element_offset: 0,
                                 num_elements_or_element_width: (data.len() / stride as usize)
                                     as u32,

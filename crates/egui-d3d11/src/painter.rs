@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use alkahest_render::{gpu::command_list::CommandList, Gpu};
-use d3d11::{dxgi, input_layout::ElementOffset};
+use d3d11::{dxgi, ElementOffset};
 use egui::{epaint::Primitive, Context};
 
 use crate::{

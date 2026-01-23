@@ -150,7 +150,7 @@ impl FeatureRenderer for LightRenderer {
         if let Some(ref bounds) = self.bounds {
             camera.is_visible(bounds)
         } else {
-            true
+            false
         }
     }
 

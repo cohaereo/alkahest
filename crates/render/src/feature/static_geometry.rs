@@ -19,6 +19,7 @@ use alkahest_data::tfx::{
 use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec3, Vec4};
+use itertools::Itertools;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use smallvec::SmallVec;
 use tiger_parse::PackageManagerExt;
@@ -260,12 +261,14 @@ impl StaticModel {
 }
 
 struct StaticInstanceGroup {
-    pub transforms: Vec<SStaticInstanceTransform>,
+    pub transforms: Vec<(SStaticInstanceTransform, bool)>,
     pub static_index: u16,
     pub cbuffer: ConstantBuffer<u8>,
     pub bounds: Vec<AxisAlignedBBox>,
     pub group_bounds: AxisAlignedBBox,
     pub visible: bool,
+    pub num_instances: u32,
+    num_instances_written: u32,
 }
 
 impl StaticInstanceGroup {
@@ -300,7 +303,11 @@ impl StaticInstanceGroup {
         //     [0.0, 0.0, model.mesh_scale, model.mesh_offset.z],
         //     [0.0, 0.0, 0.0, 1.0],
         // ]);
-        for transform in &self.transforms {
+        for transform in self
+            .transforms
+            .iter()
+            .filter_map(|(t, visible)| visible.then_some(t))
+        {
             let instance_transform = Mat4::from_scale_rotation_translation(
                 Vec3::splat(transform.scale),
                 transform.rotation,
@@ -366,7 +373,10 @@ impl StaticInstancesRenderer {
                 .transforms
                 .get(range.clone())
                 .context("Invalid instance transform range")?
-                .to_vec();
+                .iter()
+                .cloned()
+                .map(|t| (t, true))
+                .collect_vec();
 
             let mut bounds = Vec::with_capacity(transforms.len());
             for i in range {
@@ -395,12 +405,14 @@ impl StaticInstancesRenderer {
             )?;
 
             groups.push(StaticInstanceGroup {
+                num_instances: transforms.len() as u32,
                 transforms,
                 bounds,
                 group_bounds,
                 static_index: group.static_index,
                 cbuffer,
                 visible: true,
+                num_instances_written: 0,
             });
             model_to_instance_groups
                 .entry(group.static_index)
@@ -470,10 +482,30 @@ impl FeatureRenderer for StaticInstancesRenderer {
             return false;
         }
 
+        let enable_instance_culling = Renderer::instance().settings().instance_culling;
         self.groups.par_iter_mut().for_each(|group| {
+            let StaticInstanceGroup {
+                transforms, bounds, ..
+            } = group;
+
             group.visible = camera.is_visible(&group.group_bounds);
+            group.num_instances = 0;
             if group.visible {
-                group.visible = group.bounds.iter().any(|b| camera.is_visible(b));
+                group.visible = false;
+                for ((_transform, visible), bounds) in transforms.iter_mut().zip(bounds.iter()) {
+                    let bounds_visible = camera.is_visible(bounds);
+                    if enable_instance_culling {
+                        *visible = bounds_visible;
+                        if *visible {
+                            group.num_instances += 1;
+                            group.visible |= true;
+                        }
+                    } else {
+                        *visible = true;
+                        group.num_instances += 1;
+                        group.visible |= bounds_visible;
+                    }
+                }
             }
         });
 
@@ -481,8 +513,13 @@ impl FeatureRenderer for StaticInstancesRenderer {
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {
-        if self.constants_dirty {
-            for group in &self.groups {
+        for group in self.groups.iter_mut().filter(|g| g.visible) {
+            // If all instances are visible and written already, don't bother updating
+            if group.num_instances == group.num_instances_written
+                && group.num_instances_written as usize == group.transforms.len()
+            {
+                continue;
+            } else {
                 let model = &self.static_models[group.static_index as usize];
                 group.update_constants(
                     &renderer.gpu.context(),
@@ -490,8 +527,8 @@ impl FeatureRenderer for StaticInstancesRenderer {
                     self.vao_identifier,
                     renderer.ao.read().as_ref(),
                 );
+                group.num_instances_written = group.num_instances;
             }
-            self.constants_dirty = false;
         }
     }
 
@@ -510,7 +547,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
         }) {
             let model = &self.static_models[group.static_index as usize];
             group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
-            model.render_all(cmd, stage, group.transforms.len() as u32);
+            model.render_all(cmd, stage, group.num_instances);
         }
     }
 
@@ -556,7 +593,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                         let group = &groups[i];
                         let model = &models[group.static_index as usize];
                         group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
-                        model.render_all(cmd, stage, group.transforms.len() as u32);
+                        model.render_all(cmd, stage, group.num_instances);
                     });
 
                 jobs.push(job);
@@ -620,7 +657,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
                                     if group.visible {
                                         cmd.draw_indexed_instanced(
                                             index_count,
-                                            group.transforms.len() as u32,
+                                            group.num_instances,
                                             index_start,
                                             0,
                                             0,
