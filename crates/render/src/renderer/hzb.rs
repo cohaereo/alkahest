@@ -94,6 +94,44 @@ impl Hzb {
             });
         }
 
+        // for (mip, level) in levels.iter().enumerate() {
+        //     println!("mip {}: {}x{}", mip, level.width, level.height);
+        //     let z_min = level
+        //         .data
+        //         .iter()
+        //         .copied()
+        //         .reduce(|a, b| a.min(b))
+        //         .unwrap_or_default();
+
+        //     let z_max = level
+        //         .data
+        //         .iter()
+        //         .copied()
+        //         .reduce(|a, b| a.max(b))
+        //         .unwrap_or_default();
+
+        //     println!("Min {z_min} Max {z_max}");
+        //     for (i, value) in level.data.iter().enumerate() {
+        //         if (i % level.width as usize) == 0 {
+        //             println!();
+        //         }
+
+        //         let v = (*value - z_min) / (z_max - z_min);
+        //         // 24-bit ANSI display
+        //         let v_clamped = if v.is_finite() {
+        //             v.clamp(0.0, 1.0)
+        //         } else {
+        //             0.0
+        //         };
+
+        //         let lum = (v_clamped * 255.0) as u8;
+
+        //         // Print two full block characters colored with 24-bit ANSI (foreground)
+        //         print!("\x1b[38;2;{};{};{}m██", lum, lum, lum);
+        //     }
+        //     println!("\x1b[0m");
+        // }
+
         Self {
             first_mip,
             levels,

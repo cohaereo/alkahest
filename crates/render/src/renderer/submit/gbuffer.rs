@@ -214,6 +214,8 @@ impl Renderer {
             cmd.draw(4, 0);
         }
 
+        cmd.compute_set_samplers(1, &[Some(&self.common.sampler_point)]);
+        cmd.compute_set_shader(&self.hzb_downsample_cs);
         let (mut width, mut height) = hzb_chain.resolution();
         for mip in 1..hzb_chain.mip_count {
             let current_width = width >> 1;
@@ -227,7 +229,6 @@ impl Renderer {
 
             cmd.compute_set_unordered_access_views(0, &[hzb_chain.uav(mip as usize)], None);
             cmd.compute_set_shader_resources(0, &[srv.as_ref()]);
-            cmd.compute_set_shader(&self.hzb_downsample_cs);
 
             _ = self.hzb_downsample_params.write(
                 cmd,
