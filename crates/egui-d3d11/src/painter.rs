@@ -295,8 +295,8 @@ impl D3D11Renderer {
         ctx.pixel_set_samplers(
             0,
             &[Some(match filter {
-                egui::TextureFilter::Nearest => &self.samplers[0],
-                egui::TextureFilter::Linear => &self.samplers[1],
+                egui::TextureFilter::Linear => &self.samplers[0],
+                egui::TextureFilter::Nearest => &self.samplers[1],
             })],
         );
         Ok(())

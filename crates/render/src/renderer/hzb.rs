@@ -1,10 +1,13 @@
-use std::sync::atomic::{AtomicI8, Ordering};
+use std::sync::{
+    Mutex,
+    atomic::{AtomicI8, Ordering},
+};
 
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use d3d11::dxgi;
-use glam::{Mat4, UVec2, Vec2, Vec3, Vec4, vec2};
+use glam::{Mat4, Vec2, Vec3, Vec4, vec2};
 
-use crate::{Gpu, Renderer, camera::Camera, renderer::surface::SurfaceProxy};
+use crate::{Gpu, camera::Camera, renderer::surface::SurfaceProxy};
 
 #[derive(Debug)]
 pub struct HzbLevel {
@@ -26,6 +29,8 @@ pub struct Hzb {
 }
 
 impl Hzb {
+    pub const MAX_MIP_COUNT: u32 = 6;
+
     pub const EMPTY: Self = Self {
         first_mip: 0,
         levels: vec![],
@@ -43,11 +48,13 @@ impl Hzb {
             surface.res.get_desc().format == dxgi::Format::R32Typeless,
             "HZB surface format must be R32Typeless"
         );
-        const MAX_MIP_COUNT: u32 = 5;
-        let (first_mip, mips) = if surface.mip_count() < MAX_MIP_COUNT {
+        let (first_mip, mips) = if surface.mip_count() < Self::MAX_MIP_COUNT {
             (0, surface.mip_count())
         } else {
-            (surface.mip_count() - MAX_MIP_COUNT, MAX_MIP_COUNT)
+            (
+                surface.mip_count() - Self::MAX_MIP_COUNT,
+                Self::MAX_MIP_COUNT,
+            )
         };
 
         let (width, height) = surface.res.get_desc().resolution();
@@ -105,12 +112,11 @@ impl Hzb {
 
     /// Returns the best mip level for the given NDC rect
     fn select_mip(&self, rect: &UvRect) -> usize {
-        let base = &self.levels[0];
-        let width = rect.width() * base.width as f32;
-        let height = rect.height() * base.height as f32;
-        let size = width.max(height).max(1e-5);
+        let rect_px = (rect.width() * self.base_width as f32)
+            .max(rect.height() * self.base_height as f32)
+            .max(1.0);
 
-        let mip = size.log2().floor() as i32;
+        let mip = (rect_px.log2()).ceil() as i32 - self.first_mip as i32;
         mip.clamp(0, self.levels.len() as i32 - 1) as usize
     }
 
@@ -119,7 +125,7 @@ impl Hzb {
         let mut min_y = f32::INFINITY;
         let mut max_x = f32::NEG_INFINITY;
         let mut max_y = f32::NEG_INFINITY;
-        let mut min_z = f32::NEG_INFINITY;
+        let mut nearest_z = f32::NEG_INFINITY;
 
         let mut any_in_front = false;
         let mut any_behind = false;
@@ -147,7 +153,7 @@ impl Hzb {
             max_x = max_x.max(sx);
             max_y = max_y.max(sy);
 
-            min_z = min_z.max(ndc_z);
+            nearest_z = nearest_z.max(ndc_z);
         }
 
         if !any_in_front {
@@ -169,35 +175,26 @@ impl Hzb {
                 min: Vec2::new(min_x, min_y).clamp(Vec2::ZERO, Vec2::ONE),
                 max: Vec2::new(max_x, max_y).clamp(Vec2::ZERO, Vec2::ONE),
             },
-            min_z,
+            nearest_z,
         ))
     }
 
     fn sample_hzb_min_4(&self, mip: usize, rect: &UvRect) -> f32 {
         let level = &self.levels[mip];
 
-        let scale_x = level.width as f32;
-        let scale_y = level.height as f32;
+        let x0_base = (rect.min.x * self.base_width as f32).floor() as i32;
+        let y0_base = (rect.min.y * self.base_height as f32).floor() as i32;
 
-        let mut x0 = (rect.min.x * scale_x).floor() as i32;
-        let mut y0 = (rect.min.y * scale_y).floor() as i32;
-        let mut x1 = (rect.max.x * scale_x).ceil() as i32;
-        let mut y1 = (rect.max.y * scale_y).ceil() as i32;
+        let x1_base = ((rect.max.x * self.base_width as f32) - 1e-6).floor() as i32;
+        let y1_base = ((rect.max.y * self.base_height as f32) - 1e-6).floor() as i32;
 
-        let w = level.width as i32;
-        let h = level.height as i32;
-        x0 = x0.clamp(0, w - 1);
-        y0 = y0.clamp(0, h - 1);
-        x1 = x1.clamp(0, w - 1);
-        y1 = y1.clamp(0, h - 1);
+        let absolute_shift = mip + self.first_mip as usize;
 
-        // If the pixels have a gap inbetween, then this mip level is too small to sample, use a smaller one (with bigger pixels)
-        if (x1 - x0) > 1 || (y1 - y0) > 1 {
-            if (mip + 1) < self.levels.len() {
-                return self.sample_hzb_min_4(mip + 1, rect);
-            }
-        }
-
+        let x0 = (x0_base >> absolute_shift).clamp(0, (level.width - 1) as i32);
+        let y0 = (y0_base >> absolute_shift).clamp(0, (level.height - 1) as i32);
+        let x1 = (x1_base >> absolute_shift).clamp(0, (level.width - 1) as i32);
+        let y1 = (y1_base >> absolute_shift).clamp(0, (level.height - 1) as i32);
+        // 3. Perform the conservative 2x2 min sample
         let idx =
             |x: i32, y: i32| -> usize { (y as usize) * (level.width as usize) + (x as usize) };
 
@@ -221,16 +218,12 @@ impl Hzb {
             None => return false, // visible
         };
 
-        // Pick a mip where 4 texels cover the rect
+        // Pick the coarsest mip where the rect fits within 2x2 texels
         let mip = self.select_mip(&rect);
 
         let hzb_min = self.sample_hzb_min_4(mip, &rect);
 
-        if z_near <= f32::EPSILON || self.linearize_depth(z_near) < 5.0 {
-            return false;
-        }
-
-        (self.linearize_depth(z_near) - 0.0) > self.linearize_depth(hzb_min)
+        (self.linearize_depth(z_near)) > self.linearize_depth(hzb_min)
     }
 
     /// Helper for `is_aabb_occluded` to reduce mental gymnastics when checking visibility.

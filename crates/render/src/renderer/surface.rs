@@ -134,6 +134,10 @@ impl Surfaces {
             self.refresh_surfaces();
         }
     }
+
+    pub fn resolution_scale(&self) -> f32 {
+        self.resolution_scale.load()
+    }
 }
 
 pub struct Surface {

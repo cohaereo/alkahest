@@ -4,6 +4,7 @@ pub mod map;
 pub mod map_list;
 pub mod settings;
 pub mod tag_lookup;
+pub mod test_scene;
 
 use std::{fmt::Display, sync::Arc};
 
@@ -16,7 +17,7 @@ use map::MapTab;
 use map_list::MapListTab;
 use tag_lookup::TagLookupTab;
 
-use crate::ui::tabs::settings::SettingsTab;
+use crate::ui::tabs::{settings::SettingsTab, test_scene::TestSceneTab};
 
 pub enum Tab {
     Home,
@@ -24,6 +25,7 @@ pub enum Tab {
     EntityList(Box<EntityListTab>),
     MapList(MapListTab),
     Map(MapTab),
+    TestScene(TestSceneTab),
     TagLookup(TagLookupTab),
 }
 
@@ -40,6 +42,7 @@ impl Tab {
             Tab::EntityList(_) => 0,
             Tab::MapList(_) => 0,
             Tab::Map(tab) => tab.tag.0 as u64,
+            Tab::TestScene(_) => 0,
             Tab::TagLookup(_) => 0,
         }
     }
@@ -53,6 +56,7 @@ impl Display for Tab {
             Tab::EntityList(_) => format!("{} Entities", GoogleMaterialSymbols::DeployedCode),
             Tab::MapList(_) => format!("{} Maps", GoogleMaterialSymbols::Map),
             Tab::Map(tab) => format!("{} ({})", tab.name, tab.tag),
+            Tab::TestScene(_) => format!("{} Test Scene", GoogleMaterialSymbols::Experiment),
             Tab::TagLookup(_) => format!("{} Tag Lookup", GoogleMaterialSymbols::Search),
         };
 
@@ -81,30 +85,30 @@ impl<'a> egui_dock::TabViewer for TabViewer<'a> {
                 Margin::ZERO
             })
             .show(ui, |ui| {
-                ui.with_layout(
-                    egui::Layout::top_down(egui::Align::Center),
-                    |ui| match tab {
-                        Tab::Home => {
-                            self.process_result(HomeTab.ui(ui, self.shared_state));
-                        }
-                        Tab::Settings => {
-                            SettingsTab::ui(ui, self.shared_state);
-                        }
-                        Tab::EntityList(tab) => {
-                            let res = tab.ui(ui, self.egui_d3d11);
-                            self.process_result(res);
-                        }
-                        Tab::MapList(tab) => {
-                            self.process_result(tab.ui(ui));
-                        }
-                        Tab::Map(tab) => {
-                            tab.ui(ui, self.egui_d3d11);
-                        }
-                        Tab::TagLookup(data) => {
-                            self.process_result(data.ui(ui));
-                        }
-                    },
-                );
+                ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| match tab {
+                    Tab::Home => {
+                        self.process_result(HomeTab.ui(ui, self.shared_state));
+                    }
+                    Tab::Settings => {
+                        SettingsTab::ui(ui, self.shared_state);
+                    }
+                    Tab::EntityList(tab) => {
+                        let res = tab.ui(ui, self.egui_d3d11);
+                        self.process_result(res);
+                    }
+                    Tab::MapList(tab) => {
+                        self.process_result(tab.ui(ui));
+                    }
+                    Tab::Map(tab) => {
+                        tab.ui(ui, self.egui_d3d11);
+                    }
+                    Tab::TestScene(tab) => {
+                        tab.ui(ui, self.egui_d3d11);
+                    }
+                    Tab::TagLookup(data) => {
+                        self.process_result(data.ui(ui));
+                    }
+                });
             });
     }
 

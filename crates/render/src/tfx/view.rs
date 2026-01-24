@@ -21,7 +21,7 @@ pub struct View {
     pub(crate) world_to_camera: Mat4,
     pub(crate) camera_to_projective: Mat4,
 
-    pub(crate) surfaces: Arc<Surfaces>,
+    pub surfaces: Arc<Surfaces>,
     pub(crate) resolution: (u32, u32),
 
     pub gbuffers: Gbuffers,

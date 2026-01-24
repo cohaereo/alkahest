@@ -13,4 +13,7 @@ pub struct AppArgs {
 
     #[arg(long)]
     pub open_map: Option<String>,
+
+    #[arg(long)]
+    pub test_scene: bool,
 }

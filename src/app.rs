@@ -21,7 +21,7 @@ use crate::{
     config::AppConfig,
     ui::{
         Gui,
-        tabs::{Tab, map::MapTab},
+        tabs::{Tab, map::MapTab, test_scene::TestSceneTab},
     },
 };
 
@@ -58,6 +58,12 @@ impl App {
                     error!("Failed to parse map hash {}: {:?}", map_hash, e);
                 }
             };
+        }
+
+        if args.test_scene {
+            gui.add_tab(Tab::TestScene(
+                TestSceneTab::new().context("failed to create test scene")?,
+            ));
         }
 
         Ok(Self {

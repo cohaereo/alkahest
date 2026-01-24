@@ -125,6 +125,13 @@ impl AxisAlignedBBox {
             && self.min.z <= point.z
             && point.z <= self.max.z
     }
+
+    pub fn expand(&self, amount: Vec3) -> Self {
+        Self {
+            min: self.min - amount.extend(0.0),
+            max: self.max + amount.extend(0.0),
+        }
+    }
 }
 
 impl Sum for AxisAlignedBBox {

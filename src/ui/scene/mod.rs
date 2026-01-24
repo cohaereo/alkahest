@@ -49,7 +49,7 @@ pub struct Scene {
     pub world: hecs::World,
 
     renderer: Arc<Renderer>,
-    camera: Camera,
+    pub camera: Camera,
     pub view: View,
     last_frame_time: Instant,
     start_time: Instant,
@@ -175,8 +175,8 @@ impl Scene {
                 .image(SizedTexture {
                     id: egui_d3d11.textures_mut().allocate_dx_temporary(
                         self.surface_srv.clone(),
-                        Some(egui::TextureFilter::Linear),
-                        true,
+                        None,
+                        false,
                     ),
                     size,
                 })
@@ -377,7 +377,9 @@ impl Scene {
         });
 
         let Self {
-            view: View { settings, .. },
+            view: View {
+                settings, surfaces, ..
+            },
             ..
         } = self;
 
@@ -461,6 +463,20 @@ impl Scene {
             .show_value(true)
             .ui(ui);
 
+        ui.spacing_mut().slider_width = 256.0;
+        let mut resolution_scale = surfaces.resolution_scale();
+        if ui
+            .add(
+                egui::Slider::new(&mut resolution_scale, 0.25..=2.0)
+                    .step_by(0.25)
+                    .text("Resolution Scale")
+                    .custom_formatter(|value, _| format!("{:.0}%", value * 100.0)),
+            )
+            .changed()
+        {
+            surfaces.set_resolution_scale(resolution_scale);
+        }
+
         ui.separator();
 
         ui.checkbox(&mut settings.vertex_ao, "Vertex AO")
@@ -522,8 +538,10 @@ impl Scene {
             resolution
         };
 
-        if resolution != self.surface.get_desc().resolution() {
-            let (texture, srv) = Self::create_surface(&self.renderer.gpu, resolution)
+        let framebuffer_resolution = self.view.surfaces().framebuffer_resolution();
+
+        if framebuffer_resolution != self.surface.get_desc().resolution() {
+            let (texture, srv) = Self::create_surface(&self.renderer.gpu, framebuffer_resolution)
                 .expect("Failed to resize scene surface");
             self.surface = texture;
             self.surface_srv = srv;

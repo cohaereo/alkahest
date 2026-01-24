@@ -10,7 +10,7 @@ use super::Renderer;
 use crate::{
     cmd_event_span,
     gpu::command_list::CommandList,
-    renderer::submit::geometry::GeometryCommandLists,
+    renderer::{hzb::Hzb, submit::geometry::GeometryCommandLists},
     tfx::{externs::DownsampleTextureGeneric, view::View},
 };
 
@@ -253,8 +253,7 @@ impl Renderer {
 
             let num_mips = hzb_chain.mip_count;
 
-            let mip_range = num_mips.saturating_sub(5)..num_mips;
-
+            let mip_range = num_mips.saturating_sub(Hzb::MAX_MIP_COUNT + 1)..num_mips;
             view.gbuffers
                 .hzb_depth_chain_cpu
                 .lock()

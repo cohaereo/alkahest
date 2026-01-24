@@ -19,7 +19,6 @@ use super::FeatureRenderer;
 use crate::{
     Renderer,
     camera::Camera,
-    gpu::command_list::DepthMode,
     renderer::surface::Surface,
     tfx::{
         externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
