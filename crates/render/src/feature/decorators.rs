@@ -1,6 +1,6 @@
 use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
-    ShaderStage,
+    RenderStage, ShaderStage,
     common::AxisAlignedBBox,
     features::{decorators::SDecorator, dynamic::RenderStageSubscription},
 };
@@ -327,7 +327,11 @@ impl FeatureRenderer for DecoratorRenderer {
             let identifier_mask = if self.models.len() == 1 {
                 1u32.unbounded_shl(id as u32)
             } else {
-                model.identifier_mask
+                // cohae: There's dedicated identifiers for the parts used for ShadowGenerate, just doing +1 (or << 1) seems to work?
+                match stage {
+                    RenderStage::ShadowGenerate => model.identifier_mask << 1,
+                    _ => model.identifier_mask,
+                }
             };
 
             self.instance_blend_indices_vb.bind_single(cmd, 3);
