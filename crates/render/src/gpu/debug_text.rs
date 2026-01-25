@@ -139,7 +139,7 @@ impl DebugTextRenderer {
         );
         cmd.vertex_set_shader(&self.shader_vs);
         cmd.pixel_set_shader(&self.shader_ps);
-        cmd.input_assembler_set_input_layout(&self.input_layout);
+        cmd.set_input_layout_custom(&self.input_layout);
         cmd.set_input_topology(PrimitiveType::Triangles);
         cmd.input_assembler_set_vertex_buffers(
             0,

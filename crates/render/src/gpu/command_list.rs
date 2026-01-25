@@ -236,8 +236,15 @@ impl CommandList {
         }
     }
 
-    #[deprecated(note = "This method bypasses the pipeline state, use set_input_layout instead")]
+    #[deprecated(
+        note = "This method bypasses the pipeline state, use set_input_layout_custom instead"
+    )]
     pub fn input_assembler_set_input_layout(&self, layout: &d3d11::InputLayout) {
+        self.context.input_assembler_set_input_layout(layout);
+    }
+
+    pub fn set_input_layout_custom(&mut self, layout: &d3d11::InputLayout) {
+        self.current_input_layout = usize::MAX;
         self.context.input_assembler_set_input_layout(layout);
     }
 

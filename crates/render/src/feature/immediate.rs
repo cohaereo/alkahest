@@ -1,9 +1,9 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use anyhow::Context;
-use d3d11::{dxgi, fxc::ShaderTarget, InputElementDesc};
-use glam::{vec3, Vec3, Vec4Swizzles};
+use d3d11::{InputElementDesc, dxgi, fxc::ShaderTarget};
+use glam::{Vec3, Vec4Swizzles, vec3};
 
-use crate::{gpu::command_list::CommandList, gpu_span, visibility::frustum::Frustum, Gpu};
+use crate::{Gpu, gpu::command_list::CommandList, gpu_span, visibility::frustum::Frustum};
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -142,7 +142,7 @@ impl ImmediateShapeRenderer {
             Some(&[0u32]),
         )
         .unwrap();
-        cmd.input_assembler_set_input_layout(&self.input_layout);
+        cmd.set_input_layout_custom(&self.input_layout);
         cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::LineList);
 
         cmd.output_merger_set_blend_state(None, Some(&[1.0, 1.0, 1.0, 1.0]), 0xFFFF_FFFF);
