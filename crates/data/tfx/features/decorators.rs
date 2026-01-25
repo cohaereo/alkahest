@@ -1,3 +1,4 @@
+use bytemuck::{Pod, Zeroable};
 use glam::Vec4;
 use tiger_parse::tiger_type;
 use tiger_pkg::TagHash;
@@ -42,7 +43,7 @@ pub struct SDecoratorInstanceData {
 }
 
 #[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
 #[tiger_type(id = 0x80806CA9, size = 0x10)]
 pub struct SDecoratorInstanceElement {
     /// Normalized position

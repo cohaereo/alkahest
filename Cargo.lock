@@ -169,6 +169,7 @@ dependencies = [
  "anyhow",
  "assert-offset",
  "bitflags 2.10.0",
+ "bytemuck",
  "chroma-dbg 0.2.1",
  "d3d11",
  "glam",

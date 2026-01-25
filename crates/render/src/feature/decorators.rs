@@ -2,19 +2,20 @@ use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
     RenderStage, ShaderStage,
     common::AxisAlignedBBox,
-    features::{decorators::SDecorator, dynamic::RenderStageSubscription},
+    features::{
+        decorators::{SDecorator, SDecoratorInstanceElement},
+        dynamic::RenderStageSubscription,
+    },
 };
 use anyhow::Context;
-use chroma_dbg::ChromaDebug;
 use glam::{Mat4, Vec4, vec4};
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
-use tiger_parse::TigerReadable;
 use tiger_pkg::TagHash;
 
 use crate::{
     Renderer,
-    asset::{Handle, vertex_buffer::VertexBuffer},
+    asset::vertex_buffer::VertexBuffer,
     feature::{FeatureRenderer, rigid_model::DynamicModel},
     gpu::cbuffer::ConstantBuffer,
     tfx::externs,
@@ -33,7 +34,7 @@ struct DecoratorInstanceGroup {
     pub instance_start: u32,
     pub instance_count: u32,
 
-    pub instance_bounds: Vec<(AxisAlignedBBox, bool)>,
+    pub instance_bounds: Vec<(std::ops::Range<u32>, AxisAlignedBBox, bool)>,
     pub visible: bool,
     pub bounds: AxisAlignedBBox,
 }
@@ -42,9 +43,11 @@ pub struct DecoratorRenderer {
     pub data: SDecorator,
     pub hash: TagHash,
     models: Vec<DecoratorModel>,
-    instance_buffer: Handle<VertexBuffer>,
+    // instance_buffer: Handle<VertexBuffer>,
+    instance_buffer: VertexBuffer,
     instance_blend_indices_vb: VertexBuffer,
 
+    instance_data_culled: Vec<SDecoratorInstanceElement>,
     instance_groups: Vec<DecoratorInstanceGroup>,
 }
 
@@ -193,10 +196,10 @@ impl DecoratorRenderer {
                 .get(bounds_range.clone())
                 .unwrap()
                 .iter()
-                .map(|(_range, bb)| (*bb, true))
+                .map(|(range, bb)| (range.clone(), *bb, true))
                 .collect_vec();
 
-            let bounds = instance_bounds.iter().map(|(bb, _)| *bb).sum();
+            let bounds = instance_bounds.iter().map(|(_, bb, _)| *bb).sum();
 
             instance_groups.push(DecoratorInstanceGroup {
                 instance_start,
@@ -207,11 +210,19 @@ impl DecoratorRenderer {
             });
         }
 
+        let instance_buffer = VertexBuffer::load_data_ex(
+            &renderer.gpu,
+            bytemuck::cast_slice(&decorator.unk48.instance_data.elements),
+            16,
+            true,
+        )?;
+
         Ok(Self {
             models,
             hash,
-            instance_buffer: renderer.asset_manager.load(decorator.unk48.instance_buffer),
+            instance_buffer,
             instance_blend_indices_vb,
+            instance_data_culled: decorator.unk48.instance_data.elements.clone(),
             data: decorator,
             instance_groups,
         })
@@ -237,7 +248,7 @@ impl FeatureRenderer for DecoratorRenderer {
                 group
                     .instance_bounds
                     .par_iter_mut()
-                    .for_each(|(bounds, visible)| {
+                    .for_each(|(_range, bounds, visible)| {
                         *visible = camera.is_visible(bounds);
                         // if !*visible {
                         //     Renderer::instance()
@@ -247,7 +258,7 @@ impl FeatureRenderer for DecoratorRenderer {
                         // }
                     });
 
-                group.visible = group.instance_bounds.iter().any(|(_, vis)| *vis);
+                group.visible = group.instance_bounds.iter().any(|(_, _, vis)| *vis);
             }
         });
 
@@ -258,10 +269,33 @@ impl FeatureRenderer for DecoratorRenderer {
         _ = renderer;
         _ = extracted_data;
 
-        // for (m, _, _) in &mut self.models {
-        //     m.update_cbuffer(&renderer.gpu, Mat4::IDENTITY, None)
-        //         .expect("Failed to update cbuffer for decorator model");
-        // }
+        {
+            let mut instance_data_culled = vec![];
+            std::mem::swap(&mut self.instance_data_culled, &mut instance_data_culled);
+            instance_data_culled.clear();
+            for group in self.instance_groups.iter_mut().filter(|g| g.visible) {
+                group.instance_start = instance_data_culled.len() as u32;
+                group.instance_count = 0;
+                for (instance_range, _bounds, _visible) in
+                    group.instance_bounds.iter().filter(|(_, _, vis)| *vis)
+                {
+                    for instance in instance_range.clone() {
+                        instance_data_culled
+                            .push(self.data.unk48.instance_data.elements[instance as usize]);
+                    }
+                    group.instance_count += instance_range.len() as u32;
+                }
+            }
+            std::mem::swap(&mut instance_data_culled, &mut self.instance_data_culled);
+        }
+
+        unsafe {
+            self.instance_buffer.write(
+                &renderer.gpu.context(),
+                bytemuck::cast_slice(&self.instance_data_culled),
+            )
+        }
+        .expect("Failed to write decorator instance")
     }
 
     fn submit(
@@ -346,10 +380,7 @@ impl FeatureRenderer for DecoratorRenderer {
                         cmd.vertex_set_constant_buffers(speedtree_vertex_slot, &[None]);
                     }
 
-                    let Some(instance_buffer) = self.instance_buffer.get() else {
-                        return;
-                    };
-                    instance_buffer.bind_single(cmd, 1);
+                    self.instance_buffer.bind_single(cmd, 1);
 
                     cmd.draw_indexed_instanced(
                         part.index_count,

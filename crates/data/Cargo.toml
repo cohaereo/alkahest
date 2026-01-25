@@ -13,6 +13,7 @@ ahash.workspace = true
 anyhow.workspace = true
 assert-offset = "0.1"
 bitflags = "2"
+bytemuck.workspace = true
 d3d11.workspace = true
 glam.workspace = true
 int-enum = "1.2.0"

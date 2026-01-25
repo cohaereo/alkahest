@@ -367,7 +367,7 @@ impl FeatureRenderer for LightRenderer {
         let shadowmap_projection = self.shadowmap_projection;
         let local_to_world_scaled = local_to_world * light_space_transform;
         let data = self.data.clone();
-        let bounds = self.bounds.clone();
+        let bounds = self.bounds;
 
         let (_, transform_rot, transform_translation) =
             self.local_to_world.to_scale_rotation_translation();

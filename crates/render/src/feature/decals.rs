@@ -44,10 +44,7 @@ impl DecalCollectionRenderer {
             .map(|set| {
                 let r = (set.start as usize)..((set.start + set.count) as usize);
                 DecalSet {
-                    bounds: collection.decal_bounds.bounds[r]
-                        .iter()
-                        .map(|b| b.bb.clone())
-                        .sum(),
+                    bounds: collection.decal_bounds.bounds[r].iter().map(|b| b.bb).sum(),
                     visible: true,
                     technique: Renderer::instance().asset_manager.load(set.technique),
                     start: set.start,

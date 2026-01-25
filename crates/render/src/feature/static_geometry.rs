@@ -392,7 +392,7 @@ impl StaticInstancesRenderer {
                     .bounds
                     .get(bounds_index)
                     .context("Invalid occlusion bounds index")?;
-                bounds.push(b.bb.clone());
+                bounds.push(b.bb);
             }
 
             let group_bounds = bounds.iter().cloned().sum();

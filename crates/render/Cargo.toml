@@ -13,7 +13,7 @@ arcshift = "0.1.10"
 assert-offset = "0.1"
 bon = "3.3"
 bumpalo = { version = "3.17.0", features = ["allocator_api"] }
-bytemuck = { version = "1", features = ["derive"] }
+bytemuck.workspace = true
 chroma-dbg = "0.1.1"
 crossbeam.workspace = true
 d3d11.workspace = true
