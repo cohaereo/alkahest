@@ -75,7 +75,7 @@ impl CubemapRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for CubemapRenderer {
-    fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
+    fn visibility_test(&mut self, _camera: &crate::camera::Camera) -> bool {
         // camera.is_visible(&self.bounds)
         true
     }

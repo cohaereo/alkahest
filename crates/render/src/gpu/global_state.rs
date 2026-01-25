@@ -2,7 +2,6 @@ use std::fmt::Write;
 
 use alkahest_data::tfx::render_globals::SRenderGlobals;
 use anyhow::Context;
-use chroma_dbg::ChromaDebug;
 use d3d11::{DeviceChild, InputElementDesc, dxgi, sys::Foundation::BOOL};
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::package_manager;

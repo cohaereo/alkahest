@@ -1,12 +1,12 @@
 use std::{any::Any, sync::Arc};
 
 use alkahest_core::job::potassium::JobHandle;
-use alkahest_data::tfx::{features::dynamic::RenderStageSubscription, RenderStage};
+use alkahest_data::tfx::{RenderStage, features::dynamic::RenderStageSubscription};
 use glam::Mat4;
 
 use crate::{
-    camera::Camera, gpu::command_list::CommandList, tfx::packet::CompactTransform,
-    util::threading::CommandListSetId, Renderer,
+    Renderer, camera::Camera, gpu::command_list::CommandList, tfx::packet::CompactTransform,
+    util::threading::CommandListSetId,
 };
 
 pub mod cubemap;
@@ -38,7 +38,7 @@ pub trait FeatureRenderer {
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
-        _ = (renderer, stage, jobs);
+        _ = (renderer, set, stage, jobs);
     }
 
     fn dyn_clone(&self) -> Option<Box<dyn FeatureRenderer>> {

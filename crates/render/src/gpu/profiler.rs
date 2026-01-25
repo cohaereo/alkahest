@@ -29,7 +29,6 @@ struct TimestampQuery {
 
 struct FrameQueries {
     queries: Vec<TimestampQuery>,
-    frame_index: u64,
 }
 
 struct ProfilerState {
@@ -58,7 +57,6 @@ impl D3D11Profiler {
             enabled: true,
             current_frame: FrameQueries {
                 queries: Vec::new(),
-                frame_index: 0,
             },
             pending_frames: VecDeque::with_capacity(MAX_PENDING_FRAMES),
             results: Vec::new(),
@@ -170,7 +168,6 @@ impl D3D11Profiler {
 
         let mut frame = FrameQueries {
             queries: Vec::new(),
-            frame_index: *frame_index,
         };
         std::mem::swap(&mut frame, current_frame);
 

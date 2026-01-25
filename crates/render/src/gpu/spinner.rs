@@ -3,7 +3,7 @@ use std::sync::Arc;
 use alkahest_data::tfx::ShaderStage;
 use glam::Vec4;
 
-use super::{cbuffer::ConstantBuffer, command_list::CommandList, Gpu};
+use super::{Gpu, cbuffer::ConstantBuffer, command_list::CommandList};
 use crate::gpu_span;
 
 #[repr(C)]
@@ -57,7 +57,7 @@ impl FullscreenSpinner {
 
         cmd.vertex_set_shader(Some(&self.shader_vs));
         cmd.pixel_set_shader(Some(&self.shader_ps));
-        cmd.input_assembler_set_primitive_topology(d3d11::PrimitiveTopology::TriangleStrip);
+        cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::TriangleStrip);
         cmd.draw(4, 0);
     }
 }

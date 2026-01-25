@@ -20,9 +20,7 @@ use alkahest_render::{
     },
     object::RenderObject,
     renderer::submit::atmosphere::{AtmosphereData, SunDirections},
-    tfx::{
-        externs::get_global_channel_name, sequencer_vm::global_channel::GlobalChannelExpression,
-    },
+    tfx::sequencer_vm::global_channel::GlobalChannelExpression,
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
@@ -405,7 +403,7 @@ pub fn spawn_pattern_from_header(
                                 bytecode_constants: c.bytecode_constants.clone(),
                             },));
                         }
-                        SUnk808091f1Variant::Unknown { class, offset } => {
+                        SUnk808091f1Variant::Unknown { class: _, offset: _ } => {
                             // warn!(
                             //     "Unknown sequence class: {:08X} at offset: {:#X} in {}",
                             //     class,

@@ -8,6 +8,7 @@ pub mod sequencer;
 pub mod shadowmap;
 pub mod transform;
 
+#[allow(unused)]
 pub struct UnimplementedTigerComponent {
     pub class_id: u32,
     pub hash: TagHash,

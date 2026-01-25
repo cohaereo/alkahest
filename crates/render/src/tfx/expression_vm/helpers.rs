@@ -1,6 +1,6 @@
 use std::ops::{Add, BitAnd, Mul, Shr, Sub};
 
-use glam::{IVec4, UVec4, Vec4, Vec4Swizzles, uvec4, vec4};
+use glam::{IVec4, UVec4, Vec4, Vec4Swizzles, vec4};
 
 fn lerp(start: f32, end: f32, t: f32) -> f32 {
     start + (end - start) * t

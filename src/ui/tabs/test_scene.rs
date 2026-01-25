@@ -1,15 +1,10 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera};
-use egui::{Color32, Rect, vec2};
 use glam::{Quat, Vec3, vec3};
 use tiger_pkg::TagHash;
 
 use crate::{
-    task::Task,
-    ui::{
-        scene::{Scene, controller::CameraController},
-        util::UiExt,
-    },
+    ui::scene::{Scene, controller::CameraController},
     world::{pattern, transform::Transform},
 };
 

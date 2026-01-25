@@ -27,17 +27,16 @@ use crate::{
 
 pub struct App {
     pub sdl: Rc<sdl3::Sdl>,
-    pub window: Rc<Window>,
-    pub gpu: Arc<Gpu>,
+    pub _window: Rc<Window>,
+    pub _gpu: Arc<Gpu>,
     pub renderer: Arc<Renderer>,
     pub gui: Gui,
     pub running: bool,
 
     shared_state: Arc<SharedState>,
 
-    spinner: FullscreenSpinner,
+    _spinner: FullscreenSpinner,
     last_frame_time: Instant,
-    start_time: Instant,
     frametime_histogram: FrametimeHistogram,
 }
 
@@ -67,12 +66,12 @@ impl App {
         }
 
         Ok(Self {
-            spinner: FullscreenSpinner::create(&renderer.gpu)?,
+            _spinner: FullscreenSpinner::create(&renderer.gpu)?,
             renderer,
             gui,
             sdl,
-            window,
-            gpu,
+            _window: window,
+            _gpu: gpu,
             running: true,
 
             shared_state: SharedState::new()
@@ -80,7 +79,6 @@ impl App {
                 .into(),
 
             last_frame_time: Instant::now(),
-            start_time: Instant::now(),
             frametime_histogram: FrametimeHistogram::new(10),
         })
     }

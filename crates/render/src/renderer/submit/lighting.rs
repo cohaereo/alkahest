@@ -8,7 +8,7 @@ use glam::{Mat4, Vec3, Vec4Swizzles};
 use super::Renderer;
 use crate::{
     cmd_event_span,
-    gpu::command_list::{CommandList, DepthMode},
+    gpu::command_list::CommandList,
     renderer::submit::geometry::GeometryCommandLists,
     tfx::{externs, scope::CascadeScope, view::View},
 };

@@ -1,11 +1,8 @@
-use std::sync::{
-    Mutex,
-    atomic::{AtomicI8, Ordering},
-};
+use std::sync::atomic::{AtomicI8, Ordering};
 
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use d3d11::dxgi;
-use glam::{Mat4, Vec2, Vec3, Vec4, vec2};
+use glam::{Mat4, Vec2, Vec4};
 
 use crate::{Gpu, camera::Camera, renderer::surface::SurfaceProxy};
 
@@ -20,9 +17,8 @@ pub struct Hzb {
     pub first_mip: u32,
     pub levels: Vec<HzbLevel>,
     world_to_ndc: Mat4,
-    camera_pos: Vec3,
     near: f32,
-    far: f32,
+    _far: f32,
 
     base_width: u32,
     base_height: u32,
@@ -35,9 +31,8 @@ impl Hzb {
         first_mip: 0,
         levels: vec![],
         world_to_ndc: Mat4::IDENTITY,
-        camera_pos: Vec3::ZERO,
         near: 0.0,
-        far: 0.0,
+        _far: 0.0,
         base_width: 0,
         base_height: 0,
     };
@@ -136,9 +131,8 @@ impl Hzb {
             first_mip,
             levels,
             world_to_ndc: camera.world_to_clip_space(),
-            camera_pos: camera.position,
             near: camera.near,
-            far: camera.far,
+            _far: camera.far,
             base_width: width,
             base_height: height,
         }

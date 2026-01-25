@@ -1,6 +1,6 @@
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{Response, Ui};
-use glam::{EulerRot, Quat, Vec2, Vec3, Vec3Swizzles};
+use glam::{Quat, Vec2, Vec3};
 
 pub enum CameraController {
     Orbit {
@@ -152,38 +152,8 @@ impl CameraController {
             }
         }
     }
-
-    pub fn set_forward(&mut self, forward: Vec3) {
-        match self {
-            CameraController::Orbit { .. } => {
-                // todo
-            }
-            CameraController::FirstPerson { yaw_pitch, .. } => {
-                *yaw_pitch = get_look_angle(*yaw_pitch, forward);
-            }
-        }
-    }
 }
 
 pub fn egui_to_glam_vec2(vec: egui::Vec2) -> glam::Vec2 {
     glam::Vec2::new(vec.x, vec.y)
-}
-
-pub fn get_look_angle(start_angle: Vec2, dir: Vec3) -> Vec2 {
-    let inv_r = dir.length_recip();
-    if inv_r.is_infinite() {
-        start_angle
-    } else {
-        let theta = dir.x.atan2(dir.y).to_degrees();
-        let mut diff = (theta - start_angle.y).rem_euclid(360.0);
-        if diff > 180.0 {
-            diff -= 360.0;
-        }
-        let angles_degrees = Vec2::new(
-            (dir.z * inv_r).acos().to_degrees() - 90.0,
-            start_angle.y + diff,
-        );
-        println!("{:?} -> {:?}", start_angle, angles_degrees,);
-        angles_degrees
-    }
 }

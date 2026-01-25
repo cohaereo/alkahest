@@ -373,6 +373,9 @@ impl<'a> InterpreterState<'a> {
                 Opcode::Rand => {
                     set_top!(super::helpers::bytecode_op_rand(cached_top));
                 }
+                Opcode::RandSmooth => {
+                    set_top!(super::helpers::bytecode_op_rand_smooth(cached_top));
+                }
                 Opcode::TransformVec4 => {
                     let value = cached_top;
                     let w_axis = self.get(-1)?;

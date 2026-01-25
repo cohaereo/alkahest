@@ -47,9 +47,9 @@ impl Surfaces {
     }
 
     #[allow(clippy::mut_from_ref)]
-    unsafe fn surfaces_mut(&self) -> &mut Vec<Surface> {
+    unsafe fn surfaces_mut(&self) -> &mut Vec<Surface> { unsafe {
         &mut *self.surfaces.get()
-    }
+    }}
 
     fn surfaces(&self) -> &[Surface] {
         unsafe { &*self.surfaces.get() }

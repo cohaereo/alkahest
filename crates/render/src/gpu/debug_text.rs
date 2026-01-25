@@ -1,6 +1,6 @@
 use std::{borrow::Cow, sync::Arc};
 
-use alkahest_data::tfx::ShaderStage;
+use alkahest_data::tfx::{PrimitiveType, ShaderStage};
 use d3d11::{
     BindFlags, Blend, BlendDesc, BlendOp, D3D11_SUBRESOURCE_DATA, InputElementDesc,
     RenderTargetBlendDesc, SamplerDesc, Texture2dDesc, dxgi,
@@ -140,7 +140,7 @@ impl DebugTextRenderer {
         cmd.vertex_set_shader(&self.shader_vs);
         cmd.pixel_set_shader(&self.shader_ps);
         cmd.input_assembler_set_input_layout(&self.input_layout);
-        cmd.input_assembler_set_primitive_topology(d3d11::PrimitiveTopology::TriangleList);
+        cmd.set_input_topology(PrimitiveType::Triangles);
         cmd.input_assembler_set_vertex_buffers(
             0,
             &[Some(&self.mesh.vb)],

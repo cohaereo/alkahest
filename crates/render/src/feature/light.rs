@@ -87,6 +87,7 @@ impl LightRenderer {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn new_impl(
         renderer: &Renderer,
         technique_shading: TagHash,

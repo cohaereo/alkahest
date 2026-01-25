@@ -1,7 +1,7 @@
-use alkahest_data::tfx::{PipelineState, ShaderStage};
+use alkahest_data::tfx::PipelineState;
 
 use super::command_list::CommandList;
-use crate::gpu::command_list::{ContextExt, DepthMode};
+use crate::gpu::command_list::DepthMode;
 
 pub struct GpuState {
     tfx_state: PipelineState,

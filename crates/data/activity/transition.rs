@@ -1,6 +1,6 @@
-use glam::{Vec3, Vec4};
+use glam::Vec4;
 use int_enum::IntEnum;
-use tiger_parse::{tiger_type, Error, FnvHash, NullString, Padding, Pointer, TigerReadable};
+use tiger_parse::{tiger_type, FnvHash, NullString, Padding, Pointer, TigerReadable};
 use tiger_pkg::TagHash;
 
 use crate::tag::Tag;

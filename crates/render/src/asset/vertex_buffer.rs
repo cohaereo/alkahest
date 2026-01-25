@@ -114,13 +114,13 @@ impl VertexBuffer {
     /// # Safety
     ///
     /// The caller must ensure that the data fits within the buffer.
-    pub unsafe fn write(&self, cmd: &DeviceContext, data: &[u8]) -> anyhow::Result<()> {
+    pub unsafe fn write(&self, cmd: &DeviceContext, data: &[u8]) -> anyhow::Result<()> { unsafe {
         let m = cmd.map_unchecked(&self.buffer, 0, d3d11::MapType::WriteDiscard, false)?;
         m.data.copy_from(data.as_ptr() as _, data.len());
         cmd.unmap(&self.buffer, 0);
 
         Ok(())
-    }
+    }}
 }
 
 pub(crate) fn load_vertex_buffer(

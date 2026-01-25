@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
     let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
 
     for scope in globs.scopes.iter() {
-        println!("Scope: {}", scope.name.to_string());
+        println!("Scope: {}", *scope.name);
         let scope: SScope = package_manager().read_tag_struct(scope.scope)?;
         for (stage, shader_stage) in scope
             .iter_stages()

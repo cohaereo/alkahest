@@ -6,7 +6,6 @@ use std::{
 use alkahest_data::{
     hash::fnv1, pattern::SComponent, tfx::features::dynamic::SDynamicModelComponent,
 };
-use itertools::Itertools;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::package_manager;
 

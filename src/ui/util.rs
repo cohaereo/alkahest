@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::Deref, time::Instant};
+use std::{cell::RefCell, time::Instant};
 
 use egui::*;
 
@@ -6,7 +6,7 @@ pub trait UiExt {
     #[must_use]
     fn d_button(&mut self, text: impl Into<RichText>) -> Response;
 
-    fn d_spinner(&mut self, size: Vec2) -> Response;
+    // fn d_spinner(&mut self, size: Vec2) -> Response;
     fn d_paint_spinner_at(&mut self, rect: Rect);
 
     fn section_separator(&mut self, text: impl Into<RichText>);
@@ -15,37 +15,16 @@ pub trait UiExt {
 impl UiExt for Ui {
     fn d_button(&mut self, text: impl Into<RichText>) -> Response {
         DButton::new(text).ui(self)
-        // let r = self
-        //     .add(
-        //         Button::new(text.into().color(Color32::WHITE))
-        //             .min_size(vec2(120.0, 60.0))
-        //             .corner_radius(0)
-        //             .fill(Color32::from_gray(96).gamma_multiply(0.2))
-        //             .stroke(Stroke::new(1.0, Color32::WHITE)),
-        //     )
-        //     .on_hover_cursor(CursorIcon::PointingHand);
-
-        // if r.hovered() {
-        //     self.painter().rect(
-        //         r.rect.expand(4.0),
-        //         0,
-        //         Color32::TRANSPARENT,
-        //         Stroke::new(2.0, Color32::from_white_alpha(196)),
-        //         StrokeKind::Outside,
-        //     );
-        // }
-
-        // r
     }
 
-    fn d_spinner(&mut self, size: Vec2) -> Response {
-        let (rect, response) = self.allocate_exact_size(size, Sense::hover());
-        // self.add(Image::new(spinner_image().clone()).fit_to_exact_size(size))
+    // fn d_spinner(&mut self, size: Vec2) -> Response {
+    //     let (rect, response) = self.allocate_exact_size(size, Sense::hover());
+    //     // self.add(Image::new(spinner_image().clone()).fit_to_exact_size(size))
 
-        self.d_paint_spinner_at(rect);
+    //     self.d_paint_spinner_at(rect);
 
-        response
-    }
+    //     response
+    // }
 
     fn d_paint_spinner_at(&mut self, rect: Rect) {
         let (img1, img2, t) = spinner_image();

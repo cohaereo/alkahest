@@ -46,11 +46,10 @@ impl AssetManager {
     }
 
     pub fn get<T: Asset + 'static>(&self, tag: TagHash) -> Option<Handle<T>> {
-        if let Some((ty, handle)) = self.assets.lock().get(&tag) {
-            if *ty == TypeId::of::<T>() {
+        if let Some((ty, handle)) = self.assets.lock().get(&tag)
+            && *ty == TypeId::of::<T>() {
                 return Some(unsafe { handle.clone_as_typed_unchecked::<T>() });
             }
-        }
         None
     }
 

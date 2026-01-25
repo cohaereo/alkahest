@@ -18,7 +18,7 @@ use alkahest_data::tfx::{
 };
 use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
-use glam::{Mat4, Vec3, Vec4, vec3};
+use glam::{Mat4, Vec3, Vec4};
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use smallvec::SmallVec;
@@ -158,7 +158,7 @@ impl StaticModel {
                 }
 
                 if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
-                    technique.bind(cmd);
+                    technique.bind(cmd).expect("Failed to bind technique");
                 } else {
                     continue;
                 }
@@ -187,7 +187,7 @@ impl StaticModel {
                 }
 
                 if let Some(technique) = &mesh.technique.get() {
-                    technique.bind(cmd);
+                    technique.bind(cmd).expect("Failed to bind technique");
                 } else {
                     continue;
                 }
@@ -246,7 +246,7 @@ impl StaticModel {
 
         if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
             if bind_technique {
-                technique.bind(cmd);
+                technique.bind(cmd).expect("Failed to bind technique");
             }
         } else {
             return;
@@ -347,7 +347,6 @@ pub struct StaticInstancesRenderer {
     groups: Vec<StaticInstanceGroup>,
 
     vao_identifier: u64,
-    constants_dirty: bool,
     groups_by_stage_sorted_by_technique: HashMap<RenderStage, Arc<Vec<SortedModel>>>,
     bounds: AxisAlignedBBox,
 }
@@ -467,7 +466,6 @@ impl StaticInstancesRenderer {
                 }),
             static_models,
             groups,
-            constants_dirty: true,
             vao_identifier: instances.vertex_ao_identifier,
             groups_by_stage_sorted_by_technique,
             bounds: instances.bounds,

@@ -31,11 +31,10 @@ impl DecompilationResult {
 
     fn process_ansi_tags(s: &str, strip: bool) -> String {
         const RESET: &str = "\x1b[0m";
-        const BLUE: &str = "\x1b[34m";
+        // const BLUE: &str = "\x1b[34m";
         const YELLOW: &str = "\x1b[38;2;250;200;100m";
         const ORANGE: &str = "\x1b[38;2;230;144;100m";
-        const GREEN: &str = "\x1b[32m";
-        // rgb 200 130 255
+        // const GREEN: &str = "\x1b[32m";
         const MAGENTA: &str = "\x1b[38;2;200;130;255m";
         const CYAN: &str = "\x1b[38;2;90;200;255m";
         let tags = [

@@ -11,6 +11,17 @@ pub struct HomeTab;
 impl HomeTab {
     pub fn ui(&self, ui: &mut Ui, shared_state: &Arc<SharedState>) -> TabResult {
         let mut result = TabResult::Continue;
+
+        #[cfg(debug_assertions)]
+        if ui
+            .d_button(format!("{} TAG LOOKUP", GoogleMaterialSymbols::Search))
+            .clicked()
+        {
+            use crate::ui::tabs::tag_lookup::TagLookupTab;
+
+            result = TabResult::Open(Tab::TagLookup(TagLookupTab::default()));
+        }
+
         ui.add_space(32.0);
         ui.columns(2, |uis| {
             uis[0].heading("3D");
