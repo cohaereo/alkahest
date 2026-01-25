@@ -638,7 +638,7 @@ impl Scene {
         {
             s_extract_ambient_occlusion(&self.world);
             let mut fp = self.renderer.frame_packet.write();
-            s_extract_render_objects(&self.world, &mut fp);
+            s_extract_render_objects(&self.world, self.camera.position, &mut fp);
 
             {
                 let ext = self.renderer.externs.get_mut();

@@ -29,7 +29,7 @@ impl FramePacket {
         self.frame_nodes.push(FrameNode {
             render_object_handle,
             data: Box::new(()),
-            distance: f32::MAX,
+            distance: 0.0,
             visible: true,
         });
     }
@@ -37,13 +37,14 @@ impl FramePacket {
     pub fn push_dynamic_render_object(
         &mut self,
         render_object_handle: RenderObjectHandle,
+        camera_position: Vec3,
         transform: CompactTransform,
         permutation: usize,
     ) {
         self.frame_nodes.push(FrameNode {
             render_object_handle,
+            distance: transform.translation().distance(camera_position),
             data: Box::new((transform, permutation)),
-            distance: f32::MAX,
             visible: true,
         });
     }
