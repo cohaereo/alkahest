@@ -1,10 +1,15 @@
-
 use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
     ShaderStage,
+    common::AxisAlignedBBox,
     features::{decorators::SDecorator, dynamic::RenderStageSubscription},
 };
+use anyhow::Context;
+use chroma_dbg::ChromaDebug;
 use glam::{Mat4, Vec4, vec4};
+use itertools::Itertools;
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+use tiger_parse::TigerReadable;
 use tiger_pkg::TagHash;
 
 use crate::{
@@ -23,12 +28,24 @@ struct DecoratorModel {
     identifier_mask: u32,
 }
 
+#[derive(Debug)]
+struct DecoratorInstanceGroup {
+    pub instance_start: u32,
+    pub instance_count: u32,
+
+    pub instance_bounds: Vec<(AxisAlignedBBox, bool)>,
+    pub visible: bool,
+    pub bounds: AxisAlignedBBox,
+}
+
 pub struct DecoratorRenderer {
     pub data: SDecorator,
     pub hash: TagHash,
     models: Vec<DecoratorModel>,
     instance_buffer: Handle<VertexBuffer>,
     instance_blend_indices_vb: VertexBuffer,
+
+    instance_groups: Vec<DecoratorInstanceGroup>,
 }
 
 impl DecoratorRenderer {
@@ -138,9 +155,57 @@ impl DecoratorRenderer {
 
         // u8 for decorators, f32 for speedtree
         // let blend_index_data = vec![0xC8u8; decorator.unk48.instance_data.data.len() * 4];
-        let blend_index_data = vec![1f32; decorator.unk48.instance_data.data.len() * 4];
+        let blend_index_data = vec![1f32; decorator.unk48.instance_data.elements.len() * 4];
         let instance_blend_indices_vb =
             VertexBuffer::load_data(&renderer.gpu, bytemuck::cast_slice(&blend_index_data), 4)?;
+
+        let mut instance_range_bounds = Vec::with_capacity(decorator.unk38.len());
+        for (i, &[instance_start, instance_end]) in decorator.unk38.array_windows::<2>().enumerate()
+        {
+            let bounds_index = decorator
+                .unk38_to_bounds_index
+                .get(i)
+                .copied()
+                .context("Invalid bounds index mapping")?;
+
+            let group_bounds = decorator
+                .occlusion_bounds
+                .bounds
+                .get(bounds_index as usize)
+                .context("Invalid bounds index")?
+                .bb;
+
+            instance_range_bounds.push((instance_start..instance_end, group_bounds));
+        }
+
+        let mut instance_groups = vec![];
+        for &[instance_start, instance_end] in decorator.unk18.array_windows::<2>() {
+            let bounds_start = instance_range_bounds
+                .iter()
+                .position(|(range, _)| range.start == instance_start)
+                .context("Failed to find occlusion bounds start")?;
+            let bounds_end = instance_range_bounds
+                .iter()
+                .position(|(range, _)| range.end == instance_end)
+                .context("Failed to find occlusion bounds end")?;
+            let bounds_range = bounds_start..bounds_end;
+            let instance_bounds = instance_range_bounds
+                .get(bounds_range.clone())
+                .unwrap()
+                .iter()
+                .map(|(_range, bb)| (*bb, true))
+                .collect_vec();
+
+            let bounds = instance_bounds.iter().map(|(bb, _)| *bb).sum();
+
+            instance_groups.push(DecoratorInstanceGroup {
+                instance_start,
+                instance_count: instance_end - instance_start,
+                visible: true,
+                instance_bounds,
+                bounds,
+            });
+        }
 
         Ok(Self {
             models,
@@ -148,6 +213,7 @@ impl DecoratorRenderer {
             instance_buffer: renderer.asset_manager.load(decorator.unk48.instance_buffer),
             instance_blend_indices_vb,
             data: decorator,
+            instance_groups,
         })
     }
 }
@@ -155,7 +221,37 @@ impl DecoratorRenderer {
 #[profiling::all_functions]
 impl FeatureRenderer for DecoratorRenderer {
     fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
-        camera.culling_frustum.aabb_intersecting(&self.data.bounds)
+        if !camera.is_visible(&self.data.bounds) {
+            return false;
+        }
+
+        self.instance_groups.par_iter_mut().for_each(|group| {
+            group.visible = camera.is_visible(&group.bounds);
+            // if !group.visible {
+            //     Renderer::instance().immediate.lock().aabb_world(
+            //         &group.bounds,
+            //         if group.visible { 0x00ff00 } else { 0xff0000 },
+            //     );
+            // }
+            if group.visible {
+                group
+                    .instance_bounds
+                    .par_iter_mut()
+                    .for_each(|(bounds, visible)| {
+                        *visible = camera.is_visible(bounds);
+                        // if !*visible {
+                        //     Renderer::instance()
+                        //         .immediate
+                        //         .lock()
+                        //         .aabb_world(bounds, if *visible { 0x00ff00 } else { 0xff0000 });
+                        // }
+                    });
+
+                group.visible = group.instance_bounds.iter().any(|(_, vis)| *vis);
+            }
+        });
+
+        self.instance_groups.iter().any(|g| g.visible)
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn std::any::Any) {
@@ -188,9 +284,6 @@ impl FeatureRenderer for DecoratorRenderer {
                 unk50: consts.unk30,
                 unk60: consts.unk40,
                 unk70: consts.unk50,
-                // unk40: Default::default(),
-                // unk50: Default::default(),
-                // unk60: Default::default(),
                 ..(cmd
                     .externs
                     .speedtree_placements
@@ -201,11 +294,12 @@ impl FeatureRenderer for DecoratorRenderer {
             .into();
         }
 
-        for id in 0..(self.data.unk18.len() - 1) {
-            let instance_start = self.data.unk18[id];
-            let instance_end = self.data.unk18[id + 1];
-            let instance_count = instance_end - instance_start;
-
+        for (id, group) in self
+            .instance_groups
+            .iter()
+            .enumerate()
+            .filter(|(_, g)| g.visible)
+        {
             // let group_mask = if self.models.len() == 1 {
             //     1 << id
             // } else {
@@ -255,12 +349,10 @@ impl FeatureRenderer for DecoratorRenderer {
 
                     cmd.draw_indexed_instanced(
                         part.index_count,
-                        // self.data.unk48.instance_data.data.len() as _,
-                        // instance_count.min(4096),
-                        instance_count,
+                        group.instance_count,
                         part.index_start,
                         0,
-                        instance_start,
+                        group.instance_start,
                     );
                 },
             );

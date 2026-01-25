@@ -234,14 +234,19 @@ impl Renderer {
             let _gpuspan = self.profiler.scope(cmd, "immediate_geometry");
 
             const IMMEDIATE_GEOMETRY_XRAY: bool = true;
-            if IMMEDIATE_GEOMETRY_XRAY {
-                view.surfaces()
-                    .get(view.gbuffers.depth)
-                    .clear_depth(cmd, 0.0, 0xff);
-            }
+            // if IMMEDIATE_GEOMETRY_XRAY {
+            //     view.surfaces()
+            //         .get(view.gbuffers.depth)
+            //         .clear_depth(cmd, 0.0, 0xff);
+            // }
 
             self.bind_surfaces(cmd, &[view.postprocess], Some(view.gbuffers.depth));
-            cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(0));
+            cmd.state = PipelineState::new(
+                Some(0),
+                Some(if IMMEDIATE_GEOMETRY_XRAY { 0 } else { 2 }),
+                Some(2),
+                Some(0),
+            );
             cmd.flush_states();
             self.immediate.lock().prepare(gpu);
             self.immediate.lock().submit(cmd);

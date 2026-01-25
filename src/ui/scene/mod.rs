@@ -515,20 +515,29 @@ impl Scene {
                 PerformanceImpact::Low,
             );
 
-        ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
-            .setting_description_tooltip(
-                "Enables multi-threaded submission of commands to the GPU. May improve \
-                 performance on systems with many CPU cores, but can introduce stuttering on \
-                 older systems",
-                PerformanceImpact::High,
-            );
+        ui.collapsing("Advanced", |ui| {
+            ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
+                .setting_description_tooltip(
+                    "Enables multi-threaded submission of commands to the GPU. May improve \
+                     performance on systems with many CPU cores, but can introduce stuttering on \
+                     older systems",
+                    PerformanceImpact::High,
+                );
 
-        ui.checkbox(&mut settings.instance_culling, "Instance Culling")
-            .setting_description_tooltip(
-                "Enables static/decorator instance culling to reduce draw calls that fall outside \
-                 the camera's view.",
-                PerformanceImpact::High,
-            );
+            ui.checkbox(&mut settings.instance_culling, "Instance Culling")
+                .setting_description_tooltip(
+                    "Enables static/decorator instance culling to reduce draw calls that fall \
+                     outside the camera's view.",
+                    PerformanceImpact::Medium,
+                );
+
+            ui.checkbox(&mut settings.hzb_culling, "HZB Culling")
+                .setting_description_tooltip(
+                    "Enables Hierarchical Z-Buffer (HZB) culling to optimize rendering by quickly \
+                     discarding occluded objects.",
+                    PerformanceImpact::High,
+                );
+        });
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {
@@ -646,11 +655,15 @@ impl Scene {
             {
                 profiling::scope!("download_hzb");
                 let _gpuspan = self.renderer.profiler.scope(&cmd, "download_hzb");
-                self.camera.hzb = Hzb::download(
-                    gpu,
-                    &self.view.gbuffers.hzb_depth_chain_cpu.lock(),
-                    &self.camera,
-                );
+                self.camera.hzb = if self.view.settings.hzb_culling {
+                    Hzb::download(
+                        gpu,
+                        &self.view.gbuffers.hzb_depth_chain_cpu.lock(),
+                        &self.camera,
+                    )
+                } else {
+                    Hzb::EMPTY
+                };
             }
 
             let wants_to_render_shadowmaps = s_wants_to_render_shadowmaps(&self.world);

@@ -194,6 +194,7 @@ pub struct RenderSettings {
     // Performance
     pub multithreading: bool,
     pub instance_culling: bool,
+    pub hzb_culling: bool,
 }
 
 impl Default for RenderSettings {
@@ -211,6 +212,7 @@ impl Default for RenderSettings {
 
             multithreading: true,
             instance_culling: true,
+            hzb_culling: true,
         }
     }
 }

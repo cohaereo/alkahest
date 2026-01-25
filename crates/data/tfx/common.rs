@@ -32,7 +32,7 @@ pub struct SObjectOcclusionBounds {
 }
 
 #[tiger_type]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AxisAlignedBBox {
     pub min: Vec4,
     pub max: Vec4,

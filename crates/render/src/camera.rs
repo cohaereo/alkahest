@@ -1,6 +1,7 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
 use inline_tweak::tweak;
+use sdl3::gamepad::Axis;
 
 use crate::{renderer::hzb::Hzb, visibility::frustum::Frustum};
 
@@ -156,7 +157,7 @@ impl Camera {
         self.fov_y = fov;
     }
 
-    pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
+    pub fn is_in_clip_space(&self, aabb: &AxisAlignedBBox) -> bool {
         if !self.culling_frustum.aabb_intersecting(aabb) {
             return false;
         }
@@ -178,6 +179,14 @@ impl Camera {
         let ndc_size = max_ndc - min_ndc;
         let screen_size_threshold = tweak!(0.01); // Adjust this threshold as needed
         if ndc_size.x < screen_size_threshold && ndc_size.y < screen_size_threshold {
+            return false;
+        }
+
+        true
+    }
+
+    pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
+        if !self.is_in_clip_space(aabb) {
             return false;
         }
 

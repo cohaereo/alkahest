@@ -16,8 +16,8 @@ pub struct SDecorator {
     pub unk28: Vec<u32>,
     pub unk38: Vec<u32>,
     pub unk48: Tag<SUnk80807170>,
-    pub unk4c: Tag<SOcclusionBounds>,
-    pub unk50: Vec<u32>,
+    pub occlusion_bounds: Tag<SOcclusionBounds>,
+    pub unk38_to_bounds_index: Vec<u32>,
     pub unk60: [u32; 4],
     pub bounds: AxisAlignedBBox,
 }
@@ -38,14 +38,15 @@ pub struct SUnk80807170 {
 #[tiger_type(id = 0x80806CA7)]
 pub struct SDecoratorInstanceData {
     pub file_size: u64,
-    pub data: Vec<SDecoratorInstanceElement>,
+    pub elements: Vec<SDecoratorInstanceElement>,
 }
 
+#[repr(C)]
 #[derive(Clone, Debug)]
-#[tiger_type(id = 0x80806CA9)]
+#[tiger_type(id = 0x80806CA9, size = 0x10)]
 pub struct SDecoratorInstanceElement {
     /// Normalized position
-    pub position: [u16; 3],
+    pub position: [u16; 4],
     /// Rotation represented as an 8-bit quaternion
     pub rotation: [u8; 4],
     /// RGBA color
