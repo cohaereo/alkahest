@@ -46,7 +46,6 @@ const DEBUG_SHADER: &str = include_str!("../builtin/shaders/debug.hlsl");
 const CLEAR_AO_SHADER: &str = include_str!("../builtin/shaders/clear_ao.hlsl");
 const SHADOW_MAP_SHADER: &str = include_str!("../builtin/shaders/shadow_map.hlsl");
 const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
-const BLIT_FAKE_WEAPON_SHADER: &str = include_str!("../builtin/shaders/blit_fake_weapon.hlsl");
 const HZB_DOWNSAMPLE_SHADER: &str = include_str!("../builtin/shaders/hzb_downsample.hlsl");
 
 pub struct Renderer {
@@ -317,17 +316,11 @@ pub struct CommonResources {
     blit_ps: d3d11::PixelShader,
     blit_ps_linear: d3d11::PixelShader,
 
-    blit_fw_vs: d3d11::VertexShader,
-    blit_fw_ps: d3d11::PixelShader,
-
     temporary_sky_hemisphere: Texture,
     temporary_vignette: Texture,
-    temporary_health_overlay: Texture,
     temporary_bloom: Texture,
 
-    temporary_atmos: Texture,
     temporary_depth_angle_lookup: Texture,
-    temporary_depth_lookup: Texture,
 
     pub disable_skinning_vs: d3d11::VertexShader,
 
@@ -366,9 +359,6 @@ impl CommonResources {
             gpu.compile_shader_vs_ps("blit", BLIT_SHADER, "mainVS", "mainPS")?;
         let (_, blit_ps_linear) =
             gpu.compile_shader_vs_ps("blit", BLIT_SHADER, "mainVS", "mainPS_linear")?;
-
-        let (blit_fw_vs, blit_fw_ps) =
-            gpu.compile_shader_vs_ps("blit_fw", BLIT_FAKE_WEAPON_SHADER, "mainVS", "mainPS")?;
 
         let shadowmap_vs_t2 = Texture::load_2d_raw(
             gpu,
@@ -411,25 +401,13 @@ impl CommonResources {
                 gpu,
                 include_bytes!("../builtin/textures/vignette.dds"),
             )?,
-            temporary_health_overlay: Texture::load_2d_dds(
-                gpu,
-                include_bytes!("../builtin/textures/health_overlay.dds"),
-            )?,
             temporary_bloom: Texture::load_2d_dds(
                 gpu,
                 include_bytes!("../builtin/textures/screen_area_0x18.dds"),
             )?,
-            temporary_atmos: Texture::load_2d_dds(
-                gpu,
-                include_bytes!("../builtin/textures/atmos0.dds"),
-            )?,
             temporary_depth_angle_lookup: Texture::load_2d_dds(
                 gpu,
                 include_bytes!("../builtin/textures/depth_angle_lookup.dds"),
-            )?,
-            temporary_depth_lookup: Texture::load_2d_dds(
-                gpu,
-                include_bytes!("../builtin/textures/depth_lookup.dds"),
             )?,
             disable_skinning_vs: gpu.create_vertex_shader(include_bytes!(
                 "../builtin/shaders/skinning-noskinning.vs.cso"
@@ -437,8 +415,6 @@ impl CommonResources {
             blit_vs,
             blit_ps,
             blit_ps_linear,
-            blit_fw_vs,
-            blit_fw_ps,
             sampler_point,
             sampler_linear,
         })

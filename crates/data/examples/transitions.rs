@@ -1,9 +1,5 @@
-use ahash::{HashMap, HashSet};
-use alkahest_data::{
-    activity::transition::{S80809567, S808096BF},
-    hash::fnv1,
-    strings::StringContainer,
-};
+use ahash::HashSet;
+use alkahest_data::{activity::transition::S808096BF, hash::fnv1, strings::StringContainer};
 use chroma_dbg::ChromaDebug;
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::package_manager;
