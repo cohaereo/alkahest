@@ -1,7 +1,7 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{
-    Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget,
+    Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget, WidgetText,
     scroll_area::ScrollSource, vec2,
 };
 use glam::{Vec3, Vec4};
@@ -24,6 +24,9 @@ use crate::{
 };
 
 pub struct ModelListBase<P: ModelProvider> {
+    package_sorting: PackageSorting,
+    package_ids: Vec<u16>,
+
     current_package: u16,
     current_tag: TagHash,
     scene: Scene,
@@ -66,7 +69,13 @@ impl<P: ModelProvider> ModelListBase<P> {
         apply_scene_configuration(&mut scene);
         apply_scene_configuration(&mut thumbnail_scene);
 
+        let package_sorting = PackageSorting::Name;
+        let mut package_ids = provider.package_keys().to_vec();
+        package_sorting.sort_package_ids(&mut package_ids);
+
         Self {
+            package_sorting,
+            package_ids,
             current_package: 0,
             current_tag: TagHash::NONE,
             zoom: 1.0,
@@ -166,16 +175,53 @@ impl<P: ModelProvider> ModelListBase<P> {
         egui::SidePanel::left(format!("{}_packages_list", self.provider.name())).show_inside(
             ui,
             |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Sort by:");
+                    egui::ComboBox::new("sorting_mode", "")
+                        .selected_text(format!("{:?}", self.package_sorting))
+                        .show_ui(ui, |ui| {
+                            ui.style_mut()
+                                .text_styles
+                                .insert(TextStyle::Button, FontId::proportional(16.0));
+
+                            let mut clicked = ui
+                                .selectable_value(
+                                    &mut self.package_sorting,
+                                    PackageSorting::Id,
+                                    "Id",
+                                )
+                                .clicked();
+                            clicked |= ui
+                                .selectable_value(
+                                    &mut self.package_sorting,
+                                    PackageSorting::Name,
+                                    "Name",
+                                )
+                                .clicked();
+
+                            if clicked {
+                                (self.package_sorting).sort_package_ids(&mut self.package_ids);
+                            }
+                        });
+                });
+
                 egui::ScrollArea::vertical()
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                         let mut pkg_to_clear: Option<u16> = None;
-                        for pkg_id in self.provider.package_keys() {
+
+                        for pkg_id in self.package_ids.iter() {
                             let path = &package_manager().package_paths[pkg_id];
                             if ui
                                 .selectable_label(
                                     *pkg_id == self.current_package,
-                                    format!("{:04x}: {}", pkg_id, path.name),
+                                    (
+                                        WidgetText::from(format!("{pkg_id:04x} -"))
+                                            .weak()
+                                            .italics(),
+                                        path.name.clone(),
+                                    ),
                                 )
                                 .clicked()
                             {
@@ -509,5 +555,21 @@ impl ModelEntry {
             .iter()
             .map(|(_, config)| config.iter_keys().count())
             .sum()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PackageSorting {
+    Id,
+    Name,
+}
+
+impl PackageSorting {
+    fn sort_package_ids(&self, packages: &mut [u16]) {
+        match self {
+            PackageSorting::Id => packages.sort_by_key(|id| *id),
+            PackageSorting::Name => packages
+                .sort_by_cached_key(|id| (package_manager().package_paths[id].name.clone(), *id)),
+        }
     }
 }
