@@ -154,14 +154,12 @@ impl StaticMesh {
             {
                 let buffers = &self.buffers[part.buffer_index as usize];
                 if buffers.bind(cmd).is_none() {
-                    println!("Skipping mesh due to buffer binding failure");
                     continue;
                 }
 
                 if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
                     technique.bind(cmd).expect("Failed to bind technique");
                 } else {
-                    println!("Skipping mesh due to material binding failure");
                     continue;
                 }
 

@@ -20,7 +20,6 @@ use crate::{
     world::{
         permutations::{self, OPTION_KEY_INVALID, PermutationConfig},
         render_objects::{DynamicRenderObject, StaticRenderObject, s_are_all_objects_loaded},
-        transform::Transform,
     },
 };
 

@@ -2,10 +2,20 @@
 #![deny(clippy::correctness, clippy::suspicious, clippy::complexity)]
 #![allow(clippy::collapsible_else_if, clippy::missing_transmute_annotations)]
 
-use std::{rc::Rc, str::FromStr, sync::Arc, time::Instant};
+use std::{
+    io::{Cursor, Seek},
+    rc::Rc,
+    str::FromStr,
+    sync::Arc,
+    time::Instant,
+};
 
+use ahash::HashMap;
 use alkahest_core::job::SCHEDULER;
-use alkahest_data::strings::{StringContainer, StringContainerShared};
+use alkahest_data::{
+    strings::{StringContainer, StringContainerShared},
+    tag::WideHash,
+};
 use alkahest_render::{
     Gpu, Renderer,
     gpu::{command_list::CommandList, spinner::FullscreenSpinner},
@@ -14,7 +24,8 @@ use alkahest_render::{
 use anyhow::Context;
 use parking_lot::RwLock;
 use sdl3::video::Window;
-use tiger_pkg::TagHash;
+use tiger_parse::TigerReadable;
+use tiger_pkg::{TagHash, package_manager};
 
 use crate::{
     cli::AppArgs,
@@ -144,13 +155,29 @@ impl Drop for App {
 
 pub struct SharedState {
     pub strings: StringContainerShared,
+    pub strings_by_package: HashMap<String, StringContainer>,
     pub config: RwLock<AppConfig>,
 }
 
 impl SharedState {
     pub fn new() -> anyhow::Result<Self> {
+        let mut strings_by_package = HashMap::default();
+        for (name, tag) in package_manager().get_named_tags_by_class(0x80808E8B) {
+            let Ok(data) = package_manager().read_tag(tag) else {
+                continue;
+            };
+            let mut cur = Cursor::new(data);
+            cur.seek(std::io::SeekFrom::Start(0x10))?;
+            let hash = WideHash::read_ds(&mut cur)?;
+            if hash.is_none() {
+                continue;
+            }
+            strings_by_package.insert(name, StringContainer::load(hash)?);
+        }
+
         let s = Self {
             strings: StringContainer::load_all_global().into(),
+            strings_by_package,
             config: RwLock::new(AppConfig::default()),
         };
         if let Err(e) = s.load_config() {
@@ -179,5 +206,16 @@ impl SharedState {
         std::fs::write(&config_path, config_str)?;
 
         Ok(())
+    }
+
+    pub fn get_string(&self, hash: u32) -> String {
+        self.strings.get(hash)
+    }
+
+    pub fn get_string_by_package(&self, package: &str, hash: u32) -> String {
+        self.strings_by_package
+            .get(package)
+            .and_then(|s| s.try_get(hash))
+            .unwrap_or_else(|| self.get_string(hash))
     }
 }

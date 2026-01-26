@@ -33,7 +33,7 @@ impl HomeTab {
                 .d_button(format!("{} MAPS", GoogleMaterialSymbols::Map))
                 .clicked()
             {
-                result = TabResult::Open(Tab::MapList(MapListTab::new(&shared_state.strings)));
+                result = TabResult::Open(Tab::MapList(MapListTab::new(shared_state)));
             }
             if uis[0]
                 .d_button(format!("{} ENTITIES", GoogleMaterialSymbols::ChessPawn))

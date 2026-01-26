@@ -2,7 +2,7 @@ use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
 use inline_tweak::tweak;
 
-use crate::{renderer::hzb::Hzb, visibility::frustum::Frustum};
+use crate::{Renderer, renderer::hzb::Hzb, visibility::frustum::Frustum};
 
 // A simple camera controller (X forward, Z up)
 pub struct Camera {
@@ -19,9 +19,9 @@ pub struct Camera {
     pub aspect_ratio: f32,
     pub culling_frustum: Frustum,
 
-    pub local_to_camera: Mat4,
+    pub world_to_camera: Mat4,
     pub camera_to_projective: Mat4,
-    pub local_to_projective: Mat4,
+    pub world_to_projective: Mat4,
 
     pub hzb: Hzb,
 }
@@ -39,9 +39,9 @@ impl Default for Camera {
             max_ortho_width: 2.0,
             aspect_ratio: 16. / 9.,
             culling_frustum: Frustum::default(),
-            local_to_camera: Mat4::IDENTITY,
+            world_to_camera: Mat4::IDENTITY,
             camera_to_projective: Mat4::IDENTITY,
-            local_to_projective: Mat4::IDENTITY,
+            world_to_projective: Mat4::IDENTITY,
             hzb: Hzb::EMPTY,
         }
     }
@@ -54,9 +54,9 @@ impl Camera {
     pub fn update(&mut self) {
         self.culling_frustum = Frustum::from_camera(self);
 
-        self.local_to_camera = self.view_matrix();
+        self.world_to_camera = self.view_matrix();
         self.camera_to_projective = self.projection_matrix(self.aspect_ratio);
-        self.local_to_projective = self.camera_to_projective * self.local_to_camera;
+        self.world_to_projective = self.camera_to_projective * self.world_to_camera;
     }
 
     pub fn view_matrix(&self) -> glam::Mat4 {
@@ -166,9 +166,7 @@ impl Camera {
         let mut min_ndc = Vec3::splat(f32::MAX);
         let mut max_ndc = Vec3::splat(f32::MIN);
         for corner in &corners {
-            let world_pos = corner.extend(1.0);
-            let clip_pos = self.local_to_projective * world_pos;
-            let ndc_pos = clip_pos.truncate() / clip_pos.w;
+            let ndc_pos = self.world_to_projective.project_point3(*corner);
 
             min_ndc = min_ndc.min(ndc_pos);
             max_ndc = max_ndc.max(ndc_pos);
@@ -176,7 +174,7 @@ impl Camera {
 
         // If the projected size is too small, consider it not visible
         let ndc_size = max_ndc - min_ndc;
-        let screen_size_threshold = tweak!(0.01); // Adjust this threshold as needed
+        let screen_size_threshold = tweak!(0.015); // Adjust this threshold as needed
         if ndc_size.x < screen_size_threshold && ndc_size.y < screen_size_threshold {
             return false;
         }

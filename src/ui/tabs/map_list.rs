@@ -1,24 +1,23 @@
-use alkahest_data::{
-    map::{SBubbleParent, SBubbleParentShallow},
-    strings::StringContainerShared,
-};
+use std::sync::Arc;
+
+use alkahest_data::map::{SBubbleParent, SBubbleParentShallow};
 use egui::{Margin, Ui, ahash::HashMap, vec2};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
 use super::{Tab, TabResult, map::MapTab};
-use crate::ui::util::DButton;
+use crate::{app::SharedState, ui::util::DButton};
 
 pub struct MapListTab {
     map_tags_by_package: Vec<(String, Vec<(TagHash, String)>)>,
     /// Indexes into `map_tags_by_package`
     current_package_index: Option<usize>,
 
-    strings: StringContainerShared,
+    state: Arc<SharedState>,
 }
 
 impl MapListTab {
-    pub fn new(strings: &StringContainerShared) -> Self {
+    pub fn new(state: &Arc<SharedState>) -> Self {
         let map_tags: Vec<(TagHash, String)> = package_manager()
             .get_all_by_reference(SBubbleParent::ID.unwrap())
             .into_iter()
@@ -41,7 +40,7 @@ impl MapListTab {
         Self {
             map_tags_by_package,
             current_package_index: None,
-            strings: strings.clone(),
+            state: state.clone(),
         }
     }
 
@@ -51,7 +50,10 @@ impl MapListTab {
                 && let Ok(bubble_parent) =
                     package_manager().read_tag_struct::<SBubbleParentShallow>(*tag)
             {
-                *name = self.strings.get(bubble_parent.map_name);
+                *name = self.state.get_string_by_package(
+                    &package_manager().package_paths[&tag.pkg_id()].name,
+                    bubble_parent.map_name,
+                );
             }
         }
         self.map_tags_by_package[index]
