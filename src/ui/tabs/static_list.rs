@@ -36,26 +36,28 @@ impl StaticListTab {
 
 struct StaticModelProvider {
     package_keys: Vec<u16>,
-    packages: BTreeMap<u16, Vec<ModelEntry>>,
+    packages: BTreeMap<u16, (Vec<ModelEntry>, usize)>,
 }
 
 impl StaticModelProvider {
     fn new() -> Self {
-        let packages: BTreeMap<u16, Vec<ModelEntry>> = package_manager()
+        let packages: BTreeMap<u16, _> = package_manager()
             .package_paths
             .keys()
             .filter_map(|id| {
-                let has_statics = package_manager().lookup.tag32_entries_by_pkg[id]
+                let num_statics = package_manager().lookup.tag32_entries_by_pkg[id]
                     .iter()
-                    .any(|e| e.reference == SStaticMesh::ID.unwrap());
+                    .filter(|e| e.reference == SStaticMesh::ID.unwrap())
+                    .count();
 
-                if has_statics {
-                    Some((*id, vec![]))
+                if num_statics > 0 {
+                    Some((*id, (vec![], num_statics)))
                 } else {
                     None
                 }
             })
             .collect();
+
         Self {
             package_keys: packages.keys().cloned().collect(),
             packages,
@@ -73,13 +75,21 @@ impl ModelProvider for StaticModelProvider {
     }
 
     fn package(&self, pkg_id: u16) -> Option<&[ModelEntry]> {
-        self.packages.get(&pkg_id).map(|entries| entries.as_slice())
+        self.packages
+            .get(&pkg_id)
+            .map(|(entries, _)| entries.as_slice())
     }
 
     fn package_mut(&mut self, pkg_id: u16) -> Option<&mut [ModelEntry]> {
         self.packages
             .get_mut(&pkg_id)
-            .map(|entries| entries.as_mut_slice())
+            .map(|(entries, _)| entries.as_mut_slice())
+    }
+
+    fn num_models(&self, pkg_id: u16) -> usize {
+        self.packages
+            .get(&pkg_id)
+            .map_or(0, |&(_, num_models)| num_models)
     }
 
     fn load_model(&mut self, hash: TagHash, world: &mut hecs::World) -> anyhow::Result<Entity> {
@@ -87,7 +97,7 @@ impl ModelProvider for StaticModelProvider {
     }
 
     fn load_package(&mut self, pkg_id: u16) {
-        let Some(entries) = self.packages.get_mut(&pkg_id) else {
+        let Some((entries, _)) = self.packages.get_mut(&pkg_id) else {
             return;
         };
         if !entries.is_empty() {
@@ -117,7 +127,7 @@ impl ModelProvider for StaticModelProvider {
     }
 
     fn unload_package(&mut self, pkg_id: u16) {
-        if let Some(entries) = self.packages.get_mut(&pkg_id) {
+        if let Some((entries, _)) = self.packages.get_mut(&pkg_id) {
             entries.clear();
         }
     }

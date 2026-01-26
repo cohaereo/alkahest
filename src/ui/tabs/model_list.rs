@@ -1,7 +1,7 @@
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{
-    Color32, CornerRadius, FontId, Pos2, Rect, Sense, TextStyle, Ui, Vec2, Widget, WidgetText,
+    Color32, CornerRadius, FontId, Pos2, Rect, RichText, Sense, TextStyle, Ui, Vec2, Widget,
     scroll_area::ScrollSource, vec2,
 };
 use glam::{Vec3, Vec4};
@@ -19,7 +19,7 @@ use crate::{
     },
     world::{
         permutations::{self, OPTION_KEY_INVALID, PermutationConfig},
-        render_objects::s_are_all_objects_loaded,
+        render_objects::{DynamicRenderObject, StaticRenderObject, s_are_all_objects_loaded},
     },
 };
 
@@ -36,6 +36,7 @@ pub struct ModelListBase<P: ModelProvider> {
     thumbnail_scene: Scene,
     hovered_tag: TagHash,
     hover_vector: Vec2,
+    hide_empty: bool,
 
     provider: P,
 }
@@ -71,7 +72,7 @@ impl<P: ModelProvider> ModelListBase<P> {
 
         let package_sorting = PackageSorting::Name;
         let mut package_ids = provider.package_keys().to_vec();
-        package_sorting.sort_package_ids(&mut package_ids);
+        package_sorting.sort_package_ids(&provider, &mut package_ids);
 
         Self {
             package_sorting,
@@ -81,6 +82,7 @@ impl<P: ModelProvider> ModelListBase<P> {
             zoom: 1.0,
             scene,
             thumbnail_scene,
+            hide_empty: true,
             hovered_tag: TagHash::NONE,
             hover_vector: Vec2::ZERO,
 
@@ -198,9 +200,17 @@ impl<P: ModelProvider> ModelListBase<P> {
                                     "Name",
                                 )
                                 .clicked();
+                            clicked |= ui
+                                .selectable_value(
+                                    &mut self.package_sorting,
+                                    PackageSorting::Count,
+                                    "Count",
+                                )
+                                .clicked();
 
                             if clicked {
-                                (self.package_sorting).sort_package_ids(&mut self.package_ids);
+                                (self.package_sorting)
+                                    .sort_package_ids(&self.provider, &mut self.package_ids);
                             }
                         });
                 });
@@ -217,10 +227,15 @@ impl<P: ModelProvider> ModelListBase<P> {
                                 .selectable_label(
                                     *pkg_id == self.current_package,
                                     (
-                                        WidgetText::from(format!("{pkg_id:04x} -"))
-                                            .weak()
-                                            .italics(),
+                                        RichText::new(format!("{pkg_id:04x} -")).weak().italics(),
                                         path.name.clone(),
+                                        RichText::new(format!(
+                                            "({})",
+                                            self.provider.num_models(*pkg_id)
+                                        ))
+                                        .weak()
+                                        .italics()
+                                        .small(),
                                     ),
                                 )
                                 .clicked()
@@ -320,11 +335,8 @@ impl<P: ModelProvider> ModelListBase<P> {
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.horizontal(|ui| {
-                // ui.checkbox(
-                //     &mut self.show_entities_without_models,
-                //     "Show entities without models",
-                // );
-                // ui.separator();
+                ui.checkbox(&mut self.hide_empty, "Hide empty");
+                ui.separator();
                 egui::Slider::new(&mut self.zoom, 0.1f32..=1.5f32)
                     .text("Zoom")
                     .show_value(true)
@@ -338,8 +350,14 @@ impl<P: ModelProvider> ModelListBase<P> {
                 ui.separator();
                 if let Some(entries) = self.provider.package(self.current_package) {
                     let total = entries.len();
-                    // let with_models = entries.iter().filter(|e| e.has_model()).count();
-                    ui.label(format!("Showing {} entities", total));
+
+                    let with_models = entries.iter().filter(|e| !e.is_empty()).count();
+
+                    ui.label(format!(
+                        "Showing {}/{} entities",
+                        if self.hide_empty { with_models } else { total },
+                        total
+                    ));
                 }
             });
 
@@ -362,9 +380,10 @@ impl<P: ModelProvider> ModelListBase<P> {
 
                         ui.spacing_mut().item_spacing = vec2(16.0, 16.0);
                         for model in entries {
-                            // if !*show_entities_without_models && !entity.has_model() {
-                            //     continue;
-                            // }
+                            if self.hide_empty && model.is_empty() {
+                                continue;
+                            }
+
                             const TAG_BOX_HEIGHT: f32 = 30.0;
                             let (card_rect, card_response) = ui.allocate_exact_size(
                                 vec2(256.0, 256.0) * self.zoom + vec2(0.0, TAG_BOX_HEIGHT),
@@ -533,6 +552,8 @@ pub trait ModelProvider {
     fn package(&self, pkg_id: u16) -> Option<&[ModelEntry]>;
     fn package_mut(&mut self, pkg_id: u16) -> Option<&mut [ModelEntry]>;
 
+    fn num_models(&self, pkg_id: u16) -> usize;
+
     fn load_model(&mut self, hash: TagHash, world: &mut hecs::World) -> anyhow::Result<Entity>;
     fn load_package(&mut self, pkg_id: u16);
     fn unload_package(&mut self, pkg_id: u16);
@@ -556,20 +577,34 @@ impl ModelEntry {
             .map(|(_, config)| config.iter_keys().count())
             .sum()
     }
+
+    fn is_empty(&self) -> bool {
+        let Some(world) = &self.thumbnail_world else {
+            return true;
+        };
+
+        world.query::<&DynamicRenderObject>().iter().len() == 0
+            && world.query::<&StaticRenderObject>().iter().len() == 0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PackageSorting {
     Id,
     Name,
+    Count,
 }
 
 impl PackageSorting {
-    fn sort_package_ids(&self, packages: &mut [u16]) {
+    fn sort_package_ids<P: ModelProvider>(&self, provider: &P, packages: &mut [u16]) {
         match self {
             PackageSorting::Id => packages.sort_by_key(|id| *id),
             PackageSorting::Name => packages
                 .sort_by_cached_key(|id| (package_manager().package_paths[id].name.clone(), *id)),
+            PackageSorting::Count => {
+                packages.sort_by_cached_key(|id| provider.num_models(*id));
+                packages.reverse();
+            }
         }
     }
 }
