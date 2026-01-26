@@ -185,6 +185,10 @@ impl Camera {
     }
 
     pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
+        // if aabb.contains(self.position) {
+        //     return true;
+        // }
+
         if !self.is_in_clip_space(aabb) {
             return false;
         }

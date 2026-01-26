@@ -217,9 +217,9 @@ impl Renderer {
         cmd.compute_set_samplers(1, &[Some(&self.common.sampler_point)]);
         cmd.compute_set_shader(&self.hzb_downsample_cs);
         let (mut width, mut height) = hzb_chain.resolution();
-        for mip in 1..hzb_chain.mip_count {
-            let current_width = width >> 1;
-            let current_height = height >> 1;
+        for mip in 1..(hzb_chain.mip_count - 1) {
+            let current_width = (width >> 1).max(1);
+            let current_height = (height >> 1).max(1);
 
             let srv = if mip == 1 {
                 Some(depth.srv.clone())

@@ -198,7 +198,7 @@ impl Hzb {
                     min: Vec2::ZERO,
                     max: Vec2::ONE,
                 },
-                0.0,
+                1.0,
             ));
         }
 
