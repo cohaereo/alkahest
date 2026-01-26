@@ -303,7 +303,7 @@ pub fn spawn_pattern_from_header(
                 )) {
                     let render_obj = Renderer::instance().add_object(RenderObject::new(
                         TfxFeatureRenderer::ChunkedLights,
-                        LightRenderer::new(Renderer::instance(), light, bounds.bb.clone())
+                        LightRenderer::new(Renderer::instance(), light, bounds.bb)
                             .context("Failed to load light")?,
                     ));
 
@@ -403,7 +403,10 @@ pub fn spawn_pattern_from_header(
                                 bytecode_constants: c.bytecode_constants.clone(),
                             },));
                         }
-                        SUnk808091f1Variant::Unknown { class: _, offset: _ } => {
+                        SUnk808091f1Variant::Unknown {
+                            class: _,
+                            offset: _,
+                        } => {
                             // warn!(
                             //     "Unknown sequence class: {:08X} at offset: {:#X} in {}",
                             //     class,

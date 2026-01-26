@@ -60,6 +60,7 @@ tiger-parse.workspace = true
 tiger-pkg.workspace = true
 
 # General
+ahash.workspace = true
 anyhow.workspace = true
 bitflags = "2"
 bytemuck = "1.22.0"

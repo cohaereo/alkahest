@@ -94,6 +94,14 @@ extern_container! {
 }
 
 impl Externs {
+    pub fn get_global_channel_index(&self, id: u32) -> Option<usize> {
+        self.global_ids.iter().position(|i| *i == id)
+    }
+
+    pub fn get_global_channel_index_by_name(&self, name: &str) -> Option<usize> {
+        self.global_ids.iter().position(|i| *i == fnv1(name))
+    }
+
     pub fn get_global_channel_by_name(&self, name: &str) -> Vec4 {
         self.get_global_channel_by_id(fnv1(name))
     }

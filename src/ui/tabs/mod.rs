@@ -2,7 +2,9 @@ pub mod entity_list;
 pub mod home;
 pub mod map;
 pub mod map_list;
+pub mod model_list;
 pub mod settings;
+pub mod static_list;
 pub mod tag_lookup;
 pub mod test_scene;
 
@@ -17,12 +19,15 @@ use map::MapTab;
 use map_list::MapListTab;
 use tag_lookup::TagLookupTab;
 
-use crate::ui::tabs::{settings::SettingsTab, test_scene::TestSceneTab};
+use crate::ui::tabs::{
+    settings::SettingsTab, static_list::StaticListTab, test_scene::TestSceneTab,
+};
 
 pub enum Tab {
     Home,
     Settings,
     EntityList(Box<EntityListTab>),
+    StaticList(Box<StaticListTab>),
     MapList(MapListTab),
     Map(MapTab),
     TestScene(TestSceneTab),
@@ -40,6 +45,7 @@ impl Tab {
             Tab::Home => 0,
             Tab::Settings => 0,
             Tab::EntityList(_) => 0,
+            Tab::StaticList(_) => 0,
             Tab::MapList(_) => 0,
             Tab::Map(tab) => tab.tag.0 as u64,
             Tab::TestScene(_) => 0,
@@ -54,6 +60,7 @@ impl Display for Tab {
             Tab::Settings => GoogleMaterialSymbols::Settings.to_string(),
             Tab::Home => format!("{} Home", GoogleMaterialSymbols::Home),
             Tab::EntityList(_) => format!("{} Entities", GoogleMaterialSymbols::DeployedCode),
+            Tab::StaticList(_) => format!("{} Statics", GoogleMaterialSymbols::DeployedCode),
             Tab::MapList(_) => format!("{} Maps", GoogleMaterialSymbols::Map),
             Tab::Map(tab) => format!("{} ({})", tab.name, tab.tag),
             Tab::TestScene(_) => format!("{} Test Scene", GoogleMaterialSymbols::Experiment),
@@ -93,6 +100,10 @@ impl<'a> egui_dock::TabViewer for TabViewer<'a> {
                         SettingsTab::ui(ui, self.shared_state);
                     }
                     Tab::EntityList(tab) => {
+                        let res = tab.ui(ui, self.egui_d3d11);
+                        self.process_result(res);
+                    }
+                    Tab::StaticList(tab) => {
                         let res = tab.ui(ui, self.egui_d3d11);
                         self.process_result(res);
                     }

@@ -1,24 +1,31 @@
 use std::collections::BTreeMap;
 
-use alkahest_data::pattern::SPattern;
+use alkahest_data::tfx::{TfxFeatureRenderer, features::statics::SStaticMesh};
+use alkahest_render::{
+    Renderer,
+    feature::static_geometry::{StaticMesh, StaticModelRenderer},
+    object::RenderObject,
+};
+use anyhow::Context;
 use egui::Ui;
-use tiger_parse::{PackageManagerExt, TigerReadable};
+use hecs::Entity;
+use tiger_parse::TigerReadable;
 use tiger_pkg::{TagHash, package_manager};
 
 use super::TabResult;
 use crate::{
     ui::tabs::model_list::{ModelEntry, ModelListBase, ModelProvider},
-    world::pattern::{spawn_pattern, spawn_pattern_from_header},
+    world::{render_objects::DynamicRenderObject, transform::Transform},
 };
 
-pub struct EntityListTab {
-    base: ModelListBase<EntityModelProvider>,
+pub struct StaticListTab {
+    base: ModelListBase<StaticModelProvider>,
 }
 
-impl EntityListTab {
+impl StaticListTab {
     pub fn new() -> Self {
         Self {
-            base: ModelListBase::new(EntityModelProvider::new()),
+            base: ModelListBase::new(StaticModelProvider::new()),
         }
     }
 
@@ -27,22 +34,22 @@ impl EntityListTab {
     }
 }
 
-struct EntityModelProvider {
+struct StaticModelProvider {
     package_keys: Vec<u16>,
     packages: BTreeMap<u16, Vec<ModelEntry>>,
 }
 
-impl EntityModelProvider {
+impl StaticModelProvider {
     fn new() -> Self {
         let packages: BTreeMap<u16, Vec<ModelEntry>> = package_manager()
             .package_paths
             .keys()
             .filter_map(|id| {
-                let has_entities = package_manager().lookup.tag32_entries_by_pkg[id]
+                let has_statics = package_manager().lookup.tag32_entries_by_pkg[id]
                     .iter()
-                    .any(|e| e.reference == SPattern::ID.unwrap());
+                    .any(|e| e.reference == SStaticMesh::ID.unwrap());
 
-                if has_entities {
+                if has_statics {
                     Some((*id, vec![]))
                 } else {
                     None
@@ -56,7 +63,7 @@ impl EntityModelProvider {
     }
 }
 
-impl ModelProvider for EntityModelProvider {
+impl ModelProvider for StaticModelProvider {
     fn package_keys(&self) -> &[u16] {
         &self.package_keys
     }
@@ -71,12 +78,8 @@ impl ModelProvider for EntityModelProvider {
             .map(|entries| entries.as_mut_slice())
     }
 
-    fn load_model(
-        &mut self,
-        hash: TagHash,
-        world: &mut hecs::World,
-    ) -> anyhow::Result<hecs::Entity> {
-        spawn_pattern(world, hash, None, None)
+    fn load_model(&mut self, hash: TagHash, world: &mut hecs::World) -> anyhow::Result<Entity> {
+        load_static_mesh(hash, world).context("Failed to load static model")
     }
 
     fn load_package(&mut self, pkg_id: u16) {
@@ -90,24 +93,18 @@ impl ModelProvider for EntityModelProvider {
         *entries = package_manager().lookup.tag32_entries_by_pkg[&pkg_id]
             .iter()
             .enumerate()
-            .filter(|(_, e)| e.reference == SPattern::ID.unwrap())
+            .filter(|(_, e)| e.reference == SStaticMesh::ID.unwrap())
             .filter_map(|(i, _)| {
                 let hash = TagHash::new(pkg_id, i as u16);
-                match package_manager().read_tag_struct::<SPattern>(hash) {
-                    Ok(pattern) => {
-                        let mut world = hecs::World::new();
-                        if let Err(e) = spawn_pattern_from_header(&mut world, &pattern, None, None)
-                        {
-                            error!("Failed to load pattern {hash}: {e}");
-                        }
-                        Some(ModelEntry {
-                            hash,
-                            thumbnail_world: Some(world),
-                            thumbnail: None,
-                        })
-                    }
+                let mut world = hecs::World::new();
+                match load_static_mesh(hash, &mut world) {
+                    Ok(_entity) => Some(ModelEntry {
+                        hash,
+                        thumbnail_world: Some(world),
+                        thumbnail: None,
+                    }),
                     Err(err) => {
-                        error!("Failed to read pattern tag {hash}: {err}",);
+                        error!("Failed to load static model {hash}: {err}");
                         None
                     }
                 }
@@ -120,4 +117,19 @@ impl ModelProvider for EntityModelProvider {
             entries.clear();
         }
     }
+}
+
+fn load_static_mesh(hash: TagHash, world: &mut hecs::World) -> anyhow::Result<Entity> {
+    let mesh = StaticMesh::load(hash).context("Failed to read static mesh tag")?;
+    let model = StaticModelRenderer::new(&Renderer::instance().gpu, mesh)
+        .context("Failed to create static mesh renderer for tag")?;
+    let entity = world.spawn((Transform::default(), model.bounds));
+
+    let obj = Renderer::instance().add_object(RenderObject::new(
+        TfxFeatureRenderer::StaticObjects,
+        Box::new(model),
+    ));
+    _ = world.insert_one(entity, DynamicRenderObject::new(obj));
+
+    Ok(entity)
 }

@@ -1,4 +1,4 @@
-use std::{f32, io::Write, ops::Deref, sync::Arc};
+use std::{any::Any, f32, io::Write, ops::Deref, sync::Arc};
 
 use ahash::HashMap;
 use alkahest_core::job::{
@@ -18,7 +18,7 @@ use alkahest_data::tfx::{
 };
 use anyhow::Context;
 use bytemuck::{Pod, Zeroable};
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4};
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use smallvec::SmallVec;
@@ -31,7 +31,7 @@ use crate::{
     asset::Handle,
     camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
-    tfx::technique::Technique,
+    tfx::{packet::CompactTransform, technique::Technique},
     util::threading::CommandListSetId,
 };
 
@@ -56,7 +56,7 @@ pub struct InstanceTransformBlock {
     pub params: Vec4,
 }
 
-pub struct StaticModel {
+pub struct StaticMesh {
     pub model: SStaticMesh,
     pub materials: Vec<Handle<Technique>>,
     pub hash: TagHash,
@@ -65,7 +65,7 @@ pub struct StaticModel {
     special_meshes: Vec<SpecialMesh>,
 }
 
-impl StaticModel {
+impl StaticMesh {
     #[profiling::function]
     pub fn load(hash: TagHash) -> anyhow::Result<Self> {
         let model = package_manager().read_tag_struct::<SStaticMesh>(hash)?;
@@ -154,12 +154,14 @@ impl StaticModel {
             {
                 let buffers = &self.buffers[part.buffer_index as usize];
                 if buffers.bind(cmd).is_none() {
+                    println!("Skipping mesh due to buffer binding failure");
                     continue;
                 }
 
                 if let Some(technique) = &self.materials.get(i).and_then(Handle::get) {
                     technique.bind(cmd).expect("Failed to bind technique");
                 } else {
+                    println!("Skipping mesh due to material binding failure");
                     continue;
                 }
 
@@ -276,7 +278,7 @@ impl StaticInstanceGroup {
     pub fn update_constants(
         &self,
         ctx: &d3d11::DeviceContext,
-        model: &StaticModel,
+        model: &StaticMesh,
         vao_identifier: u64,
         ao: Option<&SStaticAmbientOcclusion>,
     ) {
@@ -343,7 +345,7 @@ impl StaticInstanceGroup {
 pub struct StaticInstancesRenderer {
     subscribed_stages: RenderStageSubscription,
 
-    static_models: Vec<StaticModel>,
+    static_models: Vec<StaticMesh>,
     groups: Vec<StaticInstanceGroup>,
 
     vao_identifier: u64,
@@ -357,7 +359,7 @@ impl StaticInstancesRenderer {
         let mut static_models = Vec::with_capacity(instances.statics.len());
 
         for model in &instances.statics {
-            let renderer = StaticModel::load(*model)?;
+            let renderer = StaticMesh::load(*model)?;
 
             static_models.push(renderer);
         }
@@ -585,7 +587,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
 
                         // Safety: p_models/p_groups are (practically) valid for the lifetime of this closure
                         // TODO(cohae): need a safer way to pass self.models to the job
-                        let p_models = p_models as *const Vec<StaticModel>;
+                        let p_models = p_models as *const Vec<StaticMesh>;
                         let models = unsafe { &*p_models };
                         let p_groups = p_groups as *const Vec<StaticInstanceGroup>;
                         let groups = unsafe { &*p_groups };
@@ -635,7 +637,7 @@ impl FeatureRenderer for StaticInstancesRenderer {
 
                     // Safety: p_models/p_groups are (practically) valid for the lifetime of this closure
                     // TODO(cohae): need a safer way to pass self.models to the job
-                    let p_models = p_models as *const Vec<StaticModel>;
+                    let p_models = p_models as *const Vec<StaticMesh>;
                     let models = unsafe { &*p_models };
                     let p_groups = p_groups as *const Vec<StaticInstanceGroup>;
                     let groups = unsafe { &*p_groups };
@@ -777,54 +779,106 @@ impl FeatureRenderer for StaticInstancesRenderer {
     }
 }
 
-// impl FeatureRenderer for StaticModelRenderer {
-//     fn visibility_test(&mut self, camera: &Camera) -> bool {
-//         if !camera.culling_frustum.aabb_intersecting(&self.bounds) {
-//             return false;
-//         }
-
-//         self.visible_instance_ids.clear();
-//         for (i, (_, b)) in self.transforms.iter().enumerate() {
-//             if camera.culling_frustum.aabb_intersecting(b) {
-//                 self.visible_instance_ids.push(1 + i as u32);
-//             }
-//         }
-
-//         !self.visible_instance_ids.is_empty()
-//     }
-
-//     fn extract_and_prepare(
-//         &mut self,
-//         renderer: &Renderer,
-//         _data: &mut dyn super::FeatureRendererData,
-//         _extracted_data: &dyn std::any::Any,
-//     ) {
-//         if self.constants_dirty {
-//             self.update_constants(
-//                 &renderer.gpu.context(), /*, renderer.ao.read().as_ref() */
-//             );
-//             self.constants_dirty = false;
-//         }
-//     }
-
-//     fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
-//         // Safety: there's never more instances than we allocated space for (hopefully)
-//         unsafe {
-//             self.instance_id_buffer
-//                 .write(cmd, bytemuck::cast_slice(&self.visible_instance_ids))
-//                 .unwrap();
-//         }
-//         self.render(cmd, stage);
-//     }
-
-//     fn subscribed_stages(&self) -> RenderStageSubscription {
-//         self.model.subscribed_stages
-//     }
-// }
-
 struct SortedModel {
     technique: TagHash,
     model_index: usize,
     group_index: usize,
     instance_groups: SmallVec<[usize; 4]>,
+}
+
+pub struct StaticModelRenderer {
+    model: StaticMesh,
+    group: StaticInstanceGroup,
+    pub bounds: AxisAlignedBBox,
+}
+
+impl StaticModelRenderer {
+    pub fn new(gpu: &Gpu, model: StaticMesh) -> anyhow::Result<Self> {
+        let cbuffer = ConstantBuffer::create_raw(
+            gpu,
+            2 * size_of::<Vec4>() // quantization headers
+                        +  size_of::<InstanceTransformBlock>(), // per-transform data
+        )?;
+
+        let om = &model.model.opaque_meshes;
+        let bounds =
+            AxisAlignedBBox::from_center_extents(om.mesh_offset, Vec3::splat(om.mesh_scale));
+
+        let group = StaticInstanceGroup {
+            transforms: vec![(
+                SStaticInstanceTransform {
+                    rotation: Quat::IDENTITY,
+                    translation: Vec3::ZERO,
+                    scale: 1.0,
+                    unk20: [0; 2],
+                    vertex_ao_offset: 0,
+                    unk2c: 0.0,
+                    unk30: [0; 4],
+                },
+                true,
+            )],
+            static_index: 0,
+            cbuffer,
+            bounds: vec![],
+            group_bounds: AxisAlignedBBox::NONE,
+            visible: true,
+            num_instances: 1,
+            num_instances_written: 1,
+        };
+
+        Ok(Self {
+            model,
+            group,
+            bounds,
+        })
+    }
+}
+
+impl FeatureRenderer for StaticModelRenderer {
+    fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn Any) {
+        let (obj_local_to_world, _permutation) = extracted_data
+            .downcast_ref::<(CompactTransform, usize)>()
+            .expect("Invalid extracted data type")
+            .clone();
+        let transform = obj_local_to_world.to_mat4();
+
+        let (scale, rotation, translation) = transform.to_scale_rotation_translation();
+        let transform = &mut self.group.transforms[0].0;
+        transform.rotation = rotation;
+        transform.translation = translation;
+        transform.scale = scale.x;
+
+        self.group
+            .update_constants(&renderer.gpu.context(), &self.model, 0, None);
+    }
+
+    fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
+        self.group.cbuffer.bind_cbuffer(cmd, ShaderStage::Vertex, 1);
+        self.model.render_all(cmd, stage, 1);
+    }
+
+    fn submit_parallel(
+        &self,
+        renderer: &Arc<Renderer>,
+        set: CommandListSetId,
+        stage: RenderStage,
+        jobs: &mut Vec<JobHandle>,
+    ) {
+        let self_p = &raw const *self as u64;
+        let pool = renderer.cmd_pool.clone();
+        let job = SCHEDULER.job_builder("rigid_model").spawn(move || {
+            let self_ref = unsafe { &*(self_p as *const Self) };
+            let cmd = pool.get_command_list(set);
+            self_ref
+                .group
+                .cbuffer
+                .bind_cbuffer(cmd, ShaderStage::Vertex, 1);
+            self_ref.model.render_all(cmd, stage, 1);
+        });
+        jobs.push(job);
+    }
+
+    fn subscribed_stages(&self) -> RenderStageSubscription {
+        self.model.subscribed_stages
+    }
 }

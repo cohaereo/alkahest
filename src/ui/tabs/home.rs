@@ -4,7 +4,10 @@ use egui::Ui;
 use google_material_symbols::GoogleMaterialSymbols;
 
 use super::{Tab, TabResult, entity_list::EntityListTab, map_list::MapListTab};
-use crate::{app::SharedState, ui::util::UiExt};
+use crate::{
+    app::SharedState,
+    ui::{tabs::static_list::StaticListTab, util::UiExt},
+};
 
 pub struct HomeTab;
 
@@ -27,6 +30,12 @@ impl HomeTab {
             uis[0].heading("3D");
             uis[0].add_space(4.0);
             if uis[0]
+                .d_button(format!("{} MAPS", GoogleMaterialSymbols::Map))
+                .clicked()
+            {
+                result = TabResult::Open(Tab::MapList(MapListTab::new(&shared_state.strings)));
+            }
+            if uis[0]
                 .d_button(format!("{} ENTITIES", GoogleMaterialSymbols::DeployedCode))
                 .clicked()
             {
@@ -34,13 +43,11 @@ impl HomeTab {
                 result = TabResult::Open(Tab::EntityList(Box::new(EntityListTab::new())));
             }
             if uis[0]
-                .d_button(format!("{} MAPS", GoogleMaterialSymbols::Map))
+                .d_button(format!("{} STATICS", GoogleMaterialSymbols::Landscape))
                 .clicked()
             {
-                result = TabResult::Open(Tab::MapList(MapListTab::new(&shared_state.strings)));
+                result = TabResult::Open(Tab::StaticList(Box::new(StaticListTab::new())));
             }
-            uis[0].disable();
-            let _ = uis[0].d_button(format!("{} STATICS", GoogleMaterialSymbols::Landscape));
 
             uis[1].heading("2D");
             uis[1].add_space(4.0);
