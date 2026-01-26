@@ -102,11 +102,11 @@ impl Scene {
         })
     }
 
-    pub fn set_global_channel(&mut self, id: u32, value: Vec4) {
-        if let Some(index) = self.renderer.externs.get_global_channel_index(id) {
-            self.global_channels[index] = value;
-        }
-    }
+    // pub fn set_global_channel(&mut self, id: u32, value: Vec4) {
+    //     if let Some(index) = self.renderer.externs.get_global_channel_index(id) {
+    //         self.global_channels[index] = value;
+    //     }
+    // }
 
     pub fn set_global_channel_by_name(&mut self, name: &str, value: Vec4) {
         if let Some(index) = self.renderer.externs.get_global_channel_index_by_name(name) {

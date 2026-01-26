@@ -57,6 +57,10 @@ impl EntityModelProvider {
 }
 
 impl ModelProvider for EntityModelProvider {
+    fn name(&self) -> &str {
+        "entities"
+    }
+
     fn package_keys(&self) -> &[u16] {
         &self.package_keys
     }

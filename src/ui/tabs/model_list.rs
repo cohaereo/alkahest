@@ -163,32 +163,35 @@ impl<P: ModelProvider> ModelListBase<P> {
             .insert(TextStyle::Button, FontId::proportional(16.0));
         ui.style_mut().spacing.button_padding = Vec2::new(8.0, 4.0);
 
-        egui::SidePanel::left("entities_packages_list").show_inside(ui, |ui| {
-            egui::ScrollArea::vertical()
-                .auto_shrink([false; 2])
-                .show(ui, |ui| {
-                    let mut pkg_to_clear: Option<u16> = None;
-                    for pkg_id in self.provider.package_keys() {
-                        let path = &package_manager().package_paths[pkg_id];
-                        if ui
-                            .selectable_label(
-                                *pkg_id == self.current_package,
-                                format!("{:04x}: {}", pkg_id, path.name),
-                            )
-                            .clicked()
-                        {
-                            pkg_to_clear = Some(*pkg_id);
-                            self.current_package = *pkg_id;
+        egui::SidePanel::left(format!("{}_packages_list", self.provider.name())).show_inside(
+            ui,
+            |ui| {
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        let mut pkg_to_clear: Option<u16> = None;
+                        for pkg_id in self.provider.package_keys() {
+                            let path = &package_manager().package_paths[pkg_id];
+                            if ui
+                                .selectable_label(
+                                    *pkg_id == self.current_package,
+                                    format!("{:04x}: {}", pkg_id, path.name),
+                                )
+                                .clicked()
+                            {
+                                pkg_to_clear = Some(*pkg_id);
+                                self.current_package = *pkg_id;
+                            }
                         }
-                    }
 
-                    if let Some(pkg_id) = pkg_to_clear {
-                        self.provider.unload_package(pkg_id);
-                    }
-                });
-        });
+                        if let Some(pkg_id) = pkg_to_clear {
+                            self.provider.unload_package(pkg_id);
+                        }
+                    });
+            },
+        );
 
-        egui::SidePanel::right("entities_scene")
+        egui::SidePanel::right(format!("{}_scene", self.current_package))
             .default_width(ui.ctx().content_rect().width() * 0.3)
             .show_inside(ui, |ui| {
                 ui.take_available_space();
@@ -477,6 +480,9 @@ impl<P: ModelProvider> ModelListBase<P> {
 }
 
 pub trait ModelProvider {
+    /// Used for widget IDs, must be unique between providers.
+    fn name(&self) -> &str;
+
     fn package_keys(&self) -> &[u16];
     fn package(&self, pkg_id: u16) -> Option<&[ModelEntry]>;
     fn package_mut(&mut self, pkg_id: u16) -> Option<&mut [ModelEntry]>;

@@ -59,8 +59,8 @@ impl Display for Tab {
         let s = match self {
             Tab::Settings => GoogleMaterialSymbols::Settings.to_string(),
             Tab::Home => format!("{} Home", GoogleMaterialSymbols::Home),
-            Tab::EntityList(_) => format!("{} Entities", GoogleMaterialSymbols::DeployedCode),
-            Tab::StaticList(_) => format!("{} Statics", GoogleMaterialSymbols::DeployedCode),
+            Tab::EntityList(_) => format!("{} Entities", GoogleMaterialSymbols::ChessPawn),
+            Tab::StaticList(_) => format!("{} Statics", GoogleMaterialSymbols::Landscape),
             Tab::MapList(_) => format!("{} Maps", GoogleMaterialSymbols::Map),
             Tab::Map(tab) => format!("{} ({})", tab.name, tab.tag),
             Tab::TestScene(_) => format!("{} Test Scene", GoogleMaterialSymbols::Experiment),

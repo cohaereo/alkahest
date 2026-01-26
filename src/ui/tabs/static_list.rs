@@ -64,6 +64,10 @@ impl StaticModelProvider {
 }
 
 impl ModelProvider for StaticModelProvider {
+    fn name(&self) -> &str {
+        "static_models"
+    }
+
     fn package_keys(&self) -> &[u16] {
         &self.package_keys
     }

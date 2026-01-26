@@ -36,7 +36,7 @@ impl HomeTab {
                 result = TabResult::Open(Tab::MapList(MapListTab::new(&shared_state.strings)));
             }
             if uis[0]
-                .d_button(format!("{} ENTITIES", GoogleMaterialSymbols::DeployedCode))
+                .d_button(format!("{} ENTITIES", GoogleMaterialSymbols::ChessPawn))
                 .clicked()
             {
                 // self.added_nodes.push(Tab::DynamicList);
