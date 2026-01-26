@@ -46,6 +46,7 @@ const DEBUG_SHADER: &str = include_str!("../builtin/shaders/debug.hlsl");
 const CLEAR_AO_SHADER: &str = include_str!("../builtin/shaders/clear_ao.hlsl");
 const SHADOW_MAP_SHADER: &str = include_str!("../builtin/shaders/shadow_map.hlsl");
 const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
+const OVERDRAW_SHADER: &str = include_str!("../builtin/shaders/overdraw.hlsl");
 const HZB_DOWNSAMPLE_SHADER: &str = include_str!("../builtin/shaders/hzb_downsample.hlsl");
 
 pub struct Renderer {
@@ -315,6 +316,7 @@ pub struct CommonResources {
     blit_vs: d3d11::VertexShader,
     blit_ps: d3d11::PixelShader,
     blit_ps_linear: d3d11::PixelShader,
+    overdraw_ps: d3d11::PixelShader,
 
     temporary_sky_hemisphere: Texture,
     temporary_vignette: Texture,
@@ -359,6 +361,8 @@ impl CommonResources {
             gpu.compile_shader_vs_ps("blit", BLIT_SHADER, "mainVS", "mainPS")?;
         let (_, blit_ps_linear) =
             gpu.compile_shader_vs_ps("blit", BLIT_SHADER, "mainVS", "mainPS_linear")?;
+        let (_, overdraw_ps) =
+            gpu.compile_shader_vs_ps("overdraw", OVERDRAW_SHADER, "mainVS", "mainPS")?;
 
         let shadowmap_vs_t2 = Texture::load_2d_raw(
             gpu,
@@ -415,6 +419,7 @@ impl CommonResources {
             blit_vs,
             blit_ps,
             blit_ps_linear,
+            overdraw_ps,
             sampler_point,
             sampler_linear,
         })

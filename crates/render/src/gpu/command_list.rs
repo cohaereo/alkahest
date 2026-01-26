@@ -23,6 +23,7 @@ pub struct CommandList {
     pub(super) current_stencil_ref: u32,
     pub(super) depth_mode: DepthMode,
     pub(super) bound_technique: TagHash,
+    pub(crate) pixel_shader_override: Option<d3d11::PixelShader>,
     smart_rebind: bool,
 
     pub externs: LocalExterns,
@@ -59,6 +60,7 @@ impl CommandList {
             current_depth_bias: usize::MAX,
             current_input_topology: usize::MAX,
             current_stencil_ref: 0,
+            pixel_shader_override: None,
             depth_mode: DepthMode::Reverse,
             bound_technique: TagHash::NONE,
 
@@ -206,6 +208,10 @@ impl CommandList {
         } else {
             self.smart_rebind
         }
+    }
+
+    pub fn set_override_pixel_shader(&mut self, shader: impl Into<Option<d3d11::PixelShader>>) {
+        self.pixel_shader_override = shader.into();
     }
 
     pub fn set_input_layout(&mut self, index: usize) {

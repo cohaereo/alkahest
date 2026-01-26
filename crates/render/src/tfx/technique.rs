@@ -291,7 +291,9 @@ impl ShaderModule {
     pub fn bind(&self, cmd: &mut CommandList) {
         match self {
             ShaderModule::Vertex(shader) => cmd.vertex_set_shader(shader),
-            ShaderModule::Pixel(shader) => cmd.pixel_set_shader(shader),
+            ShaderModule::Pixel(shader) => {
+                cmd.pixel_set_shader(cmd.pixel_shader_override.as_ref().unwrap_or(shader))
+            }
             ShaderModule::Geometry(shader) => cmd.geometry_set_shader(shader),
             ShaderModule::Hull(shader) => cmd.hull_set_shader(shader),
             ShaderModule::Domain(shader) => cmd.domain_set_shader(shader),

@@ -11,6 +11,7 @@ pub struct GpuState {
     current_depth_bias: usize,
     current_input_layout: usize,
     current_input_topology: usize,
+    pixel_shader_override: Option<d3d11::PixelShader>,
     depth_mode: DepthMode,
 
     state_vs: GpuStageState,
@@ -40,6 +41,7 @@ impl GpuState {
             current_depth_bias: cmd.current_depth_bias,
             current_input_layout: cmd.current_input_layout,
             current_input_topology: cmd.current_input_topology,
+            pixel_shader_override: cmd.pixel_shader_override.clone(),
             depth_mode: cmd.depth_mode,
             state_vs: GpuStageState {
                 cbuffers: cmd.vertex_get_constant_buffers(),
@@ -66,6 +68,7 @@ impl GpuState {
         cmd.current_depth_bias = self.current_depth_bias;
         cmd.current_input_layout = self.current_input_layout;
         cmd.current_input_topology = self.current_input_topology;
+        cmd.pixel_shader_override = self.pixel_shader_override.clone();
         {
             profiling::scope!("restore_vs");
             let mut samplers_refs: [Option<&d3d11::SamplerState>;

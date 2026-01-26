@@ -710,7 +710,7 @@ impl Scene {
             self.renderer
                 .submit_sun_shadows(&mut cmd, &self.camera, &self.view);
             self.renderer
-                .submit_world(&mut cmd, &self.view, self.render_mode.into());
+                .submit_view(&mut cmd, &self.view, self.render_mode.into());
         }
         cmd.copy_resource(
             &self.renderer.surfaces().get(self.view.output).texture,
@@ -925,6 +925,7 @@ pub enum RenderMode {
     // Geometry:
     DepthEdges,
     WorldNormal,
+    Overdraw,
 
     // Lighting:
     LightDiffuse,
@@ -981,6 +982,7 @@ impl RenderMode {
                 ui.section_separator("Geometry:");
                 mode!(ui, RenderMode::DepthEdges, "Depth Edges");
                 mode!(ui, RenderMode::WorldNormal, "World Normal");
+                mode!(ui, RenderMode::Overdraw, "Overdraw");
 
                 ui.section_separator("Lighting:");
                 mode!(ui, RenderMode::LightDiffuse, "Diffuse Light");
@@ -1009,6 +1011,7 @@ impl From<RenderMode> for Option<DebugPipeline> {
             RenderMode::IridescenceId => Some(DebugPipeline::Overcoat),
             RenderMode::DepthEdges => Some(DebugPipeline::DepthEdges),
             RenderMode::WorldNormal => Some(DebugPipeline::WorldNormal),
+            RenderMode::Overdraw => Some(DebugPipeline::Overdraw),
             RenderMode::LightDiffuse => Some(DebugPipeline::LightDiffuse),
             RenderMode::LightSpecular => Some(DebugPipeline::LightSpecular),
         }

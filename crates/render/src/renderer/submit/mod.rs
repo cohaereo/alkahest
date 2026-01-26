@@ -12,7 +12,9 @@ pub mod water;
 use std::{fmt::Debug, sync::Arc};
 
 use alkahest_core::convar::ConVars;
-use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, ShaderStage};
+use alkahest_data::tfx::{
+    FeatureRendererSubscription, PipelineState, PrimitiveType, RenderStage, ShaderStage,
+};
 use glam::{Mat4, Vec4, vec4};
 
 use super::Renderer;
@@ -23,12 +25,13 @@ use crate::{
     tfx::{
         externs::{self, GlobalLighting, ScreenArea, TextureView, UberDepth},
         scope::FrameScope,
+        technique::ShaderModule,
         view::View,
     },
 };
 
 impl Renderer {
-    pub fn submit_world(
+    pub fn submit_view(
         self: &Arc<Self>,
         cmd: &mut CommandList,
         view: &View,
@@ -44,12 +47,22 @@ impl Renderer {
         self.active_feature_renderers
             .store(self.calculate_active_feature_renderers());
 
-        let gpu = &self.gpu;
-
         self.prepare_externs(cmd, view);
 
         self.globals.scopes.view.bind(cmd).unwrap();
 
+        match debug_pipeline {
+            Some(DebugPipeline::Overdraw) => self.submit_view_overdraw(cmd, view),
+            _ => self.submit_view_shaded(cmd, view, debug_pipeline),
+        }
+    }
+
+    fn submit_view_shaded(
+        self: &Arc<Self>,
+        cmd: &mut CommandList,
+        view: &View,
+        debug_pipeline: Option<DebugPipeline>,
+    ) {
         let geo = if view.settings.multithreading {
             Some(self.submit_geometry_command_lists(cmd, view))
         } else {
@@ -127,6 +140,8 @@ impl Renderer {
                     DebugPipeline::WorldNormal => &p.debug_world_normal,
                     DebugPipeline::LightDiffuse => &p.debug_diffuse_light,
                     DebugPipeline::LightSpecular => &p.debug_specular_light,
+
+                    DebugPipeline::Overdraw => &p.global_lighting_and_shading,
                 };
 
                 self.execute_global_pipeline(cmd, technique, &format!("{debug_pipeline:?}"));
@@ -248,7 +263,7 @@ impl Renderer {
                 Some(0),
             );
             cmd.flush_states();
-            self.immediate.lock().prepare(gpu);
+            self.immediate.lock().prepare(&self.gpu);
             self.immediate.lock().submit(cmd);
         }
 
@@ -298,6 +313,53 @@ impl Renderer {
         //     true,
         //     "final_blit",
         // );
+    }
+
+    fn submit_view_overdraw(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+        self.submit_gbuffer_generation(cmd, view, None);
+
+        self.clear_surface(cmd, view.postprocess, [0.0, 0.0, 0.0, 1.0]);
+        self.bind_surfaces(cmd, &[view.postprocess], None);
+
+        {
+            cmd.state = PipelineState::new(Some(2), Some(0), Some(0), Some(0));
+            cmd.state_override = PipelineState::new(Some(2), Some(0), Some(0), Some(0));
+            let ShaderModule::Pixel(m) = &self
+                .globals
+                .pipelines
+                .overdraw_visualizer
+                .stage_pixel
+                .as_ref()
+                .expect("overdraw_visualizer is missing it's pixel stage")
+                .shader_module
+            else {
+                panic!("overdraw_visualizer is missing it's pixel stage");
+            };
+
+            cmd.set_override_pixel_shader(m.clone());
+            self.submit_stage_parallel_linear(
+                cmd,
+                RenderStage::GenerateGbuffer,
+                FeatureRendererSubscription::all(),
+            );
+            cmd.set_override_pixel_shader(None);
+        }
+
+        {
+            cmd.vertex_set_shader(&self.common.blit_vs);
+            cmd.pixel_set_shader(&self.common.overdraw_ps);
+
+            let surf_postprocess = view.surfaces().get(view.postprocess);
+            let surf_output = view.surfaces().get(view.output);
+            surf_output.bind_single(cmd);
+            cmd.pixel_set_shader_resources(0, &[surf_postprocess.srv(0)]);
+
+            cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+            cmd.flush_states();
+            cmd.set_input_topology(PrimitiveType::TriangleStrip);
+
+            cmd.draw(4, 0);
+        }
     }
 
     fn prepare_externs(&self, cmd: &mut CommandList, view: &View) {
@@ -676,6 +738,7 @@ pub enum DebugPipeline {
 
     DepthEdges,
     WorldNormal,
+    Overdraw,
 
     LightDiffuse,
     LightSpecular,

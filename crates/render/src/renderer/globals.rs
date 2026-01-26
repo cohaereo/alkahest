@@ -202,6 +202,7 @@ tfx_global_pipelines! {
     debug_world_normal,
     debug_diffuse_light,
     debug_specular_light,
+    overdraw_visualizer,
 
     // LUT3D variants
     screen_area_global_lut3d_distort,
