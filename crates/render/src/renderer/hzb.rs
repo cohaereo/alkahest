@@ -250,12 +250,18 @@ impl Hzb {
             None => return false, // visible
         };
 
+        let z_near_linear = self.linearize_depth(z_near);
+
+        if z_near_linear < 1.0 {
+            return false;
+        }
+
         // Pick the coarsest mip where the rect fits within 2x2 texels
         let mip = self.select_mip(&rect);
 
         let hzb_min = self.sample_hzb_min_4(mip, &rect);
 
-        (self.linearize_depth(z_near)) > self.linearize_depth(hzb_min)
+        z_near_linear > self.linearize_depth(hzb_min)
     }
 
     /// Helper for `is_aabb_occluded` to reduce mental gymnastics when checking visibility.
