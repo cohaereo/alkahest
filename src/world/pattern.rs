@@ -125,7 +125,7 @@ pub fn spawn_pattern_from_header(
                     entity,
                     AxisAlignedBBox::from_center_extents(
                         model.model.model_offset.xyz(),
-                        model.model.model_scale.xyz(),
+                        model.model.model_scale.xyz() * 2.0,
                     ),
                 )?;
 

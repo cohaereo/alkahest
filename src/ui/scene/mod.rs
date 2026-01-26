@@ -796,7 +796,7 @@ impl Scene {
         match &mut self.controller {
             CameraController::Orbit { target, .. } => {
                 *target = aabb.center();
-                self.camera.max_ortho_width = aabb.extents().length() * 1.2;
+                self.camera.max_ortho_width = aabb.extents().length() * 0.75;
             }
             CameraController::FirstPerson { .. } => {}
         }

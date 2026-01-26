@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use alkahest_data::pattern::SPattern;
+use alkahest_data::{pattern::SPattern, tfx::common::AxisAlignedBBox};
 use egui::Ui;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
@@ -8,7 +8,10 @@ use tiger_pkg::{TagHash, package_manager};
 use super::TabResult;
 use crate::{
     ui::tabs::model_list::{ModelEntry, ModelListBase, ModelProvider},
-    world::pattern::{spawn_pattern, spawn_pattern_from_header},
+    world::{
+        pattern::{spawn_pattern, spawn_pattern_from_header},
+        transform::Transform,
+    },
 };
 
 pub struct EntityListTab {
@@ -110,10 +113,24 @@ impl ModelProvider for EntityModelProvider {
                 match package_manager().read_tag_struct::<SPattern>(hash) {
                     Ok(pattern) => {
                         let mut world = hecs::World::new();
-                        if let Err(e) = spawn_pattern_from_header(&mut world, &pattern, None, None)
-                        {
+                        if let Err(e) = spawn_pattern_from_header(
+                            &mut world,
+                            &pattern,
+                            None,
+                            Some(Transform::default()),
+                        ) {
                             error!("Failed to load pattern {hash}: {e}");
                         }
+
+                        if let Some((_, (transform, aabb))) = world
+                            .query::<(&mut Transform, &mut AxisAlignedBBox)>()
+                            .iter()
+                            .next()
+                        {
+                            transform.scale = aabb.extents().recip();
+                            *aabb = aabb.transformed(transform.local_to_world());
+                        }
+
                         Some(ModelEntry {
                             hash,
                             thumbnail_world: Some(world),

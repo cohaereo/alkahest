@@ -274,7 +274,10 @@ impl CameraProjection {
             Self::Perspective => {
                 Mat4::perspective_rh(fov_or_max_width.to_radians(), aspect, near, far)
             }
-            _ => self.matrix(aspect, fov_or_max_width, near, far),
+            Self::Orthographic => {
+                let extents = Vec2::new(fov_or_max_width, fov_or_max_width / aspect) * 0.5;
+                glam::Mat4::orthographic_rh(-extents.x, extents.x, -extents.y, extents.y, far, near)
+            }
         }
     }
 }

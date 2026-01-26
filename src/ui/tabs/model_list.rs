@@ -20,6 +20,7 @@ use crate::{
     world::{
         permutations::{self, OPTION_KEY_INVALID, PermutationConfig},
         render_objects::{DynamicRenderObject, StaticRenderObject, s_are_all_objects_loaded},
+        transform::Transform,
     },
 };
 
@@ -62,6 +63,7 @@ impl<P: ModelProvider> ModelListBase<P> {
 
         let mut scene = Scene::new(Renderer::instance().clone(), Camera::default()).unwrap();
         scene.view.settings = thumbnail_scene.view.settings.clone();
+        scene.camera.far = 100_000.0;
 
         let apply_scene_configuration = |scene: &mut Scene| {
             scene.set_global_channel_by_name("global_ambient_intensity", Vec4::splat(5.0));
@@ -104,6 +106,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                         .next()
                         .map(|(_, bb)| *bb)
                         .unwrap_or(AxisAlignedBBox::from_center_extents(Vec3::ZERO, Vec3::ONE));
+
                     self.thumbnail_scene.set_world(world);
                     self.thumbnail_scene.focus_fit_ortho(&bb);
                     self.thumbnail_scene.render(1.0 / 60.0, (512, 512));
