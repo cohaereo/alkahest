@@ -1,3 +1,4 @@
+pub mod activity_list;
 pub mod entity_list;
 pub mod home;
 pub mod map;
@@ -20,7 +21,8 @@ use map_list::MapListTab;
 use tag_lookup::TagLookupTab;
 
 use crate::ui::tabs::{
-    settings::SettingsTab, static_list::StaticListTab, test_scene::TestSceneTab,
+    activity_list::ActivityListTab, settings::SettingsTab, static_list::StaticListTab,
+    test_scene::TestSceneTab,
 };
 
 pub enum Tab {
@@ -30,6 +32,7 @@ pub enum Tab {
     StaticList(Box<StaticListTab>),
     MapList(MapListTab),
     Map(MapTab),
+    ActivityList(ActivityListTab),
     TestScene(TestSceneTab),
     TagLookup(TagLookupTab),
 }
@@ -48,6 +51,7 @@ impl Tab {
             Tab::StaticList(_) => 0,
             Tab::MapList(_) => 0,
             Tab::Map(tab) => tab.tag.0 as u64,
+            Tab::ActivityList(_) => 0,
             Tab::TestScene(_) => 0,
             Tab::TagLookup(_) => 0,
         }
@@ -63,6 +67,9 @@ impl Display for Tab {
             Tab::StaticList(_) => format!("{} Statics", GoogleMaterialSymbols::Landscape),
             Tab::MapList(_) => format!("{} Maps", GoogleMaterialSymbols::Map),
             Tab::Map(tab) => format!("{} ({})", tab.name, tab.tag),
+            Tab::ActivityList(_) => {
+                format!("{} Activities", GoogleMaterialSymbols::StadiaController)
+            }
             Tab::TestScene(_) => format!("{} Test Scene", GoogleMaterialSymbols::Experiment),
             Tab::TagLookup(_) => format!("{} Tag Lookup", GoogleMaterialSymbols::Search),
         };
@@ -112,6 +119,10 @@ impl<'a> egui_dock::TabViewer for TabViewer<'a> {
                     }
                     Tab::Map(tab) => {
                         tab.ui(ui, self.egui_d3d11);
+                    }
+                    Tab::ActivityList(tab) => {
+                        let res = tab.ui(ui);
+                        self.process_result(res);
                     }
                     Tab::TestScene(tab) => {
                         tab.ui(ui, self.egui_d3d11);

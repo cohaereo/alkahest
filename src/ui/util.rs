@@ -14,7 +14,7 @@ pub trait UiExt {
 
 impl UiExt for Ui {
     fn d_button(&mut self, text: impl Into<RichText>) -> Response {
-        DButton::new(text).ui(self)
+        DButton::new(text.into()).ui(self)
     }
 
     // fn d_spinner(&mut self, size: Vec2) -> Response {
@@ -81,50 +81,54 @@ pub trait ExternalDataWidgetExt {
 
 pub struct DButton<'a> {
     button: egui::Button<'a>,
+    text_color: Color32,
 }
 
 impl<'a> DButton<'a> {
-    pub fn new(text: impl Into<RichText>) -> Self {
+    pub fn new(atoms: impl IntoAtoms<'a>) -> Self {
         Self {
-            button: egui::Button::new(text.into().color(Color32::WHITE))
+            button: egui::Button::new(atoms)
                 .min_size(vec2(120.0, 60.0))
                 .corner_radius(0)
                 .fill(Color32::from_gray(96).gamma_multiply(0.2))
                 .stroke(Stroke::new(1.0, Color32::WHITE)),
+            text_color: Color32::WHITE,
         }
     }
 
-    pub fn new_white(text: impl Into<RichText>) -> Self {
+    pub fn new_white(atoms: impl IntoAtoms<'a>) -> Self {
         Self {
-            button: egui::Button::new(text.into().color(Color32::BLACK))
+            button: egui::Button::new(atoms)
                 .min_size(vec2(120.0, 60.0))
                 .corner_radius(0)
                 .fill(Color32::from_white_alpha(196))
                 .stroke(Stroke::new(1.0, Color32::WHITE)),
+            text_color: Color32::BLACK,
         }
     }
 
     pub fn ui(self, ui: &mut Ui) -> Response {
-        let mut old_padding = egui::vec2(25.0, 20.0);
-        std::mem::swap(&mut old_padding, &mut ui.spacing_mut().button_padding);
+        ui.scope(|ui| {
+            ui.spacing_mut().button_padding = egui::vec2(25.0, 20.0);
+            ui.style_mut().visuals.override_text_color = Some(self.text_color);
 
-        let r = ui
-            .add(self.button)
-            .on_hover_cursor(CursorIcon::PointingHand);
+            let r = ui
+                .add(self.button)
+                .on_hover_cursor(CursorIcon::PointingHand);
 
-        if r.hovered() {
-            ui.painter().rect(
-                r.rect.expand(4.0),
-                0,
-                Color32::TRANSPARENT,
-                Stroke::new(2.0, Color32::from_white_alpha(196)),
-                StrokeKind::Outside,
-            );
-        }
+            if r.hovered() {
+                ui.painter().rect(
+                    r.rect.expand(4.0),
+                    0,
+                    Color32::TRANSPARENT,
+                    Stroke::new(2.0, Color32::from_white_alpha(196)),
+                    StrokeKind::Outside,
+                );
+            }
 
-        std::mem::swap(&mut old_padding, &mut ui.spacing_mut().button_padding);
-
-        r
+            r
+        })
+        .inner
     }
 
     pub fn min_size(mut self, size: Vec2) -> Self {
