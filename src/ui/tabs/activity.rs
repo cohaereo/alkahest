@@ -31,8 +31,7 @@ pub struct ActivityTab {
 
     pub tag: TagHash,
     pub name: String,
-    // load_task: Task<hecs::World>,
-    // scene: Box<Scene>,
+    scene: Box<Scene>,
 }
 
 impl ActivityTab {
@@ -52,10 +51,7 @@ impl ActivityTab {
                     map.bubble_name,
                 ),
                 load_task: Task::default(),
-                scene: Box::new(
-                    Scene::new(Renderer::instance().clone(), Camera::default())?
-                        .with_controller(CameraController::new_first_person()),
-                ),
+                world: None,
                 state: ActivityLoadState::Unloaded,
             });
         }
@@ -68,18 +64,12 @@ impl ActivityTab {
             activity,
             current_map_index: 0,
             maps,
-            // load_task: Task::new(move || {
-            //     let mut world = hecs::World::new();
-            //     crate::world::map::load_map_into_world(tag, &mut world)
-            //         .expect("Failed to load map into world");
-            //     world
-            // }),
             tag,
             name,
-            // scene: Box::new(
-            //     Scene::new(Renderer::instance().clone(), Camera::default())?
-            //         .with_controller(CameraController::new_first_person()),
-            // ),
+            scene: Box::new(
+                Scene::new(Renderer::instance().clone(), Camera::default())?
+                    .with_controller(CameraController::new_first_person()),
+            ),
         })
     }
 
@@ -118,8 +108,13 @@ impl ActivityTab {
             return;
         };
 
-        map.scene
-            .show(ui, ui.available_size_before_wrap(), egui_d3d11);
+        // std::mem::swap(&mut map.world, y);
+        if let Some(world) = map.world.as_mut() {
+            std::mem::swap(world, &mut self.scene.world);
+            self.scene
+                .show(ui, ui.available_size_before_wrap(), egui_d3d11);
+            std::mem::swap(&mut self.scene.world, world);
+        }
     }
 }
 
@@ -129,8 +124,8 @@ struct ActivityMap {
 
     name: String,
     load_task: Task<hecs::World>,
+    world: Option<hecs::World>,
     state: ActivityLoadState,
-    scene: Box<Scene>,
 }
 
 impl ActivityMap {
@@ -174,7 +169,7 @@ impl ActivityMap {
             match res {
                 Ok(world) => {
                     self.state = ActivityLoadState::Loaded;
-                    self.scene.world = world;
+                    self.world = Some(world);
                 }
                 Err(_err) => {
                     // TODO(cohae): Proper error handling and user popup(?)
