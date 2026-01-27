@@ -1,7 +1,7 @@
 use tiger_parse::{tiger_type, FnvHash, NullString, Pointer, ResourcePointer};
 use tiger_pkg::TagHash;
 
-use crate::tag::WideHash;
+use crate::tag::{Tag, WideHash};
 
 pub mod transition;
 
@@ -35,8 +35,8 @@ pub struct SActivity {
     pub destination: WideHash,
 
     #[tiger(offset = 0x40)]
-    pub unk40: Vec<Unk80808926>,
-    pub unk50: Vec<Unk80808924>,
+    pub unk40: Vec<SUnk80808926>,
+    pub unk50: Vec<SUnk80808924>,
     pub unk60: [u32; 4],
     pub unk70: FnvHash,
     pub unk74: TagHash,
@@ -45,20 +45,20 @@ pub struct SActivity {
 
 #[derive(Debug)]
 #[tiger_type(id = 0x80808924, size = 0x48)]
-pub struct Unk80808924 {
+pub struct SUnk80808924 {
     pub location_name: FnvHash,
     pub activity_name: FnvHash,
     pub bubble_name: FnvHash,
     pub unkc: u32,
     pub unk10: ResourcePointer,
-    pub unk18: Vec<Unk80808948>,
+    pub unk18: Vec<SUnk80808948>,
     pub map_references: Vec<WideHash>,
     pub unk28: [u32; 4],
 }
 
 #[derive(Debug)]
 #[tiger_type(id = 0x80808926)]
-pub struct Unk80808926 {
+pub struct SUnk80808926 {
     pub location_name: FnvHash,
     pub activity_name: FnvHash,
     pub bubble_name: FnvHash,
@@ -80,18 +80,43 @@ pub struct Unk80808926 {
 
     pub unk48: u32,
     pub unk4c: u32,
-    pub unk50: Vec<Unk80808948>,
+    pub unk50: Vec<SUnk80808948>,
     pub unk60: [u32; 4],
 }
 
 #[derive(Debug)]
 #[tiger_type(id = 0x80808948)]
-pub struct Unk80808948 {
+pub struct SUnk80808948 {
     pub location_name: FnvHash,
     pub activity_name: FnvHash,
     pub bubble_name: FnvHash,
     pub activity_phase_name: FnvHash,
     pub activity_phase_name2: FnvHash,
-    pub unk_entity_reference: TagHash,
-    // pub unk_entity_reference: Tag<Unk80808e89>,
+    pub unk_entity_reference: Tag<SUnk80808e89>,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x80808E89)]
+pub struct SUnk80808e89 {
+    pub file_size: u64,
+    pub unk8: u64,
+    pub unk10: ResourcePointer,
+    pub unk18: Tag<SUnk80808ebe>,
+    pub unk1c: u32,
+    pub unk20: [u32; 4],
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x80808EBE)]
+pub struct SUnk80808ebe {
+    pub file_size: u64,
+    pub entity_resources: Vec<Tag<Unk80808943>>,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x80808943, size = 0x24)]
+pub struct Unk80808943 {
+    pub file_size: u64,
+    #[tiger(offset = 0x20)]
+    pub entity_resource: TagHash,
 }

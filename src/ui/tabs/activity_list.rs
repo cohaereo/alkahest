@@ -9,7 +9,10 @@ use tiger_pkg::{TagHash, package_manager};
 
 use crate::{
     app::SharedState,
-    ui::{tabs::TabResult, util::DButton},
+    ui::{
+        tabs::{Tab, TabResult, activity::ActivityTab},
+        util::DButton,
+    },
 };
 
 pub struct ActivityListTab {
@@ -110,7 +113,9 @@ impl ActivityListTab {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui) -> TabResult {
-        self.node_children_ui(ui, &self.root_node, 0)
+        let mut result = TabResult::Continue;
+        self.node_children_ui(ui, &self.root_node, 0, &mut result);
+        result
     }
 
     /// Draws a branch node's children
@@ -119,10 +124,11 @@ impl ActivityListTab {
         ui: &mut egui::Ui,
         node: &ActivityTreeNode,
         depth: usize,
-    ) -> TabResult {
+        result: &mut TabResult,
+    ) {
         let ActivityTreeNode::Branch { children, .. } = node else {
             ui.label("TODO: leaf in root nodes");
-            return TabResult::Continue;
+            return;
         };
 
         let current_selected = self.current_node.borrow().get(depth).copied();
@@ -154,7 +160,19 @@ impl ActivityListTab {
                                     .ui(ui)
                                     .clicked()
                                 {
-                                    println!("Clicked on leaf {title} {tag}");
+                                    match ActivityTab::new(
+                                        &self.shared_state,
+                                        *tag,
+                                        title.to_string(),
+                                    ) {
+                                        Ok(tab) => {
+                                            *result = TabResult::Open(Tab::Activity(tab));
+                                        }
+                                        Err(err) => {
+                                            // TODO(cohae): Error popup
+                                            error!("Failed to open activity tab: {}", err);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -164,10 +182,8 @@ impl ActivityListTab {
 
         let next_node = self.current_node.borrow().get(depth).copied();
         if let Some(next_node) = next_node {
-            self.node_children_ui(ui, &children[next_node], depth + 1);
+            self.node_children_ui(ui, &children[next_node], depth + 1, result);
         }
-
-        TabResult::Continue
     }
 }
 

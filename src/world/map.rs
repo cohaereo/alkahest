@@ -1,10 +1,19 @@
-use alkahest_data::map::{ComponentData, SBubbleParent, SMapNodeTable};
+use std::io::{Cursor, Seek};
+
+use alkahest_data::{
+    activity::{SActivity, SUnk80808948},
+    map::{ComponentData, SBubbleParent, SMapNodeTable},
+    pattern::SComponent,
+};
 use anyhow::Context;
 use glam::Vec4Swizzles;
-use tiger_parse::PackageManagerExt;
+use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
-use crate::world::{pattern::spawn_pattern, transform::Transform};
+use crate::{
+    ui::tabs::activity,
+    world::{pattern::spawn_pattern, transform::Transform},
+};
 
 pub fn load_map_into_world(taghash: TagHash, world: &mut hecs::World) -> anyhow::Result<()> {
     let parent = package_manager()
@@ -12,43 +21,93 @@ pub fn load_map_into_world(taghash: TagHash, world: &mut hecs::World) -> anyhow:
         .context("Failed to read SBubbleParent")?;
     for resources in &parent.definition.containers {
         for datatable_hash in &resources.data_tables {
-            let datatable = package_manager()
-                .read_tag_struct::<SMapNodeTable>(*datatable_hash)
-                .context("Failed to read SMapNodeTable")?;
-            for node in datatable.nodes {
-                let transform = Transform::new(
-                    node.translation.xyz(),
-                    node.rotation,
-                    node.translation.www(),
-                );
+            load_nodetable_into_world(*datatable_hash, world)?;
+        }
+    }
 
-                if let Some(ComponentData::Unknown { class, offset, .. }) =
-                    *node.primary_component_data
-                {
-                    debug!(
-                        "Unknown dynamic component data class: {:08X} in {datatable_hash} at \
-                         offset: {:#X}",
-                        class, offset
-                    );
-                }
+    Ok(())
+}
 
-                if node.entity.is_none() {
-                    anyhow::bail!(
-                        "Map data table node with world id {} has no entity. This shouldn't be \
-                         possible!",
-                        node.world_id
-                    );
-                }
+pub fn load_activity_phase_into_world(
+    phase: &SUnk80808948,
+    world: &mut hecs::World,
+) -> anyhow::Result<()> {
+    for res in &phase.unk_entity_reference.unk18.entity_resources {
+        let component_data = package_manager()
+            .read_tag(res.entity_resource)
+            .context("Failed to read component data")?;
+        let mut component_data = Cursor::new(component_data);
 
-                if let Err(e) = spawn_pattern(
-                    world,
-                    node.entity.hash32(),
-                    node.primary_component_data.as_ref(),
-                    Some(transform),
-                ) {
-                    error!("Failed to load entity: {:?}", e);
-                }
-            }
+        let component =
+            SComponent::read_ds(&mut component_data).context("Failed to read SComponent")?;
+
+        if component.unk18.resource_type == 0x808092D8 {
+            component_data.seek(std::io::SeekFrom::Start(component.unk18.offset + 0x84))?;
+            let nodetable_hash = TagHash::read_ds(&mut component_data)?;
+            load_nodetable_into_world(nodetable_hash, world)?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn load_activity_for_map_into_world(
+    activity_hash: impl Into<TagHash>,
+    bubble_hash: u32,
+    world: &mut hecs::World,
+) -> anyhow::Result<()> {
+    let activity: SActivity = package_manager().read_tag_struct(activity_hash.into())?;
+    let activity_map = &activity
+        .unk50
+        .iter()
+        .find(|b| b.bubble_name == bubble_hash)
+        .context("Map index out of range")?;
+
+    for unk in &activity_map.unk18 {
+        if let Err(e) = load_activity_phase_into_world(unk, world) {
+            error!(
+                "Activity phase load for {} failed: {e}",
+                unk.unk_entity_reference.taghash()
+            )
+        }
+    }
+
+    Ok(())
+}
+
+pub fn load_nodetable_into_world(
+    table_hash: TagHash,
+    world: &mut hecs::World,
+) -> anyhow::Result<()> {
+    let table: SMapNodeTable = package_manager().read_tag_struct(table_hash)?;
+    for node in table.nodes {
+        let transform = Transform::new(
+            node.translation.xyz(),
+            node.rotation,
+            node.translation.www(),
+        );
+
+        if let Some(ComponentData::Unknown { class, offset, .. }) = *node.primary_component_data {
+            debug!(
+                "Unknown dynamic component data class: {:08X} in {table_hash} at offset: {:#X}",
+                class, offset
+            );
+        }
+
+        if node.entity.is_none() {
+            anyhow::bail!(
+                "Map data table node with world id {} has no entity. This shouldn't be possible!",
+                node.world_id
+            );
+        }
+
+        if let Err(e) = spawn_pattern(
+            world,
+            node.entity.hash32(),
+            node.primary_component_data.as_ref(),
+            Some(transform),
+        ) {
+            error!("Failed to load entity: {:?}", e);
         }
     }
 

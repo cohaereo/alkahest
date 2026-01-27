@@ -29,3 +29,9 @@ impl<T: Sized + Send> Task<T> {
         }
     }
 }
+
+impl<T: Sized + Send> Default for Task<T> {
+    fn default() -> Self {
+        Self { join_handle: None }
+    }
+}

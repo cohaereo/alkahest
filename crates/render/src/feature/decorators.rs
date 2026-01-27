@@ -194,7 +194,7 @@ impl DecoratorRenderer {
             let bounds_range = bounds_start..bounds_end;
             let instance_bounds = instance_range_bounds
                 .get(bounds_range.clone())
-                .unwrap()
+                .context("Failed to find occlusion bounds")?
                 .iter()
                 .map(|(range, bb)| (range.clone(), *bb, true))
                 .collect_vec();
