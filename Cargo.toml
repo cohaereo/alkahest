@@ -93,7 +93,7 @@ sdl3.workspace = true
 
 # UI
 egui.workspace = true
-egui_extras = { version = "0.33.3", features = ["image"] }
+egui_extras = { version = "0.33.3", features = ["image",  "svg"] }
 egui_dock.workspace = true
 image = { version = "0.25", features = ["png"] }
 clap = { version = "4.5.37", features = ["derive"] }

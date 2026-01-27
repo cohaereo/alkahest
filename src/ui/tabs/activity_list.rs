@@ -2,7 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use ahash::HashMap;
 use alkahest_data::activity::SActivity;
-use egui::vec2;
+use egui::{Atom, AtomExt, Atoms, IntoAtoms, Vec2, vec2};
 use itertools::Itertools;
 use tiger_parse::TigerReadable;
 use tiger_pkg::{TagHash, package_manager};
@@ -10,6 +10,7 @@ use tiger_pkg::{TagHash, package_manager};
 use crate::{
     app::SharedState,
     ui::{
+        icons,
         tabs::{Tab, TabResult, activity::ActivityTab},
         util::DButton,
     },
@@ -140,11 +141,11 @@ impl ActivityListTab {
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                     for (i, child) in children.iter().enumerate() {
                         match child {
-                            ActivityTreeNode::Branch { title, .. } => {
+                            ActivityTreeNode::Branch { .. } => {
                                 let btn = if Some(i) == current_selected {
-                                    DButton::new_white(title)
+                                    DButton::new_white(child.atoms())
                                 } else {
-                                    DButton::new(title)
+                                    DButton::new(child.atoms())
                                 }
                                 .min_size(vec2(512.0, 32.0))
                                 .ui(ui);
@@ -155,7 +156,7 @@ impl ActivityListTab {
                                 }
                             }
                             ActivityTreeNode::Leaf { title, tag } => {
-                                if DButton::new((title, format!("({tag})")))
+                                if DButton::new((child.atoms(), format!("({tag})")))
                                     .min_size(vec2(512.0, 32.0))
                                     .ui(ui)
                                     .clicked()
@@ -203,6 +204,39 @@ impl ActivityTreeNode {
         match self {
             ActivityTreeNode::Leaf { title, .. } => title,
             ActivityTreeNode::Branch { title, .. } => title,
+        }
+    }
+
+    fn icon_atom<'a>(&'a self) -> Option<Atom<'a>> {
+        let title = self.title();
+
+        let icon = match title.to_lowercase() {
+            v if v.starts_with("crucible") => icons::CRUCIBLE,
+            v if v.starts_with("raid") => icons::RAID,
+            v if v.starts_with("iron_banner") => icons::IRON_BANNER,
+            v if v.starts_with("trials") => icons::OSIRIS,
+            v if v.starts_with("gambit") => icons::GAMBIT,
+            v if v.starts_with("dungeon") => icons::DUNGEON,
+            v if v.starts_with("mission_") => icons::QUEST,
+            v if v.starts_with("quest_") => icons::QUEST,
+            v if v.ends_with("freeroam") => icons::PATROL,
+            v if v.starts_with("strike") => icons::STRIKE,
+            v if v.starts_with("exotic_") => icons::ENGRAM,
+            v if v.ends_with("_ls_a") => icons::LOST_SECTOR,
+            v if v.ends_with("_ls_b") => icons::LOST_SECTOR,
+            _ => return None,
+        };
+
+        Some(icon.into())
+    }
+
+    fn atoms<'a>(&'a self) -> Atoms<'a> {
+        let title = self.title();
+
+        if let Some(icon) = self.icon_atom() {
+            (icon.atom_size(Vec2::splat(32.0)), "", title.to_string()).into_atoms()
+        } else {
+            title.into_atoms()
         }
     }
 }

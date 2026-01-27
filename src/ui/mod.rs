@@ -10,6 +10,7 @@ use tabs::{DockStateExt, Tab, TabViewer};
 use crate::app::SharedState;
 
 pub mod colors;
+pub mod icons;
 mod scene;
 mod style;
 pub mod tabs;
