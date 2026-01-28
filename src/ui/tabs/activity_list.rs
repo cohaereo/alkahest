@@ -21,7 +21,11 @@ pub struct ActivityListTab {
     shared_state: Arc<SharedState>,
     root_node: ActivityTreeNode,
 
+    all_nodes: Vec<ActivityTreeNode>,
+
     current_node: RefCell<Vec<usize>>,
+
+    search_query: RefCell<String>,
 }
 
 impl ActivityListTab {
@@ -33,12 +37,22 @@ impl ActivityListTab {
         let mut raid_nodes = vec![];
         let mut strike_nodes = vec![];
 
+        let mut all_nodes = HashMap::default();
+
         for (activity_string, tag) in
             package_manager().get_named_tags_by_class(SActivity::ID.unwrap())
         {
             let Some((destination, activity)) = activity_string.split_once(".") else {
                 continue;
             };
+
+            all_nodes.insert(
+                activity_string.clone(),
+                ActivityTreeNode::Leaf {
+                    title: format!("{activity} ({destination})"),
+                    tag,
+                },
+            );
 
             if activity.ends_with("_ambient") {
                 continue;
@@ -112,6 +126,9 @@ impl ActivityListTab {
         strike_nodes.sort_by_key(|node| node.title().to_string());
         destination_nodes.sort_by_key(|node| node.title().to_string());
 
+        let mut all_nodes = all_nodes.into_values().collect_vec();
+        all_nodes.sort_by_key(|node| node.title().to_string());
+
         Self {
             shared_state: shared_state.clone(),
             root_node: ActivityTreeNode::Branch {
@@ -143,6 +160,8 @@ impl ActivityListTab {
                     },
                 ],
             },
+            all_nodes,
+            search_query: String::new().into(),
             current_node: vec![].into(),
         }
     }
@@ -168,31 +187,29 @@ impl ActivityListTab {
 
         let current_selected = self.current_node.borrow().get(depth).copied();
         egui::SidePanel::left(format!("activity_node_depth{depth}")).show_inside(ui, |ui| {
-            egui::ScrollArea::vertical()
-                .id_salt("activity_list_nodes")
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                    for (i, child) in children.iter().enumerate() {
-                        match child {
-                            ActivityTreeNode::Branch { .. } => {
-                                let btn = if Some(i) == current_selected {
-                                    DButton::new_white(child.atoms())
-                                } else {
-                                    DButton::new(child.atoms()).fill(child.bg_color())
-                                }
-                                .stroke(1.0, child.stroke_color())
-                                .min_size(vec2(512.0, 32.0))
-                                .ui(ui);
+            if depth == 0 {
+                ui.add(
+                    egui::TextEdit::singleline(&mut *self.search_query.borrow_mut())
+                        .hint_text("Search"),
+                );
+            }
 
-                                if btn.clicked() {
-                                    self.current_node.borrow_mut().truncate(depth);
-                                    self.current_node.borrow_mut().push(i);
-                                }
-                            }
-                            ActivityTreeNode::Leaf { title, tag } => {
-                                if DButton::new((child.atoms(), format!("({tag})")))
-                                    .min_size(vec2(512.0, 32.0))
+            if depth == 0 && !self.search_query.borrow().is_empty() {
+                egui::ScrollArea::vertical()
+                    .id_salt("activity_list_nodes_search")
+                    .auto_shrink([true, false])
+                    .show(ui, |ui| {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                        let query = &*self.search_query.borrow();
+                        for child in self
+                            .all_nodes
+                            .iter()
+                            .filter(|child| child.title().to_lowercase().contains(query))
+                        {
+                            #[allow(clippy::collapsible_if)]
+                            if let ActivityTreeNode::Leaf { title, tag } = child {
+                                if DButton::new(child.atoms())
+                                    .min_size(vec2(768.0, 32.0))
                                     .stroke(1.0, child.stroke_color())
                                     .fill(child.bg_color())
                                     .ui(ui)
@@ -214,8 +231,57 @@ impl ActivityListTab {
                                 }
                             }
                         }
-                    }
-                });
+                    });
+            } else {
+                egui::ScrollArea::vertical()
+                    .id_salt("activity_list_nodes")
+                    .auto_shrink([true, false])
+                    .show(ui, |ui| {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                        for (i, child) in children.iter().enumerate() {
+                            match child {
+                                ActivityTreeNode::Branch { .. } => {
+                                    let btn = if Some(i) == current_selected {
+                                        DButton::new_white(child.atoms())
+                                    } else {
+                                        DButton::new(child.atoms()).fill(child.bg_color())
+                                    }
+                                    .stroke(1.0, child.stroke_color())
+                                    .min_size(vec2(512.0, 32.0))
+                                    .ui(ui);
+
+                                    if btn.clicked() {
+                                        self.current_node.borrow_mut().truncate(depth);
+                                        self.current_node.borrow_mut().push(i);
+                                    }
+                                }
+                                ActivityTreeNode::Leaf { title, tag } => {
+                                    if DButton::new((child.atoms(), format!("({tag})")))
+                                        .min_size(vec2(512.0, 32.0))
+                                        .stroke(1.0, child.stroke_color())
+                                        .fill(child.bg_color())
+                                        .ui(ui)
+                                        .clicked()
+                                    {
+                                        match ActivityTab::new(
+                                            &self.shared_state,
+                                            *tag,
+                                            title.to_string(),
+                                        ) {
+                                            Ok(tab) => {
+                                                *result = TabResult::Open(Tab::Activity(tab));
+                                            }
+                                            Err(err) => {
+                                                // TODO(cohae): Error popup
+                                                error!("Failed to open activity tab: {}", err);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+            }
         });
 
         let next_node = self.current_node.borrow().get(depth).copied();
@@ -250,7 +316,7 @@ impl ActivityTreeNode {
 
         let kind = match title.to_lowercase() {
             v if v.starts_with("crucible") => ActivityKind::Crucible,
-            v if v.starts_with("raid") => ActivityKind::Raid,
+            v if v.starts_with("raid") || v.contains("raid_") => ActivityKind::Raid,
             v if v.starts_with("iron_banner") => ActivityKind::IronBanner,
             v if v.starts_with("trials") => ActivityKind::Trials,
             v if v.starts_with("gambit") => ActivityKind::Gambit,
@@ -259,9 +325,10 @@ impl ActivityTreeNode {
             v if v.starts_with("quest") => ActivityKind::Quest,
             v if v.starts_with("strike") => ActivityKind::Strike,
             v if v.starts_with("exotic") => ActivityKind::Exotic,
-            v if v.ends_with("freeroam") => ActivityKind::Patrol,
-            v if v.ends_with("_ls_a") => ActivityKind::LostSector,
-            v if v.ends_with("_ls_b") => ActivityKind::LostSector,
+            v if v.contains("freeroam") => ActivityKind::Patrol,
+            v if v.contains("_ls_a") || v.contains("_ls_b") || v.contains("_ls_c") => {
+                ActivityKind::LostSector
+            }
             _ => return None,
         };
 
