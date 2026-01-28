@@ -44,6 +44,10 @@ impl AxisAlignedBBox {
         max: Vec4::new(f32::MIN, f32::MIN, f32::MIN, f32::MIN),
     };
 
+    pub fn is_valid(&self) -> bool {
+        self.min.x <= self.max.x && self.min.y <= self.max.y && self.min.z <= self.max.z
+    }
+
     pub fn from_center_extents(center: Vec3, extents: Vec3) -> Self {
         Self {
             min: vec3(

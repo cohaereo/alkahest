@@ -33,6 +33,7 @@ struct DecoratorModel {
 struct DecoratorInstanceGroup {
     pub instance_start: u32,
     pub instance_count: u32,
+    pub original_range: std::ops::Range<u32>,
 
     pub instance_bounds: Vec<(std::ops::Range<u32>, AxisAlignedBBox, bool)>,
     pub visible: bool,
@@ -191,7 +192,7 @@ impl DecoratorRenderer {
                 .iter()
                 .position(|(range, _)| range.end == instance_end)
                 .context("Failed to find occlusion bounds end")?;
-            let bounds_range = bounds_start..bounds_end;
+            let bounds_range = bounds_start..=bounds_end;
             let instance_bounds = instance_range_bounds
                 .get(bounds_range.clone())
                 .context("Failed to find occlusion bounds")?
@@ -202,6 +203,7 @@ impl DecoratorRenderer {
             let bounds = instance_bounds.iter().map(|(_, bb, _)| *bb).sum();
 
             instance_groups.push(DecoratorInstanceGroup {
+                original_range: instance_start..instance_end,
                 instance_start,
                 instance_count: instance_end - instance_start,
                 visible: true,
@@ -258,7 +260,8 @@ impl FeatureRenderer for DecoratorRenderer {
                         // }
                     });
 
-                group.visible = group.instance_bounds.iter().any(|(_, _, vis)| *vis);
+                group.visible = group.instance_bounds.is_empty()
+                    || group.instance_bounds.iter().any(|(_, _, vis)| *vis);
             }
         });
 

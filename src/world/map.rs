@@ -10,12 +10,10 @@ use glam::Vec4Swizzles;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
-use crate::{
-    ui::tabs::activity,
-    world::{pattern::spawn_pattern, transform::Transform},
-};
+use crate::world::{pattern::spawn_pattern, transform::Transform};
 
 pub fn load_map_into_world(taghash: TagHash, world: &mut hecs::World) -> anyhow::Result<()> {
+    info!("Loading map {taghash}");
     let parent = package_manager()
         .read_tag_struct::<SBubbleParent>(taghash)
         .context("Failed to read SBubbleParent")?;

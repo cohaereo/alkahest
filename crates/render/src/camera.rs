@@ -156,7 +156,12 @@ impl Camera {
         self.fov_y = fov;
     }
 
-    pub fn is_in_clip_space(&self, aabb: &AxisAlignedBBox) -> bool {
+    fn is_in_clip_space(&self, aabb: &AxisAlignedBBox) -> bool {
+        // Don't bother checking an invalid/uninitialized AABB
+        if !aabb.is_valid() {
+            return true;
+        }
+
         if !self.culling_frustum.aabb_intersecting(aabb) {
             return false;
         }
@@ -183,6 +188,11 @@ impl Camera {
     }
 
     pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
+        // Don't bother checking an invalid/uninitialized AABB
+        if !aabb.is_valid() {
+            return true;
+        }
+
         // if aabb.contains(self.position) {
         //     return true;
         // }
