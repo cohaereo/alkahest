@@ -6,15 +6,17 @@ use alkahest_data::tfx::{
 
 use super::Renderer;
 use crate::{
-    cmd_event_span, gpu::command_list::CommandList,
-    renderer::submit::geometry::GeometryCommandLists, tfx::view::View,
+    cmd_event_span,
+    gpu::command_list::CommandList,
+    renderer::submit::geometry::GeometryCommandLists,
+    tfx::view::{MainView, View},
 };
 
 impl Renderer {
     pub(super) fn submit_transparent(
         self: &Arc<Self>,
         cmd: &mut CommandList,
-        view: &View,
+        view: &MainView,
         _geo: Option<&GeometryCommandLists>,
     ) {
         {

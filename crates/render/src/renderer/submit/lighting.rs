@@ -10,14 +10,18 @@ use crate::{
     cmd_event_span,
     gpu::command_list::CommandList,
     renderer::submit::geometry::GeometryCommandLists,
-    tfx::{externs, scope::CascadeScope, view::View},
+    tfx::{
+        externs,
+        scope::CascadeScope,
+        view::{MainView, View},
+    },
 };
 
 impl Renderer {
     pub(super) fn submit_lighting(
         self: &Arc<Self>,
         cmd: &mut CommandList,
-        view: &View,
+        view: &MainView,
         geo: Option<&GeometryCommandLists>,
     ) {
         self.compute_shadow_map(cmd, view);
@@ -104,7 +108,7 @@ impl Renderer {
     pub(super) fn submit_volumetrics(
         self: &Arc<Self>,
         cmd: &mut CommandList,
-        view: &View,
+        view: &MainView,
         _geo: Option<&GeometryCommandLists>,
     ) {
         profiling::scope!("submit_volumetrics");
@@ -186,7 +190,7 @@ impl Renderer {
         self.globals.scopes.view.bind(cmd).unwrap();
     }
 
-    pub(super) fn apply_volume_fog(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn apply_volume_fog(&self, cmd: &mut CommandList, view: &MainView) {
         profiling::scope!("apply_volume_fog");
         if !view.settings.volumetrics {
             return;
@@ -271,9 +275,9 @@ impl Renderer {
     //     );
     // }
 
-    fn compute_shadow_map(&self, cmd: &mut CommandList, view: &View) {
+    fn compute_shadow_map(&self, cmd: &mut CommandList, view: &MainView) {
         if !view.settings.sun_shadows {
-            view.surfaces()
+            view.surfaces
                 .get(view.shadow_mask)
                 .clear_color(cmd, [1.0; 4]);
             return;
@@ -285,7 +289,7 @@ impl Renderer {
         self.bind_surfaces(cmd, &[view.shadow_mask], None);
         cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
 
-        let mask_resolution = view.surfaces().get(view.shadow_mask).resolution();
+        let mask_resolution = view.surfaces.get(view.shadow_mask).resolution();
         let scale_x = 2.0 / mask_resolution.0 as f32;
         let scale_y = -2.0 / mask_resolution.1 as f32;
         let viewport_to_projective = Mat4::from_cols_array_2d(&[
@@ -309,7 +313,7 @@ impl Renderer {
         if true {
             for cascade_index in (0..view.sun_shadow_map_cascades.len()).rev() {
                 let cascade = view
-                    .surfaces()
+                    .surfaces
                     .get(view.sun_shadow_map_cascades[cascade_index]);
                 let depth = view.gbuffers.depth_proxy.lock().srv.clone();
                 self.cascade_scope

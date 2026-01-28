@@ -56,12 +56,15 @@ impl<P: ModelProvider> ModelListBase<P> {
         .unwrap()
         .with_controller(CameraController::new_orbit(Vec3::ZERO, 25.0));
 
-        thumbnail_scene.view.settings.autoexposure = false;
-        thumbnail_scene.view.settings.exposure_scale = 0.250;
-        thumbnail_scene.view.settings.bloom = false;
+        {
+            let view_settings = thumbnail_scene.view.settings_mut();
+            view_settings.autoexposure = false;
+            view_settings.exposure_scale = 0.250;
+            view_settings.bloom = false;
+        }
 
         let mut scene = Scene::new(Renderer::instance().clone(), Camera::default()).unwrap();
-        scene.view.settings = thumbnail_scene.view.settings.clone();
+        *scene.view.settings_mut() = thumbnail_scene.view.settings().clone();
         scene.camera.far = 100_000.0;
 
         let apply_scene_configuration = |scene: &mut Scene| {

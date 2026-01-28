@@ -2,10 +2,14 @@ use alkahest_data::tfx::{FeatureRendererSubscription, PipelineState, RenderStage
 use glam::Vec4;
 
 use super::Renderer;
-use crate::{cmd_event_span, gpu::command_list::CommandList, tfx::view::View};
+use crate::{
+    cmd_event_span,
+    gpu::command_list::CommandList,
+    tfx::view::{MainView, View},
+};
 
 impl Renderer {
-    pub(super) fn submit_water(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_water(&self, cmd: &mut CommandList, view: &MainView) {
         let _gpuscope = self.profiler.scope(cmd, "water");
         cmd_event_span!(cmd, "water_reflection");
         {
@@ -110,7 +114,7 @@ impl Renderer {
         self.submit_water_planes(cmd, view);
     }
 
-    fn submit_water_planes(&self, cmd: &mut CommandList, view: &View) {
+    fn submit_water_planes(&self, cmd: &mut CommandList, view: &MainView) {
         {
             {
                 let ext = &mut self.externs.get_mut();

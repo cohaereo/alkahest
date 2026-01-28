@@ -26,7 +26,7 @@ use crate::{
         externs::{self, GlobalLighting, ScreenArea, TextureView, UberDepth},
         scope::FrameScope,
         technique::ShaderModule,
-        view::View,
+        view::{MainView, ShadowView, View, ViewKind},
     },
 };
 
@@ -40,7 +40,7 @@ impl Renderer {
         cmd_event_span!(cmd, "submit_world");
         let _gpuspan = self.profiler.scope(cmd, "submit_world");
 
-        *self.settings.write() = view.settings.clone();
+        *self.settings.write() = view.settings().clone();
         *self.surfaces.write() = view.surfaces.clone();
         view.surfaces.resize_surfaces(view.resolution);
 
@@ -51,16 +51,39 @@ impl Renderer {
 
         self.globals.scopes.view.bind(cmd).unwrap();
 
-        match debug_pipeline {
-            Some(DebugPipeline::Overdraw) => self.submit_view_overdraw(cmd, view),
-            _ => self.submit_view_shaded(cmd, view, debug_pipeline),
+        match &view.kind {
+            crate::tfx::view::ViewKind::Main(main_view) => match debug_pipeline {
+                Some(DebugPipeline::Overdraw) => self.submit_view_overdraw(cmd, main_view),
+                _ => self.submit_view_shaded(cmd, main_view, debug_pipeline),
+            },
+            crate::tfx::view::ViewKind::Shadow(shadow_view) => {
+                self.submit_shadow_view(cmd, shadow_view)
+            }
         }
+    }
+
+    fn submit_shadow_view(self: &Arc<Self>, cmd: &mut CommandList, view: &ShadowView) {
+        cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(6));
+        cmd.flush_states();
+
+        self.common
+            .shadowmap_vs_t2
+            .bind(cmd, 2, ShaderStage::Vertex);
+
+        let shadowmap = view.surfaces.get(view.shadow_map);
+
+        shadowmap.bind_single(cmd);
+        self.submit_stage_parallel_apply(
+            cmd,
+            RenderStage::ShadowGenerate,
+            FeatureRendererSubscription::all(),
+        );
     }
 
     fn submit_view_shaded(
         self: &Arc<Self>,
         cmd: &mut CommandList,
-        view: &View,
+        view: &MainView,
         debug_pipeline: Option<DebugPipeline>,
     ) {
         let geo = if view.settings.multithreading {
@@ -250,7 +273,7 @@ impl Renderer {
 
             const IMMEDIATE_GEOMETRY_XRAY: bool = true;
             // if IMMEDIATE_GEOMETRY_XRAY {
-            //     view.surfaces()
+            //     view.surfaces
             //         .get(view.gbuffers.depth)
             //         .clear_depth(cmd, 0.0, 0xff);
             // }
@@ -315,7 +338,7 @@ impl Renderer {
         // );
     }
 
-    fn submit_view_overdraw(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+    fn submit_view_overdraw(self: &Arc<Self>, cmd: &mut CommandList, view: &MainView) {
         self.submit_gbuffer_generation(cmd, view, None);
 
         self.clear_surface(cmd, view.postprocess, [0.0, 0.0, 0.0, 1.0]);
@@ -349,8 +372,8 @@ impl Renderer {
             cmd.vertex_set_shader(&self.common.blit_vs);
             cmd.pixel_set_shader(&self.common.overdraw_ps);
 
-            let surf_postprocess = view.surfaces().get(view.postprocess);
-            let surf_output = view.surfaces().get(view.output);
+            let surf_postprocess = view.surfaces.get(view.postprocess);
+            let surf_output = view.surfaces.get(view.output);
             surf_output.bind_single(cmd);
             cmd.pixel_set_shader_resources(0, &[surf_postprocess.srv(0)]);
 
@@ -392,8 +415,8 @@ impl Renderer {
             delta_game_time: misc.delta_time,
             unk10: misc.time_of_day,
             exposure_time: 0.016666668,
-            exposure_scale: view.settings.exposure_scale,
-            exposure_illum_relative: view.settings.exposure_illum_relative,
+            exposure_scale: view.settings().exposure_scale,
+            exposure_illum_relative: view.settings().exposure_illum_relative,
             specular_tint_lookup: global_tex.specular_tint_lookup.view.clone().into(),
             specular_lobe_lookup: global_tex.specular_lobe_lookup.view.clone().into(),
             specular_lobe_3d_lookup: global_tex.specular_lobe_3d_lookup.view.clone().into(),
@@ -428,28 +451,6 @@ impl Renderer {
             unk30: 7.7,
         };
 
-        // ext.deferred.gbuffer_resolution_scale_offset =
-        //     vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
-        ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
-        ext.deferred.deferred_rt0 = view.gbuffers.albedo.into();
-        ext.deferred.deferred_rt1 = view.gbuffers.normal.into();
-        ext.deferred.deferred_rt2 = view.gbuffers.third.into();
-
-        ext.deferred.light_diffuse = view.lighting.light_diffuse.into();
-        ext.deferred.light_specular = view.lighting.light_specular.into();
-        ext.deferred.light_specular_ibl = view.lighting.light_specular_ibl.into();
-
-        ext.deferred.sky_hemisphere_mips = self.common.temporary_sky_hemisphere.view.clone().into();
-
-        ext.decal.depth_read = view.gbuffers.depth_proxy.lock().srv.clone().into();
-        ext.decal.normals_read = view.gbuffers.normal_read.into();
-        ext.decal.depth_constants = ext.deferred.depth_constants;
-        ext.decal.unk30 = vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
-
-        ext.shadow_mask.unk00 = view.shadow_mask.into();
-        // ext.shadow_mask.unk08 = view.lighting.ssao.into();
-        ext.shadow_mask.unk10 = view.gbuffers.uber_depth_half.into();
-
         *ext.global_lighting = GlobalLighting {
             unk08: self.gpu.placeholder_white.view.clone().into(),
             unk10: ext.get_global_channel_by_name("sun_color")
@@ -478,34 +479,6 @@ impl Renderer {
 
         // ext.atmosphere.unk38 = self.common.temporary_depth_lookup.view.clone().into();
         // ext.atmosphere.unk88 = self.common.temporary_atmos.view.clone().into();
-
-        *ext.atmosphere = externs::Atmosphere {
-            time_of_day_normalized: misc.time_of_day,
-            unk80: misc.atmosphere.atmosphere_lookup_vertical.clone().into(),
-            unke0: view.atmosphere.sky_lookup_near.into(),
-            unkf0: view.atmosphere.sky_lookup_far.into(),
-            unk1ec: 150.0,
-            unk1c4: 600.0,
-
-            // From EDZ nighttime capture
-            unk150: -0.97563,
-            unk154: 0.00386,
-            unk1b4: 0.94444,
-            unk1b8: 1.00,
-            unk1bc: 0.00427,
-            // time_of_day_normalized: 0.05198,
-            unk110: vec4(0.99605, 0.03099, -0.0832, 0.00),
-            sky_lookup_resolution: view
-                .surfaces()
-                .get(view.atmosphere.sky_lookup_near)
-                .resolution_with_recip(),
-            unk1d0: vec4(0.00, 0.00, 0.00, 0.00),
-            unk1e0: 0.00,
-            unk1e4: 0.00386,
-            unk1e8: 0.00427,
-
-            ..Default::default()
-        };
 
         // TODO(cohae): Most of these need to be verified, currently they are just shifted +0x70 from pre-BL
         ext.atmosphere.unk110 = ext.get_global_channel_by_name("sun_light_direction");
@@ -544,73 +517,6 @@ impl Renderer {
         ext.atmosphere.unk1ec = ext.get_global_channel_by_id(0xe4a1bf60).x;
         // ext.atmosphere.unk1f0 = ext.get_global_channel_by_id(0x63d92f7).x;
         // ext.atmosphere.unk1f4 = ext.get_global_channel_by_id(0x49864a42).x;
-
-        ext.screen_area = ScreenArea {
-            unk00: view.shading_result_read.lock().srv.clone().into(),
-            unk30: TextureView::None, // health overlay
-            unk38: self.common.default_lut.view.clone().into(), // LUT
-            unk40: if view.settings.bloom {
-                view.bloom.bloom_final.into()
-            } else {
-                self.common.temporary_bloom.view.clone().into()
-            }, // bloom
-            unk48: view.lighting.distortion.into(), // distortion
-            unk58: self.common.temporary_vignette.view.clone().into(), // vignette
-            unk7c: 0.9968,
-
-            // unk80: 0.9968, // Skydock IV
-            unk80: 0.1, // Orbit
-
-            unk90: vec4(32.0, 1024.0, 0.0, 0.0),
-            unka0: vec4(0.03125, -5.0, 14.0, 2.5),
-            unkb0: 0.5,
-            unkb4: 2.0,
-            unke0: vec4(0.25, -0.225, 0.40, 0.96),
-            unkf0: vec4(0.13281, 0.23611, 0.00, 0.00), // distortion related
-            // unkf0: Vec4::ZERO,
-            unk140: 0.05,
-            unk150: vec4(0.3, 0.5, 0.0, 0.02),
-            unk160: vec4(0.3, 0.5, 0.0, 0.5),
-            ..Default::default()
-        }
-        .into();
-
-        let depth_res = view.surfaces.get(view.gbuffers.depth).resolution();
-        ext.uber_depth = UberDepth {
-            original_depth: view.gbuffers.depth_proxy.lock().srv.clone().into(),
-            unk30: view.gbuffers.uber_depth_half.into(),
-            unk40: view.gbuffers.uber_depth_quarter.into(),
-            unk50: ext.deferred.depth_constants,
-            unk70: vec4(0.0, 0.0, depth_res.0 as f32, depth_res.1 as f32),
-            ..Default::default()
-        }
-        .into();
-
-        ext.cubemaps.unk00 = view.lighting.vertex_ao.into();
-
-        *ext.transparent = externs::Transparent {
-            unk00: view.atmosphere.sky_lookup_near.into(),
-            unk10: view.atmosphere.sky_lookup_far.into(),
-            // unk00: todo!(), // t11, Atmosphere (near?)
-            // unk08: todo!(), // t12, Atmosphere (3x2)
-            // unk10: todo!(), // t13, Atmosphere (far?)
-            // unk18: todo!(), // t14, 3d lightprobe
-            unk20: self.common.temporary_depth_angle_lookup.view.clone().into(), // t15
-            // unk28: todo!(), // t16, 3d lightprobe
-            // unk30: todo!(), // t17, 3d lightprobe
-            // unk38: todo!(), // t18, 3d lightprobe
-            // unk40: todo!(), // t19, 3d lightprobe
-            // unk48: todo!(), // t20
-            // unk50: todo!(), // t21
-            // unk58: todo!(), // t22
-            // unk60: todo!(), // t23
-            unk70: vec4(0.22882, 0.00, 1.00, 45.00),
-            unk80: vec4(0.00, 0.00, 1.17485, 2.86546),
-            unk90: vec4(0.00, 0.00, 2.10913, 5.14044),
-            unka0: vec4(0.00, 0.00, 3.46762, 8.41667),
-            unkb0: vec4(0.00, 0.00, 0.00, 0.00),
-            ..Default::default()
-        };
 
         self.globals
             .scopes
@@ -692,6 +598,132 @@ impl Renderer {
         );
 
         self.globals.scopes.frame.bind(cmd).unwrap();
+
+        if let ViewKind::Main(v) = &view.kind {
+            self.prepare_main_view_externs(v);
+        }
+    }
+
+    fn prepare_main_view_externs(&self, view: &MainView) {
+        let fb_res = view.surfaces.framebuffer_resolution();
+        let ext = self.externs.get_mut();
+        let misc = &self.frame_packet.read().misc;
+
+        // ext.deferred.gbuffer_resolution_scale_offset =
+        //     vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
+        ext.deferred.deferred_depth = view.gbuffers.depth_proxy.lock().srv.clone().into();
+        ext.deferred.deferred_rt0 = view.gbuffers.albedo.into();
+        ext.deferred.deferred_rt1 = view.gbuffers.normal.into();
+        ext.deferred.deferred_rt2 = view.gbuffers.third.into();
+
+        ext.deferred.light_diffuse = view.lighting.light_diffuse.into();
+        ext.deferred.light_specular = view.lighting.light_specular.into();
+        ext.deferred.light_specular_ibl = view.lighting.light_specular_ibl.into();
+
+        ext.deferred.sky_hemisphere_mips = self.common.temporary_sky_hemisphere.view.clone().into();
+
+        ext.decal.depth_read = view.gbuffers.depth_proxy.lock().srv.clone().into();
+        ext.decal.normals_read = view.gbuffers.normal_read.into();
+        ext.decal.depth_constants = ext.deferred.depth_constants;
+        ext.decal.unk30 = vec4(fb_res.0 as f32, fb_res.1 as f32, 0.0, 0.0);
+
+        ext.shadow_mask.unk00 = view.shadow_mask.into();
+        // ext.shadow_mask.unk08 = view.lighting.ssao.into();
+        ext.shadow_mask.unk10 = view.gbuffers.uber_depth_half.into();
+        *ext.atmosphere = externs::Atmosphere {
+            time_of_day_normalized: misc.time_of_day,
+            unk80: misc.atmosphere.atmosphere_lookup_vertical.clone().into(),
+            unke0: view.atmosphere.sky_lookup_near.into(),
+            unkf0: view.atmosphere.sky_lookup_far.into(),
+            unk1ec: 150.0,
+            unk1c4: 600.0,
+
+            // From EDZ nighttime capture
+            unk150: -0.97563,
+            unk154: 0.00386,
+            unk1b4: 0.94444,
+            unk1b8: 1.00,
+            unk1bc: 0.00427,
+            // time_of_day_normalized: 0.05198,
+            unk110: vec4(0.99605, 0.03099, -0.0832, 0.00),
+            sky_lookup_resolution: view
+                .surfaces
+                .get(view.atmosphere.sky_lookup_near)
+                .resolution_with_recip(),
+            unk1d0: vec4(0.00, 0.00, 0.00, 0.00),
+            unk1e0: 0.00,
+            unk1e4: 0.00386,
+            unk1e8: 0.00427,
+
+            ..Default::default()
+        };
+
+        ext.screen_area = ScreenArea {
+            unk00: view.shading_result_read.lock().srv.clone().into(),
+            unk30: TextureView::None, // health overlay
+            unk38: self.common.default_lut.view.clone().into(), // LUT
+            unk40: if view.settings.bloom {
+                view.bloom.bloom_final.into()
+            } else {
+                self.common.temporary_bloom.view.clone().into()
+            }, // bloom
+            unk48: view.lighting.distortion.into(), // distortion
+            unk58: self.common.temporary_vignette.view.clone().into(), // vignette
+            unk7c: 0.9968,
+
+            // unk80: 0.9968, // Skydock IV
+            unk80: 0.1, // Orbit
+
+            unk90: vec4(32.0, 1024.0, 0.0, 0.0),
+            unka0: vec4(0.03125, -5.0, 14.0, 2.5),
+            unkb0: 0.5,
+            unkb4: 2.0,
+            unke0: vec4(0.25, -0.225, 0.40, 0.96),
+            unkf0: vec4(0.13281, 0.23611, 0.00, 0.00), // distortion related
+            // unkf0: Vec4::ZERO,
+            unk140: 0.05,
+            unk150: vec4(0.3, 0.5, 0.0, 0.02),
+            unk160: vec4(0.3, 0.5, 0.0, 0.5),
+            ..Default::default()
+        }
+        .into();
+
+        let depth_res = view.surfaces.get(view.gbuffers.depth).resolution();
+        ext.uber_depth = UberDepth {
+            original_depth: view.gbuffers.depth_proxy.lock().srv.clone().into(),
+            unk30: view.gbuffers.uber_depth_half.into(),
+            unk40: view.gbuffers.uber_depth_quarter.into(),
+            unk50: ext.deferred.depth_constants,
+            unk70: vec4(0.0, 0.0, depth_res.0 as f32, depth_res.1 as f32),
+            ..Default::default()
+        }
+        .into();
+
+        ext.cubemaps.unk00 = view.lighting.vertex_ao.into();
+
+        *ext.transparent = externs::Transparent {
+            unk00: view.atmosphere.sky_lookup_near.into(),
+            unk10: view.atmosphere.sky_lookup_far.into(),
+            // unk00: todo!(), // t11, Atmosphere (near?)
+            // unk08: todo!(), // t12, Atmosphere (3x2)
+            // unk10: todo!(), // t13, Atmosphere (far?)
+            // unk18: todo!(), // t14, 3d lightprobe
+            unk20: self.common.temporary_depth_angle_lookup.view.clone().into(), // t15
+            // unk28: todo!(), // t16, 3d lightprobe
+            // unk30: todo!(), // t17, 3d lightprobe
+            // unk38: todo!(), // t18, 3d lightprobe
+            // unk40: todo!(), // t19, 3d lightprobe
+            // unk48: todo!(), // t20
+            // unk50: todo!(), // t21
+            // unk58: todo!(), // t22
+            // unk60: todo!(), // t23
+            unk70: vec4(0.22882, 0.00, 1.00, 45.00),
+            unk80: vec4(0.00, 0.00, 1.17485, 2.86546),
+            unk90: vec4(0.00, 0.00, 2.10913, 5.14044),
+            unka0: vec4(0.00, 0.00, 3.46762, 8.41667),
+            unkb0: vec4(0.00, 0.00, 0.00, 0.00),
+            ..Default::default()
+        };
     }
 
     fn calculate_active_feature_renderers(&self) -> FeatureRendererSubscription {

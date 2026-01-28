@@ -8,7 +8,10 @@ use crate::{
     asset::{Handle, texture::Texture},
     cmd_event_span,
     gpu::command_list::CommandList,
-    tfx::{externs, view::View},
+    tfx::{
+        externs,
+        view::{MainView, View},
+    },
 };
 
 #[derive(Default, Clone)]
@@ -27,7 +30,7 @@ pub struct SunDirections {
 }
 
 impl Renderer {
-    pub(crate) fn submit_atmosphere(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+    pub(crate) fn submit_atmosphere(self: &Arc<Self>, cmd: &mut CommandList, view: &MainView) {
         cmd_event_span!(cmd, "atmosphere");
         let _gpu_span = self.profiler.scope(cmd, "atmosphere");
 
@@ -36,11 +39,11 @@ impl Renderer {
         self.generate_sky_lookup(cmd, view);
     }
 
-    fn generate_sky_mask(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+    fn generate_sky_mask(self: &Arc<Self>, cmd: &mut CommandList, view: &MainView) {
         // Generate initial sky mask from uber depth
         {
-            let sky_mask_surf = view.surfaces().get(view.atmosphere.sky_mask_initial);
-            let uber_depth_surf = view.surfaces().get(view.gbuffers.uber_depth_half);
+            let sky_mask_surf = view.surfaces.get(view.atmosphere.sky_mask_initial);
+            let uber_depth_surf = view.surfaces.get(view.gbuffers.uber_depth_half);
             sky_mask_surf.bind_single(cmd);
             let ext = self.externs.get_mut();
             ext.postprocess.input = view.gbuffers.uber_depth_half.into();
@@ -59,8 +62,8 @@ impl Renderer {
 
         // Downsample 1/4th -> 1/8th
         {
-            let sky_mask_initial_surf = view.surfaces().get(view.atmosphere.sky_mask_initial);
-            let sky_mask_surf = view.surfaces().get(view.atmosphere.sky_mask);
+            let sky_mask_initial_surf = view.surfaces.get(view.atmosphere.sky_mask_initial);
+            let sky_mask_surf = view.surfaces.get(view.atmosphere.sky_mask);
             sky_mask_surf.bind_single(cmd);
             let ext = self.externs.get_mut();
             *ext.postprocess = externs::Postprocess {
@@ -132,7 +135,7 @@ impl Renderer {
         // }
     }
 
-    fn generate_sky_lookup(self: &Arc<Self>, cmd: &mut CommandList, view: &View) {
+    fn generate_sky_lookup(self: &Arc<Self>, cmd: &mut CommandList, view: &MainView) {
         {
             let atm = &self.frame_packet.read().misc.atmosphere;
             let ext = self.externs.get_mut();

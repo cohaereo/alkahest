@@ -22,7 +22,11 @@ use alkahest_render::{
             atmosphere::{AtmosphereData, SunDirections},
         },
     },
-    tfx::{externs::get_global_channel_name, packet::FramePacketMisc, view::View},
+    tfx::{
+        externs::get_global_channel_name,
+        packet::FramePacketMisc,
+        view::{View, ViewKind},
+    },
 };
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
@@ -80,7 +84,7 @@ impl Scene {
 
         Ok(Self {
             world: hecs::World::new(),
-            view: View::new(&renderer.gpu, (128, 128))?,
+            view: View::new_main(&renderer.gpu, (128, 128))?,
             global_channels: renderer.externs.default_globals,
             renderer,
             camera,
@@ -388,43 +392,38 @@ impl Scene {
             }
         });
 
-        let Self {
-            view: View {
-                settings, surfaces, ..
-            },
-            ..
-        } = self;
-
+        let view_surfaces = self.view.surfaces.clone();
+        let view_settings = self.view.settings_mut();
         ui.spacing_mut().item_spacing = vec2(8.0, 4.0);
-        ui.checkbox(&mut settings.autoexposure, "Auto-exposure")
+        ui.checkbox(&mut view_settings.autoexposure, "Auto-exposure")
             .setting_description_tooltip(
                 "Enables automatic exposure adjustment based on scene brightness.",
                 PerformanceImpact::None,
             );
 
-        if settings.autoexposure {
-            ui.strong("Target Luminance");
-            ui.spacing_mut().slider_width = ui.available_width() * 0.75;
-            egui::Slider::new(
-                &mut self.view.autoexposure.config.target_luminance,
-                0.000002..=0.04,
-            )
-            .logarithmic(false)
-            .show_value(true)
-            .ui(ui);
-        }
+        // if settings_mut.autoexposure {
+        //     ui.strong("Target Luminance");
+        //     ui.spacing_mut().slider_width = ui.available_width() * 0.75;
+        //     egui::Slider::new(
+        //         &mut self.view.autoexposure.config.target_luminance,
+        //         0.000002..=0.04,
+        //     )
+        //     .logarithmic(false)
+        //     .show_value(true)
+        //     .ui(ui);
+        // }
 
-        ui.add_enabled_ui(!settings.autoexposure, |ui| {
+        ui.add_enabled_ui(!view_settings.autoexposure, |ui| {
             ui.strong("Exposure Scale");
             ui.spacing_mut().slider_width = ui.available_width() * 0.75;
-            egui::Slider::new(&mut settings.exposure_scale, 0.001..=4.0)
+            egui::Slider::new(&mut view_settings.exposure_scale, 0.001..=4.0)
                 .logarithmic(true)
                 .show_value(true)
                 .ui(ui);
 
             ui.strong("Exposure Illum Relative");
             ui.spacing_mut().slider_width = ui.available_width() * 0.75;
-            egui::Slider::new(&mut settings.exposure_illum_relative, 0.01..=2.0)
+            egui::Slider::new(&mut view_settings.exposure_illum_relative, 0.01..=2.0)
                 .logarithmic(false)
                 .show_value(true)
                 .ui(ui);
@@ -476,7 +475,7 @@ impl Scene {
             .ui(ui);
 
         ui.spacing_mut().slider_width = 256.0;
-        let mut resolution_scale = surfaces.resolution_scale();
+        let mut resolution_scale = view_surfaces.resolution_scale();
         if ui
             .add(
                 egui::Slider::new(&mut resolution_scale, 0.25..=2.0)
@@ -486,49 +485,49 @@ impl Scene {
             )
             .changed()
         {
-            surfaces.set_resolution_scale(resolution_scale);
+            view_surfaces.set_resolution_scale(resolution_scale);
         }
 
         ui.separator();
 
-        ui.checkbox(&mut settings.vertex_ao, "Vertex AO")
+        ui.checkbox(&mut view_settings.vertex_ao, "Vertex AO")
             .setting_description_tooltip(
                 "Enables ambient occlusion based on mesh vertex data.\nCan highly impact the look \
                  and feel of a scene, as it darkens indoor areas and crevices.",
                 PerformanceImpact::None,
             );
 
-        ui.checkbox(&mut settings.bloom, "Bloom")
+        ui.checkbox(&mut view_settings.bloom, "Bloom")
             .setting_description_tooltip(
                 "Enables bloom effect, which adds a glow to bright areas of the scene.",
                 PerformanceImpact::Low,
             );
 
-        ui.checkbox(&mut settings.volumetrics, "Volumetrics")
+        ui.checkbox(&mut view_settings.volumetrics, "Volumetrics")
             .setting_description_tooltip(
                 "Enables volumetric lighting effects, such as light shafts and fog.",
                 PerformanceImpact::Medium,
             );
-        ui.checkbox(&mut settings.shadows, "Shadows")
+        ui.checkbox(&mut view_settings.shadows, "Shadows")
             .setting_description_tooltip(
                 "Enables (static) shadows for lights.",
                 PerformanceImpact::Medium,
             );
 
-        ui.checkbox(&mut settings.sun_shadows, "Sun Shadows")
+        ui.checkbox(&mut view_settings.sun_shadows, "Sun Shadows")
             .setting_description_tooltip(
                 "Enables (dynamic) shadows for the sun light.",
                 PerformanceImpact::High,
             );
 
-        ui.checkbox(&mut settings.anti_aliasing, "Anti-Aliasing")
+        ui.checkbox(&mut view_settings.anti_aliasing, "Anti-Aliasing")
             .setting_description_tooltip(
                 "Enables FXAA anti-aliasing to smooth out jagged edges.",
                 PerformanceImpact::Low,
             );
 
         ui.collapsing("Advanced", |ui| {
-            ui.checkbox(&mut settings.multithreading, "Multi-threaded Submit")
+            ui.checkbox(&mut view_settings.multithreading, "Multi-threaded Submit")
                 .setting_description_tooltip(
                     "Enables multi-threaded submission of commands to the GPU. May improve \
                      performance on systems with many CPU cores, but can introduce stuttering on \
@@ -536,14 +535,14 @@ impl Scene {
                     PerformanceImpact::High,
                 );
 
-            ui.checkbox(&mut settings.instance_culling, "Instance Culling")
+            ui.checkbox(&mut view_settings.instance_culling, "Instance Culling")
                 .setting_description_tooltip(
                     "Enables static/decorator instance culling to reduce draw calls that fall \
                      outside the camera's view.",
                     PerformanceImpact::Medium,
                 );
 
-            ui.checkbox(&mut settings.hzb_culling, "HZB Culling")
+            ui.checkbox(&mut view_settings.hzb_culling, "HZB Culling")
                 .setting_description_tooltip(
                     "Enables Hierarchical Z-Buffer (HZB) culling to optimize rendering by quickly \
                      discarding occluded objects.",
@@ -664,15 +663,11 @@ impl Scene {
             profiling::scope!("prepare");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare");
 
-            {
+            if let ViewKind::Main(view) = &self.view.kind {
                 profiling::scope!("download_hzb");
                 let _gpuspan = self.renderer.profiler.scope(&cmd, "download_hzb");
-                self.camera.hzb = if self.view.settings.hzb_culling {
-                    Hzb::download(
-                        gpu,
-                        &self.view.gbuffers.hzb_depth_chain_cpu.lock(),
-                        &self.camera,
-                    )
+                self.camera.hzb = if view.settings.hzb_culling {
+                    Hzb::download(gpu, &view.gbuffers.hzb_depth_chain_cpu.lock(), &self.camera)
                 } else {
                     Hzb::EMPTY
                 };
@@ -719,15 +714,18 @@ impl Scene {
         }
 
         {
-            self.renderer
-                .submit_sun_shadows(&mut cmd, &self.camera, &self.view);
+            // self.renderer
+            //     .submit_sun_shadows(&mut cmd, &self.camera, &self.view);
             self.renderer
                 .submit_view(&mut cmd, &self.view, self.render_mode.into());
         }
-        cmd.copy_resource(
-            &self.renderer.surfaces().get(self.view.output).texture,
-            &self.surface,
-        );
+
+        if let ViewKind::Main(view) = &self.view.kind {
+            cmd.copy_resource(
+                &self.renderer.surfaces().get(view.output).texture,
+                &self.surface,
+            );
+        }
 
         self.global_channels
             .copy_from_slice(&self.renderer.externs.globals);
@@ -905,12 +903,13 @@ impl Scene {
                 return;
             }
 
-            self.view.settings.autoexposure = false;
-            self.view.settings.exposure_scale = cb13_vec[1].x;
-            self.view.settings.exposure_illum_relative = cb13_vec[1].w;
+            let settings = self.view.settings_mut();
+            settings.autoexposure = false;
+            settings.exposure_scale = cb13_vec[1].x;
+            settings.exposure_illum_relative = cb13_vec[1].w;
             info!(
                 "Parsed frame scope data, exposure scale: {}, illumination relative: {}",
-                self.view.settings.exposure_scale, self.view.settings.exposure_illum_relative
+                settings.exposure_scale, settings.exposure_illum_relative
             );
         }
     }

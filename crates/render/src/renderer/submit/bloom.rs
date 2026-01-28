@@ -7,12 +7,12 @@ use crate::{
     renderer::surface::SurfaceHandle,
     tfx::{
         externs::{self, PostprocessInitialDownsample},
-        view::View,
+        view::{MainView, View},
     },
 };
 
 impl Renderer {
-    pub(super) fn submit_bloom(&self, cmd: &mut CommandList, view: &View) {
+    pub(super) fn submit_bloom(&self, cmd: &mut CommandList, view: &MainView) {
         cmd_event_span!(cmd, "bloom");
         let _gpu_span = self.profiler.scope(cmd, "bloom");
 
@@ -205,7 +205,7 @@ impl Renderer {
             *ext.postprocess = externs::Postprocess {
                 input: view.bloom.bloom_24th.into(),
                 output_res: view
-                    .surfaces()
+                    .surfaces
                     .get(view.bloom.autoexposure_sample_columns)
                     .resolution_with_recip(),
                 unkd0: Vec4::new(0.01, 0.90, 1.00, 1.00),
@@ -226,7 +226,7 @@ impl Renderer {
 
             view.bloom.autoexposure_sample_columns_cpu.lock().update(
                 cmd,
-                view.surfaces().get(view.bloom.autoexposure_sample_columns),
+                view.surfaces.get(view.bloom.autoexposure_sample_columns),
             );
         }
 

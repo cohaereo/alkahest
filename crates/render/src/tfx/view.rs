@@ -16,6 +16,11 @@ use crate::{
     },
 };
 
+pub enum ViewKind {
+    Main(Box<MainView>),
+    Shadow(Box<ShadowView>),
+}
+
 pub struct View {
     pub(crate) position: Vec3,
     pub(crate) world_to_camera: Mat4,
@@ -24,6 +29,83 @@ pub struct View {
     pub surfaces: Arc<Surfaces>,
     pub(crate) resolution: (u32, u32),
 
+    pub kind: ViewKind,
+
+    pub subscribed_features: FeatureRendererSubscription,
+}
+
+impl View {
+    pub fn new_main(gpu: &Gpu, resolution: (u32, u32)) -> anyhow::Result<Self> {
+        Self::new_inner(gpu, false, resolution)
+    }
+
+    pub fn new_shadow(gpu: &Gpu, resolution: (u32, u32)) -> anyhow::Result<Self> {
+        Self::new_inner(gpu, true, resolution)
+    }
+
+    fn new_inner(gpu: &Gpu, is_shadow: bool, resolution: (u32, u32)) -> anyhow::Result<Self> {
+        let surfaces = Arc::new(Surfaces::new(gpu.device.clone(), resolution));
+
+        let kind = if is_shadow {
+            ViewKind::Shadow(Box::new(ShadowView::new(&surfaces, resolution)?))
+        } else {
+            ViewKind::Main(Box::new(MainView::new(&surfaces, gpu, resolution)?))
+        };
+
+        Ok(Self {
+            position: Vec3::ZERO,
+            world_to_camera: Mat4::IDENTITY,
+            camera_to_projective: Mat4::IDENTITY,
+            resolution,
+            surfaces,
+            kind,
+            subscribed_features: FeatureRendererSubscription::all(),
+        })
+    }
+
+    pub fn update(
+        &mut self,
+        world_to_camera: Mat4,
+        camera_to_projective: Mat4,
+        resolution: (u32, u32),
+    ) {
+        self.world_to_camera = world_to_camera;
+        self.camera_to_projective = camera_to_projective;
+        self.position = self.world_to_camera.inverse().transform_point3(Vec3::ZERO);
+        self.resolution = resolution;
+    }
+
+    pub fn update_autoexposure(&mut self, gpu: &Gpu, delta_time: f32) {
+        if let ViewKind::Main(v) = &mut self.kind {
+            v.update_autoexposure(gpu, delta_time)
+        }
+    }
+
+    pub fn resolution(&self) -> (u32, u32) {
+        self.resolution
+    }
+
+    pub fn surfaces(&self) -> &Arc<Surfaces> {
+        &self.surfaces
+    }
+
+    pub fn settings(&self) -> &RenderSettings {
+        match &self.kind {
+            ViewKind::Main(v) => &v.settings,
+            ViewKind::Shadow(v) => &v.settings,
+        }
+    }
+
+    pub fn settings_mut(&mut self) -> &mut RenderSettings {
+        match &mut self.kind {
+            ViewKind::Main(v) => &mut v.settings,
+            ViewKind::Shadow(v) => &mut v.settings,
+        }
+    }
+}
+
+pub struct MainView {
+    pub(crate) surfaces: Arc<Surfaces>,
     pub gbuffers: Gbuffers,
     pub(crate) lighting: LightBuffers,
     pub(crate) water: WaterBuffers,
@@ -37,18 +119,17 @@ pub struct View {
     pub(crate) postprocess: SurfaceHandle,
     pub(crate) shading_result_read: Mutex<SurfaceProxy>,
     pub output: SurfaceHandle,
-
-    pub subscribed_features: FeatureRendererSubscription,
-
-    pub settings: RenderSettings,
-
     pub autoexposure: AutoExposureSystem,
     frame_index: u64,
+    pub settings: RenderSettings,
 }
 
-impl View {
-    pub fn new(gpu: &Gpu, resolution: (u32, u32)) -> anyhow::Result<Self> {
-        let surfaces = Arc::new(Surfaces::new(gpu.device.clone(), resolution));
+impl MainView {
+    pub fn new(
+        surfaces: &Arc<Surfaces>,
+        gpu: &Gpu,
+        resolution: (u32, u32),
+    ) -> anyhow::Result<Self> {
         let gbuffers = Gbuffers::create(gpu, &surfaces, resolution)?;
         let lighting = LightBuffers::create(&surfaces, resolution)?;
         let water = WaterBuffers::create(&surfaces, resolution)?;
@@ -107,11 +188,7 @@ impl View {
         )?;
 
         Ok(Self {
-            position: Vec3::ZERO,
-            world_to_camera: Mat4::IDENTITY,
-            camera_to_projective: Mat4::IDENTITY,
-            resolution,
-            surfaces,
+            surfaces: surfaces.clone(),
             gbuffers,
             lighting,
             water,
@@ -124,26 +201,13 @@ impl View {
             shading_result_read,
             postprocess,
             output,
-            subscribed_features: FeatureRendererSubscription::all(),
-            settings: RenderSettings::default(),
             autoexposure: AutoExposureSystem::default(),
             frame_index: 0,
+            settings: RenderSettings::default(),
         })
     }
 
-    pub fn update(
-        &mut self,
-        world_to_camera: Mat4,
-        camera_to_projective: Mat4,
-        resolution: (u32, u32),
-    ) {
-        self.world_to_camera = world_to_camera;
-        self.camera_to_projective = camera_to_projective;
-        self.position = self.world_to_camera.inverse().transform_point3(Vec3::ZERO);
-        self.resolution = resolution;
-    }
-
-    pub fn update_autoexposure(&mut self, gpu: &Gpu, delta_time: f32) {
+    fn update_autoexposure(&mut self, gpu: &Gpu, delta_time: f32) {
         if self.frame_index > 0 && self.settings.autoexposure {
             let autoexposure_columns = self.bloom.autoexposure_sample_columns_cpu.lock();
             let column_count = autoexposure_columns.res.get_desc().width;
@@ -169,13 +233,31 @@ impl View {
 
         self.frame_index += 1;
     }
+}
 
-    pub fn resolution(&self) -> (u32, u32) {
-        self.resolution
-    }
+pub struct ShadowView {
+    pub(crate) surfaces: Arc<Surfaces>,
+    pub shadow_map: SurfaceHandle,
+    pub settings: RenderSettings,
+}
 
-    pub fn surfaces(&self) -> &Arc<Surfaces> {
-        &self.surfaces
+impl ShadowView {
+    const SHADOWMAP_RESOLUTION: u32 = 1024;
+
+    pub fn new(surfaces: &Arc<Surfaces>, resolution: (u32, u32)) -> anyhow::Result<Self> {
+        let surface_desc = SurfaceDesc::builder("shadowmap", SizeRelativity::Absolute)
+            .format(dxgi::Format::R32Typeless)
+            .depth_format(dxgi::Format::D32Float)
+            .view_format(dxgi::Format::R32Float)
+            .build();
+
+        let shadow_map = surfaces.create_surface(resolution, surface_desc)?;
+
+        Ok(Self {
+            surfaces: surfaces.clone(),
+            shadow_map,
+            settings: RenderSettings::default(),
+        })
     }
 }
 

@@ -6,7 +6,9 @@ use alkahest_data::tfx::{
 };
 
 use crate::{
-    Renderer, cmd_event_span, gpu::command_list::CommandList, tfx::view::View,
+    Renderer, cmd_event_span,
+    gpu::command_list::CommandList,
+    tfx::view::{MainView, View},
     util::threading::CommandListSetId,
 };
 
@@ -22,7 +24,7 @@ impl Renderer {
     pub fn submit_geometry_command_lists(
         self: &Arc<Self>,
         cmd: &mut CommandList,
-        view: &View,
+        view: &MainView,
     ) -> GeometryCommandLists {
         cmd_event_span!(cmd, "geometry_early");
         let _gpuscope = self.profiler.scope(cmd, "geometry_early");

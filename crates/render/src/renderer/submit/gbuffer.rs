@@ -11,14 +11,17 @@ use crate::{
     cmd_event_span,
     gpu::command_list::CommandList,
     renderer::{hzb::Hzb, submit::geometry::GeometryCommandLists},
-    tfx::{externs::DownsampleTextureGeneric, view::View},
+    tfx::{
+        externs::DownsampleTextureGeneric,
+        view::{MainView, View},
+    },
 };
 
 impl Renderer {
     pub(super) fn submit_gbuffer_generation(
         self: &Arc<Self>,
         cmd: &mut CommandList,
-        view: &View,
+        view: &MainView,
         geo: Option<&GeometryCommandLists>,
     ) {
         profiling::scope!("submit_gbuffer_generation");
@@ -156,7 +159,7 @@ impl Renderer {
         self.generate_hzb_chain(cmd, view);
     }
 
-    fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &View) {
+    fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &MainView) {
         cmd_event_span!(cmd, "submit_uber_depth_generation");
         let _gpuscope = self.profiler.scope(cmd, "uber_depth_generation");
 
@@ -191,11 +194,11 @@ impl Renderer {
         );
     }
 
-    fn generate_hzb_chain(&self, cmd: &mut CommandList, view: &View) {
+    fn generate_hzb_chain(&self, cmd: &mut CommandList, view: &MainView) {
         cmd_event_span!(cmd, "generate_hzb_chain");
         let _gpuscope = self.profiler.scope(cmd, "generate_hzb_chain");
 
-        let hzb_chain = view.surfaces().get(view.gbuffers.hzb_depth_chain);
+        let hzb_chain = view.surfaces.get(view.gbuffers.hzb_depth_chain);
 
         let depth = view.gbuffers.depth_proxy.lock();
         // Copy main depth to mip 0
