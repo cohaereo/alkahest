@@ -2,7 +2,7 @@ use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
 use inline_tweak::tweak;
 
-use crate::{Renderer, renderer::hzb::Hzb, visibility::frustum::Frustum};
+use crate::{renderer::hzb::Hzb, visibility::frustum::Frustum};
 
 // A simple camera controller (X forward, Z up)
 pub struct Camera {
@@ -17,13 +17,10 @@ pub struct Camera {
     pub max_ortho_width: f32,
 
     pub aspect_ratio: f32,
-    pub culling_frustum: Frustum,
 
     pub world_to_camera: Mat4,
     pub camera_to_projective: Mat4,
     pub world_to_projective: Mat4,
-
-    pub hzb: Hzb,
 }
 
 impl Default for Camera {
@@ -38,11 +35,9 @@ impl Default for Camera {
             fov_y: 90.0,
             max_ortho_width: 2.0,
             aspect_ratio: 16. / 9.,
-            culling_frustum: Frustum::default(),
             world_to_camera: Mat4::IDENTITY,
             camera_to_projective: Mat4::IDENTITY,
             world_to_projective: Mat4::IDENTITY,
-            hzb: Hzb::EMPTY,
         }
     }
 }
@@ -52,8 +47,6 @@ impl Camera {
     pub const FAR: f32 = 50000.0;
 
     pub fn update(&mut self) {
-        self.culling_frustum = Frustum::from_camera(self);
-
         self.world_to_camera = self.view_matrix();
         self.camera_to_projective = self.projection_matrix(self.aspect_ratio);
         self.world_to_projective = self.camera_to_projective * self.world_to_camera;
@@ -154,54 +147,6 @@ impl Camera {
 
     pub fn set_fov(&mut self, fov: f32) {
         self.fov_y = fov;
-    }
-
-    fn is_in_clip_space(&self, aabb: &AxisAlignedBBox) -> bool {
-        // Don't bother checking an invalid/uninitialized AABB
-        if !aabb.is_valid() {
-            return true;
-        }
-
-        if !self.culling_frustum.aabb_intersecting(aabb) {
-            return false;
-        }
-
-        // Project the AABB corners to check how big they appear on screen
-        let corners = aabb.points();
-        let mut min_ndc = Vec3::splat(f32::MAX);
-        let mut max_ndc = Vec3::splat(f32::MIN);
-        for corner in &corners {
-            let ndc_pos = self.world_to_projective.project_point3(*corner);
-
-            min_ndc = min_ndc.min(ndc_pos);
-            max_ndc = max_ndc.max(ndc_pos);
-        }
-
-        // If the projected size is too small, consider it not visible
-        let ndc_size = max_ndc - min_ndc;
-        let screen_size_threshold = tweak!(0.015); // Adjust this threshold as needed
-        if ndc_size.x < screen_size_threshold && ndc_size.y < screen_size_threshold {
-            return false;
-        }
-
-        true
-    }
-
-    pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
-        // Don't bother checking an invalid/uninitialized AABB
-        if !aabb.is_valid() {
-            return true;
-        }
-
-        // if aabb.contains(self.position) {
-        //     return true;
-        // }
-
-        if !self.is_in_clip_space(aabb) {
-            return false;
-        }
-
-        self.hzb.is_aabb_visible(aabb)
     }
 
     /// Returns (world_to_camera, camera_to_projective) matrices for cascaded shadow mapping.

@@ -2,15 +2,15 @@ use std::{any::Any, sync::Arc};
 
 use alkahest_core::job::potassium::JobHandle;
 use alkahest_data::tfx::{
-    features::dynamic::RenderStageSubscription, RenderStage, TfxFeatureRenderer,
+    RenderStage, TfxFeatureRenderer, features::dynamic::RenderStageSubscription,
 };
 
 use crate::{
-    camera::Camera,
+    Renderer,
     feature::FeatureRenderer,
     gpu::command_list::CommandList,
+    tfx::view::View,
     util::{arena, threading::CommandListSetId},
-    Renderer,
 };
 
 #[repr(transparent)]
@@ -56,8 +56,8 @@ impl RenderObject {
 }
 
 impl RenderObject {
-    pub fn visibility_test(&mut self, camera: &Camera) -> bool {
-        self.renderer.visibility_test(camera)
+    pub fn visibility_test(&mut self, view: &View) -> bool {
+        self.renderer.visibility_test(view)
     }
 
     pub fn extract_and_prepare(&mut self, renderer: &Renderer, data: &dyn Any) {

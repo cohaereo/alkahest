@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::{Renderer, camera::Camera, tfx::view::View};
+use crate::{Renderer, tfx::view::View};
 
 impl Renderer {
-    pub fn cull_frame_packet(self: &Arc<Self>, view: &View, camera: &Camera) {
+    pub fn cull_frame_packet(self: &Arc<Self>, view: &View) {
         // parallel_iter(&mut self.frame_packet.write().frame_nodes, |node| {
         self.frame_packet
             .write()
@@ -22,7 +22,7 @@ impl Renderer {
                         {
                             node.visible = false;
                         } else {
-                            node.visible = render_object.visibility_test(camera);
+                            node.visible = render_object.visibility_test(view);
                         }
                     }
                 }

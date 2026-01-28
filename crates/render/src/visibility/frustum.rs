@@ -68,9 +68,9 @@ impl Frustum {
         Self { planes, points }
     }
 
-    pub fn from_camera(cam: &Camera) -> Self {
-        Self::from_view_and_projection(cam.view_matrix(), cam.projection_matrix_standard())
-    }
+    // pub fn from_camera(cam: &Camera) -> Self {
+    //     Self::from_view_and_projection(cam.view_matrix(), cam.projection_matrix_standard())
+    // }
 
     pub fn from_view_and_projection(view: Mat4, projection: Mat4) -> Self {
         Self::from_world_to_projective(projection * view)

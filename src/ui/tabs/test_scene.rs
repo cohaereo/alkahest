@@ -39,7 +39,7 @@ impl TestSceneTab {
                     Vec3::ONE * 0.9,
                 );
 
-                let visible = self.scene.camera.is_visible(&bounds);
+                let visible = self.scene.view.is_visible(&bounds);
                 if !visible {
                     Renderer::instance()
                         .immediate

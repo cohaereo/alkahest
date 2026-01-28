@@ -11,7 +11,7 @@ use crate::{
     Renderer,
     asset::{Handle, vertex_buffer::VertexBuffer},
     gpu::command_list::{CommandList, DepthMode},
-    tfx::technique::Technique,
+    tfx::{technique::Technique, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -65,8 +65,8 @@ impl DecalCollectionRenderer {
 
 // #[profiling::all_functions]
 impl FeatureRenderer for DecalCollectionRenderer {
-    fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
-        if !camera.culling_frustum.aabb_intersecting(&self.bounds) {
+    fn visibility_test(&mut self, view: &View) -> bool {
+        if !view.is_visible(&self.bounds) {
             return false;
         }
 

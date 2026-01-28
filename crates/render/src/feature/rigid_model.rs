@@ -22,7 +22,7 @@ use crate::{
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::{
         expression_vm::interpreter::TempObjectChannels, packet::CompactTransform,
-        technique::Technique,
+        technique::Technique, view::View,
     },
     util::threading::CommandListSetId,
 };
@@ -267,7 +267,7 @@ impl DynamicModel {
 
 #[profiling::all_functions]
 impl FeatureRenderer for DynamicModel {
-    fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
+    fn visibility_test(&mut self, view: &View) -> bool {
         // TODO(cohae): frustum culling is broken for some moving models (such as the vertex animated fan segments in Irkalla Complex)
         let bounds = AxisAlignedBBox::from_center_extents(
             self.model.model_offset.xyz(),
@@ -275,7 +275,7 @@ impl FeatureRenderer for DynamicModel {
         )
         .transformed(self.transform);
 
-        camera.is_visible(&bounds)
+        view.is_visible(&bounds)
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn Any) {

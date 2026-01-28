@@ -666,7 +666,7 @@ impl Scene {
             if let ViewKind::Main(view) = &self.view.kind {
                 profiling::scope!("download_hzb");
                 let _gpuspan = self.renderer.profiler.scope(&cmd, "download_hzb");
-                self.camera.hzb = if view.settings.hzb_culling {
+                self.view.hzb = if view.settings.hzb_culling {
                     Hzb::download(gpu, &view.gbuffers.hzb_depth_chain_cpu.lock(), &self.camera)
                 } else {
                     Hzb::EMPTY
@@ -681,7 +681,7 @@ impl Scene {
             if !wants_to_render_shadowmaps {
                 profiling::scope!("visibility");
                 let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
-                self.renderer.cull_frame_packet(&self.view, &self.camera);
+                self.renderer.cull_frame_packet(&self.view);
             }
 
             {

@@ -21,7 +21,7 @@ use crate::{
     camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     gpu_span,
-    tfx::technique::Technique,
+    tfx::{technique::Technique, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -213,10 +213,10 @@ impl TerrainPatchesRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for TerrainPatchesRenderer {
-    fn visibility_test(&mut self, camera: &Camera) -> bool {
+    fn visibility_test(&mut self, view: &View) -> bool {
         let center = self.terrain.bounds.center();
         let radius = self.terrain.bounds.radius();
-        let distance = camera.position.distance(center);
+        let distance = view.position.distance(center);
         self.detail_level = match distance {
             d if d > radius * 8.0 => TerrainDetailLevel::Thumbnail,
             d if d > radius * 4.0 => TerrainDetailLevel::Low,
@@ -225,12 +225,10 @@ impl FeatureRenderer for TerrainPatchesRenderer {
         };
 
         for (_cb11, aabb, visible) in &mut self.groups {
-            *visible = camera.is_visible(aabb);
+            *visible = view.is_visible(aabb);
         }
 
-        camera
-            .culling_frustum
-            .aabb_intersecting(&self.terrain.bounds)
+        view.culling_frustum.aabb_intersecting(&self.terrain.bounds)
     }
 
     fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {

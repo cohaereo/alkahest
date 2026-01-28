@@ -31,7 +31,7 @@ use crate::{
     asset::Handle,
     camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
-    tfx::{packet::CompactTransform, technique::Technique},
+    tfx::{packet::CompactTransform, technique::Technique, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -475,8 +475,8 @@ impl StaticInstancesRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for StaticInstancesRenderer {
-    fn visibility_test(&mut self, camera: &Camera) -> bool {
-        if !camera.is_visible(&self.bounds) {
+    fn visibility_test(&mut self, view: &View) -> bool {
+        if !view.is_visible(&self.bounds) {
             return false;
         }
 
@@ -486,12 +486,12 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 transforms, bounds, ..
             } = group;
 
-            group.visible = camera.is_visible(&group.group_bounds);
+            group.visible = view.is_visible(&group.group_bounds);
             group.num_instances = 0;
             if group.visible {
                 group.visible = false;
                 for ((_transform, visible), bounds) in transforms.iter_mut().zip(bounds.iter()) {
-                    let bounds_visible = camera.is_visible(bounds);
+                    let bounds_visible = view.is_visible(bounds);
 
                     if enable_instance_culling {
                         *visible = bounds_visible;

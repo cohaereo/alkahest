@@ -24,6 +24,7 @@ use crate::{
         externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
         packet::CompactTransform,
         technique::Technique,
+        view::View,
     },
     util::{geometry, threading::CommandListSetId},
 };
@@ -147,9 +148,9 @@ impl LightRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for LightRenderer {
-    fn visibility_test(&mut self, camera: &Camera) -> bool {
+    fn visibility_test(&mut self, view: &View) -> bool {
         if let Some(ref bounds) = self.bounds {
-            camera.is_visible(bounds)
+            view.is_visible(bounds)
         } else {
             false
         }

@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicI8, Ordering};
-
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use d3d11::dxgi;
 use glam::{Mat4, Vec2, Vec4};
@@ -291,47 +289,47 @@ impl UvRect {
     }
 }
 
-/// Gives occluded objects a period of grace before they are culled.
-#[repr(transparent)]
-pub struct CullingState(AtomicI8);
+// /// Gives occluded objects a period of grace before they are culled.
+// #[repr(transparent)]
+// pub struct CullingState(AtomicI8);
 
-impl CullingState {
-    pub const FRAMES: i8 = 4;
+// impl CullingState {
+//     pub const FRAMES: i8 = 4;
 
-    pub const fn new() -> Self {
-        Self(AtomicI8::new(Self::FRAMES))
-    }
+//     pub const fn new() -> Self {
+//         Self(AtomicI8::new(Self::FRAMES))
+//     }
 
-    pub fn is_visible(&self, camera: &Camera, aabb: &AxisAlignedBBox) -> bool {
-        if !camera.is_visible(aabb) {
-            return false;
-        }
+//     pub fn is_visible(&self, camera: &Camera, aabb: &AxisAlignedBBox) -> bool {
+//         if !camera.is_visible(aabb) {
+//             return false;
+//         }
 
-        let grace = if camera.hzb.is_aabb_occluded(aabb) {
-            self.decrement()
-        } else {
-            self.reset()
-        };
+//         let grace = if camera.hzb.is_aabb_occluded(aabb) {
+//             self.decrement()
+//         } else {
+//             self.reset()
+//         };
 
-        grace > 0
-    }
+//         grace > 0
+//     }
 
-    fn reset(&self) -> i8 {
-        self.0.store(Self::FRAMES, Ordering::Relaxed);
-        Self::FRAMES
-    }
+//     fn reset(&self) -> i8 {
+//         self.0.store(Self::FRAMES, Ordering::Relaxed);
+//         Self::FRAMES
+//     }
 
-    fn decrement(&self) -> i8 {
-        let v = self.0.fetch_sub(1, Ordering::Relaxed);
-        if v <= 0 {
-            self.0.store(0, Ordering::Relaxed);
-        }
-        v.max(0)
-    }
-}
+//     fn decrement(&self) -> i8 {
+//         let v = self.0.fetch_sub(1, Ordering::Relaxed);
+//         if v <= 0 {
+//             self.0.store(0, Ordering::Relaxed);
+//         }
+//         v.max(0)
+//     }
+// }
 
-impl Default for CullingState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl Default for CullingState {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }

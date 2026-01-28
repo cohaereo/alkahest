@@ -18,7 +18,7 @@ use crate::{
     asset::vertex_buffer::VertexBuffer,
     feature::{FeatureRenderer, rigid_model::DynamicModel},
     gpu::cbuffer::ConstantBuffer,
-    tfx::externs,
+    tfx::{externs, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -233,13 +233,13 @@ impl DecoratorRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for DecoratorRenderer {
-    fn visibility_test(&mut self, camera: &crate::camera::Camera) -> bool {
-        if !camera.is_visible(&self.data.bounds) {
+    fn visibility_test(&mut self, view: &View) -> bool {
+        if !view.is_visible(&self.data.bounds) {
             return false;
         }
 
         self.instance_groups.par_iter_mut().for_each(|group| {
-            group.visible = camera.is_visible(&group.bounds);
+            group.visible = view.is_visible(&group.bounds);
             // if !group.visible {
             //     Renderer::instance().immediate.lock().aabb_world(
             //         &group.bounds,
@@ -251,7 +251,7 @@ impl FeatureRenderer for DecoratorRenderer {
                     .instance_bounds
                     .par_iter_mut()
                     .for_each(|(_range, bounds, visible)| {
-                        *visible = camera.is_visible(bounds);
+                        *visible = view.is_visible(bounds);
                         // if !*visible {
                         //     Renderer::instance()
                         //         .immediate

@@ -5,7 +5,10 @@ use alkahest_data::tfx::{RenderStage, features::dynamic::RenderStageSubscription
 use glam::Mat4;
 
 use crate::{
-    Renderer, camera::Camera, gpu::command_list::CommandList, tfx::packet::CompactTransform,
+    Renderer,
+    camera::Camera,
+    gpu::command_list::CommandList,
+    tfx::{packet::CompactTransform, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -22,7 +25,8 @@ pub mod terrain_patches;
 
 pub trait FeatureRenderer {
     /// Returns false if the render object should be discarded
-    fn visibility_test(&mut self, _camera: &Camera) -> bool {
+    fn visibility_test(&mut self, view: &View) -> bool {
+        _ = view;
         true
     }
 

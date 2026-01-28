@@ -1,19 +1,22 @@
 use std::sync::Arc;
 
-use alkahest_data::tfx::FeatureRendererSubscription;
+use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use d3d11::dxgi;
 use glam::{Mat4, Vec3, Vec4};
+use inline_tweak::tweak;
 use parking_lot::{Mutex, RwLock};
 
 use crate::{
     Gpu, Renderer,
     renderer::{
         autoexposure::AutoExposureSystem,
+        hzb::Hzb,
         submit::buffers::{AtmosphereBuffers, BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
         surface::{
             SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale, Surfaces,
         },
     },
+    visibility::frustum::Frustum,
 };
 
 pub enum ViewKind {
@@ -25,6 +28,10 @@ pub struct View {
     pub(crate) position: Vec3,
     pub(crate) world_to_camera: Mat4,
     pub(crate) camera_to_projective: Mat4,
+    world_to_projective: Mat4,
+
+    pub culling_frustum: Frustum,
+    pub hzb: Hzb,
 
     pub surfaces: Arc<Surfaces>,
     pub(crate) resolution: (u32, u32),
@@ -56,6 +63,9 @@ impl View {
             position: Vec3::ZERO,
             world_to_camera: Mat4::IDENTITY,
             camera_to_projective: Mat4::IDENTITY,
+            world_to_projective: Mat4::IDENTITY,
+            culling_frustum: Frustum::default(),
+            hzb: Hzb::EMPTY,
             resolution,
             surfaces,
             kind,
@@ -101,6 +111,54 @@ impl View {
             ViewKind::Main(v) => &mut v.settings,
             ViewKind::Shadow(v) => &mut v.settings,
         }
+    }
+
+    fn is_in_clip_space(&self, aabb: &AxisAlignedBBox) -> bool {
+        // Don't bother checking an invalid/uninitialized AABB
+        if !aabb.is_valid() {
+            return true;
+        }
+
+        if !self.culling_frustum.aabb_intersecting(aabb) {
+            return false;
+        }
+
+        // Project the AABB corners to check how big they appear on screen
+        let corners = aabb.points();
+        let mut min_ndc = Vec3::splat(f32::MAX);
+        let mut max_ndc = Vec3::splat(f32::MIN);
+        for corner in &corners {
+            let ndc_pos = self.world_to_projective.project_point3(*corner);
+
+            min_ndc = min_ndc.min(ndc_pos);
+            max_ndc = max_ndc.max(ndc_pos);
+        }
+
+        // If the projected size is too small, consider it not visible
+        let ndc_size = max_ndc - min_ndc;
+        let screen_size_threshold = tweak!(0.015); // Adjust this threshold as needed
+        if ndc_size.x < screen_size_threshold && ndc_size.y < screen_size_threshold {
+            return false;
+        }
+
+        true
+    }
+
+    pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
+        // Don't bother checking an invalid/uninitialized AABB
+        if !aabb.is_valid() {
+            return true;
+        }
+
+        // if aabb.contains(self.position) {
+        //     return true;
+        // }
+
+        if !self.is_in_clip_space(aabb) {
+            return false;
+        }
+
+        self.hzb.is_aabb_visible(aabb)
     }
 }
 
