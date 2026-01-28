@@ -82,6 +82,8 @@ pub trait ExternalDataWidgetExt {
 pub struct DButton<'a> {
     button: egui::Button<'a>,
     text_color: Color32,
+    stroke: Stroke,
+    fill_color: Color32,
 }
 
 impl<'a> DButton<'a> {
@@ -89,10 +91,10 @@ impl<'a> DButton<'a> {
         Self {
             button: egui::Button::new(atoms)
                 .min_size(vec2(120.0, 60.0))
-                .corner_radius(0)
-                .fill(Color32::from_gray(96).gamma_multiply(0.2))
-                .stroke(Stroke::new(1.0, Color32::WHITE)),
+                .corner_radius(0),
             text_color: Color32::WHITE,
+            stroke: Stroke::new(1.0, Color32::WHITE),
+            fill_color: Color32::from_gray(96).gamma_multiply(0.2),
         }
     }
 
@@ -100,10 +102,10 @@ impl<'a> DButton<'a> {
         Self {
             button: egui::Button::new(atoms)
                 .min_size(vec2(120.0, 60.0))
-                .corner_radius(0)
-                .fill(Color32::from_white_alpha(196))
-                .stroke(Stroke::new(1.0, Color32::WHITE)),
+                .corner_radius(0),
             text_color: Color32::BLACK,
+            stroke: Stroke::new(1.0, Color32::WHITE),
+            fill_color: Color32::from_white_alpha(196),
         }
     }
 
@@ -113,7 +115,7 @@ impl<'a> DButton<'a> {
             ui.style_mut().visuals.override_text_color = Some(self.text_color);
 
             let r = ui
-                .add(self.button)
+                .add(self.button.stroke(self.stroke).fill(self.fill_color))
                 .on_hover_cursor(CursorIcon::PointingHand);
 
             if r.hovered() {
@@ -133,6 +135,16 @@ impl<'a> DButton<'a> {
 
     pub fn min_size(mut self, size: Vec2) -> Self {
         self.button = self.button.min_size(size);
+        self
+    }
+
+    pub fn stroke(mut self, width: f32, color: Color32) -> Self {
+        self.stroke = Stroke::new(width, color);
+        self
+    }
+
+    pub fn fill(mut self, color: Color32) -> Self {
+        self.fill_color = color;
         self
     }
 }

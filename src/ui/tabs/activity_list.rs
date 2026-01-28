@@ -2,7 +2,8 @@ use std::{cell::RefCell, sync::Arc};
 
 use ahash::HashMap;
 use alkahest_data::activity::SActivity;
-use egui::{Atom, AtomExt, Atoms, IntoAtoms, Vec2, vec2};
+use egui::{Atom, AtomExt, Atoms, Color32, ImageSource, IntoAtoms, Vec2, vec2};
+use google_material_symbols::GoogleMaterialSymbols;
 use itertools::Itertools;
 use tiger_parse::TigerReadable;
 use tiger_pkg::{TagHash, package_manager};
@@ -28,6 +29,9 @@ impl ActivityListTab {
         let mut crucible_nodes = HashMap::<String, Vec<ActivityTreeNode>>::default();
         let mut gambit_nodes = vec![];
         let mut destination_nodes = HashMap::<String, Vec<ActivityTreeNode>>::default();
+        let mut dungeon_nodes = vec![];
+        let mut raid_nodes = vec![];
+        let mut strike_nodes = vec![];
 
         for (activity_string, tag) in
             package_manager().get_named_tags_by_class(SActivity::ID.unwrap())
@@ -54,13 +58,28 @@ impl ActivityListTab {
                     tag,
                 });
             } else {
+                let leaf = ActivityTreeNode::Leaf {
+                    title: activity.to_string(),
+                    tag,
+                };
+                let kind = leaf.kind();
                 destination_nodes
                     .entry(destination.to_string())
                     .or_default()
-                    .push(ActivityTreeNode::Leaf {
-                        title: activity.to_string(),
-                        tag,
-                    });
+                    .push(leaf.clone());
+
+                match kind {
+                    Some(ActivityKind::Dungeon) => {
+                        dungeon_nodes.push(leaf);
+                    }
+                    Some(ActivityKind::Raid) => {
+                        raid_nodes.push(leaf.clone());
+                    }
+                    Some(ActivityKind::Strike) => {
+                        strike_nodes.push(leaf.clone());
+                    }
+                    _ => {}
+                }
             }
         }
 
@@ -89,12 +108,19 @@ impl ActivityListTab {
         crucible_nodes.sort_by_key(|node| node.title().to_string());
         destination_nodes.sort_by_key(|node| node.title().to_string());
         gambit_nodes.sort_by_key(|node| node.title().to_string());
+        raid_nodes.sort_by_key(|node| node.title().to_string());
+        strike_nodes.sort_by_key(|node| node.title().to_string());
+        destination_nodes.sort_by_key(|node| node.title().to_string());
 
         Self {
             shared_state: shared_state.clone(),
             root_node: ActivityTreeNode::Branch {
                 title: String::new(),
                 children: vec![
+                    ActivityTreeNode::Branch {
+                        title: format!("{} Packages", GoogleMaterialSymbols::Package2),
+                        children: destination_nodes,
+                    },
                     ActivityTreeNode::Branch {
                         title: "Crucible".to_string(),
                         children: crucible_nodes,
@@ -104,8 +130,16 @@ impl ActivityListTab {
                         children: gambit_nodes,
                     },
                     ActivityTreeNode::Branch {
-                        title: "Destinations".to_string(),
-                        children: destination_nodes,
+                        title: "Raids".to_string(),
+                        children: raid_nodes,
+                    },
+                    ActivityTreeNode::Branch {
+                        title: "Dungeons".to_string(),
+                        children: dungeon_nodes,
+                    },
+                    ActivityTreeNode::Branch {
+                        title: "Strikes".to_string(),
+                        children: strike_nodes,
                     },
                 ],
             },
@@ -145,8 +179,9 @@ impl ActivityListTab {
                                 let btn = if Some(i) == current_selected {
                                     DButton::new_white(child.atoms())
                                 } else {
-                                    DButton::new(child.atoms())
+                                    DButton::new(child.atoms()).fill(child.bg_color())
                                 }
+                                .stroke(1.0, child.stroke_color())
                                 .min_size(vec2(512.0, 32.0))
                                 .ui(ui);
 
@@ -158,6 +193,8 @@ impl ActivityListTab {
                             ActivityTreeNode::Leaf { title, tag } => {
                                 if DButton::new((child.atoms(), format!("({tag})")))
                                     .min_size(vec2(512.0, 32.0))
+                                    .stroke(1.0, child.stroke_color())
+                                    .fill(child.bg_color())
                                     .ui(ui)
                                     .clicked()
                                 {
@@ -188,6 +225,7 @@ impl ActivityListTab {
     }
 }
 
+#[derive(Clone)]
 enum ActivityTreeNode {
     Leaf {
         title: String,
@@ -207,36 +245,108 @@ impl ActivityTreeNode {
         }
     }
 
-    fn icon_atom<'a>(&'a self) -> Option<Atom<'a>> {
+    fn kind(&self) -> Option<ActivityKind> {
         let title = self.title();
 
-        let icon = match title.to_lowercase() {
-            v if v.starts_with("crucible") => icons::CRUCIBLE,
-            v if v.starts_with("raid") => icons::RAID,
-            v if v.starts_with("iron_banner") => icons::IRON_BANNER,
-            v if v.starts_with("trials") => icons::OSIRIS,
-            v if v.starts_with("gambit") => icons::GAMBIT,
-            v if v.starts_with("dungeon") => icons::DUNGEON,
-            v if v.starts_with("mission_") => icons::QUEST,
-            v if v.starts_with("quest_") => icons::QUEST,
-            v if v.ends_with("freeroam") => icons::PATROL,
-            v if v.starts_with("strike") => icons::STRIKE,
-            v if v.starts_with("exotic_") => icons::ENGRAM,
-            v if v.ends_with("_ls_a") => icons::LOST_SECTOR,
-            v if v.ends_with("_ls_b") => icons::LOST_SECTOR,
+        let kind = match title.to_lowercase() {
+            v if v.starts_with("crucible") => ActivityKind::Crucible,
+            v if v.starts_with("raid") => ActivityKind::Raid,
+            v if v.starts_with("iron_banner") => ActivityKind::IronBanner,
+            v if v.starts_with("trials") => ActivityKind::Trials,
+            v if v.starts_with("gambit") => ActivityKind::Gambit,
+            v if v.starts_with("dungeon") => ActivityKind::Dungeon,
+            v if v.starts_with("mission_") => ActivityKind::Mission,
+            v if v.starts_with("quest") => ActivityKind::Quest,
+            v if v.starts_with("strike") => ActivityKind::Strike,
+            v if v.starts_with("exotic") => ActivityKind::Exotic,
+            v if v.ends_with("freeroam") => ActivityKind::Patrol,
+            v if v.ends_with("_ls_a") => ActivityKind::LostSector,
+            v if v.ends_with("_ls_b") => ActivityKind::LostSector,
             _ => return None,
         };
 
-        Some(icon.into())
+        Some(kind)
     }
 
     fn atoms<'a>(&'a self) -> Atoms<'a> {
         let title = self.title();
 
-        if let Some(icon) = self.icon_atom() {
-            (icon.atom_size(Vec2::splat(32.0)), "", title.to_string()).into_atoms()
+        if let Some(kind) = self.kind() {
+            (
+                kind.icon().atom_size(Vec2::splat(32.0)),
+                "",
+                title.to_string(),
+            )
+                .into_atoms()
         } else {
             title.into_atoms()
+        }
+    }
+
+    fn color(&self) -> Color32 {
+        self.kind().map(|k| k.color()).unwrap_or(Color32::WHITE)
+    }
+
+    fn stroke_color(&self) -> Color32 {
+        self.color().gamma_multiply(1.7)
+    }
+
+    fn bg_color(&self) -> Color32 {
+        let c = self.color();
+        if c == Color32::WHITE {
+            Color32::TRANSPARENT
+        } else {
+            c.gamma_multiply(0.33)
+        }
+    }
+}
+
+enum ActivityKind {
+    Crucible,
+    Raid,
+    IronBanner,
+    Trials,
+    Gambit,
+    Dungeon,
+    Mission,
+    Quest,
+    Strike,
+    Exotic,
+    Patrol,
+    LostSector,
+}
+
+impl ActivityKind {
+    fn icon(&self) -> ImageSource<'static> {
+        match self {
+            ActivityKind::Crucible => icons::CRUCIBLE,
+            ActivityKind::Raid => icons::RAID,
+            ActivityKind::IronBanner => icons::IRON_BANNER,
+            ActivityKind::Trials => icons::OSIRIS,
+            ActivityKind::Gambit => icons::GAMBIT,
+            ActivityKind::Dungeon => icons::DUNGEON,
+            ActivityKind::Patrol => icons::PATROL,
+            ActivityKind::LostSector => icons::LOST_SECTOR,
+            ActivityKind::Strike => icons::STRIKE,
+            ActivityKind::Exotic => icons::ENGRAM,
+            ActivityKind::Quest => icons::QUEST,
+            ActivityKind::Mission => icons::QUEST,
+        }
+    }
+
+    fn color(&self) -> Color32 {
+        match self {
+            ActivityKind::Crucible => Color32::from_rgb(145, 37, 29),
+            ActivityKind::Raid => Color32::WHITE,
+            ActivityKind::IronBanner => Color32::WHITE,
+            ActivityKind::Trials => Color32::from_rgb(198, 159, 99),
+            ActivityKind::Gambit => Color32::from_rgb(57, 119, 94),
+            ActivityKind::Dungeon => Color32::from_rgb(104, 85, 72),
+            ActivityKind::Patrol => Color32::WHITE,
+            ActivityKind::LostSector => Color32::from_rgb(80, 73, 159),
+            ActivityKind::Strike => Color32::from_rgb(57, 100, 128),
+            ActivityKind::Exotic => Color32::from_rgb(191, 153, 65),
+            ActivityKind::Quest | ActivityKind::Mission => Color32::from_rgb(38, 68, 127),
         }
     }
 }
