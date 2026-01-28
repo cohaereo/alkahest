@@ -36,6 +36,7 @@ impl ActivityListTab {
         let mut dungeon_nodes = vec![];
         let mut raid_nodes = vec![];
         let mut strike_nodes = vec![];
+        let mut patrol_nodes = vec![];
 
         let mut all_nodes = HashMap::default();
 
@@ -92,6 +93,9 @@ impl ActivityListTab {
                     Some(ActivityKind::Strike) => {
                         strike_nodes.push(leaf.clone());
                     }
+                    Some(ActivityKind::Patrol) => {
+                        patrol_nodes.push(leaf.clone());
+                    }
                     _ => {}
                 }
             }
@@ -125,6 +129,7 @@ impl ActivityListTab {
         raid_nodes.sort_by_key(|node| node.title().to_string());
         strike_nodes.sort_by_key(|node| node.title().to_string());
         destination_nodes.sort_by_key(|node| node.title().to_string());
+        patrol_nodes.sort_by_key(|node| node.title().to_string());
 
         let mut all_nodes = all_nodes.into_values().collect_vec();
         all_nodes.sort_by_key(|node| node.title().to_string());
@@ -157,6 +162,10 @@ impl ActivityListTab {
                     ActivityTreeNode::Branch {
                         title: "Strikes".to_string(),
                         children: strike_nodes,
+                    },
+                    ActivityTreeNode::Branch {
+                        title: "Patrol".to_string(),
+                        children: patrol_nodes,
                     },
                 ],
             },
@@ -314,7 +323,7 @@ impl ActivityTreeNode {
     fn kind(&self) -> Option<ActivityKind> {
         let title = self.title();
 
-        let kind = match title.to_lowercase() {
+        let kind = match title.to_lowercase().as_str() {
             v if v.starts_with("crucible") => ActivityKind::Crucible,
             v if v.starts_with("raid") || v.contains("raid_") => ActivityKind::Raid,
             v if v.starts_with("iron_banner") => ActivityKind::IronBanner,
@@ -326,6 +335,7 @@ impl ActivityTreeNode {
             v if v.starts_with("strike") => ActivityKind::Strike,
             v if v.starts_with("exotic") => ActivityKind::Exotic,
             v if v.contains("freeroam") => ActivityKind::Patrol,
+            "patrol" => ActivityKind::Patrol,
             v if v.contains("_ls_a") || v.contains("_ls_b") || v.contains("_ls_c") => {
                 ActivityKind::LostSector
             }
