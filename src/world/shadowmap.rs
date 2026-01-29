@@ -1,6 +1,12 @@
 use std::sync::Arc;
 
-use alkahest_render::{Renderer, camera::CameraProjection, tfx::view::View};
+use alkahest_render::{
+    Renderer,
+    camera::CameraProjection,
+    feature::light::LightRenderer,
+    gpu::command_list::CommandList,
+    tfx::view::{View, ViewKind},
+};
 use glam::Mat4;
 use parking_lot::Mutex;
 
@@ -8,7 +14,6 @@ use crate::world::transform::Transform;
 
 pub struct ShadowMap {
     pub finished_rendering: bool,
-    // pub surface: Arc<Mutex<Option<Surface>>>,
     pub world_to_camera: Mat4,
     pub camera_to_projective: Mat4,
 }
@@ -65,13 +70,91 @@ impl ShadowMap {
     // }
 }
 
-pub fn s_wants_to_render_shadowmaps(world: &hecs::World) -> bool {
-    for (_entity, shadowmap) in world.query::<&ShadowMap>().iter() {
-        if !shadowmap.finished_rendering {
-            return true;
+pub fn s_extract_all_shadowmaps(world: &hecs::World, renderer: &Arc<Renderer>) {
+    profiling::scope!("extract_shadowmaps");
+    if renderer.asset_manager.count_loading() > 0 {
+        return;
+    }
+
+    for (i, (_entity, (shadowmap, view))) in world
+        .query::<(&mut ShadowMap, &mut View)>()
+        .iter()
+        .enumerate()
+    {
+        if shadowmap.finished_rendering {
+            continue;
+        }
+
+        view.update(
+            shadowmap.world_to_camera,
+            shadowmap.camera_to_projective,
+            view.resolution(),
+        );
+
+        let ViewKind::Shadow(v) = &mut view.kind else {
+            continue;
+        };
+
+        v.index = View::FIRST_SHADOW + i;
+
+        renderer.cull_view(v.index, view);
+    }
+}
+
+pub fn s_prepare_all_shadowmaps(
+    world: &hecs::World,
+    cmd: &mut CommandList,
+    renderer: &Arc<Renderer>,
+) {
+    profiling::scope!("prepare_shadowmaps");
+    let _gpuspan = renderer.profiler.scope(cmd, "prepare_shadowmaps");
+    if renderer.asset_manager.count_loading() > 0 {
+        return;
+    }
+
+    for (_entity, (shadowmap, view)) in world.query::<(&ShadowMap, &View)>().iter() {
+        if shadowmap.finished_rendering {
+            continue;
+        }
+
+        let ViewKind::Shadow(v) = &view.kind else {
+            continue;
+        };
+
+        for node in renderer.frame_packet.read().iter_visible(View::MAIN) {
+            if let Some(render_object) = renderer
+                .objects
+                .write()
+                .get_mut(node.render_object_handle.into())
+            {
+                render_object.prepare(renderer, v.index, &*node.data);
+            } else if node.render_object_handle.is_valid() {
+                error!("Render object not found: {:?}", node.render_object_handle);
+            }
         }
     }
-    false
+}
+
+pub fn s_submit_all_shadowmaps(
+    world: &hecs::World,
+    cmd: &mut CommandList,
+    renderer: &Arc<Renderer>,
+) {
+    profiling::scope!("render_shadowmaps");
+    let _gpuspan = renderer.profiler.scope(cmd, "render_shadowmaps");
+    if renderer.asset_manager.count_loading() > 0 {
+        return;
+    }
+
+    for (_entity, (shadowmap, view)) in world.query::<(&mut ShadowMap, &View)>().iter() {
+        if shadowmap.finished_rendering {
+            continue;
+        }
+
+        renderer.submit_view(cmd, view, None);
+
+        // shadowmap.finished_rendering = true;
+    }
 }
 
 // pub fn s_render_all_shadowmaps(

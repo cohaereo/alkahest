@@ -490,14 +490,12 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 transforms, bounds, ..
             } = group;
 
-            group
-                .visible
-                .set(view_index, view.is_visible(&group.group_bounds));
+            group.visible.set(view_index, true);
             group.num_instances = 0;
             if group.visible.get(view_index) {
                 group.visible.set(view_index, false);
                 for ((_transform, visible), bounds) in transforms.iter_mut().zip(bounds.iter()) {
-                    let bounds_visible = view.is_visible(bounds);
+                    let bounds_visible = true;
 
                     if enable_instance_culling {
                         visible.set(view_index, bounds_visible);

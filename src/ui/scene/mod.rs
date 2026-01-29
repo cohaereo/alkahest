@@ -45,6 +45,7 @@ use crate::{
     world::{
         render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
         sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
+        shadowmap::{s_extract_all_shadowmaps, s_prepare_all_shadowmaps, s_submit_all_shadowmaps},
     },
 };
 
@@ -83,7 +84,7 @@ impl Scene {
 
         Ok(Self {
             world: hecs::World::new(),
-            view: View::new_main(&renderer.gpu, (128, 128))?,
+            view: View::new_main("main", &renderer.gpu, (128, 128))?,
             global_channels: renderer.externs.default_globals,
             renderer,
             camera,
@@ -677,7 +678,8 @@ impl Scene {
 
             profiling::scope!("visibility");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
-            self.renderer.cull_frame_packet(View::MAIN, &self.view);
+            self.renderer.cull_view(View::MAIN, &self.view);
+            s_extract_all_shadowmaps(&self.world, &self.renderer);
 
             {
                 profiling::scope!("prepare/upload");
@@ -695,6 +697,8 @@ impl Scene {
                         error!("Render object not found: {:?}", node.render_object_handle);
                     }
                 }
+
+                s_prepare_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
             }
             // Sort nodes by distance
             self.renderer
@@ -709,6 +713,7 @@ impl Scene {
         }
 
         {
+            s_submit_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
             // self.renderer
             //     .submit_sun_shadows(&mut cmd, &self.camera, &self.view);
             self.renderer

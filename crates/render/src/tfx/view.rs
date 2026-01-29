@@ -25,6 +25,7 @@ pub enum ViewKind {
 }
 
 pub struct View {
+    pub name: String,
     pub(crate) position: Vec3,
     pub(crate) world_to_camera: Mat4,
     pub(crate) camera_to_projective: Mat4,
@@ -46,15 +47,28 @@ impl View {
     pub const SUN: usize = 1;
     pub const FIRST_SHADOW: usize = 2;
 
-    pub fn new_main(gpu: &Gpu, resolution: (u32, u32)) -> anyhow::Result<Self> {
-        Self::new_inner(gpu, false, resolution)
+    pub fn new_main(
+        name: impl Into<String>,
+        gpu: &Gpu,
+        resolution: (u32, u32),
+    ) -> anyhow::Result<Self> {
+        Self::new_inner(name, gpu, false, resolution)
     }
 
-    pub fn new_shadow(gpu: &Gpu, resolution: (u32, u32)) -> anyhow::Result<Self> {
-        Self::new_inner(gpu, true, resolution)
+    pub fn new_shadow(
+        name: impl Into<String>,
+        gpu: &Gpu,
+        resolution: (u32, u32),
+    ) -> anyhow::Result<Self> {
+        Self::new_inner(name, gpu, true, resolution)
     }
 
-    fn new_inner(gpu: &Gpu, is_shadow: bool, resolution: (u32, u32)) -> anyhow::Result<Self> {
+    fn new_inner(
+        name: impl Into<String>,
+        gpu: &Gpu,
+        is_shadow: bool,
+        resolution: (u32, u32),
+    ) -> anyhow::Result<Self> {
         let surfaces = Arc::new(Surfaces::new(gpu.device.clone(), resolution));
 
         let kind = if is_shadow {
@@ -64,6 +78,7 @@ impl View {
         };
 
         Ok(Self {
+            name: name.into(),
             position: Vec3::ZERO,
             world_to_camera: Mat4::IDENTITY,
             camera_to_projective: Mat4::IDENTITY,
@@ -87,6 +102,8 @@ impl View {
         self.camera_to_projective = camera_to_projective;
         self.position = self.world_to_camera.inverse().transform_point3(Vec3::ZERO);
         self.resolution = resolution;
+        self.culling_frustum =
+            Frustum::from_view_and_projection(self.world_to_camera, self.camera_to_projective);
     }
 
     pub fn update_autoexposure(&mut self, gpu: &Gpu, delta_time: f32) {
@@ -305,7 +322,7 @@ pub struct ShadowView {
 }
 
 impl ShadowView {
-    pub const SHADOWMAP_RESOLUTION: u32 = 1024;
+    pub const SHADOWMAP_RESOLUTION: u32 = 2048;
 
     pub fn new(surfaces: &Arc<Surfaces>, resolution: (u32, u32)) -> anyhow::Result<Self> {
         let surface_desc = SurfaceDesc::builder("shadowmap", SizeRelativity::Absolute)

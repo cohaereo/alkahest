@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use crate::{Renderer, tfx::view::View};
 
 impl Renderer {
-    pub fn cull_frame_packet(self: &Arc<Self>, view_index: usize, view: &View) {
+    pub fn cull_view(self: &Arc<Self>, view_index: usize, view: &View) {
         // parallel_iter(&mut self.frame_packet.write().frame_nodes, |node| {
         self.frame_packet
             .write()
@@ -28,10 +28,5 @@ impl Renderer {
                     }
                 }
             });
-
-        self.frame_packet
-            .write()
-            .frame_nodes
-            .retain(|n| !n.visible.is_empty());
     }
 }

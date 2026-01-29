@@ -22,11 +22,11 @@ use alkahest_render::{
     renderer::submit::atmosphere::{AtmosphereData, SunDirections},
     tfx::{
         sequencer_vm::global_channel::GlobalChannelExpression,
-        view::{ShadowView, View},
+        view::{ShadowView, View, ViewKind},
     },
 };
 use anyhow::Context;
-use glam::{Mat4, Vec3, Vec4Swizzles};
+use glam::{Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
@@ -277,10 +277,11 @@ pub fn spawn_pattern_from_header(
                     light.far_plane,
                 );
 
-                let light_renderer =
+                let mut light_renderer =
                     LightRenderer::new_shadowing(renderer, light, shadowmap.camera_to_projective)?;
 
                 let view = View::new_shadow(
+                    format!("shadow_{}", data.light.taghash()),
                     &Renderer::instance().gpu,
                     (
                         ShadowView::SHADOWMAP_RESOLUTION,
@@ -288,6 +289,14 @@ pub fn spawn_pattern_from_header(
                     ),
                 )
                 .expect("Failed to create shadowmap view");
+
+                let ViewKind::Shadow(v) = &view.kind else {
+                    unreachable!("view is not a shadow view even though we just created it");
+                };
+
+                let surf = view.surfaces().get(v.shadow_map);
+                light_renderer.shadow_view =
+                    Some((surf.texture.clone(), surf.srv(0).unwrap().clone()));
 
                 let render_obj =
                     RenderObject::new(TfxFeatureRenderer::DeferredLights, light_renderer);

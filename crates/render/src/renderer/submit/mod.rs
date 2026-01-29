@@ -37,8 +37,10 @@ impl Renderer {
         view: &View,
         debug_pipeline: Option<DebugPipeline>,
     ) {
-        cmd_event_span!(cmd, "submit_world");
-        let _gpuspan = self.profiler.scope(cmd, "submit_world");
+        cmd_event_span!(cmd, format!("submit_view_{}", view.name));
+        let _gpuspan = self
+            .profiler
+            .scope(cmd, format!("submit_view_{}", view.name));
 
         *self.settings.write() = view.settings().clone();
         *self.surfaces.write() = view.surfaces.clone();
@@ -72,7 +74,9 @@ impl Renderer {
 
         let shadowmap = view.surfaces.get(view.shadow_map);
 
+        shadowmap.clear_depth(cmd, 0.0, 0);
         shadowmap.bind_single(cmd);
+
         self.submit_stage_parallel_apply(
             cmd,
             view.index,

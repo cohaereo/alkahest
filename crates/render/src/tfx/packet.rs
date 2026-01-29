@@ -9,7 +9,7 @@ use crate::{object::RenderObjectHandle, renderer::submit::atmosphere::Atmosphere
 pub struct FramePacket {
     // pub alloc: Bump,
     pub frame_nodes: Vec<FrameNode>,
-    pub views: Vec<ExtractedView>,
+    // pub views: Vec<ExtractedView>,
     pub misc: FramePacketMisc,
 }
 
@@ -66,10 +66,6 @@ pub struct FrameNode {
 }
 
 unsafe impl Send for FrameNode {}
-
-pub struct ExtractedView {
-    pub source: ViewSource,
-}
 
 #[repr(C)]
 /// Compact representation of a local->world transform
