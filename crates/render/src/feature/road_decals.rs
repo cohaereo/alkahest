@@ -75,9 +75,20 @@ impl RoadDecalCollectionRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for RoadDecalCollectionRenderer {
-    fn extract_and_prepare(&mut self, _renderer: &Renderer, _extracted_data: &dyn std::any::Any) {}
+    fn prepare(
+        &mut self,
+        _renderer: &Renderer,
+        _view_index: usize,
+        _extracted_data: &dyn std::any::Any,
+    ) {
+    }
 
-    fn submit(&self, cmd: &mut CommandList, _stage: alkahest_data::tfx::RenderStage) {
+    fn submit(
+        &self,
+        cmd: &mut CommandList,
+        _view_index: usize,
+        _stage: alkahest_data::tfx::RenderStage,
+    ) {
         for decal in &self.decals {
             let Some((vb, ib)) = decal.vertex_buffer.get().zip(decal.index_buffer.get()) else {
                 return;

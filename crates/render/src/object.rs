@@ -9,7 +9,7 @@ use crate::{
     Renderer,
     feature::FeatureRenderer,
     gpu::command_list::CommandList,
-    tfx::view::View,
+    tfx::view::{self},
     util::{arena, threading::CommandListSetId},
 };
 
@@ -56,26 +56,28 @@ impl RenderObject {
 }
 
 impl RenderObject {
-    pub fn visibility_test(&mut self, view: &View) -> bool {
-        self.renderer.visibility_test(view)
+    pub fn visibility_test(&mut self, view_index: usize, view: &view::View) -> bool {
+        self.renderer.visibility_test(view_index, view)
     }
 
-    pub fn extract_and_prepare(&mut self, renderer: &Renderer, data: &dyn Any) {
-        self.renderer.extract_and_prepare(renderer, data);
+    pub fn prepare(&mut self, renderer: &Renderer, view_index: usize, data: &dyn Any) {
+        self.renderer.prepare(renderer, view_index, data);
     }
 
-    pub fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
-        self.renderer.submit(cmd, stage);
+    pub fn submit(&self, cmd: &mut CommandList, view_index: usize, stage: RenderStage) {
+        self.renderer.submit(cmd, view_index, stage);
     }
 
     pub fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        view_index: usize,
         set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
-        self.renderer.submit_parallel(renderer, set, stage, jobs);
+        self.renderer
+            .submit_parallel(renderer, view_index, set, stage, jobs);
     }
 
     pub fn is_loaded(&self) -> bool {

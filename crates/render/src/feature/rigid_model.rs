@@ -267,7 +267,7 @@ impl DynamicModel {
 
 #[profiling::all_functions]
 impl FeatureRenderer for DynamicModel {
-    fn visibility_test(&mut self, view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, view: &View) -> bool {
         // TODO(cohae): frustum culling is broken for some moving models (such as the vertex animated fan segments in Irkalla Complex)
         let bounds = AxisAlignedBBox::from_center_extents(
             self.model.model_offset.xyz(),
@@ -278,7 +278,7 @@ impl FeatureRenderer for DynamicModel {
         view.is_visible(&bounds)
     }
 
-    fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn Any) {
+    fn prepare(&mut self, renderer: &Renderer, _view_index: usize, extracted_data: &dyn Any) {
         let (obj_local_to_world, permutation) = extracted_data
             .downcast_ref::<(CompactTransform, usize)>()
             .expect("Invalid extracted data type")
@@ -308,7 +308,7 @@ impl FeatureRenderer for DynamicModel {
     }
 
     // #[profiling::function]
-    fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
+    fn submit(&self, cmd: &mut CommandList, _view_index: usize, stage: RenderStage) {
         profiling::scope!("DynamicModel::draw");
 
         self.draw_wrapped(
@@ -324,6 +324,7 @@ impl FeatureRenderer for DynamicModel {
     fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        _view_index: usize,
         set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,

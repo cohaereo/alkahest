@@ -42,6 +42,10 @@ pub struct View {
 }
 
 impl View {
+    pub const MAIN: usize = 0;
+    pub const SUN: usize = 1;
+    pub const FIRST_SHADOW: usize = 2;
+
     pub fn new_main(gpu: &Gpu, resolution: (u32, u32)) -> anyhow::Result<Self> {
         Self::new_inner(gpu, false, resolution)
     }
@@ -188,11 +192,11 @@ impl MainView {
         gpu: &Gpu,
         resolution: (u32, u32),
     ) -> anyhow::Result<Self> {
-        let gbuffers = Gbuffers::create(gpu, &surfaces, resolution)?;
-        let lighting = LightBuffers::create(&surfaces, resolution)?;
-        let water = WaterBuffers::create(&surfaces, resolution)?;
-        let bloom = BloomBuffers::create(gpu, &surfaces, resolution)?;
-        let atmosphere = AtmosphereBuffers::create(&surfaces, resolution)?;
+        let gbuffers = Gbuffers::create(gpu, surfaces, resolution)?;
+        let lighting = LightBuffers::create(surfaces, resolution)?;
+        let water = WaterBuffers::create(surfaces, resolution)?;
+        let bloom = BloomBuffers::create(gpu, surfaces, resolution)?;
+        let atmosphere = AtmosphereBuffers::create(surfaces, resolution)?;
 
         let shading_result = surfaces.create_surface(
             resolution,
@@ -297,10 +301,11 @@ pub struct ShadowView {
     pub(crate) surfaces: Arc<Surfaces>,
     pub shadow_map: SurfaceHandle,
     pub settings: RenderSettings,
+    pub index: usize,
 }
 
 impl ShadowView {
-    const SHADOWMAP_RESOLUTION: u32 = 1024;
+    pub const SHADOWMAP_RESOLUTION: u32 = 1024;
 
     pub fn new(surfaces: &Arc<Surfaces>, resolution: (u32, u32)) -> anyhow::Result<Self> {
         let surface_desc = SurfaceDesc::builder("shadowmap", SizeRelativity::Absolute)
@@ -315,6 +320,7 @@ impl ShadowView {
             surfaces: surfaces.clone(),
             shadow_map,
             settings: RenderSettings::default(),
+            index: 0,
         })
     }
 }

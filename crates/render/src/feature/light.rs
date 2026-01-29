@@ -18,13 +18,11 @@ use tiger_pkg::TagHash;
 use super::FeatureRenderer;
 use crate::{
     Renderer,
-    camera::Camera,
-    renderer::surface::Surface,
     tfx::{
         externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
         packet::CompactTransform,
         technique::Technique,
-        view::View,
+        view::{View, ViewKind},
     },
     util::{geometry, threading::CommandListSetId},
 };
@@ -49,7 +47,7 @@ pub struct LightRenderer {
     shadowmap_projection: glam::Mat4,
     bounds: Option<AxisAlignedBBox>,
 
-    pub shadowmap: Option<Arc<Mutex<Option<Surface>>>>,
+    pub shadow_view: Option<(d3d11::Texture2D, d3d11::ShaderResourceView)>,
 }
 
 impl LightRenderer {
@@ -141,24 +139,25 @@ impl LightRenderer {
             light_space_transform,
             shadowmap_projection,
             bounds,
-            shadowmap: None,
+            shadow_view: None,
         }))
     }
 }
 
 #[profiling::all_functions]
 impl FeatureRenderer for LightRenderer {
-    fn visibility_test(&mut self, view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, view: &View) -> bool {
         if let Some(ref bounds) = self.bounds {
             view.is_visible(bounds)
         } else {
-            false
+            true
         }
     }
 
-    fn extract_and_prepare(
+    fn prepare(
         &mut self,
         _renderer: &crate::Renderer,
+        _view_index: usize,
         extracted_data: &dyn std::any::Any,
     ) {
         // TODO(cohae): lights shouldnt need to extract permutations at all
@@ -178,7 +177,12 @@ impl FeatureRenderer for LightRenderer {
         self.bounds = Some(AxisAlignedBBox::from_points(&points));
     }
 
-    fn submit(&self, cmd: &mut crate::gpu::command_list::CommandList, stage: RenderStage) {
+    fn submit(
+        &self,
+        cmd: &mut crate::gpu::command_list::CommandList,
+        _view_index: usize,
+        stage: RenderStage,
+    ) {
         if stage == RenderStage::LightProbeApply {
             return;
         }
@@ -279,11 +283,8 @@ impl FeatureRenderer for LightRenderer {
             }
         }
 
-        // TODO(cohae): The shadowmap lock is *extremely* messy, needs to be cleaned up
-        let shadowmap_lock = self.shadowmap.as_ref().map(|v| v.lock());
         if Renderer::instance().settings().shadows
-            && let Some(shadowmap2) = shadowmap_lock
-            && let Some(shadowmap) = shadowmap2.as_ref()
+            && let Some((shadowmap, shadowmap_srv)) = self.shadow_view.as_ref()
         {
             // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
             Renderer::instance()
@@ -297,11 +298,12 @@ impl FeatureRenderer for LightRenderer {
                 .cloned()
                 .unwrap_or_default();
 
+            let shadowmap_desc = shadowmap.get_desc();
             cmd.externs.deferred_shadow = Some(
                 externs::DeferredShadow {
-                    shadow_depthmap: shadowmap.srv(0).cloned().into(),
-                    resolution_width: shadowmap.resolution().0 as f32,
-                    resolution_height: shadowmap.resolution().1 as f32,
+                    shadow_depthmap: shadowmap_srv.clone().into(),
+                    resolution_width: shadowmap_desc.width as f32,
+                    resolution_height: shadowmap_desc.height as f32,
                     // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
                     unkc0: shadowmap_projection * transform_relative,
                     unk180: 1.0,
@@ -355,6 +357,7 @@ impl FeatureRenderer for LightRenderer {
     fn submit_parallel(
         &self,
         renderer: &std::sync::Arc<Renderer>,
+        _view_index: usize,
         set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
@@ -379,7 +382,7 @@ impl FeatureRenderer for LightRenderer {
         let transform_relative =
             Mat4::look_at_rh(transform_translation, transform_translation + forward, up);
 
-        let shadowmap = self.shadowmap.clone();
+        let shadow_view = self.shadow_view.clone();
 
         let job = SCHEDULER
             .job_builder("light_render")
@@ -435,11 +438,8 @@ impl FeatureRenderer for LightRenderer {
                     }));
                 }
 
-                // TODO(cohae): The shadowmap lock is *extremely* messy, needs to be cleaned up
-                let shadowmap_lock = shadowmap.as_ref().map(|v| v.lock());
                 if Renderer::instance().settings().shadows
-                    && let Some(shadowmap2) = shadowmap_lock
-                    && let Some(shadowmap) = shadowmap2.as_ref()
+                    && let Some((shadowmap, shadowmap_srv)) = shadow_view
                 {
                     // TODO(cohae): Unknown what this texture is supposed to be. VS loads the first pixel and uses it as multiplier for the shadowmap UVs
                     Renderer::instance()
@@ -453,15 +453,15 @@ impl FeatureRenderer for LightRenderer {
                         .cloned()
                         .unwrap_or_default();
 
-                    debug_assert!(shadowmap.srv(0).is_some());
+                    let shadowmap_desc = shadowmap.get_desc();
                     cmd.externs.deferred_shadow = Some(
                         externs::DeferredShadow {
-                            shadow_depthmap: shadowmap.srv(0).cloned().into(),
-                            resolution_width: shadowmap.resolution().0 as f32,
-                            resolution_height: shadowmap.resolution().1 as f32,
+                            shadow_depthmap: shadowmap_srv.into(),
+                            resolution_width: shadowmap_desc.width as f32,
+                            resolution_height: shadowmap_desc.height as f32,
                             // unkc0: shadowmap.camera_to_projective * transform_relative.view_matrix(),
                             unkc0: shadowmap_projection * transform_relative,
-                            unk180: 2.0,
+                            unk180: 1.0,
                             // unk180: renderer.settings.shadow_quality.pcf_samples() as u8 as f32,
                             ..*existing_shadowmap
                         }

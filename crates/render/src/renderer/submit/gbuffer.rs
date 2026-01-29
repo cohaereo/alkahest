@@ -52,6 +52,7 @@ impl Renderer {
                 // view.gbuffers.bind(cmd, self);
                 self.submit_stage(
                     cmd,
+                    View::MAIN,
                     RenderStage::GenerateGbuffer,
                     FeatureRendererSubscription::all(),
                 );
@@ -78,6 +79,7 @@ impl Renderer {
             } else {
                 self.submit_stage(
                     cmd,
+                    View::MAIN,
                     RenderStage::Decals,
                     FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals)
                         .without(TfxFeatureRenderer::RoadDecals),
@@ -86,6 +88,7 @@ impl Renderer {
 
             self.submit_stage_parallel_linear(
                 cmd,
+                View::MAIN,
                 RenderStage::Decals,
                 FeatureRendererSubscription::DYNAMIC_DECALS
                     | FeatureRendererSubscription::ROAD_DECALS,

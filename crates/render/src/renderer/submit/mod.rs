@@ -75,6 +75,7 @@ impl Renderer {
         shadowmap.bind_single(cmd);
         self.submit_stage_parallel_apply(
             cmd,
+            view.index,
             RenderStage::ShadowGenerate,
             FeatureRendererSubscription::all(),
         );
@@ -362,6 +363,7 @@ impl Renderer {
             cmd.set_override_pixel_shader(m.clone());
             self.submit_stage_parallel_linear(
                 cmd,
+                View::MAIN,
                 RenderStage::GenerateGbuffer,
                 FeatureRendererSubscription::all(),
             );

@@ -75,14 +75,15 @@ impl CubemapRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for CubemapRenderer {
-    fn visibility_test(&mut self, _view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, _view: &View) -> bool {
         // camera.is_visible(&self.bounds)
         true
     }
 
-    fn extract_and_prepare(
+    fn prepare(
         &mut self,
         renderer: &crate::Renderer,
+        _view_index: usize,
         extracted_data: &dyn std::any::Any,
     ) {
         // TODO(cohae): lights shouldnt need to extract permutations at all
@@ -274,7 +275,7 @@ impl FeatureRenderer for CubemapRenderer {
             .unwrap();
     }
 
-    fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
+    fn submit(&self, cmd: &mut CommandList, _view_index: usize, stage: RenderStage) {
         if stage != RenderStage::Cubemaps {
             return;
         }

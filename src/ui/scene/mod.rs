@@ -45,7 +45,6 @@ use crate::{
     world::{
         render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
         sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
-        shadowmap::{s_render_all_shadowmaps, s_wants_to_render_shadowmaps},
     },
 };
 
@@ -508,9 +507,9 @@ impl Scene {
                 "Enables volumetric lighting effects, such as light shafts and fog.",
                 PerformanceImpact::Medium,
             );
-        ui.checkbox(&mut view_settings.shadows, "Shadows")
+        ui.checkbox(&mut view_settings.shadows, "Local Shadows")
             .setting_description_tooltip(
-                "Enables (static) shadows for lights.",
+                "Enables (static) shadows for local lights.",
                 PerformanceImpact::Medium,
             );
 
@@ -649,7 +648,7 @@ impl Scene {
         {
             s_extract_ambient_occlusion(&self.world);
             let mut fp = self.renderer.frame_packet.write();
-            s_extract_render_objects(&self.world, self.camera.position, &mut fp);
+            s_extract_render_objects(&self.world, &mut fp);
 
             {
                 let ext = self.renderer.externs.get_mut();
@@ -673,29 +672,25 @@ impl Scene {
                 };
             }
 
-            let wants_to_render_shadowmaps = s_wants_to_render_shadowmaps(&self.world);
+            // // TODO(cohae): Remove the dependency on the world here, shadowmaps should be part of the frame packet
+            // s_render_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
 
-            // TODO(cohae): Remove the dependency on the world here, shadowmaps should be part of the frame packet
-            s_render_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
-
-            if !wants_to_render_shadowmaps {
-                profiling::scope!("visibility");
-                let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
-                self.renderer.cull_frame_packet(&self.view);
-            }
+            profiling::scope!("visibility");
+            let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
+            self.renderer.cull_frame_packet(View::MAIN, &self.view);
 
             {
                 profiling::scope!("prepare/upload");
                 let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare_upload");
 
-                for node in self.renderer.frame_packet.read().iter_visible() {
+                for node in self.renderer.frame_packet.read().iter_visible(View::MAIN) {
                     if let Some(render_object) = self
                         .renderer
                         .objects
                         .write()
                         .get_mut(node.render_object_handle.into())
                     {
-                        render_object.extract_and_prepare(&self.renderer, &*node.data);
+                        render_object.prepare(&self.renderer, View::MAIN, &*node.data);
                     } else if node.render_object_handle.is_valid() {
                         error!("Render object not found: {:?}", node.render_object_handle);
                     }

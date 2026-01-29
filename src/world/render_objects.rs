@@ -5,7 +5,6 @@ use alkahest_render::{
     object::RenderObjectHandle,
     tfx::packet::FramePacket,
 };
-use glam::Vec3;
 
 use crate::world::{permutations::PermutationConfig, transform::Transform};
 
@@ -67,11 +66,7 @@ pub fn s_extract_ambient_occlusion(world: &hecs::World) {
     }
 }
 
-pub fn s_extract_render_objects(
-    world: &hecs::World,
-    camera_position: Vec3,
-    frame_packet: &mut FramePacket,
-) {
+pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePacket) {
     for (_entity, static_render_object) in world.query::<&StaticRenderObject>().iter() {
         frame_packet.push_static_render_object(static_render_object.handle);
     }
@@ -95,7 +90,6 @@ pub fn s_extract_render_objects(
 
         frame_packet.push_dynamic_render_object(
             render_object.handle,
-            camera_position,
             transform.local_to_world().into(),
             permutation,
         );

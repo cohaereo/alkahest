@@ -1,8 +1,6 @@
-use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3, Vec4};
-use inline_tweak::tweak;
 
-use crate::{renderer::hzb::Hzb, visibility::frustum::Frustum};
+use crate::visibility::frustum::Frustum;
 
 // A simple camera controller (X forward, Z up)
 pub struct Camera {

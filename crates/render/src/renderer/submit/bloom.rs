@@ -7,7 +7,7 @@ use crate::{
     renderer::surface::SurfaceHandle,
     tfx::{
         externs::{self, PostprocessInitialDownsample},
-        view::{MainView, View},
+        view::MainView,
     },
 };
 

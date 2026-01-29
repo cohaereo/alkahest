@@ -38,6 +38,7 @@ impl Renderer {
             cmd.flush_states();
             self.submit_stage_parallel_apply(
                 cmd,
+                View::MAIN,
                 RenderStage::DecalsAdditive,
                 FeatureRendererSubscription::all(),
             );
@@ -51,12 +52,14 @@ impl Renderer {
             if self.settings().multithreading {
                 self.submit_stage_parallel_linear(
                     cmd,
+                    View::MAIN,
                     RenderStage::Transparents,
                     FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water),
                 );
             } else {
                 self.submit_stage(
                     cmd,
+                    View::MAIN,
                     RenderStage::Transparents,
                     FeatureRendererSubscription::all_but(TfxFeatureRenderer::Water),
                 );
@@ -86,6 +89,7 @@ impl Renderer {
             cmd.flush_states();
             self.submit_stage(
                 cmd,
+                View::MAIN,
                 RenderStage::Distortion,
                 FeatureRendererSubscription::all(),
             );

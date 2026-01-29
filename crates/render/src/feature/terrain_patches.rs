@@ -18,10 +18,9 @@ use super::FeatureRenderer;
 use crate::{
     Gpu, Renderer,
     asset::{Handle, index_buffer::IndexBuffer, texture::Texture, vertex_buffer::VertexBuffer},
-    camera::Camera,
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     gpu_span,
-    tfx::{technique::Technique, view::View},
+    tfx::{packet::VisibilityMask, technique::Technique, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -44,7 +43,7 @@ pub struct TerrainPatchesRenderer {
     groups: Vec<(
         ConstantBuffer<TerrainPatchGroupConstants>,
         AxisAlignedBBox,
-        bool,
+        VisibilityMask,
     )>,
     constants_dirty: bool,
     detail_level: TerrainDetailLevel,
@@ -84,7 +83,7 @@ impl TerrainPatchesRenderer {
             .map(|g| {
                 let cbuffer = ConstantBuffer::create(gpu, None)
                     .expect("Failed to create group constant buffer");
-                (cbuffer, g.aabb(), false)
+                (cbuffer, g.aabb(), VisibilityMask::default())
             })
             .collect::<Vec<_>>();
 
@@ -107,7 +106,7 @@ impl TerrainPatchesRenderer {
     }
 
     #[profiling::function]
-    pub fn render(&self, cmd: &mut CommandList, _render_stage: RenderStage) {
+    pub fn render(&self, cmd: &mut CommandList, view_index: usize, _render_stage: RenderStage) {
         // gpu_event!(renderer.gpu, format!("terrain_patch {}", self.hash));
         gpu_span!();
 
@@ -153,7 +152,7 @@ impl TerrainPatchesRenderer {
             .filter(|(_, u)| u.detail_level == self.detail_level)
         {
             let (cb11, _aabb, visible) = &self.groups[part.group_index as usize];
-            if !visible {
+            if !visible.get(view_index) {
                 continue;
             }
 
@@ -213,7 +212,7 @@ impl TerrainPatchesRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for TerrainPatchesRenderer {
-    fn visibility_test(&mut self, view: &View) -> bool {
+    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
         let center = self.terrain.bounds.center();
         let radius = self.terrain.bounds.radius();
         let distance = view.position.distance(center);
@@ -225,31 +224,37 @@ impl FeatureRenderer for TerrainPatchesRenderer {
         };
 
         for (_cb11, aabb, visible) in &mut self.groups {
-            *visible = view.is_visible(aabb);
+            visible.set(view_index, view.is_visible(aabb));
         }
 
         view.culling_frustum.aabb_intersecting(&self.terrain.bounds)
     }
 
-    fn extract_and_prepare(&mut self, renderer: &Renderer, _extracted_data: &dyn std::any::Any) {
+    fn prepare(
+        &mut self,
+        renderer: &Renderer,
+        _view_index: usize,
+        _extracted_data: &dyn std::any::Any,
+    ) {
         if self.constants_dirty {
             self.update_constants(&renderer.gpu.context(), renderer.ao.read().as_ref());
             self.constants_dirty = false;
         }
     }
 
-    fn submit(&self, cmd: &mut CommandList, stage: RenderStage) {
+    fn submit(&self, cmd: &mut CommandList, view_index: usize, stage: RenderStage) {
         let renderer = Renderer::instance();
         if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
             cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
         }
 
-        self.render(cmd, stage);
+        self.render(cmd, view_index, stage);
     }
 
     fn submit_parallel(
         &self,
         _renderer: &Arc<Renderer>,
+        view_index: usize,
         set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
@@ -267,7 +272,7 @@ impl FeatureRenderer for TerrainPatchesRenderer {
                 if let Some(ao_vb) = renderer.ao_buffer.read().as_ref().and_then(|h| h.get()) {
                     cmd.vertex_set_shader_resources(1, std::slice::from_ref(&ao_vb.srv.as_ref()));
                 }
-                self_ref.render(cmd, stage);
+                self_ref.render(cmd, view_index, stage);
             });
         jobs.push(job);
     }

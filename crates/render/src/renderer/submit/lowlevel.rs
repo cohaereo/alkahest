@@ -16,6 +16,7 @@ impl Renderer {
     pub fn submit_stage_range(
         &self,
         cmd: &mut CommandList,
+        view_index: usize,
         frame_node_range: std::ops::Range<usize>,
         stage: RenderStage,
         mut features: FeatureRendererSubscription,
@@ -26,18 +27,14 @@ impl Renderer {
         }
         profiling::scope!("submit_stage", &format!("stage={stage:?}"));
 
-        for obj in self.frame_packet.read().frame_nodes[frame_node_range]
-            .iter()
-            // TODO(cohae): ShadowGenerate workaround until lights have their own culling
-            .filter(|n| n.visible || stage == RenderStage::ShadowGenerate)
-        {
+        for obj in self.frame_packet.read().frame_nodes[frame_node_range].iter() {
             if let Some(render_object) = self
                 .objects
                 .read()
                 .get(obj.render_object_handle.into())
                 .filter(|p| p.stages.is_subscribed(stage) && features.is_subscribed(p.feature_type))
             {
-                render_object.submit(cmd, stage);
+                render_object.submit(cmd, view_index, stage);
             }
         }
     }
@@ -45,6 +42,7 @@ impl Renderer {
     pub fn submit_stage(
         &self,
         cmd: &mut CommandList,
+        view_index: usize,
         stage: RenderStage,
         features: FeatureRendererSubscription,
     ) {
@@ -54,6 +52,7 @@ impl Renderer {
         );
         self.submit_stage_range(
             cmd,
+            view_index,
             0..self.frame_packet.read().frame_nodes.len(),
             stage,
             features,
@@ -64,6 +63,7 @@ impl Renderer {
     pub fn submit_stage_parallel(
         self: &Arc<Self>,
         cmd: &mut CommandList,
+        view_index: usize,
         stage: RenderStage,
         mut features: FeatureRendererSubscription,
     ) -> (JobHandle, CommandListSetId) {
@@ -75,20 +75,14 @@ impl Renderer {
 
         let cmd_set = unsafe { self.cmd_pool.begin(cmd) };
         let mut job_handles = Vec::new();
-        for obj in self
-            .frame_packet
-            .read()
-            .frame_nodes
-            .iter()
-            .filter(|n| n.visible)
-        {
+        for obj in self.frame_packet.read().iter_visible(view_index) {
             if let Some(render_object) = self
                 .objects
                 .read()
                 .get(obj.render_object_handle.into())
                 .filter(|p| p.stages.is_subscribed(stage) && features.is_subscribed(p.feature_type))
             {
-                render_object.submit_parallel(self, cmd_set, stage, &mut job_handles);
+                render_object.submit_parallel(self, view_index, cmd_set, stage, &mut job_handles);
             }
         }
 
@@ -108,10 +102,11 @@ impl Renderer {
     pub fn submit_stage_parallel_apply(
         self: &Arc<Self>,
         cmd: &mut CommandList,
+        view_index: usize,
         stage: RenderStage,
         features: FeatureRendererSubscription,
     ) {
-        let (sync_job, cmd_set) = self.submit_stage_parallel(cmd, stage, features);
+        let (sync_job, cmd_set) = self.submit_stage_parallel(cmd, view_index, stage, features);
         if sync_job.wait_timeout(Duration::from_millis(500)) == WaitResult::Timeout {
             // cohae: This is a leftover debug check from an issue in Potassium where jobs would deadlock sometimes due to faulty dependency tracking.
             // This should never be able to happen after potassium 0.3, but just in case, we keep this log here.
@@ -131,6 +126,7 @@ impl Renderer {
     pub fn submit_stage_parallel_linear(
         self: &Arc<Self>,
         cmd: &mut CommandList,
+        view_index: usize,
         stage: RenderStage,
         mut features: FeatureRendererSubscription,
     ) {
@@ -140,13 +136,7 @@ impl Renderer {
         let cmd_sets: [CommandListSetId; 3] =
             std::array::from_fn(|_| unsafe { self.cmd_pool.begin(cmd) });
         let mut object_handles = Vec::new();
-        for obj in self
-            .frame_packet
-            .read()
-            .frame_nodes
-            .iter()
-            .filter(|n| n.visible)
-        {
+        for obj in self.frame_packet.read().iter_visible(view_index) {
             if self
                 .objects
                 .read()
@@ -197,7 +187,7 @@ impl Renderer {
                                     && features.is_subscribed(p.feature_type)
                             })
                         {
-                            render_object.submit(cmd, stage);
+                            render_object.submit(cmd, view_index, stage);
                         }
                     }
                 });

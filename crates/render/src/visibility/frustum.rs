@@ -3,8 +3,6 @@ use std::ops::Deref;
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use glam::{Mat4, Vec3, Vec3A, Vec4, Vec4Swizzles, vec4};
 
-use crate::camera::Camera;
-
 #[derive(Default)]
 pub struct Plane(pub Vec4);
 

@@ -20,10 +20,13 @@ use alkahest_render::{
     },
     object::RenderObject,
     renderer::submit::atmosphere::{AtmosphereData, SunDirections},
-    tfx::sequencer_vm::global_channel::GlobalChannelExpression,
+    tfx::{
+        sequencer_vm::global_channel::GlobalChannelExpression,
+        view::{ShadowView, View},
+    },
 };
 use anyhow::Context;
-use glam::{Vec3, Vec4Swizzles};
+use glam::{Mat4, Vec3, Vec4Swizzles};
 use itertools::multizip;
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
@@ -274,10 +277,17 @@ pub fn spawn_pattern_from_header(
                     light.far_plane,
                 );
 
-                let mut light_renderer =
+                let light_renderer =
                     LightRenderer::new_shadowing(renderer, light, shadowmap.camera_to_projective)?;
 
-                light_renderer.shadowmap = Some(shadowmap.surface.clone());
+                let view = View::new_shadow(
+                    &Renderer::instance().gpu,
+                    (
+                        ShadowView::SHADOWMAP_RESOLUTION,
+                        ShadowView::SHADOWMAP_RESOLUTION,
+                    ),
+                )
+                .expect("Failed to create shadowmap view");
 
                 let render_obj =
                     RenderObject::new(TfxFeatureRenderer::DeferredLights, light_renderer);
@@ -287,6 +297,7 @@ pub fn spawn_pattern_from_header(
                     (
                         DynamicRenderObject::new(Renderer::instance().add_object(render_obj)),
                         shadowmap,
+                        view,
                     ),
                 )?;
             }

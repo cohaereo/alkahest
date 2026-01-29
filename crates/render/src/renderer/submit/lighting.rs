@@ -74,6 +74,7 @@ impl Renderer {
             let _gpuspan = self.profiler.scope(cmd, "cubemaps");
             self.submit_stage(
                 cmd,
+                View::MAIN,
                 RenderStage::Cubemaps,
                 FeatureRendererSubscription::all(),
             );
@@ -93,6 +94,7 @@ impl Renderer {
                 cmd.flush_states();
                 self.submit_stage(
                     cmd,
+                    View::MAIN,
                     RenderStage::LightingApply,
                     FeatureRendererSubscription::all(),
                 );
@@ -140,12 +142,14 @@ impl Renderer {
             if self.settings().multithreading {
                 self.submit_stage_parallel_linear(
                     cmd,
+                    View::MAIN,
                     RenderStage::Volumetrics,
                     FeatureRendererSubscription::all(),
                 );
             } else {
                 self.submit_stage(
                     cmd,
+                    View::MAIN,
                     RenderStage::Volumetrics,
                     FeatureRendererSubscription::all(),
                 );

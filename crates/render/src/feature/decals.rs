@@ -65,7 +65,7 @@ impl DecalCollectionRenderer {
 
 // #[profiling::all_functions]
 impl FeatureRenderer for DecalCollectionRenderer {
-    fn visibility_test(&mut self, view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, view: &View) -> bool {
         if !view.is_visible(&self.bounds) {
             return false;
         }
@@ -85,9 +85,20 @@ impl FeatureRenderer for DecalCollectionRenderer {
         true
     }
 
-    fn extract_and_prepare(&mut self, _renderer: &Renderer, _extracted_data: &dyn std::any::Any) {}
+    fn prepare(
+        &mut self,
+        _renderer: &Renderer,
+        _view_index: usize,
+        _extracted_data: &dyn std::any::Any,
+    ) {
+    }
 
-    fn submit(&self, cmd: &mut CommandList, _stage: alkahest_data::tfx::RenderStage) {
+    fn submit(
+        &self,
+        cmd: &mut CommandList,
+        _view_index: usize,
+        _stage: alkahest_data::tfx::RenderStage,
+    ) {
         let Some((vb0, vb1)) = self.vb0.get().zip(self.vb1.get()) else {
             return;
         };
@@ -120,6 +131,7 @@ impl FeatureRenderer for DecalCollectionRenderer {
     fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        _view_index: usize,
         set: CommandListSetId,
         _stage: alkahest_data::tfx::RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,

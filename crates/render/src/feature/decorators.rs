@@ -18,7 +18,7 @@ use crate::{
     asset::vertex_buffer::VertexBuffer,
     feature::{FeatureRenderer, rigid_model::DynamicModel},
     gpu::cbuffer::ConstantBuffer,
-    tfx::{externs, view::View},
+    tfx::{externs, packet::VisibilityMask, view::View},
     util::threading::CommandListSetId,
 };
 
@@ -33,10 +33,9 @@ struct DecoratorModel {
 struct DecoratorInstanceGroup {
     pub instance_start: u32,
     pub instance_count: u32,
-    pub original_range: std::ops::Range<u32>,
-
-    pub instance_bounds: Vec<(std::ops::Range<u32>, AxisAlignedBBox, bool)>,
-    pub visible: bool,
+    // pub original_range: std::ops::Range<u32>,
+    pub instance_bounds: Vec<(std::ops::Range<u32>, AxisAlignedBBox, VisibilityMask)>,
+    pub visible: VisibilityMask,
     pub bounds: AxisAlignedBBox,
 }
 
@@ -197,16 +196,16 @@ impl DecoratorRenderer {
                 .get(bounds_range.clone())
                 .context("Failed to find occlusion bounds")?
                 .iter()
-                .map(|(range, bb)| (range.clone(), *bb, true))
+                .map(|(range, bb)| (range.clone(), *bb, VisibilityMask::ALL))
                 .collect_vec();
 
             let bounds = instance_bounds.iter().map(|(_, bb, _)| *bb).sum();
 
             instance_groups.push(DecoratorInstanceGroup {
-                original_range: instance_start..instance_end,
+                // original_range: instance_start..instance_end,
                 instance_start,
                 instance_count: instance_end - instance_start,
-                visible: true,
+                visible: VisibilityMask::ALL,
                 instance_bounds,
                 bounds,
             });
@@ -233,25 +232,27 @@ impl DecoratorRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for DecoratorRenderer {
-    fn visibility_test(&mut self, view: &View) -> bool {
+    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
         if !view.is_visible(&self.data.bounds) {
             return false;
         }
 
         self.instance_groups.par_iter_mut().for_each(|group| {
-            group.visible = view.is_visible(&group.bounds);
+            group
+                .visible
+                .set(view_index, view.is_visible(&group.bounds));
             // if !group.visible {
             //     Renderer::instance().immediate.lock().aabb_world(
             //         &group.bounds,
             //         if group.visible { 0x00ff00 } else { 0xff0000 },
             //     );
             // }
-            if group.visible {
+            if group.visible.get(view_index) {
                 group
                     .instance_bounds
                     .par_iter_mut()
                     .for_each(|(_range, bounds, visible)| {
-                        *visible = view.is_visible(bounds);
+                        visible.set(view_index, view.is_visible(bounds));
                         // if !*visible {
                         //     Renderer::instance()
                         //         .immediate
@@ -260,15 +261,28 @@ impl FeatureRenderer for DecoratorRenderer {
                         // }
                     });
 
-                group.visible = group.instance_bounds.is_empty()
-                    || group.instance_bounds.iter().any(|(_, _, vis)| *vis);
+                group.visible.set(
+                    view_index,
+                    group.instance_bounds.is_empty()
+                        || group
+                            .instance_bounds
+                            .iter()
+                            .any(|(_, _, vis)| vis.get(view_index)),
+                );
             }
         });
 
-        self.instance_groups.iter().any(|g| g.visible)
+        self.instance_groups
+            .iter()
+            .any(|g| g.visible.get(view_index))
     }
 
-    fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn std::any::Any) {
+    fn prepare(
+        &mut self,
+        renderer: &Renderer,
+        view_index: usize,
+        extracted_data: &dyn std::any::Any,
+    ) {
         _ = renderer;
         _ = extracted_data;
 
@@ -276,11 +290,17 @@ impl FeatureRenderer for DecoratorRenderer {
             let mut instance_data_culled = vec![];
             std::mem::swap(&mut self.instance_data_culled, &mut instance_data_culled);
             instance_data_culled.clear();
-            for group in self.instance_groups.iter_mut().filter(|g| g.visible) {
+            for group in self
+                .instance_groups
+                .iter_mut()
+                .filter(|g| g.visible.get(view_index))
+            {
                 group.instance_start = instance_data_culled.len() as u32;
                 group.instance_count = 0;
-                for (instance_range, _bounds, _visible) in
-                    group.instance_bounds.iter().filter(|(_, _, vis)| *vis)
+                for (instance_range, _bounds, _visible) in group
+                    .instance_bounds
+                    .iter()
+                    .filter(|(_, _, vis)| vis.get(view_index))
                 {
                     for instance in instance_range.clone() {
                         instance_data_culled
@@ -304,6 +324,7 @@ impl FeatureRenderer for DecoratorRenderer {
     fn submit(
         &self,
         cmd: &mut crate::gpu::command_list::CommandList,
+        view_index: usize,
         stage: alkahest_data::tfx::RenderStage,
     ) {
         // cmd_event_span!(cmd, format!("<decorator {} ({} models)>", self.hash, self.models.len()));
@@ -335,7 +356,7 @@ impl FeatureRenderer for DecoratorRenderer {
             .instance_groups
             .iter()
             .enumerate()
-            .filter(|(_, g)| g.visible)
+            .filter(|(_, g)| g.visible.get(view_index))
         {
             // let group_mask = if self.models.len() == 1 {
             //     1 << id
@@ -400,6 +421,7 @@ impl FeatureRenderer for DecoratorRenderer {
     fn submit_parallel(
         &self,
         renderer: &std::sync::Arc<Renderer>,
+        view_index: usize,
         set: CommandListSetId,
         stage: alkahest_data::tfx::RenderStage,
         jobs: &mut Vec<alkahest_core::job::potassium::JobHandle>,
@@ -412,7 +434,7 @@ impl FeatureRenderer for DecoratorRenderer {
             .spawn(move || {
                 let self_ref = unsafe { &*(self_p as *const DecoratorRenderer) };
                 let cmd = pool_clone.get_command_list(set);
-                self_ref.submit(cmd, stage);
+                self_ref.submit(cmd, view_index, stage);
             });
 
         jobs.push(job);

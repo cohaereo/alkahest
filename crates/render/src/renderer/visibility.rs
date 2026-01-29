@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use crate::{Renderer, tfx::view::View};
 
 impl Renderer {
-    pub fn cull_frame_packet(self: &Arc<Self>, view: &View) {
+    pub fn cull_frame_packet(self: &Arc<Self>, view_index: usize, view: &View) {
         // parallel_iter(&mut self.frame_packet.write().frame_nodes, |node| {
         self.frame_packet
             .write()
@@ -20,9 +20,10 @@ impl Renderer {
                             .subscribed_features
                             .is_subscribed(render_object.feature_type)
                         {
-                            node.visible = false;
+                            node.visible.set(view_index, false);
                         } else {
-                            node.visible = render_object.visibility_test(view);
+                            node.visible
+                                .set(view_index, render_object.visibility_test(view_index, view));
                         }
                     }
                 }
@@ -31,6 +32,6 @@ impl Renderer {
         self.frame_packet
             .write()
             .frame_nodes
-            .retain(|node| node.visible);
+            .retain(|n| !n.visible.is_empty());
     }
 }

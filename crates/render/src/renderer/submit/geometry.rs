@@ -35,6 +35,7 @@ impl Renderer {
 
             self.submit_stage_parallel(
                 cmd,
+                View::MAIN,
                 RenderStage::GenerateGbuffer,
                 FeatureRendererSubscription::all(),
             )
@@ -46,6 +47,7 @@ impl Renderer {
 
             self.submit_stage_parallel(
                 cmd,
+                View::MAIN,
                 RenderStage::Decals,
                 FeatureRendererSubscription::all_but(TfxFeatureRenderer::DynamicDecals)
                     .without(TfxFeatureRenderer::RoadDecals),
@@ -60,6 +62,7 @@ impl Renderer {
             {
                 self.submit_stage_parallel(
                     cmd,
+                    View::MAIN,
                     RenderStage::LightingApply,
                     FeatureRendererSubscription::all(),
                 )

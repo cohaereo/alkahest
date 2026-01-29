@@ -8,10 +8,7 @@ use crate::{
     asset::{Handle, texture::Texture},
     cmd_event_span,
     gpu::command_list::CommandList,
-    tfx::{
-        externs,
-        view::{MainView, View},
-    },
+    tfx::{externs, view::MainView},
 };
 
 #[derive(Default, Clone)]

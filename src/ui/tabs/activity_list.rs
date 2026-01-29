@@ -2,7 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use ahash::HashMap;
 use alkahest_data::activity::SActivity;
-use egui::{Atom, AtomExt, Atoms, Color32, ImageSource, IntoAtoms, Vec2, vec2};
+use egui::{AtomExt, Atoms, Color32, ImageSource, IntoAtoms, Vec2, vec2};
 use google_material_symbols::GoogleMaterialSymbols;
 use itertools::Itertools;
 use tiger_parse::TigerReadable;

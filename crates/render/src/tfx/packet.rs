@@ -9,7 +9,7 @@ use crate::{object::RenderObjectHandle, renderer::submit::atmosphere::Atmosphere
 pub struct FramePacket {
     // pub alloc: Bump,
     pub frame_nodes: Vec<FrameNode>,
-    // pub view_nodes: Vec<ViewNode>,
+    pub views: Vec<ExtractedView>,
     pub misc: FramePacketMisc,
 }
 
@@ -30,27 +30,28 @@ impl FramePacket {
             render_object_handle,
             data: Box::new(()),
             distance: 0.0,
-            visible: true,
+            visible: VisibilityMask::default(),
         });
     }
 
     pub fn push_dynamic_render_object(
         &mut self,
         render_object_handle: RenderObjectHandle,
-        camera_position: Vec3,
         transform: CompactTransform,
         permutation: usize,
     ) {
         self.frame_nodes.push(FrameNode {
             render_object_handle,
-            distance: transform.translation().distance(camera_position),
             data: Box::new((transform, permutation)),
-            visible: true,
+            distance: 0.0,
+            visible: VisibilityMask::default(),
         });
     }
 
-    pub fn iter_visible(&self) -> impl Iterator<Item = &FrameNode> {
-        self.frame_nodes.iter().filter(|node| node.visible)
+    pub fn iter_visible(&self, view: usize) -> impl Iterator<Item = &FrameNode> {
+        self.frame_nodes
+            .iter()
+            .filter(move |node| node.visible.get(view))
     }
 }
 
@@ -59,19 +60,16 @@ impl FramePacket {
 pub struct FrameNode {
     pub render_object_handle: RenderObjectHandle,
     pub data: Box<dyn Any>,
-    pub distance: f32, // TODO: Needs to be on view node
-    pub visible: bool,
+    /// Distance between the main view and the object
+    pub distance: f32,
+    pub visible: VisibilityMask,
 }
 
 unsafe impl Send for FrameNode {}
 
-// #[repr(C)]
-// struct ViewNode {
-//     pub frame_node: u32,
-//     // TODO
-//     // /// Distance between the view and the object
-//     // pub distance: f32,
-// }
+pub struct ExtractedView {
+    pub source: ViewSource,
+}
 
 #[repr(C)]
 /// Compact representation of a local->world transform
@@ -135,4 +133,48 @@ pub struct FramePacketMisc {
 
     pub atmosphere: AtmosphereData,
     pub time_of_day: f32,
+}
+
+pub enum ViewSource {
+    Main,
+    Sun,
+    ShadowLight(u32),
+}
+
+#[derive(Debug, Default)]
+pub struct VisibilityMask(u32);
+
+impl VisibilityMask {
+    pub const ALL: VisibilityMask = VisibilityMask(!0);
+
+    #[inline]
+    pub fn set(&mut self, view_index: usize, value: bool) {
+        if value {
+            self.0 |= 1 << view_index;
+        } else {
+            self.0 &= !(1 << view_index);
+        }
+    }
+
+    #[inline]
+    pub fn set_or(&mut self, view_index: usize, value: bool) {
+        if value {
+            self.0 |= 1 << view_index;
+        }
+    }
+
+    #[inline]
+    pub fn get(&self, view_index: usize) -> bool {
+        self.0 & (1 << view_index) != 0
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.0 = 0;
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
 }

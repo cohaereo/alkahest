@@ -6,7 +6,6 @@ use glam::Mat4;
 
 use crate::{
     Renderer,
-    camera::Camera,
     gpu::command_list::CommandList,
     tfx::{packet::CompactTransform, view::View},
     util::threading::CommandListSetId,
@@ -25,24 +24,24 @@ pub mod terrain_patches;
 
 pub trait FeatureRenderer {
     /// Returns false if the render object should be discarded
-    fn visibility_test(&mut self, view: &View) -> bool {
-        _ = view;
+    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
+        _ = (view, view_index);
         true
     }
 
-    // TODO(cohae): Storing the extracted data in the render object seems a bit excessive when the frame node data is guaranteed to be valid for the duration of this call, do we really need it?
-    fn extract_and_prepare(&mut self, renderer: &Renderer, extracted_data: &dyn Any);
+    fn prepare(&mut self, renderer: &Renderer, view_index: usize, extracted_data: &dyn Any);
 
-    fn submit(&self, cmd: &mut CommandList, stage: RenderStage);
+    fn submit(&self, cmd: &mut CommandList, view_index: usize, stage: RenderStage);
 
     fn submit_parallel(
         &self,
         renderer: &Arc<Renderer>,
+        view_index: usize,
         set: CommandListSetId,
         stage: RenderStage,
         jobs: &mut Vec<JobHandle>,
     ) {
-        _ = (renderer, set, stage, jobs);
+        _ = (renderer, view_index, set, stage, jobs);
     }
 
     fn dyn_clone(&self) -> Option<Box<dyn FeatureRenderer>> {

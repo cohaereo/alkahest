@@ -26,6 +26,7 @@ impl Renderer {
         self.bind_surfaces(cmd, &[view.water.water_uv], Some(view.water.water_depth));
         self.submit_stage(
             cmd,
+            View::MAIN,
             RenderStage::WaterReflection,
             FeatureRendererSubscription::all(),
         );
@@ -134,6 +135,7 @@ impl Renderer {
             cmd.state = PipelineState::new(Some(8), Some(15), Some(2), Some(1));
             self.submit_stage(
                 cmd,
+                View::MAIN,
                 RenderStage::Transparents,
                 FeatureRendererSubscription::WATER,
             );
