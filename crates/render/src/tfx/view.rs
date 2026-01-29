@@ -13,7 +13,8 @@ use crate::{
         hzb::Hzb,
         submit::buffers::{AtmosphereBuffers, BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
         surface::{
-            SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale, Surfaces,
+            SizeRelativity, Surface, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale,
+            Surfaces,
         },
     },
     visibility::frustum::Frustum,
@@ -34,7 +35,6 @@ pub struct View {
     pub culling_frustum: Frustum,
     pub hzb: Hzb,
 
-    pub surfaces: Arc<Surfaces>,
     pub(crate) resolution: (u32, u32),
 
     pub kind: ViewKind,
@@ -70,11 +70,10 @@ impl View {
         is_shadow: bool,
         resolution: (u32, u32),
     ) -> anyhow::Result<Self> {
-        let surfaces = Arc::new(Surfaces::new(gpu.device.clone(), resolution));
-
         let kind = if is_shadow {
-            ViewKind::Shadow(Box::new(ShadowView::new(&surfaces, resolution)?))
+            ViewKind::Shadow(Box::new(ShadowView::new()?))
         } else {
+            let surfaces = Arc::new(Surfaces::new(gpu.device.clone(), resolution));
             ViewKind::Main(Box::new(MainView::new(&surfaces, gpu, resolution)?))
         };
 
@@ -87,7 +86,6 @@ impl View {
             culling_frustum: Frustum::default(),
             hzb: Hzb::EMPTY,
             resolution,
-            surfaces,
             kind,
             subscribed_features: FeatureRendererSubscription::all(),
             disable_culling: false,
@@ -118,8 +116,18 @@ impl View {
         self.resolution
     }
 
-    pub fn surfaces(&self) -> &Arc<Surfaces> {
-        &self.surfaces
+    pub fn framebuffer_resolution(&self) -> (u32, u32) {
+        match &self.kind {
+            ViewKind::Main(v) => v.surfaces.framebuffer_resolution(),
+            ViewKind::Shadow(v) => v.shadow_map.resolution(),
+        }
+    }
+
+    pub fn surfaces(&self) -> Option<&Arc<Surfaces>> {
+        match &self.kind {
+            ViewKind::Main(v) => Some(&v.surfaces),
+            ViewKind::Shadow(_) => None,
+        }
     }
 
     pub fn settings(&self) -> &RenderSettings {
@@ -190,7 +198,7 @@ impl View {
 }
 
 pub struct MainView {
-    pub(crate) surfaces: Arc<Surfaces>,
+    pub surfaces: Arc<Surfaces>,
     pub gbuffers: Gbuffers,
     pub(crate) lighting: LightBuffers,
     pub(crate) water: WaterBuffers,
@@ -321,8 +329,7 @@ impl MainView {
 }
 
 pub struct ShadowView {
-    pub(crate) surfaces: Arc<Surfaces>,
-    pub shadow_map: SurfaceHandle,
+    pub shadow_map: Surface,
     pub settings: RenderSettings,
     pub index: usize,
 }
@@ -330,17 +337,20 @@ pub struct ShadowView {
 impl ShadowView {
     pub const SHADOWMAP_RESOLUTION: u32 = 2048;
 
-    pub fn new(surfaces: &Arc<Surfaces>, resolution: (u32, u32)) -> anyhow::Result<Self> {
+    pub fn new() -> anyhow::Result<Self> {
         let surface_desc = SurfaceDesc::builder("shadowmap", SizeRelativity::Absolute)
             .format(dxgi::Format::R32Typeless)
             .depth_format(dxgi::Format::D32Float)
             .view_format(dxgi::Format::R32Float)
             .build();
 
-        let shadow_map = surfaces.create_surface(resolution, surface_desc)?;
+        let shadow_map = Surface::new(
+            &Renderer::instance().gpu,
+            (Self::SHADOWMAP_RESOLUTION, Self::SHADOWMAP_RESOLUTION),
+            surface_desc,
+        )?;
 
         Ok(Self {
-            surfaces: surfaces.clone(),
             shadow_map,
             settings: RenderSettings::default(),
             index: 0,

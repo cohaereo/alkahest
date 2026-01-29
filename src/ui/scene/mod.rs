@@ -394,7 +394,7 @@ impl Scene {
             }
         });
 
-        let view_surfaces = self.view.surfaces.clone();
+        let view_surfaces = self.view.surfaces().unwrap().clone();
         let view_settings = self.view.settings_mut();
         ui.spacing_mut().item_spacing = vec2(8.0, 4.0);
         ui.checkbox(&mut view_settings.autoexposure, "Auto-exposure")
@@ -560,7 +560,7 @@ impl Scene {
             resolution
         };
 
-        let framebuffer_resolution = self.view.surfaces().framebuffer_resolution();
+        let framebuffer_resolution = self.view.framebuffer_resolution();
 
         if framebuffer_resolution != self.surface.get_desc().resolution() {
             let (texture, srv) = Self::create_surface(&self.renderer.gpu, framebuffer_resolution)

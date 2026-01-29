@@ -10,7 +10,7 @@ impl super::Scene {
             .text_styles
             .insert(TextStyle::Body, FontId::proportional(16.0));
 
-        let surfaces = self.view.surfaces();
+        let surfaces = self.view.surfaces().unwrap();
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (_handle, surface) in surfaces.iter() {

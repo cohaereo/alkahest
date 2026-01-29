@@ -80,10 +80,8 @@ impl TextureView {
             TextureView::Surface(surface) => {
                 if let Some(srv) = Renderer::instance()
                     .surfaces()
-                    .get(*surface)
-                    .srvs
-                    .as_ref()
-                    .and_then(|s| s.first())
+                    .try_get(*surface)
+                    .and_then(|surface| surface.srvs.as_ref().and_then(|s| s.first()))
                 {
                     f(srv)
                 }

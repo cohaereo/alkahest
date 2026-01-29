@@ -310,7 +310,7 @@ pub fn spawn_pattern_from_header(
                     unreachable!("view is not a shadow view even though we just created it");
                 };
 
-                let surf = view.surfaces().get(v.shadow_map);
+                let surf = &v.shadow_map;
                 light_renderer.shadow_view =
                     Some((surf.texture.clone(), surf.srv(0).unwrap().clone()));
 

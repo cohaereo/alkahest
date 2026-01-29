@@ -3,12 +3,10 @@ use std::sync::Arc;
 use alkahest_render::{
     Renderer,
     camera::CameraProjection,
-    feature::light::LightRenderer,
     gpu::command_list::CommandList,
     tfx::view::{View, ViewKind},
 };
 use glam::Mat4;
-use parking_lot::Mutex;
 
 use crate::world::transform::Transform;
 

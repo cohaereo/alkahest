@@ -43,8 +43,6 @@ impl Renderer {
             .scope(cmd, format!("submit_view_{}", view.name));
 
         *self.settings.write() = view.settings().clone();
-        *self.surfaces.write() = view.surfaces.clone();
-        view.surfaces.resize_surfaces(view.resolution);
 
         self.active_feature_renderers
             .store(self.calculate_active_feature_renderers());
@@ -54,10 +52,15 @@ impl Renderer {
         self.globals.scopes.view.bind(cmd).unwrap();
 
         match &view.kind {
-            crate::tfx::view::ViewKind::Main(main_view) => match debug_pipeline {
-                Some(DebugPipeline::Overdraw) => self.submit_view_overdraw(cmd, main_view),
-                _ => self.submit_view_shaded(cmd, main_view, debug_pipeline),
-            },
+            crate::tfx::view::ViewKind::Main(main_view) => {
+                *self.surfaces.write() = main_view.surfaces.clone();
+                main_view.surfaces.resize_surfaces(view.resolution);
+
+                match debug_pipeline {
+                    Some(DebugPipeline::Overdraw) => self.submit_view_overdraw(cmd, main_view),
+                    _ => self.submit_view_shaded(cmd, main_view, debug_pipeline),
+                }
+            }
             crate::tfx::view::ViewKind::Shadow(shadow_view) => {
                 self.submit_shadow_view(cmd, shadow_view)
             }
@@ -72,7 +75,7 @@ impl Renderer {
             .shadowmap_vs_t2
             .bind(cmd, 2, ShaderStage::Vertex);
 
-        let shadowmap = view.surfaces.get(view.shadow_map);
+        let shadowmap = &view.shadow_map;
 
         shadowmap.clear_depth(cmd, 0.0, 0);
         shadowmap.bind_single(cmd);
@@ -392,7 +395,7 @@ impl Renderer {
     }
 
     fn prepare_externs(&self, cmd: &mut CommandList, view: &View) {
-        let fb_res = view.surfaces.framebuffer_resolution();
+        let fb_res = view.framebuffer_resolution();
 
         let misc = &self.frame_packet.read().misc;
 
