@@ -43,9 +43,11 @@ use crate::{
         util::{ExternalDataWidgetExt, UiExt},
     },
     world::{
-        render_objects::{s_extract_ambient_occlusion, s_extract_render_objects},
+        render_objects::{
+            s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
+        },
         sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
-        shadowmap::{s_extract_all_shadowmaps, s_prepare_all_shadowmaps, s_submit_all_shadowmaps},
+        shadowmap::{s_extract_all_shadowmaps, s_submit_all_shadowmaps},
     },
 };
 
@@ -659,6 +661,9 @@ impl Scene {
             s_evaluate_global_channel_expressions(&self.world);
         }
 
+        let is_everything_loaded = s_are_all_objects_loaded(&self.world, &self.renderer);
+        let can_draw_static_shadowmaps = is_everything_loaded && self.view.settings().shadows;
+
         {
             profiling::scope!("prepare");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare");
@@ -673,13 +678,16 @@ impl Scene {
                 };
             }
 
-            // // TODO(cohae): Remove the dependency on the world here, shadowmaps should be part of the frame packet
-            // s_render_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
+            if can_draw_static_shadowmaps {
+                s_extract_all_shadowmaps(&self.world, &self.renderer);
+                s_submit_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
+            }
 
-            profiling::scope!("visibility");
-            let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
-            self.renderer.cull_view(View::MAIN, &self.view);
-            s_extract_all_shadowmaps(&self.world, &self.renderer);
+            {
+                profiling::scope!("visibility");
+                let _gpuspan = self.renderer.profiler.scope(&cmd, "visibility");
+                self.renderer.cull_view(View::MAIN, &self.view);
+            }
 
             {
                 profiling::scope!("prepare/upload");
@@ -697,8 +705,6 @@ impl Scene {
                         error!("Render object not found: {:?}", node.render_object_handle);
                     }
                 }
-
-                s_prepare_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
             }
             // Sort nodes by distance
             self.renderer
@@ -713,7 +719,6 @@ impl Scene {
         }
 
         {
-            s_submit_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
             // self.renderer
             //     .submit_sun_shadows(&mut cmd, &self.camera, &self.view);
             self.renderer

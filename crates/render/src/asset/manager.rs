@@ -1,6 +1,8 @@
 use std::{
     any::TypeId,
+    cell::RefCell,
     sync::{Arc, atomic::AtomicUsize},
+    time::{Duration, Instant},
 };
 
 use alkahest_core::job::{SCHEDULER, potassium::Priority};
@@ -33,6 +35,8 @@ pub struct AssetManager {
     // request_tx: Mutex<crossbeam::channel::Sender<LoadRequest>>,
     // pub(crate) loading_threads: Mutex<Vec<std::thread::JoinHandle<()>>>,
     dummy_handle: UntypedHandle,
+
+    last_load: Mutex<Instant>,
 }
 
 impl AssetManager {
@@ -42,14 +46,16 @@ impl AssetManager {
             assets: Mutex::new(HashMap::new()),
             num_loading: Arc::new(AtomicUsize::new(0)),
             dummy_handle: UntypedHandle::new(TagHash::NONE),
+            last_load: Mutex::new(Instant::now()),
         }
     }
 
     pub fn get<T: Asset + 'static>(&self, tag: TagHash) -> Option<Handle<T>> {
         if let Some((ty, handle)) = self.assets.lock().get(&tag)
-            && *ty == TypeId::of::<T>() {
-                return Some(unsafe { handle.clone_as_typed_unchecked::<T>() });
-            }
+            && *ty == TypeId::of::<T>()
+        {
+            return Some(unsafe { handle.clone_as_typed_unchecked::<T>() });
+        }
         None
     }
 
@@ -84,6 +90,7 @@ impl AssetManager {
 
         self.num_loading
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        *self.last_load.lock() = Instant::now();
 
         let request = LoadRequest {
             tag,
@@ -116,6 +123,14 @@ impl AssetManager {
 
     pub fn count_loading(&self) -> usize {
         self.num_loading.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    pub fn time_since_last_load(&self) -> Duration {
+        self.last_load.lock().elapsed()
+    }
+
+    pub fn is_idle(&self) -> bool {
+        self.count_loading() == 0 && self.time_since_last_load() > Duration::from_millis(500)
     }
 }
 

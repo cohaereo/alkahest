@@ -48,10 +48,10 @@ impl FramePacket {
         });
     }
 
-    pub fn iter_visible(&self, view: usize) -> impl Iterator<Item = &FrameNode> {
+    pub fn iter_visible(&self, view_index: usize) -> impl Iterator<Item = &FrameNode> {
         self.frame_nodes
             .iter()
-            .filter(move |node| node.visible.get(view))
+            .filter(move |node| node.visible.get(view_index))
     }
 }
 
@@ -167,6 +167,14 @@ impl VisibilityMask {
     #[inline]
     pub fn clear(&mut self) {
         self.0 = 0;
+    }
+
+    pub fn set_all(&mut self, value: bool) {
+        if value {
+            self.0 = !0;
+        } else {
+            self.0 = 0;
+        }
     }
 
     #[inline]

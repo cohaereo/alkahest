@@ -1,4 +1,7 @@
-use std::io::{Cursor, Seek, SeekFrom};
+use std::{
+    io::{Cursor, Seek, SeekFrom},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use alkahest_data::{
     map::ComponentData,
@@ -38,6 +41,14 @@ use crate::world::{
     shadowmap::ShadowMap,
     transform::Transform,
 };
+
+#[macro_export]
+macro_rules! once {
+    () => {{
+        static RAN_ONCE: AtomicBool = AtomicBool::new(false);
+        !RAN_ONCE.swap(true, Ordering::SeqCst)
+    }};
+}
 
 pub fn spawn_pattern(
     world: &mut hecs::World,
@@ -280,7 +291,7 @@ pub fn spawn_pattern_from_header(
                 let mut light_renderer =
                     LightRenderer::new_shadowing(renderer, light, shadowmap.camera_to_projective)?;
 
-                let view = View::new_shadow(
+                let mut view = View::new_shadow(
                     format!("shadow_{}", data.light.taghash()),
                     &Renderer::instance().gpu,
                     (
@@ -289,6 +300,11 @@ pub fn spawn_pattern_from_header(
                     ),
                 )
                 .expect("Failed to create shadowmap view");
+
+                if once!() {
+                    warn!("Culling is disabled for shadow views");
+                }
+                view.disable_culling = true;
 
                 let ViewKind::Shadow(v) = &view.kind else {
                     unreachable!("view is not a shadow view even though we just created it");

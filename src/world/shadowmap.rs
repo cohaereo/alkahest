@@ -71,10 +71,11 @@ impl ShadowMap {
 }
 
 pub fn s_extract_all_shadowmaps(world: &hecs::World, renderer: &Arc<Renderer>) {
-    profiling::scope!("extract_shadowmaps");
-    if renderer.asset_manager.count_loading() > 0 {
+    if !renderer.asset_manager.is_idle() {
         return;
     }
+
+    profiling::scope!("extract_shadowmaps");
 
     for (i, (_entity, (shadowmap, view))) in world
         .query::<(&mut ShadowMap, &mut View)>()
@@ -96,23 +97,25 @@ pub fn s_extract_all_shadowmaps(world: &hecs::World, renderer: &Arc<Renderer>) {
         };
 
         v.index = View::FIRST_SHADOW + i;
+        debug_assert!(v.index >= View::FIRST_SHADOW);
 
         renderer.cull_view(v.index, view);
     }
 }
 
-pub fn s_prepare_all_shadowmaps(
+pub fn s_submit_all_shadowmaps(
     world: &hecs::World,
     cmd: &mut CommandList,
     renderer: &Arc<Renderer>,
 ) {
-    profiling::scope!("prepare_shadowmaps");
-    let _gpuspan = renderer.profiler.scope(cmd, "prepare_shadowmaps");
-    if renderer.asset_manager.count_loading() > 0 {
+    if !renderer.asset_manager.is_idle() {
         return;
     }
 
-    for (_entity, (shadowmap, view)) in world.query::<(&ShadowMap, &View)>().iter() {
+    profiling::scope!("render_shadowmaps");
+    let _gpuspan = renderer.profiler.scope(cmd, "render_shadowmaps");
+
+    for (_entity, (shadowmap, view)) in world.query::<(&mut ShadowMap, &View)>().iter() {
         if shadowmap.finished_rendering {
             continue;
         }
@@ -121,7 +124,7 @@ pub fn s_prepare_all_shadowmaps(
             continue;
         };
 
-        for node in renderer.frame_packet.read().iter_visible(View::MAIN) {
+        for node in renderer.frame_packet.read().iter_visible(v.index) {
             if let Some(render_object) = renderer
                 .objects
                 .write()
@@ -132,28 +135,10 @@ pub fn s_prepare_all_shadowmaps(
                 error!("Render object not found: {:?}", node.render_object_handle);
             }
         }
-    }
-}
-
-pub fn s_submit_all_shadowmaps(
-    world: &hecs::World,
-    cmd: &mut CommandList,
-    renderer: &Arc<Renderer>,
-) {
-    profiling::scope!("render_shadowmaps");
-    let _gpuspan = renderer.profiler.scope(cmd, "render_shadowmaps");
-    if renderer.asset_manager.count_loading() > 0 {
-        return;
-    }
-
-    for (_entity, (shadowmap, view)) in world.query::<(&mut ShadowMap, &View)>().iter() {
-        if shadowmap.finished_rendering {
-            continue;
-        }
 
         renderer.submit_view(cmd, view, None);
 
-        // shadowmap.finished_rendering = true;
+        shadowmap.finished_rendering = true;
     }
 }
 

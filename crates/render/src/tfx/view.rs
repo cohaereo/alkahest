@@ -40,6 +40,7 @@ pub struct View {
     pub kind: ViewKind,
 
     pub subscribed_features: FeatureRendererSubscription,
+    pub disable_culling: bool,
 }
 
 impl View {
@@ -89,6 +90,7 @@ impl View {
             surfaces,
             kind,
             subscribed_features: FeatureRendererSubscription::all(),
+            disable_culling: false,
         })
     }
 
@@ -166,6 +168,10 @@ impl View {
     }
 
     pub fn is_visible(&self, aabb: &AxisAlignedBBox) -> bool {
+        if self.disable_culling {
+            return true;
+        }
+
         // Don't bother checking an invalid/uninitialized AABB
         if !aabb.is_valid() {
             return true;

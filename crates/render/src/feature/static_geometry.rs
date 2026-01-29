@@ -28,7 +28,7 @@ use tiger_pkg::{TagHash, package_manager};
 use super::{FeatureRenderer, shared::ModelBuffers};
 use crate::{
     Gpu, Renderer,
-    asset::Handle,
+    asset::{Handle, handle::is_technique_loaded},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     tfx::{
         packet::{CompactTransform, VisibilityMask},
@@ -490,12 +490,14 @@ impl FeatureRenderer for StaticInstancesRenderer {
                 transforms, bounds, ..
             } = group;
 
-            group.visible.set(view_index, true);
+            group
+                .visible
+                .set(view_index, view.is_visible(&group.group_bounds));
             group.num_instances = 0;
             if group.visible.get(view_index) {
                 group.visible.set(view_index, false);
                 for ((_transform, visible), bounds) in transforms.iter_mut().zip(bounds.iter()) {
-                    let bounds_visible = true;
+                    let bounds_visible = view.is_visible(bounds);
 
                     if enable_instance_culling {
                         visible.set(view_index, bounds_visible);
@@ -780,6 +782,26 @@ impl FeatureRenderer for StaticInstancesRenderer {
 
     fn subscribed_stages(&self) -> RenderStageSubscription {
         self.subscribed_stages
+    }
+
+    fn is_loaded(&self) -> bool {
+        if self
+            .static_models
+            .iter()
+            .any(|v| v.materials.iter().any(|t| !is_technique_loaded(t)))
+        {
+            return false;
+        }
+
+        if self.static_models.iter().any(|v| {
+            v.special_meshes
+                .iter()
+                .any(|s| !is_technique_loaded(&s.technique))
+        }) {
+            return false;
+        }
+
+        true
     }
 }
 
