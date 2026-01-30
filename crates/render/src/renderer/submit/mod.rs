@@ -287,7 +287,7 @@ impl Renderer {
             profiling::scope!("prepare/submit immediate geometry");
             let _gpuspan = self.profiler.scope(cmd, "immediate_geometry");
 
-            const IMMEDIATE_GEOMETRY_XRAY: bool = true;
+            const IMMEDIATE_GEOMETRY_XRAY: bool = false;
             // if IMMEDIATE_GEOMETRY_XRAY {
             //     view.surfaces
             //         .get(view.gbuffers.depth)

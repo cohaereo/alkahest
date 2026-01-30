@@ -29,6 +29,7 @@ use alkahest_render::{
         packet::FramePacketMisc,
         view::{View, ViewKind},
     },
+    visibility::frustum::Frustum,
 };
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
@@ -802,16 +803,15 @@ impl Scene {
         }
         let sun_dir = -sun_dir.normalize();
 
-        // let total_frustum = {
-        //     let (world_to_camera, camera_to_projective) =
-        //         self.camera
-        //             .build_shadow_cascade(sun_dir, 0.0, Renderer::MAX_CASCADE_DISTANCE);
+        let total_frustum = {
+            let (world_to_camera, camera_to_projective) =
+                self.camera
+                    .build_shadow_cascade(sun_dir, 0.05, Renderer::MAX_CASCADE_DISTANCE);
 
-        //     Frustum::from_view_and_projection(world_to_camera, camera_to_projective)
-        // };
+            Frustum::from_view_and_projection(world_to_camera, camera_to_projective)
+        };
 
-        self.renderer.cull_view(View::SUN, &NoCulling);
-        // self.renderer.cull_view(View::SUN, &total_frustum);
+        self.renderer.cull_view(View::SUN, &total_frustum);
         {
             cmd_event_span!(cmd, "prepare_sun_view");
             let _gpuspan = self.renderer.profiler.scope(cmd, "prepare_sun_view");
@@ -852,6 +852,7 @@ impl Scene {
             let (world_to_camera, camera_to_projective) =
                 self.camera.build_shadow_cascade(sun_dir, z_near, z_far);
 
+            // let frustum = Frustum::from_view_and_projection(world_to_camera, camera_to_projective);
             sun_shadow_map_cascades.push((
                 camera_to_projective * world_to_camera,
                 sv.shadow_map
