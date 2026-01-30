@@ -14,7 +14,8 @@ use crate::{
     Gpu, Renderer,
     asset::{Handle, texture::Texture},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
-    tfx::{packet::CompactTransform, view::View},
+    renderer::visibility::OpaqueView,
+    tfx::packet::CompactTransform,
     util::geometry,
 };
 
@@ -75,7 +76,7 @@ impl CubemapRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for CubemapRenderer {
-    fn visibility_test(&mut self, _view_index: usize, _view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, _view: &dyn OpaqueView) -> bool {
         // camera.is_visible(&self.bounds)
         true
     }

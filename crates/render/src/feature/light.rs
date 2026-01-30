@@ -12,17 +12,16 @@ use alkahest_data::tfx::{
 use d3d11::dxgi;
 use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use itertools::Itertools;
-use parking_lot::Mutex;
 use tiger_pkg::TagHash;
 
 use super::FeatureRenderer;
 use crate::{
     Renderer,
+    renderer::visibility::OpaqueView,
     tfx::{
         externs::{self, DeferredLight, SimpleGeometry, VolumeFog},
         packet::CompactTransform,
         technique::Technique,
-        view::{View, ViewKind},
     },
     util::{geometry, threading::CommandListSetId},
 };
@@ -146,7 +145,7 @@ impl LightRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for LightRenderer {
-    fn visibility_test(&mut self, _view_index: usize, view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, view: &dyn OpaqueView) -> bool {
         if let Some(ref bounds) = self.bounds {
             view.is_visible(bounds)
         } else {

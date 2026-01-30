@@ -3,6 +3,7 @@ use std::sync::Arc;
 use alkahest_render::{
     Renderer,
     camera::CameraProjection,
+    cmd_event_span,
     gpu::command_list::CommandList,
     tfx::view::{View, ViewKind},
 };
@@ -122,15 +123,22 @@ pub fn s_submit_all_shadowmaps(
             continue;
         };
 
-        for node in renderer.frame_packet.read().iter_visible(v.index) {
-            if let Some(render_object) = renderer
-                .objects
-                .write()
-                .get_mut(node.render_object_handle.into())
-            {
-                render_object.prepare(renderer, v.index, &*node.data);
-            } else if node.render_object_handle.is_valid() {
-                error!("Render object not found: {:?}", node.render_object_handle);
+        {
+            cmd_event_span!(cmd, format!("prepare_view_{}", view.name));
+            let _gpuspan = renderer
+                .profiler
+                .scope(cmd, format!("prepare_view_{}", view.name));
+
+            for node in renderer.frame_packet.read().iter_visible(v.index) {
+                if let Some(render_object) = renderer
+                    .objects
+                    .write()
+                    .get_mut(node.render_object_handle.into())
+                {
+                    render_object.prepare(renderer, v.index, &*node.data);
+                } else if node.render_object_handle.is_valid() {
+                    error!("Render object not found: {:?}", node.render_object_handle);
+                }
             }
         }
 

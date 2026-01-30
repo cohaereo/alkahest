@@ -153,6 +153,10 @@ impl CommandList {
         }
     }
 
+    pub fn depth_mode(&self) -> DepthMode {
+        self.depth_mode
+    }
+
     pub fn set_depth_stencil_state(&mut self, index: usize) {
         if self.current_depth_state != index {
             let states = &self.global_states().depth_stencil_states[index];

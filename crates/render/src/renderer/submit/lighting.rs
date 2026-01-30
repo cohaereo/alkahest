@@ -315,10 +315,9 @@ impl Renderer {
 
         self.clear_surface(cmd, view.shadow_mask, [1f32; 4]);
         if true {
-            for cascade_index in (0..view.sun_shadow_map_cascades.len()).rev() {
-                let cascade = view
-                    .surfaces
-                    .get(view.sun_shadow_map_cascades[cascade_index]);
+            for (cascade_index, (world_to_cascade, cascade_srv)) in
+                view.sun_shadow_map_cascades.iter().enumerate().rev()
+            {
                 let depth = view.gbuffers.depth_proxy.lock().srv.clone();
                 self.cascade_scope
                     .write(
@@ -330,13 +329,13 @@ impl Renderer {
                             light_dir: sun_dir.normalize().into(),
                             // plane_distance: Self::CASCADE_DISTANCE_RANGES[cascade_index],
                             plane_distance: Self::get_cascade_distance_range(cascade_index).1,
-                            world_to_cascade: view.cascade_matrices.read()[cascade_index],
+                            world_to_cascade: *world_to_cascade,
                         },
                     )
                     .expect("Failed to write cascade scope");
                 self.cascade_scope.bind(cmd, ShaderStage::Vertex, 0);
                 self.cascade_scope.bind(cmd, ShaderStage::Pixel, 0);
-                cmd.pixel_set_shader_resources(0, &[Some(&depth), cascade.srv(0)]);
+                cmd.pixel_set_shader_resources(0, &[Some(&depth), Some(cascade_srv)]);
                 cmd.pixel_set_samplers(1, &[Some(&self.common.sampler_linear)]);
                 cmd.flush_states();
                 cmd.vertex_set_shader(Some(&self.shadow_map_vs));

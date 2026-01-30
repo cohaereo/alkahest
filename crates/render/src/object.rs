@@ -9,7 +9,7 @@ use crate::{
     Renderer,
     feature::FeatureRenderer,
     gpu::command_list::CommandList,
-    tfx::view::{self},
+    renderer::visibility::OpaqueView,
     util::{arena, threading::CommandListSetId},
 };
 
@@ -56,7 +56,7 @@ impl RenderObject {
 }
 
 impl RenderObject {
-    pub fn visibility_test(&mut self, view_index: usize, view: &view::View) -> bool {
+    pub fn visibility_test(&mut self, view_index: usize, view: &dyn OpaqueView) -> bool {
         self.renderer.visibility_test(view_index, view)
     }
 

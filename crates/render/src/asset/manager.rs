@@ -1,6 +1,5 @@
 use std::{
     any::TypeId,
-    cell::RefCell,
     sync::{Arc, atomic::AtomicUsize},
     time::{Duration, Instant},
 };

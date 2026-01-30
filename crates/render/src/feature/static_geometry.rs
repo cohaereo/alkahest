@@ -30,10 +30,10 @@ use crate::{
     Gpu, Renderer,
     asset::{Handle, handle::is_technique_loaded},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
+    renderer::visibility::OpaqueView,
     tfx::{
         packet::{CompactTransform, VisibilityMask},
         technique::Technique,
-        view::View,
     },
     util::threading::CommandListSetId,
 };
@@ -479,7 +479,7 @@ impl StaticInstancesRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for StaticInstancesRenderer {
-    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
+    fn visibility_test(&mut self, view_index: usize, view: &dyn OpaqueView) -> bool {
         if !view.is_visible(&self.bounds) {
             return false;
         }

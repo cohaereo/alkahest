@@ -11,7 +11,8 @@ use crate::{
     Renderer,
     asset::{Handle, vertex_buffer::VertexBuffer},
     gpu::command_list::{CommandList, DepthMode},
-    tfx::{technique::Technique, view::View},
+    renderer::visibility::OpaqueView,
+    tfx::technique::Technique,
     util::threading::CommandListSetId,
 };
 
@@ -65,7 +66,7 @@ impl DecalCollectionRenderer {
 
 // #[profiling::all_functions]
 impl FeatureRenderer for DecalCollectionRenderer {
-    fn visibility_test(&mut self, _view_index: usize, view: &View) -> bool {
+    fn visibility_test(&mut self, _view_index: usize, view: &dyn OpaqueView) -> bool {
         if !view.is_visible(&self.bounds) {
             return false;
         }

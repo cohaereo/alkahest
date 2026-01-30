@@ -18,7 +18,8 @@ use crate::{
     asset::vertex_buffer::VertexBuffer,
     feature::{FeatureRenderer, rigid_model::DynamicModel},
     gpu::cbuffer::ConstantBuffer,
-    tfx::{externs, packet::VisibilityMask, view::View},
+    renderer::visibility::OpaqueView,
+    tfx::{externs, packet::VisibilityMask},
     util::threading::CommandListSetId,
 };
 
@@ -232,7 +233,7 @@ impl DecoratorRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for DecoratorRenderer {
-    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
+    fn visibility_test(&mut self, view_index: usize, view: &dyn OpaqueView) -> bool {
         if !view.is_visible(&self.data.bounds) {
             return false;
         }

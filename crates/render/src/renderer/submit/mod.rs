@@ -21,7 +21,7 @@ use super::Renderer;
 use crate::{
     camera::Camera,
     cmd_event_span,
-    gpu::command_list::CommandList,
+    gpu::command_list::{CommandList, DepthMode},
     tfx::{
         externs::{self, GlobalLighting, ScreenArea, TextureView, UberDepth},
         scope::FrameScope,
@@ -77,7 +77,15 @@ impl Renderer {
 
         let shadowmap = &view.shadow_map;
 
-        shadowmap.clear_depth(cmd, 0.0, 0);
+        shadowmap.clear_depth(
+            cmd,
+            if cmd.depth_mode() == DepthMode::Forward {
+                1.0
+            } else {
+                0.0
+            },
+            0,
+        );
         shadowmap.bind_single(cmd);
 
         self.submit_stage_parallel_apply(

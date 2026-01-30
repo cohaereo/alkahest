@@ -14,13 +14,15 @@ use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use alkahest_render::{
     Gpu, Renderer,
     camera::Camera,
-    gpu::command_list::CommandList,
+    cmd_event_span,
+    gpu::command_list::{CommandList, DepthMode},
     renderer::{
         hzb::Hzb,
         submit::{
             DebugPipeline,
             atmosphere::{AtmosphereData, SunDirections},
         },
+        visibility::NoCulling,
     },
     tfx::{
         externs::get_global_channel_name,
@@ -34,7 +36,7 @@ use egui::{
     FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
     Widget, containers::menu::MenuConfig, load::SizedTexture, vec2,
 };
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use crate::{
@@ -78,11 +80,20 @@ pub struct Scene {
 
     frametimes: Vec<f32>,
     global_channels: [Vec4; 256],
+
+    sun_shadow_views: [View; Renderer::NUM_CASCADES],
 }
 
 impl Scene {
     pub fn new(renderer: Arc<Renderer>, camera: Camera) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
+
+        let sun_shadow_views = std::array::from_fn(|i| {
+            let mut v = View::new_shadow(format!("shadow_csm_{i}"), &renderer.gpu, (2048, 2048))
+                .expect("Failed to create shadow cascade view");
+            v.disable_culling = true;
+            v
+        });
 
         Ok(Self {
             world: hecs::World::new(),
@@ -105,6 +116,7 @@ impl Scene {
             show_surface_viewer: false,
             show_channel_editor: false,
             frametimes: Vec::new(),
+            sun_shadow_views,
         })
     }
 
@@ -599,8 +611,10 @@ impl Scene {
             }
         }
 
-        let gpu = &self.renderer.gpu;
-        let mut cmd = CommandList::from_device_context(gpu, gpu.context().clone());
+        let mut cmd = CommandList::from_device_context(
+            &self.renderer.gpu,
+            self.renderer.gpu.context().clone(),
+        );
         let _gpuspan = self.renderer.profiler.scope(&cmd, "Scene::render (total)");
         self.renderer.frame_packet.write().begin_frame(packet_misc);
         self.renderer
@@ -665,6 +679,19 @@ impl Scene {
         let can_draw_static_shadowmaps = is_everything_loaded && self.view.settings().shadows;
 
         {
+            profiling::scope!("render_shadows");
+            let _gpuspan = self.renderer.profiler.scope(&cmd, "render_shadows");
+            if can_draw_static_shadowmaps {
+                s_extract_all_shadowmaps(&self.world, &self.renderer);
+                s_submit_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
+            }
+
+            if self.view.settings().sun_shadows {
+                self.draw_sun_shadows(&mut cmd);
+            }
+        }
+
+        {
             profiling::scope!("prepare");
             let _gpuspan = self.renderer.profiler.scope(&cmd, "prepare");
 
@@ -672,15 +699,14 @@ impl Scene {
                 profiling::scope!("download_hzb");
                 let _gpuspan = self.renderer.profiler.scope(&cmd, "download_hzb");
                 self.view.hzb = if view.settings.hzb_culling {
-                    Hzb::download(gpu, &view.gbuffers.hzb_depth_chain_cpu.lock(), &self.camera)
+                    Hzb::download(
+                        &self.renderer.gpu,
+                        &view.gbuffers.hzb_depth_chain_cpu.lock(),
+                        &self.camera,
+                    )
                 } else {
                     Hzb::EMPTY
                 };
-            }
-
-            if can_draw_static_shadowmaps {
-                s_extract_all_shadowmaps(&self.world, &self.renderer);
-                s_submit_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
             }
 
             {
@@ -762,6 +788,90 @@ impl Scene {
             .is_multiple_of(10)
         {
             self.profiler_results = Some(self.renderer.profiler.get_results_string());
+        }
+    }
+
+    fn draw_sun_shadows(&mut self, cmd: &mut CommandList) {
+        let mut sun_dir = self
+            .renderer
+            .externs
+            .get_global_channel_by_name("sun_light_direction")
+            .xyz();
+        if sun_dir.length() < 0.01 {
+            sun_dir = Vec3::Z;
+        }
+        let sun_dir = -sun_dir.normalize();
+
+        // let total_frustum = {
+        //     let (world_to_camera, camera_to_projective) =
+        //         self.camera
+        //             .build_shadow_cascade(sun_dir, 0.0, Renderer::MAX_CASCADE_DISTANCE);
+
+        //     Frustum::from_view_and_projection(world_to_camera, camera_to_projective)
+        // };
+
+        self.renderer.cull_view(View::SUN, &NoCulling);
+        // self.renderer.cull_view(View::SUN, &total_frustum);
+        {
+            cmd_event_span!(cmd, "prepare_sun_view");
+            let _gpuspan = self.renderer.profiler.scope(cmd, "prepare_sun_view");
+
+            for node in self.renderer.frame_packet.read().iter_visible(View::SUN) {
+                if let Some(render_object) = self
+                    .renderer
+                    .objects
+                    .write()
+                    .get_mut(node.render_object_handle.into())
+                {
+                    render_object.prepare(&self.renderer, View::SUN, &*node.data);
+                } else if node.render_object_handle.is_valid() {
+                    error!("Render object not found: {:?}", node.render_object_handle);
+                }
+            }
+        }
+
+        let mut sun_shadow_map_cascades = vec![];
+        cmd.set_depth_mode(DepthMode::Forward);
+        for c in 0..Renderer::NUM_CASCADES {
+            profiling::scope!("submit_sun_shadow_cascade", &format!("cascade {}", c));
+            let _gpuspan = self
+                .renderer
+                .profiler
+                .scope(cmd, format!("shadow_cascade_{c}"));
+            let shadow_view = &mut self.sun_shadow_views[c];
+            let ViewKind::Shadow(sv) = &mut shadow_view.kind else {
+                warn!("Invalid view kind for sun shadow view");
+                continue;
+            };
+            sv.index = View::SUN;
+            // self.bind_surfaces(cmd, &[], Some(shadow_map));
+            // self.clear_surface_depth(cmd, shadow_map, 1.0, 0);
+
+            let (z_near, z_far) = Renderer::get_cascade_distance_range(c);
+
+            let (world_to_camera, camera_to_projective) =
+                self.camera.build_shadow_cascade(sun_dir, z_near, z_far);
+
+            sun_shadow_map_cascades.push((
+                camera_to_projective * world_to_camera,
+                sv.shadow_map
+                    .srv(0)
+                    .expect("Sun shadow view is missing an SRV")
+                    .clone(),
+            ));
+
+            shadow_view.update(
+                world_to_camera,
+                camera_to_projective,
+                shadow_view.resolution(),
+            );
+
+            self.renderer.submit_view(cmd, shadow_view, None);
+        }
+        cmd.set_depth_mode(DepthMode::Reverse);
+
+        if let ViewKind::Main(mv) = &mut self.view.kind {
+            mv.sun_shadow_map_cascades = sun_shadow_map_cascades;
         }
     }
 

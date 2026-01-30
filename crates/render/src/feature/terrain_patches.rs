@@ -20,7 +20,8 @@ use crate::{
     asset::{Handle, index_buffer::IndexBuffer, texture::Texture, vertex_buffer::VertexBuffer},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     gpu_span,
-    tfx::{packet::VisibilityMask, technique::Technique, view::View},
+    renderer::visibility::OpaqueView,
+    tfx::{packet::VisibilityMask, technique::Technique},
     util::threading::CommandListSetId,
 };
 
@@ -212,10 +213,10 @@ impl TerrainPatchesRenderer {
 
 #[profiling::all_functions]
 impl FeatureRenderer for TerrainPatchesRenderer {
-    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
+    fn visibility_test(&mut self, view_index: usize, view: &dyn OpaqueView) -> bool {
         let center = self.terrain.bounds.center();
         let radius = self.terrain.bounds.radius();
-        let distance = view.position.distance(center);
+        let distance = view.position().distance(center);
         self.detail_level = match distance {
             d if d > radius * 8.0 => TerrainDetailLevel::Thumbnail,
             d if d > radius * 4.0 => TerrainDetailLevel::Low,
@@ -227,7 +228,7 @@ impl FeatureRenderer for TerrainPatchesRenderer {
             visible.set(view_index, view.is_visible(aabb));
         }
 
-        view.culling_frustum.aabb_intersecting(&self.terrain.bounds)
+        view.is_visible(&self.terrain.bounds)
     }
 
     fn prepare(

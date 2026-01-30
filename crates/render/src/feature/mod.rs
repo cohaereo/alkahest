@@ -7,7 +7,8 @@ use glam::Mat4;
 use crate::{
     Renderer,
     gpu::command_list::CommandList,
-    tfx::{packet::CompactTransform, view::View},
+    renderer::visibility::OpaqueView,
+    tfx::packet::CompactTransform,
     util::threading::CommandListSetId,
 };
 
@@ -24,7 +25,7 @@ pub mod terrain_patches;
 
 pub trait FeatureRenderer {
     /// Returns false if the render object should be discarded
-    fn visibility_test(&mut self, view_index: usize, view: &View) -> bool {
+    fn visibility_test(&mut self, view_index: usize, view: &dyn OpaqueView) -> bool {
         _ = (view, view_index);
         true
     }
