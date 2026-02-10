@@ -8,6 +8,7 @@ use crate::{Renderer, tfx::view::View, visibility::frustum::Frustum};
 
 impl Renderer {
     pub fn cull_view(self: &Arc<Self>, view_index: usize, view: &dyn OpaqueView) {
+        let features = self.frame_packet.read().misc.subscribed_features;
         // parallel_iter(&mut self.frame_packet.write().frame_nodes, |node| {
         self.frame_packet
             .write()
@@ -18,10 +19,7 @@ impl Renderer {
                 // SAFETY: We have exclusive access to the frame packet and the objects data, and each render object only has one frame node
                 unsafe {
                     if let Some(render_object) = (*p).get_mut(node.render_object_handle.into()) {
-                        if !view
-                            .subscribed_features()
-                            .is_subscribed(render_object.feature_type)
-                        {
+                        if !features.is_subscribed(render_object.feature_type) {
                             node.visible.set(view_index, false);
                         } else {
                             node.visible

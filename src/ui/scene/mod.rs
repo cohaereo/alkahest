@@ -594,6 +594,7 @@ impl Scene {
             delta_time,
             time: self.start_time.elapsed().as_secs_f32(),
             time_of_day: (self.time_of_day / 3600.0).fract(),
+            subscribed_features: self.view.subscribed_features,
             ..Default::default()
         };
 

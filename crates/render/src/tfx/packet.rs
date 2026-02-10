@@ -1,5 +1,6 @@
 use std::any::Any;
 
+use alkahest_data::tfx::FeatureRendererSubscription;
 use assert_offset::AssertOffsets;
 use glam::{Mat4, Vec3, Vec4};
 
@@ -129,6 +130,7 @@ pub struct FramePacketMisc {
 
     pub atmosphere: AtmosphereData,
     pub time_of_day: f32,
+    pub subscribed_features: FeatureRendererSubscription,
 }
 
 pub enum ViewSource {

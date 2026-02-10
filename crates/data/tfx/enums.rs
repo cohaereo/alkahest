@@ -169,7 +169,7 @@ impl TigerReadable for TfxFeatureRenderer {
 }
 
 bitflags! {
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Default, Debug, Copy, Clone)]
     pub struct FeatureRendererSubscription : u32 {
         const STATIC_OBJECTS            = 1 << TfxFeatureRenderer::StaticObjects as u32;
         const DYNAMIC_OBJECTS           = 1 << TfxFeatureRenderer::DynamicObjects as u32;

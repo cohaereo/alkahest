@@ -45,7 +45,7 @@ impl Renderer {
         *self.settings.write() = view.settings().clone();
 
         self.active_feature_renderers
-            .store(self.calculate_active_feature_renderers());
+            .store(self.frame_packet.read().misc.subscribed_features);
 
         self.prepare_externs(cmd, view);
 
@@ -741,32 +741,6 @@ impl Renderer {
             unkb0: vec4(0.00, 0.00, 0.00, 0.00),
             ..Default::default()
         };
-    }
-
-    fn calculate_active_feature_renderers(&self) -> FeatureRendererSubscription {
-        let mut sub = FeatureRendererSubscription::all();
-        macro_rules! remove_feature_if_unset {
-            ($convar:expr, $flag:ident) => {
-                if !ConVars::get_flag(concat!("render.feature.", $convar)) {
-                    sub.remove(FeatureRendererSubscription::$flag);
-                }
-            };
-        }
-
-        remove_feature_if_unset!("static_objects", STATIC_OBJECTS);
-        remove_feature_if_unset!("terrain_patches", TERRAIN_PATCH);
-        remove_feature_if_unset!("rigid_objects", RIGID_OBJECT);
-        remove_feature_if_unset!("chunked_lights", CHUNKED_LIGHTS);
-        remove_feature_if_unset!("deferred_lights", DEFERRED_LIGHTS);
-        remove_feature_if_unset!("sky_transparent", SKY_TRANSPARENT);
-        remove_feature_if_unset!("decals", DECALS);
-        remove_feature_if_unset!("dynamic_decals", DYNAMIC_DECALS);
-        remove_feature_if_unset!("road_decals", ROAD_DECALS);
-        remove_feature_if_unset!("water", WATER);
-        remove_feature_if_unset!("volumetrics", VOLUMETRICS);
-        remove_feature_if_unset!("cubemaps", CUBEMAPS);
-
-        sub
     }
 }
 
