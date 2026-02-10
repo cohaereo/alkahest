@@ -68,7 +68,7 @@ impl Renderer {
     }
 
     fn submit_shadow_view(self: &Arc<Self>, cmd: &mut CommandList, view: &ShadowView) {
-        cmd.state = PipelineState::new(Some(0), Some(2), Some(2), Some(6));
+        cmd.state = PipelineState::new(Some(0), Some(2), Some(0), Some(6));
         cmd.flush_states();
 
         self.common
