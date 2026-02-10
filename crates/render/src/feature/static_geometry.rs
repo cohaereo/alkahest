@@ -264,14 +264,13 @@ impl StaticMesh {
 }
 
 struct StaticInstanceGroup {
-    pub transforms: Vec<(SStaticInstanceTransform, VisibilityMask)>,
+    pub transforms: Vec<SStaticInstanceTransform>,
     pub static_index: u16,
     pub cbuffer: ConstantBuffer<u8>,
     pub bounds: Vec<AxisAlignedBBox>,
     pub group_bounds: AxisAlignedBBox,
     pub visible: VisibilityMask,
     pub num_instances: u32,
-    num_instances_written: u32,
 }
 
 impl StaticInstanceGroup {
@@ -279,7 +278,6 @@ impl StaticInstanceGroup {
     pub fn update_constants(
         &self,
         ctx: &d3d11::DeviceContext,
-        view_index: usize,
         model: &StaticMesh,
         vao_identifier: u64,
         ao: Option<&SStaticAmbientOcclusion>,
@@ -307,11 +305,7 @@ impl StaticInstanceGroup {
         //     [0.0, 0.0, model.mesh_scale, model.mesh_offset.z],
         //     [0.0, 0.0, 0.0, 1.0],
         // ]);
-        for transform in self
-            .transforms
-            .iter()
-            .filter_map(|(t, visible)| visible.get(view_index).then_some(t))
-        {
+        for transform in self.transforms.iter() {
             let instance_transform = Mat4::from_scale_rotation_translation(
                 Vec3::splat(transform.scale),
                 transform.rotation,
@@ -350,6 +344,7 @@ pub struct StaticInstancesRenderer {
     static_models: Vec<StaticMesh>,
     groups: Vec<StaticInstanceGroup>,
 
+    constants_dirty: bool,
     vao_identifier: u64,
     groups_by_stage_sorted_by_technique: HashMap<RenderStage, Arc<Vec<SortedModel>>>,
     bounds: AxisAlignedBBox,
@@ -378,7 +373,6 @@ impl StaticInstancesRenderer {
                 .context("Invalid instance transform range")?
                 .iter()
                 .cloned()
-                .map(|t| (t, VisibilityMask::default()))
                 .collect_vec();
 
             let mut bounds = Vec::with_capacity(transforms.len());
@@ -415,7 +409,6 @@ impl StaticInstancesRenderer {
                 static_index: group.static_index,
                 cbuffer,
                 visible: VisibilityMask::default(),
-                num_instances_written: 0,
             });
             model_to_instance_groups
                 .entry(group.static_index)
@@ -470,6 +463,7 @@ impl StaticInstancesRenderer {
                 }),
             static_models,
             groups,
+            constants_dirty: true,
             vao_identifier: instances.vertex_ao_identifier,
             groups_by_stage_sorted_by_technique,
             bounds: instances.bounds,
@@ -484,33 +478,15 @@ impl FeatureRenderer for StaticInstancesRenderer {
             return false;
         }
 
-        let enable_instance_culling = Renderer::instance().settings().instance_culling;
         self.groups.par_iter_mut().for_each(|group| {
-            let StaticInstanceGroup {
-                transforms, bounds, ..
-            } = group;
-
             group
                 .visible
                 .set(view_index, view.is_visible(&group.group_bounds));
-            group.num_instances = 0;
             if group.visible.get(view_index) {
-                group.visible.set(view_index, false);
-                for ((_transform, visible), bounds) in transforms.iter_mut().zip(bounds.iter()) {
-                    let bounds_visible = view.is_visible(bounds);
-
-                    if enable_instance_culling {
-                        visible.set(view_index, bounds_visible);
-                        if visible.get(view_index) {
-                            group.num_instances += 1;
-                            group.visible.set_or(view_index, true);
-                        }
-                    } else {
-                        visible.set(view_index, true);
-                        group.num_instances += 1;
-                        group.visible.set_or(view_index, bounds_visible);
-                    }
-                }
+                group.visible.set(
+                    view_index,
+                    group.bounds.iter().any(|bb| view.is_visible(bb)),
+                );
             }
         });
 
@@ -520,26 +496,20 @@ impl FeatureRenderer for StaticInstancesRenderer {
     fn prepare(
         &mut self,
         renderer: &Renderer,
-        view_index: usize,
+        _view_index: usize,
         _extracted_data: &dyn std::any::Any,
     ) {
-        for group in self.groups.iter_mut().filter(|g| g.visible.get(view_index)) {
-            // If all instances are visible and written already, don't bother updating
-            if group.num_instances == group.num_instances_written
-                && group.num_instances_written as usize == group.transforms.len()
-            {
-                continue;
-            } else {
+        if self.constants_dirty {
+            for group in &self.groups {
                 let model = &self.static_models[group.static_index as usize];
                 group.update_constants(
                     &renderer.gpu.context(),
-                    view_index,
                     model,
                     self.vao_identifier,
                     renderer.ao.read().as_ref(),
                 );
-                group.num_instances_written = group.num_instances;
             }
+            self.constants_dirty = false;
         }
     }
 
@@ -831,25 +801,21 @@ impl StaticModelRenderer {
             AxisAlignedBBox::from_center_extents(om.mesh_offset, Vec3::splat(om.mesh_scale));
 
         let group = StaticInstanceGroup {
-            transforms: vec![(
-                SStaticInstanceTransform {
-                    rotation: Quat::IDENTITY,
-                    translation: Vec3::ZERO,
-                    scale: 1.0,
-                    unk20: [0; 2],
-                    vertex_ao_offset: 0,
-                    unk2c: 0.0,
-                    unk30: [0; 4],
-                },
-                VisibilityMask::default(),
-            )],
+            transforms: vec![SStaticInstanceTransform {
+                rotation: Quat::IDENTITY,
+                translation: Vec3::ZERO,
+                scale: 1.0,
+                unk20: [0; 2],
+                vertex_ao_offset: 0,
+                unk2c: 0.0,
+                unk30: [0; 4],
+            }],
             static_index: 0,
             cbuffer,
             bounds: vec![],
             group_bounds: AxisAlignedBBox::NONE,
             visible: VisibilityMask::default(),
             num_instances: 1,
-            num_instances_written: 1,
         };
 
         Ok(Self {
@@ -861,7 +827,7 @@ impl StaticModelRenderer {
 }
 
 impl FeatureRenderer for StaticModelRenderer {
-    fn prepare(&mut self, renderer: &Renderer, view_index: usize, extracted_data: &dyn Any) {
+    fn prepare(&mut self, renderer: &Renderer, _view_index: usize, extracted_data: &dyn Any) {
         let (obj_local_to_world, _permutation) = extracted_data
             .downcast_ref::<(CompactTransform, usize)>()
             .expect("Invalid extracted data type")
@@ -869,13 +835,13 @@ impl FeatureRenderer for StaticModelRenderer {
         let transform = obj_local_to_world.to_mat4();
 
         let (scale, rotation, translation) = transform.to_scale_rotation_translation();
-        let transform = &mut self.group.transforms[0].0;
+        let transform = &mut self.group.transforms[0];
         transform.rotation = rotation;
         transform.translation = translation;
         transform.scale = scale.x;
 
         self.group
-            .update_constants(&renderer.gpu.context(), view_index, &self.model, 0, None);
+            .update_constants(&renderer.gpu.context(), &self.model, 0, None);
     }
 
     fn submit(&self, cmd: &mut CommandList, _view_index: usize, stage: RenderStage) {

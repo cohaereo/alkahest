@@ -2,10 +2,7 @@ use alkahest_core::job::{SCHEDULER, potassium::Priority};
 use alkahest_data::tfx::{
     RenderStage, ShaderStage,
     common::AxisAlignedBBox,
-    features::{
-        decorators::{SDecorator, SDecoratorInstanceElement},
-        dynamic::RenderStageSubscription,
-    },
+    features::{decorators::SDecorator, dynamic::RenderStageSubscription},
 };
 use anyhow::Context;
 use glam::{Mat4, Vec4, vec4};
@@ -35,7 +32,7 @@ struct DecoratorInstanceGroup {
     pub instance_start: u32,
     pub instance_count: u32,
     // pub original_range: std::ops::Range<u32>,
-    pub instance_bounds: Vec<(std::ops::Range<u32>, AxisAlignedBBox, VisibilityMask)>,
+    // pub instance_bounds: Vec<(std::ops::Range<u32>, AxisAlignedBBox)>,
     pub visible: VisibilityMask,
     pub bounds: AxisAlignedBBox,
 }
@@ -48,7 +45,6 @@ pub struct DecoratorRenderer {
     instance_buffer: VertexBuffer,
     instance_blend_indices_vb: VertexBuffer,
 
-    instance_data_culled: Vec<SDecoratorInstanceElement>,
     instance_groups: Vec<DecoratorInstanceGroup>,
 }
 
@@ -197,17 +193,17 @@ impl DecoratorRenderer {
                 .get(bounds_range.clone())
                 .context("Failed to find occlusion bounds")?
                 .iter()
-                .map(|(range, bb)| (range.clone(), *bb, VisibilityMask::ALL))
+                .map(|(range, bb)| (range.clone(), *bb))
                 .collect_vec();
 
-            let bounds = instance_bounds.iter().map(|(_, bb, _)| *bb).sum();
+            let bounds = instance_bounds.iter().map(|(_, bb)| *bb).sum();
 
             instance_groups.push(DecoratorInstanceGroup {
                 // original_range: instance_start..instance_end,
                 instance_start,
                 instance_count: instance_end - instance_start,
                 visible: VisibilityMask::ALL,
-                instance_bounds,
+                // instance_bounds,
                 bounds,
             });
         }
@@ -224,7 +220,6 @@ impl DecoratorRenderer {
             hash,
             instance_buffer,
             instance_blend_indices_vb,
-            instance_data_culled: decorator.unk48.instance_data.elements.clone(),
             data: decorator,
             instance_groups,
         })
@@ -242,35 +237,6 @@ impl FeatureRenderer for DecoratorRenderer {
             group
                 .visible
                 .set(view_index, view.is_visible(&group.bounds));
-            // if !group.visible {
-            //     Renderer::instance().immediate.lock().aabb_world(
-            //         &group.bounds,
-            //         if group.visible { 0x00ff00 } else { 0xff0000 },
-            //     );
-            // }
-            if group.visible.get(view_index) {
-                group
-                    .instance_bounds
-                    .par_iter_mut()
-                    .for_each(|(_range, bounds, visible)| {
-                        visible.set(view_index, view.is_visible(bounds));
-                        // if !*visible {
-                        //     Renderer::instance()
-                        //         .immediate
-                        //         .lock()
-                        //         .aabb_world(bounds, if *visible { 0x00ff00 } else { 0xff0000 });
-                        // }
-                    });
-
-                group.visible.set(
-                    view_index,
-                    group.instance_bounds.is_empty()
-                        || group
-                            .instance_bounds
-                            .iter()
-                            .any(|(_, _, vis)| vis.get(view_index)),
-                );
-            }
         });
 
         self.instance_groups
@@ -280,46 +246,10 @@ impl FeatureRenderer for DecoratorRenderer {
 
     fn prepare(
         &mut self,
-        renderer: &Renderer,
-        view_index: usize,
-        extracted_data: &dyn std::any::Any,
+        _renderer: &Renderer,
+        _view_index: usize,
+        _extracted_data: &dyn std::any::Any,
     ) {
-        _ = renderer;
-        _ = extracted_data;
-
-        {
-            let mut instance_data_culled = vec![];
-            std::mem::swap(&mut self.instance_data_culled, &mut instance_data_culled);
-            instance_data_culled.clear();
-            for group in self
-                .instance_groups
-                .iter_mut()
-                .filter(|g| g.visible.get(view_index))
-            {
-                group.instance_start = instance_data_culled.len() as u32;
-                group.instance_count = 0;
-                for (instance_range, _bounds, _visible) in group
-                    .instance_bounds
-                    .iter()
-                    .filter(|(_, _, vis)| vis.get(view_index))
-                {
-                    for instance in instance_range.clone() {
-                        instance_data_culled
-                            .push(self.data.unk48.instance_data.elements[instance as usize]);
-                    }
-                    group.instance_count += instance_range.len() as u32;
-                }
-            }
-            std::mem::swap(&mut instance_data_culled, &mut self.instance_data_culled);
-        }
-
-        unsafe {
-            self.instance_buffer.write(
-                &renderer.gpu.context(),
-                bytemuck::cast_slice(&self.instance_data_culled),
-            )
-        }
-        .expect("Failed to write decorator instance")
     }
 
     fn submit(

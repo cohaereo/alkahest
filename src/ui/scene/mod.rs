@@ -550,16 +550,9 @@ impl Scene {
                     PerformanceImpact::High,
                 );
 
-            ui.checkbox(&mut view_settings.instance_culling, "Instance Culling")
-                .setting_description_tooltip(
-                    "Enables static/decorator instance culling to reduce draw calls that fall \
-                     outside the camera's view.",
-                    PerformanceImpact::Medium,
-                );
-
             ui.checkbox(&mut view_settings.hzb_culling, "HZB Culling")
                 .setting_description_tooltip(
-                    "Enables Hierarchical Z-Buffer (HZB) culling to optimize rendering by quickly \
+                    "Enables Hierarchical Z-Buffer (HZB) culling to optimize rendering by \
                      discarding occluded objects.",
                     PerformanceImpact::High,
                 );
