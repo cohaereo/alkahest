@@ -8,6 +8,11 @@ use crate::{Renderer, tfx::view::View, visibility::frustum::Frustum};
 
 impl Renderer {
     pub fn cull_view(self: &Arc<Self>, view_index: usize, view: &dyn OpaqueView) {
+        if view_index >= 32 {
+            error!("View index out of range ({}, max 32)", view_index);
+            return;
+        }
+
         let features = self.frame_packet.read().misc.subscribed_features;
         // parallel_iter(&mut self.frame_packet.write().frame_nodes, |node| {
         self.frame_packet

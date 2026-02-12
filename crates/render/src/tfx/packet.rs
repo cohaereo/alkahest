@@ -4,7 +4,9 @@ use alkahest_data::tfx::FeatureRendererSubscription;
 use assert_offset::AssertOffsets;
 use glam::{Mat4, Vec3, Vec4};
 
-use crate::{object::RenderObjectHandle, renderer::submit::atmosphere::AtmosphereData};
+use crate::{
+    object::RenderObjectHandle, renderer::submit::atmosphere::AtmosphereData, tfx::view::View,
+};
 
 #[derive(Default)]
 pub struct FramePacket {
@@ -163,7 +165,11 @@ impl VisibilityMask {
 
     #[inline]
     pub fn get(&self, view_index: usize) -> bool {
-        self.0 & (1 << view_index) != 0
+        if view_index >= View::MAX_VIEWS {
+            false
+        } else {
+            self.0 & (1 << view_index) != 0
+        }
     }
 
     #[inline]

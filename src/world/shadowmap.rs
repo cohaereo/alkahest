@@ -76,12 +76,17 @@ pub fn s_extract_all_shadowmaps(world: &hecs::World, renderer: &Arc<Renderer>) {
 
     profiling::scope!("extract_shadowmaps");
 
-    for (i, (_entity, (shadowmap, view))) in world
-        .query::<(&mut ShadowMap, &mut View)>()
-        .iter()
-        .enumerate()
-    {
+    let mut i = 0;
+    for (_entity, (shadowmap, view)) in world.query::<(&mut ShadowMap, &mut View)>().iter() {
         if shadowmap.finished_rendering {
+            continue;
+        }
+
+        if View::FIRST_SHADOW + i >= View::MAX_VIEWS {
+            if let ViewKind::Shadow(v) = &mut view.kind {
+                v.index = usize::MAX;
+            };
+
             continue;
         }
 
@@ -97,6 +102,7 @@ pub fn s_extract_all_shadowmaps(world: &hecs::World, renderer: &Arc<Renderer>) {
 
         v.index = View::FIRST_SHADOW + i;
         debug_assert!(v.index >= View::FIRST_SHADOW);
+        i += 1;
 
         renderer.cull_view(v.index, view);
     }
@@ -122,6 +128,10 @@ pub fn s_submit_all_shadowmaps(
         let ViewKind::Shadow(v) = &view.kind else {
             continue;
         };
+
+        if v.index >= View::MAX_VIEWS {
+            continue;
+        }
 
         {
             cmd_event_span!(cmd, format!("prepare_view_{}", view.name));

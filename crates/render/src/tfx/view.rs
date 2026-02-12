@@ -47,6 +47,7 @@ impl View {
     pub const MAIN: usize = 0;
     pub const SUN: usize = 1;
     pub const FIRST_SHADOW: usize = 2;
+    pub const MAX_VIEWS: usize = 32;
 
     pub fn new_main(
         name: impl Into<String>,

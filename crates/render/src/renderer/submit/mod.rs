@@ -68,6 +68,11 @@ impl Renderer {
     }
 
     fn submit_shadow_view(self: &Arc<Self>, cmd: &mut CommandList, view: &ShadowView) {
+        if view.index >= 32 {
+            error!("Shadow view index out of range ({}, max 32)", view.index);
+            return;
+        }
+
         cmd.state = PipelineState::new(Some(0), Some(2), Some(0), Some(6));
         cmd.flush_states();
 
