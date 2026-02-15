@@ -85,11 +85,14 @@ pub fn load_nodetable_into_world(
             node.translation.www(),
         );
 
-        if let Some(ComponentData::Unknown { class, offset, .. }) = *node.primary_component_data {
-            debug!(
-                "Unknown dynamic component data class: {:08X} in {table_hash} at offset: {:#X}",
-                class, offset
-            );
+        for (i, data) in node.component_data.iter().enumerate() {
+            if let ComponentData::Unknown { class, offset, .. } = data {
+                debug!(
+                    "Unknown dynamic component data class: {:08X} (#{}) in {table_hash} at \
+                     offset: {:#X}",
+                    class, i, offset
+                );
+            }
         }
 
         if node.entity.is_none() {
@@ -102,7 +105,7 @@ pub fn load_nodetable_into_world(
         if let Err(e) = spawn_pattern(
             world,
             node.entity.hash32(),
-            node.primary_component_data.as_ref(),
+            Some(&node.component_data),
             Some(transform),
         ) {
             error!("Failed to load entity: {:?}", e);

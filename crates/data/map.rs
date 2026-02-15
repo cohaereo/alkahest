@@ -1,5 +1,10 @@
+use std::{io::SeekFrom, ops::Deref};
+
 use glam::{Quat, Vec4};
-use tiger_parse::{tiger_type, tiger_variant_enum, FnvHash, OptionalVariantPointer};
+use tiger_parse::{
+    tiger_type, tiger_variant_enum, Endian, FnvHash, OptionalVariantPointer, TigerReadable,
+    VariantEnum,
+};
 use tiger_pkg::TagHash;
 
 use crate::{
@@ -75,12 +80,11 @@ pub struct SMapNodeEntry {
     pub unk68: FnvHash,
     pub unk6c: u32,
     pub world_id: u64,
-    pub primary_component_data: OptionalVariantPointer<ComponentData>,
+    pub component_data: SComponentDataListPtr,
     pub unk80: [u32; 4],
 }
 
 tiger_variant_enum! {
-    [offset = 0x10]
     [Unknown(true)]
     enum ComponentData {
         SStaticTerrainPatchesComponent,
@@ -173,4 +177,88 @@ pub struct SSunDataComponent {
     pub unkc: TagHash,
     pub unk10: TagHash,
     pub unk14: TagHash,
+}
+
+pub struct SComponentDataNode {
+    next: Option<Box<SComponentDataNode>>,
+    data: ComponentData,
+}
+
+impl SComponentDataNode {
+    pub fn next(&self) -> Option<&SComponentDataNode> {
+        self.next.as_deref()
+    }
+
+    pub fn data(&self) -> &ComponentData {
+        &self.data
+    }
+}
+
+pub struct SComponentDataListPtr(Option<SComponentDataNode>);
+
+impl SComponentDataListPtr {
+    pub fn iter<'a>(&'a self) -> ComponentDataListIter<'a> {
+        ComponentDataListIter {
+            current: self.0.as_ref(),
+        }
+    }
+
+    pub fn first(&self) -> Option<&SComponentDataNode> {
+        self.0.as_ref()
+    }
+
+    pub fn get_by_class(&self, class_id: u32) -> Option<&ComponentData> {
+        self.iter().find(|c| c.class_id() == class_id)
+    }
+}
+
+impl TigerReadable for SComponentDataListPtr {
+    fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        endian: Endian,
+    ) -> tiger_parse::Result<Self> {
+        let offset_base = reader.stream_position()?;
+        let offset: i64 = TigerReadable::read_ds_endian(reader, endian)?;
+        if offset == 0 || offset == i64::MAX {
+            return Ok(Self(None));
+        }
+
+        let offset_save = reader.stream_position()?;
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset - 4))?;
+        let resource_type: u32 = TigerReadable::read_ds_endian(reader, endian)?;
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset))?;
+        let next_unboxed = SComponentDataListPtr::read_ds_endian(reader, endian)?;
+        let next = next_unboxed.0.map(Box::new);
+
+        reader.seek(SeekFrom::Start(offset_base))?;
+        reader.seek(SeekFrom::Current(offset + 0x10))?;
+        let data = ComponentData::read_variant_endian(reader, endian, resource_type)?;
+
+        reader.seek(SeekFrom::Start(offset_save))?;
+
+        Ok(Self(Some(SComponentDataNode { next, data })))
+    }
+
+    const ID: Option<u32> = None;
+
+    const SIZE: usize = 8;
+}
+
+pub struct ComponentDataListIter<'a> {
+    current: Option<&'a SComponentDataNode>,
+}
+
+impl<'a> Iterator for ComponentDataListIter<'a> {
+    type Item = &'a ComponentData;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.map(|node| {
+            self.current = node.next.as_deref();
+            &node.data
+        })
+    }
 }

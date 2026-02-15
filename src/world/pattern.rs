@@ -4,7 +4,7 @@ use std::{
 };
 
 use alkahest_data::{
-    map::ComponentData,
+    map::{ComponentData, SComponentDataListPtr},
     pattern::{S8080841B, SPattern},
     tfx::{
         TfxFeatureRenderer,
@@ -30,7 +30,7 @@ use alkahest_render::{
 };
 use anyhow::Context;
 use glam::{Vec3, Vec4Swizzles};
-use itertools::multizip;
+use itertools::{Itertools, multizip};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
@@ -53,19 +53,19 @@ macro_rules! once {
 pub fn spawn_pattern(
     world: &mut hecs::World,
     pattern_tag: TagHash,
-    map_data: Option<&ComponentData>,
+    map_data_list: Option<&SComponentDataListPtr>,
     transform: Option<Transform>,
 ) -> anyhow::Result<hecs::Entity> {
     let header = package_manager()
         .read_tag_struct::<SPattern>(pattern_tag)
         .context("Failed to read SEntity")?;
-    spawn_pattern_from_header(world, &header, map_data, transform)
+    spawn_pattern_from_header(world, &header, map_data_list, transform)
 }
 
 pub fn spawn_pattern_from_header(
     world: &mut hecs::World,
     header: &SPattern,
-    map_data: Option<&ComponentData>,
+    map_data_list: Option<&SComponentDataListPtr>,
     transform: Option<Transform>,
 ) -> anyhow::Result<hecs::Entity> {
     let renderer = Renderer::instance();
@@ -93,16 +93,16 @@ pub fn spawn_pattern_from_header(
             };
         }
 
-        let Some(dynamic_data) = &*component.dynamic_data else {
+        let Some(dynamic_data) = component.dynamic_data.first() else {
             continue;
         };
 
-        let data = if let Some(data) = map_data
-            && data.class_id() == dynamic_data.class_id()
+        let data = if let Some(data) =
+            map_data_list.and_then(|l| l.get_by_class(dynamic_data.data().class_id()))
         {
             data
         } else {
-            dynamic_data
+            dynamic_data.data()
         };
 
         macro_rules! get_component_data {
@@ -476,11 +476,14 @@ pub fn spawn_pattern_from_header(
                     data.class_name(),
                     component.taghash()
                 );
-                if let Some(map_data) = map_data {
+                if let Some(map_data) = map_data_list {
                     debug!(
-                        "\t\t- Has map data ({:08X} / {})",
-                        map_data.class_id(),
-                        map_data.class_name()
+                        "\t\t- Has map data ({})",
+                        map_data
+                            .iter()
+                            .enumerate()
+                            .map(|(i, c)| format!("[{i}]={}({:08X})", c.class_name(), c.class_id()))
+                            .join(", ")
                     );
                 }
 
