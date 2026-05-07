@@ -221,6 +221,7 @@ impl Gui {
             })
             .show_leaf_collapse_buttons(false)
             .show_leaf_close_all_buttons(false)
+            .draggable_tabs(false)
             .show(
                 &ctx,
                 &mut TabViewer {
