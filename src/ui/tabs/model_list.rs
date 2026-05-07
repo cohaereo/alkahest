@@ -63,7 +63,7 @@ impl<P: ModelProvider> ModelListBase<P> {
         {
             let view_settings = thumbnail_scene.view.settings_mut();
             view_settings.autoexposure = false;
-            view_settings.exposure_scale = 0.250;
+            view_settings.exposure_scale = 0.350;
             view_settings.bloom = false;
         }
 
