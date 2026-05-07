@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{Response, Ui};
 use glam::{Quat, Vec2, Vec3};
@@ -9,7 +11,7 @@ pub enum CameraController {
         yaw_pitch: Vec2,
     },
     FirstPerson {
-        speed: f32,
+        ln_speed: f32,
         yaw_pitch: Vec2,
     },
 }
@@ -26,7 +28,7 @@ impl CameraController {
 
     pub fn new_first_person() -> Self {
         Self::FirstPerson {
-            speed: 25.0,
+            ln_speed: 3.2,
             yaw_pitch: Vec2::ZERO,
         }
     }
@@ -68,7 +70,22 @@ impl CameraController {
 
                 camera.position = *target - camera.forward() * real_distance;
             }
-            Self::FirstPerson { speed, yaw_pitch } => {
+            Self::FirstPerson {
+                ln_speed,
+                yaw_pitch,
+            } => {
+                if response.hovered() {
+                    let scroll_delta = ui.input(|i| i.raw_scroll_delta);
+                    if scroll_delta.y != 0.0 {
+                        ui.memory_mut(|m| {
+                            m.data
+                                .insert_temp("scene_last_speed_change".into(), Instant::now());
+                        });
+                    }
+                    *ln_speed += scroll_delta.y / 250.0;
+                    *ln_speed = ln_speed.clamp(-10.0, 5.0);
+                }
+
                 let mut movement = Vec3::ZERO;
                 ui.input(|i| {
                     if i.key_down(egui::Key::W) {
@@ -109,7 +126,7 @@ impl CameraController {
                     *yaw_pitch += Vec2::new(drag_delta_scaled.x, drag_delta_scaled.y);
                     yaw_pitch.y = yaw_pitch.y.clamp(-89.0, 89.0);
                 }
-                camera.position += movement * delta_time * *speed;
+                camera.position += movement * delta_time * ln_speed.exp();
             }
         }
 
@@ -150,6 +167,13 @@ impl CameraController {
                 camera.rotation = Quat::from_rotation_z(yaw_pitch.x.to_radians())
                     * Quat::from_rotation_y(yaw_pitch.y.to_radians());
             }
+        }
+    }
+
+    pub fn speed(&self) -> f32 {
+        match self {
+            Self::Orbit { .. } => 1.0,
+            Self::FirstPerson { ln_speed, .. } => ln_speed.exp(),
         }
     }
 }

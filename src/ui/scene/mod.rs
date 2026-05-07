@@ -254,6 +254,28 @@ impl Scene {
                 egui::UiBuilder::new().max_rect(panel_rect.shrink2(vec2(12.0, 4.0))),
                 |ui| {
                     ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                        if let Some(last_speed_change) = ui.memory(|m| {
+                            m.data.get_temp::<Instant>("scene_last_speed_change".into())
+                        }) && last_speed_change.elapsed().as_secs_f32() <= 2.0
+                        {
+                            ui.label(format!(
+                                "{} Camera Speed: {:.1}m/s",
+                                GoogleMaterialSymbols::Speed,
+                                self.controller.speed()
+                            ));
+                        }
+
+                        // if self.umbra_result == QueryErrorCode::OutsideScene {
+                        //     ui.label(
+                        //         RichText::new(format!(
+                        //             "{} Outside Scene",
+                        //             GoogleMaterialSymbols::Warning
+                        //         ))
+                        //         .color(Color32::YELLOW)
+                        //         .size(16.0),
+                        //     );
+                        // }
+
                         if self.world.is_empty() {
                             ui.label(
                                 RichText::new(format!(
