@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{
@@ -37,6 +39,8 @@ pub struct ModelListBase<P: ModelProvider> {
     hovered_tag: TagHash,
     hover_vector: Vec2,
     hide_empty: bool,
+
+    filter: String,
 
     provider: P,
 }
@@ -90,6 +94,8 @@ impl<P: ModelProvider> ModelListBase<P> {
             hide_empty: true,
             hovered_tag: TagHash::NONE,
             hover_vector: Vec2::ZERO,
+
+            filter: String::new(),
 
             provider,
         }
@@ -180,9 +186,19 @@ impl<P: ModelProvider> ModelListBase<P> {
             .insert(TextStyle::Button, FontId::proportional(16.0));
         ui.style_mut().spacing.button_padding = Vec2::new(8.0, 4.0);
 
+        let (filter_hash, filter_valid) = match TagHash::from_str(&self.filter) {
+            Ok(o) => (Some(o), true),
+            Err(_) => (None, false),
+        };
+
         egui::SidePanel::left(format!("{}_packages_list", self.provider.name())).show_inside(
             ui,
             |ui| {
+                egui::TextEdit::singleline(&mut self.filter)
+                    .text_color_opt((!filter_valid).then_some(Color32::RED))
+                    .hint_text("Search by Hash")
+                    .ui(ui);
+
                 ui.horizontal(|ui| {
                     ui.label("Sort by:");
                     egui::ComboBox::new("sorting_mode", "")
@@ -228,6 +244,12 @@ impl<P: ModelProvider> ModelListBase<P> {
                         let mut pkg_to_clear: Option<u16> = None;
 
                         for pkg_id in self.package_ids.iter() {
+                            if let Some(hash) = filter_hash
+                                && *pkg_id != hash.pkg_id()
+                            {
+                                continue;
+                            }
+
                             let path = &package_manager().package_paths[pkg_id];
                             if ui
                                 .selectable_label(
@@ -386,6 +408,12 @@ impl<P: ModelProvider> ModelListBase<P> {
 
                         ui.spacing_mut().item_spacing = vec2(16.0, 16.0);
                         for model in entries {
+                            if let Some(hash) = filter_hash
+                                && model.hash != hash
+                            {
+                                continue;
+                            }
+
                             if self.hide_empty && model.is_empty() {
                                 continue;
                             }
