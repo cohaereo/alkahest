@@ -65,6 +65,7 @@ impl<P: ModelProvider> ModelListBase<P> {
 
         let mut scene = Scene::new(Renderer::instance().clone(), Camera::default()).unwrap();
         *scene.view.settings_mut() = thumbnail_scene.view.settings().clone();
+        scene.view.settings_mut().sun_shadows = true;
         scene.camera.far = 100_000.0;
 
         let apply_scene_configuration = |scene: &mut Scene| {
