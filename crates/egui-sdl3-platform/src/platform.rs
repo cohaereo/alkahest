@@ -261,9 +261,22 @@ impl Platform {
         let output = self.egui_ctx.end_pass();
 
         for c in &output.platform_output.commands {
-            if let egui::OutputCommand::CopyText(text) = c {
-                if let Err(e) = video.clipboard().set_clipboard_text(text) {
-                    tracing::error!("Failed to assign text to clipboard: {}", e);
+            match c {
+                egui::OutputCommand::CopyText(text) => {
+                    if let Err(e) = video.clipboard().set_clipboard_text(text) {
+                        tracing::error!("Failed to assign text to clipboard: {}", e);
+                    }
+                }
+                egui::OutputCommand::CopyImage(_color_image) => {
+                    tracing::error!(
+                        "egui requested to copy an image to the clipboard, but this is not \
+                         supported by the sdl3 integration"
+                    );
+                }
+                egui::OutputCommand::OpenUrl(open_url) => {
+                    if let Err(e) = sdl3::url::open_url(&open_url.url) {
+                        tracing::error!("Failed to open url '{}': {}", open_url.url, e);
+                    }
                 }
             }
         }

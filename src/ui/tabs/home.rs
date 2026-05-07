@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use egui::Ui;
+use egui::{Ui, vec2};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use super::{Tab, TabResult, entity_list::EntityListTab, map_list::MapListTab};
@@ -67,6 +67,44 @@ impl HomeTab {
             let _ = uis[1].d_button(format!("{} TEXTURES", GoogleMaterialSymbols::Image));
             let _ = uis[1].d_button(format!("{} UI", GoogleMaterialSymbols::DesktopWindows));
         });
+
+        egui::TopBottomPanel::bottom("home_links")
+            .frame(egui::Frame::NONE)
+            .show_separator_line(false)
+            .resizable(false)
+            .show_inside(ui, |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.image_link(
+                        egui::include_image!("../../../assets/ui/github.svg"),
+                        vec2(64.0, 64.0),
+                        "https://github.com/cohaereo/alkahest",
+                    );
+
+                    ui.image_link(
+                        egui::include_image!("../../../assets/ui/discord.svg"),
+                        vec2(64.0, 48.0),
+                        "https://discord.gg/ssGYcJrBUM",
+                    )
+                    .on_hover_text("Join the Discord server");
+
+                    // let response = ui
+                    //     .allocate_response(vec2(64.0, 48.0), Sense::click())
+                    //     .on_hover_cursor(egui::CursorIcon::PointingHand);
+
+                    // egui::Image::new(egui::include_image!("../../../assets/ui/discord.svg"))
+                    //     .tint(if response.hovered() {
+                    //         egui::Color32::LIGHT_GRAY
+                    //     } else {
+                    //         egui::Color32::DARK_GRAY
+                    //     })
+                    //     .paint_at(ui, response.rect);
+
+                    // if response.clicked() {
+                    //     ui.ctx()
+                    //         .open_url(egui::OpenUrl::new_tab("https://discord.gg/ssGYcJrBUM"));
+                    // }
+                });
+            });
 
         // ui.separator();
 
