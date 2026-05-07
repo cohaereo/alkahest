@@ -29,7 +29,7 @@ use alkahest_render::{
     },
 };
 use anyhow::Context;
-use glam::{Vec3, Vec4Swizzles};
+use glam::{Vec3, Vec4Swizzles, vec3, vec4};
 use itertools::{Itertools, multizip};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
@@ -412,14 +412,19 @@ pub fn spawn_pattern_from_header(
                 if let Some(ref sun) = *get_component_data!(SSunDataComponent).unk0 {
                     let SUnk80808ac8Variant::SSunAngles(a0) = &*sun.unk10.unk10;
                     // let SUnk80808ac8Variant::SSunAngles(_a1) = &*sun.unk14.unk10;
-                    let SUnk80808ac8Variant::SSunAngles(a2) = &*sun.unk18.unk10;
+                    let atmosphere_directions = if let Some(a2_parent) = &*sun.unk18 {
+                        let SUnk80808ac8Variant::SSunAngles(a2) = &*a2_parent.unk10;
+                        a2.angles.clone()
+                    } else {
+                        [vec4(-1.0, -1.0, -1.0, 0.0).normalize(); 3600].to_vec()
+                    };
                     // let SUnk80808ac8Variant::SSunAngles(_a3) = &*sun.unk1c.unk10;
 
                     world.insert_one(
                         entity,
                         SunDirections {
                             sun_directions: a0.angles.clone(),
-                            atmosphere_directions: a2.angles.clone(),
+                            atmosphere_directions,
                         },
                     )?;
                 }

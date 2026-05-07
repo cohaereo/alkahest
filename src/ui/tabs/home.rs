@@ -52,13 +52,15 @@ impl HomeTab {
                 .clicked()
             {
                 // self.added_nodes.push(Tab::DynamicList);
-                result = TabResult::Open(Tab::EntityList(Box::new(EntityListTab::new())));
+                result =
+                    TabResult::Open(Tab::EntityList(Box::new(EntityListTab::new(&shared_state))));
             }
             if uis[0]
                 .d_button(format!("{} STATICS", GoogleMaterialSymbols::Landscape))
                 .clicked()
             {
-                result = TabResult::Open(Tab::StaticList(Box::new(StaticListTab::new())));
+                result =
+                    TabResult::Open(Tab::StaticList(Box::new(StaticListTab::new(&shared_state))));
             }
 
             uis[1].heading("2D");

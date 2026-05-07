@@ -12,6 +12,7 @@ use tiger_pkg::{TagHash, package_manager};
 
 use super::TabResult;
 use crate::{
+    app::SharedState,
     ui::{
         scene::{
             Scene,
@@ -46,7 +47,7 @@ pub struct ModelListBase<P: ModelProvider> {
 }
 
 impl<P: ModelProvider> ModelListBase<P> {
-    pub fn new(provider: P) -> Self {
+    pub fn new(provider: P, shared: &SharedState) -> Self {
         let mut thumbnail_scene = Scene::new(
             Renderer::instance().clone(),
             Camera {
@@ -56,6 +57,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                 far: 250.0,
                 ..Default::default()
             },
+            shared,
         )
         .unwrap()
         .with_controller(CameraController::new_orbit(Vec3::ZERO, 25.0));
@@ -67,7 +69,8 @@ impl<P: ModelProvider> ModelListBase<P> {
             view_settings.bloom = false;
         }
 
-        let mut scene = Scene::new(Renderer::instance().clone(), Camera::default()).unwrap();
+        let mut scene =
+            Scene::new(Renderer::instance().clone(), Camera::default(), shared).unwrap();
         *scene.view.settings_mut() = thumbnail_scene.view.settings().clone();
         scene.view.settings_mut().sun_shadows = true;
         scene.camera.far = 100_000.0;

@@ -7,6 +7,7 @@ use tiger_pkg::{TagHash, package_manager};
 
 use super::TabResult;
 use crate::{
+    app::SharedState,
     ui::tabs::model_list::{ModelEntry, ModelListBase, ModelProvider},
     world::{
         pattern::{spawn_pattern, spawn_pattern_from_header},
@@ -19,9 +20,9 @@ pub struct EntityListTab {
 }
 
 impl EntityListTab {
-    pub fn new() -> Self {
+    pub fn new(shared: &SharedState) -> Self {
         Self {
-            base: ModelListBase::new(EntityModelProvider::new()),
+            base: ModelListBase::new(EntityModelProvider::new(), shared),
         }
     }
 

@@ -14,6 +14,7 @@ use tiger_pkg::{TagHash, package_manager};
 
 use super::TabResult;
 use crate::{
+    app::SharedState,
     ui::tabs::model_list::{ModelEntry, ModelListBase, ModelProvider},
     world::{render_objects::DynamicRenderObject, transform::Transform},
 };
@@ -23,9 +24,9 @@ pub struct StaticListTab {
 }
 
 impl StaticListTab {
-    pub fn new() -> Self {
+    pub fn new(shared: &SharedState) -> Self {
         Self {
-            base: ModelListBase::new(StaticModelProvider::new()),
+            base: ModelListBase::new(StaticModelProvider::new(), shared),
         }
     }
 

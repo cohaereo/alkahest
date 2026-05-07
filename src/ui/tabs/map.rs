@@ -3,6 +3,7 @@ use egui::{Color32, Rect, vec2};
 use tiger_pkg::TagHash;
 
 use crate::{
+    app::SharedState,
     task::Task,
     ui::{
         scene::{Scene, controller::CameraController},
@@ -18,7 +19,7 @@ pub struct MapTab {
 }
 
 impl MapTab {
-    pub fn new(tag: TagHash, name: String) -> anyhow::Result<Self> {
+    pub fn new(tag: TagHash, name: String, shared: &SharedState) -> anyhow::Result<Self> {
         Ok(Self {
             load_task: Task::new(move || {
                 let mut world = hecs::World::new();
@@ -29,7 +30,7 @@ impl MapTab {
             tag,
             name,
             scene: Box::new(
-                Scene::new(Renderer::instance().clone(), Camera::default())?
+                Scene::new(Renderer::instance().clone(), Camera::default(), shared)?
                     .with_controller(CameraController::new_first_person()),
             ),
         })

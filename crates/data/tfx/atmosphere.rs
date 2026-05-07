@@ -24,7 +24,7 @@ pub struct SUnk80806a74 {
     pub unk0: Vec4,
     pub unk10: Tag<SUnk80808ac8>,
     pub unk14: OptionalTag<SUnk80808ac8>,
-    pub unk18: Tag<SUnk80808ac8>,
+    pub unk18: OptionalTag<SUnk80808ac8>,
     pub unk1c: OptionalTag<SUnk80808ac8>,
 }
 

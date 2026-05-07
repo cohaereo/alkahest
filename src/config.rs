@@ -2,6 +2,8 @@
 pub struct AppConfig {
     pub vsync: bool,
     pub resolution_scale: f32,
+    pub framerate_limit: usize,
+    pub framelimiter_enabled: bool,
 }
 
 impl Default for AppConfig {
@@ -9,6 +11,8 @@ impl Default for AppConfig {
         Self {
             vsync: true,
             resolution_scale: 1.0,
+            framerate_limit: 60,
+            framelimiter_enabled: false,
         }
     }
 }

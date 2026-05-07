@@ -22,7 +22,6 @@ use alkahest_render::{
             DebugPipeline,
             atmosphere::{AtmosphereData, SunDirections},
         },
-        visibility::NoCulling,
     },
     tfx::{
         externs::get_global_channel_name,
@@ -41,6 +40,7 @@ use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use crate::{
+    app::SharedState,
     ui::{
         scene::controller::CameraController,
         util::{ExternalDataWidgetExt, UiExt},
@@ -86,7 +86,11 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(renderer: Arc<Renderer>, camera: Camera) -> anyhow::Result<Self> {
+    pub fn new(
+        renderer: Arc<Renderer>,
+        camera: Camera,
+        shared: &SharedState,
+    ) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
 
         let sun_shadow_views = std::array::from_fn(|i| {
@@ -96,9 +100,13 @@ impl Scene {
             v
         });
 
+        let view = View::new_main("main", &renderer.gpu, (128, 128))?;
+        let view_surfaces = view.surfaces().unwrap().clone();
+        view_surfaces.set_resolution_scale(shared.config.read().resolution_scale);
+
         Ok(Self {
             world: hecs::World::new(),
-            view: View::new_main("main", &renderer.gpu, (128, 128))?,
+            view,
             global_channels: renderer.externs.default_globals,
             renderer,
             camera,

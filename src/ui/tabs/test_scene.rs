@@ -4,6 +4,7 @@ use glam::{Quat, Vec3, vec3};
 use tiger_pkg::TagHash;
 
 use crate::{
+    app::SharedState,
     ui::scene::{Scene, controller::CameraController},
     world::{pattern, transform::Transform},
 };
@@ -13,9 +14,9 @@ pub struct TestSceneTab {
 }
 
 impl TestSceneTab {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(shared: &SharedState) -> anyhow::Result<Self> {
         let mut scene = Box::new(
-            Scene::new(Renderer::instance().clone(), Camera::default())?
+            Scene::new(Renderer::instance().clone(), Camera::default(), shared)?
                 .with_controller(CameraController::new_first_person()),
         );
 

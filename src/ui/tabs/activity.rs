@@ -67,7 +67,7 @@ impl ActivityTab {
             tag,
             name,
             scene: Box::new(
-                Scene::new(Renderer::instance().clone(), Camera::default())?
+                Scene::new(Renderer::instance().clone(), Camera::default(), state)?
                     .with_controller(CameraController::new_first_person()),
             ),
         })

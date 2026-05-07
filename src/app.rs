@@ -57,10 +57,13 @@ impl App {
         let renderer = Arc::new(Renderer::new(gpu.clone()).context("Failed to create renderer")?);
         Renderer::set_instance(renderer.clone());
 
+        let shared_state: Arc<SharedState> = SharedState::new()
+            .context("Failed to create shared state")?
+            .into();
         let mut gui = Gui::new(&gpu, sdl.clone(), window.clone())?;
         if let Some(map_hash) = args.open_map.as_ref() {
             match TagHash::from_str(map_hash) {
-                Ok(tag) => match MapTab::new(tag, String::new()) {
+                Ok(tag) => match MapTab::new(tag, String::new(), &shared_state) {
                     Ok(tab) => gui.add_tab(Tab::Map(tab)),
                     Err(e) => error!("Failed to open map tab for {}: {:?}", map_hash, e),
                 },
@@ -72,7 +75,7 @@ impl App {
 
         if args.test_scene {
             gui.add_tab(Tab::TestScene(
-                TestSceneTab::new().context("failed to create test scene")?,
+                TestSceneTab::new(&shared_state).context("failed to create test scene")?,
             ));
         }
 
@@ -85,9 +88,7 @@ impl App {
             _gpu: gpu,
             running: true,
 
-            shared_state: SharedState::new()
-                .context("Failed to create shared state")?
-                .into(),
+            shared_state,
 
             last_frame_time: Instant::now(),
             frametime_histogram: FrametimeHistogram::new(10),
@@ -141,6 +142,14 @@ impl App {
 
         self.renderer
             .present_frame(self.shared_state.config.read().vsync);
+
+        let config = self.shared_state.config.read();
+        if config.framelimiter_enabled {
+            let target_frame_delta = 1.0 / config.framerate_limit as f32;
+            while self.last_frame_time.elapsed().as_secs_f32() < target_frame_delta {
+                std::hint::spin_loop();
+            }
+        }
 
         profiling::finish_frame!();
     }
