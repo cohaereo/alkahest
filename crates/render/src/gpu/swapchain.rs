@@ -60,7 +60,7 @@ impl Swapchain {
             == Some(SwapChainStatus::Occluded)
         {
             self.present_parameters = PresentFlags::TEST;
-            std::thread::sleep(Duration::from_millis(20));
+            std::thread::sleep(Duration::from_millis(50));
         } else {
             self.present_parameters = PresentFlags::empty();
         }

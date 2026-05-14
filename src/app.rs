@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
     str::FromStr,
     sync::Arc,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use ahash::HashMap;
@@ -38,7 +38,7 @@ use crate::{
 
 pub struct App {
     pub sdl: Rc<sdl3::Sdl>,
-    pub _window: Rc<Window>,
+    pub window: Rc<Window>,
     pub _gpu: Arc<Gpu>,
     pub renderer: Arc<Renderer>,
     pub gui: Gui,
@@ -84,7 +84,7 @@ impl App {
             renderer,
             gui,
             sdl,
-            _window: window,
+            window,
             _gpu: gpu,
             running: true,
 
@@ -149,6 +149,10 @@ impl App {
             while self.last_frame_time.elapsed().as_secs_f32() < target_frame_delta {
                 std::hint::spin_loop();
             }
+        }
+
+        if !self.window.has_input_focus() && !self.window.has_mouse_focus() {
+            std::thread::sleep(Duration::from_millis(50));
         }
 
         profiling::finish_frame!();
