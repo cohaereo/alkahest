@@ -9,6 +9,7 @@ lazy_static! {
             .workers
             .iter_mut()
             .for_each(|w| w.priority = potassium::ThreadPriority::Highest);
+        config.stack_size_bytes = 128 * 1024;
         config
     });
 }
