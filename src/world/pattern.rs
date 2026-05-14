@@ -471,6 +471,20 @@ pub fn spawn_pattern_from_header(
 
                 add_unknown_component!("Sequence");
             }
+            0x80806CF0 => {
+                let data = get_component_data!(SUmbraTomeComponent);
+                let Some(tomes) = &*data.tag else {
+                    tracing::error!("Missing tag for SUmbraTomeComponent");
+                    continue;
+                };
+
+                let tome0_data = package_manager()
+                    .read_tag(tomes.tome0)
+                    .context("failed to read tome0 data")?;
+                let tome = umbra::Tome::load_from_buffer(&tome0_data);
+
+                world.insert_one(entity, tome)?;
+            }
             u => {
                 debug!(
                     "\t- Unknown entity component type {:08X}, tag {:08X}, data type {:08X}/{} \

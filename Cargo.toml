@@ -15,6 +15,7 @@ members = [
     "crates/render",
     "crates/egui-d3d11",
     "crates/egui-sdl3-platform",
+    "crates/umbra3",
 ]
 
 [workspace.dependencies]
@@ -52,6 +53,7 @@ alkahest-data = { path = "./crates/data" }
 alkahest-render = { path = "./crates/render" }
 egui-d3d11 = { path = "./crates/egui-d3d11" }
 egui-sdl3-platform = { path = "./crates/egui-sdl3-platform" }
+umbra = { path = "./crates/umbra3" }
 
 # (De)serialization
 gltf = { package = "gltf-json", version = "1.4.1" }

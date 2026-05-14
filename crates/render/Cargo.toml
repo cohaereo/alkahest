@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 alkahest-core = { path = "../core" }
 alkahest-data = { path = "../data" }
+umbra = { path = "../umbra3" }
 
 anyhow.workspace = true
 arc-atomic = "0.1"

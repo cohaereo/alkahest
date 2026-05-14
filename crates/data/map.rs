@@ -22,6 +22,7 @@ use crate::{
             sky_objects::SSkyObjectCollection,
         },
     },
+    umbra::SUmbraTomes,
 };
 
 #[derive(Debug)]
@@ -99,7 +100,8 @@ tiger_variant_enum! {
         SRoadDecalCollectionComponent,
         SWaterPlaneComponent,
         SAtmosphereDataComponent,
-        SSunDataComponent
+        SSunDataComponent,
+        SUmbraTomeComponent
         // SMaterialPermutationsComponent,
     }
 }
@@ -177,6 +179,11 @@ pub struct SSunDataComponent {
     pub unkc: TagHash,
     pub unk10: TagHash,
     pub unk14: TagHash,
+}
+
+#[tiger_type(id = 0x80806CF1)]
+pub struct SUmbraTomeComponent {
+    pub tag: OptionalTag<SUmbraTomes>,
 }
 
 pub struct SComponentDataNode {

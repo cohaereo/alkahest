@@ -1,0 +1,11 @@
+[package]
+name = "umbra3-sys"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+link-cplusplus = "1"
+
+[build-dependencies]
+bindgen = "0.72.1"
+cmake = "0.1.57"

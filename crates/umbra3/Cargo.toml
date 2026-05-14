@@ -1,0 +1,13 @@
+[package]
+name = "umbra"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam.workspace = true
+umbra3-sys = { path = "./umbra3-sys" }
+profiling.workspace = true
+
+[dev-dependencies]
+anyhow = "1.0.102"
+rayon = "1.11.0"

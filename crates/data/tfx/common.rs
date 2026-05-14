@@ -122,12 +122,21 @@ impl AxisAlignedBBox {
     }
 
     pub fn contains(&self, point: Vec3) -> bool {
-        self.min.x <= point.x
+        point.x >= self.min.x
             && point.x <= self.max.x
-            && self.min.y <= point.y
+            && point.y >= self.min.y
             && point.y <= self.max.y
-            && self.min.z <= point.z
+            && point.z >= self.min.z
             && point.z <= self.max.z
+    }
+
+    pub fn intersects_aabb(&self, other: &Self) -> bool {
+        self.max.x >= other.min.x
+            && self.min.x <= other.max.x
+            && self.max.y >= other.min.y
+            && self.min.y <= other.max.y
+            && self.max.z >= other.min.z
+            && self.min.z <= other.max.z
     }
 
     pub fn expand(&self, amount: Vec3) -> Self {
