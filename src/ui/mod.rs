@@ -243,23 +243,23 @@ impl Gui {
             }
         }
 
-        {
-            let painter = ctx.layer_painter(egui::LayerId::new(
-                egui::Order::Foreground,
-                egui::Id::new("sodi"),
-            ));
+        // {
+        //     let painter = ctx.layer_painter(egui::LayerId::new(
+        //         egui::Order::Foreground,
+        //         egui::Id::new("sodi"),
+        //     ));
 
-            painter.text(
-                ctx.content_rect().left_bottom() + vec2(24.0, -16.0),
-                egui::Align2::LEFT_BOTTOM,
-                format!(
-                    "{} TEST BUILD, DO NOT DISTRIBUTE",
-                    GoogleMaterialSymbols::Lock
-                ),
-                egui::FontId::new(48.0, egui::FontFamily::Name("Medium".into())),
-                egui::Color32::from_white_alpha(127),
-            );
-        }
+        //     painter.text(
+        //         ctx.content_rect().left_bottom() + vec2(24.0, -16.0),
+        //         egui::Align2::LEFT_BOTTOM,
+        //         format!(
+        //             "{} TEST BUILD, DO NOT DISTRIBUTE",
+        //             GoogleMaterialSymbols::Lock
+        //         ),
+        //         egui::FontId::new(48.0, egui::FontFamily::Name("Medium".into())),
+        //         egui::Color32::from_white_alpha(127),
+        //     );
+        // }
 
         let output = self
             .egui_sdl3
