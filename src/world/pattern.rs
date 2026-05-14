@@ -485,6 +485,20 @@ pub fn spawn_pattern_from_header(
 
                 world.insert_one(entity, tome)?;
             }
+            0x80808CB3 => {
+                let data = get_component_data!(SRespawnPointsComponent);
+                let Some(points) = &*data.tag else {
+                    tracing::error!("Missing tag for SRespawnPointsComponent");
+                    continue;
+                };
+
+                for point in &points.unk8 {
+                    world.spawn((
+                        Transform::new(point.translation.truncate(), point.rotation, Vec3::ONE),
+                        point.clone(),
+                    ));
+                }
+            }
             u => {
                 debug!(
                     "\t- Unknown entity component type {:08X}, tag {:08X}, data type {:08X}/{} \

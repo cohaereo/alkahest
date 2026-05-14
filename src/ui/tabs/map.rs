@@ -1,5 +1,7 @@
+use alkahest_data::map::SRespawnPoint;
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{Color32, Rect, vec2};
+use glam::Vec3;
 use tiger_pkg::TagHash;
 
 use crate::{
@@ -9,6 +11,7 @@ use crate::{
         scene::{Scene, controller::CameraController},
         util::UiExt,
     },
+    world::transform::Transform,
 };
 
 pub struct MapTab {
@@ -40,6 +43,40 @@ impl MapTab {
         if let Some(map) = self.load_task.get() {
             match map {
                 Ok(world) => {
+                    let mut spawn_candidates = Vec::new();
+                    for (_, (transform, respawn_point)) in
+                        world.query::<(&Transform, &SRespawnPoint)>().iter()
+                    {
+                        spawn_candidates.push((
+                            transform.translation,
+                            transform.rotation,
+                            respawn_point.unk20,
+                        ));
+                    }
+
+                    // If there's any spawn points labeled 'default' (0x2ea8fb98), filter out the rest
+                    if spawn_candidates
+                        .iter()
+                        .find(|(_, _, p)| *p == 0x2ea8fb98)
+                        .is_some()
+                    {
+                        spawn_candidates.retain(|(_, _, p)| *p == 0x2ea8fb98);
+                    }
+
+                    if let Some((translation, rotation, hash)) = fastrand::choice(spawn_candidates)
+                    {
+                        self.scene.camera.position = translation + Vec3::Z * 2.0;
+                        self.scene.camera.rotation = rotation;
+                        self.scene
+                            .controller
+                            .set_yaw_pitch(self.scene.camera.get_yaw_pitch());
+                        info!(
+                            "Spawning camera at {translation:?} {rotation:?} / {:?} (spawn point \
+                             0x{hash:X})",
+                            self.scene.camera.get_yaw_pitch()
+                        );
+                    }
+
                     self.scene.set_world(world);
                 }
                 Err(_e) => {

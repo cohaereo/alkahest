@@ -101,7 +101,8 @@ tiger_variant_enum! {
         SWaterPlaneComponent,
         SAtmosphereDataComponent,
         SSunDataComponent,
-        SUmbraTomeComponent
+        SUmbraTomeComponent,
+        SRespawnPointsComponent
         // SMaterialPermutationsComponent,
     }
 }
@@ -184,6 +185,28 @@ pub struct SSunDataComponent {
 #[tiger_type(id = 0x80806CF1)]
 pub struct SUmbraTomeComponent {
     pub tag: OptionalTag<SUmbraTomes>,
+}
+
+#[tiger_type(id = 0x80808CB5)]
+pub struct SRespawnPointsComponent {
+    pub tag: OptionalTag<SRespawnPoints>,
+}
+
+#[derive(Clone, Debug)]
+#[tiger_type(id = 0x80808CB7)]
+pub struct SRespawnPoints {
+    pub file_size: u64,
+    pub unk8: Vec<SRespawnPoint>,
+}
+
+#[derive(Clone, Debug)]
+#[tiger_type(id = 0x80808CB9)]
+pub struct SRespawnPoint {
+    pub rotation: Quat,
+    pub translation: Vec4,
+    pub unk20: u32,
+    // cohae: Probably padding
+    pub unk24: [u32; 3],
 }
 
 pub struct SComponentDataNode {
