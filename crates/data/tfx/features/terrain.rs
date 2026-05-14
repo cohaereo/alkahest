@@ -53,7 +53,7 @@ pub struct STerrainMeshGroup {
 
 impl STerrainMeshGroup {
     pub fn aabb(&self) -> AxisAlignedBBox {
-        AxisAlignedBBox::from_center_extents(self.center.xyz(), self.extents.xyz())
+        AxisAlignedBBox::from_center_extents(self.center.xyz(), self.extents.xyz() * 2.0)
     }
 }
 
