@@ -29,7 +29,7 @@ impl HomeTab {
         }
 
         ui.add_space(32.0);
-        ui.columns(2, |uis| {
+        ui.columns(1, |uis| {
             uis[0].heading("3D");
             uis[0].add_space(4.0);
             if uis[0]
@@ -53,21 +53,21 @@ impl HomeTab {
             {
                 // self.added_nodes.push(Tab::DynamicList);
                 result =
-                    TabResult::Open(Tab::EntityList(Box::new(EntityListTab::new(&shared_state))));
+                    TabResult::Open(Tab::EntityList(Box::new(EntityListTab::new(shared_state))));
             }
             if uis[0]
                 .d_button(format!("{} STATICS", GoogleMaterialSymbols::Landscape))
                 .clicked()
             {
                 result =
-                    TabResult::Open(Tab::StaticList(Box::new(StaticListTab::new(&shared_state))));
+                    TabResult::Open(Tab::StaticList(Box::new(StaticListTab::new(shared_state))));
             }
 
-            uis[1].heading("2D");
-            uis[1].add_space(4.0);
-            uis[1].disable();
-            let _ = uis[1].d_button(format!("{} TEXTURES", GoogleMaterialSymbols::Image));
-            let _ = uis[1].d_button(format!("{} UI", GoogleMaterialSymbols::DesktopWindows));
+            // uis[1].heading("2D");
+            // uis[1].add_space(4.0);
+            // uis[1].disable();
+            // let _ = uis[1].d_button(format!("{} TEXTURES", GoogleMaterialSymbols::Image));
+            // let _ = uis[1].d_button(format!("{} UI", GoogleMaterialSymbols::DesktopWindows));
         });
 
         egui::TopBottomPanel::bottom("home_links")
