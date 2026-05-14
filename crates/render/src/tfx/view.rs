@@ -402,7 +402,7 @@ impl Default for RenderSettings {
             volumetrics: true,
             shadows: true,
             autoexposure: true,
-            sun_shadows: false,
+            sun_shadows: true,
             anti_aliasing: true,
 
             multithreading: true,
