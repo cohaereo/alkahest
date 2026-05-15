@@ -136,6 +136,7 @@ impl ModelProvider for EntityModelProvider {
                             hash,
                             thumbnail_world: Some(world),
                             thumbnail: None,
+                            rerender_needed: false,
                         })
                     }
                     Err(err) => {

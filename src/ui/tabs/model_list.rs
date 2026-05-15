@@ -109,7 +109,10 @@ impl<P: ModelProvider> ModelListBase<P> {
             return;
         };
 
-        for entry in entries.iter_mut().filter(|e| e.thumbnail.is_none()) {
+        for entry in entries
+            .iter_mut()
+            .filter(|e| e.thumbnail.is_none() || e.rerender_needed)
+        {
             if let Some(world) = entry.thumbnail_world.take() {
                 if s_are_all_objects_loaded(&world, Renderer::instance()) {
                     let bb = world
@@ -125,6 +128,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                     match self.thumbnail_scene.copy_output_as_texture() {
                         Ok(o) => {
                             entry.thumbnail = Some(o);
+                            entry.rerender_needed = false;
                         }
                         Err(e) => {
                             error!("Failed to render thumbnail for {}: {}", entry.hash, e);
@@ -397,7 +401,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                 .auto_shrink([false; 2])
                 .scroll_source(ScrollSource::MOUSE_WHEEL | ScrollSource::SCROLL_BAR)
                 .show(ui, |ui| {
-                    let Some(entries) = self.provider.package(self.current_package) else {
+                    let Some(entries) = self.provider.package_mut(self.current_package) else {
                         ui.label("No package selected");
                         return;
                     };
@@ -497,6 +501,9 @@ impl<P: ModelProvider> ModelListBase<P> {
                                     Color32::WHITE,
                                 );
                             } else {
+                                if ui.is_rect_visible(card_response.rect) {
+                                    model.rerender_needed = true;
+                                }
                                 ui.d_paint_spinner_at(Rect::from_center_size(
                                     card_image_rect.center(),
                                     vec2(64.0, 64.0),
@@ -600,6 +607,7 @@ pub struct ModelEntry {
     pub hash: TagHash,
     pub thumbnail_world: Option<hecs::World>,
     pub thumbnail: Option<d3d11::ShaderResourceView>,
+    pub rerender_needed: bool,
 }
 
 impl ModelEntry {
