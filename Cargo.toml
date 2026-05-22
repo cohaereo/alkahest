@@ -15,6 +15,7 @@ members = [
     "crates/render",
     "crates/egui-d3d11",
     "crates/egui-sdl3-platform",
+    "crates/rrise",
     "crates/umbra3",
 ]
 
