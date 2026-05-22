@@ -42,6 +42,7 @@ use itertools::Itertools;
 
 use crate::{
     app::SharedState,
+    audio,
     ui::{
         scene::controller::CameraController,
         util::{ExternalDataWidgetExt, UiExt},
@@ -346,6 +347,13 @@ impl Scene {
 
             self.render(delta_time, resolution);
         });
+
+        audio::set_gameobject_pos(
+            audio::LISTENER_ID,
+            self.camera.position,
+            self.camera.up(),
+            self.camera.forward(),
+        );
     }
 
     fn show_toolbar(&mut self, ui: &mut Ui) {

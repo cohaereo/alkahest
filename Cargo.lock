@@ -130,6 +130,7 @@ dependencies = [
  "parking_lot",
  "profiling",
  "rayon",
+ "rrise",
  "sdl3",
  "serde",
  "serde_json",
@@ -3213,6 +3214,7 @@ checksum = "6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97"
 name = "rrise"
 version = "0.2.3"
 dependencies = [
+ "alkahest-core",
  "bindgen",
  "cc",
  "crossbeam-channel",
@@ -3221,6 +3223,7 @@ dependencies = [
  "log",
  "paste",
  "simple_logger",
+ "tiger-pkg",
 ]
 
 [[package]]

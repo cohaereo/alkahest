@@ -54,6 +54,9 @@ alkahest-data = { path = "./crates/data" }
 alkahest-render = { path = "./crates/render" }
 egui-d3d11 = { path = "./crates/egui-d3d11" }
 egui-sdl3-platform = { path = "./crates/egui-sdl3-platform" }
+rrise = { path = "./crates/rrise", features = [
+    "AkOpusDecoder"
+] }
 umbra = { path = "./crates/umbra3" }
 
 # (De)serialization

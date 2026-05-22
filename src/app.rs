@@ -28,6 +28,7 @@ use tiger_parse::TigerReadable;
 use tiger_pkg::{TagHash, package_manager};
 
 use crate::{
+    audio,
     cli::AppArgs,
     config::AppConfig,
     ui::{
@@ -53,6 +54,8 @@ pub struct App {
 
 impl App {
     pub fn new(sdl: Rc<sdl3::Sdl>, window: Rc<Window>, args: AppArgs) -> anyhow::Result<Self> {
+        audio::init_sound_engine().context("Failed to initialize sound engine")?;
+
         let gpu = Arc::new(Gpu::create(&window).context("Failed to create GPU")?);
         let renderer = Arc::new(Renderer::new(gpu.clone()).context("Failed to create renderer")?);
         Renderer::set_instance(renderer.clone());
@@ -155,6 +158,8 @@ impl App {
             std::thread::sleep(Duration::from_millis(50));
         }
 
+        rrise::sound_engine::render_audio(false);
+
         profiling::finish_frame!();
     }
 }
@@ -162,6 +167,9 @@ impl App {
 impl Drop for App {
     fn drop(&mut self) {
         self.shared_state.save_config().ok();
+        if let Err(e) = audio::term_sound_engine() {
+            error!("Failed to terminate sound engine: {:?}", e);
+        }
         SCHEDULER.shutdown();
     }
 }

@@ -9,6 +9,7 @@ use itertools::Itertools;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
+mod audio;
 mod cli;
 mod config;
 mod task;

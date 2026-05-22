@@ -29,7 +29,7 @@ impl Display for AKRESULT {
             AK_InvalidStateGroup => "the StateGroup is not a valid channel",
             AK_ChildAlreadyHasAParent => "the child already has a parent",
             AK_InvalidLanguage => "the language is invalid (applies to the Low-Level I/O)",
-            AK_CannotAddItseflAsAChild => "it is not possible to add itself as its own child",
+            AK_CannotAddItselfAsAChild => "it is not possible to add itself as its own child",
             AK_InvalidParameter => "something is not within bounds",
             AK_ElementAlreadyInList => "the item could not be added because it was already in the list",
             AK_PathNotFound => "this path is not known",
@@ -80,7 +80,17 @@ impl Display for AKRESULT {
             AK_FileFormatMismatch => "media file format unexpected",
             AK_NoDistinctListener => "no distinct listener provided for AddOutput",
             AK_ACP_Error => "generic XMA decoder error",
-            AK_ResourceInUse => "tesource is in use and cannot be released",
+            AK_ResourceInUse => "Resource is in use and cannot be released",
+            AK_InvalidBankType => "invalid bank type",
+            AK_AlreadyInitialized => "already initialized",
+            AK_NotInitialized => "not initialized",
+            AK_FilePermissionError => "file permission error",
+            AK_UnknownFileError => "unknown file error",
+            AK_TooManyConcurrentOperations => "too many concurrent operations",
+            AK_InvalidFileSize => "invalid file size",
+            AK_Deferred => "operation deferred",
+            AK_FilePathTooLong => "file path too long",
+            AK_InvalidState => "the state is invalid",
         })
     }
 }

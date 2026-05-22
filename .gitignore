@@ -18,6 +18,7 @@ keys.txt
 /misc
 /.cargo
 /dist
+/Media
 
 /profile.json.gz
 /dhat-heap.json

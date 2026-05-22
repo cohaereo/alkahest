@@ -2,11 +2,7 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use std::env;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use std::path::PathBuf;
+use std::{env, fs::File, io, io::Write, path::PathBuf};
 
 macro_rules! static_feature {
     ($feature:literal) => {
@@ -123,46 +119,19 @@ fn main() -> io::Result<()> {
         .join("c")
         .join("utilities");
 
+    let samples_dir = wwise_sdk.join("samples").join("SoundEngine");
+    let common_dir = samples_dir.join("Common");
     let mut build = cc::Build::new();
     build
         .cpp(true)
         .file(crate_dir.join("default_streaming_mgr.cpp"))
         .file(crate_dir.join("static_plugins.cpp"))
-        .file(
-            wwise_sdk
-                .join("samples")
-                .join("SoundEngine")
-                .join("Common")
-                .join("AkFilePackage.cpp"),
-        )
-        .file(
-            wwise_sdk
-                .join("samples")
-                .join("SoundEngine")
-                .join("Common")
-                .join("AkFilePackageLUT.cpp"),
-        )
-        .file(
-            wwise_sdk
-                .join("samples")
-                .join("SoundEngine")
-                .join("Common")
-                .join("AkMultipleFileLocation.cpp"),
-        )
-        .file(
-            wwise_sdk
-                .join("samples")
-                .join("SoundEngine")
-                .join("Common")
-                .join("AkFileLocationBase.cpp"),
-        )
-        .file(
-            wwise_sdk
-                .join("samples")
-                .join("SoundEngine")
-                .join("Common")
-                .join("AkDefaultLowLevelIODispatcher.cpp"),
-        )
+        .file(common_dir.join("AkFilePackage.cpp"))
+        .file(common_dir.join("AkFilePackageLUT.cpp"))
+        .file(common_dir.join("AkMultipleFileLocation.cpp"))
+        .file(common_dir.join("AkFileLocationBase.cpp"))
+        .file(common_dir.join("AkDefaultLowLevelIODispatcher.cpp"))
+        .file(common_dir.join("AkGeneratedSoundBanksResolver.cpp"))
         .include(out_path.clone())
         .include(wwise_sdk.join("include"))
         .include(wwise_sdk.join("samples").join("SoundEngine"))

@@ -34,12 +34,15 @@ use itertools::{Itertools, multizip};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
-use crate::world::{
-    UnimplementedTigerComponent, UnimplementedTigerComponents,
-    permutations::PermutationConfig,
-    render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
-    shadowmap::ShadowMap,
-    transform::Transform,
+use crate::{
+    audio::AudioSource,
+    world::{
+        UnimplementedTigerComponent, UnimplementedTigerComponents,
+        permutations::PermutationConfig,
+        render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
+        shadowmap::ShadowMap,
+        transform::Transform,
+    },
 };
 
 #[macro_export]
@@ -497,6 +500,34 @@ pub fn spawn_pattern_from_header(
                         Transform::new(point.translation.truncate(), point.rotation, Vec3::ONE),
                         point.clone(),
                     ));
+                }
+            }
+            0x8080666C => {
+                let data = get_component_data!(SAudioPathComponent);
+                match AudioSource::load_event_and_play(data.event.hash32()) {
+                    Ok(source) => {
+                        let center = data
+                            .nodes
+                            .iter()
+                            .map(|n| n.xyz())
+                            .reduce(|a, b| a + b)
+                            .unwrap_or_default()
+                            / (data.nodes.len() as f32);
+
+                        source.set_position(center);
+                        world.insert_one(entity, source)?;
+                    }
+                    Err(e) => error!("Failed to play audio event: {e:?}"),
+                }
+            }
+            0x80806671 => {
+                let data = get_component_data!(SAudioPointComponent);
+                match AudioSource::load_event_and_play(data.event.hash32()) {
+                    Ok(source) => {
+                        source.set_position(transform.map(|t| t.translation).unwrap_or_default());
+                        world.insert_one(entity, source)?;
+                    }
+                    Err(e) => error!("Failed to play audio event: {e:?}"),
                 }
             }
             u => {

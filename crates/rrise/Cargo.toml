@@ -15,10 +15,10 @@ exclude = [
     "/videos",
 ]
 
-[patch.crates-io]
-rrise-headers = { path = "rrise-headers" }
-
 [dependencies]
+alkahest-core = { path = "../core" }
+tiger-pkg.workspace = true
+
 cc = { version = "1.0.73", optional = true }
 paste = "1.0.7"
 log = "0.4.16"
@@ -40,7 +40,7 @@ path = "src/rrise.rs"
 crate-type = ["dylib", "rlib"]
 
 [features]
-default = ["AkVorbisDecoder", "AkMeterFX"]
+default = ["AkVorbisDecoder", "AkOpusDecoder", "AkMeterFX"]
 AkVorbisDecoder = []
 AkOpusDecoder = ["AkOggOpusDecoder", "AkWemOpusDecoder"]
 AkAudioInputSource = []

@@ -33,7 +33,7 @@ macro_rules! link_static_plugin {
                         )
                     ),
                 ))]
-                ::std::convert::identity(unsafe {
+                ::std::hint::black_box(unsafe {
                     crate::bindings_static_plugins::[<$global_var_name Registration>]
                 });
                 log::debug!(

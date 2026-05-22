@@ -102,7 +102,10 @@ tiger_variant_enum! {
         SAtmosphereDataComponent,
         SSunDataComponent,
         SUmbraTomeComponent,
-        SRespawnPointsComponent
+        SRespawnPointsComponent,
+        SAudioPathComponent,
+        SAudioPointComponent
+
         // SMaterialPermutationsComponent,
     }
 }
@@ -207,6 +210,27 @@ pub struct SRespawnPoint {
     pub unk20: u32,
     // cohae: Probably padding
     pub unk24: [u32; 3],
+}
+
+#[derive(Clone, Debug)]
+#[tiger_type(id = 0x8080666D)]
+pub struct SAudioPathComponent {
+    pub event: WideHash,
+    pub unk10: u32,
+    pub unk14: u32,
+    pub unk18: f32,
+    pub unk1c: FnvHash,
+    pub nodes: Vec<Vec4>,
+}
+
+#[derive(Clone, Debug)]
+#[tiger_type(id = 0x8080666F)]
+pub struct SAudioPointComponent {
+    pub event: WideHash,
+    pub unk10: u32,
+    pub unk14: u32,
+    pub unk18: f32,
+    pub unk1c: FnvHash,
 }
 
 pub struct SComponentDataNode {

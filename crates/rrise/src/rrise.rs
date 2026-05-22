@@ -120,8 +120,6 @@ pub use bindings::root::AkTriggerID;
 pub use bindings::root::AkUInt32;
 /// Unique 32-bit ID
 pub use bindings::root::AkUniqueID;
-#[doc(inline)]
-pub use bindings::root::AkVector;
 /// Volume value( also apply to LFE )
 pub use bindings::root::AkVolumeValue;
 #[doc(inline)]
@@ -168,6 +166,8 @@ pub use bindings::root::AK_MAX_PRIORITY;
 pub use bindings::root::AK_MIN_PRIORITY;
 #[doc(inline)]
 pub use bindings::root::AK_SOUNDBANK_VERSION;
+#[doc(inline)]
+pub use bindings::root::{AkVector, AkVector64};
 #[doc(inline)]
 pub use bindings::AK_INVALID_AUDIO_OBJECT_ID;
 #[doc(inline)]

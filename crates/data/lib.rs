@@ -8,3 +8,4 @@ pub mod strings;
 pub mod tag;
 pub mod tfx;
 pub mod umbra;
+pub mod wwise;
