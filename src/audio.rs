@@ -25,6 +25,7 @@ static BANK_CACHE: LazyLock<Mutex<AHashMap<TagHash, (rrise::AkBankID, Vec<u8>)>>
 pub struct AudioSource {
     pub gameobject_id: u64,
     bank: rrise::AkBankID,
+    event_id: Option<u32>,
 }
 
 impl AudioSource {
@@ -48,8 +49,9 @@ impl AudioSource {
             }
         }
 
-        let source = Self::load_bank(event.wwise_bank)?;
+        let mut source = Self::load_bank(event.wwise_bank)?;
         source.post_event(event.event_id)?;
+        source.event_id = Some(event.event_id);
         rrise::sound_engine::set_game_object_output_bus_volume(
             source.gameobject_id,
             LISTENER_ID,
@@ -76,21 +78,32 @@ impl AudioSource {
         Ok(AudioSource {
             gameobject_id,
             bank: bank_id,
+            event_id: None,
         })
     }
 
     pub fn set_position(&self, pos: Vec3) {
         set_gameobject_pos(self.gameobject_id, pos, Vec3::Z, Vec3::X, false);
-        // set_gameobject_pos(self.gameobject_id, Vec3::ZERO, Vec3::Z, Vec3::X, false);
     }
 
     pub fn post_event(&self, event_id: u32) -> Result<rrise::AkPlayingID, rrise::AkResult> {
         rrise::sound_engine::PostEvent::new(self.gameobject_id, event_id).post()
     }
+
+    pub fn stop(&self) {
+        rrise::sound_engine::stop_all(Some(self.gameobject_id));
+    }
+
+    pub fn start(&self) {
+        if let Some(event_id) = self.event_id {
+            let _ = self.post_event(event_id);
+        }
+    }
 }
 
 impl Drop for AudioSource {
     fn drop(&mut self) {
+        self.stop();
         rrise::sound_engine::unregister_game_obj(self.gameobject_id).ok();
         free_gameobject_id(self.gameobject_id);
     }

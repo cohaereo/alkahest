@@ -5,7 +5,7 @@ mod surface_viewer;
 use std::{
     sync::{
         Arc,
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
     },
     time::Instant,
 };
@@ -48,7 +48,7 @@ use crate::{
         util::{ExternalDataWidgetExt, UiExt},
     },
     world::{
-        audio::s_update_audio_sources,
+        audio::{s_start_all_audio_sources, s_update_audio_sources},
         render_objects::{
             s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
         },
@@ -89,6 +89,7 @@ pub struct Scene {
 
     umbra_enabled: bool,
     umbra_result: umbra::QueryErrorCode,
+    scene_id: String,
 }
 
 impl Scene {
@@ -96,6 +97,7 @@ impl Scene {
         renderer: Arc<Renderer>,
         camera: Camera,
         shared: &SharedState,
+        scene_id: impl Into<String>,
     ) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
 
@@ -132,9 +134,14 @@ impl Scene {
             show_channel_editor: false,
             frametimes: Vec::new(),
             sun_shadow_views,
-            umbra_enabled: true,
+            umbra_enabled: false,
             umbra_result: umbra::QueryErrorCode::Ok,
+            scene_id: scene_id.into(),
         })
+    }
+
+    pub fn set_id(&mut self, id: impl Into<String>) {
+        self.scene_id = id.into();
     }
 
     // pub fn set_global_channel(&mut self, id: u32, value: Vec4) {
@@ -348,6 +355,18 @@ impl Scene {
 
             self.render(delta_time, resolution);
         });
+
+        static LAST_ACTIVE_SCENE_ID: AtomicU64 = AtomicU64::new(u64::MAX);
+
+        let scene_hash = hash(&self.scene_id);
+        let old_scene_hash = LAST_ACTIVE_SCENE_ID.load(Ordering::SeqCst);
+        if old_scene_hash != scene_hash {
+            // Scene changed, stop all audio and start all the sources in this scene
+            rrise::sound_engine::stop_all(None);
+            s_start_all_audio_sources(&self.world);
+
+            LAST_ACTIVE_SCENE_ID.store(scene_hash, Ordering::SeqCst);
+        }
 
         audio::set_gameobject_pos(
             audio::LISTENER_ID,
@@ -1385,4 +1404,11 @@ enum PerformanceImpact {
     Low,
     Medium,
     High,
+}
+
+fn hash<T: std::hash::Hash>(value: &T) -> u64 {
+    use std::hash::Hasher;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    value.hash(&mut hasher);
+    hasher.finish()
 }

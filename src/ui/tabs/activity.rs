@@ -67,8 +67,13 @@ impl ActivityTab {
             tag,
             name,
             scene: Box::new(
-                Scene::new(Renderer::instance().clone(), Camera::default(), state)?
-                    .with_controller(CameraController::new_first_person()),
+                Scene::new(
+                    Renderer::instance().clone(),
+                    Camera::default(),
+                    state,
+                    format!("activity_{tag}"),
+                )?
+                .with_controller(CameraController::new_first_person()),
             ),
         })
     }
@@ -108,11 +113,12 @@ impl ActivityTab {
             return;
         };
 
-        // std::mem::swap(&mut map.world, y);
         if let Some(world) = map.world.as_mut() {
             std::mem::swap(world, &mut self.scene.world);
             self.scene
                 .show(ui, ui.available_size_before_wrap(), egui_d3d11);
+            self.scene
+                .set_id(format!("activity_{}_map_{}", self.tag, map.index));
             std::mem::swap(&mut self.scene.world, world);
         }
     }

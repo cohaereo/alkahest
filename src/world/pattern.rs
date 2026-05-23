@@ -506,13 +506,17 @@ pub fn spawn_pattern_from_header(
                 let data = get_component_data!(SAudioPathComponent);
                 match AudioSource::load_event_and_play(data.event.hash32()) {
                     Ok(source) => {
-                        let center = data
+                        let mut center = data
                             .nodes
                             .iter()
                             .map(|n| n.xyz())
                             .reduce(|a, b| a + b)
                             .unwrap_or_default()
                             / (data.nodes.len() as f32);
+
+                        if center.is_nan() {
+                            center = transform.map(|t| t.translation).unwrap_or_default();
+                        }
 
                         source.set_position(center);
                         world.insert_one(entity, source)?;

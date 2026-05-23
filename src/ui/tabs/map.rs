@@ -33,8 +33,13 @@ impl MapTab {
             tag,
             name,
             scene: Box::new(
-                Scene::new(Renderer::instance().clone(), Camera::default(), shared)?
-                    .with_controller(CameraController::new_first_person()),
+                Scene::new(
+                    Renderer::instance().clone(),
+                    Camera::default(),
+                    shared,
+                    format!("map_{tag}"),
+                )?
+                .with_controller(CameraController::new_first_person()),
             ),
         })
     }

@@ -16,8 +16,13 @@ pub struct TestSceneTab {
 impl TestSceneTab {
     pub fn new(shared: &SharedState) -> anyhow::Result<Self> {
         let mut scene = Box::new(
-            Scene::new(Renderer::instance().clone(), Camera::default(), shared)?
-                .with_controller(CameraController::new_first_person()),
+            Scene::new(
+                Renderer::instance().clone(),
+                Camera::default(),
+                shared,
+                "test_scene",
+            )?
+            .with_controller(CameraController::new_first_person()),
         );
 
         for pos in [vec3(30.0, -20.0, 18.0), vec3(34.0, -20.0, 18.0)] {

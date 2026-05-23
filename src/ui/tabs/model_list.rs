@@ -58,6 +58,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                 ..Default::default()
             },
             shared,
+            "model_list_thumbnails",
         )
         .unwrap()
         .with_controller(CameraController::new_orbit(Vec3::ZERO, 25.0));
@@ -69,8 +70,13 @@ impl<P: ModelProvider> ModelListBase<P> {
             view_settings.bloom = false;
         }
 
-        let mut scene =
-            Scene::new(Renderer::instance().clone(), Camera::default(), shared).unwrap();
+        let mut scene = Scene::new(
+            Renderer::instance().clone(),
+            Camera::default(),
+            shared,
+            "model_list_main",
+        )
+        .unwrap();
         *scene.view.settings_mut() = thumbnail_scene.view.settings().clone();
         scene.view.settings_mut().sun_shadows = true;
         scene.camera.far = 100_000.0;

@@ -5,7 +5,7 @@ use crate::{
     world::transform::Transform,
 };
 
-const MAX_DISTANCE: f32 = 30.0;
+const MAX_DISTANCE: f32 = 50.0;
 const MIN_VOLUME: f32 = 0.0;
 
 pub fn s_update_audio_sources(world: &hecs::World, listener_pos: Vec3) {
@@ -24,5 +24,11 @@ pub fn s_update_audio_sources(world: &hecs::World, listener_pos: Vec3) {
             LISTENER_ID,
             volume,
         );
+    }
+}
+
+pub fn s_start_all_audio_sources(world: &hecs::World) {
+    for (_entity, audio_source) in world.query::<&AudioSource>().iter() {
+        audio_source.start();
     }
 }
