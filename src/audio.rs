@@ -15,11 +15,11 @@ use rrise::{
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
 
-pub const LISTENER_ID: u64 = 0;
-static GAMEOBJECT_TRACKER: AtomicU64 = AtomicU64::new(1);
+pub const LISTENER_ID: u64 = 1;
+static GAMEOBJECT_TRACKER: AtomicU64 = AtomicU64::new(2);
 static FREE_GAMEOBJECT_IDS: Mutex<Vec<u64>> = Mutex::new(Vec::new());
 
-static BANK_CACHE: LazyLock<Mutex<AHashMap<TagHash, rrise::AkBankID>>> =
+static BANK_CACHE: LazyLock<Mutex<AHashMap<TagHash, (rrise::AkBankID, Vec<u8>)>>> =
     LazyLock::new(|| Mutex::new(AHashMap::default()));
 
 pub struct AudioSource {
@@ -50,19 +50,24 @@ impl AudioSource {
 
         let source = Self::load_bank(event.wwise_bank)?;
         source.post_event(event.event_id)?;
+        rrise::sound_engine::set_game_object_output_bus_volume(
+            source.gameobject_id,
+            LISTENER_ID,
+            0.0,
+        );
         Ok(source)
     }
 
     pub fn load_bank(bank_tag: TagHash) -> anyhow::Result<Self> {
         let bank_id = match BANK_CACHE.lock().entry(bank_tag) {
-            std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
+            std::collections::hash_map::Entry::Occupied(entry) => entry.get().0,
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let bank_data = package_manager()
                     .read_tag(bank_tag)
                     .context("Failed to read bank")?;
                 let bank_id = rrise::sound_engine::load_bank_from_memory(&bank_data)
                     .context("Failed to load bank")?;
-                *entry.insert(bank_id)
+                entry.insert((bank_id, bank_data)).0
             }
         };
         let gameobject_id = alloc_gameobject_id();
@@ -75,7 +80,8 @@ impl AudioSource {
     }
 
     pub fn set_position(&self, pos: Vec3) {
-        set_gameobject_pos(self.gameobject_id, pos, Vec3::Z, Vec3::Y);
+        set_gameobject_pos(self.gameobject_id, pos, Vec3::Z, Vec3::X, false);
+        // set_gameobject_pos(self.gameobject_id, Vec3::ZERO, Vec3::Z, Vec3::X, false);
     }
 
     pub fn post_event(&self, event_id: u32) -> Result<rrise::AkPlayingID, rrise::AkResult> {
@@ -94,7 +100,7 @@ pub fn alloc_gameobject_id() -> u64 {
     if let Some(id) = FREE_GAMEOBJECT_IDS.lock().pop() {
         id
     } else {
-        GAMEOBJECT_TRACKER.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
+        GAMEOBJECT_TRACKER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 }
 
@@ -102,8 +108,8 @@ pub fn free_gameobject_id(id: u64) {
     FREE_GAMEOBJECT_IDS.lock().push(id);
 }
 
-pub fn set_gameobject_pos(id: u64, pos: Vec3, up: Vec3, front: Vec3) {
-    rrise::sound_engine::set_position(
+pub fn set_gameobject_pos(id: u64, pos: Vec3, up: Vec3, front: Vec3, is_listener: bool) {
+    if let Err(e) = rrise::sound_engine::set_position(
         id,
         AkSoundPosition {
             position: AkVector64 {
@@ -122,7 +128,10 @@ pub fn set_gameobject_pos(id: u64, pos: Vec3, up: Vec3, front: Vec3) {
                 Z: up.z,
             },
         },
-    );
+        is_listener,
+    ) {
+        error!("Failed to set game object position: {}", e);
+    }
 }
 
 pub fn init_sound_engine() -> anyhow::Result<()> {
@@ -150,7 +159,7 @@ pub fn init_sound_engine() -> anyhow::Result<()> {
         &mut AkPlatformInitSettings::default(),
     )?;
 
-    // TODO: initialize spatial audio
+    rrise::spatial_audio::init()?;
 
     rrise::music_engine::init(&mut AkMusicSettings::default())?;
 
@@ -169,17 +178,22 @@ pub fn init_sound_engine() -> anyhow::Result<()> {
 
     info!("Sound engine initialized");
 
+    #[cfg(debug_assertions)]
+    rrise::communication::init(&rrise::settings::AkCommSettings::default())?;
+
     rrise::sound_engine::register_game_obj(LISTENER_ID)?;
-    rrise::sound_engine::add_default_listener(LISTENER_ID)?;
+    rrise::sound_engine::set_default_listeners(&[LISTENER_ID])?;
+    // rrise::sound_engine::set_listener_spatialization(LISTENER_ID, true)?;
 
     Ok(())
 }
 
 pub fn term_sound_engine() -> anyhow::Result<()> {
+    #[cfg(debug_assertions)]
+    rrise::communication::term();
+
     rrise::sound_engine::stop_all(None);
     rrise::sound_engine::unregister_all_game_obj()?;
-
-    // TODO: terminate spatial audio
 
     // term music
     rrise::music_engine::term();

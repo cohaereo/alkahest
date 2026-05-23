@@ -48,6 +48,7 @@ use crate::{
         util::{ExternalDataWidgetExt, UiExt},
     },
     world::{
+        audio::s_update_audio_sources,
         render_objects::{
             s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
         },
@@ -352,8 +353,11 @@ impl Scene {
             audio::LISTENER_ID,
             self.camera.position,
             self.camera.up(),
-            self.camera.forward(),
+            -self.camera.forward(), // Apparently wwise's forward is not our forward?
+            true,
         );
+
+        s_update_audio_sources(&self.world, self.camera.position);
     }
 
     fn show_toolbar(&mut self, ui: &mut Ui) {

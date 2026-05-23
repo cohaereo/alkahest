@@ -12,6 +12,7 @@ pub mod music_engine;
 pub mod query_params;
 pub mod settings;
 pub mod sound_engine;
+pub mod spatial_audio;
 pub mod stream_mgr;
 
 mod bindings;

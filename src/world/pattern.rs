@@ -516,12 +516,17 @@ pub fn spawn_pattern_from_header(
 
                         source.set_position(center);
                         world.insert_one(entity, source)?;
+                        world.insert_one(
+                            entity,
+                            Transform::new(center, Default::default(), Vec3::ONE),
+                        )?;
                     }
                     Err(e) => error!("Failed to play audio event: {e:?}"),
                 }
             }
             0x80806671 => {
                 let data = get_component_data!(SAudioPointComponent);
+                // println!("Playing event {:X?}", data);
                 match AudioSource::load_event_and_play(data.event.hash32()) {
                     Ok(source) => {
                         source.set_position(transform.map(|t| t.translation).unwrap_or_default());

@@ -186,6 +186,7 @@ fn main() -> io::Result<()> {
         .allowlist_var("Ak.*")
         .allowlist_var("Ak.*")
         .allowlist_function("AK::.*")
+        .allowlist_function("AK::SoundEngine::SetListenerPosition")
         .allowlist_function("Ak.*")
         .allowlist_function("InitDefaultStreamMgr")
         .allowlist_function("TermDefaultStreamMgr")
@@ -210,7 +211,7 @@ fn main() -> io::Result<()> {
         .bitfield_enum("AkAudioAPILinux")
         .must_use_type("AKRESULT")
         .enable_cxx_namespaces()
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .layout_tests(false)
         .generate()
         .expect("Unable to generate bindings");

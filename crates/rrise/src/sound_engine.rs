@@ -2,7 +2,7 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use ::std::{convert::TryInto, ffi::CStr, fmt::Debug};
+use ::std::{convert::TryInto, ffi::CStr, fmt::Debug, mem::zeroed};
 
 use crate::{
     bindings::root::{AK::SoundEngine::*, *},
@@ -244,11 +244,40 @@ pub fn register_named_game_obj<T: AsRef<str>>(
 pub fn set_position<T: Into<AkSoundPosition>>(
     game_object_id: AkGameObjectID,
     position: T,
+    is_listener: bool,
 ) -> Result<(), AkResult> {
     ak_call_result![SetPosition(
         game_object_id,
         &position.into(),
-        AkSetPositionFlags_AkSetPositionFlags_Default
+        if is_listener {
+            AkSetPositionFlags_AkSetPositionFlags_Listener
+        } else {
+            AkSetPositionFlags_AkSetPositionFlags_Emitter
+        }
+    )]
+}
+
+pub fn set_game_object_output_bus_volume(
+    emitter_id: AkGameObjectID,
+    listener_id: AkGameObjectID,
+    volume: f32,
+) -> Result<(), AkResult> {
+    ak_call_result![SetGameObjectOutputBusVolume(
+        emitter_id,
+        listener_id,
+        volume,
+    )]
+}
+
+pub fn set_listener_spatialization(
+    listener_id: AkGameObjectID,
+    spatialized: bool,
+) -> Result<(), AkResult> {
+    ak_call_result![SetListenerSpatialization(
+        listener_id,
+        spatialized,
+        zeroed(),
+        ::std::ptr::null_mut()
     )]
 }
 

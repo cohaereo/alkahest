@@ -158,7 +158,7 @@ impl App {
             std::thread::sleep(Duration::from_millis(50));
         }
 
-        rrise::sound_engine::render_audio(false);
+        rrise::sound_engine::render_audio(true);
 
         profiling::finish_frame!();
     }
