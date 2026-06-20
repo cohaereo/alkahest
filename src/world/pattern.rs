@@ -84,7 +84,7 @@ pub fn spawn_pattern_from_header(
         macro_rules! add_unknown_component {
             ($name:expr) => {
                 let component = UnimplementedTigerComponent {
-                    class_id: component.unk10.resource_type,
+                    class_id: component.default_instance.resource_type,
                     hash: component.taghash(),
                     name: None,
                 };
@@ -117,7 +117,7 @@ pub fn spawn_pattern_from_header(
                         "Expected component data type {} for component type 0x{:08X}, found \
                          {}/0x{:08X}",
                         stringify!($type),
-                        component.unk10.resource_type,
+                        component.default_instance.resource_type,
                         data.class_name(),
                         data.class_id()
                     );
@@ -126,10 +126,10 @@ pub fn spawn_pattern_from_header(
             };
         }
 
-        match component.unk10.resource_type {
+        match component.default_instance.resource_type {
             0x80806d8a => {
                 let mut cur = Cursor::new(package_manager().read_tag(component.taghash())?);
-                cur.seek(SeekFrom::Start(component.unk18.offset))?;
+                cur.seek(SeekFrom::Start(component.definition.offset))?;
                 let model: SDynamicModelComponent = TigerReadable::read_ds(&mut cur)?;
 
                 if let Some(permutations) = PermutationConfig::from_model(&model) {
@@ -152,7 +152,7 @@ pub fn spawn_pattern_from_header(
             }
             0x80808412 => {
                 let mut cur = Cursor::new(package_manager().read_tag(component.taghash())?);
-                cur.seek(SeekFrom::Start(component.unk18.offset + 0x88))?;
+                cur.seek(SeekFrom::Start(component.definition.offset + 0x88))?;
                 let array: Vec<S8080841B> = TigerReadable::read_ds(&mut cur)?;
 
                 for v1 in array {
@@ -434,7 +434,7 @@ pub fn spawn_pattern_from_header(
             }
             0x80809479 => {
                 let mut f = Cursor::new(package_manager().read_tag(component.taghash())?);
-                f.seek(SeekFrom::Start(component.unk18.offset))?;
+                f.seek(SeekFrom::Start(component.definition.offset))?;
 
                 let globals = SUnk80808179::read_ds(&mut f)?;
                 for g in globals.unk1c8.iter().chain(globals.unk1d8.iter()) {
@@ -544,7 +544,7 @@ pub fn spawn_pattern_from_header(
                     "\t- Unknown entity component type {:08X}, tag {:08X}, data type {:08X}/{} \
                      (table {})",
                     u,
-                    component.unk10.resource_type,
+                    component.default_instance.resource_type,
                     data.class_id(),
                     data.class_name(),
                     component.taghash()

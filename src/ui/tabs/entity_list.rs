@@ -1,7 +1,11 @@
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, atomic::AtomicUsize, mpsc::Receiver},
+};
 
 use alkahest_data::{pattern::SPattern, tfx::common::AxisAlignedBBox};
 use egui::Ui;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
@@ -34,33 +38,55 @@ impl EntityListTab {
 struct EntityModelProvider {
     package_keys: Vec<u16>,
     packages: BTreeMap<u16, (Vec<ModelEntry>, usize)>,
+    packages_left: Arc<AtomicUsize>,
+
+    package_rx: Receiver<(u16, usize)>,
 }
 
 impl EntityModelProvider {
     fn new() -> Self {
-        let packages: BTreeMap<u16, _> = package_manager()
-            .package_paths
-            .keys()
-            .filter_map(|id| {
-                let num_entities = package_manager()
-                    .lookup
-                    .tag32_entries_by_pkg
-                    .get(id)?
-                    .iter()
-                    .filter(|e| e.reference == SPattern::ID.unwrap())
-                    .count();
+        let (package_tx, package_rx) = std::sync::mpsc::channel();
 
-                if num_entities > 0 {
-                    Some((*id, (vec![], num_entities)))
-                } else {
-                    None
-                }
-            })
-            .collect();
+        let packages_left = Arc::new(AtomicUsize::new(package_manager().package_paths.len()));
+
+        let packages_left_clone = packages_left.clone();
+        std::thread::spawn(move || {
+            package_manager()
+                .package_paths
+                .par_iter()
+                .for_each(|(pkg_id, _)| {
+                    let num_entities = get_num_entities_with_models(*pkg_id);
+                    if num_entities > 0 {
+                        let _ = package_tx.send((*pkg_id, num_entities));
+                    }
+                    packages_left_clone.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                });
+        });
+        // let packages: BTreeMap<u16, _> = package_manager()
+        //     .package_paths
+        //     .keys()
+        //     .filter_map(|id| {
+        //         let num_entities = package_manager()
+        //             .lookup
+        //             .tag32_entries_by_pkg
+        //             .get(id)?
+        //             .iter()
+        //             .filter(|e| e.reference == SPattern::ID.unwrap())
+        //             .count();
+
+        //         if num_entities > 0 {
+        //             Some((*id, (vec![], num_entities)))
+        //         } else {
+        //             None
+        //         }
+        //     })
+        //     .collect();
 
         Self {
-            package_keys: packages.keys().cloned().collect(),
-            packages,
+            package_keys: Default::default(),
+            packages: Default::default(),
+            packages_left,
+            package_rx,
         }
     }
 }
@@ -68,6 +94,22 @@ impl EntityModelProvider {
 impl ModelProvider for EntityModelProvider {
     fn name(&self) -> &str {
         "entities"
+    }
+
+    fn update(&mut self) {
+        while let Ok((pkg_id, num_entities)) = self.package_rx.try_recv() {
+            self.packages.insert(pkg_id, (vec![], num_entities));
+            self.package_keys.push(pkg_id);
+        }
+    }
+
+    fn load_status(&self) -> Option<String> {
+        let left = self.packages_left.load(std::sync::atomic::Ordering::SeqCst);
+        if left == 0 {
+            None
+        } else {
+            Some(format!("Loading {left} packages..."))
+        }
     }
 
     fn package_keys(&self) -> &[u16] {
@@ -156,4 +198,36 @@ impl ModelProvider for EntityModelProvider {
             entries.clear();
         }
     }
+}
+
+fn get_num_entities_with_models(pkg_id: u16) -> usize {
+    let mut num_models = 0;
+    let Some(entries) = package_manager()
+        .lookup
+        .tag32_entries_by_pkg
+        .get(&pkg_id)
+        .cloned()
+    else {
+        return 0;
+    };
+
+    for (i, _entry) in entries
+        .into_iter()
+        .enumerate()
+        .filter(|(_, e)| Some(e.reference) == SPattern::ID)
+    {
+        let tag = TagHash::new(pkg_id, i as u16);
+        let Ok(pattern) = package_manager().read_tag_struct::<SPattern>(tag) else {
+            continue;
+        };
+
+        for c in pattern.components {
+            if c.unk0.default_instance.resource_type == 0x80806d8a {
+                num_models += 1;
+                break;
+            }
+        }
+    }
+
+    num_models
 }

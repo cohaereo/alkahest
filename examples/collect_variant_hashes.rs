@@ -37,12 +37,12 @@ fn main() -> anyhow::Result<()> {
             }
         };
 
-        if component.unk10.resource_type != 0x80806d8a {
+        if component.default_instance.resource_type != 0x80806d8a {
             continue;
         }
 
         let mut cur = Cursor::new(package_manager().read_tag(hash)?);
-        cur.seek(SeekFrom::Start(component.unk18.offset))?;
+        cur.seek(SeekFrom::Start(component.definition.offset))?;
         let model: SDynamicModelComponent = TigerReadable::read_ds(&mut cur)?;
 
         for keys1 in &model.unk38 {

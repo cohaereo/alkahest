@@ -40,14 +40,14 @@ fn main() -> anyhow::Result<()> {
     let component: SComponent = TigerReadable::read_ds(&mut f)?;
     // println!("{:#?}", component);
 
-    if component.unk10.resource_type != 0x80809479 {
+    if component.default_instance.resource_type != 0x80809479 {
         anyhow::bail!(
             "Invalid component type (expected 0x80809479, got {:X})",
-            component.unk10.resource_type
+            component.default_instance.resource_type
         );
     }
 
-    f.seek(SeekFrom::Start(component.unk18.offset))?;
+    f.seek(SeekFrom::Start(component.definition.offset))?;
 
     let globals = SUnk80808179::read_ds(&mut f)?;
 

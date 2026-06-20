@@ -23,8 +23,8 @@ pub struct SComponent {
     pub file_size: u64,
     // cohae: This field isn't a list, but it uses the same layout as ComponentDataListPtr
     pub dynamic_data: SComponentDataListPtr,
-    pub unk10: ResourcePointer,
-    pub unk18: ResourcePointer,
+    pub default_instance: ResourcePointer,
+    pub definition: ResourcePointer,
 
     pub unk20: Vec<ResourcePointerWithClass>,
 

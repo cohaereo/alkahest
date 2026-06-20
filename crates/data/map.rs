@@ -1,10 +1,7 @@
-use std::{io::SeekFrom, ops::Deref};
+use std::io::SeekFrom;
 
 use glam::{Quat, Vec4};
-use tiger_parse::{
-    tiger_type, tiger_variant_enum, Endian, FnvHash, OptionalVariantPointer, TigerReadable,
-    VariantEnum,
-};
+use tiger_parse::{tiger_type, tiger_variant_enum, Endian, FnvHash, TigerReadable, VariantEnum};
 use tiger_pkg::TagHash;
 
 use crate::{

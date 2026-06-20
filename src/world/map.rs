@@ -39,8 +39,8 @@ pub fn load_activity_phase_into_world(
         let component =
             SComponent::read_ds(&mut component_data).context("Failed to read SComponent")?;
 
-        if component.unk18.resource_type == 0x808092D8 {
-            component_data.seek(std::io::SeekFrom::Start(component.unk18.offset + 0x84))?;
+        if component.definition.resource_type == 0x808092D8 {
+            component_data.seek(std::io::SeekFrom::Start(component.definition.offset + 0x84))?;
             let nodetable_hash = TagHash::read_ds(&mut component_data)?;
             load_nodetable_into_world(nodetable_hash, world)?;
         }

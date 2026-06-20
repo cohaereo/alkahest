@@ -28,12 +28,12 @@ fn main() -> anyhow::Result<()> {
         .read_tag_struct(hash)
         .context("Failed to read/parse tag")?;
 
-    if component.unk10.resource_type != 0x80808673 {
+    if component.default_instance.resource_type != 0x80808673 {
         panic!("Not a dynamic model component");
     }
 
     let mut cur = Cursor::new(package_manager().read_tag(hash)?);
-    cur.seek(SeekFrom::Start(component.unk18.offset))?;
+    cur.seek(SeekFrom::Start(component.definition.offset))?;
     let model: SDynamicModelComponent = TigerReadable::read_ds(&mut cur)?;
     println!("{}", model.dbg_chroma());
 

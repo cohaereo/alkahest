@@ -186,6 +186,13 @@ impl<P: ModelProvider> ModelListBase<P> {
     }
 
     pub fn ui(&mut self, ui: &mut Ui, egui_d3d11: &mut egui_d3d11::D3D11Renderer) -> TabResult {
+        self.provider.update();
+        if self.provider.package_keys().len() != self.package_ids.len() {
+            self.package_ids = self.provider.package_keys().to_vec();
+            self.package_sorting
+                .sort_package_ids(&self.provider, &mut self.package_ids);
+        }
+
         self.provider.load_package(self.current_package);
         self.render_thumbnails(ui.ctx());
 
@@ -207,13 +214,24 @@ impl<P: ModelProvider> ModelListBase<P> {
         egui::SidePanel::left(format!("{}_packages_list", self.provider.name())).show_inside(
             ui,
             |ui| {
+                if let Some(status) = self.provider.load_status() {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label(status);
+                    });
+                }
+
                 egui::TextEdit::singleline(&mut self.filter)
                     .text_color_opt((!filter_valid).then_some(Color32::RED))
-                    .hint_text("Search by Hash")
+                    .hint_text(
+                        RichText::new("Search by Hash (8XXXXXXX)...")
+                            .color(Color32::GRAY)
+                            .italics(),
+                    )
                     .ui(ui);
 
                 ui.horizontal(|ui| {
-                    ui.label("Sort by:");
+                    ui.label(RichText::new("Sort by:").color(Color32::GRAY));
                     egui::ComboBox::new("sorting_mode", "")
                         .selected_text(format!("{:?}", self.package_sorting))
                         .show_ui(ui, |ui| {
@@ -597,6 +615,12 @@ impl<P: ModelProvider> ModelListBase<P> {
 pub trait ModelProvider {
     /// Used for widget IDs, must be unique between providers.
     fn name(&self) -> &str;
+
+    fn update(&mut self) {}
+
+    fn load_status(&self) -> Option<String> {
+        None
+    }
 
     fn package_keys(&self) -> &[u16];
     fn package(&self, pkg_id: u16) -> Option<&[ModelEntry]>;
