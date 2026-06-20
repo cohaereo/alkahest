@@ -107,9 +107,10 @@ impl StringContainer {
             .get_all_by_reference(SLocalizedStrings::ID.unwrap())
             .into_iter()
             .filter(|(t, _)| {
-                package_manager().package_paths[&t.pkg_id()]
-                    .name
-                    .contains("global")
+                package_manager()
+                    .package_paths
+                    .get(&t.pkg_id())
+                    .is_some_and(|p| p.name.contains("global"))
             })
             .map(|(t, _)| t)
             .collect();

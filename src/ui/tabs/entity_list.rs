@@ -42,7 +42,10 @@ impl EntityModelProvider {
             .package_paths
             .keys()
             .filter_map(|id| {
-                let num_entities = package_manager().lookup.tag32_entries_by_pkg[id]
+                let num_entities = package_manager()
+                    .lookup
+                    .tag32_entries_by_pkg
+                    .get(id)?
                     .iter()
                     .filter(|e| e.reference == SPattern::ID.unwrap())
                     .count();

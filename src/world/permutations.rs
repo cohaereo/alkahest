@@ -64,7 +64,7 @@ impl PermutationConfig {
                 return None;
             };
             for v in key_indices {
-                let m = &model.unk38[*v as usize];
+                let m = &model.unk38.get(*v as usize)?;
                 keys.insert(m.unk8[0].switch_key, m.unk8[0].value);
             }
 

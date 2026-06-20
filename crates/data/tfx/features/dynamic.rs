@@ -81,20 +81,20 @@ pub struct SDynamicMeshPart {
 #[derive(Debug, Clone)]
 #[tiger_type(size = 0x450)]
 pub struct SDynamicModelComponent {
-    #[tiger(offset = 0x38)]
+    #[tiger(offset = 0x58)]
     pub unk38: Vec<S8080BACC>,
 
-    #[tiger(offset = 0x244)]
+    #[tiger(offset = 0x264)]
     pub model_hash: TagHash,
 
-    #[tiger(offset = 0x3e0)]
+    #[tiger(offset = 0x400)]
     pub technique_map: Vec<SDynamicMeshMaterialVariants>,
 
-    #[tiger(offset = 0x400)]
+    #[tiger(offset = 0x420)]
     pub unk408: Vec<u16>,
     pub unk418: Vec<S80808682>,
 
-    #[tiger(offset = 0x420)]
+    #[tiger(offset = 0x440)]
     pub techniques: Vec<TagHash>,
 }
 

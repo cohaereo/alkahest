@@ -29,7 +29,7 @@ use alkahest_render::{
     },
 };
 use anyhow::Context;
-use glam::{Vec3, Vec4Swizzles, vec3, vec4};
+use glam::{Vec3, Vec4Swizzles, vec4};
 use itertools::{Itertools, multizip};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
