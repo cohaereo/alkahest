@@ -475,18 +475,18 @@ pub fn spawn_pattern_from_header(
                 add_unknown_component!("Sequence");
             }
             0x80806CF0 => {
-                let data = get_component_data!(SUmbraTomeComponent);
-                let Some(tomes) = &*data.tag else {
-                    tracing::error!("Missing tag for SUmbraTomeComponent");
-                    continue;
-                };
+                // let data = get_component_data!(SUmbraTomeComponent);
+                // let Some(tomes) = &*data.tag else {
+                //     tracing::error!("Missing tag for SUmbraTomeComponent");
+                //     continue;
+                // };
 
-                let tome0_data = package_manager()
-                    .read_tag(tomes.tome0)
-                    .context("failed to read tome0 data")?;
-                let tome = umbra::Tome::load_from_buffer(&tome0_data);
+                // let tome0_data = package_manager()
+                //     .read_tag(tomes.tome0)
+                //     .context("failed to read tome0 data")?;
+                // let tome = umbra::Tome::load_from_buffer(&tome0_data);
 
-                world.insert_one(entity, tome)?;
+                // world.insert_one(entity, tome)?;
             }
             0x80808CB3 => {
                 let data = get_component_data!(SRespawnPointsComponent);

@@ -1,4 +1,4 @@
-#![feature(allocator_api, array_try_from_fn, int_roundings)]
+#![feature(array_try_from_fn, int_roundings)]
 
 pub mod gpu;
 pub use gpu::Gpu;

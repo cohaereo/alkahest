@@ -16,7 +16,6 @@ members = [
     "crates/egui-d3d11",
     "crates/egui-sdl3-platform",
     "crates/rrise",
-    "crates/umbra3",
 ]
 
 [workspace.dependencies]
@@ -57,7 +56,6 @@ egui-sdl3-platform = { path = "./crates/egui-sdl3-platform" }
 rrise = { path = "./crates/rrise", features = [
     "AkOpusDecoder"
 ] }
-umbra = { path = "./crates/umbra3" }
 
 # (De)serialization
 gltf = { package = "gltf-json", version = "1.4.1" }

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use alkahest_data::tfx::{FeatureRendererSubscription, common::AxisAlignedBBox};
 use d3d11::dxgi;
 use glam::{Mat4, Vec3, Vec4};
-use inline_tweak::tweak;
 use parking_lot::Mutex;
 
 use crate::{
@@ -41,8 +40,6 @@ pub struct View {
 
     pub subscribed_features: FeatureRendererSubscription,
     pub disable_culling: bool,
-    pub occlusion_buffer: Option<umbra::OcclusionBuffer>,
-    pub visible_cluster_bounds: Option<Vec<AxisAlignedBBox>>,
 }
 
 impl View {
@@ -92,8 +89,6 @@ impl View {
             kind,
             subscribed_features: FeatureRendererSubscription::all(),
             disable_culling: false,
-            occlusion_buffer: None,
-            visible_cluster_bounds: None,
         })
     }
 
@@ -150,39 +145,9 @@ impl View {
     }
 
     #[profiling::function]
-    fn is_visible_umbra_occlusion(&self, aabb: &AxisAlignedBBox) -> bool {
-        if let Some(occlusion_buffer) = &self.occlusion_buffer
-            && !occlusion_buffer.is_aabb_visible(
-                aabb.min.truncate().to_array(),
-                aabb.max.truncate().to_array(),
-            )
-        {
-            return false;
-        }
-
-        true
-    }
-
-    #[profiling::function]
     pub fn is_visible_quick(&self, aabb: &AxisAlignedBBox) -> bool {
         if !aabb.is_valid() {
             return true;
-        }
-
-        if let Some(visible_cluster_bounds) = &self.visible_cluster_bounds
-            && visible_cluster_bounds.len() < 64
-        {
-            profiling::scope!("visible_cluster_bounds");
-            for cluster_aabb in visible_cluster_bounds {
-                if cluster_aabb.intersects_aabb(aabb) {
-                    return self.is_visible_umbra_occlusion(aabb);
-                }
-            }
-            return false;
-        }
-
-        if !self.is_visible_umbra_occlusion(aabb) {
-            return false;
         }
 
         if aabb.contains(self.position) {

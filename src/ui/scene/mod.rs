@@ -33,12 +33,11 @@ use alkahest_render::{
 use bitflags::Flags;
 use d3d11::{ShaderResourceView, Texture2D, Texture2dDesc, dxgi};
 use egui::{
-    Color32, FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder,
-    Vec2, Widget, containers::menu::MenuConfig, load::SizedTexture, vec2,
+    FontId, Image, ImageSource, Rect, Response, RichText, Sense, TextStyle, Ui, UiBuilder, Vec2,
+    Widget, containers::menu::MenuConfig, load::SizedTexture, vec2,
 };
 use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use google_material_symbols::GoogleMaterialSymbols;
-use itertools::Itertools;
 
 use crate::{
     app::SharedState,
@@ -87,8 +86,6 @@ pub struct Scene {
 
     sun_shadow_views: [View; Renderer::NUM_CASCADES],
 
-    umbra_enabled: bool,
-    umbra_result: umbra::QueryErrorCode,
     scene_id: String,
 }
 
@@ -134,8 +131,6 @@ impl Scene {
             show_channel_editor: false,
             frametimes: Vec::new(),
             sun_shadow_views,
-            umbra_enabled: false,
-            umbra_result: umbra::QueryErrorCode::Ok,
             scene_id: scene_id.into(),
         })
     }
@@ -286,17 +281,6 @@ impl Scene {
                                 GoogleMaterialSymbols::Speed,
                                 self.controller.speed()
                             ));
-                        }
-
-                        if self.umbra_result == umbra::QueryErrorCode::OutsideScene {
-                            ui.label(
-                                RichText::new(format!(
-                                    "{} Outside Scene",
-                                    GoogleMaterialSymbols::Warning
-                                ))
-                                .color(Color32::YELLOW)
-                                .size(16.0),
-                            );
                         }
 
                         if self.world.is_empty() {
@@ -623,12 +607,6 @@ impl Scene {
                      discarding occluded objects.",
                     PerformanceImpact::High,
                 );
-
-            ui.checkbox(&mut self.umbra_enabled, "Umbra Culling")
-                .setting_description_tooltip(
-                    "Enables Umbra3 occlusion culling for geometry.",
-                    PerformanceImpact::High,
-                );
         });
     }
 
@@ -662,58 +640,6 @@ impl Scene {
             .update(world_to_camera, camera_to_projective, resolution);
         self.view
             .update_autoexposure(&self.renderer.gpu, delta_time);
-
-        self.view.occlusion_buffer = None;
-        self.view.visible_cluster_bounds = None;
-        if let Some((_, tome)) = self.world.query::<&umbra::Tome>().iter().next()
-            && self.umbra_enabled
-        {
-            profiling::scope!("umbra_visibility");
-
-            let mut query = umbra::Query::new(tome);
-            let mut vis = umbra::Visibility::default();
-            let mut ob = umbra::OcclusionBuffer::default();
-
-            let mut cluster_storage = vec![0i32; tome.get_cluster_count() as usize];
-            let mut clusters = umbra::IndexList::new(&mut cluster_storage);
-            vis.set_output_clusters(&mut clusters);
-            vis.set_output_buffer(&mut ob);
-
-            self.umbra_result = query.query_portal_visibility(
-                0,
-                &vis,
-                &umbra::CameraTransform::new(
-                    (self.camera.projection_matrix_standard() * self.camera.view_matrix())
-                        .to_cols_array_2d(),
-                    self.camera.position.to_array(),
-                ),
-                0.0,
-                -1.0,
-                0,
-                1,
-                0,
-            );
-
-            let num_clusters = clusters.size() as usize;
-            cluster_storage.truncate(num_clusters);
-
-            if self.umbra_result == umbra::QueryErrorCode::Ok {
-                self.view.occlusion_buffer = Some(ob);
-                self.view.visible_cluster_bounds = Some(
-                    cluster_storage
-                        .into_iter()
-                        .map(|i| {
-                            let (min, max) = tome.get_cluster_bounds(i);
-                            AxisAlignedBBox {
-                                min: min.extend(1.0),
-                                max: max.extend(1.0),
-                            }
-                            .expand(Vec3::splat(4.0))
-                        })
-                        .collect_vec(),
-                );
-            }
-        }
 
         let mut packet_misc = FramePacketMisc {
             delta_time,
