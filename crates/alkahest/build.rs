@@ -38,11 +38,4 @@ fn main() {
         res.set_icon("assets/icon2.ico");
         res.compile().unwrap();
     }
-
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    println!(
-        "cargo:rustc-link-search=native={}",
-        manifest_dir.join("lib").display()
-    );
-    println!("cargo:rustc-link-lib=static=iron");
 }

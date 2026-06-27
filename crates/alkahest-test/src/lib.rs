@@ -14,13 +14,9 @@ use alkahest_renderer::{
 use anyhow::Context;
 use clap::Parser;
 use destiny_pkg::{GameVersion, PackageManager};
-use mimalloc::MiMalloc;
 use tracing_subscriber::{
     filter::filter_fn, fmt::Subscriber, layer::SubscriberExt, util::SubscriberInitExt,
 };
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Parser, Debug, Clone)]
 #[command(about, long_about = None, disable_version_flag(true))]

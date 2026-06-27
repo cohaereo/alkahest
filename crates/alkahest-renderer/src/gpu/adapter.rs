@@ -1,6 +1,6 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicU32, Ordering},
         Arc,
     },
     time::Duration,
@@ -19,13 +19,8 @@ use windows::{
             Direct3D11::*,
             Dxgi::{Common::*, *},
         },
-        UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WINDOW_DISPLAY_AFFINITY},
     },
 };
-
-const DISPLAY_AFFINITY: WINDOW_DISPLAY_AFFINITY =
-    WINDOW_DISPLAY_AFFINITY(0x10FFEF / u16::MAX as u32);
-pub static DESKTOP_DISPLAY_MODE: AtomicBool = AtomicBool::new(false);
 
 pub struct GpuAdapter {
     pub device: ID3D11Device,
@@ -105,12 +100,6 @@ impl GpuAdapter {
             );
 
             unsafe {
-                if !DESKTOP_DISPLAY_MODE.load(Ordering::SeqCst) {
-                    // Fixes display issues on certain mobile GPUs
-                    SetWindowDisplayAffinity(swap_chain_descriptor.OutputWindow, DISPLAY_AFFINITY)
-                        .ok();
-                }
-
                 dxgi.CreateSwapChain(&device, &swap_chain_descriptor, &mut swap_chain)
                     .ok()
                     .context("Failed to create swapchain")?;

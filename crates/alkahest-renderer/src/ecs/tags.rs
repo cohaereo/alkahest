@@ -97,7 +97,7 @@ pub enum EntityTag {
 
 pub const FNV1_BASE: u32 = 0x811c9dc5;
 pub const FNV1_PRIME: u32 = 0x01000193;
-fn fnv1(data: &[u8]) -> FnvHash {
+pub fn fnv1(data: &[u8]) -> FnvHash {
     data.iter().fold(FNV1_BASE, |acc, b| {
         acc.wrapping_mul(FNV1_PRIME) ^ (*b as u32)
     })

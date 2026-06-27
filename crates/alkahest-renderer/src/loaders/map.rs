@@ -42,7 +42,7 @@ use crate::{
             static_geometry::{StaticInstance, StaticInstances, StaticModel, StaticModelSingle},
             terrain::TerrainPatches,
         },
-        tags::{insert_tag, EntityTag, NodeFilter},
+        tags::{fnv1, insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
         visibility::VisibilityBundle,
         Scene, SceneInfo,
@@ -71,17 +71,6 @@ pub async fn load_map(
     let bubble_parent = package_manager()
         .read_tag_struct::<SBubbleParent>(map_hash)
         .context("Failed to read SBubbleParent")?;
-
-    unsafe extern "C" {
-        #[allow(improper_ctypes)]
-        fn load_keys_for_namespace(bubble: *const SBubbleParent, namespace: u32);
-    }
-
-    if let Some(path) = package_manager().package_paths.get(&map_hash.pkg_id()) {
-        unsafe {
-            load_keys_for_namespace(&bubble_parent, fnv1(path.name.as_bytes()));
-        }
-    }
 
     let mut scene = Scene::new_with_info(activity_hash, map_hash);
     let bubble_definition = if bubble_parent.child_map.is_some() {
@@ -1531,57 +1520,57 @@ fn spawn_data_entity(scene: &mut Scene, components: impl Bundle, parent: Option<
     child_id
 }
 
-fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
-    let data: Vec<u8> = package_manager().read_tag(entity).ok()?;
-    let mut cur = Cursor::new(&data);
+// fn get_entity_labels(entity: TagHash) -> Option<FxHashMap<u64, String>> {
+//     let data: Vec<u8> = package_manager().read_tag(entity).ok()?;
+//     let mut cur = Cursor::new(&data);
 
-    let e: SEntityResource = TigerReadable::read_ds(&mut cur).ok()?;
-    let mut world_id_list: Vec<Unk80809905> = vec![];
-    if e.unk80.is_none() {
-        return None;
-    }
+//     let e: SEntityResource = TigerReadable::read_ds(&mut cur).ok()?;
+//     let mut world_id_list: Vec<Unk80809905> = vec![];
+//     if e.unk80.is_none() {
+//         return None;
+//     }
 
-    for (i, b) in data.chunks_exact(4).enumerate() {
-        let v: [u8; 4] = b.try_into().unwrap();
-        let hash = u32::from_le_bytes(v);
-        let offset = i as u64 * 4;
+//     for (i, b) in data.chunks_exact(4).enumerate() {
+//         let v: [u8; 4] = b.try_into().unwrap();
+//         let hash = u32::from_le_bytes(v);
+//         let offset = i as u64 * 4;
 
-        if hash == 0x80809905 {
-            cur.seek(SeekFrom::Start(offset - 8)).ok()?;
-            let count: u64 = TigerReadable::read_ds(&mut cur).ok()?;
-            cur.seek(SeekFrom::Start(offset + 8)).ok()?;
-            for _ in 0..count {
-                let e: Unk80809905 = TigerReadable::read_ds(&mut cur).ok()?;
-                world_id_list.push(e);
-            }
-            // let list: TablePointer<Unk80809905> = TigerReadable::read_ds_endian(&mut cur, Endian::Little).ok()?;
-            // world_id_list = list.take_data();
-            break;
-        }
-    }
+//         if hash == 0x80809905 {
+//             cur.seek(SeekFrom::Start(offset - 8)).ok()?;
+//             let count: u64 = TigerReadable::read_ds(&mut cur).ok()?;
+//             cur.seek(SeekFrom::Start(offset + 8)).ok()?;
+//             for _ in 0..count {
+//                 let e: Unk80809905 = TigerReadable::read_ds(&mut cur).ok()?;
+//                 world_id_list.push(e);
+//             }
+//             // let list: TablePointer<Unk80809905> = TigerReadable::read_ds_endian(&mut cur, Endian::Little).ok()?;
+//             // world_id_list = list.take_data();
+//             break;
+//         }
+//     }
 
-    // TODO(cohae): There's volumes and stuff without a world ID that still have a name
-    world_id_list.retain(|w| w.world_id != u64::MAX);
+//     // TODO(cohae): There's volumes and stuff without a world ID that still have a name
+//     world_id_list.retain(|w| w.world_id != u64::MAX);
 
-    let mut name_hash_map: FxHashMap<FnvHash, String> = FxHashMap::default();
+//     let mut name_hash_map: FxHashMap<FnvHash, String> = FxHashMap::default();
 
-    let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
-    for v in tablethingy.unk0.into_iter() {
-        if let Some(name_ptr) = v.unk0_name_pointer.as_ref() {
-            name_hash_map.insert(
-                fnv1(name_ptr.name.0 .0.as_bytes()),
-                name_ptr.name.to_string(),
-            );
-        }
-    }
+//     let tablethingy: Unk8080906b = package_manager().read_tag_struct(e.unk80).ok()?;
+//     for v in tablethingy.unk0.into_iter() {
+//         if let Some(name_ptr) = v.unk0_name_pointer.as_ref() {
+//             name_hash_map.insert(
+//                 fnv1(name_ptr.name.0 .0.as_bytes()),
+//                 name_ptr.name.to_string(),
+//             );
+//         }
+//     }
 
-    Some(
-        world_id_list
-            .into_iter()
-            .filter_map(|w| Some((w.world_id, name_hash_map.get(&w.name_hash)?.clone())))
-            .collect(),
-    )
-}
+//     Some(
+//         world_id_list
+//             .into_iter()
+//             .filter_map(|w| Some((w.world_id, name_hash_map.get(&w.name_hash)?.clone())))
+//             .collect(),
+//     )
+// }
 
 #[allow(clippy::too_many_arguments)]
 fn load_entity_into_scene(
@@ -1706,11 +1695,4 @@ fn load_entity_into_scene(
     }
 
     Ok(scene_entity)
-}
-const FNV1_BASE: u32 = 0x811c9dc5;
-const FNV1_PRIME: u32 = 0x01000193;
-fn fnv1(data: &[u8]) -> FnvHash {
-    data.iter().fold(FNV1_BASE, |acc, b| {
-        acc.wrapping_mul(FNV1_PRIME) ^ (*b as u32)
-    })
 }

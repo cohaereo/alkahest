@@ -34,10 +34,6 @@ mod paths;
 mod updater;
 mod util;
 
-#[cfg(not(feature = "profiler"))]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 // #[cfg(feature = "profiler")]
 // #[global_allocator]
 // static GLOBAL: profiling::tracy_client::ProfiledAllocator<std::alloc::System> =

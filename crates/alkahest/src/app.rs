@@ -45,10 +45,7 @@ use crate::{
     maplist::{Map, MapList},
     resources::AppResources,
     updater::UpdateCheck,
-    util::{
-        action::{ActionBuffer, ActionList},
-        iron,
-    },
+    util::action::{ActionBuffer, ActionList},
     ApplicationArgs,
 };
 
@@ -80,10 +77,6 @@ impl AlkahestApp {
         icon: &winit::window::Icon,
         args: ApplicationArgs,
     ) -> Self {
-        iron::set_policy(iron::Policy::Disabled);
-        alkahest_renderer::gpu::adapter::DESKTOP_DISPLAY_MODE
-            .store(iron::get_content_policy(), Ordering::SeqCst);
-
         // TODO(cohae): The new winit API is annoying to work with for desktop apps, so we're sticking to deprecated stuff until we migrate to SDL
         #[allow(deprecated)]
         let window = event_loop

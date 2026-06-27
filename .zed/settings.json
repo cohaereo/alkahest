@@ -7,9 +7,9 @@
     "rust-analyzer": {
       "initialization_options": {
         "cargo": {
-          "target": "x86_64-pc-windows-msvc"
-        }
-      }
-    }
-  }
+          "target": "x86_64-pc-windows-msvc",
+        },
+      },
+    },
+  },
 }

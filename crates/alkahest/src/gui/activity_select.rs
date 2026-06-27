@@ -52,7 +52,9 @@ impl ActivityBrowser {
                         match StringContainer::load(destination.string_container.hash32()) {
                             Ok(sc) => sc.0,
                             Err(e) => {
-                                error!("Failed to load string container: {e}");
+                                if destination.string_container.is_some() {
+                                    error!("Failed to load string container: {e}");
+                                }
                                 FxHashMap::default()
                             }
                         }
@@ -96,7 +98,7 @@ impl ActivityBrowser {
                             &activity.activity_code.to_string(),
                             SActivity::ID.unwrap(),
                         ) else {
-                            error!(
+                            debug!(
                                 "Failed to find activity {activity_code} in destination \
                                  {destination_code}"
                             );
