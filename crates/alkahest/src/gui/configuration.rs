@@ -29,71 +29,71 @@ impl GuiView for RenderSettingsPanel {
     ) -> Option<ViewAction> {
         egui::Window::new("Settings").show(ctx, |ui| {
             let mut camera = resources.get_mut::<Camera>();
-            ui.heading("Camera");
-            ui.strong(RichText::new("TODO: move to dropdown button").color(egui::Color32::YELLOW));
-            let position = camera.position();
-            let orientation = camera.orientation();
-            ui.label(format!(
-                "XYZ: {:.2} / {:.3} / {:.2}",
-                position.x, position.y, position.z
-            ));
+            ui.collapsing(RichText::new("Camera").heading(), |ui| {
+                let position = camera.position();
+                let orientation = camera.orientation();
+                ui.label(format!(
+                    "XYZ: {:.2} / {:.3} / {:.2}",
+                    position.x, position.y, position.z
+                ));
 
-            if ui
-                .button(format!(
-                    "{} Copy goto command{}",
-                    ICON_CLIPBOARD,
-                    ui.input(|i| i.modifiers.shift)
-                        .then_some(" (+angles)")
-                        .unwrap_or_default()
-                ))
-                .clicked()
-            {
-                let command = if ui.input(|i| i.modifiers.shift) {
-                    format!(
-                        "goto {} {} {} {} {}",
-                        position.x, position.y, position.z, orientation.x, orientation.y,
-                    )
-                } else {
-                    format!("goto {} {} {}", position.x, position.y, position.z)
-                };
+                if ui
+                    .button(format!(
+                        "{} Copy goto command{}",
+                        ICON_CLIPBOARD,
+                        ui.input(|i| i.modifiers.shift)
+                            .then_some(" (+angles)")
+                            .unwrap_or_default()
+                    ))
+                    .clicked()
+                {
+                    let command = if ui.input(|i| i.modifiers.shift) {
+                        format!(
+                            "goto {} {} {} {} {}",
+                            position.x, position.y, position.z, orientation.x, orientation.y,
+                        )
+                    } else {
+                        format!("goto {} {} {}", position.x, position.y, position.z)
+                    };
 
-                ui.ctx().copy_text(command);
-            }
+                    ui.ctx().copy_text(command);
+                }
 
-            ui.add_space(4.0);
+                ui.add_space(4.0);
 
-            ui.horizontal(|ui| {
-                egui::DragValue::new(&mut camera.speed_mul)
-                    .range(0.05f32..=25.0)
-                    .speed(0.05)
-                    .ui(ui);
-                ui.label("Speed");
-            });
-
-            if let CameraProjection::Perspective { fov, .. } = &mut camera.projection {
                 ui.horizontal(|ui| {
-                    egui::DragValue::new(fov)
-                        .range(5f32..=120.0)
+                    egui::DragValue::new(&mut camera.speed_mul)
+                        .range(0.05f32..=25.0)
                         .speed(0.05)
                         .ui(ui);
-                    ui.label("FOV");
+                    ui.label("Speed");
                 });
-            }
 
-            ui.horizontal(|ui| {
-                egui::DragValue::new(&mut camera.smooth_movement)
-                    .range(0f32..=5.0)
-                    .speed(0.05)
-                    .ui(ui);
-                ui.label("Smooth movement");
-            });
+                if let CameraProjection::Perspective { fov, .. } = &mut camera.projection {
+                    ui.horizontal(|ui| {
+                        egui::DragValue::new(fov)
+                            .range(5f32..=120.0)
+                            .speed(0.05)
+                            .ui(ui);
+                        ui.label("FOV");
+                    });
+                }
 
-            ui.horizontal(|ui| {
-                egui::DragValue::new(&mut camera.smooth_look)
-                    .range(0f32..=5.0)
-                    .speed(0.05)
-                    .ui(ui);
-                ui.label("Smooth look");
+                ui.horizontal(|ui| {
+                    egui::DragValue::new(&mut camera.smooth_movement)
+                        .range(0f32..=5.0)
+                        .speed(0.05)
+                        .ui(ui);
+                    ui.label("Smooth movement");
+                });
+
+                ui.horizontal(|ui| {
+                    egui::DragValue::new(&mut camera.smooth_look)
+                        .range(0f32..=5.0)
+                        .speed(0.05)
+                        .ui(ui);
+                    ui.label("Smooth look");
+                });
             });
 
             ui.separator();

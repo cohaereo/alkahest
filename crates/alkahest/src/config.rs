@@ -96,6 +96,8 @@ impl Default for VisualSettings {
                             | NodeFilter::InstakillBarrier
                             | NodeFilter::Cubemap
                             | NodeFilter::NamedArea
+                            | NodeFilter::Decal
+                            | NodeFilter::Decorator
                     ) {
                         Some(nf.to_string())
                     } else {
