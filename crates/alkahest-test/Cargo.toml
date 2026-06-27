@@ -11,7 +11,7 @@ alkahest-pm = { path = "../alkahest-pm" }
 alkahest-renderer = { path = "../alkahest-renderer" }
 
 # (De)serialization
-destiny-pkg.workspace = true
+tiger-pkg.workspace = true
 tiger-parse.workspace = true
 
 # Graphics/GUI

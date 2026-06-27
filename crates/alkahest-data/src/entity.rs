@@ -1,20 +1,20 @@
 use std::ops::Range;
 
-use destiny_pkg::TagHash;
-use tiger_parse::{tiger_tag, FnvHash, NullString, Pointer, PointerOptional};
+use tiger_parse::{tiger_type, FnvHash, NullString, Pointer, PointerOptional};
+use tiger_pkg::TagHash;
 
 use super::geometry::{ELodCategory, EPrimitiveType};
 use crate::{activity::SEntityResource, tfx::TfxRenderStage, Tag};
 
 #[derive(Clone)]
-#[tiger_tag(id = 0x80809AD8)]
+#[tiger_type(id = 0x80809AD8)]
 pub struct SEntity {
     pub file_size: u64,
     pub entity_resources: Vec<Unk80809c04>,
 }
 
 #[derive(Clone)]
-#[tiger_tag(id = 0x80809ACD)]
+#[tiger_type(id = 0x80809ACD)]
 pub struct Unk80809c04 {
     pub unk0: Tag<SEntityResource>,
     pub unk4: u32,
@@ -22,13 +22,13 @@ pub struct Unk80809c04 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806F07, size = 0x70)]
+#[tiger_type(id = 0x80806F07, size = 0x90)]
 pub struct SDynamicModel {
     pub file_size: u64,
     pub unk8: u64,
     pub meshes: Vec<SDynamicMesh>,
     pub unk20: glam::Vec4,
-    #[tag(offset = 0x50)]
+    #[tiger(offset = 0x50)]
     pub model_scale: glam::Vec4,
     pub model_offset: glam::Vec4,
     pub texcoord_scale: glam::Vec2,
@@ -36,7 +36,7 @@ pub struct SDynamicModel {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806EC5, size = 0x80)]
+#[tiger_type(id = 0x80806EC5, size = 0x80)]
 pub struct SDynamicMesh {
     pub vertex0_buffer: TagHash,
     pub vertex1_buffer: TagHash,
@@ -69,7 +69,7 @@ impl SDynamicMesh {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806ECB)]
+#[tiger_type(id = 0x80806ECB)]
 pub struct SDynamicMeshPart {
     pub technique: TagHash,
     pub variant_shader_index: u16,
@@ -89,7 +89,7 @@ pub struct SDynamicMeshPart {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D97)]
+#[tiger_type(id = 0x80806D97)]
 pub struct Unk808072c5 {
     pub technique_count: u32,
     pub technique_start: u32,
@@ -97,7 +97,7 @@ pub struct Unk808072c5 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct Unk80809905 {
     pub name_hash: FnvHash,
     _pad: u32,
@@ -105,21 +105,21 @@ pub struct Unk80809905 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x8080906b)]
+#[tiger_type(id = 0x8080906b)]
 pub struct Unk8080906b {
     pub file_size: u64,
     pub unk0: Vec<Unk80809d02>,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80809D02)]
+#[tiger_type(id = 0x80809D02)]
 pub struct Unk80809d02 {
     pub unk0_name_pointer: PointerOptional<Unk8080894d>,
     pub unk8: PointerOptional<()>,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct Unk8080894d {
     pub name: Pointer<NullString>,
 }

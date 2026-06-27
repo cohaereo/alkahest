@@ -1,12 +1,12 @@
-use destiny_pkg::TagHash;
 use glam::Vec4;
-use tiger_parse::{tiger_tag, NullString, Pointer};
+use tiger_parse::{tiger_type, NullString, Pointer};
+use tiger_pkg::TagHash;
 
 use super::Tag;
 use crate::technique::SDynamicConstants;
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x8080978C)]
+#[tiger_type(id = 0x8080978C)]
 pub struct SRenderGlobals {
     pub file_size: u64,
     pub unk8: Vec<SUnk8080870f>,
@@ -14,7 +14,7 @@ pub struct SRenderGlobals {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x8080870F)]
+#[tiger_type(id = 0x8080870F)]
 pub struct SUnk8080870f {
     pub unk0: u32,
     pub unk4: u32,
@@ -23,7 +23,7 @@ pub struct SUnk8080870f {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808067a8)]
+#[tiger_type(id = 0x808067a8)]
 pub struct SUnk808067a8 {
     pub file_size: u64,
     pub unk8: TagHash,
@@ -37,7 +37,7 @@ pub struct SUnk808067a8 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808066ae)]
+#[tiger_type(id = 0x808066ae)]
 pub struct SUnk808066ae {
     pub file_size: u64,
     pub specular_tint_lookup_texture: TagHash,
@@ -47,7 +47,7 @@ pub struct SUnk808066ae {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808067AD)]
+#[tiger_type(id = 0x808067AD)]
 pub struct SUnk808067ad {
     pub name: Pointer<NullString>,
     pub unk8: u32,
@@ -56,7 +56,7 @@ pub struct SUnk808067ad {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808067AC)]
+#[tiger_type(id = 0x808067AC)]
 pub struct SUnk808067ac {
     pub name: Pointer<NullString>,
     pub unk8: u32,
@@ -64,13 +64,13 @@ pub struct SUnk808067ac {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806DBA, size = 0x400)]
+#[tiger_type(id = 0x80806DBA, size = 0x400)]
 
 pub struct SScope {
     pub file_size: u64,
     pub name: Pointer<NullString>,
 
-    #[tag(offset = 0x48)]
+    #[tiger(offset = 0x48)]
     // TODO(cohae): Order *might* be incorrect
     pub stage_pixel: SScopeStage,
     pub stage_vertex: SScopeStage,
@@ -95,7 +95,7 @@ impl SScope {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct SScopeStage {
     pub unk0: [u32; 4],
     pub unk10: u64,
@@ -105,7 +105,7 @@ pub struct SScopeStage {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x8080822D)]
+#[tiger_type(id = 0x8080822D)]
 pub struct SUnk8080822d {
     pub file_size: u64,
     pub unk8: Vec<u16>,

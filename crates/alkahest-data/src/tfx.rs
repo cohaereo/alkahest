@@ -108,7 +108,6 @@ impl TigerReadable for TfxRenderStage {
         Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
     }
 
-    const ZEROCOPY: bool = true;
     const SIZE: usize = 1;
 }
 
@@ -187,7 +186,6 @@ impl TigerReadable for TfxFeatureRenderer {
         Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
     }
 
-    const ZEROCOPY: bool = true;
     const SIZE: usize = 1;
 }
 
@@ -236,6 +234,5 @@ impl TigerReadable for TfxShaderStage {
         Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
     }
 
-    const ZEROCOPY: bool = true;
     const SIZE: usize = 1;
 }

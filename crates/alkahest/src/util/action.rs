@@ -14,8 +14,8 @@ use alkahest_renderer::{
     resources::AppResources,
 };
 use bevy_ecs::entity::Entity;
-use destiny_pkg::TagHash;
 use glam::{Vec2, Vec3};
+use tiger_pkg::TagHash;
 
 use crate::{
     gui::activity_select::{get_activity_hash, set_activity},

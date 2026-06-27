@@ -3,14 +3,14 @@ use std::{
     io::{Read, Seek},
 };
 
-use destiny_pkg::TagHash;
 use glam::Vec4;
-use tiger_parse::{tiger_tag, Endian, NullString, Pointer, TigerReadable};
+use tiger_parse::{tiger_type, Endian, NullString, Pointer, TigerReadable};
+use tiger_pkg::TagHash;
 
 use crate::{tfx::TfxShaderStage, WideHash};
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806DAA)]
+#[tiger_type(id = 0x80806DAA)]
 pub struct STechnique {
     pub file_size: u64,
     /// Indicates what to bind
@@ -60,7 +60,7 @@ impl STechnique {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct STechniqueShader {
     pub shader: TagHash,
     pub unk4: u32,
@@ -72,7 +72,7 @@ pub struct STechniqueShader {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806DCF)]
+#[tiger_type(id = 0x80806DCF)]
 pub struct SMaterialTextureAssignment {
     /// Material slot to assign to
     pub slot: u32,
@@ -81,7 +81,7 @@ pub struct SMaterialTextureAssignment {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct Unk80806cb1 {
     pub file_size: u64,
     pub unk8: TagHash,
@@ -94,7 +94,7 @@ pub struct Unk80806cb1 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct Unk80806cb5 {
     pub name: Pointer<NullString>,
     pub unk8: u32,
@@ -103,7 +103,7 @@ pub struct Unk80806cb5 {
 
 pub type Unk80806cb6 = Unk80806cb5;
 
-#[tiger_tag]
+#[tiger_type]
 #[derive(Debug, Clone)]
 pub struct SDynamicConstants {
     pub bytecode: Vec<u8>,             // 0x0
@@ -170,12 +170,11 @@ impl TigerReadable for TfxScopeBits {
         Ok(Self::from_bits_truncate(bits))
     }
 
-    const ZEROCOPY: bool = true;
     const SIZE: usize = 8;
 }
 
 /// Selection of blend, rasterizer, depth bias and depth stencil state
-#[tiger_tag(size = 4)]
+#[tiger_type(size = 4)]
 #[derive(Clone, Copy)]
 pub struct StateSelection {
     /// Value is encoded as 0xDDCCBBAA

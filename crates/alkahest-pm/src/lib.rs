@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use destiny_pkg::{PackageManager, TagHash};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use tiger_pkg::{PackageManager, TagHash};
 
 lazy_static! {
     pub static ref PACKAGE_MANAGER: RwLock<Option<Arc<PackageManager>>> = RwLock::new(None);

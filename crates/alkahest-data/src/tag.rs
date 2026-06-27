@@ -4,9 +4,8 @@ use std::{
 };
 
 use alkahest_pm::package_manager;
-use binrw::{BinRead, BinReaderExt};
-use destiny_pkg::{TagHash, TagHash64};
 use tiger_parse::{dpkg::PackageManagerExt, TigerReadable};
+use tiger_pkg::{TagHash, TagHash64};
 
 #[derive(Clone)]
 pub struct Tag<T: TigerReadable>(pub T, TagHash);
@@ -20,7 +19,6 @@ impl<T: TigerReadable> TigerReadable for Tag<T> {
         Ok(Tag(package_manager().read_tag_struct(tag)?, tag))
     }
 
-    const ZEROCOPY: bool = false;
     const SIZE: usize = TagHash::SIZE;
 }
 
@@ -131,25 +129,25 @@ impl From<TagHash> for WideHash {
     }
 }
 
-impl BinRead for WideHash {
-    type Args<'a> = ();
+// impl BinRead for WideHash {
+//     type Args<'a> = ();
 
-    fn read_options<R: std::io::Read + std::io::Seek>(
-        reader: &mut R,
-        endian: binrw::Endian,
-        _args: Self::Args<'_>,
-    ) -> binrw::BinResult<Self> {
-        let hash32: TagHash = reader.read_type(endian)?;
-        let is_hash32: u32 = reader.read_type(endian)?;
-        let hash64: TagHash64 = reader.read_type(endian)?;
+//     fn read_options<R: std::io::Read + std::io::Seek>(
+//         reader: &mut R,
+//         endian: binrw::Endian,
+//         _args: Self::Args<'_>,
+//     ) -> binrw::BinResult<Self> {
+//         let hash32: TagHash = reader.read_type(endian)?;
+//         let is_hash32: u32 = reader.read_type(endian)?;
+//         let hash64: TagHash64 = reader.read_type(endian)?;
 
-        if is_hash32 != 0 {
-            Ok(WideHash::Hash32(hash32))
-        } else {
-            Ok(WideHash::Hash64(hash64))
-        }
-    }
-}
+//         if is_hash32 != 0 {
+//             Ok(WideHash::Hash32(hash32))
+//         } else {
+//             Ok(WideHash::Hash64(hash64))
+//         }
+//     }
+// }
 
 impl TigerReadable for WideHash {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
@@ -167,7 +165,6 @@ impl TigerReadable for WideHash {
         }
     }
 
-    const ZEROCOPY: bool = false;
     const SIZE: usize = 16;
 }
 
@@ -189,7 +186,6 @@ impl<T: TigerReadable> TigerReadable for WideTag<T> {
         }
     }
 
-    const ZEROCOPY: bool = false;
     const SIZE: usize = TagHash::SIZE;
 }
 

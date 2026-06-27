@@ -1,17 +1,17 @@
-use destiny_pkg::TagHash;
-use tiger_parse::tiger_tag;
+use tiger_parse::tiger_type;
+use tiger_pkg::TagHash;
 
 use crate::common::ResourceHash;
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff, size = 0x30)]
+#[tiger_type(id = 0xffffffff, size = 0x30)]
 pub struct Unk80804f72 {
     pub file_size: u64,
     pub unk8: Vec<Unk80804f74>,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff, size = 0x30)]
+#[tiger_type(id = 0xffffffff, size = 0x30)]
 pub struct Unk80804f74 {
     pub unk0: ResourceHash,
     pub unk4: ResourceHash,
@@ -21,7 +21,7 @@ pub struct Unk80804f74 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff, size = 0x30)]
+#[tiger_type(id = 0xffffffff, size = 0x30)]
 pub struct Unk80804f76 {
     pub unk0: (TagHash, ResourceHash),
     pub unk8: (TagHash, ResourceHash),

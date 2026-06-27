@@ -4,7 +4,7 @@ use alkahest_data::{
     activity::{SActivity, SEntityResource, SUnk8080460c, Unk80808cef, Unk80808e89, Unk808092d8},
     common::ResourceHash,
     decorator::SDecorator,
-    entity::{SEntity, Unk808072c5, Unk8080906b, Unk80809905},
+    entity::{SEntity, Unk808072c5},
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume,
         SDecalCollectionResource, SHavokShapeRef, SLensFlare, SLightCollection, SMapAtmosphere,
@@ -19,13 +19,12 @@ use alkahest_data::{
 use alkahest_pm::package_manager;
 use anyhow::Context;
 use bevy_ecs::{bundle::Bundle, entity::Entity, query::With};
-use binrw::BinReaderExt;
-use destiny_pkg::TagHash;
 use ecolor::Color32;
 use glam::{Mat4, Vec3, Vec4Swizzles};
 use itertools::{multizip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
-use tiger_parse::{Endian, FnvHash, PackageManagerExt, TigerReadable};
+use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
+use tiger_pkg::TagHash;
 
 use crate::{
     camera::CameraProjection,
@@ -42,7 +41,7 @@ use crate::{
             static_geometry::{StaticInstance, StaticInstances, StaticModel, StaticModelSingle},
             terrain::TerrainPatches,
         },
-        tags::{fnv1, insert_tag, EntityTag, NodeFilter},
+        tags::{insert_tag, EntityTag, NodeFilter},
         transform::{OriginalTransform, Transform, TransformFlags},
         visibility::VisibilityBundle,
         Scene, SceneInfo,
@@ -438,7 +437,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let preheader_tag: TagHash = table_data.read_le().unwrap();
+                let preheader_tag = TagHash::read_ds(table_data)?;
                 let preheader: SUnk80806ef4 =
                     package_manager().read_tag_struct(preheader_tag).unwrap();
 
@@ -560,7 +559,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let tag: TagHash = table_data.read_le().unwrap();
+                let tag = TagHash::read_ds(table_data)?;
                 if !tag.is_some() {
                     continue;
                 }
@@ -750,7 +749,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let tag: TagHash = table_data.read_le().unwrap();
+                let tag = TagHash::read_ds(table_data)?;
                 if tag.is_none() {
                     continue;
                 }
@@ -775,7 +774,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let tag: TagHash = table_data.read_le().unwrap();
+                let tag = TagHash::read_ds(table_data)?;
                 if !tag.is_some() {
                     continue;
                 }
@@ -835,7 +834,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let tag: TagHash = table_data.read_le().unwrap();
+                let tag = TagHash::read_ds(table_data)?;
                 let light: SShadowingLight = package_manager().read_tag_struct(tag)?;
 
                 let shadowmap = ShadowMapRenderer::new(
@@ -958,7 +957,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let tag: TagHash = table_data.read_le().unwrap();
+                let tag = TagHash::read_ds(table_data)?;
                 if tag.is_none() {
                     // cohae: Apparently the lens flare tag is optional?
                     continue;
@@ -984,7 +983,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let tag: TagHash = table_data.read_le().unwrap();
+                let tag = TagHash::read_ds(table_data)?;
                 if !tag.is_some() {
                     continue;
                 }
@@ -1016,7 +1015,7 @@ fn load_datatable_into_scene<R: Read + Seek>(
                 table_data
                     .seek(SeekFrom::Start(data.data_resource.offset + 16))
                     .unwrap();
-                let header_tag: TagHash = table_data.read_le().unwrap();
+                let header_tag = TagHash::read_ds(table_data)?;
                 let header: SDecorator = package_manager().read_tag_struct(header_tag)?;
 
                 match DecoratorRenderer::load(renderer, header_tag, header) {

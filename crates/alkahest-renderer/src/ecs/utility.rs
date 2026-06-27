@@ -6,9 +6,9 @@ use bevy_ecs::{
     prelude::Component,
     system::{In, Query, Res, ResMut},
 };
-use destiny_pkg::TagHash;
 use ecolor::Rgba;
 use glam::Vec3;
+use tiger_pkg::TagHash;
 
 use super::{
     common::{Icon, Label, Mutable, RenderCommonBundle},

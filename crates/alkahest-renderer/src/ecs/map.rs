@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use alkahest_data::map::{SMapAtmosphere, SStaticAmbientOcclusion};
 use anyhow::Context;
 use bevy_ecs::{prelude::Component, system::Resource};
-use destiny_pkg::TagHash;
 use glam::Vec3;
+use tiger_pkg::TagHash;
 
 use crate::{
     gpu::{texture::Texture, GpuContext},

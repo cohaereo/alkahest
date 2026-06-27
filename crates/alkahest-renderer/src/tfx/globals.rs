@@ -3,9 +3,9 @@ use std::sync::Arc;
 use alkahest_data::render_globals::{SRenderGlobals, SUnk808066ae, SUnk808067a8, SUnk8080822d};
 use alkahest_pm::package_manager;
 use anyhow::Context;
-use destiny_pkg::TagHash;
 use rustc_hash::FxHashMap;
 use tiger_parse::PackageManagerExt;
+use tiger_pkg::TagHash;
 
 use crate::{
     gpu::{texture::Texture, GpuContext},

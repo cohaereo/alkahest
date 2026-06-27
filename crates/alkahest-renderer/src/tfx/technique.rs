@@ -6,9 +6,9 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use anyhow::{ensure, Context};
-use destiny_pkg::TagHash;
 use glam::Vec4;
 use rustc_hash::FxHashMap;
+use tiger_pkg::TagHash;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11ComputeShader, ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader,
     ID3D11PixelShader, ID3D11SamplerState, ID3D11VertexShader,

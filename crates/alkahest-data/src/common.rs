@@ -33,7 +33,6 @@ impl TigerReadable for ResourceHash {
     }
 
     const SIZE: usize = u32::SIZE;
-    const ZEROCOPY: bool = true;
 }
 
 impl Debug for ResourceHash {

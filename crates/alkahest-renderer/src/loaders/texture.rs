@@ -1,5 +1,5 @@
 use alkahest_data::WideHash;
-use destiny_pkg::TagHash;
+use tiger_pkg::TagHash;
 
 use crate::gpu::{texture::Texture, GpuContext};
 

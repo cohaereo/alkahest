@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crossbeam::channel::{Receiver, Sender};
-use destiny_pkg::TagHash;
 use rustc_hash::FxHashSet;
 use strum::AsRefStr;
+use tiger_pkg::TagHash;
 
 use crate::{
     gpu::{texture::Texture, GpuContext},

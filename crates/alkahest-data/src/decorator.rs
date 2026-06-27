@@ -1,6 +1,6 @@
-use destiny_pkg::TagHash;
 use glam::Vec4;
-use tiger_parse::tiger_tag;
+use tiger_parse::tiger_type;
+use tiger_pkg::TagHash;
 
 use crate::{
     occlusion::{Aabb, SOcclusionBounds},
@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806C98)]
+#[tiger_type(id = 0x80806C98)]
 pub struct SDecorator {
     pub file_size: u64,
     pub unk8: Vec<Tag<SUnk80806CB2>>,
@@ -23,7 +23,7 @@ pub struct SDecorator {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806CA4)]
+#[tiger_type(id = 0x80806CA4)]
 pub struct SUnk80806CA4 {
     pub file_size: u64,
     pub unk8: u32,
@@ -35,14 +35,14 @@ pub struct SUnk80806CA4 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806CA7)]
+#[tiger_type(id = 0x80806CA7)]
 pub struct SDecoratorInstanceData {
     pub file_size: u64,
     pub data: Vec<SDecoratorInstanceElement>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806CA9)]
+#[tiger_type(id = 0x80806CA9)]
 pub struct SDecoratorInstanceElement {
     /// Normalized position
     pub position: [u16; 3],
@@ -52,7 +52,7 @@ pub struct SDecoratorInstanceElement {
     pub color: [u8; 4],
 }
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806C9F)]
+#[tiger_type(id = 0x80806C9F)]
 pub struct SUnk80806C9F {
     pub instances_scale: Vec4,
     pub instances_offset: Vec4,
@@ -63,7 +63,7 @@ pub struct SUnk80806C9F {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806CB2)]
+#[tiger_type(id = 0x80806CB2)]
 pub struct SUnk80806CB2 {
     pub file_size: u64,
     pub entity_model: TagHash,
@@ -75,14 +75,14 @@ pub struct SUnk80806CB2 {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806CB8)]
+#[tiger_type(id = 0x80806CB8)]
 pub struct SUnk80806CB8 {
     pub file_size: u64,
     pub unk8: Vec<SUnk80806CBA>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80806CBA)]
+#[tiger_type(id = 0x80806CBA)]
 pub struct SUnk80806CBA {
     pub unk0: [Vec4; 5],
 }

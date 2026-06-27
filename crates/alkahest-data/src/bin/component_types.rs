@@ -2,9 +2,9 @@ use std::{borrow::Cow, collections::HashMap, sync::Arc};
 
 use alkahest_data::entity::SEntity;
 use alkahest_pm::{package_manager, PACKAGE_MANAGER};
-use destiny_pkg::{GameVersion, PackageManager, TagHash};
 use lazy_static::lazy_static;
 use tiger_parse::PackageManagerExt;
+use tiger_pkg::{GameVersion, PackageManager, TagHash};
 
 lazy_static! {
     static ref TYPE_MAPPING: HashMap<u32, &'static str> = [
@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
     let packages_dir = std::env::args().nth(1).expect("missing packages dir");
     *PACKAGE_MANAGER.write() = Some(Arc::new(PackageManager::new(
         packages_dir,
-        GameVersion::Destiny2TheFinalShape,
+        GameVersion::Destiny(tiger_pkg::DestinyVersion::Destiny2Renegades),
         None,
     )?));
     println!("Package manager initialized");

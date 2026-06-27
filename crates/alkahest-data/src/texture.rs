@@ -1,16 +1,16 @@
-use destiny_pkg::TagHash;
-use tiger_parse::tiger_tag;
+use tiger_parse::tiger_type;
+use tiger_pkg::TagHash;
 
 use crate::dxgi::DxgiFormat;
 
 #[derive(Debug)]
-#[tiger_tag(etype = 32, size = 0x40)]
+#[tiger_type(etype = 32, size = 0x40)]
 pub struct STextureHeader {
     pub data_size: u32,
     pub format: DxgiFormat,
     pub _unk8: u32,
 
-    #[tag(offset = 0x20)]
+    #[tiger(offset = 0x20)]
     pub cafe: u16, // 0x20
 
     pub width: u16,      // 0x22
@@ -29,7 +29,7 @@ pub struct STextureHeader {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct TexturePlate {
     pub file_size: u64,
     pub _unk: u64,
@@ -37,7 +37,7 @@ pub struct TexturePlate {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct TexturePlateTransform {
     pub texture: TagHash,
     pub translation: glam::IVec2,
@@ -45,7 +45,7 @@ pub struct TexturePlateTransform {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct TexturePlateSet {
     pub file_size: u64,
     pub _unk: [u32; 7],

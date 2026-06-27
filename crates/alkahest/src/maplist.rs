@@ -26,10 +26,10 @@ use bevy_ecs::{
     system::Commands,
     world::CommandQueue,
 };
-use destiny_pkg::TagHash;
 use itertools::Itertools;
 use poll_promise::Promise;
 use smallvec::SmallVec;
+use tiger_pkg::TagHash;
 
 use crate::{
     discord, gui::activity_select::CurrentActivity, resources::AppResources, ApplicationArgs,

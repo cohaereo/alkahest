@@ -1,6 +1,6 @@
 use bevy_ecs::system::Resource;
-use destiny_pkg::TagHash;
 use resources::SelectedEntity;
+use tiger_pkg::TagHash;
 
 pub mod audio;
 pub mod channels;

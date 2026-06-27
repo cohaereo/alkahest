@@ -5,15 +5,15 @@ use std::{
 };
 
 use alkahest_pm::package_manager;
-use destiny_pkg::TagHash;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
-use tiger_parse::{tiger_tag, PackageManagerExt, Pointer, TigerReadable};
+use tiger_parse::{tiger_type, PackageManagerExt, Pointer, TigerReadable};
+use tiger_pkg::TagHash;
 
 use crate::common::ResourceHash;
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808099EF)]
+#[tiger_type(id = 0x808099EF)]
 pub struct SLocalizedStrings {
     pub file_size: u64,
     pub string_hashes: Vec<ResourceHash>,
@@ -33,7 +33,7 @@ pub struct SLocalizedStrings {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct SStringData {
     pub file_size: u64,
     pub string_parts: Vec<SStringPart>,
@@ -44,14 +44,14 @@ pub struct SStringData {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808099F5)]
+#[tiger_type(id = 0x808099F5)]
 pub struct SStringCombination {
     pub data: Pointer<()>,
     pub part_count: i64,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x808099F7)]
+#[tiger_type(id = 0x808099F7)]
 pub struct SStringPart {
     pub _unk0: u64,
     pub data: Pointer<()>,
@@ -90,10 +90,10 @@ impl StringContainer {
             let mut final_string = String::new();
 
             for ip in 0..combination.part_count {
-                cur.seek(SeekFrom::Start(combination.data.offset()))?;
+                cur.seek(SeekFrom::Start(combination.data.offset() as u64))?;
                 cur.seek(SeekFrom::Current(ip * 0x20))?;
                 let part: SStringPart = TigerReadable::read_ds(&mut cur)?;
-                cur.seek(SeekFrom::Start(part.data.offset()))?;
+                cur.seek(SeekFrom::Start(part.data.offset() as u64))?;
                 let mut data = vec![0u8; part.byte_length as usize];
                 cur.read_exact(&mut data)?;
                 final_string += &decode_text(&data, part.cipher_shift);

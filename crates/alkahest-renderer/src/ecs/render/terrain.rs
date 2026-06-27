@@ -7,9 +7,9 @@ use alkahest_data::{
 };
 use alkahest_pm::package_manager;
 use bevy_ecs::{entity::Entity, prelude::Component};
-use destiny_pkg::TagHash;
 use glam::Vec4;
 use tiger_parse::PackageManagerExt;
+use tiger_pkg::TagHash;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 use crate::{
@@ -232,10 +232,11 @@ impl TerrainPatches {
             }
 
             unsafe {
-                renderer
-                    .gpu
-                    .lock_context()
-                    .DrawIndexed(part.index_count as _, part.index_start as _, 0);
+                renderer.gpu.lock_context().DrawIndexed(
+                    part.index_count as _,
+                    part.index_start as _,
+                    0,
+                );
             }
         }
     }

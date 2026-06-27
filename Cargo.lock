@@ -112,7 +112,7 @@ dependencies = [
  "anyhow",
  "bevy_ecs",
  "bevy_tasks",
- "binrw",
+ "binrw 0.13.3",
  "bitflags 2.6.0",
  "build-time",
  "bytemuck",
@@ -120,7 +120,6 @@ dependencies = [
  "clap",
  "crossbeam",
  "destiny-havok",
- "destiny-pkg",
  "directories",
  "discord-sdk",
  "egui",
@@ -160,6 +159,7 @@ dependencies = [
  "strum",
  "thiserror 1.0.63",
  "tiger-parse",
+ "tiger-pkg",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -182,14 +182,14 @@ dependencies = [
  "anyhow",
  "assert-offset",
  "bevy_ecs",
- "binrw",
+ "binrw 0.13.3",
  "bitflags 2.6.0",
- "destiny-pkg",
  "glam",
  "lazy_static",
  "rayon",
  "rustc-hash 2.0.0",
  "tiger-parse",
+ "tiger-pkg",
 ]
 
 [[package]]
@@ -210,9 +210,9 @@ name = "alkahest-pm"
 version = "0.5.1"
 dependencies = [
  "anyhow",
- "destiny-pkg",
  "lazy_static",
  "parking_lot",
+ "tiger-pkg",
 ]
 
 [[package]]
@@ -223,13 +223,12 @@ dependencies = [
  "alkahest-pm",
  "anyhow",
  "bevy_ecs",
- "binrw",
+ "binrw 0.13.3",
  "bitflags 2.6.0",
  "bytemuck",
  "chroma-dbg",
  "crossbeam",
  "destiny-havok",
- "destiny-pkg",
  "ecolor",
  "fastrand",
  "field_access",
@@ -251,6 +250,7 @@ dependencies = [
  "smallvec",
  "strum",
  "tiger-parse",
+ "tiger-pkg",
  "tracing",
  "windows 0.57.0",
  "winit",
@@ -266,13 +266,13 @@ dependencies = [
  "anyhow",
  "clap",
  "crossbeam",
- "destiny-pkg",
  "futures",
  "itertools 0.13.0",
  "lazy_static",
  "parking_lot",
  "rayon",
  "tiger-parse",
+ "tiger-pkg",
  "tracing",
  "tracing-subscriber",
  "windows 0.57.0",
@@ -660,19 +660,20 @@ dependencies = [
 
 [[package]]
 name = "bincode"
-version = "2.0.0-rc.3"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f11ea1a0346b94ef188834a65c068a03aec181c94896d481d7a0a40d85b0ce95"
+checksum = "36eaf5d7b090263e8150820482d5d93cd964a81e4019913c972f4edcc6edb740"
 dependencies = [
  "bincode_derive",
  "serde",
+ "unty",
 ]
 
 [[package]]
 name = "bincode_derive"
-version = "2.0.0-rc.3"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e30759b3b99a1b802a7a3aa21c85c3ded5c28e1c83170d82d70f08bbf7f3e4c"
+checksum = "bf95709a440f45e986983918d0e8a1f30a9b1df04918fc828670606804ac3c09"
 dependencies = [
  "virtue",
 ]
@@ -684,7 +685,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "173901312e9850391d4d7c1318c4e099fdc037d61870fca427429830efdb4e5f"
 dependencies = [
  "array-init",
- "binrw_derive",
+ "binrw_derive 0.13.3",
+ "bytemuck",
+]
+
+[[package]]
+name = "binrw"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d53195f985e88ab94d1cc87e80049dd2929fd39e4a772c5ae96a7e5c4aad3642"
+dependencies = [
+ "array-init",
+ "binrw_derive 0.15.1",
  "bytemuck",
 ]
 
@@ -695,10 +707,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb515fdd6f8d3a357c8e19b8ec59ef53880807864329b1cb1cba5c53bf76557e"
 dependencies = [
  "either",
- "owo-colors",
+ "owo-colors 3.5.0",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "binrw_derive"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5910da05ee556b789032c8ff5a61fb99239580aa3fd0bfaa8f4d094b2aee00ad"
+dependencies = [
+ "either",
+ "owo-colors 4.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
 ]
 
 [[package]]
@@ -1047,7 +1072,7 @@ dependencies = [
  "eyre",
  "indenter",
  "once_cell",
- "owo-colors",
+ "owo-colors 3.5.0",
  "tracing-error",
 ]
 
@@ -1058,7 +1083,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd6be1b2a7e382e2b98b43b2adcca6bb0e465af0bdd38123873ae61eb17a72c2"
 dependencies = [
  "once_cell",
- "owo-colors",
+ "owo-colors 3.5.0",
  "tracing-core",
  "tracing-error",
 ]
@@ -1293,38 +1318,13 @@ name = "destiny-havok"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "binrw",
+ "binrw 0.13.3",
  "bitflags 2.6.0",
  "chull",
  "colored",
  "glam",
  "itertools 0.13.0",
  "parry3d",
-]
-
-[[package]]
-name = "destiny-pkg"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daeb4e7dc68ce26f5b234514248c8b187221ca8f1471b4e1809dd0cb221fe571"
-dependencies = [
- "aes",
- "aes-gcm",
- "anyhow",
- "bincode",
- "binrw",
- "clap",
- "clap-num",
- "hex",
- "itertools 0.13.0",
- "lazy_static",
- "libloading",
- "parking_lot",
- "rayon",
- "rustc-hash 1.1.0",
- "serde",
- "serde_json",
- "tracing",
 ]
 
 [[package]]
@@ -1411,12 +1411,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b"
 
 [[package]]
+name = "disqualified"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9c272297e804878a2a4b707cfcfc6d2328b5bb936944613b4fdf2b9269afdfd"
+
+[[package]]
 name = "dlib"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading",
+ "libloading 0.8.5",
 ]
 
 [[package]]
@@ -2384,6 +2390,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2477,7 +2492,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
+]
+
+[[package]]
+name = "libloading"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
+dependencies = [
+ "cfg-if",
+ "windows-link",
 ]
 
 [[package]]
@@ -3246,6 +3271,12 @@ name = "owo-colors"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
+
+[[package]]
+name = "owo-colors"
+version = "4.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d211803b9b6b570f68772237e415a029d5a50c65d382910b879fb19d3271f94d"
 
 [[package]]
 name = "parking"
@@ -4316,25 +4347,52 @@ dependencies = [
 
 [[package]]
 name = "tiger-parse"
-version = "0.1.15"
-source = "git+https://github.com/v4nguard/tiger-parse#31aea7322de71ecaff9128113827e809abac08f6"
+version = "0.7.2"
+source = "git+https://github.com/v4nguard/tiger-parse.git#69469beb8c5420523860792613fa51bbcdbd76f8"
 dependencies = [
- "anyhow",
- "destiny-pkg",
+ "disqualified",
  "glam",
+ "paste",
+ "thiserror 1.0.63",
  "tiger-parse-derive",
+ "tiger-pkg",
  "tracing",
 ]
 
 [[package]]
 name = "tiger-parse-derive"
 version = "0.1.0"
-source = "git+https://github.com/v4nguard/tiger-parse#31aea7322de71ecaff9128113827e809abac08f6"
+source = "git+https://github.com/v4nguard/tiger-parse.git#69469beb8c5420523860792613fa51bbcdbd76f8"
 dependencies = [
  "darling",
  "proc-macro2",
  "quote",
  "syn 2.0.98",
+]
+
+[[package]]
+name = "tiger-pkg"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20b797ef7f330cbc59bf3604a97c072147ba8923c0f531a3feeb407b91831712"
+dependencies = [
+ "aes-gcm",
+ "ahash",
+ "anyhow",
+ "bincode",
+ "binrw 0.15.1",
+ "bitflags 2.6.0",
+ "clap",
+ "clap-num",
+ "hex",
+ "itertools 0.14.0",
+ "lazy_static",
+ "libloading 0.9.0",
+ "parking_lot",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -4730,6 +4788,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
+name = "unty"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d49784317cd0d1ee7ec5c716dd598ec5b4483ea832a2dced265471cc0f690ae"
+
+[[package]]
 name = "url"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4791,9 +4855,9 @@ dependencies = [
 
 [[package]]
 name = "virtue"
-version = "0.0.13"
+version = "0.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dcc60c0624df774c82a0ef104151231d37da4962957d691c011c852b2473314"
+checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 
 [[package]]
 name = "walkdir"
@@ -5206,6 +5270,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows-link"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
 name = "windows-registry"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5576,7 +5646,7 @@ dependencies = [
  "as-raw-xcb-connection",
  "gethostname",
  "libc",
- "libloading",
+ "libloading 0.8.5",
  "once_cell",
  "rustix",
  "x11rb-protocol",

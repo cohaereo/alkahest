@@ -1,8 +1,8 @@
-use destiny_pkg::TagHash;
-use tiger_parse::tiger_tag;
+use tiger_parse::tiger_type;
+use tiger_pkg::TagHash;
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80809738)]
+#[tiger_type(id = 0x80809738)]
 pub struct SSoundCollection {
     pub file_size: u64,
     pub unk8: u32,

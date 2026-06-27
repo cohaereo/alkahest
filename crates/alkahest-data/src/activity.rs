@@ -1,10 +1,10 @@
-use destiny_pkg::TagHash;
-use tiger_parse::{tiger_tag, NullString, Pointer, ResourcePointer, ResourcePointerWithClass};
+use tiger_parse::{tiger_type, NullString, Pointer, ResourcePointer, ResourcePointerWithClass};
+use tiger_pkg::TagHash;
 
 use crate::{common::ResourceHash, Tag, WideHash};
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808E8E, size = 0x80)]
+#[tiger_type(id = 0x80808E8E, size = 0x88)]
 pub struct SActivity {
     pub file_size: u64,
     pub location_name: ResourceHash,
@@ -14,7 +14,7 @@ pub struct SActivity {
     pub unk18: ResourcePointer,
     pub destination: WideHash,
 
-    #[tag(offset = 0x40)]
+    #[tiger(offset = 0x40)]
     pub unk40: Vec<Unk80808926>,
     pub unk50: Vec<Unk80808924>,
     pub unk60: [u32; 4],
@@ -24,7 +24,7 @@ pub struct SActivity {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808E8B)]
+#[tiger_type(id = 0x80808E8B)]
 pub struct SDestination {
     pub file_size: u64,
     pub location_name: ResourceHash,
@@ -42,7 +42,7 @@ pub struct SDestination {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x8080892E)]
+#[tiger_type(id = 0x8080892E)]
 pub struct Unk8080892e {
     /// Doesn't always map to a string
     pub activity_name: ResourceHash,
@@ -53,7 +53,7 @@ pub struct Unk8080892e {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808924, size = 0x48)]
+#[tiger_type(id = 0x80808924, size = 0x48)]
 pub struct Unk80808924 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -66,7 +66,7 @@ pub struct Unk80808924 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808926)]
+#[tiger_type(id = 0x80808926)]
 pub struct Unk80808926 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -95,7 +95,7 @@ pub struct Unk80808926 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80808948)]
+#[tiger_type(id = 0x80808948)]
 pub struct Unk80808948 {
     pub location_name: ResourceHash,
     pub activity_name: ResourceHash,
@@ -106,7 +106,7 @@ pub struct Unk80808948 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80808E89)]
+#[tiger_type(id = 0x80808E89)]
 pub struct Unk80808e89 {
     pub file_size: u64,
     pub unk8: u64,
@@ -117,22 +117,22 @@ pub struct Unk80808e89 {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80808EBE)]
+#[tiger_type(id = 0x80808EBE)]
 pub struct Unk80808ebe {
     pub file_size: u64,
     pub entity_resources: Vec<Tag<Unk80808943>>,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80808943, size = 0x24)]
+#[tiger_type(id = 0x80808943, size = 0x24)]
 pub struct Unk80808943 {
     pub file_size: u64,
-    #[tag(offset = 0x20)]
+    #[tiger(offset = 0x20)]
     pub entity_resource: TagHash,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80809B06, size = 0x88)]
+#[tiger_type(id = 0x80809B06, size = 0x88)]
 pub struct SEntityResource {
     pub file_size: u64,
     pub unk8: ResourcePointer,
@@ -141,19 +141,19 @@ pub struct SEntityResource {
 
     pub unk20: Vec<ResourcePointerWithClass>,
 
-    #[tag(offset = 0x40)]
+    #[tiger(offset = 0x40)]
     pub resource_table1: Vec<()>,
 
-    #[tag(offset = 0x60)]
+    #[tiger(offset = 0x60)]
     pub resource_table2: Vec<Pointer<SEntityRef>>,
 
-    #[tag(offset = 0x80)]
+    #[tiger(offset = 0x80)]
     pub unk80: TagHash,
     pub unk84: TagHash,
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct Unk808092d8 {
     pub unk0: [u32; 33],
     pub unk84: TagHash,
@@ -164,7 +164,7 @@ pub struct Unk808092d8 {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct SUnk8080460c {
     pub unk0: [u32; 36],
     pub rotation: glam::Quat,
@@ -172,14 +172,14 @@ pub struct SUnk8080460c {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct Unk80808cef {
     pub unk0: [u32; 22],
     pub unk58: TagHash,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0xffffffff)]
+#[tiger_type(id = 0xffffffff)]
 pub struct SEntityRef {
     /// SEntity, SSoundCollection
     pub unk0: WideHash,

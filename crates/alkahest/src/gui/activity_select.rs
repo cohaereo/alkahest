@@ -5,10 +5,10 @@ use alkahest_data::{
 };
 use alkahest_pm::{is_pkg_redacted, package_manager};
 use anyhow::Context as _;
-use destiny_pkg::TagHash;
 use egui::{ahash::HashMapExt, Color32, Context, RichText, TextBuffer};
 use rustc_hash::FxHashMap;
 use tiger_parse::{PackageManagerExt, TigerReadable};
+use tiger_pkg::TagHash;
 use winit::window::Window;
 
 use crate::{

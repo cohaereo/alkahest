@@ -9,11 +9,11 @@ use bevy_ecs::{
     change_detection::DetectChanges, component::Component, entity::Entity, system::Query,
     world::Ref,
 };
-use destiny_pkg::TagHash;
 use glam::{Vec4, Vec4Swizzles};
 use itertools::Itertools;
 use rustc_hash::FxHashSet;
 use tiger_parse::PackageManagerExt;
+use tiger_pkg::TagHash;
 
 use crate::{
     ecs::{

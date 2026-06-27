@@ -4,10 +4,10 @@ use alkahest_renderer::{
     ecs::{transform::Transform, Scene},
     renderer::RendererShared,
 };
-use destiny_pkg::TagHash;
 use glam::Vec3;
 use itertools::Itertools;
 use tiger_parse::TigerReadable;
+use tiger_pkg::TagHash;
 
 use crate::gui::console::load_entity;
 

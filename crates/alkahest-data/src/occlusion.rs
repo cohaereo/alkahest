@@ -1,15 +1,15 @@
 use glam::{Mat4, Quat, Vec3};
-use tiger_parse::{tiger_tag, TigerReadable};
+use tiger_parse::{tiger_type, TigerReadable};
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x808093B1, size = 0x18)]
+#[tiger_type(id = 0x808093B1, size = 0x18)]
 pub struct SOcclusionBounds {
     pub file_size: u64,
     pub bounds: Vec<SObjectOcclusionBounds>,
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x808093B3, size = 0x30)]
+#[tiger_type(id = 0x808093B3, size = 0x30)]
 pub struct SObjectOcclusionBounds {
     pub bb: Aabb,
     pub unk20: [u32; 4],
@@ -152,5 +152,4 @@ impl TigerReadable for Aabb {
     }
 
     const SIZE: usize = glam::Vec4::SIZE * 2;
-    const ZEROCOPY: bool = false;
 }

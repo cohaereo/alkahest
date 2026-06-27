@@ -32,7 +32,6 @@ use alkahest_renderer::{
 use anyhow::Context;
 use bevy_ecs::bundle::Bundle;
 use binrw::BinReaderExt;
-use destiny_pkg::{TagHash, TagHash64};
 use egui::{Color32, RichText, TextStyle};
 use glam::{Mat4, Vec2, Vec3, Vec4Swizzles};
 use itertools::Itertools;
@@ -40,6 +39,7 @@ use lazy_static::lazy_static;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use rustc_hash::FxHashSet;
 use tiger_parse::{Endian, PackageManagerExt, TigerReadable};
+use tiger_pkg::{TagHash, TagHash64};
 use tracing::{
     field::{Field, Visit},
     Event, Level, Subscriber,

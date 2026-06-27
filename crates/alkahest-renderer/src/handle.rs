@@ -4,9 +4,9 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use destiny_pkg::TagHash;
 use indexmap::IndexMap;
 use rustc_hash::FxHasher;
+use tiger_pkg::TagHash;
 
 use crate::{
     gpu::texture::Texture,
@@ -60,7 +60,7 @@ impl AssetId {
         }
     }
 
-    pub fn tiger_taghash(&self) -> Option<TagHash> {
+    pub fn tiger_typehash(&self) -> Option<TagHash> {
         match self.value() {
             AssetIdValue::Tiger(taghash) => Some(taghash),
             _ => None,

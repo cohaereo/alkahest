@@ -24,11 +24,11 @@ bitflags = { version = "2.5.0", features = ["serde"] }
 bytemuck = "1.7.0"
 chroma-dbg = "0.1.1"
 crossbeam = "0.8.4"
-destiny-pkg = "0.14"
-tiger-parse = { version = "0.1.15", git = "https://github.com/v4nguard/tiger-parse", features = [
+tiger-pkg = { version = "0.20" }
+tiger-parse = { version = "0.7.2", git = "https://github.com/v4nguard/tiger-parse.git", features = [
     "check_types",
     "check_types_strict",
-    "destiny_pkg",
+    "tiger_pkg",
     "check_types_debug",
 ] }
 

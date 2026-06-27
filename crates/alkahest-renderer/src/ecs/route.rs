@@ -2,8 +2,8 @@ use std::fmt::Write;
 
 use anyhow::Context;
 use bevy_ecs::{bundle::Bundle, entity::Entity, prelude::Component, system::Commands};
-use destiny_pkg::TagHash;
 use glam::Vec3;
+use tiger_pkg::TagHash;
 
 use super::{
     common::{Global, Icon, Label, Mutable, RenderCommonBundle},

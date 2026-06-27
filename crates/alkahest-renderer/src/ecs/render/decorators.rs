@@ -5,9 +5,9 @@ use alkahest_data::{
 use alkahest_pm::package_manager;
 use anyhow::ensure;
 use bevy_ecs::component::Component;
-use destiny_pkg::TagHash;
 use glam::{Mat4, Vec4};
 use tiger_parse::PackageManagerExt;
+use tiger_pkg::TagHash;
 
 use crate::{
     ecs::render::dynamic_geometry::DynamicModel,

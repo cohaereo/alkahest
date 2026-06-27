@@ -3,8 +3,8 @@ use std::sync::Arc;
 use alkahest_data::{buffers::IndexBufferHeader, dxgi::DxgiFormat};
 use alkahest_pm::package_manager;
 use anyhow::Context;
-use destiny_pkg::TagHash;
 use tiger_parse::PackageManagerExt;
+use tiger_pkg::TagHash;
 use windows::Win32::Graphics::{
     Direct3D11::{
         ID3D11Buffer, D3D11_BIND_INDEX_BUFFER, D3D11_BUFFER_DESC, D3D11_SUBRESOURCE_DATA,

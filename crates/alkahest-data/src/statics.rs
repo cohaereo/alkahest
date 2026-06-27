@@ -1,5 +1,5 @@
-use destiny_pkg::TagHash;
-use tiger_parse::tiger_tag;
+use tiger_parse::tiger_type;
+use tiger_pkg::TagHash;
 
 use crate::{
     geometry::{ELodCategory, EPrimitiveType},
@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806D44)]
+#[tiger_type(id = 0x80806D44)]
 pub struct SStaticMesh {
     pub file_size: u64,
     /// GenerateGbuffer/DepthPrepass/ShadowGenerate
@@ -25,7 +25,7 @@ pub struct SStaticMesh {
 }
 
 #[derive(Debug)]
-#[tiger_tag(id = 0x80806D30, size = 0x60)]
+#[tiger_type(id = 0x80806D30, size = 0x60)]
 pub struct SStaticMeshData {
     pub file_size: u64,
     pub mesh_groups: Vec<SStaticMeshGroup>,
@@ -33,7 +33,7 @@ pub struct SStaticMeshData {
     pub buffers: Vec<(TagHash, TagHash, TagHash, TagHash)>,
     pub unk38: u32,
 
-    #[tag(offset = 0x40)]
+    #[tiger(offset = 0x40)]
     pub mesh_offset: glam::Vec3,
     pub mesh_scale: f32,
     pub texture_coordinate_scale: f32,
@@ -42,7 +42,7 @@ pub struct SStaticMeshData {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D37)]
+#[tiger_type(id = 0x80806D37)]
 pub struct SStaticMeshPart {
     pub index_start: u32,
     pub index_count: u32,
@@ -53,7 +53,7 @@ pub struct SStaticMeshPart {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D38)]
+#[tiger_type(id = 0x80806D38)]
 pub struct SStaticMeshGroup {
     pub part_index: u16,
     pub render_stage: TfxRenderStage,
@@ -66,12 +66,12 @@ pub struct SStaticMeshGroup {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x808093AD, size = 0x98)]
+#[tiger_type(id = 0x808093AD, size = 0xc8)]
 pub struct SStaticMeshInstances {
-    #[tag(offset = 0x18)]
+    #[tiger(offset = 0x18)]
     pub occlusion_bounds: Tag<SOcclusionBounds>,
 
-    #[tag(offset = 0x40)]
+    #[tiger(offset = 0x40)]
     pub transforms: Vec<SStaticInstanceTransform>,
     pub unk50: u64,
     pub unk58: [u64; 4],
@@ -82,7 +82,7 @@ pub struct SStaticMeshInstances {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D28)]
+#[tiger_type(id = 0x80806D28)]
 pub struct SStaticMeshInstanceGroup {
     pub instance_count: u16,
     pub instance_start: u16,
@@ -91,7 +91,7 @@ pub struct SStaticMeshInstanceGroup {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D40)]
+#[tiger_type(id = 0x80806D40)]
 pub struct SStaticInstanceTransform {
     pub rotation: glam::Quat,
     pub translation: glam::Vec3,
@@ -102,7 +102,7 @@ pub struct SStaticInstanceTransform {
 }
 
 #[derive(Debug, Clone)]
-#[tiger_tag(id = 0x80806D2F)]
+#[tiger_type(id = 0x80806D2F)]
 pub struct SStaticSpecialMesh {
     pub render_stage: TfxRenderStage,
     pub input_layout_index: u8,

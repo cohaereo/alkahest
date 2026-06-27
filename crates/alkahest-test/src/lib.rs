@@ -13,7 +13,7 @@ use alkahest_renderer::{
 };
 use anyhow::Context;
 use clap::Parser;
-use destiny_pkg::{GameVersion, PackageManager};
+use tiger_pkg::{GameVersion, PackageManager};
 use tracing_subscriber::{
     filter::filter_fn, fmt::Subscriber, layer::SubscriberExt, util::SubscriberInitExt,
 };
@@ -50,7 +50,12 @@ fn initialize_package_manager(/* args: &TestArgs*/) -> anyhow::Result<()> {
         );
     }
 
-    let pm = PackageManager::new(package_dir, GameVersion::Destiny2TheFinalShape, None).unwrap();
+    let pm = PackageManager::new(
+        package_dir,
+        GameVersion::Destiny(tiger_pkg::DestinyVersion::Destiny2Renegades),
+        None,
+    )
+    .expect("Failed to initialize package manager");
 
     *PACKAGE_MANAGER.write() = Some(Arc::new(pm));
 

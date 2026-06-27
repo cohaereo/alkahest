@@ -20,7 +20,6 @@ impl TigerReadable for EPrimitiveType {
         Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
     }
 
-    const ZEROCOPY: bool = true;
     const SIZE: usize = 1;
 }
 
@@ -56,7 +55,6 @@ impl TigerReadable for ELodCategory {
         Ok(unsafe { transmute(u8::read_ds_endian(reader, endian)?) })
     }
 
-    const ZEROCOPY: bool = true;
     const SIZE: usize = 1;
 }
 
