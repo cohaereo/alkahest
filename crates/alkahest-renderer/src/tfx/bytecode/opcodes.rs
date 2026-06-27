@@ -27,120 +27,123 @@ pub enum TfxBytecodeOp {
     #[br(magic = 0x0d_u8)] Merge2_2,
     #[br(magic = 0x0e_u8)] Merge3_1,
     #[br(magic = 0x0f_u8)] Cubic,
-    #[br(magic = 0x10_u8)] Lerp,
-    #[br(magic = 0x11_u8)] LerpSaturated,
-    #[br(magic = 0x12_u8)] MultiplyAdd,
-    #[br(magic = 0x13_u8)] Clamp,
-    #[br(magic = 0x14_u8)] Unk14,
-    #[br(magic = 0x15_u8)] Abs,
-    #[br(magic = 0x16_u8)] Signum,
-    #[br(magic = 0x17_u8)] Floor,
-    #[br(magic = 0x18_u8)] Ceil,
-    #[br(magic = 0x19_u8)] Round,
-    #[br(magic = 0x1a_u8)] Frac,
-    #[br(magic = 0x1b_u8)] Unk1b,
-    #[br(magic = 0x1c_u8)] Unk1c,
-    #[br(magic = 0x1d_u8)] Negate,
-    #[br(magic = 0x1e_u8)] VectorRotationsSin, // _trig_helper_vector_sin_rotations_estimate
-    #[br(magic = 0x1f_u8)] VectorRotationsCos, // _trig_helper_vector_cos_rotations_estimate
-    #[br(magic = 0x20_u8)] VectorRotationsSinCos, // _trig_helper_vector_sin_cos_rotations_estimate
-    #[br(magic = 0x21_u8)] PermuteExtendX, // Alias for permute(.xxxx)
-    #[br(magic = 0x22_u8)] Permute { fields: u8 }, // Permute/swizzle values
-    #[br(magic = 0x23_u8)] Saturate,
-    #[br(magic = 0x24_u8)] Unk24,
-    #[br(magic = 0x25_u8)] Unk25,
-    #[br(magic = 0x26_u8)] Unk26,
-    #[br(magic = 0x27_u8)] Triangle,
-    #[br(magic = 0x28_u8)] Jitter,
-    #[br(magic = 0x29_u8)] Wander,
-    #[br(magic = 0x2a_u8)] Rand,
-    #[br(magic = 0x2b_u8)] RandSmooth,
-    #[br(magic = 0x2c_u8)] Unk2c,
-    #[br(magic = 0x2d_u8)] Unk2d,
-    #[br(magic = 0x2e_u8)] TransformVec4,
+    #[br(magic = 0x10_u8)] Unknown0x10,
+    #[br(magic = 0x11_u8)] Unknown0x11,
+    #[br(magic = 0x12_u8)] Unknown0x12,
+    #[br(magic = 0x13_u8)] Lerp,
+    #[br(magic = 0x14_u8)] LerpSaturated,
+    #[br(magic = 0x15_u8)] MultiplyAdd,
+    #[br(magic = 0x16_u8)] Clamp,
+    #[br(magic = 0x17_u8)] Unk14,
+    #[br(magic = 0x18_u8)] Abs,
+    #[br(magic = 0x19_u8)] Signum,
+    #[br(magic = 0x1a_u8)] Floor,
+    #[br(magic = 0x1b_u8)] Ceil,
+    #[br(magic = 0x1c_u8)] Round,
+    #[br(magic = 0x1d_u8)] Frac,
+    #[br(magic = 0x1e_u8)] Unk1b,
+    #[br(magic = 0x1f_u8)] Unk1c,
+    #[br(magic = 0x20_u8)] Negate,
+    #[br(magic = 0x21_u8)] VectorRotationsSin, // _trig_helper_vector_sin_rotations_estimate
+    #[br(magic = 0x22_u8)] VectorRotationsCos, // _trig_helper_vector_cos_rotations_estimate
+    #[br(magic = 0x23_u8)] VectorRotationsSinCos, // _trig_helper_vector_sin_cos_rotations_estimate
+    #[br(magic = 0x28_u8)] PermuteExtendX, // Alias for permute(.xxxx)
+    #[br(magic = 0x29_u8)] Permute { fields: u8 }, // Permute/swizzle values
+    #[br(magic = 0x2a_u8)] Saturate,
+    #[br(magic = 0x2b_u8)] Unk24,
+    #[br(magic = 0x2c_u8)] Unk25,
+    #[br(magic = 0x2d_u8)] Unk26,
+    #[br(magic = 0x2e_u8)] Triangle,
+    #[br(magic = 0x2f_u8)] Jitter,
+    #[br(magic = 0x30_u8)] Wander,
+    #[br(magic = 0x31_u8)] Rand,
+    #[br(magic = 0x32_u8)] RandSmooth,
+    #[br(magic = 0x33_u8)] Unk2c,
+    #[br(magic = 0x34_u8)] Unk2d,
+    #[br(magic = 0x35_u8)] TransformVec4,
 
-    #[br(magic = 0x34_u8)] CompareLess,
-    #[br(magic = 0x35_u8)] CompareLessEqual,
-    #[br(magic = 0x36_u8)] CompareGreater,
-    #[br(magic = 0x37_u8)] CompareGreaterEqual,
-    #[br(magic = 0x38_u8)] CompareEqual,
-    #[br(magic = 0x39_u8)] CompareNotEqual,
-    #[br(magic = 0x3a_u8)] CompareNotZeroTernary,
+    #[br(magic = 0x36_u8)] CompareLess,
+    #[br(magic = 0x37_u8)] CompareLessEqual,
+    #[br(magic = 0x38_u8)] CompareGreater,
+    #[br(magic = 0x39_u8)] CompareGreaterEqual,
+    #[br(magic = 0x3a_u8)] CompareEqual,
+    #[br(magic = 0x3b_u8)] CompareNotEqual,
+    #[br(magic = 0x3c_u8)] CompareNotZeroTernary,
 
     // Constant-related
-    #[br(magic = 0x3B_u8)] PushConstVec4 { constant_index: u8 },
-    #[br(magic = 0x3C_u8)] LerpConstant { constant_start: u8 },
-    #[br(magic = 0x3D_u8)] LerpConstantSaturated { constant_start: u8 },
-    #[br(magic = 0x3E_u8)] Spline4Const { constant_start: u8 },
-    #[br(magic = 0x3F_u8)] Spline8Const { constant_start: u8 },
-    #[br(magic = 0x40_u8)] Spline8ChainConst { constant_start: u8 },
-    #[br(magic = 0x41_u8)] Gradient4Const { constant_start: u8 },
-    #[br(magic = 0x42_u8)] Unk3b { constant_start: u8 },
+    #[br(magic = 0x42_u8)] PushConstVec4 { constant_index: u8 },
+    #[br(magic = 0x43_u8)] LerpConstant { constant_start: u8 },
+    #[br(magic = 0x44_u8)] LerpConstantSaturated { constant_start: u8 },
+    #[br(magic = 0x45_u8)] Spline4Const { constant_start: u8 },
+    #[br(magic = 0x46_u8)] Spline8Const { constant_start: u8 },
+    #[br(magic = 0x47_u8)] Spline8ChainConst { constant_start: u8 },
+    #[br(magic = 0x48_u8)] Gradient4Const { constant_start: u8 },
+    #[br(magic = 0x49_u8)] Unk3b { constant_start: u8 },
 
     // Externs
     /// Pushes an extern float to the stack, extended to all 4 elements (value.xxxx)
     /// Offset is in single floats (4 bytes)
-    #[br(magic = 0x43_u8)] PushExternInputFloat { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x4a_u8)] PushExternInputFloat { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern vec4 to the stack
     /// Offset is in vec4s (16 bytes)
-    #[br(magic = 0x44_u8)] PushExternInputVec4 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x4b_u8)] PushExternInputVec4 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern mat4 to the stack
     /// Offset is in vec4s (16 bytes)
-    #[br(magic = 0x45_u8)] PushExternInputMat4 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x4c_u8)] PushExternInputMat4 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern texture to the stack as a u64
     /// Offset is in u64s (8 bytes)
-    #[br(magic = 0x46_u8)] PushExternInputTextureView { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x4d_u8)] PushExternInputTextureView { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern u32 to the stack as a u64
     /// Offset is in u32s (4 bytes)
-    #[br(magic = 0x47_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x4e_u8)] PushExternInputU32 { extern_: TfxExtern, offset: u8 },
     /// Pushes an extern UAV to the stack as a u64
     /// Offset is in u64s (8 bytes)
-    #[br(magic = 0x48_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
+    #[br(magic = 0x4f_u8)] PushExternInputUav { extern_: TfxExtern, offset: u8 },
 
     // TODO(cohae): Loads a value from render context + 0x44a0
-    #[br(magic = 0x49_u8)] Unk42,
-    #[br(magic = 0x4A_u8)] PushFromOutput { element: u8 },
-    #[br(magic = 0x4B_u8)] PopOutput { element: u8 },
-    #[br(magic = 0x4C_u8)] PopOutputMat4 { element: u8 },
-    #[br(magic = 0x4D_u8)] PushTemp { slot: u8 },
-    #[br(magic = 0x4E_u8)] PopTemp { slot: u8 },
-    #[br(magic = 0x4F_u8)] SetShaderTexture {
+    #[br(magic = 0x50_u8)] Unk42,
+    #[br(magic = 0x51_u8)] PushFromOutput { element: u8 },
+    #[br(magic = 0x52_u8)] PopOutput { element: u8 },
+    #[br(magic = 0x53_u8)] PopOutputMat4 { element: u8 },
+    #[br(magic = 0x54_u8)] PushTemp { slot: u8 },
+    #[br(magic = 0x55_u8)] PopTemp { slot: u8 },
+    #[br(magic = 0x56_u8)] SetShaderTexture {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x50_u8)] Unk49 { unk1: u8 },
-    #[br(magic = 0x51_u8)] SetShaderSampler {
+    #[br(magic = 0x57_u8)] Unk49 { unk1: u8 },
+    #[br(magic = 0x58_u8)] SetShaderSampler {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x52_u8)] SetShaderUav {
+    #[br(magic = 0x59_u8)] SetShaderUav {
         value: u8,
         #[br(try_calc(TfxShaderStage::from_tfx_value(value)))]
         stage: TfxShaderStage,
         #[br(calc(value & 0x1f))]
         slot: u8
     },
-    #[br(magic = 0x53_u8)] Unk4c { unk1: u8 },
+    #[br(magic = 0x5a_u8)] Unk4c { unk1: u8 },
     /// Pushes a sampler on the stack from the technique sampler table
-    #[br(magic = 0x54_u8)] PushSampler { index: u8 },
+    #[br(magic = 0x5b_u8)] PushSampler { index: u8 },
 
-    #[br(magic = 0x55_u8)] PushObjectChannelVector { #[br(big)] hash: u32 },
-    #[br(magic = 0x56_u8)] PushGlobalChannelVector { unk1: u8 },
-    #[br(magic = 0x57_u8)] Unk50 { unk1: u8 },
-    #[br(magic = 0x58_u8)] Unk51,
-    #[br(magic = 0x59_u8)] PushTexDimensions { index: u8, fields: u8 },
-    #[br(magic = 0x5a_u8)] PushTexTilingParams { index: u8, fields: u8 },
-    #[br(magic = 0x5b_u8)] PushTexTileLayerCount { index: u8, fields: u8 },
-    #[br(magic = 0x5c_u8)] Unk55,
-    #[br(magic = 0x5d_u8)] Unk56,
-    #[br(magic = 0x5e_u8)] Unk57,
-    #[br(magic = 0x5f_u8)] Unk58,
+    #[br(magic = 0x5c_u8)] PushObjectChannelVector { #[br(big)] hash: u32 },
+    #[br(magic = 0x5d_u8)] PushGlobalChannelVector { unk1: u8 },
+    #[br(magic = 0x5e_u8)] Unk50 { unk1: u8 },
+    #[br(magic = 0x5f_u8)] Unk51,
+    #[br(magic = 0x60_u8)] PushTexDimensions { index: u8, fields: u8 },
+    #[br(magic = 0x61_u8)] PushTexTilingParams { index: u8, fields: u8 },
+    #[br(magic = 0x62_u8)] PushTexTileLayerCount { index: u8, fields: u8 },
+    #[br(magic = 0x63_u8)] Unk55,
+    #[br(magic = 0x64_u8)] Unk56,
+    #[br(magic = 0x65_u8)] Unk57,
+    #[br(magic = 0x66_u8)] Unk58,
 }
 
 impl TfxBytecodeOp {
@@ -173,6 +176,9 @@ impl TfxBytecodeOp {
             TfxBytecodeOp::Merge2_2 => "merge_2_2",
             TfxBytecodeOp::Merge3_1 => "merge_3_1",
             TfxBytecodeOp::Cubic => "cubic",
+            TfxBytecodeOp::Unknown0x10 => "unknown0x10",
+            TfxBytecodeOp::Unknown0x11 => "unknown0x11",
+            TfxBytecodeOp::Unknown0x12 => "unknown0x12",
             TfxBytecodeOp::Lerp => "lerp",
             TfxBytecodeOp::LerpSaturated => "lerp_saturated",
             TfxBytecodeOp::MultiplyAdd => "multiply_add",

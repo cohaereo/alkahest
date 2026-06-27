@@ -73,6 +73,12 @@ pub async fn load_map(
         .context("Failed to read SBubbleParent")?;
 
     let mut scene = Scene::new_with_info(activity_hash, map_hash);
+    info!(
+        "Loading map: {} / bubble {} ({})",
+        map_hash,
+        bubble_parent.child_map,
+        bubble_parent.child_map.hash32()
+    );
     let bubble_definition = if bubble_parent.child_map.is_some() {
         package_manager()
             .read_tag_struct::<SBubbleDefinition>(bubble_parent.child_map.hash32())
@@ -1629,14 +1635,14 @@ fn load_entity_into_scene(
         match entres.unk10.resource_type {
             0x80806d8a => {
                 let mut cur = Cursor::new(package_manager().read_tag(entres.taghash())?);
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x244))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x264))?;
                 let model_hash: TagHash = TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x3e0))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x400))?;
                 let entity_material_map: Vec<Unk808072c5> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
-                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x420))?;
+                cur.seek(SeekFrom::Start(entres.unk18.offset + 0x440))?;
                 let materials: Vec<TagHash> =
                     TigerReadable::read_ds_endian(&mut cur, Endian::Little)?;
 
