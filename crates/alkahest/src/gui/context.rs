@@ -12,7 +12,6 @@ use indexmap::IndexMap;
 use smallvec::SmallVec;
 use winit::{event::WindowEvent, window::Window};
 
-use super::sodi::Sodi;
 use crate::{
     gui::{
         bottom_bar::BottomBar,
@@ -215,7 +214,6 @@ impl GuiViewManager {
         views.insert(CrosshairOverlay);
         views.insert(ResourceLoadIndicatorOverlay);
         views.insert(GizmoSelector);
-        views.insert(Sodi::default());
 
         views.insert_overlay(FpsDisplayOverlay::default());
 

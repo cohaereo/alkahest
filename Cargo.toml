@@ -71,9 +71,6 @@ windows = { version = "0.57.0", features = [
 winit = { version = "0.30" }
 
 
-[profile.dev.package.destiny-pkg]
-opt-level = 3
-
 [profile.dev.package.backtrace]
 opt-level = 3
 
