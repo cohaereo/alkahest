@@ -456,7 +456,7 @@ impl DxgiFormat {
                 (pitch, pitch * nbh)
             }
             _ => {
-                let pitch = (width * self.bpp() + 7) / 8;
+                let pitch = (width * self.bpp()).div_ceil(8);
                 (pitch, height * pitch)
             }
         }

@@ -22,7 +22,7 @@ impl GpuMesh {
         scissors: Rect,
         pixels_per_point: f32,
     ) -> Option<Self> {
-        if mesh.indices.is_empty() || mesh.indices.len() % 3 != 0 {
+        if mesh.indices.is_empty() || !mesh.indices.len().is_multiple_of(3) {
             None
         } else {
             let vertices = mesh

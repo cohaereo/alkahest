@@ -23,7 +23,6 @@ tiger-parse.workspace = true
 
 # Graphics/GUI
 egui.workspace = true
-egui_commonmark = "0.20.0"
 egui_extras.workspace = true
 egui-directx11 = { path = "../egui-directx11" }
 egui-winit = "0.31.0"

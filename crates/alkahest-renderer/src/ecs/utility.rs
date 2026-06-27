@@ -438,9 +438,7 @@ fn draw_route(
                 });
 
             let node_is_local = node.map_hash.map_or(true, |h| h == current_hash);
-            let next_is_local = next_node.map_or(false, |(_, n)| {
-                n.map_hash.map_or(false, |h| h == current_hash)
-            });
+            let next_is_local = next_node.is_some_and(|(_, n)| n.map_hash == Some(current_hash));
 
             if route.show_all || prev_is_local || node_is_local || next_is_local {
                 draw_route_node(renderer, route, node, pos, color, *node_e, current_hash);

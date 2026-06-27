@@ -92,7 +92,7 @@ impl FnvWordlist {
     pub fn new() -> Self {
         let mut map: HashMap<u32, String> = HashMap::new();
 
-        const WORDLIST: &'static str = include_str!("../../../wordlist_channels.txt");
+        const WORDLIST: &str = include_str!("../../../wordlist_channels.txt");
         for s in WORDLIST.lines() {
             let s = s.to_string();
             let h = fnv1(s.as_bytes());

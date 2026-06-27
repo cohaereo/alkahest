@@ -102,7 +102,7 @@ impl GuiView for OutlinerPanel {
                     }
 
                     // Check if the entity has all the tags that are enabled
-                    tags.map_or(false, |tags| {
+                    tags.is_some_and(|tags| {
                         self.filters
                             .iter()
                             .filter(|(_, enabled)| **enabled)

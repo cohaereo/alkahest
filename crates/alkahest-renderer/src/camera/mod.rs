@@ -157,7 +157,7 @@ impl Camera {
             && self
                 .tween
                 .as_ref()
-                .map_or(false, |t| t.angle_movement.is_some())
+                .is_some_and(|t| t.angle_movement.is_some())
         {
             self.tween = None;
         }

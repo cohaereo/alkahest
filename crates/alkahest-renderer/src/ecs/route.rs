@@ -186,7 +186,7 @@ impl Route {
                 if let Some(node) = scene.get::<RouteNode>(*child_ent) {
                     let current_visible = node.map_hash == scene.get_map_hash();
                     let next_visible =
-                        next_node.map_or(false, |n| n.map_hash == scene.get_map_hash());
+                        next_node.is_some_and(|n| n.map_hash == scene.get_map_hash());
                     let e = scene.entity(*child_ent);
                     if self.show_all || prev_visible || current_visible || next_visible {
                         cmd.entity(e.id()).insert(Visibility::Visible);

@@ -10,13 +10,12 @@ use alkahest_renderer::icons::{
     ICON_PLUS_BOX_OUTLINE,
 };
 use egui::{vec2, Color32, RichText, Vec2};
-use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use winit::window::Window;
 
 use crate::{
     gui::context::{GuiCtx, GuiView, HiddenWindows, ViewAction},
     resources::AppResources,
-    util::{consts, consts::CHANGELOG_MD},
+    util::consts,
 };
 
 mod help;
@@ -27,7 +26,6 @@ pub struct MenuBar {
     controls_open: bool,
     changelog_open: bool,
     about_open: bool,
-    markdown_cache: CommonMarkCache,
 }
 
 macro_rules! control_section_title {
@@ -80,7 +78,6 @@ impl GuiView for MenuBar {
             });
         });
 
-        self.change_log(ctx);
         self.about(ctx);
         self.controls(ctx);
 
@@ -89,15 +86,6 @@ impl GuiView for MenuBar {
 }
 
 impl MenuBar {
-    pub fn change_log(&mut self, ctx: &egui::Context) {
-        egui::Window::new("Changelog")
-            .open(&mut self.changelog_open)
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    CommonMarkViewer::new().show(ui, &mut self.markdown_cache, CHANGELOG_MD);
-                })
-            });
-    }
     pub fn about(&mut self, ctx: &egui::Context) {
         egui::Window::new("About")
             .open(&mut self.about_open)

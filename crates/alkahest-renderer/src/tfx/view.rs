@@ -1,5 +1,6 @@
-use alkahest_data::tfx::TfxRenderStage;
 use std::ops::{BitOr, BitOrAssign};
+
+use alkahest_data::tfx::TfxRenderStage;
 
 use super::externs;
 use crate::{camera::Viewport, ecs::culling::Frustum};

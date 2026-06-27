@@ -463,7 +463,7 @@ impl ShadowMapRenderer {
         mode: ShadowGenerationMode,
     ) {
         self.world_to_camera = transform.view_matrix();
-        self.transform = transform.clone();
+        self.transform = *transform;
 
         unsafe {
             let view = match mode {
@@ -623,12 +623,11 @@ fn compute_light_local_to_world(node_local_to_world: Mat4, min: Vec3, max: Vec3)
 
     // Third matrix operation (computing light_local_to_world):
     // Rearrange the columns of mat_scaled: swap the x and z axes, leaving y and w unchanged.
-    let light_local_to_world = Mat4 {
+
+    Mat4 {
         x_axis: mat_scaled.z_axis,
         y_axis: mat_scaled.y_axis,
         z_axis: mat_scaled.x_axis,
         w_axis: mat_scaled.w_axis,
-    };
-
-    light_local_to_world
+    }
 }

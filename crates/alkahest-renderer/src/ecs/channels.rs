@@ -7,9 +7,8 @@ use bevy_ecs::{
 use glam::Vec4;
 use rustc_hash::FxHashMap;
 
-use crate::{renderer::RendererShared, tfx::channels::ChannelType};
-
 use super::render::dynamic_geometry::DynamicModelComponent;
+use crate::{renderer::RendererShared, tfx::channels::ChannelType};
 
 #[derive(Component)]
 pub struct ObjectChannels {

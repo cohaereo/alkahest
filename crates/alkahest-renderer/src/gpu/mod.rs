@@ -187,7 +187,7 @@ impl GpuContext {
 
     /// The device context may only be accessed from one thread at a time, so calling this method will lock the context for the current thread.
     #[inline(always)]
-    pub fn lock_context(&self) -> ReentrantMutexGuard<ID3D11DeviceContext> {
+    pub fn lock_context(&self) -> ReentrantMutexGuard<'_, ID3D11DeviceContext> {
         self.context.lock()
     }
 }

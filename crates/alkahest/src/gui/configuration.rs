@@ -41,9 +41,11 @@ impl GuiView for RenderSettingsPanel {
                     .button(format!(
                         "{} Copy goto command{}",
                         ICON_CLIPBOARD,
-                        ui.input(|i| i.modifiers.shift)
-                            .then_some(" (+angles)")
-                            .unwrap_or_default()
+                        if ui.input(|i| i.modifiers.shift) {
+                            " (+angles)"
+                        } else {
+                            Default::default()
+                        }
                     ))
                     .clicked()
                 {

@@ -120,7 +120,7 @@ impl Action for TweenAction {
             .get::<Camera>()
             .tween
             .as_ref()
-            .map_or(false, |t| t.is_aborted())
+            .is_some_and(|t| t.is_aborted())
     }
 }
 
@@ -149,14 +149,14 @@ impl Action for MapSwapAction {
         let maps = resources.get::<MapList>();
 
         maps.current_map()
-            .map_or(false, |f| f.load_state == MapLoadState::Loaded)
+            .is_some_and(|f| f.load_state == MapLoadState::Loaded)
     }
 
     fn is_aborted(&self, resources: &AppResources) -> bool {
         let maps = resources.get::<MapList>();
 
         maps.current_map()
-            .map_or(false, |f| matches!(f.load_state, MapLoadState::Error(_)))
+            .is_some_and(|f| matches!(f.load_state, MapLoadState::Error(_)))
     }
 }
 

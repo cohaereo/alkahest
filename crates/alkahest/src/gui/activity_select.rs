@@ -140,7 +140,7 @@ impl ActivityBrowser {
         for (m, _) in package_manager().get_all_by_reference(SBubbleParent::ID.unwrap()) {
             let package_name = package_manager().package_paths[&m.pkg_id()].name.clone();
             let Ok(map_name) = get_map_name(m, stringmap_global) else {
-                error!("Failed to get map name for {m}");
+                warn!("Failed to get map name for {m}");
                 continue;
             };
 

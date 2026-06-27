@@ -1,6 +1,7 @@
 use alkahest_data::tfx::{TfxRenderStage, TfxShaderStage};
 use bevy_ecs::entity::Entity;
 
+use super::channels::ObjectChannels;
 use crate::{
     ecs::{
         hierarchy::Parent,
@@ -19,8 +20,6 @@ use crate::{
     renderer::Renderer,
     shader::shader_ball::ShaderBallComponent,
 };
-
-use super::channels::ObjectChannels;
 
 pub mod decorators;
 pub mod dynamic_geometry;

@@ -4,7 +4,7 @@ use egui::Ui;
 use crate::{config, gui::menu::MenuBar};
 
 impl MenuBar {
-    pub(super) fn help_menu(&mut self, ui: &mut Ui, resources: &AppResources) {
+    pub(super) fn help_menu(&mut self, ui: &mut Ui, _resources: &AppResources) {
         if ui.button("Controls").clicked() {
             self.controls_open = true;
             ui.close_menu()
@@ -27,10 +27,6 @@ impl MenuBar {
             std::process::exit(0);
         }
 
-        if ui.button("Changelog").clicked() {
-            self.changelog_open = true;
-            ui.close_menu();
-        }
         if ui.button("Discord").clicked() {
             ui.ctx().open_url(egui::OpenUrl::new_tab(
                 "https://discord.gg/PTR42Hc9BH".to_string(),

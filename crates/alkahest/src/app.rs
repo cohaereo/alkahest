@@ -1,4 +1,4 @@
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::Arc;
 
 use alkahest_data::text::{StringContainer, StringContainerShared};
 use alkahest_renderer::{
@@ -256,12 +256,10 @@ impl AlkahestApp {
                     WindowEvent::MouseWheel {
                         delta: MouseScrollDelta::LineDelta(_scroll_x, scroll_y),
                         ..
-                    } => {
-                        if !egui_event_response.consumed {
-                            resources
-                                .get_mut::<Camera>()
-                                .update_mouse(Vec2::ZERO, scroll_y);
-                        }
+                    } if !egui_event_response.consumed => {
+                        resources
+                            .get_mut::<Camera>()
+                            .update_mouse(Vec2::ZERO, scroll_y);
                     }
                     WindowEvent::Resized(new_dims) => {
                         let minimized = window.is_minimized().unwrap_or(false);
