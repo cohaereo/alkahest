@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
-use crate::{paths, updater::UpdateChannel, util::RwLock};
+use crate::{paths, util::RwLock};
 
 lazy_static! {
     pub static ref CONFIGURATION: RwLock<Config> = RwLock::new(Config::default());
@@ -68,7 +68,6 @@ pub struct Config {
     pub window: WindowConfig,
     pub renderer: RendererSettings,
     pub visual: VisualSettings,
-    pub update_channel: Option<UpdateChannel>,
     pub packages_directory: Option<String>,
 }
 

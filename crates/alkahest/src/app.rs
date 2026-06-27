@@ -39,12 +39,10 @@ use crate::{
         gizmo::draw_transform_gizmos,
         hotkeys,
         inspector::FnvWordlist,
-        updater::{ChannelSelector, UpdateDownload},
         SelectionGizmoMode,
     },
     maplist::{Map, MapList},
     resources::AppResources,
-    updater::UpdateCheck,
     util::action::{ActionBuffer, ActionList},
     ApplicationArgs,
 };
@@ -62,9 +60,6 @@ pub struct AlkahestApp {
 
     renderer: RendererShared,
     scratch_map: Scene,
-
-    update_channel_gui: ChannelSelector,
-    updater_gui: Option<UpdateDownload>,
 
     next_config_save: std::time::Instant,
 }
@@ -157,17 +152,6 @@ impl AlkahestApp {
                 &resources.get::<StringContainerShared>(),
             ));
 
-        resources.insert(UpdateCheck::default());
-        let update_channel_gui = ChannelSelector {
-            open: config::with(|c| c.update_channel.is_none()),
-        };
-
-        let updater_gui: Option<UpdateDownload> = None;
-
-        if let Some(update_channel) = config::with(|c| c.update_channel) {
-            resources.get_mut::<UpdateCheck>().start(update_channel);
-        }
-
         let camera = Camera::new_fps(Viewport {
             size: glam::UVec2::new(1920, 1080),
             origin: glam::UVec2::new(0, 0),
@@ -211,8 +195,6 @@ impl AlkahestApp {
             last_cursor_pos: None,
             renderer,
             scratch_map: new_scene(),
-            update_channel_gui,
-            updater_gui,
             next_config_save: std::time::Instant::now() + Self::CONFIG_SAVE_INTERVAL,
         }
     }
@@ -227,8 +209,6 @@ impl AlkahestApp {
             last_cursor_pos,
             renderer,
             scratch_map,
-            update_channel_gui,
-            updater_gui,
             gilrs,
             next_config_save,
             ..
@@ -441,55 +421,6 @@ impl AlkahestApp {
                             .scoped(|| {
                                 gpu_profile_event!(renderer.gpu, "egui");
                                 gui.draw_frame(window, |ctx, ectx| {
-                                    update_channel_gui.open =
-                                        config::with(|c| c.update_channel.is_none());
-                                    update_channel_gui.show(ectx, resources);
-                                    if update_channel_gui.open {
-                                        return;
-                                    }
-
-                                    {
-                                        // let mut loads = resources.get_mut::<LoadIndicators>().unwrap();
-                                        let mut update_check = resources.get_mut::<UpdateCheck>();
-                                        // {
-                                        //     let check_running = update_check
-                                        //         .0
-                                        //         .as_ref()
-                                        //         .map_or(false, |v| v.poll().is_pending());
-                                        //
-                                        //     let indicator =
-                                        //         loads.entry("update_check".to_string()).or_insert_with(
-                                        //             || LoadIndicator::new("Checking for updates"),
-                                        //         );
-                                        //
-                                        //     if indicator.active != check_running {
-                                        //         indicator.restart();
-                                        //     }
-                                        //
-                                        //     indicator.active = check_running;
-                                        // }
-
-                                        if update_check
-                                            .0
-                                            .as_ref()
-                                            .map_or(false, |v| v.poll().is_ready())
-                                        {
-                                            let update =
-                                                update_check.0.take().unwrap().block_and_take();
-                                            if let Some(update) = update {
-                                                *updater_gui = Some(UpdateDownload::new(update));
-                                            }
-                                        }
-                                    }
-
-                                    if let Some(updater_gui_) = updater_gui.as_mut() {
-                                        if !updater_gui_.show(ectx, resources) {
-                                            *updater_gui = None;
-                                        }
-
-                                        return;
-                                    }
-
                                     let mut gui_views = resources.get_mut::<GuiViewManager>();
                                     gui_views.draw(ectx, window, resources, ctx);
 

@@ -31,7 +31,6 @@ mod resources {
 }
 mod discord;
 mod paths;
-mod updater;
 mod util;
 
 // #[cfg(feature = "profiler")]
