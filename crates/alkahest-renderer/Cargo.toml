@@ -14,7 +14,6 @@ bevy_ecs.workspace = true
 binrw = "0.13.3"                                      # TODO(cohae): Remove this once we have custom parsing for TfxBytecodeOp
 bitflags.workspace = true
 bytemuck.workspace = true
-chroma-dbg.workspace = true
 crossbeam.workspace = true
 tiger-pkg.workspace = true
 ecolor.workspace = true

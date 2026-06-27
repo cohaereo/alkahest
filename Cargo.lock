@@ -113,10 +113,8 @@ dependencies = [
  "bevy_ecs",
  "bevy_tasks",
  "binrw 0.13.3",
- "bitflags 2.6.0",
  "build-time",
  "bytemuck",
- "chrono",
  "clap",
  "crossbeam",
  "destiny-havok",
@@ -130,7 +128,6 @@ dependencies = [
  "field_access",
  "fs-err",
  "game-detector",
- "genmesh",
  "gilrs",
  "glam",
  "hex",
@@ -138,7 +135,6 @@ dependencies = [
  "itertools 0.13.0",
  "lazy_static",
  "native-dialog",
- "obj",
  "once_cell",
  "parking_lot",
  "paste",
@@ -150,13 +146,10 @@ dependencies = [
  "ron",
  "rustc-hash 2.0.0",
  "rustc_version",
- "semver",
  "serde",
- "serde_json",
  "serde_yaml",
  "smallvec",
  "strum",
- "thiserror 1.0.63",
  "tiger-parse",
  "tiger-pkg",
  "tokio",
@@ -166,7 +159,6 @@ dependencies = [
  "tracing-subscriber",
  "transform-gizmo-egui",
  "windows 0.57.0",
- "windows-registry",
  "winit",
  "winres",
 ]
@@ -223,7 +215,6 @@ dependencies = [
  "binrw 0.13.3",
  "bitflags 2.6.0",
  "bytemuck",
- "chroma-dbg",
  "crossbeam",
  "destiny-havok",
  "ecolor",
@@ -892,17 +883,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chroma-dbg"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3284526a82ec8cc9f81b936266f6c2a97f17c2ae40e27a0afa840341d40e05f2"
-dependencies = [
- "anstyle",
- "pest",
- "pest_derive",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -910,10 +890,7 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
- "js-sys",
  "num-traits 0.2.19",
- "serde",
- "wasm-bindgen",
  "windows-targets 0.52.6",
 ]
 
@@ -4685,7 +4662,7 @@ dependencies = [
  "windows-implement 0.58.0",
  "windows-interface 0.58.0",
  "windows-result 0.2.0",
- "windows-strings 0.1.0",
+ "windows-strings",
  "windows-targets 0.52.6",
 ]
 
@@ -4740,17 +4717,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
-name = "windows-registry"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bafa604f2104cf5ae2cc2db1dee84b7e6a5d11b05f737b60def0ffdc398cbc0a"
-dependencies = [
- "windows-result 0.2.0",
- "windows-strings 0.2.0",
- "windows-targets 0.52.6",
-]
-
-[[package]]
 name = "windows-result"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4775,15 +4741,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cd9b125c486025df0eabcb585e62173c6c9eddcec5d117d3b6e8c30e2ee4d10"
 dependencies = [
  "windows-result 0.2.0",
- "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "windows-strings"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978d65aedf914c664c510d9de43c8fd85ca745eaff1ed53edf409b479e441663"
-dependencies = [
  "windows-targets 0.52.6",
 ]
 
