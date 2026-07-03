@@ -222,6 +222,24 @@ impl Renderer {
             }
         });
 
+        if debug_pipeline.is_none_or(|p| p.has_atmosphere()) {
+            self.debug_cbuffer.bind(cmd, ShaderStage::Pixel, 0);
+
+            cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+            cmd.flush_states();
+            cmd.vertex_set_shader(Some(&self.blit_to_background_vs));
+            cmd.pixel_set_shader(Some(&self.blit_to_background_ps));
+            cmd.set_input_topology(alkahest_data::tfx::PrimitiveType::TriangleStrip);
+            cmd.pixel_set_shader_resources(
+                0,
+                &[
+                    Some(&view.gbuffers.depth_proxy.lock().srv),
+                    view.surfaces.get(view.atmosphere.sky_lookup_near).srv(0),
+                ],
+            );
+            cmd.draw(4, 0);
+        }
+
         // view.shading_result_read
         //     .lock()
         //     .update(cmd, view.surfaces.get(view.shading_result));
@@ -779,6 +797,13 @@ impl DebugPipeline {
             DebugPipeline::GlobalLightingShading
                 | DebugPipeline::DeferredShading
                 | DebugPipeline::DeferredShadingNoAtm
+        )
+    }
+
+    pub fn has_atmosphere(&self) -> bool {
+        matches!(
+            self,
+            DebugPipeline::GlobalLightingShading | DebugPipeline::DeferredShading
         )
     }
 

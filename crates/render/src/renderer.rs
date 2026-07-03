@@ -43,6 +43,7 @@ use crate::{
 };
 
 const DEBUG_SHADER: &str = include_str!("../builtin/shaders/debug.hlsl");
+const BLIT_TO_BG_SHADER: &str = include_str!("../builtin/shaders/blit_to_background.hlsl");
 const CLEAR_AO_SHADER: &str = include_str!("../builtin/shaders/clear_ao.hlsl");
 const SHADOW_MAP_SHADER: &str = include_str!("../builtin/shaders/shadow_map.hlsl");
 const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
@@ -66,6 +67,8 @@ pub struct Renderer {
 
     debug_vs: d3d11::VertexShader,
     debug_ps: d3d11::PixelShader,
+    blit_to_background_vs: d3d11::VertexShader,
+    blit_to_background_ps: d3d11::PixelShader,
     clear_ao_vs: d3d11::VertexShader,
     clear_ao_ps: d3d11::PixelShader,
     clear_ao_all_ps: d3d11::PixelShader,
@@ -126,6 +129,9 @@ impl Renderer {
         let (debug_vs, debug_ps) =
             gpu.compile_shader_vs_ps("debug", DEBUG_SHADER, "mainVS", "mainPS")?;
 
+        let (blit_to_background_vs, blit_to_background_ps) =
+            gpu.compile_shader_vs_ps("blit_to_background", BLIT_TO_BG_SHADER, "mainVS", "mainPS")?;
+
         let (clear_ao_vs, clear_ao_ps) =
             gpu.compile_shader_vs_ps("clear_ao", CLEAR_AO_SHADER, "mainVS", "mainPS")?;
 
@@ -159,6 +165,8 @@ impl Renderer {
 
             debug_vs,
             debug_ps,
+            blit_to_background_vs,
+            blit_to_background_ps,
             clear_ao_vs,
             clear_ao_ps,
             clear_ao_all_ps,
