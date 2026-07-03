@@ -24,6 +24,8 @@ pub struct AutoExposureConfig {
 
     /// Speed when adapting to a darker scene (exposure going up)
     pub speed_light_to_dark: f32,
+
+    pub highlight_protection: f32,
 }
 
 impl Default for AutoExposureConfig {
@@ -34,12 +36,11 @@ impl Default for AutoExposureConfig {
             max_luminance: 65000.0,
             speed_dark_to_light: 2.0, // Fast reaction to bright areas
             speed_light_to_dark: 1.0, // Slow reaction to dark areas
+            highlight_protection: 0.30,
         }
     }
 }
 
-/// Holds the state of the camera's exposure.
-/// You should keep one instance of this per camera.
 #[derive(Clone)]
 pub struct AutoExposureSystem {
     pub config: AutoExposureConfig,
@@ -128,11 +129,14 @@ impl AutoExposureSystem {
         let avg_lin_lum = total_lin_sum / total_weight;
 
         let scene_luminance_geo = avg_log_lum.exp2();
+
+        let blended_luminance =
+            scene_luminance_geo.lerp(avg_lin_lum, self.config.highlight_protection);
+
         let clamped_luminance =
-            scene_luminance_geo.clamp(self.config.min_luminance, self.config.max_luminance);
+            blended_luminance.clamp(self.config.min_luminance, self.config.max_luminance);
 
         let target_scale = self.config.target_luminance / clamped_luminance;
-
         let target_illum = avg_lin_lum.clamp(0.0, 1.0);
 
         ExposureResult {
