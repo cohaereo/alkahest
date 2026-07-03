@@ -34,9 +34,7 @@ potassium = "0.4.3"
 profiling = "1"
 rayon = "1.11.0"
 serde = { version = "1.0", features = ["derive"] }
-sdl3 = { version = "0.16", features = [
-    "raw-window-handle",
-] }
+sdl3 = { version = "0.16", features = ["raw-window-handle"] }
 subsecond = "0.7.2"
 tiger-parse = { version = "0.7.1", git = "https://github.com/v4nguard/tiger-parse.git", features = [
     "check_types",
@@ -53,8 +51,8 @@ alkahest-data = { path = "./crates/data" }
 alkahest-render = { path = "./crates/render" }
 egui-d3d11 = { path = "./crates/egui-d3d11" }
 egui-sdl3-platform = { path = "./crates/egui-sdl3-platform" }
-rrise = { path = "./crates/rrise", features = [
-    "AkOpusDecoder"
+rrise = { path = "./crates/rrise", optional = true, features = [
+    "AkOpusDecoder",
 ] }
 
 # (De)serialization
@@ -86,7 +84,7 @@ tracy-client = { version = "*", optional = true, default-features = false, featu
     "context-switch-tracing",
     "crash-handler",
     "enable",
-#    "sampling",
+    #    "sampling",
     "system-tracing",
 ] }
 
@@ -97,7 +95,7 @@ sdl3.workspace = true
 
 # UI
 egui.workspace = true
-egui_extras = { version = "0.33.3", features = ["image",  "svg"] }
+egui_extras = { version = "0.33.3", features = ["image", "svg"] }
 egui_dock.workspace = true
 image = { version = "0.25", features = ["png"] }
 clap = { version = "4.5.37", features = ["derive"] }
@@ -142,3 +140,4 @@ overflow-checks = false
 tracy = ["profiling/profile-with-tracy", "dep:tracy-client"]
 tracy-alloc = ["tracy"]
 dhat-heap = ["dep:dhat"]
+wwise = ["dep:rrise"]

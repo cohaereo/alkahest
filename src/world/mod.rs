@@ -1,5 +1,6 @@
 use tiger_pkg::TagHash;
 
+#[cfg(feature = "wwise")]
 pub mod audio;
 pub mod map;
 pub mod pattern;

@@ -5,7 +5,7 @@ mod surface_viewer;
 use std::{
     sync::{
         Arc,
-        atomic::{AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
     },
     time::Instant,
 };
@@ -39,15 +39,17 @@ use egui::{
 use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 use google_material_symbols::GoogleMaterialSymbols;
 
+#[cfg(feature = "wwise")]
+use crate::audio;
+#[cfg(feature = "wwise")]
+use crate::world::audio::{s_start_all_audio_sources, s_update_audio_sources};
 use crate::{
     app::SharedState,
-    audio,
     ui::{
         scene::controller::CameraController,
         util::{ExternalDataWidgetExt, UiExt},
     },
     world::{
-        audio::{s_start_all_audio_sources, s_update_audio_sources},
         render_objects::{
             s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
         },
@@ -340,27 +342,38 @@ impl Scene {
             self.render(delta_time, resolution);
         });
 
-        static LAST_ACTIVE_SCENE_ID: AtomicU64 = AtomicU64::new(u64::MAX);
+        #[cfg(feature = "wwise")]
+        {
+            use std::sync::atomic::AtomicU64;
+            fn hash<T: std::hash::Hash>(value: &T) -> u64 {
+                use std::hash::Hasher;
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                value.hash(&mut hasher);
+                hasher.finish()
+            }
 
-        let scene_hash = hash(&self.scene_id);
-        let old_scene_hash = LAST_ACTIVE_SCENE_ID.load(Ordering::SeqCst);
-        if old_scene_hash != scene_hash {
-            // Scene changed, stop all audio and start all the sources in this scene
-            rrise::sound_engine::stop_all(None);
-            s_start_all_audio_sources(&self.world);
+            static LAST_ACTIVE_SCENE_ID: AtomicU64 = AtomicU64::new(u64::MAX);
 
-            LAST_ACTIVE_SCENE_ID.store(scene_hash, Ordering::SeqCst);
+            let scene_hash = hash(&self.scene_id);
+            let old_scene_hash = LAST_ACTIVE_SCENE_ID.load(Ordering::SeqCst);
+            if old_scene_hash != scene_hash {
+                // Scene changed, stop all audio and start all the sources in this scene
+                rrise::sound_engine::stop_all(None);
+                s_start_all_audio_sources(&self.world);
+
+                LAST_ACTIVE_SCENE_ID.store(scene_hash, Ordering::SeqCst);
+            }
+
+            audio::set_gameobject_pos(
+                audio::LISTENER_ID,
+                self.camera.position,
+                self.camera.up(),
+                -self.camera.forward(), // Apparently wwise's forward is not our forward?
+                true,
+            );
+
+            s_update_audio_sources(&self.world, self.camera.position);
         }
-
-        audio::set_gameobject_pos(
-            audio::LISTENER_ID,
-            self.camera.position,
-            self.camera.up(),
-            -self.camera.forward(), // Apparently wwise's forward is not our forward?
-            true,
-        );
-
-        s_update_audio_sources(&self.world, self.camera.position);
     }
 
     fn show_toolbar(&mut self, ui: &mut Ui) {
@@ -1330,11 +1343,4 @@ enum PerformanceImpact {
     Low,
     Medium,
     High,
-}
-
-fn hash<T: std::hash::Hash>(value: &T) -> u64 {
-    use std::hash::Hasher;
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    value.hash(&mut hasher);
-    hasher.finish()
 }
