@@ -729,6 +729,11 @@ impl Scene {
             {
                 let ext = self.renderer.externs.get_mut();
                 let distance_to_night = (self.time_of_day / 1800.0 - 1.0).abs();
+
+                self.renderer.externs.get_mut().set_global_channel_by_name(
+                    "cubemap_relighting_sky_intensity",
+                    Vec4::splat(1.0 - distance_to_night),
+                );
                 ext.unk_sequencer_values[0] = Vec4::splat((1.0 - distance_to_night) * 0.725);
             }
             s_evaluate_global_channel_expressions(&self.world);
