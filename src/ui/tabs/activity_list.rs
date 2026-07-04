@@ -48,10 +48,17 @@ impl ActivityListTab {
                 continue;
             };
 
+            let title = if let Some(activity_name) = shared_state.get_activity_name(activity) {
+                activity_name.to_string()
+            } else {
+                activity.to_string()
+            };
+
             all_nodes.insert(
                 activity_string.clone(),
                 ActivityTreeNode::Leaf {
-                    title: format!("{activity} ({destination})"),
+                    title: format!("{title} ({destination})"),
+                    code: activity.to_string(),
                     tag,
                 },
             );
@@ -65,17 +72,20 @@ impl ActivityListTab {
                     .entry(destination.to_string())
                     .or_default()
                     .push(ActivityTreeNode::Leaf {
-                        title: activity.to_string(),
+                        title,
+                        code: activity.to_string(),
                         tag,
                     });
             } else if destination.starts_with("gambit_") {
                 gambit_nodes.push(ActivityTreeNode::Leaf {
                     title: destination.to_string(),
+                    code: destination.to_string(),
                     tag,
                 });
             } else {
                 let leaf = ActivityTreeNode::Leaf {
-                    title: activity.to_string(),
+                    title,
+                    code: activity.to_string(),
                     tag,
                 };
                 let kind = leaf.kind();
@@ -218,13 +228,12 @@ impl ActivityListTab {
                     .show(ui, |ui| {
                         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                         let query = &*self.search_query.borrow();
-                        for child in self
-                            .all_nodes
-                            .iter()
-                            .filter(|child| child.title().to_lowercase().contains(query))
-                        {
+                        for child in self.all_nodes.iter().filter(|child| {
+                            child.title().to_lowercase().contains(query)
+                                || child.code().to_lowercase().contains(query)
+                        }) {
                             #[allow(clippy::collapsible_if)]
-                            if let ActivityTreeNode::Leaf { title, tag } = child {
+                            if let ActivityTreeNode::Leaf { title, code, tag } = child {
                                 if DButton::new(child.atoms())
                                     .min_size(vec2(768.0, 32.0))
                                     .stroke(1.0, child.stroke_color())
@@ -272,14 +281,24 @@ impl ActivityListTab {
                                         self.current_node.borrow_mut().push(i);
                                     }
                                 }
-                                ActivityTreeNode::Leaf { title, tag } => {
-                                    if DButton::new((child.atoms(), format!("({tag})")))
+                                ActivityTreeNode::Leaf { title, code, tag } => {
+                                    let response = DButton::new(child.atoms())
+                                        .subtitle(if title == code {
+                                            format!("{tag}")
+                                        } else {
+                                            format!("{code} - {tag}")
+                                        })
                                         .min_size(vec2(512.0, 32.0))
                                         .stroke(1.0, child.stroke_color())
                                         .fill(child.bg_color())
-                                        .ui(ui)
-                                        .clicked()
-                                    {
+                                        .ui(ui);
+                                    response.context_menu(|ui| {
+                                        if ui.button("Copy tag").clicked() {
+                                            ui.ctx().copy_text(tag.to_string());
+                                        }
+                                    });
+
+                                    if response.clicked() {
                                         match ActivityTab::new(
                                             &self.shared_state,
                                             *tag,
@@ -312,6 +331,7 @@ impl ActivityListTab {
 enum ActivityTreeNode {
     Leaf {
         title: String,
+        code: String,
         tag: TagHash,
     },
     Branch {
@@ -328,10 +348,17 @@ impl ActivityTreeNode {
         }
     }
 
-    fn kind(&self) -> Option<ActivityKind> {
-        let title = self.title();
+    fn code(&self) -> &str {
+        match self {
+            ActivityTreeNode::Leaf { code, .. } => code,
+            ActivityTreeNode::Branch { title, .. } => title,
+        }
+    }
 
-        let kind = match title.to_lowercase().as_str() {
+    fn kind(&self) -> Option<ActivityKind> {
+        let code = self.code();
+
+        let kind = match code.to_lowercase().as_str() {
             "mission_presage"
             | "mission_wrathful"
             | "mission_chrome"
@@ -382,7 +409,15 @@ impl ActivityTreeNode {
             )
                 .into_atoms()
         } else {
-            title.into_atoms()
+            match self {
+                ActivityTreeNode::Leaf { title, .. } => (
+                    icons::UNKNOWN.atom_size(Vec2::splat(32.0)),
+                    "",
+                    title.to_string(),
+                )
+                    .into_atoms(),
+                ActivityTreeNode::Branch { title, .. } => title.to_string().into_atoms(),
+            }
         }
     }
 

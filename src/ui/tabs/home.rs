@@ -29,7 +29,7 @@ impl HomeTab {
         egui::Image::new(include_image!("../../../assets/ui/bg.png")).paint_at(ui, ui.clip_rect());
         egui::Image::new(include_image!("../../../assets/ui/bg_vignette.png"))
             .tint(Color32::from_white_alpha(
-                (64.0 + 64.0 * (START_TIME.elapsed().as_secs_f32() * 0.5).sin()) as u8,
+                (64.0 + 64.0 * (START_TIME.elapsed().as_secs_f32()).sin()) as u8,
             ))
             .paint_at(ui, ui.clip_rect());
 

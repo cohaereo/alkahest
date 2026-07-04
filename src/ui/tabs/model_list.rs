@@ -567,14 +567,8 @@ impl<P: ModelProvider> ModelListBase<P> {
                                 ui.style_mut()
                                     .text_styles
                                     .insert(TextStyle::Button, FontId::proportional(16.0));
-                                if ui.button("Copy hash").clicked() {
+                                if ui.button("Copy tag").clicked() {
                                     ui.ctx().copy_text(model.hash.to_string());
-                                    ui.close();
-                                }
-
-                                if ui.button("Copy hash (Charm)").clicked() {
-                                    ui.ctx()
-                                        .copy_text(format!("{:08X}", model.hash.0.swap_bytes()));
                                     ui.close();
                                 }
                             });

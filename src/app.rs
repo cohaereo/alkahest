@@ -13,6 +13,7 @@ use std::{
 use ahash::HashMap;
 use alkahest_core::job::SCHEDULER;
 use alkahest_data::{
+    hash::fnv1,
     strings::{StringContainer, StringContainerShared},
     tag::WideHash,
 };
@@ -180,6 +181,12 @@ pub struct SharedState {
     pub strings: StringContainerShared,
     pub strings_by_package: HashMap<String, StringContainer>,
     pub config: RwLock<AppConfig>,
+
+    /// Investment hash -> Name
+    pub activity_names: HashMap<u32, String>,
+
+    /// Activity name hash (eg. mission_sentient) -> Investment hash
+    pub activity_hash_to_investment: HashMap<u32, u32>,
 }
 
 impl SharedState {
@@ -198,11 +205,35 @@ impl SharedState {
             strings_by_package.insert(name, StringContainer::load(hash)?);
         }
 
-        let s = Self {
+        const ACTIVITY_NAME_DATA: &str = include_str!("../assets/data/activity_names.json");
+        const ACTIVITY_TO_INVESTENT_DATA: &str =
+            include_str!("../assets/data/activity_to_investment.json");
+
+        let mut s = Self {
             strings: StringContainer::load_all_global().into(),
             strings_by_package,
             config: RwLock::new(AppConfig::default()),
+            activity_names: serde_json::from_str(ACTIVITY_NAME_DATA)?,
+            activity_hash_to_investment: serde_json::from_str(ACTIVITY_TO_INVESTENT_DATA)?,
         };
+
+        s.activity_names
+            .retain(|_, name| !matches!(name.to_lowercase().as_str(), "solitude"));
+
+        for (_, name) in s.activity_names.iter_mut() {
+            *name = name.replace(": Master", "");
+            *name = name.replace(": Standard", "");
+            *name = name.replace(": Legendary", "");
+            *name = name.replace(": Private", "");
+            *name = name.replace(": Matchmade", "");
+            *name = name.replace(": Customize", "");
+            *name = name.replace(": Contest", "");
+            *name = name.replace("Master Conquest: ", "");
+            *name = name.replace("Grandmaster Conquest: ", "");
+            *name = name.replace("Ultimate Conquest: ", "");
+            *name = name.replace("Nightfall Grandmaster: ", "");
+        }
+
         if let Err(e) = s.load_config() {
             warn!("Failed to load config: {:?}", e);
         }
@@ -240,5 +271,14 @@ impl SharedState {
             .get(package)
             .and_then(|s| s.try_get(hash))
             .unwrap_or_else(|| self.get_string(hash))
+    }
+
+    pub fn get_activity_name(&self, internal_name: &str) -> Option<&str> {
+        let hash = fnv1(internal_name);
+        self.activity_hash_to_investment
+            .get(&hash)
+            .and_then(|investment_hash| {
+                self.activity_names.get(investment_hash).map(|s| s.as_str())
+            })
     }
 }

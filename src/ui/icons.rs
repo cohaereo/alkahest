@@ -17,3 +17,4 @@ include_icon!(PATROL, "patrol.svg");
 include_icon!(QUEST, "quest.svg");
 include_icon!(RAID, "raid.svg");
 include_icon!(STRIKE, "strike.svg");
+include_icon!(UNKNOWN, "unknown.svg");

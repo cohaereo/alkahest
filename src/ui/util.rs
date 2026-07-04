@@ -113,6 +113,8 @@ pub trait ExternalDataWidgetExt {
 
 pub struct DButton<'a> {
     button: egui::Button<'a>,
+    text: String,
+    subtitle: Option<String>,
     text_color: Color32,
     stroke: Stroke,
     fill_color: Color32,
@@ -121,10 +123,13 @@ pub struct DButton<'a> {
 
 impl<'a> DButton<'a> {
     pub fn new(atoms: impl IntoAtoms<'a>) -> Self {
+        let atoms = atoms.into_atoms();
         Self {
+            text: atoms.text().unwrap_or_default().to_string(),
             button: egui::Button::new(atoms)
-                .min_size(vec2(120.0, 60.0))
+                .min_size(vec2(100.0, 60.0))
                 .corner_radius(0),
+            subtitle: None,
             text_color: Color32::WHITE,
             stroke: Stroke::new(1.0, Color32::WHITE),
             fill_color: Color32::from_gray(96).gamma_multiply(0.2),
@@ -133,10 +138,13 @@ impl<'a> DButton<'a> {
     }
 
     pub fn new_white(atoms: impl IntoAtoms<'a>) -> Self {
+        let atoms = atoms.into_atoms();
         Self {
+            text: atoms.text().unwrap_or_default().to_string(),
             button: egui::Button::new(atoms)
                 .min_size(vec2(120.0, 60.0))
                 .corner_radius(0),
+            subtitle: None,
             text_color: Color32::BLACK,
             stroke: Stroke::new(1.0, Color32::WHITE),
             fill_color: Color32::from_white_alpha(196),
@@ -147,11 +155,36 @@ impl<'a> DButton<'a> {
     pub fn ui(self, ui: &mut Ui) -> Response {
         ui.scope(|ui| {
             ui.spacing_mut().button_padding = self.padding;
-            ui.style_mut().visuals.override_text_color = Some(self.text_color);
+            let text_color = if self.subtitle.is_some() {
+                // Hide the text as we'll be doing the layout ourselves. This will still reserve the space necessary for the main button text.
+                Color32::TRANSPARENT
+            } else {
+                self.text_color
+            };
+            ui.style_mut().visuals.override_text_color = Some(text_color);
 
             let r = ui
                 .add(self.button.stroke(self.stroke).fill(self.fill_color))
                 .on_hover_cursor(CursorIcon::PointingHand);
+
+            if let Some(subtitle) = self.subtitle {
+                let title_pos = r.rect.left_center() + vec2(64.0, 4.0);
+                let text_style = ui.style().text_styles[&TextStyle::Button].clone();
+                ui.painter().text(
+                    title_pos + vec2(0.0, 1.0),
+                    Align2::LEFT_BOTTOM,
+                    &self.text,
+                    text_style.clone(),
+                    self.text_color,
+                );
+                ui.painter().text(
+                    title_pos + vec2(6.0, 0.0),
+                    Align2::LEFT_TOP,
+                    &subtitle,
+                    FontId::proportional(text_style.size / 1.5),
+                    Color32::GRAY,
+                );
+            }
 
             if r.hovered() {
                 ui.painter().rect(
@@ -166,6 +199,11 @@ impl<'a> DButton<'a> {
             r
         })
         .inner
+    }
+
+    pub fn subtitle(mut self, text: impl Into<String>) -> Self {
+        self.subtitle = Some(text.into());
+        self
     }
 
     pub fn min_size(mut self, size: Vec2) -> Self {
