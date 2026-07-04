@@ -1,4 +1,4 @@
-# Alkahest Upended
+# Alkahest
 
 ## Resources
 

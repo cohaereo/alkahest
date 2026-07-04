@@ -38,6 +38,8 @@ impl ActivityListTab {
         let mut strike_nodes = vec![];
         let mut patrol_nodes = vec![];
         let mut exotic_nodes = vec![];
+        let mut cinematic_nodes = vec![];
+        let mut unknown_nodes = vec![];
 
         let mut all_nodes = HashMap::default();
 
@@ -59,6 +61,7 @@ impl ActivityListTab {
                 ActivityTreeNode::Leaf {
                     title: format!("{title} ({destination})"),
                     code: activity.to_string(),
+                    destination: destination.to_string(),
                     tag,
                 },
             );
@@ -74,18 +77,21 @@ impl ActivityListTab {
                     .push(ActivityTreeNode::Leaf {
                         title,
                         code: activity.to_string(),
+                        destination: destination.to_string(),
                         tag,
                     });
             } else if destination.starts_with("gambit_") {
                 gambit_nodes.push(ActivityTreeNode::Leaf {
                     title: destination.to_string(),
                     code: destination.to_string(),
+                    destination: destination.to_string(),
                     tag,
                 });
             } else {
                 let leaf = ActivityTreeNode::Leaf {
                     title,
                     code: activity.to_string(),
+                    destination: destination.to_string(),
                     tag,
                 };
                 let kind = leaf.kind();
@@ -109,6 +115,12 @@ impl ActivityListTab {
                     }
                     Some(ActivityKind::Exotic) => {
                         exotic_nodes.push(leaf.clone());
+                    }
+                    Some(ActivityKind::Cinematic) => {
+                        cinematic_nodes.push(leaf.clone());
+                    }
+                    None => {
+                        unknown_nodes.push(leaf.clone());
                     }
                     _ => {}
                 }
@@ -144,6 +156,9 @@ impl ActivityListTab {
         strike_nodes.sort_by_key(|node| node.title().to_string());
         destination_nodes.sort_by_key(|node| node.title().to_string());
         patrol_nodes.sort_by_key(|node| node.title().to_string());
+        exotic_nodes.sort_by_key(|node| node.title().to_string());
+        cinematic_nodes.sort_by_key(|node| node.title().to_string());
+        unknown_nodes.sort_by_key(|node| node.title().to_string());
 
         let mut all_nodes = all_nodes.into_values().collect_vec();
         all_nodes.sort_by_key(|node| node.title().to_string());
@@ -182,8 +197,16 @@ impl ActivityListTab {
                         children: exotic_nodes,
                     },
                     ActivityTreeNode::Branch {
+                        title: "Cinematics".to_string(),
+                        children: cinematic_nodes,
+                    },
+                    ActivityTreeNode::Branch {
                         title: "Patrol".to_string(),
                         children: patrol_nodes,
+                    },
+                    ActivityTreeNode::Branch {
+                        title: "Unsorted".to_string(),
+                        children: unknown_nodes,
                     },
                 ],
             },
@@ -233,7 +256,7 @@ impl ActivityListTab {
                                 || child.code().to_lowercase().contains(query)
                         }) {
                             #[allow(clippy::collapsible_if)]
-                            if let ActivityTreeNode::Leaf { title, code, tag } = child {
+                            if let ActivityTreeNode::Leaf { title, tag, .. } = child {
                                 if DButton::new(child.atoms())
                                     .min_size(vec2(768.0, 32.0))
                                     .stroke(1.0, child.stroke_color())
@@ -281,10 +304,15 @@ impl ActivityListTab {
                                         self.current_node.borrow_mut().push(i);
                                     }
                                 }
-                                ActivityTreeNode::Leaf { title, code, tag } => {
+                                ActivityTreeNode::Leaf {
+                                    title,
+                                    code,
+                                    destination,
+                                    tag,
+                                } => {
                                     let response = DButton::new(child.atoms())
                                         .subtitle(if title == code {
-                                            format!("{tag}")
+                                            format!("{destination} - {tag}")
                                         } else {
                                             format!("{code} - {tag}")
                                         })
@@ -332,6 +360,7 @@ enum ActivityTreeNode {
     Leaf {
         title: String,
         code: String,
+        destination: String,
         tag: TagHash,
     },
     Branch {
@@ -384,9 +413,14 @@ impl ActivityTreeNode {
             v if v.starts_with("gambit") => ActivityKind::Gambit,
             v if v.starts_with("dungeon") => ActivityKind::Dungeon,
             v if v.starts_with("mission_") => ActivityKind::Mission,
+            v if v.starts_with("campaignfire_") => ActivityKind::Mission,
+            v if v.starts_with("exo_challenge_") => ActivityKind::Mission,
+            v if v.starts_with("offensive_") => ActivityKind::Mission,
             v if v.starts_with("quest") => ActivityKind::Quest,
             v if v.starts_with("strike") => ActivityKind::Strike,
             v if v.starts_with("exotic") => ActivityKind::Exotic,
+            v if v.starts_with("cine") => ActivityKind::Cinematic,
+            v if v.contains("_mission") => ActivityKind::Mission,
             v if v.contains("freeroam") => ActivityKind::Patrol,
             "patrol" => ActivityKind::Patrol,
             v if v.contains("_ls_a") || v.contains("_ls_b") || v.contains("_ls_c") => {
@@ -452,6 +486,7 @@ enum ActivityKind {
     Exotic,
     Patrol,
     LostSector,
+    Cinematic,
 }
 
 impl ActivityKind {
@@ -469,6 +504,7 @@ impl ActivityKind {
             ActivityKind::Exotic => icons::ENGRAM,
             ActivityKind::Quest => icons::QUEST,
             ActivityKind::Mission => icons::QUEST,
+            ActivityKind::Cinematic => icons::CINEMATIC,
         }
     }
 
@@ -484,6 +520,7 @@ impl ActivityKind {
             ActivityKind::LostSector => Color32::from_rgb(80, 73, 159),
             ActivityKind::Strike => Color32::from_rgb(57, 100, 128),
             ActivityKind::Exotic => Color32::from_rgb(191, 153, 65),
+            ActivityKind::Cinematic => Color32::from_rgb(140, 140, 140),
             ActivityKind::Quest | ActivityKind::Mission => Color32::from_rgb(38, 68, 127),
         }
     }
