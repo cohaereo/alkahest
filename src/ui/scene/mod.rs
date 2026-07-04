@@ -69,6 +69,7 @@ pub struct Scene {
     /// Time of day (0 - 3600)
     time_of_day: f32,
     animate_time_of_day: bool,
+    time_scale: f32,
     sun_light_angle: f32,
     pub render_mode: RenderMode,
     keep_settings_open: bool,
@@ -118,6 +119,7 @@ impl Scene {
             renderer,
             camera,
             time_of_day: 1200.0,
+            time_scale: 1.0,
             animate_time_of_day: true,
             sun_light_angle: 60f32,
             render_mode: RenderMode::Shaded,
@@ -547,6 +549,16 @@ impl Scene {
         ui.checkbox(&mut self.animate_time_of_day, "Automate Time")
             .on_hover_text("Automatically animate time of day");
 
+        if self.animate_time_of_day {
+            ui.horizontal(|ui| {
+                ui.label("Time scale:");
+                egui::DragValue::new(&mut self.time_scale)
+                    .fixed_decimals(1)
+                    .speed(0.1)
+                    .ui(ui);
+            });
+        }
+
         ui.spacing_mut().slider_width = ui.available_width() * 0.75;
         egui::Slider::new(&mut self.camera.fov_y, 10.0..=120.0)
             .text("Camera FOV")
@@ -640,7 +652,7 @@ impl Scene {
         }
 
         if self.animate_time_of_day {
-            self.time_of_day += delta_time;
+            self.time_of_day += delta_time * self.time_scale;
             self.time_of_day = self.time_of_day.rem_euclid(3600.0);
         }
 
