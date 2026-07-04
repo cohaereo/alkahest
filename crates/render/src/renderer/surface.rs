@@ -180,18 +180,18 @@ impl Surface {
             1
         };
 
+        let texture_desc = Texture2dDesc::builder()
+            .width(width)
+            .height(height)
+            .mip_levels(mip_count)
+            .format(desc.format)
+            .bind_flags(bind_flags | BindFlags::SHADER_RESOURCE)
+            .build();
         let texture = device
-            .create_texture2d(
-                &Texture2dDesc::builder()
-                    .width(width)
-                    .height(height)
-                    .mip_levels(mip_count)
-                    .format(desc.format)
-                    .bind_flags(bind_flags | BindFlags::SHADER_RESOURCE)
-                    .build(),
-                None,
-            )
-            .context("Failed to create surface texture")?;
+            .create_texture2d(&texture_desc, None)
+            .with_context(|| {
+                format!("Failed to create surface texture. Desc: {texture_desc:#?}")
+            })?;
 
         let mut srvs = vec![];
         let mut uavs = vec![];
@@ -319,8 +319,12 @@ impl Surface {
             return;
         }
 
-        *self = Self::new(device, base_resolution, self.desc.clone())
-            .expect("Failed to resize surface");
+        *self = Self::new(device, base_resolution, self.desc.clone()).unwrap_or_else(|e| {
+            panic!(
+                "Failed to resize surface {} to {}x{}: {e:?}",
+                self.desc.label, base_resolution.0, base_resolution.1
+            )
+        });
     }
 
     pub fn clear_depth(&self, context: &d3d11::DeviceContext, clear_value: f32, stencil_ref: u8) {

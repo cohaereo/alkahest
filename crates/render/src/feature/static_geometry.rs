@@ -395,7 +395,7 @@ impl StaticInstancesRenderer {
 
             let group_bounds = bounds.iter().cloned().sum();
 
-            let cbuffer = ConstantBuffer::create_raw(
+            let cbuffer = ConstantBuffer::create_raw_cb(
                 gpu,
                 2 * size_of::<Vec4>() // quantization headers
                             + transforms.len() * size_of::<InstanceTransformBlock>(), // per-transform data

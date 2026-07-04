@@ -274,7 +274,7 @@ impl Texture {
                         BindFlags::empty()
                     },
             )
-            .usage(d3d11::Usage::Immutable)
+            .usage(d3d11::Usage::Default)
             .build();
 
         let tex = device

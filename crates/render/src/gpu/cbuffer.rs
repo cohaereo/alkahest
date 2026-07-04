@@ -85,6 +85,27 @@ impl<T> ConstantBuffer<T> {
         })
     }
 
+    pub fn create_raw_cb(gpu: &Gpu, size: usize) -> anyhow::Result<Self> {
+        let size_aligned = (size + 15) & !15;
+
+        let buffer = gpu.create_buffer(
+            &BufferDesc::builder()
+                .usage(Usage::Dynamic)
+                .bind_flags(BindFlags::CONSTANT_BUFFER)
+                .cpu_access_flags(CpuAccessFlags::WRITE)
+                .byte_width(size_aligned as u32)
+                .build(),
+            None,
+        )?;
+
+        Ok(Self {
+            buffer,
+            size: size_aligned,
+            srv: None,
+            _marker: Default::default(),
+        })
+    }
+
     pub fn create_raw(gpu: &Gpu, size: usize) -> anyhow::Result<Self> {
         let size_aligned = (size + 15) & !15;
 
@@ -130,12 +151,14 @@ impl<T> ConstantBuffer<T> {
 
     /// # Safety
     /// The caller must ensure that the length of the slice matches the size of the buffer.
-    pub unsafe fn write_array(&self, ctx: &d3d11::DeviceContext, data: &[T]) -> anyhow::Result<()> { unsafe {
-        let map = self.map(ctx, d3d11::MapType::WriteDiscard)?;
-        map.data
-            .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
-        Ok(())
-    }}
+    pub unsafe fn write_array(&self, ctx: &d3d11::DeviceContext, data: &[T]) -> anyhow::Result<()> {
+        unsafe {
+            let map = self.map(ctx, d3d11::MapType::WriteDiscard)?;
+            map.data
+                .copy_from_nonoverlapping(data.as_ptr() as _, std::mem::size_of_val(data));
+            Ok(())
+        }
+    }
 
     pub fn map(
         &self,
