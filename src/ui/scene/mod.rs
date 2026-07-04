@@ -737,6 +737,12 @@ impl Scene {
                 ext.unk_sequencer_values[0] = Vec4::splat((1.0 - distance_to_night) * 0.725);
             }
             s_evaluate_global_channel_expressions(&self.world);
+
+            // Fixes III not showing up in the singularity
+            self.renderer
+                .externs
+                .get_mut()
+                .set_global_channel_by_id(0x2C53817A, Vec4::splat(1.0));
         }
 
         let is_everything_loaded = s_are_all_objects_loaded(&self.world, &self.renderer);
