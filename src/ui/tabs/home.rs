@@ -1,6 +1,12 @@
-use std::sync::Arc;
+use std::{
+    sync::{Arc, LazyLock},
+    time::Instant,
+};
 
-use egui::{Ui, vec2};
+use egui::{
+    AtomExt, Color32, FontId, IntoAtoms, Pos2, Rect, RichText, TextStyle, Ui, Widget,
+    include_image, vec2,
+};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use super::{Tab, TabResult, entity_list::EntityListTab, map_list::MapListTab};
@@ -16,7 +22,16 @@ pub struct HomeTab;
 
 impl HomeTab {
     pub fn ui(&self, ui: &mut Ui, shared_state: &Arc<SharedState>) -> TabResult {
+        static START_TIME: LazyLock<Instant> = LazyLock::new(Instant::now);
+
         let mut result = TabResult::Continue;
+
+        egui::Image::new(include_image!("../../../assets/ui/bg.png")).paint_at(ui, ui.clip_rect());
+        egui::Image::new(include_image!("../../../assets/ui/bg_vignette.png"))
+            .tint(Color32::from_white_alpha(
+                (64.0 + 64.0 * (START_TIME.elapsed().as_secs_f32() * 0.5).sin()) as u8,
+            ))
+            .paint_at(ui, ui.clip_rect());
 
         #[cfg(debug_assertions)]
         if ui
@@ -30,8 +45,12 @@ impl HomeTab {
 
         ui.add_space(32.0);
         ui.columns(1, |uis| {
-            uis[0].heading("3D");
-            uis[0].add_space(4.0);
+            uis[0].style_mut().text_styles.insert(
+                TextStyle::Button,
+                FontId::new(32.0, egui::FontFamily::Name("Medium".into())),
+            );
+            // uis[0].heading("3D");
+            // uis[0].add_space(4.0);
             if uis[0]
                 .d_button(format!(
                     "{} ACTIVITIES",
@@ -75,56 +94,35 @@ impl HomeTab {
             .show_separator_line(false)
             .resizable(false)
             .show_inside(ui, |ui| {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.image_link(
-                        egui::include_image!("../../../assets/ui/github.svg"),
-                        vec2(64.0, 64.0),
-                        "https://github.com/cohaereo/alkahest",
-                    );
+                ui.horizontal(|ui| {
+                    egui::Image::new(egui::include_image!("../../../assets/alkahest_256.png"))
+                        .fit_to_exact_size(vec2(96.0, 96.0))
+                        .ui(ui);
+                    ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = 0.0;
+                        ui.add_space(12.0);
+                        ui.heading("Alkahest");
+                        ui.label(
+                            RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
+                                .color(Color32::GRAY),
+                        );
+                    });
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.image_link(
+                            egui::include_image!("../../../assets/ui/github.svg"),
+                            vec2(64.0, 64.0),
+                            "https://github.com/cohaereo/alkahest",
+                        );
 
-                    ui.image_link(
-                        egui::include_image!("../../../assets/ui/discord.svg"),
-                        vec2(64.0, 48.0),
-                        "https://discord.gg/ssGYcJrBUM",
-                    )
-                    .on_hover_text("Join the Discord server");
-
-                    // let response = ui
-                    //     .allocate_response(vec2(64.0, 48.0), Sense::click())
-                    //     .on_hover_cursor(egui::CursorIcon::PointingHand);
-
-                    // egui::Image::new(egui::include_image!("../../../assets/ui/discord.svg"))
-                    //     .tint(if response.hovered() {
-                    //         egui::Color32::LIGHT_GRAY
-                    //     } else {
-                    //         egui::Color32::DARK_GRAY
-                    //     })
-                    //     .paint_at(ui, response.rect);
-
-                    // if response.clicked() {
-                    //     ui.ctx()
-                    //         .open_url(egui::OpenUrl::new_tab("https://discord.gg/ssGYcJrBUM"));
-                    // }
+                        ui.image_link(
+                            egui::include_image!("../../../assets/ui/discord.svg"),
+                            vec2(64.0, 48.0),
+                            "https://discord.gg/ssGYcJrBUM",
+                        )
+                        .on_hover_text("Join the Discord server");
+                    });
                 });
             });
-
-        // ui.separator();
-
-        // ui.with_layout(
-        //     egui::Layout::top_down_justified(egui::Align::Center),
-        //     |ui| {
-        //         if ui
-        //             .d_button(format!(
-        //                 "{} Tag Lookup",
-        //                 GoogleMaterialSymbols::Search
-        //             ))
-        //             .clicked()
-        //         {
-        //             self.added_nodes
-        //                 .push(Tab::TagLookup(TagLookupTab::default()));
-        //         }
-        //     },
-        // );
 
         result
     }

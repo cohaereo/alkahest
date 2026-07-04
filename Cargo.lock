@@ -98,7 +98,7 @@ checksum = "4aa90d7ce82d4be67b64039a3d588d38dbcc6736577de4a847025ce5b0c468d1"
 
 [[package]]
 name = "alkahest"
-version = "0.0.0"
+version = "0.6.0"
 dependencies = [
  "ahash",
  "alkahest-core",
