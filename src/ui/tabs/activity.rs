@@ -6,7 +6,7 @@ use std::{
 use alkahest_data::activity::SActivity;
 use alkahest_render::{Renderer, camera::Camera};
 use anyhow::Context;
-use egui::vec2;
+use egui::{FontId, TextStyle, vec2};
 use google_material_symbols::GoogleMaterialSymbols;
 use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
@@ -84,6 +84,10 @@ impl ActivityTab {
                 .auto_shrink([true, false])
                 .id_salt("map_list_packages")
                 .show(ui, |ui| {
+                    ui.style_mut().text_styles.insert(
+                        TextStyle::Button,
+                        FontId::new(20.0, egui::FontFamily::Name("Medium".into())),
+                    );
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                     for (i, map) in self.maps.iter_mut().enumerate() {
                         let state = map.poll_load();
@@ -101,7 +105,12 @@ impl ActivityTab {
                             DButton::new((load_sym.to_string(), map.name.clone()))
                         };
 
-                        if btn.min_size(vec2(384.0, 32.0)).ui(ui).clicked() {
+                        if btn
+                            .padding(vec2(8.0, 4.0))
+                            .min_size(vec2(340.0, 32.0))
+                            .ui(ui)
+                            .clicked()
+                        {
                             self.current_map_index = i;
                             map.start_load();
                         }

@@ -116,6 +116,7 @@ pub struct DButton<'a> {
     text_color: Color32,
     stroke: Stroke,
     fill_color: Color32,
+    padding: Vec2,
 }
 
 impl<'a> DButton<'a> {
@@ -127,6 +128,7 @@ impl<'a> DButton<'a> {
             text_color: Color32::WHITE,
             stroke: Stroke::new(1.0, Color32::WHITE),
             fill_color: Color32::from_gray(96).gamma_multiply(0.2),
+            padding: vec2(25.0, 20.0),
         }
     }
 
@@ -138,12 +140,13 @@ impl<'a> DButton<'a> {
             text_color: Color32::BLACK,
             stroke: Stroke::new(1.0, Color32::WHITE),
             fill_color: Color32::from_white_alpha(196),
+            padding: vec2(25.0, 20.0),
         }
     }
 
     pub fn ui(self, ui: &mut Ui) -> Response {
         ui.scope(|ui| {
-            ui.spacing_mut().button_padding = egui::vec2(25.0, 20.0);
+            ui.spacing_mut().button_padding = self.padding;
             ui.style_mut().visuals.override_text_color = Some(self.text_color);
 
             let r = ui
@@ -167,6 +170,11 @@ impl<'a> DButton<'a> {
 
     pub fn min_size(mut self, size: Vec2) -> Self {
         self.button = self.button.min_size(size);
+        self
+    }
+
+    pub fn padding(mut self, padding: Vec2) -> Self {
+        self.padding = padding;
         self
     }
 
