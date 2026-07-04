@@ -37,6 +37,7 @@ impl ActivityListTab {
         let mut raid_nodes = vec![];
         let mut strike_nodes = vec![];
         let mut patrol_nodes = vec![];
+        let mut exotic_nodes = vec![];
 
         let mut all_nodes = HashMap::default();
 
@@ -95,6 +96,9 @@ impl ActivityListTab {
                     }
                     Some(ActivityKind::Patrol) => {
                         patrol_nodes.push(leaf.clone());
+                    }
+                    Some(ActivityKind::Exotic) => {
+                        exotic_nodes.push(leaf.clone());
                     }
                     _ => {}
                 }
@@ -162,6 +166,10 @@ impl ActivityListTab {
                     ActivityTreeNode::Branch {
                         title: "Strikes".to_string(),
                         children: strike_nodes,
+                    },
+                    ActivityTreeNode::Branch {
+                        title: "Exotics".to_string(),
+                        children: exotic_nodes,
                     },
                     ActivityTreeNode::Branch {
                         title: "Patrol".to_string(),
@@ -324,6 +332,24 @@ impl ActivityTreeNode {
         let title = self.title();
 
         let kind = match title.to_lowercase().as_str() {
+            "mission_presage"
+            | "mission_wrathful"
+            | "mission_chrome"
+            | "mission_grasp"
+            | "mission_sentient"
+            | "mission_download_s19"
+            | "mission_integrate_s19"
+            | "mission_restore_s19"
+            | "mission_upload_s19"
+            | "mission_avalon"
+            | "mission_agents"
+            | "s24_mission_encore"
+            | "s26_mission_seize"
+            | "mission_starcrossed"
+            | "mission_mirrorbox"
+            | "mission_sarcophagus"
+            | "mission_cormorant"
+            | "mission_oblation" => ActivityKind::Exotic,
             v if v.starts_with("crucible") => ActivityKind::Crucible,
             v if v.starts_with("raid") || v.contains("raid_") => ActivityKind::Raid,
             v if v.starts_with("iron_banner") => ActivityKind::IronBanner,
