@@ -1,12 +1,19 @@
 #[macro_use]
 extern crate tracing;
-use std::rc::Rc;
+use std::{fs::File, rc::Rc, sync::Mutex};
 
+use anyhow::Context;
 use app::App;
 use clap::Parser;
 use cli::AppArgs;
 use itertools::Itertools;
-use tracing_subscriber::filter::{EnvFilter, LevelFilter};
+use tracing_subscriber::{
+    Layer,
+    filter::{EnvFilter, LevelFilter, Targets},
+    fmt,
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+};
 
 mod app;
 #[cfg(feature = "wwise")]
@@ -34,16 +41,7 @@ fn main() -> anyhow::Result<()> {
 
     fix_windows_console();
     alkahest_core::setup_panic_hook();
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy(),
-        )
-        .pretty()
-        // .with_span_events(FmtSpan::NONE)
-        .with_file(false)
-        .init();
+    init_tracing()?;
 
     let args = AppArgs::parse();
 
@@ -99,6 +97,38 @@ fn main() -> anyhow::Result<()> {
     }
 
     tiger_pkg::finalize_package_manager();
+
+    Ok(())
+}
+
+fn init_tracing() -> anyhow::Result<()> {
+    let log_file = File::create("alkahest.log").context("creating log file")?;
+
+    let file_filter = Targets::new()
+        .with_default(LevelFilter::DEBUG)
+        .with_target("gdt_cpus", LevelFilter::OFF)
+        .with_target("ureq", LevelFilter::OFF)
+        .with_target("rustls", LevelFilter::OFF);
+
+    let file_layer = fmt::layer()
+        .with_file(false)
+        .with_ansi(false)
+        .with_writer(Mutex::new(log_file))
+        .with_filter(file_filter);
+
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+
+    let stderr_layer = fmt::layer()
+        .with_file(false)
+        .with_writer(std::io::stderr)
+        .with_filter(env_filter);
+
+    tracing_subscriber::registry()
+        .with(file_layer)
+        .with(stderr_layer)
+        .init();
 
     Ok(())
 }

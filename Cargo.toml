@@ -43,7 +43,7 @@ tiger-parse = { version = "0.7.1", git = "https://github.com/v4nguard/tiger-pars
     "check_types_debug",
 ] }
 tiger-pkg = { version = "0.18.12", features = ["global_manager_instance"] }
-tracing = { version = "0.2.0", git = "https://github.com/cohaereo/tracing-lesspretty.git" }
+tracing = "0.1"
 
 [dependencies]
 alkahest-core = { path = "./crates/core" }
@@ -71,9 +71,10 @@ env_logger = "0.11.8"
 itertools.workspace = true
 parking_lot.workspace = true
 profiling.workspace = true
-tracing-subscriber = { version = "0.3", git = "https://github.com/cohaereo/tracing-lesspretty.git", features = [
+tracing-subscriber = { version = "0.3", features = [
     "env-filter",
     "fmt",
+    "std",
     "tracing-log",
 ] }
 tracing.workspace = true

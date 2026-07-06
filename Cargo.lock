@@ -142,8 +142,8 @@ dependencies = [
  "tiger-parse",
  "tiger-pkg",
  "toml 0.9.10+spec-1.1.0",
- "tracing 0.2.0",
- "tracing-subscriber 0.3.0",
+ "tracing",
+ "tracing-subscriber",
  "tracy-client",
 ]
 
@@ -163,7 +163,7 @@ dependencies = [
  "serde",
  "tiger-pkg",
  "toml 0.8.20",
- "tracing 0.2.0",
+ "tracing",
 ]
 
 [[package]]
@@ -223,7 +223,7 @@ dependencies = [
  "smallvec",
  "tiger-parse",
  "tiger-pkg",
- "tracing 0.2.0",
+ "tracing",
  "uuid",
 ]
 
@@ -809,7 +809,7 @@ checksum = "b8b88ea9df13354b55bc7234ebcce36e6ef896aca2e42a15de9e10edce01b427"
 dependencies = [
  "once_cell",
  "owo-colors 4.2.3",
- "tracing-core 0.1.33",
+ "tracing-core",
  "tracing-error",
 ]
 
@@ -1174,7 +1174,7 @@ dependencies = [
  "slab",
  "slotmap",
  "subsecond",
- "tracing 0.1.41",
+ "tracing",
 ]
 
 [[package]]
@@ -1197,7 +1197,7 @@ dependencies = [
  "serde_json",
  "subsecond",
  "thiserror 2.0.18",
- "tracing 0.1.41",
+ "tracing",
  "tungstenite",
 ]
 
@@ -1224,7 +1224,7 @@ dependencies = [
  "generational-box",
  "parking_lot",
  "rustc-hash 2.1.1",
- "tracing 0.1.41",
+ "tracing",
  "warnings",
 ]
 
@@ -1326,7 +1326,7 @@ dependencies = [
  "anyhow",
  "egui",
  "sdl3",
- "tracing 0.2.0",
+ "tracing",
 ]
 
 [[package]]
@@ -1762,7 +1762,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e658d10252a15200ca4a1c67c7180fc0baffa3f92869bbd903025daf6f70fd65"
 dependencies = [
  "parking_lot",
- "tracing 0.1.41",
+ "tracing",
 ]
 
 [[package]]
@@ -2334,8 +2334,8 @@ dependencies = [
  "scoped-tls",
  "serde",
  "serde_json",
- "tracing 0.1.41",
- "tracing-subscriber 0.3.19",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3798,7 +3798,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tiger-parse-derive",
  "tiger-pkg",
- "tracing 0.1.41",
+ "tracing",
 ]
 
 [[package]]
@@ -3833,7 +3833,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "tracing 0.1.41",
+ "tracing",
 ]
 
 [[package]]
@@ -3976,19 +3976,8 @@ checksum = "784e0ac535deb450455cbfa28a6f0df145ea1bb7ae51b821cf5e7927fdcfbdd0"
 dependencies = [
  "log",
  "pin-project-lite",
- "tracing-attributes 0.1.28",
- "tracing-core 0.1.33",
-]
-
-[[package]]
-name = "tracing"
-version = "0.2.0"
-source = "git+https://github.com/cohaereo/tracing-lesspretty.git#0678c1ab004d1406a55a5f9f40b84ec0fc92f719"
-dependencies = [
- "pin-project-lite",
- "portable-atomic",
- "tracing-attributes 0.2.0",
- "tracing-core 0.2.0",
+ "tracing-attributes",
+ "tracing-core",
 ]
 
 [[package]]
@@ -3996,16 +3985,6 @@ name = "tracing-attributes"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "395ae124c09f9e6918a2310af6038fba074bcf474ac352496d5910dd59a2226d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
-name = "tracing-attributes"
-version = "0.2.0"
-source = "git+https://github.com/cohaereo/tracing-lesspretty.git#0678c1ab004d1406a55a5f9f40b84ec0fc92f719"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4023,23 +4002,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-core"
-version = "0.2.0"
-source = "git+https://github.com/cohaereo/tracing-lesspretty.git#0678c1ab004d1406a55a5f9f40b84ec0fc92f719"
-dependencies = [
- "once_cell",
- "portable-atomic",
- "portable-atomic-util",
-]
-
-[[package]]
 name = "tracing-error"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b1581020d7a273442f5b45074a6a57d5757ad0a47dac0e9f0bd57b81936f3db"
 dependencies = [
- "tracing 0.1.41",
- "tracing-subscriber 0.3.19",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -4050,35 +4019,7 @@ checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
 dependencies = [
  "log",
  "once_cell",
- "tracing-core 0.1.33",
-]
-
-[[package]]
-name = "tracing-log"
-version = "0.2.0"
-source = "git+https://github.com/cohaereo/tracing-lesspretty.git#0678c1ab004d1406a55a5f9f40b84ec0fc92f719"
-dependencies = [
- "log",
- "once_cell",
- "tracing-core 0.2.0",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.3.0"
-source = "git+https://github.com/cohaereo/tracing-lesspretty.git#0678c1ab004d1406a55a5f9f40b84ec0fc92f719"
-dependencies = [
- "matchers",
- "nu-ansi-term",
- "once_cell",
- "portable-atomic-util",
- "regex",
- "sharded-slab",
- "smallvec",
- "thread_local",
- "tracing 0.2.0",
- "tracing-core 0.2.0",
- "tracing-log 0.2.0 (git+https://github.com/cohaereo/tracing-lesspretty.git)",
+ "tracing-core",
 ]
 
 [[package]]
@@ -4094,9 +4035,9 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
- "tracing 0.1.41",
- "tracing-core 0.1.33",
- "tracing-log 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing",
+ "tracing-core",
+ "tracing-log",
 ]
 
 [[package]]
@@ -4348,7 +4289,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64f68998838dab65727c9b30465595c6f7c953313559371ca8bf31759b3680ad"
 dependencies = [
  "pin-project",
- "tracing 0.1.41",
+ "tracing",
  "warnings-macro",
 ]
 
