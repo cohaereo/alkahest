@@ -15,6 +15,8 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
 };
 
+use crate::cli::print_banner;
+
 mod app;
 #[cfg(feature = "wwise")]
 mod audio;
@@ -42,6 +44,8 @@ fn main() -> anyhow::Result<()> {
     fix_windows_console();
     alkahest_core::setup_panic_hook();
     init_tracing()?;
+
+    print_banner();
 
     let args = AppArgs::parse();
 
