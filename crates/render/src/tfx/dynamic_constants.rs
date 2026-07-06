@@ -84,7 +84,7 @@ impl DynamicConstants {
                 .iter()
                 .map(|sampler| {
                     if sampler.sampler.is_none() {
-                        error!("Sampler is None");
+                        debug!("TODO: Implement texture parameter access from expressions");
                         Ok(None)
                     } else {
                         let sampler = load_sampler(gpu, sampler.sampler)?;

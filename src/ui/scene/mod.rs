@@ -394,6 +394,17 @@ impl Scene {
             .0
             .on_hover_text("Scene Settings");
 
+        if matches!(self.controller, CameraController::Orbit { .. })
+            && ui
+                .selectable_label(
+                    self.camera.draw_grid,
+                    GoogleMaterialSymbols::Grid4x4.to_string(),
+                )
+                .clicked()
+        {
+            self.camera.draw_grid = !self.camera.draw_grid;
+        }
+
         if ui
             .selectable_label(
                 self.show_surface_viewer,

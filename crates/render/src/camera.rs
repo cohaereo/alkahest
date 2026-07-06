@@ -19,6 +19,8 @@ pub struct Camera {
     pub world_to_camera: Mat4,
     pub camera_to_projective: Mat4,
     pub world_to_projective: Mat4,
+
+    pub draw_grid: bool,
 }
 
 impl Default for Camera {
@@ -36,6 +38,7 @@ impl Default for Camera {
             world_to_camera: Mat4::IDENTITY,
             camera_to_projective: Mat4::IDENTITY,
             world_to_projective: Mat4::IDENTITY,
+            draw_grid: true,
         }
     }
 }

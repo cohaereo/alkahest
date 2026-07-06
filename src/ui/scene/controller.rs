@@ -40,6 +40,37 @@ impl CameraController {
                 distance,
                 yaw_pitch,
             } => {
+                if camera.draw_grid {
+                    const GRID_CELL_SIZE: f32 = 1.0;
+                    const GRID_DIM: usize = 10;
+                    const GRID_SIZE: f32 = GRID_CELL_SIZE * GRID_DIM as f32;
+                    const GRID_HALF_SIZE: f32 = GRID_SIZE / 2.0;
+
+                    for i in 0..GRID_DIM + 1 {
+                        let pos_x = Vec3::new(
+                            i as f32 * GRID_CELL_SIZE - GRID_HALF_SIZE,
+                            -GRID_HALF_SIZE,
+                            0.0,
+                        );
+                        let pos_y = Vec3::new(
+                            -GRID_HALF_SIZE,
+                            i as f32 * GRID_CELL_SIZE - GRID_HALF_SIZE,
+                            0.0,
+                        );
+
+                        Renderer::instance().immediate.lock().line(
+                            pos_x,
+                            pos_x + Vec3::new(0.0, GRID_SIZE, 0.0),
+                            0x666666,
+                        );
+                        Renderer::instance().immediate.lock().line(
+                            pos_y,
+                            pos_y + Vec3::new(GRID_SIZE, 0.0, 0.0),
+                            0x666666,
+                        );
+                    }
+                }
+
                 if response.hovered() {
                     let scroll_delta = ui.input(|i| i.raw_scroll_delta);
                     *distance += -scroll_delta.y / 250.0;
