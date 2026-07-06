@@ -171,6 +171,12 @@ impl From<TagHash> for WideHash {
     }
 }
 
+impl From<TagHash64> for WideHash {
+    fn from(val: TagHash64) -> Self {
+        WideHash::Hash64(val)
+    }
+}
+
 impl TigerReadable for WideHash {
     fn read_ds_endian<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,

@@ -223,6 +223,19 @@ impl Renderer {
         });
 
         if debug_pipeline.is_none_or(|p| p.has_atmosphere()) {
+            self.debug_cbuffer
+                .write(
+                    cmd,
+                    &Mat4::from_cols(
+                        self.externs
+                            .get_global_channel_by_name("sky_snapshot_intensity"),
+                        Vec4::ZERO,
+                        Vec4::ZERO,
+                        Vec4::ZERO,
+                    ),
+                )
+                .ok();
+
             self.debug_cbuffer.bind(cmd, ShaderStage::Pixel, 0);
 
             cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));

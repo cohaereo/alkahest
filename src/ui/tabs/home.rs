@@ -3,10 +3,7 @@ use std::{
     time::Instant,
 };
 
-use egui::{
-    AtomExt, Color32, FontId, IntoAtoms, Pos2, Rect, RichText, TextStyle, Ui, Widget,
-    include_image, vec2,
-};
+use egui::{Color32, FontId, RichText, TextStyle, Ui, Widget, include_image, vec2};
 use google_material_symbols::GoogleMaterialSymbols;
 
 use super::{Tab, TabResult, entity_list::EntityListTab, map_list::MapListTab};

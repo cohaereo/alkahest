@@ -1,14 +1,14 @@
 use std::{str::FromStr, sync::atomic::Ordering};
 
 use alkahest_data::tfx::common::AxisAlignedBBox;
-use alkahest_render::{Renderer, camera::Camera};
+use alkahest_render::{Renderer, camera::Camera, renderer::submit::atmosphere::AtmosphereData};
 use egui::{
     Color32, CornerRadius, FontId, Pos2, Rect, RichText, Sense, TextStyle, Ui, Vec2, Widget,
     scroll_area::ScrollSource, vec2,
 };
 use glam::{Vec3, Vec4};
-use hecs::Entity;
-use tiger_pkg::{TagHash, package_manager};
+use hecs::{Entity, World};
+use tiger_pkg::{TagHash, TagHash64, package_manager};
 
 use super::TabResult;
 use crate::{
@@ -69,7 +69,7 @@ impl<P: ModelProvider> ModelListBase<P> {
         {
             let view_settings = thumbnail_scene.view.settings_mut();
             view_settings.autoexposure = false;
-            view_settings.exposure_scale = 0.350;
+            view_settings.exposure_scale = 0.75;
             view_settings.bloom = false;
         }
 
@@ -86,10 +86,13 @@ impl<P: ModelProvider> ModelListBase<P> {
 
         let apply_scene_configuration = |scene: &mut Scene| {
             scene.set_global_channel_by_name("global_ambient_intensity", Vec4::splat(5.0));
+            Self::init_scene(&mut scene.world);
         };
 
         apply_scene_configuration(&mut scene);
+        scene.set_global_channel_by_name("sky_snapshot_intensity", Vec4::splat(0.09));
         apply_scene_configuration(&mut thumbnail_scene);
+        thumbnail_scene.set_global_channel_by_name("sky_snapshot_intensity", Vec4::splat(0.03));
 
         let package_sorting = PackageSorting::Name;
         let mut package_ids = provider.package_keys().to_vec();
@@ -116,6 +119,20 @@ impl<P: ModelProvider> ModelListBase<P> {
         }
     }
 
+    fn init_scene(world: &mut World) {
+        if world.query::<&AtmosphereData>().iter().next().is_some() {
+            return;
+        }
+        let am = &Renderer::instance().asset_manager;
+        world.spawn((AtmosphereData {
+            atmosphere_lookup_near_0: am.load(TagHash64(0x36F0C0D29A440000)),
+            atmosphere_lookup_far_0: am.load(TagHash64(0x36F0C0D29A440000)),
+            atmosphere_lookup_near_1: am.load(TagHash64(0x419374B990AB0000)),
+            atmosphere_lookup_far_1: am.load(TagHash64(0x419374B990AB0000)),
+            atmosphere_lookup_vertical: am.load(TagHash(0x80BD7A1E)),
+        },));
+    }
+
     fn render_thumbnails(&mut self, egui_ctx: &egui::Context) {
         let Some(entries) = self.provider.package_mut(self.current_package) else {
             return;
@@ -125,7 +142,7 @@ impl<P: ModelProvider> ModelListBase<P> {
             .iter_mut()
             .filter(|e| e.thumbnail.is_none() || e.rerender_needed)
         {
-            if let Some(world) = entry.thumbnail_world.take() {
+            if let Some(mut world) = entry.thumbnail_world.take() {
                 if s_are_all_objects_loaded(&world, Renderer::instance()) {
                     let bb = world
                         .query::<&AxisAlignedBBox>()
@@ -134,6 +151,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                         .map(|(_, bb)| *bb)
                         .unwrap_or(AxisAlignedBBox::from_center_extents(Vec3::ZERO, Vec3::ONE));
 
+                    Self::init_scene(&mut world);
                     self.thumbnail_scene.set_world(world);
                     self.thumbnail_scene.focus_fit_ortho(&bb);
                     self.thumbnail_scene.render(1.0 / 60.0, (512, 512));
@@ -173,7 +191,9 @@ impl<P: ModelProvider> ModelListBase<P> {
         let Some(entry) = entries.iter_mut().find(|e| e.hash == hash) else {
             return;
         };
-        if let Some(world) = entry.thumbnail_world.take() {
+        if let Some(mut world) = entry.thumbnail_world.take() {
+            Self::init_scene(&mut world);
+
             let bb = world
                 .query::<&AxisAlignedBBox>()
                 .iter()
@@ -646,6 +666,7 @@ impl<P: ModelProvider> ModelListBase<P> {
                 });
 
             if let Some(model_hash) = load_model {
+                Self::init_scene(&mut self.scene.world);
                 match self.provider.load_model(model_hash, &mut self.scene.world) {
                     Ok(_entity) => {
                         let bb = self

@@ -23,6 +23,13 @@ cbuffer scope_frame : register(b13) {
     float exposure_illum_relative;
 };
 
+cbuffer scope_debug : register(b0) {
+    float4 sky_snapshot_intensity;
+    float4 unused1;
+    float4 unused2;
+    float4 unused3;
+};
+
 // Vertex Shader
 struct VSOutput {
   float4 pos : SV_POSITION;
@@ -61,5 +68,5 @@ float4 mainPS(VSOutput input) : SV_TARGET {
   float depth = deferred_depth.Sample(samplerState, input.uv).x;
   if (depth > 0)
     discard;
-  return source.Sample(samplerState, input.uv) * exposure_scale;
+  return source.Sample(samplerState, input.uv) * exposure_scale * sky_snapshot_intensity.x;
 }
