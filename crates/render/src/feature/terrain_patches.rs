@@ -283,4 +283,8 @@ impl FeatureRenderer for TerrainPatchesRenderer {
             | RenderStageSubscription::SHADOW_GENERATE
             | RenderStageSubscription::DEPTH_PREPASS
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }

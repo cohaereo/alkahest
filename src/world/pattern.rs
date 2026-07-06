@@ -1,11 +1,14 @@
 use std::{
     io::{Cursor, Seek, SeekFrom},
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
 };
 
 use alkahest_data::{
     map::{ComponentData, SComponentDataListPtr},
-    pattern::{S8080841B, SPattern},
+    pattern::{S8080841B, SObjectChannelComponent, SPattern},
     tfx::{
         TfxFeatureRenderer,
         atmosphere::SUnk80808ac8Variant,
@@ -24,19 +27,19 @@ use alkahest_render::{
     object::RenderObject,
     renderer::submit::atmosphere::{AtmosphereData, SunDirections},
     tfx::{
-        sequencer_vm::global_channel::GlobalChannelExpression,
+        sequencer_vm::{ObjectChannel, global_channel::GlobalChannelExpression},
         view::{ShadowView, View, ViewKind},
     },
 };
 use anyhow::Context;
-use glam::{Vec3, Vec4Swizzles, vec4};
+use glam::{Vec3, Vec4, Vec4Swizzles, vec4};
 use itertools::{Itertools, multizip};
 use tiger_parse::{PackageManagerExt, TigerReadable};
 use tiger_pkg::{TagHash, package_manager};
 
 use crate::world::{
     UnimplementedTigerComponent, UnimplementedTigerComponents,
-    permutations::PermutationConfig,
+    object::{ObjectChannels, PermutationConfig},
     render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
     shadowmap::ShadowMap,
     transform::Transform,
@@ -166,6 +169,36 @@ pub fn spawn_pattern_from_header(
                         }
                     }
                 }
+            }
+            0x808095B1 => {
+                let mut cur = Cursor::new(package_manager().read_tag(component.taghash())?);
+                cur.seek(SeekFrom::Start(component.definition.offset + 0x10))?;
+                let data = SObjectChannelComponent::read_ds(&mut cur)?;
+                let mut channels = ObjectChannels(
+                    data.m_channels
+                        .iter()
+                        .map(|c| ObjectChannel {
+                            name: c.name,
+                            value: Vec4::ONE,
+                            expression: c.expression.clone(),
+                            usage: Arc::new(AtomicUsize::new(0)),
+                        })
+                        .collect(),
+                );
+
+                channels.set_by_name("cool_down", Vec4::ZERO);
+                channels.set_by_name("charge_progress", Vec4::ZERO);
+                channels.set_by_name("unique_id", Vec4::splat(fastrand::f32_inclusive()));
+
+                channels.set_by_name("hack_progress", Vec4::splat(0.5));
+                channels.set_by_name("device_power", Vec4::splat(0.1));
+                channels.set_by_name("spawn_in", Vec4::ZERO);
+                channels.set_by_id(0x0FBEEF72, Vec4::ZERO);
+                // channels.set_by_id(0x262F908A, Vec4::ZERO);
+
+                channels.set_by_id(0x2B9D1F06, Vec4::splat(0.0));
+
+                world.insert_one(entity, channels)?;
             }
             // 0x80804030 => {
             //     let Some(ComponentData::SMaterialPermutationsComponent(data)) = map_data else {

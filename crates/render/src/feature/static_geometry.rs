@@ -773,6 +773,10 @@ impl FeatureRenderer for StaticInstancesRenderer {
 
         true
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 struct SortedModel {
@@ -873,5 +877,9 @@ impl FeatureRenderer for StaticModelRenderer {
 
     fn subscribed_stages(&self) -> RenderStageSubscription {
         self.model.subscribed_stages
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

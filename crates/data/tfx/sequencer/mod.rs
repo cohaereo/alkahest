@@ -146,16 +146,13 @@ pub struct SUnk808067bb {
 #[derive(Debug, Clone)]
 #[tiger_type(id = 0x00000000, size = 0xd8)]
 pub struct SUnknownEventExpressions {
-    pub unk00: Vec<u8>,
-    pub unk10: Vec<Vec4>,
+    pub unk00: SExpression,
 
     #[tiger(offset = 0x48)]
-    pub unk48: Vec<u8>,
-    pub unk58: Vec<Vec4>,
+    pub unk48: SExpression,
 
     #[tiger(offset = 0x90)]
-    pub unk88: Vec<u8>,
-    pub unk98: Vec<Vec4>,
+    pub unk88: SExpression,
 }
 
 #[derive(Debug, Clone)]
@@ -171,4 +168,13 @@ pub struct SSequenceNodeBase {
     pub unk14: f32,
     pub duration: f32,
     pub unk1c: u32,
+}
+
+#[derive(Debug, Clone)]
+#[tiger_type(id = 0x00000000, size = 0x30)]
+pub struct SExpression {
+    pub bytecode: Vec<u8>,
+    pub bytecode_constants: Vec<Vec4>,
+    pub unk20: u64,
+    pub unk28: u64,
 }

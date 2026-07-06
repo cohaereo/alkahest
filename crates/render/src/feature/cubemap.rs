@@ -324,6 +324,10 @@ impl FeatureRenderer for CubemapRenderer {
     fn subscribed_stages(&self) -> RenderStageSubscription {
         RenderStageSubscription::CUBEMAPS
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 #[repr(C)]

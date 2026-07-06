@@ -1,5 +1,6 @@
 use std::{ops::Deref, sync::Arc};
 
+use ahash::AHashMap;
 use alkahest_data::tfx::{STechnique, STechniqueShader, ShaderStage, TechniqueBindMode};
 use anyhow::{Context, ensure};
 use d3d11::DeviceChild;
@@ -7,10 +8,7 @@ use tiger_parse::PackageManagerExt;
 use tiger_pkg::{TagHash, package_manager};
 
 use super::dynamic_constants::DynamicConstants;
-use crate::{
-    Gpu, asset::Handle, gpu::command_list::CommandList,
-    tfx::expression_vm::interpreter::TempObjectChannels,
-};
+use crate::{Gpu, asset::Handle, gpu::command_list::CommandList, tfx::sequencer_vm::ObjectChannel};
 
 pub struct Technique {
     pub tech: STechnique,
@@ -104,7 +102,7 @@ impl Technique {
     pub fn bind_with_channels(
         &self,
         cmd: &mut CommandList,
-        channels: Option<&TempObjectChannels>,
+        channels: Option<&AHashMap<u32, ObjectChannel>>,
     ) -> anyhow::Result<()> {
         profiling::scope!("Technique::bind", &format!("hash={}", self.hash));
         // TODO(cohae): This might break (it probably will, it just wont have that big of an impact)
@@ -257,7 +255,7 @@ impl TechniqueStage {
     pub fn bind(
         &self,
         cmd: &mut CommandList,
-        channels: Option<&TempObjectChannels>,
+        channels: Option<&AHashMap<u32, ObjectChannel>>,
     ) -> anyhow::Result<()> {
         profiling::scope!(
             "TechniqueStage::bind",

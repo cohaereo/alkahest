@@ -1,8 +1,9 @@
-use tiger_parse::{tiger_type, FnvHash, ResourcePointer, ResourcePointerWithClass};
+use tiger_parse::{tiger_type, FnvHash, Padding, ResourcePointer, ResourcePointerWithClass};
 
 use crate::{
     map::SComponentDataListPtr,
     tag::{Tag, WideHash},
+    tfx::sequencer::SExpression,
 };
 
 #[tiger_type(id = 0x80809AD8)]
@@ -45,4 +46,21 @@ pub struct S8080841D {
     pub unk0: FnvHash,
     pub unk4: u32,
     pub entity: WideHash,
+}
+
+#[tiger_type(id = 0x80809597, size = 0x1A8)]
+pub struct SObjectChannelComponent {
+    // #[tiger(offset = 0x128)]
+    // pub m_providers: Vec<()>,
+    #[tiger(offset = 0x138)]
+    pub m_channels: Vec<SObjectChannel>,
+}
+
+#[tiger_type(id = 0x808095A9, size = 0x70)]
+pub struct SObjectChannel {
+    pub name: FnvHash,
+    _pad4: Padding<4>,
+    pub expression: SExpression,
+    #[tiger(offset = 0x60)]
+    pub interpolation: u64,
 }

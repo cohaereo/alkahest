@@ -53,6 +53,7 @@ use crate::{
         render_objects::{
             s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
         },
+        s_update_object_channels,
         sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
         shadowmap::{s_extract_all_shadowmaps, s_submit_all_shadowmaps},
     },
@@ -217,7 +218,7 @@ impl Scene {
 
         if self.show_channel_editor {
             egui::SidePanel::right("channel_editor").show_inside(ui, |ui| {
-                self.show_channel_editor(ui);
+                self.show_global_channel_editor(ui);
             });
         }
 
@@ -647,6 +648,8 @@ impl Scene {
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {
+        s_update_object_channels(&self.world);
+
         let resolution = if self.lock_resolution {
             (1920, 1080)
         } else {
@@ -1008,7 +1011,7 @@ impl Scene {
         }
     }
 
-    fn show_channel_editor(&mut self, ui: &mut Ui) {
+    fn show_global_channel_editor(&mut self, ui: &mut Ui) {
         ui.style_mut()
             .text_styles
             .insert(TextStyle::Body, FontId::proportional(16.0));

@@ -1,8 +1,13 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use alkahest_data::{hash::fnv1, tfx::features::dynamic::SDynamicModelComponent};
+use alkahest_render::tfx::sequencer_vm::ObjectChannel;
+use glam::Vec4;
 
 pub struct PermutationConfig {
+    pub permutation_index_override: Option<usize>,
+    pub permutation_count: usize,
+
     /// Current configuration of key-value pairs
     pub configuration: HashMap<u32, u32>,
 
@@ -14,13 +19,31 @@ pub struct PermutationConfig {
 }
 
 impl PermutationConfig {
+    pub fn is_configurable(&self) -> bool {
+        !self.keys.is_empty()
+    }
+
     pub fn from_model(model: &SDynamicModelComponent) -> Option<Self> {
+        let permutation_count = model
+            .technique_map
+            .iter()
+            .filter(|m| m.unk8 == 0)
+            .map(|m| m.technique_count as usize)
+            .next()
+            .unwrap_or(1);
+
         if model.unk408.is_empty() || model.unk418.is_empty() {
-            debug!(
-                "TODO: Handle dynamic model permutations without unk408, dont know what to do \
-                 with these yet"
-            );
-            return None;
+            // debug!(
+            //     "TODO: Handle dynamic model permutations without unk408, dont know what to do \
+            //      with these yet"
+            // );
+            return Some(Self {
+                permutation_index_override: Some(0),
+                permutation_count,
+                configuration: Default::default(),
+                keys: Default::default(),
+                pairs_to_permutation: Default::default(),
+            });
         }
         let mut configuration = HashMap::new();
         for keys1 in &model.unk38 {
@@ -74,6 +97,9 @@ impl PermutationConfig {
         }
 
         Some(Self {
+            permutation_index_override: None,
+            permutation_count,
+
             configuration,
             keys,
             pairs_to_permutation,
@@ -97,10 +123,35 @@ impl PermutationConfig {
     }
 
     pub fn calculate_permutation_index(&self) -> Option<usize> {
+        if let Some(index) = self.permutation_index_override {
+            return Some(index);
+        }
+
         let mut key_vals: Vec<(u32, u32)> =
             self.configuration.iter().map(|(k, v)| (*k, *v)).collect();
         key_vals.sort_by_key(|(k, _)| *k);
         self.pairs_to_permutation.get(&key_vals).copied()
+    }
+}
+
+pub struct ObjectChannels(pub Vec<ObjectChannel>);
+
+impl ObjectChannels {
+    pub fn set_by_name(&mut self, name: &str, value: Vec4) {
+        let hash = fnv1(name);
+        self.set_by_id(hash, value);
+    }
+
+    pub fn set_by_id(&mut self, hash: u32, value: Vec4) {
+        if let Some(channel) = self.0.iter_mut().find(|c| c.name == hash) {
+            channel.value = value;
+        }
+    }
+
+    pub fn reset_usage_counters(&mut self) {
+        for channel in &mut self.0 {
+            channel.usage.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
     }
 }
 
@@ -121,7 +172,7 @@ const FNV_NAME_GUESSES: &[(u32, &str)] = &[
     (0x1023B2D3, "color*"),
 ];
 
-fn find_fnv_name(hash: u32) -> Option<&'static str> {
+pub fn find_fnv_name(hash: u32) -> Option<&'static str> {
     if let Some(s) = FNV_NAMES
         .iter()
         .find(|&&name| fnv1(name.as_bytes()) == hash)
@@ -137,12 +188,6 @@ fn find_fnv_name(hash: u32) -> Option<&'static str> {
     }
 }
 
-pub fn find_kv_name(hash: u32) -> Option<&'static str> {
-    find_fnv_name(hash)
-}
-
-pub fn find_kv_name_or_default(hash: u32) -> String {
-    find_kv_name(hash)
-        .map(|v| v.to_string())
-        .unwrap_or_else(|| format!("unknown_{hash:08X}"))
+pub fn find_fnv_name_or_default(hash: u32) -> String {
+    find_fnv_name(hash).map_or_else(|| format!("unknown_{hash:08X}"), |v| v.to_string())
 }

@@ -21,7 +21,7 @@ use crate::{
         util::UiExt,
     },
     world::{
-        permutations::{self, OPTION_KEY_INVALID, PermutationConfig},
+        object::{self, OPTION_KEY_INVALID, ObjectChannels, PermutationConfig},
         render_objects::{DynamicRenderObject, StaticRenderObject, s_are_all_objects_loaded},
     },
 };
@@ -42,6 +42,9 @@ pub struct ModelListBase<P: ModelProvider> {
     hide_empty: bool,
 
     filter: String,
+
+    config_tab: EntityConfigTab,
+    only_show_used_channels: bool,
 
     provider: P,
 }
@@ -105,6 +108,9 @@ impl<P: ModelProvider> ModelListBase<P> {
             hover_vector: Vec2::ZERO,
 
             filter: String::new(),
+
+            config_tab: EntityConfigTab::Permutations,
+            only_show_used_channels: true,
 
             provider,
         }
@@ -315,77 +321,130 @@ impl<P: ModelProvider> ModelListBase<P> {
             .default_width(ui.ctx().content_rect().width() * 0.3)
             .show_inside(ui, |ui| {
                 ui.take_available_space();
-
-                if let Some((_, config)) = self
+                let permutations_available = self
                     .scene
                     .world
-                    .query::<&mut PermutationConfig>()
+                    .query::<&PermutationConfig>()
                     .iter()
-                    .next()
-                {
+                    .any(|(_, config)| config.permutation_count > 1 || config.is_configurable());
+
+                let object_channels_available = self
+                    .scene
+                    .world
+                    .query::<&ObjectChannels>()
+                    .iter()
+                    .any(|(_, channels)| !channels.0.is_empty());
+
+                if permutations_available || object_channels_available {
                     ui.style_mut()
                         .text_styles
                         .insert(TextStyle::Button, FontId::proportional(14.0));
                     ui.style_mut()
                         .text_styles
                         .insert(TextStyle::Body, FontId::proportional(12.0));
-                    egui::TopBottomPanel::bottom("entities_scene_configuration").show_inside(
-                        ui,
-                        |ui| {
+                    egui::TopBottomPanel::bottom("entities_scene_configuration")
+                        .resizable(true)
+                        .show_inside(ui, |ui| {
                             ui.add_space(12.0);
+                            ui.horizontal(|ui| {
+                                if object_channels_available {
+                                    ui.selectable_value(
+                                        &mut self.config_tab,
+                                        EntityConfigTab::Channels,
+                                        "Channels",
+                                    );
+                                } else {
+                                    self.config_tab = EntityConfigTab::Permutations;
+                                }
 
-                            config.for_each_key_mut(|key, available_values, current_value| {
-                                ui.horizontal(|ui| {
-                                    ui.label(permutations::find_kv_name_or_default(key));
-                                    egui::ComboBox::from_id_salt(format!(
-                                        "permutation_combo_{key:X}"
-                                    ))
-                                    .selected_text(permutations::find_kv_name_or_default(
-                                        *current_value,
-                                    ))
-                                    .show_ui(ui, |ui| {
-                                        ui.style_mut()
-                                            .text_styles
-                                            .insert(TextStyle::Button, FontId::proportional(16.0));
-                                        ui.style_mut().spacing.button_padding = Vec2::new(8.0, 2.0);
-                                        ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-
-                                        for value in available_values {
-                                            if *value == OPTION_KEY_INVALID {
-                                                continue;
-                                            }
-                                            ui.selectable_value(
-                                                current_value,
-                                                *value,
-                                                permutations::find_kv_name_or_default(*value),
-                                            );
-                                        }
-                                    });
-                                });
+                                if permutations_available {
+                                    ui.selectable_value(
+                                        &mut self.config_tab,
+                                        EntityConfigTab::Permutations,
+                                        "Permutations",
+                                    );
+                                } else {
+                                    self.config_tab = EntityConfigTab::Channels;
+                                }
                             });
 
-                            if config.calculate_permutation_index().is_none() {
-                                ui.colored_label(
-                                    Color32::YELLOW,
-                                    "Warning: Current configuration does not map to a valid \
-                                     permutation (hover for details)",
-                                )
-                                .on_hover_ui(|ui| {
-                                    ui.style_mut()
-                                        .text_styles
-                                        .insert(TextStyle::Body, FontId::proportional(12.0));
-                                    ui.label(
-                                        "The current combination of permutation keys does not \
-                                         correspond to any valid permutation for this \
-                                         model.\nThis is a bug in Alkahest, and may happen more \
-                                         frequently with models that have a large number of \
-                                         options.",
-                                    );
-                                });
+                            match self.config_tab {
+                                EntityConfigTab::Permutations => self.show_permutation_editor(ui),
+                                EntityConfigTab::Channels => self.show_object_channel_editor(ui),
                             }
-                        },
-                    );
+                        });
                 }
+
+                // if let Some((_, config)) = self
+                //     .scene
+                //     .world
+                //     .query::<&mut PermutationConfig>()
+                //     .iter()
+                //     .next()
+                // {
+                //     ui.style_mut()
+                //         .text_styles
+                //         .insert(TextStyle::Button, FontId::proportional(14.0));
+                //     ui.style_mut()
+                //         .text_styles
+                //         .insert(TextStyle::Body, FontId::proportional(12.0));
+                //     egui::TopBottomPanel::bottom("entities_scene_configuration").show_inside(
+                //         ui,
+                //         |ui| {
+                //             ui.add_space(12.0);
+
+                //             config.for_each_key_mut(|key, available_values, current_value| {
+                //                 ui.horizontal(|ui| {
+                //                     ui.label(permutations::find_kv_name_or_default(key));
+                //                     egui::ComboBox::from_id_salt(format!(
+                //                         "permutation_combo_{key:X}"
+                //                     ))
+                //                     .selected_text(permutations::find_kv_name_or_default(
+                //                         *current_value,
+                //                     ))
+                //                     .show_ui(ui, |ui| {
+                //                         ui.style_mut()
+                //                             .text_styles
+                //                             .insert(TextStyle::Button, FontId::proportional(16.0));
+                //                         ui.style_mut().spacing.button_padding = Vec2::new(8.0, 2.0);
+                //                         ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+
+                //                         for value in available_values {
+                //                             if *value == OPTION_KEY_INVALID {
+                //                                 continue;
+                //                             }
+                //                             ui.selectable_value(
+                //                                 current_value,
+                //                                 *value,
+                //                                 permutations::find_kv_name_or_default(*value),
+                //                             );
+                //                         }
+                //                     });
+                //                 });
+                //             });
+
+                //             if config.calculate_permutation_index().is_none() {
+                //                 ui.colored_label(
+                //                     Color32::YELLOW,
+                //                     "Warning: Current configuration does not map to a valid \
+                //                      permutation (hover for details)",
+                //                 )
+                //                 .on_hover_ui(|ui| {
+                //                     ui.style_mut()
+                //                         .text_styles
+                //                         .insert(TextStyle::Body, FontId::proportional(12.0));
+                //                     ui.label(
+                //                         "The current combination of permutation keys does not \
+                //                          correspond to any valid permutation for this \
+                //                          model.\nThis is a bug in Alkahest, and may happen more \
+                //                          frequently with models that have a large number of \
+                //                          options.",
+                //                     );
+                //                 });
+                //             }
+                //         },
+                //     );
+                // }
 
                 // egui::CentralPanel::default().show_inside(ui, |ui| {
                 self.scene.show(ui, ui.available_size(), egui_d3d11);
@@ -479,15 +538,25 @@ impl<P: ModelProvider> ModelListBase<P> {
                                 FontId::proportional(16.0),
                                 ui.visuals().text_color(),
                             );
+
                             let option_count = model.option_count();
-                            if option_count >= 1 {
+                            let permutation_count = model.permutation_count();
+                            if option_count >= 1 || permutation_count >= 2 {
                                 card_painter.text(
                                     card_rect.right_bottom() + vec2(-8.0, -5.0),
                                     egui::Align2::RIGHT_BOTTOM,
                                     if self.zoom >= 0.70 {
-                                        format!("{option_count} options")
+                                        if option_count == 0 {
+                                            format!("{permutation_count} variants")
+                                        } else {
+                                            format!("{option_count} options")
+                                        }
                                     } else {
-                                        option_count.to_string()
+                                        if option_count == 0 {
+                                            permutation_count.to_string()
+                                        } else {
+                                            option_count.to_string()
+                                        }
                                     },
                                     FontId::proportional(16.0),
                                     ui.visuals().text_color().gamma_multiply(0.8),
@@ -604,6 +673,148 @@ impl<P: ModelProvider> ModelListBase<P> {
 
         TabResult::Continue
     }
+
+    fn show_permutation_editor(&mut self, ui: &mut Ui) {
+        if let Some((_, config)) = self
+            .scene
+            .world
+            .query::<&mut PermutationConfig>()
+            .iter()
+            .next()
+        {
+            let manual_mode = config.permutation_index_override.is_some();
+            ui.horizontal(|ui| {
+                if config.is_configurable() {
+                    if ui
+                        .selectable_label(!manual_mode, "Calculate Permutation")
+                        .clicked()
+                    {
+                        config.permutation_index_override = None;
+                    }
+                } else if config.permutation_index_override.is_none() {
+                    config.permutation_index_override = Some(0);
+                }
+
+                if ui.selectable_label(manual_mode, "Manual Index").clicked()
+                    && config.permutation_index_override.is_none()
+                {
+                    config.permutation_index_override = Some(0);
+                }
+            });
+
+            if manual_mode {
+                let mut index = config.permutation_index_override.unwrap_or(0);
+                ui.horizontal(|ui| {
+                    ui.label("Permutation Index:");
+                    ui.style_mut().spacing.slider_width = ui.available_width() * 0.7;
+                    ui.add(egui::Slider::new(
+                        &mut index,
+                        0..=config.permutation_count.saturating_sub(1),
+                    ));
+                });
+
+                // Only update when overridden, otherwise we can't switch back to calculation mode
+                if config.permutation_index_override.is_some() {
+                    config.permutation_index_override = Some(index);
+                }
+            } else {
+                config.for_each_key_mut(|key, available_values, current_value| {
+                    ui.horizontal(|ui| {
+                        ui.label(object::find_fnv_name_or_default(key));
+                        egui::ComboBox::from_id_salt(format!("permutation_combo_{key:X}"))
+                            .selected_text(object::find_fnv_name_or_default(*current_value))
+                            .show_ui(ui, |ui| {
+                                ui.style_mut()
+                                    .text_styles
+                                    .insert(TextStyle::Button, FontId::proportional(16.0));
+                                ui.style_mut().spacing.button_padding = Vec2::new(8.0, 2.0);
+                                ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+
+                                for value in available_values {
+                                    if *value == OPTION_KEY_INVALID {
+                                        continue;
+                                    }
+                                    ui.selectable_value(
+                                        current_value,
+                                        *value,
+                                        object::find_fnv_name_or_default(*value),
+                                    );
+                                }
+                            });
+                    });
+                });
+            }
+
+            if let Some(permutation_index) = config.calculate_permutation_index() {
+                ui.label(format!("Selected permutation: {permutation_index}"));
+            } else {
+                ui.colored_label(
+                    Color32::YELLOW,
+                    "Warning: Current configuration does not map to a valid permutation (hover \
+                     for details)",
+                )
+                .on_hover_ui(|ui| {
+                    ui.style_mut()
+                        .text_styles
+                        .insert(TextStyle::Body, FontId::proportional(12.0));
+                    ui.label(
+                        "The current combination of permutation keys does not correspond to any \
+                         valid permutation for this model.\nThis is a bug in Deimos, and may \
+                         happen more frequently with models that have a large number of options.",
+                    );
+                });
+            }
+        }
+    }
+    fn show_object_channel_editor(&mut self, ui: &mut Ui) {
+        ui.checkbox(&mut self.only_show_used_channels, "Only show used");
+        if let Some((_, channels)) = self
+            .scene
+            .world
+            .query::<&mut ObjectChannels>()
+            .iter()
+            .next()
+        {
+            ui.spacing_mut().scroll.floating = false;
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                for channel in channels.0.iter_mut().filter(|c| {
+                    if self.only_show_used_channels {
+                        c.usage.load(std::sync::atomic::Ordering::Relaxed) > 0
+                    } else {
+                        true
+                    }
+                }) {
+                    ui.horizontal(|ui| {
+                        if let Some(name) = object::find_fnv_name(channel.name) {
+                            ui.label(format!("{name} (0x{:08X})", channel.name));
+                        } else {
+                            ui.label(format!("unk_{:08X}", channel.name));
+                        }
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().button_padding = vec2(4.0, 1.0);
+                            ui.spacing_mut().interact_size = egui::vec2(100.0, 32.0);
+                            egui::DragValue::new(&mut channel.value.x)
+                                .fixed_decimals(4)
+                                .speed(0.01)
+                                .ui(ui);
+                            egui::DragValue::new(&mut channel.value.y)
+                                .fixed_decimals(4)
+                                .speed(0.01)
+                                .ui(ui);
+                            egui::DragValue::new(&mut channel.value.z)
+                                .fixed_decimals(4)
+                                .speed(0.01)
+                                .ui(ui);
+                            egui::DragValue::new(&mut channel.value.w)
+                                .fixed_decimals(4)
+                                .speed(0.01)
+                                .ui(ui);
+                        });
+                    });
+                }
+            });
+        }
+    }
 }
 
 pub trait ModelProvider {
@@ -647,6 +858,19 @@ impl ModelEntry {
             .sum()
     }
 
+    fn permutation_count(&self) -> usize {
+        let Some(world) = &self.thumbnail_world else {
+            return 0;
+        };
+
+        world
+            .query::<&PermutationConfig>()
+            .iter()
+            .map(|(_, config)| config.permutation_count)
+            .max()
+            .unwrap_or(0)
+    }
+
     fn is_empty(&self) -> bool {
         let Some(world) = &self.thumbnail_world else {
             return true;
@@ -676,4 +900,10 @@ impl PackageSorting {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EntityConfigTab {
+    Permutations,
+    Channels,
 }

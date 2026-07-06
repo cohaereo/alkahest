@@ -517,6 +517,10 @@ impl FeatureRenderer for LightRenderer {
             | RenderStageSubscription::LIGHT_PROBE_APPLY
             | RenderStageSubscription::VOLUMETRICS
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 fn compute_light_bounds(light_space_transform: Mat4) -> (Vec3, Vec3) {

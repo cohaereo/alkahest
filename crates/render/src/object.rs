@@ -23,6 +23,10 @@ impl RenderObjectHandle {
     pub fn is_valid(&self) -> bool {
         self != &Self::INVALID
     }
+
+    pub fn index(&self) -> arena::Index {
+        self.0
+    }
 }
 
 impl From<RenderObjectHandle> for arena::Index {
@@ -52,6 +56,10 @@ impl RenderObject {
             renderer: self.renderer.dyn_clone()?,
             feature_type: self.feature_type,
         })
+    }
+
+    pub fn get_mut<T: FeatureRenderer + 'static>(&mut self) -> Option<&mut T> {
+        self.renderer.as_any_mut().downcast_mut::<T>()
     }
 }
 

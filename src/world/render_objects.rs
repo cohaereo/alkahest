@@ -2,11 +2,15 @@ use alkahest_data::tfx::features::ao::SStaticAmbientOcclusion;
 use alkahest_render::{
     Renderer,
     asset::{Handle, vertex_buffer::VertexBuffer},
+    feature::rigid_model::DynamicModel,
     object::RenderObjectHandle,
     tfx::packet::FramePacket,
 };
 
-use crate::world::{permutations::PermutationConfig, transform::Transform};
+use crate::world::{
+    object::{ObjectChannels, PermutationConfig},
+    transform::Transform,
+};
 
 pub struct StaticRenderObject {
     handle: RenderObjectHandle,
@@ -67,15 +71,18 @@ pub fn s_extract_ambient_occlusion(world: &hecs::World) {
 }
 
 pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePacket) {
+    let mut render_objects = Renderer::instance().objects.write();
+
     for (_entity, static_render_object) in world.query::<&StaticRenderObject>().iter() {
         frame_packet.push_static_render_object(static_render_object.handle);
     }
 
-    for (_entity, (transform, render_object, permutations)) in world
+    for (_entity, (transform, render_object, permutations, object_channels)) in world
         .query::<(
             Option<&Transform>,
             &DynamicRenderObject,
             Option<&PermutationConfig>,
+            Option<&ObjectChannels>,
         )>()
         .iter()
     {
@@ -87,6 +94,16 @@ pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePac
         } else {
             render_object.permutation
         };
+
+        if let Some(object_channels) = object_channels
+            && let Some(rigid_model) = render_objects
+                .get_mut(render_object.handle.index())
+                .and_then(|r| r.get_mut::<DynamicModel>())
+        {
+            for channel in &object_channels.0 {
+                rigid_model.channels.insert(channel.name, channel.clone());
+            }
+        }
 
         frame_packet.push_dynamic_render_object(
             render_object.handle,

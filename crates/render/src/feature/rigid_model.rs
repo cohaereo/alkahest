@@ -1,5 +1,6 @@
 use std::{any::Any, sync::Arc};
 
+use ahash::AHashMap;
 use alkahest_core::job::{SCHEDULER, potassium::JobHandle};
 use alkahest_data::tfx::{
     RenderStage, ShaderStage, TfxScopeBits,
@@ -21,10 +22,7 @@ use crate::{
     asset::{Handle, handle::is_technique_loaded},
     gpu::{cbuffer::ConstantBuffer, command_list::CommandList},
     renderer::visibility::OpaqueView,
-    tfx::{
-        expression_vm::interpreter::TempObjectChannels, packet::CompactTransform,
-        technique::Technique,
-    },
+    tfx::{packet::CompactTransform, sequencer_vm::ObjectChannel, technique::Technique},
     util::threading::CommandListSetId,
 };
 
@@ -48,7 +46,7 @@ pub struct DynamicModel {
     pub hash: TagHash,
 
     pub cb: ConstantBuffer<RigidModelConstants>,
-    pub channels: TempObjectChannels,
+    pub channels: AHashMap<u32, ObjectChannel>,
     pub transform: Mat4,
 }
 
@@ -135,7 +133,7 @@ impl DynamicModel {
             hash,
             cb: ConstantBuffer::create(&Renderer::instance().gpu, None)
                 .context("Failed to create constant buffer")?,
-            channels: TempObjectChannels::default(),
+            channels: AHashMap::default(),
             transform: Mat4::IDENTITY,
         }))
     }
@@ -304,8 +302,6 @@ impl FeatureRenderer for DynamicModel {
                 },
             )
             .unwrap();
-
-        self.channels.position = obj_local_to_world.translation().extend(0.0);
     }
 
     // #[profiling::function]
@@ -365,6 +361,10 @@ impl FeatureRenderer for DynamicModel {
         }
 
         true
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 

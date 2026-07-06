@@ -5,11 +5,8 @@ use alkahest_data::tfx::{RenderStage, features::dynamic::RenderStageSubscription
 use glam::Mat4;
 
 use crate::{
-    Renderer,
-    gpu::command_list::CommandList,
-    renderer::visibility::OpaqueView,
-    tfx::packet::CompactTransform,
-    util::threading::CommandListSetId,
+    Renderer, gpu::command_list::CommandList, renderer::visibility::OpaqueView,
+    tfx::packet::CompactTransform, util::threading::CommandListSetId,
 };
 
 pub mod cubemap;
@@ -23,7 +20,7 @@ mod shared;
 pub mod static_geometry;
 pub mod terrain_patches;
 
-pub trait FeatureRenderer {
+pub trait FeatureRenderer: Send + Sync {
     /// Returns false if the render object should be discarded
     fn visibility_test(&mut self, view_index: usize, view: &dyn OpaqueView) -> bool {
         _ = (view, view_index);
@@ -55,6 +52,8 @@ pub trait FeatureRenderer {
     fn is_loaded(&self) -> bool {
         true
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 pub trait FeatureRendererData: Any {

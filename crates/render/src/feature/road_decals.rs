@@ -115,4 +115,8 @@ impl FeatureRenderer for RoadDecalCollectionRenderer {
     fn subscribed_stages(&self) -> RenderStageSubscription {
         RenderStageSubscription::DECALS
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }

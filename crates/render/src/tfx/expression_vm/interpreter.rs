@@ -1,6 +1,7 @@
 use core::f32;
 use std::ops::{Add, Mul, Sub};
 
+use ahash::AHashMap;
 use alkahest_data::tfx::{ExternIndex, ShaderStage};
 use anyhow::{Context, ensure};
 use d3d11::SamplerState;
@@ -10,19 +11,17 @@ use super::opcodes::Opcode;
 use crate::{
     Renderer,
     gpu::command_list::ContextExt,
-    tfx::externs::{ExternAccessor, ExternAccessorExt, TextureView, Uav},
+    tfx::{
+        externs::{ExternAccessor, ExternAccessorExt, TextureView, Uav},
+        sequencer_vm::ObjectChannel,
+    },
     util::math::Vec4Ext,
 };
-
-#[derive(Default)]
-pub struct TempObjectChannels {
-    pub position: Vec4,
-}
 
 pub struct InterpreterState<'a> {
     data: &'a [u8],
     pub ip: usize,
-    object_channels: Option<&'a TempObjectChannels>,
+    object_channels: Option<&'a AHashMap<u32, ObjectChannel>>,
     context: Option<&'a d3d11::DeviceContext>,
     externs: Option<&'a dyn ExternAccessor>,
 
@@ -48,7 +47,10 @@ impl<'a> InterpreterState<'a> {
         }
     }
 
-    pub fn with_object_channels(mut self, object_channels: &'a TempObjectChannels) -> Self {
+    pub fn with_object_channels(
+        mut self,
+        object_channels: &'a AHashMap<u32, ObjectChannel>,
+    ) -> Self {
         self.object_channels = Some(object_channels);
         self
     }
@@ -754,10 +756,13 @@ impl<'a> InterpreterState<'a> {
                 Opcode::PushObjectChannelVector => {
                     let channel_hash = u32::from_be_bytes([ptr[1], ptr[2], ptr[3], ptr[4]]);
 
-                    let v = match channel_hash {
-                        0xD3583E54 => Vec4::ZERO, // unique_id
-                        _ => Vec4::ONE,
-                    };
+                    let v = self
+                        .object_channels
+                        .and_then(|channels| channels.get(&channel_hash))
+                        .map_or(Vec4::ONE, |c| {
+                            c.usage.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            c.value
+                        });
 
                     cached_top = self.push(v)?;
                 }

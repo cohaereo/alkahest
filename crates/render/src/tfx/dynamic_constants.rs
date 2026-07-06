@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
+use ahash::AHashMap;
 use alkahest_data::tfx::{SDynamicConstants, ShaderStage};
 use anyhow::Context;
 use glam::Vec4;
 use itertools::Itertools;
 use tiger_pkg::package_manager;
 
-use super::expression_vm::{
-    self,
-    interpreter::{InterpreterState, TempObjectChannels},
-};
+use super::expression_vm::{self, interpreter::InterpreterState};
 use crate::{
     Gpu, Renderer,
     asset::{
@@ -20,7 +18,10 @@ use crate::{
         cbuffer::ConstantBuffer,
         command_list::{CommandList, ContextExt},
     },
-    tfx::expression_vm::opcodes::{Opcode, OpcodeIterator},
+    tfx::{
+        expression_vm::opcodes::{Opcode, OpcodeIterator},
+        sequencer_vm::ObjectChannel,
+    },
 };
 
 /// Holds all dynamically bound resources for a shader
@@ -107,7 +108,7 @@ impl DynamicConstants {
     fn prepare_constants(
         &self,
         cmd: &mut CommandList,
-        channels: Option<&TempObjectChannels>,
+        channels: Option<&AHashMap<u32, ObjectChannel>>,
     ) -> anyhow::Result<()> {
         if self.writes_cbuffer {
             if let Some(ref cbuffer) = self.cbuffer {
@@ -134,7 +135,7 @@ impl DynamicConstants {
         &self,
         cmd: &mut CommandList,
         output: Option<&mut [Vec4]>,
-        channels: Option<&TempObjectChannels>,
+        channels: Option<&AHashMap<u32, ObjectChannel>>,
     ) {
         // profiling::scope!(
         //     "evaluate_expression_bytecode",
@@ -180,7 +181,7 @@ impl DynamicConstants {
         &self,
         cmd: &mut CommandList,
         stage: ShaderStage,
-        channels: Option<&TempObjectChannels>,
+        channels: Option<&AHashMap<u32, ObjectChannel>>,
     ) -> anyhow::Result<()> {
         if !self.bytecode.is_empty() {
             self.prepare_constants(cmd, channels)?;
