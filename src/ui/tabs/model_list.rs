@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::atomic::Ordering};
 
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera};
@@ -776,10 +776,19 @@ impl<P: ModelProvider> ModelListBase<P> {
             .next()
         {
             ui.spacing_mut().scroll.floating = false;
-            egui::ScrollArea::vertical().show(ui, |ui| {
+            let num_channels = if self.only_show_used_channels {
+                channels
+                    .0
+                    .iter()
+                    .filter(|c| c.usage.load(Ordering::Relaxed) > 0)
+                    .count()
+            } else {
+                channels.0.len()
+            };
+            let mut show_inner = |ui: &mut Ui| {
                 for channel in channels.0.iter_mut().filter(|c| {
                     if self.only_show_used_channels {
-                        c.usage.load(std::sync::atomic::Ordering::Relaxed) > 0
+                        c.usage.load(Ordering::Relaxed) > 0
                     } else {
                         true
                     }
@@ -812,7 +821,15 @@ impl<P: ModelProvider> ModelListBase<P> {
                         });
                     });
                 }
-            });
+            };
+
+            if num_channels <= 4 {
+                show_inner(ui);
+            } else {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    show_inner(ui);
+                });
+            }
         }
     }
 }
