@@ -2,12 +2,17 @@ use std::{collections::BTreeMap, mem::discriminant, rc::Rc, sync::Arc};
 
 use alkahest_render::{Gpu, gpu::command_list::CommandList};
 use anyhow::Context;
-use egui::{Color32, FontId, vec2};
+use egui::{Color32, FontId, Margin, vec2};
 use egui_dock::{DockArea, DockState, TabInteractionStyle};
 use google_material_symbols::GoogleMaterialSymbols;
 use tabs::{DockStateExt, Tab, TabViewer};
 
-use crate::app::SharedState;
+use crate::{
+    app::SharedState,
+    task::Task,
+    ui::util::DButton,
+    updater::{AvailableUpdate, check_stable_release},
+};
 
 pub mod colors;
 pub mod icons;
@@ -25,6 +30,10 @@ pub struct Gui {
     tree: DockState<Tab>,
 
     added_nodes: Vec<Tab>,
+
+    update_check: Task<Option<AvailableUpdate>>,
+    available_update: Option<AvailableUpdate>,
+    commonmark_cache: egui_commonmark::CommonMarkCache,
 }
 
 impl Gui {
@@ -154,6 +163,17 @@ impl Gui {
             egui_sdl3,
             tree,
             added_nodes: Vec::new(),
+
+            update_check: Task::new(|| match check_stable_release() {
+                Ok(Some(update)) => Some(update),
+                Ok(None) => None,
+                e => {
+                    error!("Failed to check for update: {:?}", e);
+                    None
+                }
+            }),
+            available_update: None,
+            commonmark_cache: egui_commonmark::CommonMarkCache::default(),
         })
     }
 
@@ -241,6 +261,66 @@ impl Gui {
             } else {
                 self.tree.push_to_focused_leaf(tab);
             }
+        }
+
+        if let Some(update) = self.update_check.get() {
+            match update {
+                Ok(update) => {
+                    self.available_update = update;
+                }
+                Err(e) => {
+                    error!("Failed to check for update: {:?}", e);
+                }
+            }
+        }
+
+        let mut close_update_window = false;
+        if let Some(update) = self.available_update.as_ref() {
+            egui::Modal::new("update_available".into())
+                .frame(egui::Frame::popup(&ctx.style()).inner_margin(Margin::symmetric(64, 48)))
+                .show(&ctx, |ui| {
+                    ui.heading("Update available!");
+                    ui.label(format!(
+                        "Release '{}' is available for download",
+                        update.version
+                    ));
+                    ui.separator();
+                    egui::ScrollArea::vertical()
+                        .max_height(ui.ctx().viewport_rect().height() * 0.6)
+                        .show(ui, |ui| {
+                            egui_commonmark::CommonMarkViewer::new().show(
+                                ui,
+                                &mut self.commonmark_cache,
+                                update.changelog.as_str(),
+                            );
+                        });
+
+                    ui.add_space(32.0);
+                    ui.horizontal(|ui| {
+                        if DButton::new(format!("{} Close", GoogleMaterialSymbols::Close))
+                            .padding(vec2(16.0, 6.0))
+                            .ui(ui)
+                            .clicked()
+                        {
+                            close_update_window = true;
+                        }
+
+                        if DButton::new(format!(
+                            "{} Open in Browser",
+                            GoogleMaterialSymbols::OpenInNew
+                        ))
+                        .padding(vec2(16.0, 6.0))
+                        .ui(ui)
+                        .clicked()
+                        {
+                            ctx.open_url(egui::OpenUrl::new_tab(&update.url));
+                        }
+                    });
+                });
+        }
+
+        if close_update_window {
+            self.available_update = None;
         }
 
         // {

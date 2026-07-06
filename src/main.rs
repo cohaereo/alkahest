@@ -15,6 +15,7 @@ mod cli;
 mod config;
 mod task;
 mod ui;
+mod updater;
 mod world;
 
 #[cfg(all(feature = "dhat-heap", not(feature = "tracy")))]
