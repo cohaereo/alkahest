@@ -42,7 +42,7 @@ pub struct DynamicModel {
     permutation_count: usize,
 
     identifier_count: usize,
-    pub identifier_mask: u32,
+    pub identifier_mask: u128,
 
     pub hash: TagHash,
 
@@ -122,7 +122,7 @@ impl DynamicModel {
             permutation_count,
             // selected_mesh: 0,
             identifier_count,
-            identifier_mask: u32::MAX,
+            identifier_mask: u128::MAX,
             mesh_buffers,
             technique_map,
             techniques,
@@ -197,7 +197,7 @@ impl DynamicModel {
         &self,
         cmd: &mut CommandList,
         stage: RenderStage,
-        identifier_mask: u32,
+        identifier_mask: u128,
         mut f: F,
     ) where
         F: FnMut(&Self, &mut CommandList, (usize, &SDynamicMesh), (usize, &SDynamicMeshPart)),
@@ -222,7 +222,7 @@ impl DynamicModel {
             mesh_buffers.bind(cmd);
             for part_index in mesh.get_range_for_stage(stage) {
                 let part = &mesh.parts[part_index];
-                if identifier_mask & 1u32.unbounded_shl(part.external_identifier as u32) == 0 {
+                if identifier_mask & 1u128.unbounded_shl(part.external_identifier as u32) == 0 {
                     continue;
                 }
 

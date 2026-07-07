@@ -160,7 +160,7 @@ impl ObjectChannels {
 }
 
 pub struct DynamicModelParts {
-    pub mask: u32,
+    pub mask: u128,
     pub num_parts: usize,
 }
 

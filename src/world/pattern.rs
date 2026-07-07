@@ -149,7 +149,7 @@ pub fn spawn_pattern_from_header(
                 world.insert_one(
                     entity,
                     DynamicModelParts {
-                        mask: u32::MAX,
+                        mask: u128::MAX,
                         num_parts: model.identifier_count(),
                     },
                 )?;

@@ -26,3 +26,5 @@ keys.txt
 /perf.data
 /perf.data.old
 *.tracy
+/fxc-server.exe
+/liboodle-data-shared.so

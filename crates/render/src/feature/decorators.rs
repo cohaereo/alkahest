@@ -24,7 +24,7 @@ struct DecoratorModel {
     model: Box<DynamicModel>,
     ext: Box<externs::RigidModel>,
     cbuffers: Vec<ConstantBuffer<Vec4>>,
-    identifier_mask: u32,
+    identifier_mask: u128,
 }
 
 #[derive(Debug)]
@@ -123,7 +123,7 @@ impl DecoratorRenderer {
             };
 
             let identifier_mask = if decorator.unk8.len() <= 1 {
-                u32::MAX
+                u128::MAX
             } else {
                 model.model.meshes[0..model.model.meshes.len() - 1]
                     .iter()
@@ -314,7 +314,7 @@ impl FeatureRenderer for DecoratorRenderer {
             cmd.externs.rigid_model = model.ext.clone().into();
 
             let identifier_mask = if self.models.len() == 1 {
-                1u32.unbounded_shl(id as u32)
+                1u128.unbounded_shl(id as u32)
             } else {
                 // cohae: There's dedicated identifiers for the parts used for ShadowGenerate, just doing +1 (or << 1) seems to work?
                 match stage {
