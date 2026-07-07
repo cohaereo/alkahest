@@ -46,6 +46,11 @@ impl ActivityTab {
             maps.push(ActivityMap {
                 activity: activity.clone(),
                 index: maps.len(),
+                is_valid: if let Some(first_ref) = map.map_references.first() {
+                    first_ref.hash32().is_some()
+                } else {
+                    false
+                },
                 name: state.get_string_by_package(
                     &package_manager().package_paths[&tag.pkg_id()].name,
                     map.bubble_name,
@@ -98,22 +103,33 @@ impl ActivityTab {
                         {
                             load_sym = GoogleMaterialSymbols::RadioButtonChecked;
                         }
+                        if !map.is_valid {
+                            load_sym = GoogleMaterialSymbols::Block;
+                        }
 
-                        let btn = if self.current_map_index == i {
-                            DButton::new_white((load_sym.to_string(), map.name.clone()))
+                        let map_name = if !map.is_valid {
+                            format!("{} (invalid)", map.name)
                         } else {
-                            DButton::new((load_sym.to_string(), map.name.clone()))
+                            map.name.clone()
                         };
 
-                        if btn
-                            .padding(vec2(8.0, 4.0))
-                            .min_size(vec2(340.0, 32.0))
-                            .ui(ui)
-                            .clicked()
-                        {
-                            self.current_map_index = i;
-                            map.start_load();
-                        }
+                        let btn = if self.current_map_index == i {
+                            DButton::new_white((load_sym.to_string(), map_name))
+                        } else {
+                            DButton::new((load_sym.to_string(), map_name))
+                        };
+
+                        ui.add_enabled_ui(map.is_valid, |ui| {
+                            if btn
+                                .padding(vec2(8.0, 4.0))
+                                .min_size(vec2(340.0, 32.0))
+                                .ui(ui)
+                                .clicked()
+                            {
+                                self.current_map_index = i;
+                                map.start_load();
+                            }
+                        });
                     }
                 });
         });
@@ -136,6 +152,7 @@ impl ActivityTab {
 struct ActivityMap {
     activity: Arc<SActivity>,
     index: usize,
+    is_valid: bool,
 
     name: String,
     load_task: Task<hecs::World>,

@@ -137,7 +137,7 @@ impl StringContainer {
     pub fn get(&self, hash: impl Into<u32>) -> String {
         let hash = hash.into();
         self.try_get(hash)
-            .unwrap_or_else(|| format!("<missingstr=0x{hash:08X}>"))
+            .unwrap_or_else(|| format!("<HASH(0x{hash:08X})>"))
     }
 
     pub fn merge(mut self, other: Self) -> Self {
