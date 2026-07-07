@@ -159,6 +159,11 @@ impl ObjectChannels {
     }
 }
 
+pub struct DynamicModelParts {
+    pub mask: u32,
+    pub num_parts: usize,
+}
+
 const WORDLIST: &str = include_str!("wordlist.txt");
 
 static FNV_NAMES: LazyLock<AHashMap<u32, String>> = LazyLock::new(|| {

@@ -39,7 +39,7 @@ use tiger_pkg::{TagHash, package_manager};
 
 use crate::world::{
     UnimplementedTigerComponent, UnimplementedTigerComponents,
-    object::{ObjectChannels, PermutationConfig},
+    object::{DynamicModelParts, ObjectChannels, PermutationConfig},
     render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
     shadowmap::ShadowMap,
     transform::Transform,
@@ -144,6 +144,14 @@ pub fn spawn_pattern_from_header(
                         model.model.model_offset.xyz(),
                         model.model.model_scale.xyz() * 2.0,
                     ),
+                )?;
+
+                world.insert_one(
+                    entity,
+                    DynamicModelParts {
+                        mask: u32::MAX,
+                        num_parts: model.identifier_count(),
+                    },
                 )?;
 
                 let obj = Renderer::instance()

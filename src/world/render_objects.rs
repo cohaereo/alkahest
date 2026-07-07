@@ -8,7 +8,7 @@ use alkahest_render::{
 };
 
 use crate::world::{
-    object::{ObjectChannels, PermutationConfig},
+    object::{DynamicModelParts, ObjectChannels, PermutationConfig},
     transform::Transform,
 };
 
@@ -77,12 +77,13 @@ pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePac
         frame_packet.push_static_render_object(static_render_object.handle);
     }
 
-    for (_entity, (transform, render_object, permutations, object_channels)) in world
+    for (_entity, (transform, render_object, permutations, object_channels, parts)) in world
         .query::<(
             Option<&Transform>,
             &DynamicRenderObject,
             Option<&PermutationConfig>,
             Option<&ObjectChannels>,
+            Option<&DynamicModelParts>,
         )>()
         .iter()
     {
@@ -95,13 +96,17 @@ pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePac
             render_object.permutation
         };
 
-        if let Some(object_channels) = object_channels
-            && let Some(rigid_model) = render_objects
-                .get_mut(render_object.handle.index())
-                .and_then(|r| r.get_mut::<DynamicModel>())
+        if let Some(rigid_model) = render_objects
+            .get_mut(render_object.handle.index())
+            .and_then(|r| r.get_mut::<DynamicModel>())
         {
-            for channel in &object_channels.0 {
-                rigid_model.channels.insert(channel.name, channel.clone());
+            if let Some(object_channels) = object_channels {
+                for channel in &object_channels.0 {
+                    rigid_model.channels.insert(channel.name, channel.clone());
+                }
+            }
+            if let Some(parts) = parts {
+                rigid_model.identifier_mask = parts.mask;
             }
         }
 

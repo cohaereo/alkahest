@@ -42,6 +42,7 @@ pub struct DynamicModel {
     permutation_count: usize,
 
     identifier_count: usize,
+    pub identifier_mask: u32,
 
     pub hash: TagHash,
 
@@ -121,6 +122,7 @@ impl DynamicModel {
             permutation_count,
             // selected_mesh: 0,
             identifier_count,
+            identifier_mask: u32::MAX,
             mesh_buffers,
             technique_map,
             techniques,
@@ -311,7 +313,7 @@ impl FeatureRenderer for DynamicModel {
         self.draw_wrapped(
             cmd,
             stage,
-            u32::MAX,
+            self.identifier_mask,
             |_model, cmd, (_mesh_index, _mesh), (_part_index, part)| {
                 cmd.draw_indexed(part.index_count, part.index_start, 0);
             },
@@ -328,13 +330,14 @@ impl FeatureRenderer for DynamicModel {
     ) {
         let self_p = &raw const *self as u64;
         let pool = renderer.cmd_pool.clone();
+        let identifier_maswk = self.identifier_mask;
         let job = SCHEDULER.job_builder("rigid_model").spawn(move || {
             let self_ref = unsafe { &*(self_p as *const Self) };
             let cmd = pool.get_command_list(set);
             self_ref.draw_wrapped(
                 cmd,
                 stage,
-                u32::MAX,
+                identifier_maswk,
                 |_model, cmd, (_mesh_index, _mesh), (_part_index, part)| {
                     cmd.draw_indexed(part.index_count, part.index_start, 0);
                 },

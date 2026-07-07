@@ -21,7 +21,7 @@ use crate::{
         util::UiExt,
     },
     world::{
-        object::{self, OPTION_KEY_INVALID, ObjectChannels, PermutationConfig},
+        object::{self, DynamicModelParts, OPTION_KEY_INVALID, ObjectChannels, PermutationConfig},
         render_objects::{DynamicRenderObject, StaticRenderObject, s_are_all_objects_loaded},
     },
 };
@@ -355,7 +355,14 @@ impl<P: ModelProvider> ModelListBase<P> {
                     .iter()
                     .any(|(_, channels)| !channels.0.is_empty());
 
-                if permutations_available || object_channels_available {
+                let parts_available = self
+                    .scene
+                    .world
+                    .query::<&DynamicModelParts>()
+                    .iter()
+                    .any(|(_, parts)| parts.num_parts > 1);
+
+                if permutations_available || object_channels_available || parts_available {
                     ui.style_mut()
                         .text_styles
                         .insert(TextStyle::Button, FontId::proportional(14.0));
@@ -373,8 +380,6 @@ impl<P: ModelProvider> ModelListBase<P> {
                                         EntityConfigTab::Channels,
                                         "Channels",
                                     );
-                                } else {
-                                    self.config_tab = EntityConfigTab::Permutations;
                                 }
 
                                 if permutations_available {
@@ -383,14 +388,36 @@ impl<P: ModelProvider> ModelListBase<P> {
                                         EntityConfigTab::Permutations,
                                         "Permutations",
                                     );
-                                } else {
-                                    self.config_tab = EntityConfigTab::Channels;
+                                }
+
+                                if parts_available {
+                                    ui.selectable_value(
+                                        &mut self.config_tab,
+                                        EntityConfigTab::Parts,
+                                        "Parts",
+                                    );
                                 }
                             });
 
                             match self.config_tab {
-                                EntityConfigTab::Permutations => self.show_permutation_editor(ui),
-                                EntityConfigTab::Channels => self.show_object_channel_editor(ui),
+                                EntityConfigTab::Permutations => {
+                                    if !permutations_available {
+                                        self.config_tab = EntityConfigTab::Channels;
+                                    }
+                                    self.show_permutation_editor(ui)
+                                }
+                                EntityConfigTab::Channels => {
+                                    if !object_channels_available {
+                                        self.config_tab = EntityConfigTab::Parts;
+                                    }
+                                    self.show_object_channel_editor(ui)
+                                }
+                                EntityConfigTab::Parts => {
+                                    if !parts_available {
+                                        self.config_tab = EntityConfigTab::Permutations;
+                                    }
+                                    self.show_parts_editor(ui)
+                                }
                             }
                         });
                 }
@@ -853,6 +880,49 @@ impl<P: ModelProvider> ModelListBase<P> {
             }
         }
     }
+
+    fn show_parts_editor(&mut self, ui: &mut Ui) {
+        if let Some((_, parts)) = self
+            .scene
+            .world
+            .query::<&mut DynamicModelParts>()
+            .iter()
+            .next()
+        {
+            ui.horizontal(|ui| {
+                if ui.button("Select All").clicked() {
+                    parts.mask = (1 << parts.num_parts) - 1;
+                }
+
+                if ui.button("Select None").clicked() {
+                    parts.mask = 0;
+                }
+
+                ui.weak("Tip: Hold ctrl when selecting parts to disable all other parts");
+            });
+            ui.horizontal_wrapped(|ui| {
+                ui.style_mut()
+                    .text_styles
+                    .insert(TextStyle::Body, FontId::monospace(14.0));
+
+                for i in 0..parts.num_parts {
+                    let mut enabled = (parts.mask >> i) & 1 != 0;
+                    let response = ui.checkbox(&mut enabled, format!("#{:02}", i));
+                    if response.changed() {
+                        if enabled {
+                            parts.mask |= 1 << i;
+                        } else {
+                            parts.mask &= !(1 << i);
+                        }
+                    }
+
+                    if response.clicked() && ui.input(|i| i.modifiers.ctrl) {
+                        parts.mask = 1 << i;
+                    }
+                }
+            });
+        }
+    }
 }
 
 pub trait ModelProvider {
@@ -909,6 +979,18 @@ impl ModelEntry {
             .unwrap_or(0)
     }
 
+    fn part_count(&self) -> usize {
+        let Some(world) = &self.thumbnail_world else {
+            return 0;
+        };
+
+        world
+            .query::<&DynamicModelParts>()
+            .iter()
+            .map(|(_, parts)| parts.num_parts)
+            .sum()
+    }
+
     fn is_empty(&self) -> bool {
         let Some(world) = &self.thumbnail_world else {
             return true;
@@ -944,4 +1026,5 @@ impl PackageSorting {
 enum EntityConfigTab {
     Permutations,
     Channels,
+    Parts,
 }
