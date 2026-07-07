@@ -164,12 +164,14 @@ impl Gui {
             tree,
             added_nodes: Vec::new(),
 
-            update_check: Task::new(|| match check_stable_release() {
-                Ok(Some(update)) => Some(update),
-                Ok(None) => None,
-                e => {
-                    error!("Failed to check for update: {:?}", e);
-                    None
+            update_check: Task::new("update_check".to_string(), || {
+                match check_stable_release() {
+                    Ok(Some(update)) => Some(update),
+                    Ok(None) => None,
+                    e => {
+                        error!("Failed to check for update: {:?}", e);
+                        None
+                    }
                 }
             }),
             available_update: None,

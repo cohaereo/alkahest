@@ -3,11 +3,14 @@ pub struct Task<T: Sized + Send + 'static> {
 }
 
 impl<T: Sized + Send> Task<T> {
-    pub fn new<F>(f: F) -> Self
+    pub fn new<F>(name: String, f: F) -> Self
     where
         F: FnOnce() -> T + Send + 'static,
     {
-        let join_handle = std::thread::spawn(f);
+        let join_handle = std::thread::Builder::new()
+            .name(name)
+            .spawn(f)
+            .expect("Failed to spawn task thread");
 
         Self {
             join_handle: Some(join_handle),
@@ -15,10 +18,7 @@ impl<T: Sized + Send> Task<T> {
     }
 
     pub fn is_pending(&self) -> bool {
-        self.join_handle
-            .as_ref()
-            .map(|s| !s.is_finished())
-            .unwrap_or(false)
+        self.join_handle.as_ref().is_some_and(|s| !s.is_finished())
     }
 
     pub fn get(&mut self) -> Option<std::thread::Result<T>> {

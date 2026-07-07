@@ -24,7 +24,7 @@ pub struct MapTab {
 impl MapTab {
     pub fn new(tag: TagHash, name: String, shared: &SharedState) -> anyhow::Result<Self> {
         Ok(Self {
-            load_task: Task::new(move || {
+            load_task: Task::new("map_load".to_string(), move || {
                 let mut world = hecs::World::new();
                 crate::world::map::load_map_into_world(tag, &mut world)
                     .expect("Failed to load map into world");

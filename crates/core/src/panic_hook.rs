@@ -43,7 +43,7 @@ pub fn setup_panic_hook() {
         }
 
         // Dont show dialog on debug builds
-        if !cfg!(debug_assertions) {
+        if !cfg!(debug_assertions) && this_thread.name() != Some("map_load") {
             // Finally, show a dialog
             let panic_message_stripped = strip_ansi_codes(&format!("{info}"));
             if let Err(e) = native_dialog::MessageDialog::new()
@@ -59,8 +59,8 @@ pub fn setup_panic_hook() {
             }
         }
 
-        // Make sure the application exits
-        std::process::exit(-1);
+        // // Make sure the application exits
+        // std::process::exit(-1);
     }));
 
     if !cfg!(debug_assertions) {
