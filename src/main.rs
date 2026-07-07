@@ -1,3 +1,4 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #[macro_use]
 extern crate tracing;
 use std::{fs::File, rc::Rc, sync::Mutex};
