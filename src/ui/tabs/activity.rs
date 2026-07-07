@@ -47,16 +47,18 @@ impl ActivityTab {
         let activity = Arc::new(activity);
         println!("loading activity {activity_name}");
 
+        let mut current_map_index = 0;
         let mut maps = vec![];
-        for map in &activity.unk50 {
+        for (index, map) in activity.unk50.iter().enumerate() {
+            let is_valid = if let Some(first_ref) = map.map_references.first() {
+                first_ref.hash32().is_some()
+            } else {
+                false
+            };
             maps.push(ActivityMap {
                 activity: activity.clone(),
                 index: maps.len(),
-                is_valid: if let Some(first_ref) = map.map_references.first() {
-                    first_ref.hash32().is_some()
-                } else {
-                    false
-                },
+                is_valid,
                 name: state.get_string_by_activity(
                     activity_name.trim_end_matches("_ambient"),
                     map.bubble_name,
@@ -65,15 +67,24 @@ impl ActivityTab {
                 world: None,
                 state: ActivityLoadState::Unloaded,
             });
+
+            if current_map_index == index && !is_valid {
+                current_map_index += 1;
+            }
         }
-        if let Some(map) = maps.first_mut() {
+
+        if current_map_index >= maps.len() {
+            current_map_index = 0;
+        }
+
+        if let Some(map) = maps.get_mut(current_map_index) {
             map.start_load();
         }
 
         Ok(Self {
             state: state.clone(),
             activity,
-            current_map_index: 0,
+            current_map_index,
             maps,
             tag,
             name: tab_name,
