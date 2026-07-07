@@ -256,7 +256,10 @@ impl ActivityListTab {
                                 || child.code().to_lowercase().contains(query)
                         }) {
                             #[allow(clippy::collapsible_if)]
-                            if let ActivityTreeNode::Leaf { title, tag, .. } = child {
+                            if let ActivityTreeNode::Leaf {
+                                title, tag, code, ..
+                            } = child
+                            {
                                 if DButton::new(child.atoms())
                                     .min_size(vec2(768.0, 32.0))
                                     .stroke(1.0, child.stroke_color())
@@ -268,6 +271,7 @@ impl ActivityListTab {
                                         &self.shared_state,
                                         *tag,
                                         title.to_string(),
+                                        code,
                                     ) {
                                         Ok(tab) => {
                                             *result = TabResult::Open(Tab::Activity(tab));
@@ -331,6 +335,7 @@ impl ActivityListTab {
                                             &self.shared_state,
                                             *tag,
                                             title.to_string(),
+                                            code,
                                         ) {
                                             Ok(tab) => {
                                                 *result = TabResult::Open(Tab::Activity(tab));

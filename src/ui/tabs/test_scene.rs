@@ -50,7 +50,7 @@ impl TestSceneTab {
                     Renderer::instance()
                         .immediate
                         .lock()
-                        .aabb_world(&bounds, if visible { 0x00ff00 } else { 0xff0000 });
+                        .aabb_world(&bounds, 0xff0000);
                 }
             }
         }

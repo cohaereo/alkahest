@@ -50,7 +50,7 @@ impl MapListTab {
                 && let Ok(bubble_parent) =
                     package_manager().read_tag_struct::<SBubbleParentShallow>(*tag)
             {
-                *name = self.state.get_string_by_package(
+                *name = self.state.get_string_by_activity(
                     &package_manager().package_paths[&tag.pkg_id()].name,
                     bubble_parent.map_name,
                 );

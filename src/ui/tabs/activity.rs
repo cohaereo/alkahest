@@ -35,11 +35,17 @@ pub struct ActivityTab {
 }
 
 impl ActivityTab {
-    pub fn new(state: &Arc<SharedState>, tag: TagHash, name: String) -> anyhow::Result<Self> {
+    pub fn new(
+        state: &Arc<SharedState>,
+        tag: TagHash,
+        tab_name: String,
+        activity_name: &str,
+    ) -> anyhow::Result<Self> {
         let activity: SActivity = package_manager()
             .read_tag_struct(tag)
             .context("Failed to read SActivity")?;
         let activity = Arc::new(activity);
+        println!("loading activity {activity_name}");
 
         let mut maps = vec![];
         for map in &activity.unk50 {
@@ -51,8 +57,8 @@ impl ActivityTab {
                 } else {
                     false
                 },
-                name: state.get_string_by_package(
-                    &package_manager().package_paths[&tag.pkg_id()].name,
+                name: state.get_string_by_activity(
+                    activity_name.trim_end_matches("_ambient"),
                     map.bubble_name,
                 ),
                 load_task: Task::default(),
@@ -70,7 +76,7 @@ impl ActivityTab {
             current_map_index: 0,
             maps,
             tag,
-            name,
+            name: tab_name,
             scene: Box::new(
                 Scene::new(
                     Renderer::instance().clone(),

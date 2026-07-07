@@ -144,6 +144,10 @@ impl StringContainer {
         self.0.extend(other.0);
         self
     }
+
+    pub fn extend(&mut self, other: Self) {
+        self.0.extend(other.0);
+    }
 }
 
 impl Deref for StringContainer {

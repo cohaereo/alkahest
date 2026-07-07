@@ -3,6 +3,7 @@
 #![allow(clippy::collapsible_else_if, clippy::missing_transmute_annotations)]
 
 use std::{
+    collections::hash_map::Entry,
     io::{Cursor, Seek},
     rc::Rc,
     str::FromStr,
@@ -179,7 +180,7 @@ impl Drop for App {
 
 pub struct SharedState {
     pub strings: StringContainerShared,
-    pub strings_by_package: HashMap<String, StringContainer>,
+    pub strings_by_activity: HashMap<String, StringContainer>,
     pub config: RwLock<AppConfig>,
 
     /// Investment hash -> Name
@@ -191,7 +192,7 @@ pub struct SharedState {
 
 impl SharedState {
     pub fn new() -> anyhow::Result<Self> {
-        let mut strings_by_package = HashMap::default();
+        let mut strings_by_activity: HashMap<String, StringContainer> = HashMap::default();
         for (name, tag) in package_manager().get_named_tags_by_class(0x80808E8B) {
             let Ok(data) = package_manager().read_tag(tag) else {
                 continue;
@@ -202,7 +203,20 @@ impl SharedState {
             if hash.is_none() {
                 continue;
             }
-            strings_by_package.insert(name, StringContainer::load(hash)?);
+
+            let activity = if let Some((_destination, activity)) = name.split_once(".") {
+                activity
+            } else {
+                &name
+            };
+
+            let container = StringContainer::load(hash)?;
+            match strings_by_activity.entry(activity.to_string()) {
+                Entry::Occupied(mut e) => e.get_mut().extend(container),
+                Entry::Vacant(e) => {
+                    e.insert(container);
+                }
+            }
         }
 
         const ACTIVITY_NAME_DATA: &str = include_str!("../assets/data/activity_names.json");
@@ -211,7 +225,7 @@ impl SharedState {
 
         let mut s = Self {
             strings: StringContainer::load_all_global().into(),
-            strings_by_package,
+            strings_by_activity,
             config: RwLock::new(AppConfig::default()),
             activity_names: serde_json::from_str(ACTIVITY_NAME_DATA)?,
             activity_hash_to_investment: serde_json::from_str(ACTIVITY_TO_INVESTENT_DATA)?,
@@ -266,9 +280,9 @@ impl SharedState {
         self.strings.get(hash)
     }
 
-    pub fn get_string_by_package(&self, package: &str, hash: u32) -> String {
-        self.strings_by_package
-            .get(package)
+    pub fn get_string_by_activity(&self, activity_name: &str, hash: u32) -> String {
+        self.strings_by_activity
+            .get(activity_name)
             .and_then(|s| s.try_get(hash))
             .unwrap_or_else(|| self.get_string(hash))
     }
