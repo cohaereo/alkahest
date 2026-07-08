@@ -23,7 +23,7 @@ anyhow = "1"
 ahash = "0.8"
 bytemuck = { version = "1", features = ["derive"] }
 crossbeam = "0.8"
-d3d11 = { version = "0.3.2", features = ["sdl3"] }
+d3d11 = { version = "0.3.3", features = ["sdl3"] }
 egui = { version = "0.33.3", default-features = false, features = ["bytemuck"] }
 egui_dock = "0.18"
 gdt-cpus = "25.5.0"
