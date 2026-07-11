@@ -84,6 +84,7 @@ pub struct Scene {
     profiler_results: Option<String>,
     show_surface_viewer: bool,
     show_channel_editor: bool,
+    automate_channels: bool,
 
     frametimes: Vec<f32>,
     global_channels: [Vec4; 256],
@@ -137,6 +138,7 @@ impl Scene {
             frametimes: Vec::new(),
             sun_shadow_views,
             scene_id: scene_id.into(),
+            automate_channels: true,
         })
     }
 
@@ -762,7 +764,10 @@ impl Scene {
                 );
                 ext.unk_sequencer_values[0] = Vec4::splat((1.0 - distance_to_night) * 0.725);
             }
-            s_evaluate_global_channel_expressions(&self.world);
+
+            if self.automate_channels {
+                s_evaluate_global_channel_expressions(&self.world);
+            }
 
             // Fixes III not showing up in the singularity
             self.renderer
@@ -1020,13 +1025,14 @@ impl Scene {
             .insert(TextStyle::Button, FontId::proportional(16.0));
 
         let automated_ids = s_get_all_global_channel_ids(&self.world);
+        ui.heading("Global Channels");
+        ui.checkbox(&mut self.automate_channels, "Sequencer Automation");
         egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.heading("Global Channels");
             for (i, channel) in self.global_channels.iter_mut().enumerate() {
                 let Some(channel_id) = self.renderer.externs.global_ids.get(i) else {
                     continue;
                 };
-                let is_automated = automated_ids.contains(channel_id);
+                let is_automated = automated_ids.contains(channel_id) && self.automate_channels;
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 4.0;
                     if let Some(name) = get_global_channel_name(*channel_id) {
