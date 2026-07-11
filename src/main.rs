@@ -50,7 +50,8 @@ fn main() -> anyhow::Result<()> {
 
     let args = AppArgs::parse();
 
-    alkahest_core::initialize_package_manager(args.gamedir.as_deref())?;
+    alkahest_core::initialize_package_manager(args.gamedir.as_deref())
+        .expect("Failed to initialize package manager");
 
     let sdl_context = Rc::new(sdl3::init().expect("Failed to initialize SDL"));
     #[cfg(target_os = "linux")]
@@ -98,7 +99,9 @@ fn main() -> anyhow::Result<()> {
             }
         }
 
-        app.render(&event_pump);
+        subsecond::call(|| {
+            app.render(&event_pump);
+        });
     }
 
     tiger_pkg::finalize_package_manager();

@@ -3,8 +3,9 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 pub use convar::*;
+use game_detector::InstalledGame;
 use tiger_pkg::{register_pkg_key, PackageManager};
-use tracing::{error, info};
+use tracing::info;
 pub mod config;
 pub mod job;
 
@@ -22,22 +23,24 @@ pub fn initialize_package_manager<'a>(
     let game_path = if let Some(path) = &suggested_path.into() {
         path.to_string()
     } else {
-        let Some(steamapp) = game_detector::steam::get_all_apps()
-            .context("Failed to enumerate Steam apps")?
-            .into_iter()
-            .find(|a| a.appid == DESTINY2_APP_ID)
-        else {
-            error!(
-                "Failed to find Destiny 2 app in Steam library. If you don't have Destiny 2 \
-                 installed through Steam, then you can specify the path to the game directory \
-                 using the --gamedir/-g argument."
-            );
-            return Ok(());
+        let Some(app) = find_all_installations().into_iter().next() else {
+            return Err(anyhow::anyhow!(
+                "Failed to find a valid Destiny 2 app. If you don't have Destiny 2 installed \
+                 through Steam/Epic Games/Microsoft Store, then you can specify the path to the \
+                 game directory using the --gamedir/-g argument."
+            ));
         };
 
-        info!("Found Destiny 2 installation at '{}'", steamapp.game_path);
+        let game_path = match app {
+            InstalledGame::Steam(app_state) => app_state.game_path,
+            InstalledGame::EpicGames(manifest) => manifest.install_location,
+            InstalledGame::MicrosoftStore(game_package) => game_package.path,
+            v => anyhow::bail!("Invalid games store ({v:?})"),
+        };
 
-        steamapp.game_path
+        info!("Found Destiny 2 installation at '{}'", game_path);
+
+        game_path
     };
 
     let pm = Arc::new(
@@ -86,4 +89,16 @@ fn register_all_keys() {
     register_pkg_key(0x361103272915D800, [0x08, 0xC3, 0x78, 0x77, 0x6E, 0xB5, 0x4F, 0x80, 0x7F, 0x94, 0x29, 0xE9, 0xAE, 0x09, 0x33, 0x04], [0x09, 0xEB, 0x94, 0x72, 0x29, 0xBF, 0xC9, 0x02, 0xD7, 0x0C, 0x6A, 0x2C]); // w64_sr_v950_promo_redacted
     register_pkg_key(0x835DC8BF1AFEAB83, [0x56, 0x82, 0xFD, 0xAA, 0xC9, 0xB3, 0x32, 0xE1, 0x24, 0x39, 0x6E, 0x02, 0xBB, 0xE6, 0x23, 0x87], [0x1A, 0x51, 0xC3, 0x3F, 0x39, 0x28, 0xFB, 0x0E, 0x56, 0x29, 0x83, 0x04]); // w64_sr_v950_partner_redacted
     register_pkg_key(0xF10A51CB73ACC4E4, [0xAD, 0xF5, 0x8D, 0x01, 0x08, 0x93, 0x18, 0xC9, 0x11, 0x35, 0xE0, 0x25, 0x67, 0xD1, 0xB7, 0x36], [0x7E, 0x65, 0xB0, 0x26, 0x18, 0x5E, 0x09, 0x85, 0xE1, 0xB7, 0x37, 0x4C]); // w64_sr_v955_partner_redacted
+}
+
+fn find_all_installations() -> Vec<InstalledGame> {
+    let mut installations = game_detector::find_all_games();
+    installations.retain(|i| match i {
+        InstalledGame::Steam(a) => a.appid == 1085660,
+        InstalledGame::EpicGames(m) => m.display_name == "Destiny 2",
+        InstalledGame::MicrosoftStore(p) => p.app_name == "Destiny2PCbasegame",
+        _ => false,
+    });
+
+    installations
 }
