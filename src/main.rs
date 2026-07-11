@@ -47,6 +47,7 @@ fn main() -> anyhow::Result<()> {
     init_tracing()?;
 
     print_banner();
+    increase_ulimit();
 
     let args = AppArgs::parse();
 
@@ -162,6 +163,25 @@ fn fix_windows_console() {
                     ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING,
                 );
             }
+        }
+    }
+}
+
+fn increase_ulimit() {
+    #[cfg(target_os = "linux")]
+    unsafe {
+        let mut rlim: libc::rlimit = std::mem::zeroed();
+        if libc::getrlimit(libc::RLIMIT_NOFILE, &mut rlim) != 0 {
+            error!("Failed to obtain open file limit");
+            return;
+        }
+
+        rlim.rlim_cur = 4096.min(rlim.rlim_max);
+
+        if libc::setrlimit(libc::RLIMIT_NOFILE, &rlim) != 0 {
+            error!("Failed to increase open file limit");
+        } else {
+            info!("Increased open file limit to {}", rlim.rlim_cur);
         }
     }
 }

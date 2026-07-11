@@ -130,6 +130,7 @@ dependencies = [
  "image",
  "inline_tweak",
  "itertools 0.14.0",
+ "libc",
  "parking_lot",
  "profiling",
  "rayon",
@@ -1757,9 +1758,9 @@ dependencies = [
 
 [[package]]
 name = "game-detector"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbf19ded491e8e6585c38b05c45a0479d7002428de12726683e10c4fa514dd6"
+checksum = "061304d38143370455a3dd1c6c0814e569dbe233d13f4ea928285f44706bbb5a"
 dependencies = [
  "anyhow",
  "fs-err",

@@ -7,7 +7,7 @@ edition = "2021"
 anyhow.workspace = true
 breakpad-handler = { version = "0.2.0", optional = true }
 color-eyre = { version = "0.6.5", optional = true }
-game-detector = { version = "0.2.1" }
+game-detector = { version = "0.2.2" }
 lazy_static = "1"
 native-dialog = { version = "0.7.0", optional = true }
 parking_lot.workspace = true
@@ -20,8 +20,4 @@ tracing.workspace = true
 
 [features]
 default = ["panic-hook"]
-panic-hook = [
-    "breakpad-handler",
-    "color-eyre",
-    "native-dialog"
-]
+panic-hook = ["breakpad-handler", "color-eyre", "native-dialog"]
