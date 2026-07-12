@@ -12,6 +12,8 @@ use breakpad_handler::BreakpadHandler;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
+use crate::cache_relative_path;
+
 lazy_static! {
     static ref PANIC_FILE: Arc<Mutex<Option<File>>> = Arc::new(Mutex::new(None));
     static ref PANIC_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
@@ -69,13 +71,14 @@ pub fn setup_panic_hook() {
 }
 
 fn install_breakpad() {
-    if !std::fs::exists("crashes").unwrap_or(false) {
-        if let Err(e) = std::fs::create_dir("crashes") {
+    let crashes_dir = cache_relative_path("crashes");
+    if !std::fs::exists(&crashes_dir).unwrap_or(false) {
+        if let Err(e) = std::fs::create_dir(&crashes_dir) {
             eprintln!("Failed to create crash dump directory: {e}");
         }
     } else {
         // Clean up dumps, keep only the last 5
-        if let Ok(dir) = std::fs::read_dir("crashes") {
+        if let Ok(dir) = std::fs::read_dir(&crashes_dir) {
             // Get all .dmp files
             let mut dumps: Vec<_> = dir
                 .filter_map(|entry| {
@@ -108,7 +111,7 @@ fn install_breakpad() {
 
     // TODO(cohae): Prevent handler from triggering twice/on panic
     let breakpad = BreakpadHandler::attach(
-        "crashes",
+        &crashes_dir,
         breakpad_handler::InstallOptions::BothHandlers,
         Box::new(|path: PathBuf| {
             eprintln!("Crash dump written to: {}", path.display());
@@ -132,9 +135,15 @@ fn install_breakpad() {
 }
 
 fn write_panic_to_file(info: &PanicHookInfo<'_>, bt: Backtrace) -> std::io::Result<()> {
+    let panic_log_path = if cfg!(target_os = "windows") {
+        "panic.log"
+    } else {
+        "/tmp/panic.log"
+    };
+
     let mut file_lock = PANIC_FILE.lock();
     if file_lock.is_none() {
-        *file_lock = Some(File::create("panic.log")?);
+        *file_lock = Some(File::create(panic_log_path)?);
     }
 
     let f = file_lock.as_mut().unwrap();

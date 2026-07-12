@@ -12,7 +12,7 @@ use std::{
 };
 
 use ahash::HashMap;
-use alkahest_core::job::SCHEDULER;
+use alkahest_core::{config_relative_path, job::SCHEDULER};
 use alkahest_data::{
     hash::fnv1,
     strings::{StringContainer, StringContainerShared},
@@ -256,8 +256,7 @@ impl SharedState {
     }
 
     pub fn load_config(&self) -> anyhow::Result<()> {
-        let exe_path = std::env::current_exe()?.parent().unwrap().to_path_buf();
-        let config_path = exe_path.join("config.toml");
+        let config_path = config_relative_path("config.toml");
         if config_path.exists() {
             let config_str = std::fs::read_to_string(&config_path)?;
             let config: AppConfig = toml::from_str(&config_str)?;
@@ -268,8 +267,7 @@ impl SharedState {
     }
 
     pub fn save_config(&self) -> anyhow::Result<()> {
-        let exe_path = std::env::current_exe()?.parent().unwrap().to_path_buf();
-        let config_path = exe_path.join("config.toml");
+        let config_path = config_relative_path("config.toml");
         let config_str = toml::to_string_pretty(&*self.config.read())?;
         std::fs::write(&config_path, config_str)?;
 

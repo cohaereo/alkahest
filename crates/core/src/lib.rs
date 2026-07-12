@@ -3,7 +3,9 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 pub use convar::*;
+use directories::ProjectDirs;
 use game_detector::InstalledGame;
+use lazy_static::lazy_static;
 use tiger_pkg::{register_pkg_key, PackageManager};
 use tracing::info;
 pub mod config;
@@ -101,4 +103,25 @@ fn find_all_installations() -> Vec<InstalledGame> {
     });
 
     installations
+}
+
+lazy_static! {
+    static ref PROJECT_DIRECTORIES: ProjectDirs = {
+        let dirs = ProjectDirs::from("dev", "cohae", "alkahest")
+            .expect("Could not determine alkahest project directories");
+
+        if !dirs.cache_dir().exists() {
+            std::fs::create_dir_all(dirs.cache_dir()).unwrap();
+        }
+
+        dirs
+    };
+}
+
+pub fn cache_relative_path(path: &str) -> PathBuf {
+    PROJECT_DIRECTORIES.cache_dir().join(path)
+}
+
+pub fn config_relative_path(path: &str) -> PathBuf {
+    PROJECT_DIRECTORIES.config_dir().join(path)
 }

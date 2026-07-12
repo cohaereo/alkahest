@@ -7,6 +7,7 @@ edition = "2021"
 anyhow.workspace = true
 breakpad-handler = { version = "0.2.0", optional = true }
 color-eyre = { version = "0.6.5", optional = true }
+directories = "6.0.0"
 game-detector = { version = "0.2.2" }
 lazy_static = "1"
 native-dialog = { version = "0.7.0", optional = true }

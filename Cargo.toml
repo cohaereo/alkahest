@@ -42,7 +42,7 @@ tiger-parse = { version = "0.7.1", git = "https://github.com/v4nguard/tiger-pars
     "tiger_pkg",
     "check_types_debug",
 ] }
-tiger-pkg = { version = "0.18.12", features = ["global_manager_instance"] }
+tiger-pkg = { version = "0.21.0", features = ["global_manager_instance"] }
 tracing = "0.1"
 
 [dependencies]
@@ -115,6 +115,7 @@ ehttp = { version = "0.7.1", features = ["json"] }
 semver = "1.0.28"
 egui_commonmark = { version = "0.22.0", default-features = false }
 build-time = "0.1.3"
+directories = "6.0.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"

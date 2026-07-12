@@ -111,7 +111,12 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn init_tracing() -> anyhow::Result<()> {
-    let log_file = File::create("alkahest.log").context("creating log file")?;
+    let log_path = if cfg!(target_os = "windows") {
+        "alkahest.log"
+    } else {
+        "/tmp/alkahest.log"
+    };
+    let log_file = File::create(log_path).context("creating log file")?;
 
     let file_filter = Targets::new()
         .with_default(LevelFilter::DEBUG)
