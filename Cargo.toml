@@ -120,6 +120,20 @@ directories = "6.0.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
 
+[package.metadata.appimage]
+assets = ["fxc-server.exe", "liboodle-data-shared.so"]
+auto_link = true
+auto_link_exclude_list = [
+    "libc.so*",
+    "libm.so*",
+    "libgcc_s.so*",
+    "libstdc++.so*",
+    "ld-linux-x86-64.so*",
+    "libdxvk_d3d11.so*",
+    "libdxvk_dxgi.so*",
+    "libSDL3.so*",
+]
+
 [build-dependencies]
 embed-resource = "3.0.1"
 
