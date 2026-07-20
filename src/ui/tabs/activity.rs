@@ -24,8 +24,6 @@ use crate::{
 };
 
 pub struct ActivityTab {
-    state: Arc<SharedState>,
-    activity: Arc<SActivity>,
     maps: Vec<ActivityMap>,
     current_map_index: usize,
 
@@ -82,8 +80,6 @@ impl ActivityTab {
         }
 
         Ok(Self {
-            state: state.clone(),
-            activity,
             current_map_index,
             maps,
             tag,

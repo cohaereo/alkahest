@@ -393,18 +393,18 @@ pub fn stop_all(game_object_id: Option<AkGameObjectID>) {
 /// *Remarks*
 /// > - The initialization bank must be loaded first.
 /// > - All SoundBanks subsequently loaded must come from the same Wwise project as the
-///   initialization bank. If you need to load SoundBanks from a different project, you
-///   must first unload ALL banks, including the initialization bank, then load the
-///   initialization bank from the other project, and finally load banks from that project.
+///   > initialization bank. If you need to load SoundBanks from a different project, you
+///   > must first unload ALL banks, including the initialization bank, then load the
+///   > initialization bank from the other project, and finally load banks from that project.
 /// > - Codecs and plug-ins must be registered before loading banks that use them.
 /// > - Loading a bank referencing an unregistered plug-in or codec will result in a load bank success,
-/// but the plug-ins will not be used. More specifically, playing a sound that uses an unregistered effect plug-in
-/// will result in audio playback without applying the said effect. If an unregistered source plug-in is used by an event's audio objects,
-/// posting the event will fail.
+/// >   but the plug-ins will not be used. More specifically, playing a sound that uses an unregistered effect plug-in
+/// >   will result in audio playback without applying the said effect. If an unregistered source plug-in is used by an event's audio objects,
+/// >   posting the event will fail.
 /// > - The sound engine internally calls get_id_from_string(name) to return the correct bank ID.
-/// Therefore, in_pszString should be the real name of the SoundBank (with or without the BNK extension - it is trimmed internally),
-/// not the name of the file (if you changed it), nor the full path of the file. The path should be resolved in
-/// your implementation of the Stream Manager, or in the Low-Level I/O module if you use the default Stream Manager's implementation.
+/// >   Therefore, in_pszString should be the real name of the SoundBank (with or without the BNK extension - it is trimmed internally),
+/// >   not the name of the file (if you changed it), nor the full path of the file. The path should be resolved in
+/// >   your implementation of the Stream Manager, or in the Low-Level I/O module if you use the default Stream Manager's implementation.
 ///
 /// *See also*
 /// > - [unload_bank_by_name]
@@ -439,18 +439,18 @@ pub fn load_bank_by_name<T: AsRef<str>>(name: T) -> Result<AkBankID, AkResult> {
 /// *Remarks*
 /// > - The initialization bank must be loaded first.
 /// > - All SoundBanks subsequently loaded must come from the same Wwise project as the
-///   initialization bank. If you need to load SoundBanks from a different project, you
-///   must first unload ALL banks, including the initialization bank, then load the
-///   initialization bank from the other project, and finally load banks from that project.
+///   > initialization bank. If you need to load SoundBanks from a different project, you
+///   > must first unload ALL banks, including the initialization bank, then load the
+///   > initialization bank from the other project, and finally load banks from that project.
 /// > - Codecs and plug-ins must be registered before loading banks that use them.
 /// > - Loading a bank referencing an unregistered plug-in or codec will result in a load bank success,
-/// but the plug-ins will not be used. More specifically, playing a sound that uses an unregistered effect plug-in
-/// will result in audio playback without applying the said effect. If an unregistered source plug-in is used by an event's audio objects,
-/// posting the event will fail.
+/// >   but the plug-ins will not be used. More specifically, playing a sound that uses an unregistered effect plug-in
+/// >   will result in audio playback without applying the said effect. If an unregistered source plug-in is used by an event's audio objects,
+/// >   posting the event will fail.
 /// > - The sound engine internally calls get_id_from_string(name) to return the correct bank ID.
-/// Therefore, in_pszString should be the real name of the SoundBank (with or without the BNK extension - it is trimmed internally),
-/// not the name of the file (if you changed it), nor the full path of the file. The path should be resolved in
-/// your implementation of the Stream Manager, or in the Low-Level I/O module if you use the default Stream Manager's implementation.
+/// >   Therefore, in_pszString should be the real name of the SoundBank (with or without the BNK extension - it is trimmed internally),
+/// >   not the name of the file (if you changed it), nor the full path of the file. The path should be resolved in
+/// >   your implementation of the Stream Manager, or in the Low-Level I/O module if you use the default Stream Manager's implementation.
 ///
 /// *See also*
 /// > - [unload_bank_by_name]
@@ -475,10 +475,10 @@ pub fn load_bank_from_memory(data: &[u8]) -> Result<AkBankID, AkResult> {
 ///
 /// *Remarks*
 /// > - If used, the array of external sources should contain the information for each external source triggered by the
-/// event. When triggering an Event with multiple external sources, you need to differentiate each source
-/// by using the cookie property in the External Source in the Wwise project and in AkExternalSourceInfo.
+/// >   event. When triggering an Event with multiple external sources, you need to differentiate each source
+/// >   by using the cookie property in the External Source in the Wwise project and in AkExternalSourceInfo.
 /// > - If an event triggers the playback of more than one external source, they must be named uniquely in the project
-/// (therefore have a unique cookie) in order to tell them apart when filling the AkExternalSourceInfo structures.
+/// >   (therefore have a unique cookie) in order to tell them apart when filling the AkExternalSourceInfo structures.
 ///
 /// *See also*
 /// > - [render_audio]
@@ -535,7 +535,7 @@ impl<'a> PostEvent<'a> {
                     PostEvent2(
                         cname.as_ptr(),
                         self.game_obj_id,
-                        self.flags.0 as u32,
+                        self.flags.0,
                         None,
                         ::std::ptr::null_mut(),
                         0,                      // TODO
@@ -554,7 +554,7 @@ impl<'a> PostEvent<'a> {
                 PostEvent(
                     id,
                     self.game_obj_id,
-                    self.flags.0 as u32,
+                    self.flags.0,
                     None,
                     ::std::ptr::null_mut(),
                     0,                      // TODO
@@ -596,7 +596,7 @@ impl<'a> PostEvent<'a> {
                     PostEvent2(
                         cname.as_ptr(),
                         self.game_obj_id,
-                        (self.flags | AkCallbackType::AK_EndOfEvent).0 as u32,
+                        (self.flags | AkCallbackType::AK_EndOfEvent).0,
                         Some(Self::call_callback_as_closure::<F>),
                         data as *mut _,
                         0,                      // TODO
@@ -615,7 +615,7 @@ impl<'a> PostEvent<'a> {
                 PostEvent(
                     id,
                     self.game_obj_id,
-                    (self.flags | AkCallbackType::AK_EndOfEvent).0 as u32,
+                    (self.flags | AkCallbackType::AK_EndOfEvent).0,
                     Some(Self::call_callback_as_closure::<F>),
                     data as *mut _,
                     0,                      // TODO

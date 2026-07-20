@@ -4,13 +4,15 @@
 
 //! Everything related to RTPC, Switch, States and Triggers.
 
-use crate::bindings::root::AK::SoundEngine::{
-    PostTrigger, PostTrigger2, ResetRTPCValue, ResetRTPCValue2, SetRTPCValue, SetRTPCValue2,
-    SetRTPCValueByPlayingID, SetRTPCValueByPlayingID2, SetState, SetState2, SetSwitch, SetSwitch2,
-};
 use crate::{
-    ak_call_result, with_cstring, AkCurveInterpolation, AkGameObjectID, AkID, AkPlayingID,
-    AkResult, AkRtpcValue, AkTimeMs, AK_INVALID_GAME_OBJECT, AK_INVALID_PLAYING_ID,
+    ak_call_result,
+    bindings::root::AK::SoundEngine::{
+        PostTrigger, PostTrigger2, ResetRTPCValue, ResetRTPCValue2, SetRTPCValue, SetRTPCValue2,
+        SetRTPCValueByPlayingID, SetRTPCValueByPlayingID2, SetState, SetState2, SetSwitch,
+        SetSwitch2,
+    },
+    with_cstring, AkCurveInterpolation, AkGameObjectID, AkID, AkPlayingID, AkResult, AkRtpcValue,
+    AkTimeMs, AK_INVALID_GAME_OBJECT, AK_INVALID_PLAYING_ID,
 };
 
 /// Helper to set or reset RTPCs.
@@ -237,7 +239,7 @@ pub fn post_trigger<'a, T: Into<AkID<'a>>>(
 /// *Return*
 /// > - [AkResult::AK_Success] if successful
 /// > - [AkResult::AK_IDNotFound] if the state or State Group name was not resolved to an existing ID.
-/// Make sure that the banks were generated with the "include string" option.
+/// >   Make sure that the banks were generated with the "include string" option.
 ///
 /// Panics if state_group and state_id are not of the same variant.
 pub fn set_state<'a, T: Into<AkID<'a>>>(state_group: T, state_id: T) -> Result<(), AkResult> {

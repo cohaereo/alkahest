@@ -445,7 +445,7 @@ impl StaticInstancesRenderer {
             }
         }
 
-        for (_stage, groups_sorted_by_technique) in groups_by_stage_sorted_by_technique.iter_mut() {
+        for groups_sorted_by_technique in groups_by_stage_sorted_by_technique.values_mut() {
             groups_sorted_by_technique.sort_unstable_by_key(|k| k.technique);
         }
 

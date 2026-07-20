@@ -131,7 +131,7 @@ impl<'a> DButton<'a> {
                 .corner_radius(0),
             subtitle: None,
             text_color: Color32::WHITE,
-            stroke: Stroke::new(1.0, Color32::WHITE),
+            stroke: Stroke::new(1f32, Color32::WHITE),
             fill_color: Color32::from_gray(96).gamma_multiply(0.2),
             padding: vec2(25.0, 20.0),
         }
@@ -146,7 +146,7 @@ impl<'a> DButton<'a> {
                 .corner_radius(0),
             subtitle: None,
             text_color: Color32::BLACK,
-            stroke: Stroke::new(1.0, Color32::WHITE),
+            stroke: Stroke::new(1f32, Color32::WHITE),
             fill_color: Color32::from_white_alpha(196),
             padding: vec2(25.0, 20.0),
         }
@@ -191,7 +191,7 @@ impl<'a> DButton<'a> {
                     r.rect.expand(4.0),
                     0,
                     Color32::TRANSPARENT,
-                    Stroke::new(2.0, Color32::from_white_alpha(196)),
+                    Stroke::new(2f32, Color32::from_white_alpha(196)),
                     StrokeKind::Outside,
                 );
             }

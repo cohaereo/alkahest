@@ -2,9 +2,7 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use crate::bindings::root::AK;
-use crate::settings::AkMemSettings;
-use crate::{ak_call_result, AkResult};
+use crate::{ak_call_result, bindings::root::AK, settings::AkMemSettings, AkResult};
 
 /// Initialize the default implementation of the Memory Manager.
 pub fn init(settings: &mut AkMemSettings) -> Result<(), AkResult> {

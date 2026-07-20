@@ -173,8 +173,6 @@ pub use bindings::root::{AkVector, AkVector64};
 pub use bindings::AK_INVALID_AUDIO_OBJECT_ID;
 #[doc(inline)]
 pub use bindings::AK_INVALID_GAME_OBJECT;
-pub use error::*;
-pub use transform::*;
 
 pub use crate::bindings::root::{
     AkMIDIEvent_tCc, AkMIDIEvent_tChanAftertouch, AkMIDIEvent_tGen, AkMIDIEvent_tNoteAftertouch,

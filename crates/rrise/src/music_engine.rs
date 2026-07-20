@@ -2,9 +2,9 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use crate::bindings::root::AK::MusicEngine::*;
-use crate::settings::AkMusicSettings;
-use crate::{ak_call_result, AkResult};
+use crate::{
+    ak_call_result, bindings::root::AK::MusicEngine::*, settings::AkMusicSettings, AkResult,
+};
 
 /// Initialize the music engine.
 ///

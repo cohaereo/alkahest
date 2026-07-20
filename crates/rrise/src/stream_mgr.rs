@@ -2,24 +2,27 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use crate::bindings::root::{InitDefaultStreamMgr, TermDefaultStreamMgr, AK};
-use crate::settings::{AkDeviceSettings, AkStreamMgrSettings};
-use crate::{ak_call_result, to_os_char, AkResult};
+use crate::{
+    ak_call_result,
+    bindings::root::{InitDefaultStreamMgr, TermDefaultStreamMgr, AK},
+    settings::{AkDeviceSettings, AkStreamMgrSettings},
+    to_os_char, AkResult,
+};
 
 /// Stream Manager factory.
 ///
 /// *Remarks*
 /// > - In order for the Stream Manager to work properly, you also need to create
-/// at least one streaming device (and implement its I/O hook), and register the
-/// File Location Resolver with AK::StreamMgr::SetFileLocationResolver().
+/// >   at least one streaming device (and implement its I/O hook), and register the
+/// >   File Location Resolver with AK::StreamMgr::SetFileLocationResolver().
 /// > - Use [AkStreamMgrSettings::default], then modify the settings you want,
-/// then feed this function with them.
+/// >   then feed this function with them.
 ///
 /// *See also*
 /// - [AkStreamMgrSettings::default]
 pub fn init(settings: &AkStreamMgrSettings) -> Result<(), AkResult> {
     let addr = unsafe { AK::StreamMgr::Create(settings) };
-    if addr == std::ptr::null_mut() {
+    if addr.is_null() {
         Err(AkResult::AK_Fail)
     } else {
         Ok(())

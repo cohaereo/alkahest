@@ -541,6 +541,7 @@ pub fn spawn_pattern_from_header(
                 }
             }
             0x8080666C => {
+                #[cfg(feature = "wwise")]
                 let data = get_component_data!(SAudioPathComponent);
                 #[cfg(feature = "wwise")]
                 match crate::audio::AudioSource::load_event_and_play(data.event.hash32()) {
@@ -568,6 +569,7 @@ pub fn spawn_pattern_from_header(
                 }
             }
             0x80806671 => {
+                #[cfg(feature = "wwise")]
                 let data = get_component_data!(SAudioPointComponent);
                 // println!("Playing event {:X?}", data);
                 #[cfg(feature = "wwise")]

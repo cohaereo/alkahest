@@ -2,8 +2,9 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use crate::bindings::root::AK::PluginRegistration;
 use paste::paste;
+
+use crate::bindings::root::AK::PluginRegistration;
 
 #[cfg(windows)]
 macro_rules! import_plugin_registration {

@@ -234,7 +234,7 @@ impl SharedState {
         s.activity_names
             .retain(|_, name| !matches!(name.to_lowercase().as_str(), "solitude"));
 
-        for (_, name) in s.activity_names.iter_mut() {
+        for name in s.activity_names.values_mut() {
             *name = name.replace(": Master", "");
             *name = name.replace(": Standard", "");
             *name = name.replace(": Legendary", "");

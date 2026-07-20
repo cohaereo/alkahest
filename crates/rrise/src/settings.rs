@@ -88,7 +88,7 @@ unsafe fn app_name() -> Option<[i8; 64]> {
         }
 
         if name.len() < 64 {
-            name.extend(std::iter::repeat('\0').take(64 - name.len()));
+            name.extend(std::iter::repeat_n('\0', 64 - name.len()));
         } else {
             name.truncate(64);
         }

@@ -552,7 +552,7 @@ impl Scene {
         ui.scope(|ui| {
             ui.style_mut().visuals.widgets.inactive.bg_fill = egui::Color32::from_black_alpha(48);
             ui.style_mut().visuals.widgets.inactive.bg_stroke =
-                egui::Stroke::new(8.0, egui::Color32::WHITE);
+                egui::Stroke::new(8f32, egui::Color32::WHITE);
 
             egui::Slider::new(&mut self.time_of_day, 0.0..=3600.0)
                 .show_value(false)

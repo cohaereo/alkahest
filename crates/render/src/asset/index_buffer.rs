@@ -1,10 +1,10 @@
 use alkahest_data::tfx::buffers::IndexBufferHeader;
 use anyhow::Context;
-use d3d11::{dxgi, BindFlags, BufferDesc, DeviceChild, Usage};
+use d3d11::{BindFlags, BufferDesc, DeviceChild, Usage, dxgi};
 use tiger_parse::PackageManagerExt;
-use tiger_pkg::{package_manager, TagHash};
+use tiger_pkg::{TagHash, package_manager};
 
-use crate::{gpu::command_list::CommandList, Gpu};
+use crate::{Gpu, gpu::command_list::CommandList};
 
 #[derive(Clone)]
 pub struct IndexBuffer {

@@ -979,17 +979,17 @@ impl ModelEntry {
             .unwrap_or(0)
     }
 
-    fn part_count(&self) -> usize {
-        let Some(world) = &self.thumbnail_world else {
-            return 0;
-        };
+    // fn part_count(&self) -> usize {
+    //     let Some(world) = &self.thumbnail_world else {
+    //         return 0;
+    //     };
 
-        world
-            .query::<&DynamicModelParts>()
-            .iter()
-            .map(|(_, parts)| parts.num_parts)
-            .sum()
-    }
+    //     world
+    //         .query::<&DynamicModelParts>()
+    //         .iter()
+    //         .map(|(_, parts)| parts.num_parts)
+    //         .sum()
+    // }
 
     fn is_empty(&self) -> bool {
         let Some(world) = &self.thumbnail_world else {

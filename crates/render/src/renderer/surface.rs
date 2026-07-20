@@ -211,7 +211,7 @@ impl Surface {
                     )
                     .context("Failed to create surface SRV")?;
 
-                r.set_debug_name(format!("{} (View, mip={mip})", &desc.label));
+                r.set_debug_name(format!("{} (View, mip={mip})", desc.label));
                 srvs.push(r);
             }
         }
@@ -228,7 +228,7 @@ impl Surface {
                     )
                     .context("Failed to create surface UAV")?;
 
-                r.set_debug_name(format!("{} (UAV, mip={mip})", &desc.label));
+                r.set_debug_name(format!("{} (UAV, mip={mip})", desc.label));
                 uavs.push(r);
             }
         }
@@ -251,7 +251,7 @@ impl Surface {
                     ),
                 )
                 .context("Failed to create surface DSV")?;
-            r.set_debug_name(format!("{} (DSV)", &desc.label));
+            r.set_debug_name(format!("{} (DSV)", desc.label));
             dsv = Some(r);
         } else {
             let r = device
@@ -265,7 +265,7 @@ impl Surface {
                     ),
                 )
                 .context("Failed to create surface RTV")?;
-            r.set_debug_name(format!("{} (RT)", &desc.label));
+            r.set_debug_name(format!("{} (RT)", desc.label));
             rtv = Some(r);
         }
 

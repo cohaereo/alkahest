@@ -10,10 +10,7 @@ fn main() -> anyhow::Result<()> {
     let globs = &data.unk8.first().context("No render globals found")?.unk8.0;
 
     for pipeline in &globs.pipelines {
-        println!(
-            "{} > techniques/{}.tfx",
-            pipeline.technique, &*pipeline.name,
-        );
+        println!("{} > techniques/{}.tfx", pipeline.technique, *pipeline.name,);
         let Ok(technique) = package_manager().read_tag_struct::<STechnique>(pipeline.technique)
         else {
             continue;
@@ -25,7 +22,7 @@ fn main() -> anyhow::Result<()> {
                 .context("Failed to get shader entry")?;
             let bytecode = package_manager().read_tag(entry.reference)?;
             std::fs::write(
-                format!("techniques/{}_{:?}.cso", &*pipeline.name, stage),
+                format!("techniques/{}_{:?}.cso", *pipeline.name, stage),
                 &bytecode,
             )?;
         }

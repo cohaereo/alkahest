@@ -6,9 +6,7 @@
 //!
 //! Will be disabled entirely (not linked nor built) when `--cfg wwrelease` is set.
 
-use crate::bindings::root::AK;
-use crate::settings::AkCommSettings;
-use crate::{ak_call_result, AkResult};
+use crate::{ak_call_result, bindings::root::AK, settings::AkCommSettings, AkResult};
 
 /// Initializes the communication module. When this is called, and [sound_engine::render_audio](crate::sound_engine::render_audio)
 /// is called periodically, you may use the authoring tool to connect to the sound engine.

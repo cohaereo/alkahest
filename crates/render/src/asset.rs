@@ -1,4 +1,4 @@
-use uuid::{uuid, Uuid};
+use uuid::{Uuid, uuid};
 
 pub mod handle;
 pub mod index_buffer;

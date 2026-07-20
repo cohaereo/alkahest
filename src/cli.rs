@@ -4,7 +4,6 @@ use glam::Vec4;
 
 pub const ALKAHEST_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BUILD_DATE: &str = build_time_utc!("%Y-%m-%d");
-pub const BUILD_TIMESTAMP: &str = build_time_utc!();
 pub const GIT_HASH: &str = env!("GIT_HASH");
 
 #[derive(Parser, Debug, Clone)]

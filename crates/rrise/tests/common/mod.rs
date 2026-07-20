@@ -2,8 +2,7 @@
  * Copyright (c) 2022 Contributors to the Rrise project
  */
 
-use rrise::settings::*;
-use rrise::{communication, memory_mgr, sound_engine, stream_mgr, AkResult};
+use rrise::{communication, memory_mgr, settings::*, sound_engine, stream_mgr, AkResult};
 
 pub fn init_sound_engine() -> Result<(), AkResult> {
     // init memorymgr

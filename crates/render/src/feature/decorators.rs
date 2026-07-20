@@ -73,7 +73,7 @@ impl DecoratorRenderer {
                     let mut data = vec![Vec4::ONE; 72];
                     data[0..=4].copy_from_slice(&constants.unk0);
                     // data[5..=29]
-                    for (i, c) in smodel.unk58.chunks_exact(4).enumerate() {
+                    for (i, c) in smodel.unk58.as_chunks::<4>().0.iter().enumerate() {
                         let v = Vec4::new(c[0], c[1], c[2], c[3]);
                         data[5 + i] = v;
                     }

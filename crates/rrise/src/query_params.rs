@@ -108,8 +108,8 @@ pub fn get_listener_position(index: u64) -> Result<AkListenerPosition, AkResult>
 ///
 /// *Remark*
 /// > When looking up RTPC values via playing ID (ie. `requested_scope` is [RtpcValueType::PlayingID]), `on_game_obj` can be set to a specific game object (if it is available to the caller) to use as a fall back value.
-/// If the game object is unknown or unavailable, [None] or [AK_INVALID_GAME_OBJECT] can be passed in `on_game_obj`, and the game object will be looked up via `on_playing_id`.
-/// However in this case, it is not possible to retrieve a game object value as a fall back value if the playing id does not exist. It is best to pass in the game object if possible.
+/// > If the game object is unknown or unavailable, [None] or [AK_INVALID_GAME_OBJECT] can be passed in `on_game_obj`, and the game object will be looked up via `on_playing_id`.
+/// > However in this case, it is not possible to retrieve a game object value as a fall back value if the playing id does not exist. It is best to pass in the game object if possible.
 ///
 /// > `on_game_obj` is ignored if `requested_scope` is [RtpcValueType::Global]
 ///

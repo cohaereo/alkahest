@@ -6,7 +6,6 @@ use crate::cli::ALKAHEST_VERSION;
 #[derive(Debug)]
 pub struct AvailableUpdate {
     pub version: String,
-    pub download_url: String,
     pub url: String,
     pub changelog: String,
 }
@@ -32,14 +31,7 @@ pub fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
         pub name: String,
         pub html_url: String,
 
-        pub assets: Vec<AssetPartial>,
         pub body: String,
-    }
-
-    #[derive(Deserialize, Debug)]
-    struct AssetPartial {
-        pub name: String,
-        pub browser_download_url: String,
     }
 
     let request = github_get(GET_RELEASES.replace('%', REPOSITORY));
@@ -59,16 +51,8 @@ pub fn check_stable_release() -> anyhow::Result<Option<AvailableUpdate>> {
         return Ok(None);
     }
 
-    let download_url = release
-        .assets
-        .iter()
-        .find(|asset| asset.name == "alkahest.zip")
-        .map(|asset| asset.browser_download_url.clone())
-        .context("alkahest.zip not found in release")?;
-
     Ok(Some(AvailableUpdate {
         version: release.name,
-        download_url,
         url: release.html_url,
         changelog: release.body,
     }))
