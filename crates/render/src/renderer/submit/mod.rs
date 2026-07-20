@@ -170,6 +170,10 @@ impl Renderer {
                 let p = &self.globals.pipelines;
                 let technique = match debug_pipeline {
                     DebugPipeline::GlobalLightingShading => &p.global_lighting_and_shading,
+                    DebugPipeline::GlobalLightingShadingNoAtm => {
+                        view.atmosphere.clear_lookup(cmd, &self.surfaces.read());
+                        &p.global_lighting_and_shading
+                    }
                     DebugPipeline::DeferredShading => &p.deferred_shading,
                     DebugPipeline::DeferredShadingNoAtm => &p.deferred_shading_no_atm,
                     DebugPipeline::Albedo => &p.debug_source_color,
@@ -783,6 +787,7 @@ impl Renderer {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DebugPipeline {
     GlobalLightingShading,
+    GlobalLightingShadingNoAtm,
     DeferredShading,
     DeferredShadingNoAtm,
 
@@ -808,6 +813,7 @@ impl DebugPipeline {
         matches!(
             self,
             DebugPipeline::GlobalLightingShading
+                | DebugPipeline::GlobalLightingShadingNoAtm
                 | DebugPipeline::DeferredShading
                 | DebugPipeline::DeferredShadingNoAtm
         )

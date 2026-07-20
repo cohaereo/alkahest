@@ -607,4 +607,13 @@ impl AtmosphereBuffers {
             sky_lookup_far,
         })
     }
+
+    pub fn clear_lookup(&self, context: &d3d11::DeviceContext, surfaces: &Surfaces) {
+        surfaces
+            .get(self.sky_lookup_far)
+            .clear_color(context, [0., 0., 0., 0.]);
+        surfaces
+            .get(self.sky_lookup_near)
+            .clear_color(context, [0., 0., 0., 0.]);
+    }
 }

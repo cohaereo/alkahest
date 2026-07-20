@@ -1137,6 +1137,7 @@ pub enum RenderMode {
     Lookdev,
     Shaded,
     ShadedNoSun,
+    ShadedNoAtm,
     ShadingOnly,
     // Matcap,
 
@@ -1189,6 +1190,7 @@ impl RenderMode {
 
                 mode!(ui, RenderMode::Lookdev, "Lookdev");
                 mode!(ui, RenderMode::Shaded, "Shaded");
+                mode!(ui, RenderMode::ShadedNoAtm, "Shaded (No atmosphere)");
                 mode!(ui, RenderMode::ShadedNoSun, "Shaded (No sun)");
                 mode!(
                     ui,
@@ -1226,6 +1228,7 @@ impl From<RenderMode> for Option<DebugPipeline> {
         match val {
             RenderMode::Lookdev => None,
             RenderMode::Shaded => Some(DebugPipeline::GlobalLightingShading),
+            RenderMode::ShadedNoAtm => Some(DebugPipeline::GlobalLightingShadingNoAtm),
             RenderMode::ShadedNoSun => Some(DebugPipeline::DeferredShading),
             RenderMode::ShadingOnly => Some(DebugPipeline::DeferredShadingNoAtm),
             // RenderMode::Matcap => Some(DebugPipeline::Matcap),
