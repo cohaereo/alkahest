@@ -749,6 +749,13 @@ impl Scene {
                 .set_global_channel_by_name("sun_light_direction", sun_light_direction.extend(0.0));
         }
 
+        if self.render_mode == RenderMode::Lookdev {
+            self.renderer.externs.get_mut().set_global_channel_by_name(
+                "sun_light_direction",
+                -self.camera.forward().extend(0.0),
+            );
+        }
+
         {
             s_extract_ambient_occlusion(&self.world);
             let mut fp = self.renderer.frame_packet.write();
