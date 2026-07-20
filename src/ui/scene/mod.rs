@@ -787,7 +787,12 @@ impl Scene {
                 s_submit_all_shadowmaps(&self.world, &mut cmd, &self.renderer);
             }
 
-            if self.view.settings().sun_shadows {
+            if self.view.settings().sun_shadows
+                && matches!(
+                    self.render_mode,
+                    RenderMode::ShadedNoAtm | RenderMode::Shaded
+                )
+            {
                 self.draw_sun_shadows(&mut cmd);
             }
         }
