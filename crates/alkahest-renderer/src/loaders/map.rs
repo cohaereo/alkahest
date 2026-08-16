@@ -11,8 +11,8 @@ use alkahest_data::{
     map::{
         SAudioClipCollection, SBubbleDefinition, SBubbleParent, SCubemapVolume, SLensFlare,
         SLightCollection, SMapAtmosphere, SMapDataTable, SShadowingLight, SSlipSurfaceVolume,
-        STerrainPatchesResource, SUnk808068d4, SUnk80806aa7, SUnk80806ac2, SUnk80806ef4,
-        SUnk80808246, SUnk80808604, SUnk80808cb7, SUnk80809178, SUnk8080917b,
+        SSpawnPoints, STerrainPatchesResource, SUnk808068d4, SUnk80806aa7, SUnk80806ac2,
+        SUnk80806ef4, SUnk80808246, SUnk80808604, SUnk80809178, SUnk8080917b,
     },
     text::{StringContainer, StringContainerShared},
     tfx::TfxFeatureRenderer,
@@ -817,37 +817,37 @@ fn load_datatable_into_scene<R: Read + Seek>(
                     parent_entity,
                 );
             }
-            // 0x80808cb5 => {
-            //     table_data
-            //         .seek(SeekFrom::Start(data.data_resource.offset + 16))
-            //         .unwrap();
-            //     let tag: TagHash = table_data.read_le().unwrap();
-            //     if !tag.is_some() {
-            //         continue;
-            //     }
-            //
-            //     let header: SUnk80808cb7 = package_manager().read_tag_struct(tag)?;
-            //
-            //     for respawn_point in header.unk8.iter() {
-            //         spawn_data_entity(
-            //             scene,
-            //             (
-            //                 NodeFilter::RespawnPoint,
-            //                 Icon::Colored(ICON_ACCOUNT_CONVERT, Color32::RED),
-            //                 Label::from(format!("Respawn point 0x{:X}", respawn_point.unk20)),
-            //                 Transform {
-            //                     translation: respawn_point.translation.truncate(),
-            //                     rotation: respawn_point.rotation,
-            //                     ..Default::default()
-            //                 },
-            //                 respawn_point.clone(),
-            //                 resource_origin,
-            //                 metadata.clone(),
-            //             ),
-            //             parent_entity,
-            //         );
-            //     }
-            // }
+            0x80809160 => {
+                table_data
+                    .seek(SeekFrom::Start(data.data_resource.offset + 16))
+                    .unwrap();
+                let tag: TagHash = table_data.read_le().unwrap();
+                if !tag.is_some() {
+                    continue;
+                }
+
+                let header: SSpawnPoints = package_manager().read_tag_struct(tag)?;
+
+                for spawn_point in header.unk8.iter() {
+                    spawn_data_entity(
+                        scene,
+                        (
+                            NodeFilter::SpawnPoint,
+                            Icon::Colored(ICON_ACCOUNT_CONVERT, Color32::RED),
+                            Label::from(format!("Spawn point 0x{:X}", spawn_point.unk20)),
+                            Transform {
+                                translation: spawn_point.translation.truncate(),
+                                rotation: spawn_point.rotation,
+                                ..Default::default()
+                            },
+                            spawn_point.clone(),
+                            resource_origin,
+                            metadata.clone(),
+                        ),
+                        parent_entity,
+                    );
+                }
+            }
             // // Decorator
             // 0x80806cc3 => {
             //     table_data

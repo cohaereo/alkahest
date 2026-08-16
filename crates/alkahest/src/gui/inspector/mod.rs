@@ -2,7 +2,7 @@ mod decorator;
 mod light;
 mod util;
 
-use alkahest_data::map::{SLightCollection, SRespawnPoint};
+use alkahest_data::map::{SLightCollection, SSpawnPoint};
 use alkahest_renderer::{
     camera::Camera,
     ecs::{
@@ -282,7 +282,7 @@ fn show_inspector_components(
         CubemapVolume,
         ShaderBallComponent,
         DecoratorRenderer,
-        SRespawnPoint,
+        SSpawnPoint,
         NodeMetadata
     );
 }
@@ -652,7 +652,7 @@ impl ComponentPanel for NodeMetadata {
     }
 }
 
-impl ComponentPanel for SRespawnPoint {
+impl ComponentPanel for SSpawnPoint {
     fn inspector_name() -> &'static str {
         "Respawn Point"
     }

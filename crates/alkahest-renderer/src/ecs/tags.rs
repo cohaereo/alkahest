@@ -7,9 +7,9 @@ use tiger_parse::FnvHash;
 use super::Scene;
 use crate::{
     icons::{
-        ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_CUBE, ICON_DROPBOX, ICON_HELP, ICON_LIGHTBULB_ON,
-        ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG, ICON_TOOLBOX,
-        ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
+        ICON_ACCOUNT_CONVERT, ICON_CHESS_PAWN, ICON_CUBE, ICON_DROPBOX, ICON_HELP,
+        ICON_LIGHTBULB_ON, ICON_PINE_TREE, ICON_REPLY, ICON_SKULL, ICON_SPHERE, ICON_TAG,
+        ICON_TOOLBOX, ICON_VOLUME_HIGH, ICON_WEATHER_PARTLY_CLOUDY,
     },
     util::color::Color,
 };
@@ -19,7 +19,7 @@ pub type NodeFilterSet = FxHashSet<NodeFilter>;
 #[derive(strum::EnumIter, strum::Display, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum NodeFilter {
     Entity,
-    RespawnPoint,
+    SpawnPoint,
     Light,
     Sound,
     Decorator,
@@ -42,7 +42,7 @@ impl NodeFilter {
     pub fn icon(&self) -> char {
         match self {
             NodeFilter::Entity => ICON_CHESS_PAWN,
-            NodeFilter::RespawnPoint => ICON_ACCOUNT_CONVERT,
+            NodeFilter::SpawnPoint => ICON_ACCOUNT_CONVERT,
             NodeFilter::Light => ICON_LIGHTBULB_ON,
             NodeFilter::Sound => ICON_VOLUME_HIGH,
             NodeFilter::Decorator => ICON_PINE_TREE,
@@ -62,7 +62,7 @@ impl NodeFilter {
     pub fn color(&self) -> Color {
         match self {
             NodeFilter::Entity => Color::WHITE,
-            NodeFilter::RespawnPoint => Color::from_srgba_unmultiplied(220, 20, 20, 255),
+            NodeFilter::SpawnPoint => Color::from_srgba_unmultiplied(220, 20, 20, 255),
             NodeFilter::Light => Color::from_srgba_unmultiplied(255, 255, 0, 255),
             NodeFilter::Sound => Color::from_srgba_unmultiplied(0, 192, 0, 255),
             NodeFilter::Decorator => Color::from_srgba_unmultiplied(80, 210, 80, 255),

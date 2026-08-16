@@ -388,15 +388,15 @@ pub struct SRotationTranslation {
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80808CB7)]
-pub struct SUnk80808cb7 {
+#[tiger_tag(id = 0x80809162)]
+pub struct SSpawnPoints {
     pub file_size: u64,
-    pub unk8: Vec<SRespawnPoint>,
+    pub unk8: Vec<SSpawnPoint>,
 }
 
 #[derive(Clone, Debug)]
-#[tiger_tag(id = 0x80808CB9)]
-pub struct SRespawnPoint {
+#[tiger_tag(id = 0x80809164)]
+pub struct SSpawnPoint {
     pub rotation: Quat,
     pub translation: Vec4,
     pub unk20: u32,
