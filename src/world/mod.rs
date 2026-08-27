@@ -5,7 +5,9 @@ use crate::world::{object::ObjectChannels, transform::Transform};
 
 #[cfg(feature = "wwise")]
 pub mod audio;
+pub mod label;
 pub mod map;
+pub mod node_filter;
 pub mod object;
 pub mod pattern;
 pub mod render_objects;

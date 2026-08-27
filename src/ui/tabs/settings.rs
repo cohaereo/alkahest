@@ -1,6 +1,6 @@
-use egui::{FontId, TextStyle, Ui};
+use egui::{FontId, RichText, TextStyle, Ui};
 
-use crate::app::SharedState;
+use crate::{app::SharedState, world::node_filter::NodeFilter};
 
 pub struct SettingsTab;
 
@@ -31,5 +31,33 @@ impl SettingsTab {
                 .text("Resolution Scale")
                 .custom_formatter(|value, _| format!("{:.0}%", value * 100.0)),
         );
+
+        ui.separator();
+        ui.heading("Node Visualization");
+
+        ui.checkbox(&mut config.visual.node_nametags, "Show node nametags");
+
+        ui.add_enabled_ui(config.visual.node_nametags, |ui| {
+            ui.checkbox(
+                &mut config.visual.node_nametags_named_only,
+                "Only show named nodes",
+            );
+
+            ui.collapsing("Node filters", |ui| {
+                for filter in NodeFilter::ALL {
+                    let filter_text = RichText::new(format!("{}", filter)).color(filter.color());
+
+                    let key = filter.to_string();
+                    let mut checked = config.visual.node_filters.contains(&key);
+                    if ui.checkbox(&mut checked, filter_text).changed() {
+                        if checked {
+                            config.visual.node_filters.insert(key);
+                        } else {
+                            config.visual.node_filters.remove(&key);
+                        }
+                    }
+                }
+            });
+        });
     }
 }

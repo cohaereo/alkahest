@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera};
 use glam::{Quat, Vec3, vec3};
@@ -14,7 +16,7 @@ pub struct TestSceneTab {
 }
 
 impl TestSceneTab {
-    pub fn new(shared: &SharedState) -> anyhow::Result<Self> {
+    pub fn new(shared: &Arc<SharedState>) -> anyhow::Result<Self> {
         let mut scene = Box::new(
             Scene::new(
                 Renderer::instance().clone(),

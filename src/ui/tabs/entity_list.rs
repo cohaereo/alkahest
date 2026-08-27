@@ -24,7 +24,7 @@ pub struct EntityListTab {
 }
 
 impl EntityListTab {
-    pub fn new(shared: &SharedState) -> Self {
+    pub fn new(shared: &Arc<SharedState>) -> Self {
         Self {
             base: ModelListBase::new(EntityModelProvider::new(), shared),
         }

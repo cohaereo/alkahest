@@ -1,4 +1,7 @@
-use std::{str::FromStr, sync::atomic::Ordering};
+use std::{
+    str::FromStr,
+    sync::{Arc, atomic::Ordering},
+};
 
 use alkahest_data::tfx::common::AxisAlignedBBox;
 use alkahest_render::{Renderer, camera::Camera, renderer::submit::atmosphere::AtmosphereData};
@@ -50,7 +53,7 @@ pub struct ModelListBase<P: ModelProvider> {
 }
 
 impl<P: ModelProvider> ModelListBase<P> {
-    pub fn new(provider: P, shared: &SharedState) -> Self {
+    pub fn new(provider: P, shared: &Arc<SharedState>) -> Self {
         let mut thumbnail_scene = Scene::new(
             Renderer::instance().clone(),
             Camera {

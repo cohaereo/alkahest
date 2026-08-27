@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use alkahest_data::tfx::{TfxFeatureRenderer, features::statics::SStaticMesh};
 use alkahest_render::{
@@ -24,7 +24,7 @@ pub struct StaticListTab {
 }
 
 impl StaticListTab {
-    pub fn new(shared: &SharedState) -> Self {
+    pub fn new(shared: &Arc<SharedState>) -> Self {
         Self {
             base: ModelListBase::new(StaticModelProvider::new(), shared),
         }
