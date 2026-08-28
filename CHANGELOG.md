@@ -35,6 +35,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added back map selection hotkeys for Activity selector
 - Added "Ambient" category under Activities
 - Added "Home" hotkey for map viewing to jump to a random default spawn
+- Added back "G" hotkey for going to the place you're gazing at
+- Fixed Kings Fall not showing up as a raid
+- Added crosshair option under scene settings
 
 ## 0.5.2 - 2025-02-11
 

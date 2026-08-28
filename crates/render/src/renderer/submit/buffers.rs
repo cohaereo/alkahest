@@ -4,7 +4,10 @@ use parking_lot::Mutex;
 
 use crate::{
     Gpu, Renderer,
-    gpu::command_list::CommandList,
+    gpu::{
+        command_list::CommandList,
+        gpu_buffer::{GpuBuffer, GpuBufferDesc},
+    },
     renderer::surface::{
         SizeRelativity, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale, Surfaces,
     },
@@ -21,6 +24,8 @@ pub struct Gbuffers {
     pub depth_proxy: Mutex<SurfaceProxy>,
     pub albedo_proxy: Mutex<SurfaceProxy>,
     pub third_proxy: Mutex<SurfaceProxy>,
+
+    pub depth_sample: GpuBuffer<f32>,
 
     pub uber_depth_half: SurfaceHandle,
     pub uber_depth_quarter: SurfaceHandle,
@@ -118,6 +123,9 @@ impl Gbuffers {
                 .build(),
         )?;
 
+        let depth_sample =
+            GpuBuffer::new(&gpu.device, GpuBufferDesc::builder("depth_sample").build())?;
+
         Ok(Gbuffers {
             albedo,
             normal,
@@ -142,6 +150,8 @@ impl Gbuffers {
                 // Some(dxgi::Format::R8g8b8a8Typeless),
                 false,
             )?),
+
+            depth_sample,
 
             uber_depth_half,
             uber_depth_quarter,

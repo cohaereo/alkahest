@@ -34,7 +34,10 @@ use crate::{
     feature::immediate::ImmediateShapeRenderer,
     gpu::{cbuffer::ConstantBuffer, debug_text::DebugTextRenderer, profiler::D3D11Profiler},
     object::{RenderObject, RenderObjectHandle},
-    renderer::submit::{bloom::PostProcessScope, gbuffer::HzbDownsampleParams},
+    renderer::submit::{
+        bloom::PostProcessScope,
+        gbuffer::{CoordParams, HzbDownsampleParams},
+    },
     tfx::{externs::Externs, packet::FramePacket, scope::CascadeScope, view::RenderSettings},
     util::{
         arena::Arena,
@@ -49,6 +52,7 @@ const SHADOW_MAP_SHADER: &str = include_str!("../builtin/shaders/shadow_map.hlsl
 const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
 const OVERDRAW_SHADER: &str = include_str!("../builtin/shaders/overdraw.hlsl");
 const HZB_DOWNSAMPLE_SHADER: &str = include_str!("../builtin/shaders/hzb_downsample.hlsl");
+const DEPTH_SAMPLE: &str = include_str!("../builtin/shaders/depth_sample.hlsl");
 
 pub struct Renderer {
     pub gpu: Arc<Gpu>,
@@ -77,6 +81,8 @@ pub struct Renderer {
     cascade_scope: ConstantBuffer<CascadeScope>,
     hzb_downsample_cs: d3d11::ComputeShader,
     hzb_downsample_params: ConstantBuffer<HzbDownsampleParams>,
+    depth_sample_cs: d3d11::ComputeShader,
+    depth_sample_params: ConstantBuffer<CoordParams>,
 
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
     pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
@@ -144,6 +150,8 @@ impl Renderer {
         let hzb_downsample_cs =
             gpu.compile_shader_cs("hzb_downsample", HZB_DOWNSAMPLE_SHADER, "main")?;
 
+        let depth_sample_cs = gpu.compile_shader_cs("depth_sample", DEPTH_SAMPLE, "mainCS")?;
+
         let globals = RenderGlobals::load(&gpu).context("Failed to load render globals")?;
         Ok(Self {
             externs: ThreadMutCell::new(Externs::new(&globals)),
@@ -174,6 +182,8 @@ impl Renderer {
             shadow_map_ps,
             hzb_downsample_cs,
             hzb_downsample_params: ConstantBuffer::create(&gpu, None)?,
+            depth_sample_cs,
+            depth_sample_params: ConstantBuffer::create(&gpu, None)?,
             cascade_scope: ConstantBuffer::create(&gpu, None)?,
 
             common: CommonResources::load(&gpu)?,

@@ -2,6 +2,7 @@ pub mod cbuffer;
 pub mod command_list;
 pub mod debug_text;
 mod global_state;
+pub mod gpu_buffer;
 pub mod profiler;
 pub mod spinner;
 pub mod state;

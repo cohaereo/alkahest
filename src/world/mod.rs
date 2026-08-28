@@ -12,6 +12,7 @@ pub mod render_objects;
 pub mod sequencer;
 pub mod shadowmap;
 pub mod transform;
+pub mod tween;
 
 #[allow(unused)]
 pub struct UnimplementedTigerComponent {

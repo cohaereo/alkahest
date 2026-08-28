@@ -1,5 +1,6 @@
 mod asset_viewer;
 pub mod controller;
+mod crosshair;
 mod surface_viewer;
 
 use std::{
@@ -49,8 +50,8 @@ use crate::world::audio::{s_start_all_audio_sources, s_update_audio_sources};
 use crate::{
     app::SharedState,
     ui::{
-        hotkeys::SHORTCUT_MAP_HOME,
-        scene::controller::CameraController,
+        hotkeys::{SHORTCUT_GAZE, SHORTCUT_MAP_HOME, SHORTCUT_TOGGLE_CROSSHAIR},
+        scene::{controller::CameraController, crosshair::draw_crosshair},
         util::{ExternalDataWidgetExt, UiExt},
     },
     world::{
@@ -61,6 +62,7 @@ use crate::{
         sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
         shadowmap::{s_extract_all_shadowmaps, s_submit_all_shadowmaps},
         transform::Transform,
+        tween::{Tween, ease_out_exponential, s_update_tweens},
     },
 };
 
@@ -69,6 +71,7 @@ pub struct Scene {
 
     renderer: Arc<Renderer>,
     pub camera: Camera,
+    pub tween: Option<Tween>,
     pub view: View,
     last_frame_time: Instant,
     start_time: Instant,
@@ -80,6 +83,7 @@ pub struct Scene {
     pub render_mode: RenderMode,
     keep_settings_open: bool,
     lock_resolution: bool,
+    show_crosshair: bool,
 
     pub controller: CameraController,
 
@@ -125,6 +129,7 @@ impl Scene {
             global_channels: renderer.externs.default_globals,
             renderer,
             camera,
+            tween: None,
             time_of_day: 1200.0,
             time_scale: 1.0,
             animate_time_of_day: true,
@@ -132,6 +137,7 @@ impl Scene {
             render_mode: RenderMode::Shaded,
             keep_settings_open: false,
             lock_resolution: false,
+            show_crosshair: false,
             controller: CameraController::new_orbit(Vec3::ZERO, 2.5),
             surface,
             surface_srv,
@@ -222,6 +228,7 @@ impl Scene {
         }
 
         if let Some((translation, rotation, hash)) = fastrand::choice(spawn_candidates) {
+            self.tween = None;
             self.camera.position = translation + Vec3::Z * 2.0;
             self.camera.rotation = rotation;
             self.controller.set_yaw_pitch(self.camera.get_yaw_pitch());
@@ -232,9 +239,45 @@ impl Scene {
         }
     }
 
+    pub fn get_distance_pos_to_gaze(&mut self) -> (f32, Vec3) {
+        if let ViewKind::Main(view) = &self.view.kind {
+            let d = self.renderer.read_depth_at_center(view);
+            let pos = self
+                .camera
+                .world_to_projective
+                .inverse()
+                .project_point3(Vec3::new(0.0, 0.0, d));
+            let distance = (pos - self.camera.position).length();
+            (distance, pos)
+        } else {
+            (
+                f32::INFINITY,
+                Vec3::new(f32::INFINITY, f32::INFINITY, f32::INFINITY),
+            )
+        }
+    }
+
+    pub fn goto_gaze(&mut self) {
+        let (distance, pos) = self.get_distance_pos_to_gaze();
+        if distance + 0.01 < self.camera.far {
+            self.tween = Some(Tween::new(
+                ease_out_exponential,
+                Some((self.camera.position, pos - self.camera.forward() * 10.0)),
+                None,
+                0.7,
+            ));
+        }
+    }
+
     pub fn process_hotkeys(&mut self, ui: &mut egui::Ui) {
         if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_MAP_HOME)) {
             self.goto_home();
+        }
+        if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_GAZE)) {
+            self.goto_gaze();
+        }
+        if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_TOGGLE_CROSSHAIR)) {
+            self.show_crosshair = !self.show_crosshair;
         }
     }
 
@@ -270,16 +313,20 @@ impl Scene {
         egui::CentralPanel::default().show(ui, |ui| {
             let panel_rect = ui.available_rect_before_wrap();
 
-            let r = ui
-                .image(SizedTexture {
-                    id: egui_d3d11.textures_mut().allocate_dx_temporary(
-                        self.surface_srv.clone(),
-                        None,
-                        false,
-                    ),
-                    size,
-                })
-                .interact(Sense::CLICK | Sense::DRAG | Sense::HOVER);
+            let im = ui.image(SizedTexture {
+                id: egui_d3d11.textures_mut().allocate_dx_temporary(
+                    self.surface_srv.clone(),
+                    None,
+                    false,
+                ),
+                size,
+            });
+
+            if self.show_crosshair {
+                draw_crosshair(ui, im.rect.center());
+            }
+
+            let r = im.interact(Sense::CLICK | Sense::DRAG | Sense::HOVER);
 
             if !ui.is_rect_visible(r.rect) {
                 return;
@@ -379,7 +426,14 @@ impl Scene {
             let size_pixels = size * ui.ctx().pixels_per_point();
             let resolution = (size_pixels.x as u32, size_pixels.y as u32);
 
-            self.controller.update(&mut self.camera, ui, &r, delta_time);
+            self.controller
+                .update(&mut self.camera, &mut self.tween, ui, &r, delta_time);
+            s_update_tweens(
+                &mut self.world,
+                &mut self.camera,
+                &mut self.tween,
+                delta_time,
+            );
 
             if r.dragged_by(egui::PointerButton::Middle) {
                 let delta_adjusted = r.drag_delta() / 4.0;
@@ -441,6 +495,14 @@ impl Scene {
             })
             .0
             .on_hover_text("Scene Settings");
+
+        if ui
+            .selectable_label(self.show_crosshair, GoogleMaterialSymbols::Add.to_string())
+            .on_hover_text("Toggle Crosshair")
+            .clicked()
+        {
+            self.show_crosshair = !self.show_crosshair;
+        }
 
         if matches!(self.controller, CameraController::Orbit { .. })
             && ui

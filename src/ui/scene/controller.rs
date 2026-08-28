@@ -4,6 +4,8 @@ use alkahest_render::{Renderer, camera::Camera, util::math::Vec3Ext};
 use egui::{Response, Ui};
 use glam::{Quat, Vec2, Vec3};
 
+use crate::world::tween::Tween;
+
 pub enum CameraController {
     Orbit {
         target: Vec3,
@@ -33,7 +35,14 @@ impl CameraController {
         }
     }
 
-    pub fn update(&mut self, camera: &mut Camera, ui: &Ui, response: &Response, delta_time: f32) {
+    pub fn update(
+        &mut self,
+        camera: &mut Camera,
+        tween: &mut Option<Tween>,
+        ui: &Ui,
+        response: &Response,
+        delta_time: f32,
+    ) {
         let scroll_delta = ui.input(|i| {
             let mut scroll = egui::Vec2::ZERO;
             for event in i.raw.events.iter() {
@@ -180,6 +189,10 @@ impl CameraController {
                     }
                 });
 
+                if movement.length_squared() > 0.0 && tween.is_some() {
+                    *tween = None;
+                }
+
                 if response.dragged_by(egui::PointerButton::Primary)
                     || response.dragged_by(egui::PointerButton::Secondary)
                 {
@@ -187,6 +200,9 @@ impl CameraController {
                     let drag_delta_scaled = (drag_delta / 10.0) * egui::vec2(-1.0, 1.3);
                     *yaw_pitch += Vec2::new(drag_delta_scaled.x, drag_delta_scaled.y);
                     yaw_pitch.y = yaw_pitch.y.clamp(-89.0, 89.0);
+                    if tween.as_ref().is_some_and(|t| t.angle_movement.is_some()) {
+                        *tween = None;
+                    }
                 }
                 camera.position += movement * delta_time * ln_speed.exp();
             }

@@ -160,6 +160,7 @@ impl Renderer {
 
         self.submit_uber_depth_generation(cmd, view);
         self.generate_hzb_chain(cmd, view);
+        self.sample_depth_at_center(cmd, view);
     }
 
     fn submit_uber_depth_generation(&self, cmd: &mut CommandList, view: &MainView) {
@@ -267,10 +268,57 @@ impl Renderer {
                 .update_mips(cmd, hzb_chain, mip_range);
         }
     }
+
+    fn sample_depth_at_center(&self, cmd: &mut CommandList, view: &MainView) {
+        cmd_event_span!(cmd, "sample_depth");
+        cmd.state = PipelineState::new(Some(0), Some(0), Some(0), Some(0));
+
+        let _gpuscope = self.profiler.scope(cmd, "sample_depth");
+        cmd.compute_set_shader(&self.depth_sample_cs);
+
+        // Set depth texture as input to t0
+        let depth = view.gbuffers.depth_proxy.lock();
+        let srv = Some(depth.srv.clone());
+        cmd.compute_set_shader_resources(0, &[srv.as_ref()]);
+
+        let d = view.surfaces.get(view.gbuffers.depth);
+        // Set coordinate to same to to b0
+        _ = self.depth_sample_params.write(
+            cmd,
+            &CoordParams {
+                coord: UVec2::new(d.resolution().0 / 2, d.resolution().1 / 2),
+            },
+        );
+        self.depth_sample_params.bind(cmd, ShaderStage::Compute, 0);
+
+        // Set up float output at u0
+
+        cmd.compute_set_unordered_access_views(0, &[Some(&view.gbuffers.depth_sample.uav)], None);
+
+        cmd.dispatch(1, 1, 1);
+
+        cmd.compute_set_unordered_access_views(0, &[None], None);
+        cmd.compute_set_shader_resources(0, &[None]);
+
+        view.gbuffers.depth_sample.copy_to_staging(cmd);
+    }
+
+    pub fn read_depth_at_center(&self, view: &MainView) -> f32 {
+        profiling::scope!("get_depth_sample");
+        view.gbuffers
+            .depth_sample
+            .read_element(&self.gpu.context(), 0)
+            .unwrap()
+    }
 }
 
 #[repr(C)]
 pub struct HzbDownsampleParams {
     prev_size: UVec2,
     current_size: UVec2,
+}
+
+#[repr(C)]
+pub struct CoordParams {
+    coord: UVec2,
 }
