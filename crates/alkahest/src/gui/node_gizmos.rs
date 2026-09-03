@@ -91,6 +91,8 @@ impl GuiView for NodeGizmoOverlay {
         // if self.debug_overlay.borrow().show_map_resources {
         if config::with(|c| c.visual.node_nametags) {
             let named_nodes_only = config::with(|c| c.visual.node_nametags_named_only);
+            let show_label = config::with(|c| c.visual.node_nametag_labels);
+            let show_label_background = config::with(|c| c.visual.node_nametag_label_backgrounds);
             let mut maps = resources.get_mut::<MapList>();
             if let Some(map) = maps.current_map_mut() {
                 struct NodeDisplayPoint {
@@ -196,7 +198,11 @@ impl GuiView for NodeGizmoOverlay {
                         NodeDisplayPoint {
                             has_havok_data: false,
                             origin: origin.cloned(),
-                            label: label.map(|v| v.label.clone()).unwrap_or_default(),
+                            label: if show_label {
+                                label.map(|v| v.label.clone()).unwrap_or_default()
+                            } else {
+                                "".to_string()
+                            },
                             icon: icon.cloned(),
                         },
                     ))
@@ -262,17 +268,19 @@ impl GuiView for NodeGizmoOverlay {
                         // if self.debug_overlay.borrow().map_resource_label_background {
                         let background_color = color.text_color_for_background();
                         let white_bg = background_color.r() == 255;
-                        painter.rect(
-                            debug_string_rect.expand(4.0),
-                            egui::CornerRadius::ZERO,
-                            if white_bg {
-                                Color32::from_white_alpha(128)
-                            } else {
-                                Color32::from_black_alpha(96)
-                            },
-                            egui::Stroke::default(),
-                            egui::StrokeKind::Middle,
-                        );
+                        if show_label_background && show_label {
+                            painter.rect(
+                                debug_string_rect.expand(4.0),
+                                egui::CornerRadius::ZERO,
+                                if white_bg {
+                                    Color32::from_white_alpha(128)
+                                } else {
+                                    Color32::from_black_alpha(96)
+                                },
+                                egui::Stroke::default(),
+                                egui::StrokeKind::Middle,
+                            );
+                        }
                         // }
 
                         painter.text(

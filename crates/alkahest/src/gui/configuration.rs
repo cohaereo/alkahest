@@ -152,6 +152,12 @@ impl GuiView for RenderSettingsPanel {
 
                     render_feat_vis(ui, "Crosshair", &mut c.visual.draw_crosshair);
                     render_feat_vis(ui, "Node Visualization", &mut c.visual.node_nametags);
+                    render_feat_vis(ui, "Node Labels", &mut c.visual.node_nametag_labels);
+                    render_feat_vis(
+                        ui,
+                        "Node Label Backgrounds",
+                        &mut c.visual.node_nametag_label_backgrounds,
+                    );
                     ui.collapsing("Node filters", |ui| {
                         ui.checkbox(
                             &mut c.visual.node_nametags_named_only,
