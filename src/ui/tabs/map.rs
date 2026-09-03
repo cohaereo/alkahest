@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use alkahest_data::map::SRespawnPoint;
 use alkahest_render::{Renderer, camera::Camera};
 use egui::{Color32, Rect, vec2};
@@ -22,7 +24,7 @@ pub struct MapTab {
 }
 
 impl MapTab {
-    pub fn new(tag: TagHash, name: String, shared: &SharedState) -> anyhow::Result<Self> {
+    pub fn new(tag: TagHash, name: String, shared: &Arc<SharedState>) -> anyhow::Result<Self> {
         Ok(Self {
             load_task: Task::new("map_load".to_string(), move || {
                 let mut world = hecs::World::new();

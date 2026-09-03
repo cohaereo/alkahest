@@ -55,6 +55,7 @@ use crate::{
         util::{ExternalDataWidgetExt, UiExt},
     },
     world::{
+        label::Label,
         render_objects::{
             s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
         },
@@ -101,13 +102,15 @@ pub struct Scene {
     sun_shadow_views: [View; Renderer::NUM_CASCADES],
 
     scene_id: String,
+
+    shared: Arc<SharedState>,
 }
 
 impl Scene {
     pub fn new(
         renderer: Arc<Renderer>,
         camera: Camera,
-        shared: &SharedState,
+        shared: &Arc<SharedState>,
         scene_id: impl Into<String>,
     ) -> anyhow::Result<Self> {
         let (surface, surface_srv) = Self::create_surface(&renderer.gpu, (512, 512))?;
@@ -150,6 +153,7 @@ impl Scene {
             sun_shadow_views,
             scene_id: scene_id.into(),
             automate_channels: true,
+            shared: Arc::clone(shared),
         })
     }
 
@@ -444,6 +448,8 @@ impl Scene {
             subsecond::call(|| {
                 self.render(delta_time, resolution);
             });
+
+            self.draw_node_nametags(ui, r.rect);
         });
 
         #[cfg(feature = "wwise")]
@@ -477,6 +483,69 @@ impl Scene {
             );
 
             s_update_audio_sources(&self.world, self.camera.position);
+        }
+    }
+
+    fn draw_node_nametags(&self, ui: &Ui, image_rect: Rect) {
+        let (node_nametags, named_only, filters, distance_limit_enabled, max_distance) = {
+            let config = self.shared.config.read();
+            (
+                config.visual.node_nametags,
+                config.visual.node_nametags_named_only,
+                config.visual.node_filters.clone(),
+                config.visual.node_nametags_distance_limit,
+                config.visual.node_nametags_max_distance,
+            )
+        };
+
+        if !node_nametags {
+            return;
+        }
+
+        let painter = ui.painter();
+        let screen_size = image_rect.size();
+
+        for (_, (transform, label)) in self.world.query::<(&Transform, &Label)>().iter() {
+            if named_only && label.default {
+                continue;
+            }
+
+            if !filters.contains(&label.kind.to_string()) {
+                continue;
+            }
+
+            if distance_limit_enabled
+                && transform.translation.distance(self.camera.position) > max_distance
+            {
+                continue;
+            }
+
+            let clip = self.camera.world_to_projective * transform.translation.extend(1.0);
+            if clip.w <= 0.0 {
+                continue;
+            }
+
+            let ndc = clip.xyz() / clip.w;
+            if !(-1.2..=1.2).contains(&ndc.x) || !(-1.2..=1.2).contains(&ndc.y) {
+                continue;
+            }
+
+            let screen_point = egui::pos2(
+                image_rect.min.x + (ndc.x * 0.5 + 0.5) * screen_size.x,
+                image_rect.min.y + (1.0 - (ndc.y * 0.5 + 0.5)) * screen_size.y,
+            );
+
+            let font = egui::FontId::proportional(14.0);
+            let galley = painter.layout_no_wrap(label.label.clone(), font, egui::Color32::WHITE);
+            let text_rect = egui::Align2::CENTER_CENTER
+                .anchor_rect(egui::Rect::from_min_size(screen_point, galley.size()));
+
+            painter.rect_filled(
+                text_rect.expand(3.0),
+                2.0,
+                egui::Color32::from_black_alpha(140),
+            );
+            painter.galley(text_rect.min, galley, egui::Color32::WHITE);
         }
     }
 
@@ -754,6 +823,22 @@ impl Scene {
                     PerformanceImpact::High,
                 );
         });
+
+        ui.separator();
+        ui.heading("Node Visualization");
+
+        {
+            let mut config = self.shared.config.write();
+            ui.checkbox(
+                &mut config.visual.node_nametags_distance_limit,
+                "Limit node display distance",
+            );
+            ui.add_enabled(
+                config.visual.node_nametags_distance_limit,
+                egui::Slider::new(&mut config.visual.node_nametags_max_distance, 25.0..=4000.0)
+                    .text("Max Node Distance"),
+            );
+        }
     }
 
     pub fn render(&mut self, delta_time: f32, resolution: (u32, u32)) {

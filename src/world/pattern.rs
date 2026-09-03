@@ -39,6 +39,8 @@ use tiger_pkg::{TagHash, package_manager};
 
 use crate::world::{
     UnimplementedTigerComponent, UnimplementedTigerComponents,
+    label::Label,
+    node_filter::NodeFilter,
     object::{DynamicModelParts, ObjectChannels, PermutationConfig},
     render_objects::{DynamicRenderObject, StaticAmbientOcclusion, StaticRenderObject},
     shadowmap::ShadowMap,
@@ -77,6 +79,7 @@ pub fn spawn_pattern_from_header(
     if let Some(transform) = transform {
         world.insert_one(entity, transform)?;
     }
+    world.insert_one(entity, Label::default_for(NodeFilter::Entity))?;
 
     for component_ref in &header.components {
         let component: SComponent = package_manager().read_tag_struct(component_ref.component)?;
@@ -541,6 +544,7 @@ pub fn spawn_pattern_from_header(
                     world.spawn((
                         Transform::new(point.translation.truncate(), point.rotation, Vec3::ONE),
                         point.clone(),
+                        Label::default_for(NodeFilter::RespawnPoint),
                     ));
                 }
             }
