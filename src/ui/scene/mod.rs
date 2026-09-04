@@ -30,7 +30,7 @@ use alkahest_render::{
     tfx::{
         externs::get_global_channel_name,
         packet::FramePacketMisc,
-        view::{View, ViewKind},
+        view::{MainView, View, ViewKind},
     },
     visibility::frustum::Frustum,
 };
@@ -60,6 +60,7 @@ use crate::{
             s_are_all_objects_loaded, s_extract_ambient_occlusion, s_extract_render_objects,
         },
         s_update_object_channels,
+        selected_entity::SelectedEntity,
         sequencer::{s_evaluate_global_channel_expressions, s_get_all_global_channel_ids},
         shadowmap::{s_extract_all_shadowmaps, s_submit_all_shadowmaps},
         transform::Transform,
@@ -85,6 +86,7 @@ pub struct Scene {
     keep_settings_open: bool,
     lock_resolution: bool,
     show_crosshair: bool,
+    selected_entity: SelectedEntity,
 
     pub controller: CameraController,
 
@@ -154,6 +156,7 @@ impl Scene {
             scene_id: scene_id.into(),
             automate_channels: true,
             shared: Arc::clone(shared),
+            selected_entity: SelectedEntity::default(),
         })
     }
 
@@ -428,7 +431,11 @@ impl Scene {
                 }
             });
 
-            let size_pixels = size * ui.ctx().pixels_per_point();
+            let size_pixels = if self.lock_resolution {
+                Vec2::new(1920.0, 1080.0)
+            } else {
+                size * ui.ctx().pixels_per_point()
+            };
             let resolution = (size_pixels.x as u32, size_pixels.y as u32);
 
             self.controller
@@ -446,11 +453,35 @@ impl Scene {
                 self.sun_light_angle = self.sun_light_angle.rem_euclid(360.0);
             }
 
+            if r.clicked() {
+                if let Some(mouse_pos) = im.interact_pointer_pos()
+                    && let ViewKind::Main(view) = &mut self.view.kind
+                {
+                    let rel_pos = mouse_pos - r.rect.min;
+                    let render_x = (rel_pos.x / r.rect.width() * size_pixels.x) as u32;
+                    let render_y = (rel_pos.y / r.rect.height() * size_pixels.y) as u32;
+                    view.pickbuffer.request_selection(render_x, render_y);
+                }
+            }
+
             subsecond::call(|| {
                 self.render(delta_time, resolution);
             });
 
             self.draw_node_nametags(ui, r.rect);
+
+            if let ViewKind::Main(view) = &mut self.view.kind {
+                if let Some(picked_id) = view.pickbuffer.finish_request(&self.renderer) {
+                    if let Some(entity) = self
+                        .world
+                        .iter()
+                        .map(|er| er.entity())
+                        .find(|e| e.id() == picked_id)
+                    {
+                        self.selected_entity.select(entity);
+                    }
+                }
+            }
         });
 
         #[cfg(feature = "wwise")]
@@ -1058,7 +1089,11 @@ impl Scene {
                 .submit_view(&mut cmd, &self.view, self.render_mode.into());
         }
 
-        if let ViewKind::Main(view) = &self.view.kind {
+        if let ViewKind::Main(view) = &mut self.view.kind {
+            if view.pickbuffer.has_request() {
+                self.renderer.submit_view_pickbuffer(&mut cmd, &view);
+            }
+
             cmd.copy_resource(
                 &self.renderer.surfaces().get(view.output).texture,
                 &self.surface,
@@ -1360,6 +1395,7 @@ pub enum RenderMode {
     // Geometry:
     DepthEdges,
     WorldNormal,
+    PickBuffer,
     Overdraw,
 
     // Lighting:
@@ -1418,6 +1454,7 @@ impl RenderMode {
                 ui.section_separator("Geometry:");
                 mode!(ui, RenderMode::DepthEdges, "Depth Edges");
                 mode!(ui, RenderMode::WorldNormal, "World Normal");
+                mode!(ui, RenderMode::PickBuffer, "Entity Selection");
                 mode!(ui, RenderMode::Overdraw, "Overdraw");
 
                 ui.section_separator("Lighting:");
@@ -1448,6 +1485,7 @@ impl From<RenderMode> for Option<DebugPipeline> {
             RenderMode::IridescenceId => Some(DebugPipeline::Overcoat),
             RenderMode::DepthEdges => Some(DebugPipeline::DepthEdges),
             RenderMode::WorldNormal => Some(DebugPipeline::WorldNormal),
+            RenderMode::PickBuffer => Some(DebugPipeline::PickBuffer),
             RenderMode::Overdraw => Some(DebugPipeline::Overdraw),
             RenderMode::LightDiffuse => Some(DebugPipeline::LightDiffuse),
             RenderMode::LightSpecular => Some(DebugPipeline::LightSpecular),

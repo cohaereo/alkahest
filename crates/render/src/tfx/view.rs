@@ -10,7 +10,10 @@ use crate::{
     renderer::{
         autoexposure::AutoExposureSystem,
         hzb::Hzb,
-        submit::buffers::{AtmosphereBuffers, BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
+        submit::{
+            buffers::{AtmosphereBuffers, BloomBuffers, Gbuffers, LightBuffers, WaterBuffers},
+            pickbuffer::PickBuffers,
+        },
         surface::{
             SizeRelativity, Surface, SurfaceDesc, SurfaceHandle, SurfaceProxy, SurfaceScale,
             Surfaces,
@@ -204,6 +207,7 @@ pub struct MainView {
     pub(crate) water: WaterBuffers,
     pub(crate) bloom: BloomBuffers,
     pub(crate) atmosphere: AtmosphereBuffers,
+    pub pickbuffer: PickBuffers,
     pub sun_shadow_map_cascades: Vec<(Mat4, d3d11::ShaderResourceView)>,
     pub(crate) shadow_mask: SurfaceHandle,
 
@@ -227,6 +231,7 @@ impl MainView {
         let water = WaterBuffers::create(surfaces, resolution)?;
         let bloom = BloomBuffers::create(gpu, surfaces, resolution)?;
         let atmosphere = AtmosphereBuffers::create(surfaces, resolution)?;
+        let pickbuffer = PickBuffers::create(gpu, surfaces, resolution)?;
 
         let shading_result = surfaces.create_surface(
             resolution,
@@ -270,6 +275,7 @@ impl MainView {
             water,
             bloom,
             atmosphere,
+            pickbuffer,
             sun_shadow_map_cascades: vec![],
             shadow_mask,
             shading_result,

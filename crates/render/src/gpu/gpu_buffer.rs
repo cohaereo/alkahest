@@ -75,6 +75,7 @@ impl<T: TypedBufferFormat> GpuBuffer<T> {
                 .ok()?;
             Some(unsafe { *map.data.cast::<T>().add(index as usize) })
         } else {
+            info!("not reading");
             None
         }
     }

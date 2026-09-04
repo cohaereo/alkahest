@@ -283,13 +283,13 @@ impl Renderer {
 
         let d = view.surfaces.get(view.gbuffers.depth);
         // Set coordinate to same to to b0
-        _ = self.depth_sample_params.write(
+        _ = self.sample_params.write(
             cmd,
             &CoordParams {
                 coord: UVec2::new(d.resolution().0 / 2, d.resolution().1 / 2),
             },
         );
-        self.depth_sample_params.bind(cmd, ShaderStage::Compute, 0);
+        self.sample_params.bind(cmd, ShaderStage::Compute, 0);
 
         // Set up float output at u0
 
@@ -320,5 +320,5 @@ pub struct HzbDownsampleParams {
 
 #[repr(C)]
 pub struct CoordParams {
-    coord: UVec2,
+    pub(crate) coord: UVec2,
 }

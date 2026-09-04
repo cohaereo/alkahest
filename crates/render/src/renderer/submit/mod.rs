@@ -5,6 +5,7 @@ pub mod gbuffer;
 pub mod geometry;
 pub mod lighting;
 pub mod lowlevel;
+pub mod pickbuffer;
 pub mod sun_shadows;
 pub mod transparent;
 pub mod water;
@@ -58,6 +59,9 @@ impl Renderer {
 
                 match debug_pipeline {
                     Some(DebugPipeline::Overdraw) => self.submit_view_overdraw(cmd, main_view),
+                    Some(DebugPipeline::PickBuffer) => {
+                        self.submit_view_pickbuffer_debug(cmd, main_view)
+                    }
                     _ => self.submit_view_shaded(cmd, main_view, debug_pipeline),
                 }
             }
@@ -183,6 +187,7 @@ impl Renderer {
                     DebugPipeline::Overcoat => &p.debug_colored_overcoat_id,
                     DebugPipeline::DepthEdges => &p.debug_depth_edges,
                     DebugPipeline::WorldNormal => &p.debug_world_normal,
+                    DebugPipeline::PickBuffer => &p.deferred_shading,
                     DebugPipeline::LightDiffuse => &p.debug_diffuse_light,
                     DebugPipeline::LightSpecular => &p.debug_specular_light,
 
@@ -802,6 +807,7 @@ pub enum DebugPipeline {
 
     DepthEdges,
     WorldNormal,
+    PickBuffer,
     Overdraw,
 
     LightDiffuse,

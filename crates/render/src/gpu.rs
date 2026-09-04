@@ -228,6 +228,27 @@ impl Gpu {
         Ok((vs, ps))
     }
 
+    pub fn compile_shader_ps(
+        &self,
+        name: &str,
+        source: &str,
+        entry_ps: &str,
+    ) -> anyhow::Result<d3d11::PixelShader> {
+        let ps_source = d3d11::fxc::compile(
+            source.as_bytes(),
+            Some(name),
+            &[],
+            entry_ps,
+            d3d11::fxc::ShaderTarget::Pixel,
+        )?;
+
+        let ps = self
+            .create_pixel_shader(&ps_source)
+            .context("Failed to create pixel shader")?;
+
+        Ok(ps)
+    }
+
     pub fn compile_shader_cs(
         &self,
         name: &str,
