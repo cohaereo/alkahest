@@ -317,6 +317,7 @@ impl Scene {
         egui::CentralPanel::default().show(ui, |ui| {
             let panel_rect = ui.available_rect_before_wrap();
 
+            let size = size.min(panel_rect.size());
             let im = ui.image(SizedTexture {
                 id: egui_d3d11.textures_mut().allocate_dx_temporary(
                     self.surface_srv.clone(),
