@@ -28,9 +28,14 @@ impl FramePacket {
         // self.view_nodes.clear();
     }
 
-    pub fn push_static_render_object(&mut self, render_object_handle: RenderObjectHandle) {
+    pub fn push_static_render_object(
+        &mut self,
+        render_object_handle: RenderObjectHandle,
+        entity_id: u32,
+    ) {
         self.frame_nodes.push(FrameNode {
             render_object_handle,
+            entity_id,
             data: Box::new(()),
             distance: 0.0,
             visible: VisibilityMask::default(),
@@ -40,11 +45,13 @@ impl FramePacket {
     pub fn push_dynamic_render_object(
         &mut self,
         render_object_handle: RenderObjectHandle,
+        entity_id: u32,
         transform: CompactTransform,
         permutation: usize,
     ) {
         self.frame_nodes.push(FrameNode {
             render_object_handle,
+            entity_id,
             data: Box::new((transform, permutation)),
             distance: 0.0,
             visible: VisibilityMask::default(),
@@ -62,6 +69,7 @@ impl FramePacket {
 #[derive(AssertOffsets)]
 pub struct FrameNode {
     pub render_object_handle: RenderObjectHandle,
+    pub entity_id: u32,
     pub data: Box<dyn Any>,
     /// Distance between the main view and the object
     pub distance: f32,

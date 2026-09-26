@@ -53,6 +53,9 @@ const BLIT_SHADER: &str = include_str!("../builtin/shaders/blit_srgb.hlsl");
 const OVERDRAW_SHADER: &str = include_str!("../builtin/shaders/overdraw.hlsl");
 const HZB_DOWNSAMPLE_SHADER: &str = include_str!("../builtin/shaders/hzb_downsample.hlsl");
 const DEPTH_SAMPLE: &str = include_str!("../builtin/shaders/depth_sample.hlsl");
+const PICKBUFFER_SAMPLE: &str = include_str!("../builtin/shaders/pickbuffer_sample.hlsl");
+const PICKBUFFER_DEBUG_SHADER: &str = include_str!("../builtin/shaders/pickbuffer_debug.hlsl");
+const PICKBUFFER_SHADER: &str = include_str!("../builtin/shaders/pick_buffer.hlsl");
 
 pub struct Renderer {
     pub gpu: Arc<Gpu>,
@@ -82,7 +85,9 @@ pub struct Renderer {
     hzb_downsample_cs: d3d11::ComputeShader,
     hzb_downsample_params: ConstantBuffer<HzbDownsampleParams>,
     depth_sample_cs: d3d11::ComputeShader,
-    depth_sample_params: ConstantBuffer<CoordParams>,
+    pickbuffer_sample_cs: d3d11::ComputeShader,
+    sample_params: ConstantBuffer<CoordParams>,
+    pub pickbuffer_cb: ConstantBuffer<u32>,
 
     pub ao: RwLock<Option<SStaticAmbientOcclusion>>,
     pub ao_buffer: RwLock<Option<Handle<VertexBuffer>>>,
@@ -151,6 +156,8 @@ impl Renderer {
             gpu.compile_shader_cs("hzb_downsample", HZB_DOWNSAMPLE_SHADER, "main")?;
 
         let depth_sample_cs = gpu.compile_shader_cs("depth_sample", DEPTH_SAMPLE, "mainCS")?;
+        let pickbuffer_sample_cs =
+            gpu.compile_shader_cs("pickbuffer_sample", PICKBUFFER_SAMPLE, "mainCS")?;
 
         let globals = RenderGlobals::load(&gpu).context("Failed to load render globals")?;
         Ok(Self {
@@ -183,8 +190,11 @@ impl Renderer {
             hzb_downsample_cs,
             hzb_downsample_params: ConstantBuffer::create(&gpu, None)?,
             depth_sample_cs,
-            depth_sample_params: ConstantBuffer::create(&gpu, None)?,
+            pickbuffer_sample_cs,
+            sample_params: ConstantBuffer::create(&gpu, None)?,
             cascade_scope: ConstantBuffer::create(&gpu, None)?,
+
+            pickbuffer_cb: ConstantBuffer::create(&gpu, None)?,
 
             common: CommonResources::load(&gpu)?,
 
@@ -335,6 +345,8 @@ pub struct CommonResources {
     blit_ps: d3d11::PixelShader,
     blit_ps_linear: d3d11::PixelShader,
     overdraw_ps: d3d11::PixelShader,
+    pickbuffer_ps: d3d11::PixelShader,
+    pickbuffer_debug_ps: d3d11::PixelShader,
 
     temporary_sky_hemisphere: Texture,
     temporary_vignette: Texture,
@@ -381,6 +393,15 @@ impl CommonResources {
             gpu.compile_shader_vs_ps("blit", BLIT_SHADER, "mainVS", "mainPS_linear")?;
         let (_, overdraw_ps) =
             gpu.compile_shader_vs_ps("overdraw", OVERDRAW_SHADER, "mainVS", "mainPS")?;
+        let (_, pickbuffer_debug_ps) = gpu.compile_shader_vs_ps(
+            "pickbuffer_debug",
+            PICKBUFFER_DEBUG_SHADER,
+            "mainVS",
+            "mainPS",
+        )?;
+
+        let pickbuffer_ps: d3d11::PixelShader =
+            gpu.compile_shader_ps("pickbuffer", PICKBUFFER_SHADER, "PSMain")?;
 
         let shadowmap_vs_t2 = Texture::load_2d_raw(
             gpu,
@@ -440,6 +461,8 @@ impl CommonResources {
             overdraw_ps,
             sampler_point,
             sampler_linear,
+            pickbuffer_ps,
+            pickbuffer_debug_ps,
         })
     }
 }

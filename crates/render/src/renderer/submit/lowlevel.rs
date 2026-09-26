@@ -4,7 +4,8 @@ use alkahest_core::job::{
     SCHEDULER,
     potassium::{JobHandle, WaitResult},
 };
-use alkahest_data::tfx::{FeatureRendererSubscription, RenderStage};
+use alkahest_data::tfx::{FeatureRendererSubscription, RenderStage, ShaderStage};
+use d3d11::Rect;
 
 use super::Renderer;
 use crate::{
@@ -34,6 +35,7 @@ impl Renderer {
                 .get(obj.render_object_handle.into())
                 .filter(|p| p.stages.is_subscribed(stage) && features.is_subscribed(p.feature_type))
             {
+                _ = self.pickbuffer_cb.write(cmd, &obj.entity_id);
                 render_object.submit(cmd, view_index, stage);
             }
         }
@@ -82,6 +84,7 @@ impl Renderer {
                 .get(obj.render_object_handle.into())
                 .filter(|p| p.stages.is_subscribed(stage) && features.is_subscribed(p.feature_type))
             {
+                _ = self.pickbuffer_cb.write(cmd, &obj.entity_id);
                 render_object.submit_parallel(self, view_index, cmd_set, stage, &mut job_handles);
             }
         }
@@ -144,7 +147,7 @@ impl Renderer {
                 .filter(|p| p.stages.is_subscribed(stage) && features.is_subscribed(p.feature_type))
                 .is_some()
             {
-                object_handles.push(obj.render_object_handle);
+                object_handles.push((obj.render_object_handle, obj.entity_id));
             }
         }
 
@@ -181,12 +184,14 @@ impl Renderer {
                         if let Some(render_object) = renderer_clone
                             .objects
                             .read()
-                            .get((*handle).into())
+                            .get((*handle).0.into())
                             .filter(|p| {
                                 p.stages.is_subscribed(stage)
                                     && features.is_subscribed(p.feature_type)
                             })
                         {
+                            let entity_id = (*handle).1;
+                            //_ = self.pickbuffer_cb.write(cmd, &entity_idd);
                             render_object.submit(cmd, view_index, stage);
                         }
                     }

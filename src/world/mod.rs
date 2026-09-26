@@ -11,6 +11,7 @@ pub mod node_filter;
 pub mod object;
 pub mod pattern;
 pub mod render_objects;
+pub mod selected_entity;
 pub mod sequencer;
 pub mod shadowmap;
 pub mod transform;

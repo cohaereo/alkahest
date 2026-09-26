@@ -73,11 +73,11 @@ pub fn s_extract_ambient_occlusion(world: &hecs::World) {
 pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePacket) {
     let mut render_objects = Renderer::instance().objects.write();
 
-    for (_entity, static_render_object) in world.query::<&StaticRenderObject>().iter() {
-        frame_packet.push_static_render_object(static_render_object.handle);
+    for (entity, static_render_object) in world.query::<&StaticRenderObject>().iter() {
+        frame_packet.push_static_render_object(static_render_object.handle, entity.id());
     }
 
-    for (_entity, (transform, render_object, permutations, object_channels, parts)) in world
+    for (entity, (transform, render_object, permutations, object_channels, parts)) in world
         .query::<(
             Option<&Transform>,
             &DynamicRenderObject,
@@ -112,6 +112,7 @@ pub fn s_extract_render_objects(world: &hecs::World, frame_packet: &mut FramePac
 
         frame_packet.push_dynamic_render_object(
             render_object.handle,
+            entity.id(),
             transform.local_to_world().into(),
             permutation,
         );
